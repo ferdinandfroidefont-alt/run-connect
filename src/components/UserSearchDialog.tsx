@@ -34,6 +34,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followStatus, setFollowStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Search for users and load their stats
@@ -77,20 +78,27 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
     }
   };
 
-  // Check if following a user
+  // Check follow status (pending, accepted, or none)
   const checkFollowStatus = async (userId: string) => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('user_follows')
-        .select('id')
+        .select('id, status')
         .eq('follower_id', user.id)
         .eq('following_id', userId)
-        .single();
+        .maybeSingle();
 
-      setIsFollowing(!!data);
+      if (data) {
+        setFollowStatus(data.status);
+        setIsFollowing(data.status === 'accepted');
+      } else {
+        setFollowStatus(null);
+        setIsFollowing(false);
+      }
     } catch (error: any) {
+      setFollowStatus(null);
       setIsFollowing(false);
     }
   };
@@ -101,8 +109,8 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
 
     setLoading(true);
     try {
-      if (isFollowing) {
-        // Unfollow
+      if (followStatus === 'accepted') {
+        // Unfollow - remove the follow relationship
         const { error } = await supabase
           .from('user_follows')
           .delete()
@@ -110,20 +118,35 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           .eq('following_id', selectedProfile.user_id);
 
         if (error) throw error;
+        setFollowStatus(null);
         setIsFollowing(false);
         toast({ title: "Succès", description: "Vous ne suivez plus cet utilisateur" });
+      } else if (followStatus === 'pending') {
+        // Cancel pending request
+        const { error } = await supabase
+          .from('user_follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('following_id', selectedProfile.user_id);
+
+        if (error) throw error;
+        setFollowStatus(null);
+        setIsFollowing(false);
+        toast({ title: "Succès", description: "Demande de suivi annulée" });
       } else {
-        // Follow
+        // Send follow request (will be pending by default)
         const { error } = await supabase
           .from('user_follows')
           .insert([{
             follower_id: user.id,
-            following_id: selectedProfile.user_id
+            following_id: selectedProfile.user_id,
+            status: 'pending'
           }]);
 
         if (error) throw error;
-        setIsFollowing(true);
-        toast({ title: "Succès", description: "Vous suivez maintenant cet utilisateur" });
+        setFollowStatus('pending');
+        setIsFollowing(false);
+        toast({ title: "Demande envoyée", description: "Votre demande de suivi a été envoyée" });
       }
     } catch (error: any) {
       toast({ title: "Erreur", description: "Impossible de modifier le suivi", variant: "destructive" });
@@ -233,6 +256,11 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
                   <>
                     <UserCheck className="h-4 w-4 mr-2" />
                     Suivi
+                  </>
+                ) : followStatus === 'pending' ? (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    En attente
                   </>
                 ) : (
                   <>
