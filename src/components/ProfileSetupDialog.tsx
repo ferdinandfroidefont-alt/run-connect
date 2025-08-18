@@ -129,7 +129,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarPreview} />
                 <AvatarFallback>
-                  {displayName ? displayName[0].toUpperCase() : email[0].toUpperCase()}
+                  {displayName && displayName.length > 0 
+                    ? displayName[0].toUpperCase() 
+                    : email && email.length > 0 
+                      ? email[0].toUpperCase() 
+                      : "U"
+                  }
                 </AvatarFallback>
               </Avatar>
               <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90">
