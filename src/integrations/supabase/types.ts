@@ -333,6 +333,10 @@ export type Database = {
         Args: { follow_id: string }
         Returns: boolean
       }
+      add_user_points: {
+        Args: { points_to_add: number; user_id_param: string }
+        Returns: undefined
+      }
       are_users_friends: {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
