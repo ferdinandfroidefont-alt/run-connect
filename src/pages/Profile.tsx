@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Settings, LogOut, Crown, Camera } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { FollowDialog } from "@/components/FollowDialog";
 
 interface Profile {
   username: string;
@@ -28,13 +29,39 @@ const Profile = () => {
   const [formData, setFormData] = useState<Partial<Profile>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [showFollowDialog, setShowFollowDialog] = useState(false);
+  const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchFollowCounts();
     }
   }, [user]);
+
+  const fetchFollowCounts = async () => {
+    if (!user) return;
+
+    try {
+      // Get follower count
+      const { data: followerData } = await supabase.rpc('get_follower_count', { 
+        profile_user_id: user.id 
+      });
+      
+      // Get following count
+      const { data: followingData } = await supabase.rpc('get_following_count', { 
+        profile_user_id: user.id 
+      });
+      
+      setFollowerCount(followerData || 0);
+      setFollowingCount(followingData || 0);
+    } catch (error) {
+      console.error('Error fetching follow counts:', error);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -193,6 +220,28 @@ const Profile = () => {
               </>
             )}
             <h2 className="text-xl font-semibold">{profile?.display_name || profile?.username}</h2>
+            <div className="flex gap-4 mt-2">
+              <button
+                onClick={() => {
+                  setFollowDialogType('followers');
+                  setShowFollowDialog(true);
+                }}
+                className="text-center hover:text-primary transition-colors"
+              >
+                <p className="font-bold text-lg">{followerCount}</p>
+                <p className="text-sm text-muted-foreground">Abonnés</p>
+              </button>
+              <button
+                onClick={() => {
+                  setFollowDialogType('following');
+                  setShowFollowDialog(true);
+                }}
+                className="text-center hover:text-primary transition-colors"
+              >
+                <p className="font-bold text-lg">{followingCount}</p>
+                <p className="text-sm text-muted-foreground">Abonnements</p>
+              </button>
+            </div>
             {profile?.is_premium && (
               <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 mt-2">
                 <Crown className="h-3 w-3 mr-1" />
@@ -319,6 +368,15 @@ const Profile = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Follow Dialog */}
+        <FollowDialog
+          open={showFollowDialog}
+          onOpenChange={setShowFollowDialog}
+          type={followDialogType}
+          followerCount={followerCount}
+          followingCount={followingCount}
+        />
       </div>
     </div>
   );
