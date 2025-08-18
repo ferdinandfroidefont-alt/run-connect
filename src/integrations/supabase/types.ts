@@ -361,6 +361,10 @@ export type Database = {
           username: string
         }[]
       }
+      remove_user_points: {
+        Args: { points_to_remove: number; user_id_param: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
