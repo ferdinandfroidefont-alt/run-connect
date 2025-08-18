@@ -71,12 +71,12 @@ const Auth = () => {
           description: "Vérifiez votre email pour confirmer votre compte.",
         });
       } else {
-        // For signin, send OTP avec shouldCreateUser: false pour forcer le code
+        // For signin, send OTP avec shouldCreateUser: true pour créer le compte si nécessaire
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            shouldCreateUser: false
+            shouldCreateUser: true
           },
         });
         if (error) throw error;
@@ -112,21 +112,31 @@ const Auth = () => {
       
       // Vérifier si c'est un nouvel utilisateur
       if (data.user) {
-        // Vérifier si le profil existe déjà
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', data.user.id)
-          .single();
-        
-        if (!existingProfile) {
-          // Nouveau utilisateur - afficher le setup de profil
-          setNewUserId(data.user.id);
-          setShowProfileSetup(true);
-        } else {
-          // Utilisateur existant - rediriger
-          window.location.href = '/';
-        }
+        // Attendre un peu pour que le trigger crée le profil
+        setTimeout(async () => {
+          try {
+            // Vérifier si le profil existe déjà
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('id, username')
+              .eq('user_id', data.user.id)
+              .maybeSingle();
+            
+            if (!existingProfile) {
+              // Nouveau utilisateur - afficher le setup de profil
+              setNewUserId(data.user.id);
+              setShowProfileSetup(true);
+            } else {
+              // Utilisateur existant - rediriger
+              window.location.href = '/';
+            }
+          } catch (profileError: any) {
+            console.error('Erreur lors de la vérification du profil:', profileError);
+            // En cas d'erreur, afficher le setup de profil par sécurité
+            setNewUserId(data.user.id);
+            setShowProfileSetup(true);
+          }
+        }, 1000);
       }
     } catch (error: any) {
       toast({

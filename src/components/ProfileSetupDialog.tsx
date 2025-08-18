@@ -66,6 +66,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!username.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le nom d'utilisateur est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -79,20 +89,50 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
         }
       }
 
+      // Vérifier l'unicité du nom d'utilisateur
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username.trim())
+        .neq('user_id', userId)
+        .maybeSingle();
+
+      if (existingUser) {
+        toast({
+          title: "Nom d'utilisateur déjà pris",
+          description: "Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Mettre à jour le profil
       const { error } = await supabase
         .from('profiles')
         .upsert({
           user_id: userId,
-          username: username || email.split('@')[0],
-          display_name: displayName || email,
+          username: username.trim(),
+          display_name: displayName.trim() || username.trim(),
           age: age ? parseInt(age) : null,
-          phone,
-          bio,
-          avatar_url: avatarUrl,
+          phone: phone.trim() || null,
+          bio: bio.trim() || null,
+          avatar_url: avatarUrl || null,
         });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505' && error.message.includes('profiles_username_unique')) {
+          toast({
+            title: "Nom d'utilisateur déjà pris",
+            description: "Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+        setIsLoading(false);
+        return;
+      }
 
       toast({
         title: "Profil configuré !",
@@ -153,13 +193,17 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
 
           {/* Nom d'utilisateur */}
           <div className="space-y-2">
-            <Label htmlFor="username">Nom d'utilisateur</Label>
+            <Label htmlFor="username">Nom d'utilisateur *</Label>
             <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={email.split('@')[0]}
+              required
             />
+            <p className="text-xs text-muted-foreground">
+              Uniquement des lettres, chiffres et underscores
+            </p>
           </div>
 
           {/* Nom d'affichage */}
@@ -216,7 +260,18 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                if (!username.trim()) {
+                  toast({
+                    title: "Nom d'utilisateur requis",
+                    description: "Vous devez choisir un nom d'utilisateur pour continuer.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                onOpenChange(false);
+                window.location.href = '/';
+              }}
               className="flex-1"
               disabled={isLoading}
             >
