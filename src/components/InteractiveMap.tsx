@@ -10,8 +10,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 // Declare global google maps types
 declare global {
@@ -45,6 +50,7 @@ interface Filter {
   activity_types: string[];
   session_types: string[];
   search_query: string;
+  selected_date: Date;
 }
 
 export const InteractiveMap = () => {
@@ -61,16 +67,25 @@ export const InteractiveMap = () => {
   const [filters, setFilters] = useState<Filter>({
     activity_types: [],
     session_types: [],
-    search_query: ''
+    search_query: '',
+    selected_date: new Date()
   });
 
   // Load sessions from database
   const loadSessions = async () => {
     try {
+      // Get start and end of selected date
+      const startOfDay = new Date(filters.selected_date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(filters.selected_date);
+      endOfDay.setHours(23, 59, 59, 999);
+
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
-        .gte('scheduled_at', new Date().toISOString());
+        .gte('scheduled_at', startOfDay.toISOString())
+        .lte('scheduled_at', endOfDay.toISOString());
 
       if (error) throw error;
       
@@ -485,6 +500,37 @@ export const InteractiveMap = () => {
               onChange={(e) => setFilters(prev => ({ ...prev, search_query: e.target.value }))}
               className="pl-10"
             />
+          </div>
+          
+          {/* Date Filter */}
+          <div className="mt-3 flex justify-center">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-auto justify-center text-center font-normal bg-card/90 backdrop-blur-sm",
+                    "border-primary/20 hover:bg-primary/5"
+                  )}
+                >
+                  <Calendar className="mr-2 h-4 w-4 text-primary" />
+                  {format(filters.selected_date, "EEEE d MMMM", { locale: fr })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="center">
+                <CalendarComponent
+                  mode="single"
+                  selected={filters.selected_date}
+                  onSelect={(date) => {
+                    if (date) {
+                      setFilters(prev => ({ ...prev, selected_date: date }));
+                    }
+                  }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>

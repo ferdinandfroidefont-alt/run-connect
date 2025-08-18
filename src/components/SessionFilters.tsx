@@ -9,6 +9,7 @@ interface Filter {
   activity_types: string[];
   session_types: string[];
   search_query: string;
+  selected_date: Date;
 }
 
 interface SessionFiltersProps {
@@ -53,7 +54,8 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
     onFiltersChange({
       activity_types: [],
       session_types: [],
-      search_query: filters.search_query
+      search_query: filters.search_query,
+      selected_date: filters.selected_date
     });
   };
 
