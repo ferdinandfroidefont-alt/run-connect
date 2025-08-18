@@ -49,33 +49,71 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
           avatar_url: string | null
           bio: string | null
           created_at: string
           display_name: string | null
           id: string
+          is_premium: boolean | null
           updated_at: string
           user_id: string | null
+          username: string | null
         }
         Insert: {
+          age?: number | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          is_premium?: boolean | null
           updated_at?: string
           user_id?: string | null
+          username?: string | null
         }
         Update: {
+          age?: number | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          is_premium?: boolean | null
           updated_at?: string
           user_id?: string | null
+          username?: string | null
         }
         Relationships: []
+      }
+      session_participants: {
+        Row: {
+          id: string
+          joined_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       session_requests: {
         Row: {
@@ -107,6 +145,93 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          activity_type: string
+          created_at: string
+          current_participants: number | null
+          description: string | null
+          id: string
+          intensity: string | null
+          is_private: boolean | null
+          location_lat: number
+          location_lng: number
+          location_name: string
+          max_participants: number | null
+          organizer_id: string
+          scheduled_at: string
+          session_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          current_participants?: number | null
+          description?: string | null
+          id?: string
+          intensity?: string | null
+          is_private?: boolean | null
+          location_lat: number
+          location_lng: number
+          location_name: string
+          max_participants?: number | null
+          organizer_id: string
+          scheduled_at: string
+          session_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          current_participants?: number | null
+          description?: string | null
+          id?: string
+          intensity?: string | null
+          is_private?: boolean | null
+          location_lat?: number
+          location_lng?: number
+          location_name?: string
+          max_participants?: number | null
+          organizer_id?: string
+          scheduled_at?: string
+          session_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_scores: {
+        Row: {
+          created_at: string
+          id: string
+          last_weekly_reset: string | null
+          total_points: number | null
+          updated_at: string
+          user_id: string
+          weekly_points: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_weekly_reset?: string | null
+          total_points?: number | null
+          updated_at?: string
+          user_id: string
+          weekly_points?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_weekly_reset?: string | null
+          total_points?: number | null
+          updated_at?: string
+          user_id?: string
+          weekly_points?: number | null
         }
         Relationships: []
       }
