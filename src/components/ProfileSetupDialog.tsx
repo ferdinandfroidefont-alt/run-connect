@@ -184,15 +184,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Finaliser votre profil</DialogTitle>
           <DialogDescription>
             Ajoutez quelques informations pour compléter votre inscription
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex-1 overflow-y-auto pr-2">
+          <form onSubmit={handleSubmit} className="space-y-4">
           {/* Photo de profil */}
           <div className="flex flex-col items-center space-y-2">
             <div className="relative">
@@ -310,7 +311,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
               Confirmer et créer mon compte
             </Button>
           </div>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
