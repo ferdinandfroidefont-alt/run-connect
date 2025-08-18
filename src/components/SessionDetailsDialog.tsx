@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -149,6 +149,41 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     }
   };
 
+  const handleDeleteSession = async () => {
+    if (!user || !isOrganizer) return;
+
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette séance ?")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Delete session participants first
+      const { error: participantsError } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', session.id);
+
+      if (participantsError) throw participantsError;
+
+      // Delete the session
+      const { error: sessionError } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', session.id);
+
+      if (sessionError) throw sessionError;
+
+      toast({ title: "Séance supprimée avec succès" });
+      onSessionUpdated();
+      onClose();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
@@ -248,13 +283,24 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           <Separator />
 
           {/* Action Buttons */}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             {isOrganizer ? (
-              <Badge variant="secondary" className="flex-1 justify-center py-2">
-                Votre séance
-              </Badge>
-            ) : isScheduled ? (
               <>
+                <Badge variant="secondary" className="justify-center py-2">
+                  Votre séance
+                </Badge>
+                <Button
+                  onClick={handleDeleteSession}
+                  disabled={loading}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {loading ? "Suppression..." : "Supprimer la séance"}
+                </Button>
+              </>
+            ) : isScheduled ? (
+              <div className="flex gap-2">
                 <Button
                   onClick={handleJoinSession}
                   disabled={loading || isFull}
@@ -270,9 +316,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 >
                   {loading ? "..." : "Ne plus participer"}
                 </Button>
-              </>
+              </div>
             ) : (
-              <Badge variant="destructive" className="flex-1 justify-center py-2">
+              <Badge variant="destructive" className="justify-center py-2">
                 Séance terminée
               </Badge>
             )}
