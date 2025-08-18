@@ -5,6 +5,7 @@ import { MapStyleSelector } from './MapStyleSelector';
 import { SessionFilters } from './SessionFilters';
 import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
+import { NotificationCenter } from './NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -521,6 +522,7 @@ export const InteractiveMap = () => {
               RunConnect
             </h1>
             <div className="flex items-center gap-2">
+              <NotificationCenter onSessionUpdated={loadSessions} />
               <Button
                 size="sm"
                 onClick={() => setIsCreateDialogOpen(true)}
