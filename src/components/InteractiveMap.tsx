@@ -472,26 +472,28 @@ export const InteractiveMap = () => {
       <div ref={mapContainer} className="absolute inset-0" />
       
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center justify-between p-4">
-          <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
-            RunConnect
-          </h1>
-          <div className="flex items-center gap-2">
-            <NotificationCenter onSessionUpdated={loadSessions} />
-            <Button
-              size="sm"
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Créer
-            </Button>
+      <div className="absolute top-0 left-0 right-0 z-10">
+        <div className="bg-card/95 backdrop-blur-sm border-b border-border">
+          <div className="flex items-center justify-between p-4">
+            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
+              RunConnect
+            </h1>
+            <div className="flex items-center gap-2">
+              <NotificationCenter onSessionUpdated={loadSessions} />
+              <Button
+                size="sm"
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Créer
+              </Button>
+            </div>
           </div>
         </div>
         
-        {/* Search Bar */}
-        <div className="px-4 pb-4">
+        {/* Search Bar and Date Filter - No background */}
+        <div className="px-4 pb-4 mt-20">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
