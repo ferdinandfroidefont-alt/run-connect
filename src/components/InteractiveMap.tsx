@@ -36,6 +36,7 @@ interface Session {
   profiles: {
     username: string;
     display_name: string;
+    avatar_url: string | null;
   };
 }
 
@@ -76,12 +77,14 @@ export const InteractiveMap = () => {
       const sessionsWithProfiles = await Promise.all(
         (data || []).map(async (session) => {
           const { data: profile } = await supabase
-            .rpc('get_public_profile', { profile_user_id: session.organizer_id })
+            .from('profiles')
+            .select('username, display_name, avatar_url')
+            .eq('user_id', session.organizer_id)
             .single();
           
           return {
             ...session,
-            profiles: profile || { username: 'Utilisateur', display_name: null }
+            profiles: profile || { username: 'Utilisateur', display_name: null, avatar_url: null }
           };
         })
       );
@@ -114,13 +117,17 @@ export const InteractiveMap = () => {
 
     // Create markers for filtered sessions
     filteredSessions.forEach(session => {
+      // Create custom marker with profile photo
+      const markerElement = createCustomMarker(session);
+      
       const marker = new google.maps.Marker({
         position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
         map: map.current,
         title: session.title,
         icon: {
-          url: getActivityIcon(session.activity_type),
-          scaledSize: new google.maps.Size(32, 32),
+          url: markerElement,
+          scaledSize: new google.maps.Size(40, 40),
+          anchor: new google.maps.Point(20, 40)
         }
       });
 
@@ -132,14 +139,66 @@ export const InteractiveMap = () => {
     });
   };
 
-  const getActivityIcon = (activityType: string) => {
-    const icons: Record<string, string> = {
-      'course': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiNlZjQ0NDQiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEzLjQ5IDEwLjQ4TDE2IDcuOTYgMTYuNzUgOUwyMiA3bC0yLjI1LTMuMjUgMi4yNS0zLjI1TDE3LjUgMGwtMi41IDUuNS0yLjUtNUwxMi41IDcuNSAxNS40IDkuNGwtMS45MSAxLjA4em0tNy43MiA0IDEuNDUgMi40NEw2IDEuOTFIMmwtMS43MyAzbC0xLjczLTNIMi4yOGwtMyA1LjE4IDMgNS4xOGgzLjQ0eiIvPjwvc3ZnPg==',
-      'velo': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiMzYjgyZjYiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTE1LjUgNS41YzEuMSAwIDItLjkgMi0ycy0uOS0yLTItMi0yIC45LTIgMiAuOSAyIDIgMm0tMy4wOCAzSDlsLS4zMS0xSDhsLTIgNUg0bDIuODYtNy4xNWMuMTQtLjM0LjQ1LS41OS44Mi0uNzJDNy45MiA1IDggNS4wOCA4LjEyIDUuMTJjLjE0LS4wNi4yOC0uMTIuNDQtLjEyaDMuOThjLjUyIDAgLjk4LjMzIDEuMTYuOGwuOTggMi4yOC4yLjQ1TDE3IDExSDlsMSAyaDguMDhMMjAuNSAxMWgtMC4yM2wtMi40NS01LjgzYy0uMjMtLjU1LS43My0uOTQtMS4zNC0uOTRIMTIuNDJabTEuNzMgN2gtMS4xNGwtMS40NSAzLjNjLS4zMS43LS45OSAxLjE1LTEuNzcgMS4xNUg5bC0xLTJoMi41OWwxLjUtMy4zWiIvPjwvc3ZnPg==',
-      'marche': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiMyMmM1NWUiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEzLjUgNS41YzEuMSAwIDItLjkgMi0ycy0uOS0yLTItMi0yIC45LTIgMiAuOSAyIDIgMm0yIDItSDEzbC0zIDQtMi0yVjhINU4xbDIgMlYzaDEuNUwxNS41IDcuNVptMCAwdjMuMjVsMS43NSAxLjc1TDE5IDEwVjhsLTMuNS0uNVoiLz48L3N2Zz4=',
-      'natation': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiMwZDk0ODgiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEgMjFjMCAuNS40IDEgMSAxaDIwYy42IDAgMS0uNSAxLTFzLS40LTEtMS0xSDJjLS42IDAtMSAuNS0xIDFtMTktNWMtMS4xIDAtMi4zLjQtMy4yIDFsLS44LS43Yy0uNS0uNS0xLjItLjgtMi0uOHMtMS41LjMtMiAuOGwtLjggLjdjLS45LS42LTItMS0zLjItMWgtLjVjLTEgMC0yIC40LTIuNyAxbC0uOC0uN2MtLjktLjYtMi0xLTMuMi0xSDJjLS42IDAtMSAuNS0xIDFzLjQgMSAxIDFoLjVjLjggMCAxLjUuMyAyIC44bC44LjdjLjkuNiAyIDEgMy4yIDFoLjVjMSAwIDItLjQgMi43LTFsLjguN2MuOS42IDIgMSAzLjIgMWguNWMxIDAgMi0uNCAyLjctMWwuOC43Yy45LjYgMiAxIDMuMiAxSDE5Yy42IDAgMS0uNSAxLTFzLS40LTEtMS0xem0wLTNjLTEuMSAwLTIuMy40LTMuMiAxbC0uOC0uN2MtLjUtLjUtMS4yLS44LTItLjhzLTEuNS4zLTIgLjhsLS44LjdjLS45LS42LTItMS0zLjItMWgtLjVjLTEgMC0yIC40LTIuNyAxbC0uOC0uN2MtLjktLjYtMi0xLTMuMi0xSDJjLS42IDAtMSAuNS0xIDFzLjQgMSAxIDFoLjVjLjggMCAxLjUuMyAyIC44bC44LjdjLjkuNiAyIDEgMy4yIDFoLjVjMSAwIDItLjQgMi43LTFsLjguN2MuOS42IDIgMSAzLjIgMWguNWMxIDAgMi0uNCAyLjctMWwuOC43Yy45LjYgMiAxIDMuMiAxSDE5Yy42IDAgMS0uNSAxLTFzLS40LTEtMS0xem0wLTNjLTEuMSAwLTIuMy40LTMuMiAxbC0uOC0uN2MtLjUtLjUtMS4yLS44LTItLjhzLTEuNS4zLTIgLjhsLS44LjdjLS45LS42LTItMS0zLjItMWgtLjVjLTEgMC0yIC40LTIuNyAxbC0uOC0uN2MtLjktLjYtMi0xLTMuMi0xSDJjLS42IDAtMSAuNS0xIDFzLjQgMSAxIDFoLjVjLjggMCAxLjUuMyAyIC44bC44LjdjLjkuNiAyIDEgMy4yIDFoLjVjMSAwIDItLjQgMi43LTFsLjguN2MuOS42IDIgMSAzLjIgMWguNWMxIDAgMi0uNCAyLjctMWwuOC43Yy45LjYgMiAxIDMuMiAxSDE5Yy42IDAgMS0uNSAxLTFzLS40LTEtMS0xem0tMTEtN2MxLjEgMCAyLS45IDItMnMtLjktMi0yLTItMiAuOS0yIDIgLjkgMiAyIDJtMCAyYy0uNSAwLTEgLjItMS4zLjVMOC4zIDRjLS4zLS40LS44LS42LTEuMy0uNmgtM2MtLjYgMC0xIC41LTEgMXMuNCAxIDEgMWgyLjRsMS45IDIuNkM3LjggNyA4IDYgOSA2aDJjMS4xIDAgMiAuOSAyIDJ2N2MwIDEuMS0uOSAyLTIgMkg5Yy0xLjEgMC0yLS45LTItMlY4aC0xYy0uNiAwLTEtLjUtMS0xcy40LTEgMS0xaDJ6Ii8+PC9zdmc+'
+  const createCustomMarker = (session: Session) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const size = 40;
+    
+    canvas.width = size;
+    canvas.height = size;
+    
+    if (!ctx) return getFallbackIcon(session.activity_type);
+
+    // Dessiner le cercle de fond
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2 - 2, 0, 2 * Math.PI);
+    ctx.fillStyle = getActivityColor(session.activity_type);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Si l'utilisateur a une photo de profil
+    if (session.profiles.avatar_url) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        // Créer un masque circulaire pour l'image
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2 - 4, 0, 2 * Math.PI);
+        ctx.clip();
+        ctx.drawImage(img, 2, 2, size - 4, size - 4);
+        ctx.restore();
+      };
+      img.src = session.profiles.avatar_url;
+    } else {
+      // Afficher les initiales si pas de photo
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const initials = (session.profiles.display_name || session.profiles.username || 'U')
+        .charAt(0).toUpperCase();
+      ctx.fillText(initials, size / 2, size / 2);
+    }
+
+    return canvas.toDataURL();
+  };
+
+  const getActivityColor = (activityType: string) => {
+    const colors: Record<string, string> = {
+      'course': '#ef4444',
+      'velo': '#3b82f6', 
+      'marche': '#22c55e',
+      'natation': '#0d9488'
     };
-    return icons[activityType] || icons['course'];
+    return colors[activityType] || colors['course'];
+  };
+
+  const getFallbackIcon = (activityType: string) => {
+    // Fallback simple SVG data URL
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiNlZjQ0NDQiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNlZjQ0NDQiLz48L3N2Zz4=';
   };
 
   // Real-time updates for sessions
