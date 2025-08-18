@@ -5,13 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { FcGoogle } from "react-icons/fc";
-import { Loader2, Mail, Lock } from "lucide-react";
+import { Loader2, Mail, Lock, KeyRound } from "lucide-react";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [authStep, setAuthStep] = useState<'email' | 'otp' | 'password'>('email');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const { toast } = useToast();
 
   const handleGoogleAuth = async () => {
@@ -36,12 +38,13 @@ const Auth = () => {
     }
   };
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
+      if (authMode === 'signup') {
+        // For signup, use password-based registration
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -56,14 +59,68 @@ const Auth = () => {
           description: "Vérifiez votre email pour confirmer votre compte.",
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        // For signin, send OTP
+        const { error } = await supabase.auth.signInWithOtp({
           email,
-          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
         });
         if (error) throw error;
         
-        window.location.href = '/';
+        setAuthStep('otp');
+        toast({
+          title: "Code envoyé !",
+          description: "Vérifiez votre email pour le code de connexion.",
+        });
       }
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+      if (error) throw error;
+      
+      window.location.href = '/';
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordSignin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      
+      window.location.href = '/';
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -81,7 +138,12 @@ const Auth = () => {
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">RunConnect</CardTitle>
           <CardDescription>
-            {isSignUp ? "Créez votre compte pour rejoindre la communauté" : "Connectez-vous à votre compte"}
+            {authStep === 'otp' 
+              ? "Entrez le code reçu par email"
+              : authMode === 'signup' 
+                ? "Créez votre compte pour rejoindre la communauté" 
+                : "Connectez-vous à votre compte"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -92,7 +154,7 @@ const Auth = () => {
             className="w-full"
           >
             <FcGoogle className="mr-2 h-4 w-4" />
-            {isSignUp ? "S'inscrire" : "Se connecter"} avec Google
+            {authMode === 'signup' ? "S'inscrire" : "Se connecter"} avec Google
           </Button>
           
           <div className="relative">
@@ -106,52 +168,177 @@ const Auth = () => {
             </div>
           </div>
 
-          <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div className="space-y-2">
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="email"
-                  placeholder="votre.email@exemple.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+          {authStep === 'otp' ? (
+            // OTP Verification Form
+            <form onSubmit={handleOtpSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Code à 6 chiffres"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="pl-10 text-center text-lg tracking-widest"
+                    maxLength={6}
+                    required
+                  />
+                </div>
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="password"
-                  placeholder="Votre mot de passe"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSignUp ? "Créer mon compte" : "Se connecter"}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || otp.length !== 6}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Vérifier le code
+              </Button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthStep('email');
+                    setOtp('');
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  ← Retour
+                </button>
+              </div>
+            </form>
+          ) : authMode === 'signup' ? (
+            // Signup Form (email + password)
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="votre.email@exemple.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    placeholder="Votre mot de passe"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Créer mon compte
+              </Button>
+            </form>
+          ) : (
+            // Signin Options
+            <div className="space-y-4">
+              {/* OTP Signin */}
+              <form onSubmit={handleEmailSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="votre.email@exemple.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Recevoir un code par email
+                </Button>
+              </form>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Ou avec mot de passe
+                  </span>
+                </div>
+              </div>
+
+              {/* Password Signin */}
+              <form onSubmit={handlePasswordSignin} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="votre.email@exemple.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="Votre mot de passe"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Se connecter avec mot de passe
+                </Button>
+              </form>
+            </div>
+          )}
 
           <div className="text-center">
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
               className="text-sm text-primary hover:underline"
             >
-              {isSignUp ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
+              {authMode === 'signup' ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
             </button>
           </div>
         </CardContent>
