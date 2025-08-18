@@ -52,6 +52,12 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				'map-control': {
+					DEFAULT: 'hsl(var(--map-control-bg))',
+					border: 'hsl(var(--map-control-border))',
+					hover: 'hsl(var(--map-control-hover))',
+					active: 'hsl(var(--map-control-active))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +73,17 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-map': 'var(--gradient-map)',
+				'gradient-control': 'var(--gradient-control)'
+			},
+			boxShadow: {
+				'map-control': 'var(--shadow-map-control)',
+				'map-panel': 'var(--shadow-map-panel)'
+			},
+			transitionProperty: {
+				'map': 'var(--transition-map)'
 			},
 			keyframes: {
 				'accordion-down': {
