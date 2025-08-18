@@ -24,7 +24,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("GOOGLE_MAPS_API_KEY n'est pas configuré");
     }
 
-    const { address, lat, lng, type }: GeocodeRequest = await req.json();
+    const body = await req.json();
+    const { address, lat, lng, type }: GeocodeRequest = body || {};
     
     // Si on demande juste la clé API
     if (type === 'get-key') {
