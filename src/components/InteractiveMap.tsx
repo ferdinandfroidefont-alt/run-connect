@@ -5,11 +5,12 @@ import { MapStyleSelector } from './MapStyleSelector';
 import { SessionFilters } from './SessionFilters';
 import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
+import { NotificationCenter } from './NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bell, Plus, Search, MapPin } from 'lucide-react';
+import { Plus, Search, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Declare global google maps types
@@ -462,7 +463,7 @@ export const InteractiveMap = () => {
             RunConnect
           </h1>
           <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-foreground" />
+            <NotificationCenter onSessionUpdated={loadSessions} />
             <Button
               size="sm"
               onClick={() => setIsCreateDialogOpen(true)}

@@ -67,46 +67,61 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     return colors[intensity] || 'bg-gray-100 text-gray-800';
   };
 
-  const handleJoinSession = async () => {
-    if (!user || !isScheduled || isFull) return;
+  const handleRequestJoin = async () => {
+    if (!user || !isScheduled) return;
 
     setLoading(true);
     try {
-      // Check if already participating
-      const { data: existingParticipation } = await supabase
-        .from('session_participants')
+      // Check if already requested
+      const { data: existingRequest } = await supabase
+        .from('session_requests')
         .select('id')
         .eq('session_id', session.id)
         .eq('user_id', user.id)
         .single();
 
-      if (existingParticipation) {
-        toast({ title: "Vous participez déjà à cette séance" });
+      if (existingRequest) {
+        toast({ title: "Vous avez déjà fait une demande pour cette séance" });
         return;
       }
 
-      // Join session
-      const { error: joinError } = await supabase
-        .from('session_participants')
+      // Get user profile for request
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, username, avatar_url')
+        .eq('user_id', user.id)
+        .single();
+
+      // Create session request
+      const { error: requestError } = await supabase
+        .from('session_requests')
         .insert([{
           session_id: session.id,
-          user_id: user.id
+          user_id: user.id,
+          requester_name: profile?.display_name || profile?.username || 'Utilisateur',
+          requester_avatar: profile?.avatar_url
         }]);
 
-      if (joinError) throw joinError;
+      if (requestError) throw requestError;
 
-      // Update session participant count
-      const { error: updateError } = await supabase
-        .from('sessions')
-        .update({
-          current_participants: session.current_participants + 1
-        })
-        .eq('id', session.id);
+      // Create notification for session organizer
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: session.organizer_id,
+          title: 'Nouvelle demande de participation',
+          message: `${profile?.display_name || profile?.username || 'Quelqu\'un'} souhaite rejoindre votre séance "${session.title}"`,
+          type: 'session_request',
+          data: {
+            session_id: session.id,
+            request_user_id: user.id,
+            session_title: session.title
+          }
+        }]);
 
-      if (updateError) throw updateError;
+      if (notificationError) throw notificationError;
 
-      toast({ title: "Vous avez rejoint la séance !" });
-      onSessionUpdated();
+      toast({ title: "Demande envoyée !", description: "Le créateur va recevoir votre demande" });
       onClose();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -300,23 +315,13 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 </Button>
               </>
             ) : isScheduled ? (
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleJoinSession}
-                  disabled={loading || isFull}
-                  className="flex-1"
-                >
-                  {loading ? "..." : isFull ? "Complet" : "Participer"}
-                </Button>
-                <Button
-                  onClick={handleLeaveSession}
-                  disabled={loading}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {loading ? "..." : "Ne plus participer"}
-                </Button>
-              </div>
+              <Button
+                onClick={handleRequestJoin}
+                disabled={loading || isFull}
+                className="w-full"
+              >
+                {loading ? "Envoi..." : isFull ? "Complet" : "Demander à rejoindre"}
+              </Button>
             ) : (
               <Badge variant="destructive" className="justify-center py-2">
                 Séance terminée
