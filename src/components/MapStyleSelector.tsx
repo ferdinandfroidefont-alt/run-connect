@@ -8,28 +8,28 @@ interface MapStyleSelectorProps {
 
 const mapStyles = [
   {
-    id: 'mapbox://styles/mapbox/light-v11',
-    name: 'Clair',
+    id: 'roadmap',
+    name: 'Route',
     icon: Map,
-    preview: 'bg-gradient-to-br from-blue-50 to-gray-100'
+    preview: 'bg-gradient-to-br from-gray-50 to-gray-200'
   },
   {
-    id: 'mapbox://styles/mapbox/dark-v11',
-    name: 'Sombre',
-    icon: Map,
-    preview: 'bg-gradient-to-br from-gray-800 to-gray-900'
-  },
-  {
-    id: 'mapbox://styles/mapbox/satellite-v9',
+    id: 'satellite',
     name: 'Satellite',
     icon: Satellite,
     preview: 'bg-gradient-to-br from-green-600 to-blue-600'
   },
   {
-    id: 'mapbox://styles/mapbox/outdoors-v12',
-    name: 'Terrain',
+    id: 'hybrid',
+    name: 'Hybride',
     icon: Mountain,
     preview: 'bg-gradient-to-br from-green-500 to-yellow-600'
+  },
+  {
+    id: 'terrain',
+    name: 'Terrain',
+    icon: Mountain,
+    preview: 'bg-gradient-to-br from-amber-600 to-green-700'
   }
 ];
 

@@ -1,109 +1,128 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { Loader } from '@googlemaps/js-api-loader';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { toast } from 'sonner';
 
+// Declare global google maps types
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
 export const InteractiveMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
+  const map = useRef<google.maps.Map | null>(null);
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [isTokenDialogOpen, setIsTokenDialogOpen] = useState(true);
-  const [currentStyle, setCurrentStyle] = useState('mapbox://styles/mapbox/light-v11');
+  const [currentStyle, setCurrentStyle] = useState('roadmap');
 
   useEffect(() => {
-    if (!mapContainer.current || !mapboxToken) return;
+    if (!mapContainer.current || !googleMapsApiKey) return;
 
-    // Initialize map
-    mapboxgl.accessToken = mapboxToken;
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: currentStyle,
-      projection: { name: 'globe' },
-      zoom: 2,
-      center: [2.3522, 48.8566], // Paris coordinates
-      pitch: 0,
-      bearing: 0,
+    const loader = new Loader({
+      apiKey: googleMapsApiKey,
+      version: 'weekly',
+      libraries: ['geometry', 'places']
     });
 
-    // Add navigation controls
-    map.current.addControl(
-      new mapboxgl.NavigationControl({
-        visualizePitch: true,
-      }),
-      'top-right'
-    );
+    loader.load().then(() => {
+      if (!mapContainer.current) return;
 
-    // Add scale control
-    map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+      // Initialize map
+      map.current = new google.maps.Map(mapContainer.current, {
+        zoom: 8,
+        center: { lat: 48.8566, lng: 2.3522 }, // Paris coordinates
+        mapTypeId: currentStyle as google.maps.MapTypeId,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: false,
+        gestureHandling: 'greedy',
+        styles: currentStyle === 'custom' ? [
+          {
+            featureType: 'all',
+            elementType: 'geometry.fill',
+            stylers: [{ color: '#f5f5f5' }]
+          },
+          {
+            featureType: 'water',
+            elementType: 'geometry',
+            stylers: [{ color: '#c9c9c9' }]
+          }
+        ] : undefined
+      });
 
-    // Add geolocate control
-    map.current.addControl(
-      new mapboxgl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true
-        },
-        trackUserLocation: true,
-        showUserHeading: true
-      }),
-      'top-right'
-    );
-
-    // Add atmosphere and fog effects for globe
-    map.current.on('style.load', () => {
-      if (map.current?.getProjection().name === 'globe') {
-        map.current.setFog({
-          color: 'rgb(186, 210, 235)',
-          'high-color': 'rgb(36, 92, 223)',
-          'horizon-blend': 0.02,
-          'space-color': 'rgb(11, 11, 25)',
-          'star-intensity': 0.6,
-        });
-      }
+      toast.success("Carte Google Maps prête !");
+    }).catch((error) => {
+      console.error('Erreur lors du chargement de Google Maps:', error);
+      toast.error("Erreur lors du chargement de la carte");
     });
-
-    toast.success("Carte interactive prête !");
 
     return () => {
-      map.current?.remove();
+      // Google Maps cleanup is handled automatically
     };
-  }, [mapboxToken, currentStyle]);
+  }, [googleMapsApiKey, currentStyle]);
 
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
     if (map.current) {
-      map.current.setStyle(style);
+      if (style === 'custom') {
+        map.current.setOptions({
+          styles: [
+            {
+              featureType: 'all',
+              elementType: 'geometry.fill',
+              stylers: [{ color: '#f5f5f5' }]
+            },
+            {
+              featureType: 'water',
+              elementType: 'geometry',
+              stylers: [{ color: '#c9c9c9' }]
+            }
+          ]
+        });
+      } else {
+        map.current.setMapTypeId(style as google.maps.MapTypeId);
+        map.current.setOptions({ styles: undefined });
+      }
     }
   };
 
   const handleZoomIn = () => {
-    map.current?.zoomIn();
+    if (map.current) {
+      const currentZoom = map.current.getZoom() || 8;
+      map.current.setZoom(currentZoom + 1);
+    }
   };
 
   const handleZoomOut = () => {
-    map.current?.zoomOut();
+    if (map.current) {
+      const currentZoom = map.current.getZoom() || 8;
+      map.current.setZoom(currentZoom - 1);
+    }
   };
 
   const handleResetView = () => {
-    map.current?.flyTo({
-      center: [2.3522, 48.8566],
-      zoom: 2,
-      pitch: 0,
-      bearing: 0,
-      duration: 2000,
-    });
+    if (map.current) {
+      map.current.panTo({ lat: 48.8566, lng: 2.3522 });
+      map.current.setZoom(8);
+    }
   };
 
   const handleToggle3D = () => {
     if (!map.current) return;
     
-    const currentPitch = map.current.getPitch();
-    map.current.flyTo({
-      pitch: currentPitch > 0 ? 0 : 60,
-      duration: 1000,
-    });
+    // Toggle between map and satellite view for "3D" effect
+    const currentType = map.current.getMapTypeId();
+    if (currentType === 'satellite') {
+      map.current.setMapTypeId('roadmap');
+      toast.info("Vue 2D activée");
+    } else {
+      map.current.setMapTypeId('satellite');
+      toast.info("Vue satellite activée");
+    }
   };
 
   if (isTokenDialogOpen) {
@@ -112,26 +131,26 @@ export const InteractiveMap = () => {
         <div className="bg-card rounded-lg shadow-map-panel p-8 max-w-md w-full border border-border">
           <h2 className="text-2xl font-bold mb-4 text-foreground">Configuration de la carte</h2>
           <p className="text-muted-foreground mb-6">
-            Pour utiliser cette carte interactive, vous devez fournir votre token Mapbox public.
-            Visitez <a href="https://mapbox.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">mapbox.com</a> pour obtenir votre token.
+            Pour utiliser cette carte interactive, vous devez fournir votre clé API Google Maps.
+            Visitez <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a> pour obtenir votre clé API.
           </p>
           <div className="space-y-4">
             <input
               type="text"
-              placeholder="Votre token Mapbox public"
-              value={mapboxToken}
-              onChange={(e) => setMapboxToken(e.target.value)}
+              placeholder="Votre clé API Google Maps"
+              value={googleMapsApiKey}
+              onChange={(e) => setGoogleMapsApiKey(e.target.value)}
               className="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
             />
             <button
               onClick={() => {
-                if (mapboxToken.trim()) {
+                if (googleMapsApiKey.trim()) {
                   setIsTokenDialogOpen(false);
                 } else {
-                  toast.error("Veuillez entrer un token valide");
+                  toast.error("Veuillez entrer une clé API valide");
                 }
               }}
-              disabled={!mapboxToken.trim()}
+              disabled={!googleMapsApiKey.trim()}
               className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Commencer
