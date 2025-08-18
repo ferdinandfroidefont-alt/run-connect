@@ -349,6 +349,17 @@ export type Database = {
         Args: { profile_user_id: string }
         Returns: number
       }
+      get_friend_suggestions: {
+        Args: { current_user_id: string; suggestion_limit?: number }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          mutual_friend_names: string[]
+          mutual_friends_count: number
+          user_id: string
+          username: string
+        }[]
+      }
       get_public_profile: {
         Args: { profile_user_id: string }
         Returns: {

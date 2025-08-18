@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { UserSearchDialog } from "@/components/UserSearchDialog";
+import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { 
   MessageCircle, 
   Users, 
@@ -536,16 +537,14 @@ const Messages = () => {
           </CardContent>
         </Card>
 
-        {/* Quick suggestions */}
+        {/* Friend suggestions */}
         <Card>
           <CardHeader className="flex flex-row items-center space-y-0 pb-3">
             <Users className="h-5 w-5 text-primary mr-2" />
-            <CardTitle className="text-lg">Suggestions</CardTitle>
+            <CardTitle className="text-lg">Suggestions d'amis</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground text-sm">
-              Découvrez des sportifs près de chez vous et créez des liens dans la communauté RunConnect !
-            </p>
+            <FriendSuggestions compact />
           </CardContent>
         </Card>
 
