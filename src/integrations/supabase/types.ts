@@ -333,6 +333,10 @@ export type Database = {
         Args: { follow_id: string }
         Returns: boolean
       }
+      are_users_friends: {
+        Args: { user1_id: string; user2_id: string }
+        Returns: boolean
+      }
       get_follower_count: {
         Args: { profile_user_id: string }
         Returns: number

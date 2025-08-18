@@ -35,6 +35,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followStatus, setFollowStatus] = useState<string | null>(null);
+  const [areFriends, setAreFriends] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Search for users and load their stats
@@ -78,11 +79,12 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
     }
   };
 
-  // Check follow status (pending, accepted, or none)
+  // Check follow status and friendship
   const checkFollowStatus = async (userId: string) => {
     if (!user) return;
 
     try {
+      // Check follow status
       const { data, error } = await supabase
         .from('user_follows')
         .select('id, status')
@@ -97,9 +99,18 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
         setFollowStatus(null);
         setIsFollowing(false);
       }
+
+      // Check if they are friends (mutual following)
+      const { data: friendsData } = await supabase.rpc('are_users_friends', {
+        user1_id: user.id,
+        user2_id: userId
+      });
+      
+      setAreFriends(friendsData || false);
     } catch (error: any) {
       setFollowStatus(null);
       setIsFollowing(false);
+      setAreFriends(false);
     }
   };
 
@@ -146,6 +157,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
         if (error) throw error;
         setFollowStatus('pending');
         setIsFollowing(false);
+        setAreFriends(false); // Reset friends status
         toast({ title: "Demande envoyée", description: "Votre demande de suivi a été envoyée" });
       }
     } catch (error: any) {
@@ -270,7 +282,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
                 )}
               </Button>
               
-              {(!selectedProfile.is_private || isFollowing) && (
+              {areFriends && (
                 <Button
                   onClick={() => {
                     onStartConversation(selectedProfile.user_id);
