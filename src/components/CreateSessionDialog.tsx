@@ -53,23 +53,42 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map }: 
     { value: 'intense', label: 'Intense' },
   ];
 
-  const handleSelectLocation = () => {
+  const handleSelectLocation = async () => {
     if (!map) return;
 
     const center = map.getCenter();
     if (center) {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ location: center }, (results, status) => {
-        if (status === 'OK' && results?.[0]) {
+      try {
+        setLoading(true);
+        
+        // Utilise notre proxy Google Maps au lieu du geocodeur direct
+        const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+          body: {
+            lat: center.lat(),
+            lng: center.lng(),
+            type: 'reverse'
+          }
+        });
+
+        if (error) throw error;
+
+        if (data?.status === 'OK' && data?.results?.[0]) {
           setSelectedLocation({
             lat: center.lat(),
             lng: center.lng(),
-            name: results[0].formatted_address
+            name: data.results[0].formatted_address
           });
-          setFormData(prev => ({ ...prev, location_name: results[0].formatted_address }));
+          setFormData(prev => ({ ...prev, location_name: data.results[0].formatted_address }));
           toast({ title: "Lieu sélectionné !" });
+        } else {
+          throw new Error('Aucun résultat trouvé');
         }
-      });
+      } catch (error) {
+        console.error('Erreur géocodage:', error);
+        toast({ title: "Erreur", description: "Erreur lors de la géolocalisation", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

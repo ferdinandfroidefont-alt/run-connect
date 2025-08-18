@@ -7,9 +7,8 @@ import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Bell, Plus, Search, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,8 +50,7 @@ export const InteractiveMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
-  const [isTokenDialogOpen, setIsTokenDialogOpen] = useState(true);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState('roadmap');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -175,69 +173,73 @@ export const InteractiveMap = () => {
   }, [sessions, filters]);
 
   useEffect(() => {
-    if (!mapContainer.current || !googleMapsApiKey) return;
+    if (!mapContainer.current || isMapLoaded) return;
 
-    const loader = new Loader({
-      apiKey: googleMapsApiKey,
-      version: 'weekly',
-      libraries: ['geometry', 'places']
-    });
+    const initializeMap = async () => {
+      try {
+        const loader = new Loader({
+          apiKey: 'DUMMY_KEY', // On utilise notre proxy, pas besoin de vraie clé ici
+          version: 'weekly',
+          libraries: ['geometry', 'places']
+        });
 
-    loader.load().then(() => {
-      if (!mapContainer.current) return;
+        await loader.load();
+        
+        if (!mapContainer.current) return;
 
-      // Initialize map
-      map.current = new google.maps.Map(mapContainer.current, {
-        zoom: 12,
-        center: { lat: 48.8566, lng: 2.3522 }, // Paris coordinates
-        mapTypeId: currentStyle as google.maps.MapTypeId,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        zoomControl: false,
-        gestureHandling: 'greedy',
-        styles: currentStyle === 'custom' ? [
-          {
-            featureType: 'all',
-            elementType: 'geometry.fill',
-            stylers: [{ color: '#f5f5f5' }]
-          },
-          {
-            featureType: 'water',
-            elementType: 'geometry',
-            stylers: [{ color: '#c9c9c9' }]
-          }
-        ] : undefined
-      });
+        // Initialize map
+        map.current = new google.maps.Map(mapContainer.current, {
+          zoom: 12,
+          center: { lat: 48.8566, lng: 2.3522 }, // Paris coordinates
+          mapTypeId: currentStyle as google.maps.MapTypeId,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          zoomControl: false,
+          gestureHandling: 'greedy',
+          styles: currentStyle === 'custom' ? [
+            {
+              featureType: 'all',
+              elementType: 'geometry.fill',
+              stylers: [{ color: '#f5f5f5' }]
+            },
+            {
+              featureType: 'water',
+              elementType: 'geometry',
+              stylers: [{ color: '#c9c9c9' }]
+            }
+          ] : undefined
+        });
 
-      // Try to get user's location
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            map.current?.setCenter(pos);
-            map.current?.setZoom(14);
-            toast.success("Position détectée !");
-          },
-          () => {
-            toast.info("Localisation non disponible, centré sur Paris");
-          }
-        );
+        setIsMapLoaded(true);
+
+        // Try to get user's location
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              };
+              map.current?.setCenter(pos);
+              map.current?.setZoom(14);
+              toast.success("Position détectée !");
+            },
+            () => {
+              toast.info("Localisation non disponible, centré sur Paris");
+            }
+          );
+        }
+
+        toast.success("Carte Google Maps prête !");
+      } catch (error) {
+        console.error('Erreur lors du chargement de Google Maps:', error);
+        toast.error("Erreur lors du chargement de la carte");
       }
-
-      toast.success("Carte Google Maps prête !");
-    }).catch((error) => {
-      console.error('Erreur lors du chargement de Google Maps:', error);
-      toast.error("Erreur lors du chargement de la carte");
-    });
-
-    return () => {
-      // Google Maps cleanup is handled automatically
     };
-  }, [googleMapsApiKey, currentStyle]);
+
+    initializeMap();
+  }, [currentStyle]);
 
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
@@ -318,41 +320,6 @@ export const InteractiveMap = () => {
     }
   };
 
-  if (isTokenDialogOpen) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="bg-card rounded-lg shadow-map-panel p-8 max-w-md w-full border border-border">
-          <h2 className="text-2xl font-bold mb-4 text-foreground">Configuration de la carte</h2>
-          <p className="text-muted-foreground mb-6">
-            Pour utiliser cette carte interactive, vous devez fournir votre clé API Google Maps.
-            Visitez <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a> pour obtenir votre clé API.
-          </p>
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Votre clé API Google Maps"
-              value={googleMapsApiKey}
-              onChange={(e) => setGoogleMapsApiKey(e.target.value)}
-              className="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-            <button
-              onClick={() => {
-                if (googleMapsApiKey.trim()) {
-                  setIsTokenDialogOpen(false);
-                } else {
-                  toast.error("Veuillez entrer une clé API valide");
-                }
-              }}
-              disabled={!googleMapsApiKey.trim()}
-              className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Commencer
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative w-full h-screen bg-background">
