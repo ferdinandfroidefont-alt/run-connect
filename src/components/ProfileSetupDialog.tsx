@@ -23,6 +23,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
   const [age, setAge] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
+  const [password, setPassword] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const { toast } = useToast();
@@ -75,18 +76,47 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
       });
       return;
     }
+
+    if (!avatarFile) {
+      toast({
+        title: "Erreur",
+        description: "La photo de profil est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsLoading(true);
 
     try {
-      let avatarUrl = "";
+      // Upload avatar (obligatoire maintenant)
+      const uploadedUrl = await uploadAvatar(avatarFile);
+      if (!uploadedUrl) {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'uploader la photo de profil.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
 
-      // Upload avatar si un fichier est sélectionné
-      if (avatarFile) {
-        const uploadedUrl = await uploadAvatar(avatarFile);
-        if (uploadedUrl) {
-          avatarUrl = uploadedUrl;
-        }
+      // Mettre à jour le mot de passe de l'utilisateur
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (passwordError) {
+        throw passwordError;
       }
 
       // Vérifier l'unicité du nom d'utilisateur
@@ -117,7 +147,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
           age: age ? parseInt(age) : null,
           phone: phone.trim() || null,
           bio: bio.trim() || null,
-          avatar_url: avatarUrl || null,
+          avatar_url: uploadedUrl,
         });
 
       if (error) {
@@ -188,7 +218,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
               onChange={handleAvatarChange}
               className="hidden"
             />
-            <p className="text-xs text-muted-foreground">Cliquez sur l'icône pour ajouter une photo</p>
+            <p className="text-xs text-muted-foreground text-red-500">Photo de profil obligatoire *</p>
           </div>
 
           {/* Nom d'utilisateur */}
@@ -214,6 +244,20 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Votre nom complet"
+            />
+          </div>
+
+          {/* Mot de passe */}
+          <div className="space-y-2">
+            <Label htmlFor="password">Mot de passe *</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Minimum 6 caractères"
+              required
+              minLength={6}
             />
           </div>
 
