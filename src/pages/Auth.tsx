@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound } from "lucide-react";
 
@@ -14,7 +15,18 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [newUserId, setNewUserId] = useState<string>("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Vérifier si l'utilisateur est déjà connecté
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        window.location.href = '/';
+      }
+    });
+  }, []);
 
   const handleGoogleAuth = async () => {
     try {
@@ -59,11 +71,12 @@ const Auth = () => {
           description: "Vérifiez votre email pour confirmer votre compte.",
         });
       } else {
-        // For signin, send OTP
+        // For signin, send OTP avec shouldCreateUser: false pour forcer le code
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
+            shouldCreateUser: false
           },
         });
         if (error) throw error;
@@ -71,7 +84,7 @@ const Auth = () => {
         setAuthStep('otp');
         toast({
           title: "Code envoyé !",
-          description: "Vérifiez votre email pour le code de connexion.",
+          description: "Vérifiez votre email pour le code de connexion à 6 chiffres.",
         });
       }
     } catch (error: any) {
@@ -90,14 +103,31 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
         type: 'email',
       });
       if (error) throw error;
       
-      window.location.href = '/';
+      // Vérifier si c'est un nouvel utilisateur
+      if (data.user) {
+        // Vérifier si le profil existe déjà
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .single();
+        
+        if (!existingProfile) {
+          // Nouveau utilisateur - afficher le setup de profil
+          setNewUserId(data.user.id);
+          setShowProfileSetup(true);
+        } else {
+          // Utilisateur existant - rediriger
+          window.location.href = '/';
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -343,6 +373,13 @@ const Auth = () => {
           </div>
         </CardContent>
       </Card>
+      
+      <ProfileSetupDialog
+        open={showProfileSetup}
+        onOpenChange={setShowProfileSetup}
+        userId={newUserId}
+        email={email}
+      />
     </div>
   );
 };
