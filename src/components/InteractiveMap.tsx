@@ -70,6 +70,8 @@ export const InteractiveMap = () => {
     search_query: '',
     selected_date: new Date()
   });
+  const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Load sessions from database
   const loadSessions = async () => {
@@ -241,6 +243,31 @@ export const InteractiveMap = () => {
     if (!user) return;
 
     loadSessions();
+
+    // Initialize search autocomplete when map is loaded
+    if (isMapLoaded && searchInputRef.current && !searchAutocomplete) {
+      const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
+        types: ['geocode'],
+        componentRestrictions: { country: 'fr' }
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.geometry && place.geometry.location && map.current) {
+          // Center map on selected location
+          map.current.setCenter(place.geometry.location);
+          map.current.setZoom(15);
+          
+          // Update search query
+          setFilters(prev => ({ 
+            ...prev, 
+            search_query: place.formatted_address || place.name || ''
+          }));
+        }
+      });
+
+      setSearchAutocomplete(autocomplete);
+    }
 
     const channel = supabase
       .channel('schema-db-changes')
@@ -497,6 +524,7 @@ export const InteractiveMap = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder="Rechercher un lieu ou une séance..."
               value={filters.search_query}
               onChange={(e) => setFilters(prev => ({ ...prev, search_query: e.target.value }))}
