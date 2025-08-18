@@ -97,7 +97,7 @@ export const InteractiveMap = () => {
   };
 
   // Create map markers for sessions
-  const createMarkers = () => {
+  const createMarkers = async () => {
     if (!map.current || !window.google) return;
 
     // Clear existing markers
@@ -116,74 +116,93 @@ export const InteractiveMap = () => {
     });
 
     // Create markers for filtered sessions
-    filteredSessions.forEach(session => {
-      // Create custom marker with profile photo
-      const markerElement = createCustomMarker(session);
-      
-      const marker = new google.maps.Marker({
-        position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
-        map: map.current,
-        title: session.title,
-        icon: {
-          url: markerElement,
-          scaledSize: new google.maps.Size(40, 40),
-          anchor: new google.maps.Point(20, 40)
-        }
-      });
+    for (const session of filteredSessions) {
+      try {
+        const markerIcon = await createCustomMarker(session);
+        
+        const marker = new google.maps.Marker({
+          position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
+          map: map.current,
+          title: session.title,
+          icon: {
+            url: markerIcon,
+            scaledSize: new google.maps.Size(50, 50),
+            anchor: new google.maps.Point(25, 50)
+          }
+        });
 
-      marker.addListener('click', () => {
-        setSelectedSession(session);
-      });
+        marker.addListener('click', () => {
+          setSelectedSession(session);
+        });
 
-      markers.current.push(marker);
-    });
+        markers.current.push(marker);
+      } catch (error) {
+        console.error('Error creating marker for session:', session.id, error);
+      }
+    }
   };
 
-  const createCustomMarker = (session: Session) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const size = 40;
-    
-    canvas.width = size;
-    canvas.height = size;
-    
-    if (!ctx) return getFallbackIcon(session.activity_type);
+  const createCustomMarker = (session: Session): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const size = 50;
+      
+      canvas.width = size;
+      canvas.height = size;
+      
+      if (!ctx) {
+        resolve(getFallbackIcon(session.activity_type));
+        return;
+      }
 
-    // Dessiner le cercle de fond
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2 - 2, 0, 2 * Math.PI);
-    ctx.fillStyle = getActivityColor(session.activity_type);
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+      const drawMarker = (profileImage?: HTMLImageElement) => {
+        // Clear canvas
+        ctx.clearRect(0, 0, size, size);
 
-    // Si l'utilisateur a une photo de profil
-    if (session.profiles.avatar_url) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        // Créer un masque circulaire pour l'image
-        ctx.save();
+        // Dessiner le cercle de fond
         ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2 - 4, 0, 2 * Math.PI);
-        ctx.clip();
-        ctx.drawImage(img, 2, 2, size - 4, size - 4);
-        ctx.restore();
-      };
-      img.src = session.profiles.avatar_url;
-    } else {
-      // Afficher les initiales si pas de photo
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const initials = (session.profiles.display_name || session.profiles.username || 'U')
-        .charAt(0).toUpperCase();
-      ctx.fillText(initials, size / 2, size / 2);
-    }
+        ctx.arc(size / 2, size / 2, size / 2 - 3, 0, 2 * Math.PI);
+        ctx.fillStyle = getActivityColor(session.activity_type);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.stroke();
 
-    return canvas.toDataURL();
+        if (profileImage) {
+          // Créer un masque circulaire pour l'image de profil
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(size / 2, size / 2, size / 2 - 6, 0, 2 * Math.PI);
+          ctx.clip();
+          ctx.drawImage(profileImage, 6, 6, size - 12, size - 12);
+          ctx.restore();
+        } else {
+          // Afficher les initiales si pas de photo
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 16px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const initials = (session.profiles.display_name || session.profiles.username || 'U')
+            .charAt(0).toUpperCase();
+          ctx.fillText(initials, size / 2, size / 2);
+        }
+
+        resolve(canvas.toDataURL());
+      };
+
+      // Si l'utilisateur a une photo de profil, la charger
+      if (session.profiles.avatar_url) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => drawMarker(img);
+        img.onerror = () => drawMarker(); // Fallback aux initiales si l'image ne charge pas
+        img.src = session.profiles.avatar_url;
+      } else {
+        // Pas de photo, utiliser les initiales
+        drawMarker();
+      }
+    });
   };
 
   const getActivityColor = (activityType: string) => {
