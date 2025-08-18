@@ -175,8 +175,15 @@ export const InteractiveMap = () => {
 
     const initializeMap = async () => {
       try {
+        // Récupérer la clé API Google Maps depuis Supabase
+        const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
+          body: { type: 'get-key' }
+        });
+        
+        const googleMapsApiKey = apiKeyData?.apiKey || 'FALLBACK_KEY';
+        
         const loader = new Loader({
-          apiKey: 'DUMMY_KEY', // On utilise notre proxy, pas besoin de vraie clé ici
+          apiKey: googleMapsApiKey,
           version: 'weekly',
           libraries: ['geometry', 'places']
         });

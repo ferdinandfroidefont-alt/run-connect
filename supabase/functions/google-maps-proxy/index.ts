@@ -9,7 +9,7 @@ interface GeocodeRequest {
   address?: string;
   lat?: number;
   lng?: number;
-  type: 'geocode' | 'reverse';
+  type: 'geocode' | 'reverse' | 'get-key';
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -25,6 +25,18 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { address, lat, lng, type }: GeocodeRequest = await req.json();
+    
+    // Si on demande juste la clé API
+    if (type === 'get-key') {
+      return new Response(JSON.stringify({ apiKey }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+    }
+
     let url = "";
 
     if (type === 'geocode' && address) {
