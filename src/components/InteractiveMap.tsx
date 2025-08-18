@@ -492,8 +492,8 @@ export const InteractiveMap = () => {
           </div>
         </div>
         
-        {/* Search Bar and Date Filter - No background */}
-        <div className="px-4 pb-4 mt-20">
+        {/* Search Bar and Date Filter - Floating over map */}
+        <div className="absolute top-20 left-0 right-0 z-10 px-4 pb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
