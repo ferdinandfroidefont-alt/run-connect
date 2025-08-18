@@ -276,18 +276,21 @@ export type Database = {
           follower_id: string
           following_id: string
           id: string
+          status: string | null
         }
         Insert: {
           created_at?: string
           follower_id: string
           following_id: string
           id?: string
+          status?: string | null
         }
         Update: {
           created_at?: string
           follower_id?: string
           following_id?: string
           id?: string
+          status?: string | null
         }
         Relationships: []
       }
@@ -326,6 +329,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_follow_request: {
+        Args: { follow_id: string }
+        Returns: boolean
+      }
+      get_follower_count: {
+        Args: { profile_user_id: string }
+        Returns: number
+      }
+      get_following_count: {
+        Args: { profile_user_id: string }
+        Returns: number
+      }
       get_public_profile: {
         Args: { profile_user_id: string }
         Returns: {

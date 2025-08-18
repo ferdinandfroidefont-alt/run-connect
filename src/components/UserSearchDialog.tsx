@@ -17,6 +17,8 @@ interface Profile {
   avatar_url: string | null;
   bio: string | null;
   is_private: boolean;
+  follower_count?: number;
+  following_count?: number;
 }
 
 interface UserSearchDialogProps {
@@ -34,7 +36,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Search for users
+  // Search for users and load their stats
   const searchUsers = async () => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -50,7 +52,26 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
         .limit(20);
 
       if (error) throw error;
-      setSearchResults(data || []);
+
+      // Load follower counts for each profile
+      const profilesWithStats = await Promise.all(
+        (data || []).map(async (profile) => {
+          const { data: followerData } = await supabase.rpc('get_follower_count', { 
+            profile_user_id: profile.user_id 
+          });
+          const { data: followingData } = await supabase.rpc('get_following_count', { 
+            profile_user_id: profile.user_id 
+          });
+          
+          return {
+            ...profile,
+            follower_count: followerData || 0,
+            following_count: followingData || 0
+          };
+        })
+      );
+
+      setSearchResults(profilesWithStats);
     } catch (error: any) {
       console.error('Error searching users:', error);
     }
@@ -163,6 +184,20 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
                   </Badge>
                 )}
               </div>
+
+              {/* Stats */}
+              {(!selectedProfile.is_private || isFollowing) && (
+                <div className="flex justify-center gap-6 py-3">
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">{selectedProfile.follower_count || 0}</p>
+                    <p className="text-xs text-muted-foreground">Abonnés</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">{selectedProfile.following_count || 0}</p>
+                    <p className="text-xs text-muted-foreground">Abonnements</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bio */}

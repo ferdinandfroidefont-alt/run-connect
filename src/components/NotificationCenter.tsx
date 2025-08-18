@@ -14,7 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Check, X, User } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Bell, Check, X, User, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -171,6 +172,73 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
     }
   };
 
+  // Handle follow request acceptance
+  const handleAcceptFollow = async (notification: Notification) => {
+    if (!user || notification.type !== 'follow_request') return;
+
+    setLoading(true);
+    try {
+      const { follow_id, follower_id } = notification.data;
+
+      // Accept the follow request
+      const { error } = await supabase.rpc('accept_follow_request', { 
+        follow_id: follow_id 
+      });
+
+      if (error) throw error;
+
+      // Mark notification as read
+      await markAsRead(notification.id);
+
+      // Create notification for follower
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: follower_id,
+          title: 'Demande acceptée !',
+          message: 'Votre demande de suivi a été acceptée',
+          type: 'follow_accepted'
+        }]);
+
+      if (notificationError) console.error('Error creating notification:', notificationError);
+
+      toast({ title: "Demande acceptée", description: "Vous avez un nouvel abonné" });
+      fetchNotifications();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle follow request rejection
+  const handleRejectFollow = async (notification: Notification) => {
+    if (!user || notification.type !== 'follow_request') return;
+
+    setLoading(true);
+    try {
+      const { follow_id, follower_id } = notification.data;
+
+      // Delete the follow request
+      const { error } = await supabase
+        .from('user_follows')
+        .delete()
+        .eq('id', follow_id);
+
+      if (error) throw error;
+
+      // Mark notification as read
+      await markAsRead(notification.id);
+
+      toast({ title: "Demande refusée" });
+      fetchNotifications();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const markAsRead = async (notificationId: string) => {
     try {
       const { error } = await supabase
@@ -214,52 +282,83 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
             notifications.map((notification) => (
               <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''}`}>
                 <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-sm font-medium">{notification.title}</h4>
-                        {!notification.read && (
-                          <Badge variant="secondary" className="text-xs">Nouveau</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(notification.created_at), "d MMM 'à' HH:mm", { locale: fr })}
-                      </p>
-                      
-                      {notification.type === 'session_request' && !notification.read && (
-                        <>
-                          <Separator className="my-3" />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleAcceptRequest(notification)}
-                              disabled={loading}
-                              className="flex-1"
-                            >
-                              <Check className="h-4 w-4 mr-1" />
-                              Accepter
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRejectRequest(notification)}
-                              disabled={loading}
-                              className="flex-1"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Refuser
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                   <div className="flex items-start gap-3">
+                     <div className="flex-shrink-0">
+                       {notification.type === 'follow_request' ? (
+                         <UserPlus className="h-5 w-5 text-primary" />
+                       ) : (
+                         <User className="h-5 w-5 text-primary" />
+                       )}
+                     </div>
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-center justify-between mb-1">
+                         <h4 className="text-sm font-medium">{notification.title}</h4>
+                         {!notification.read && (
+                           <Badge variant="secondary" className="text-xs">Nouveau</Badge>
+                         )}
+                       </div>
+                       <p className="text-sm text-muted-foreground mb-2">
+                         {notification.message}
+                       </p>
+                       <p className="text-xs text-muted-foreground">
+                         {format(new Date(notification.created_at), "d MMM 'à' HH:mm", { locale: fr })}
+                       </p>
+                       
+                       {notification.type === 'session_request' && !notification.read && (
+                         <>
+                           <Separator className="my-3" />
+                           <div className="flex gap-2">
+                             <Button
+                               size="sm"
+                               onClick={() => handleAcceptRequest(notification)}
+                               disabled={loading}
+                               className="flex-1"
+                             >
+                               <Check className="h-4 w-4 mr-1" />
+                               Accepter
+                             </Button>
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               onClick={() => handleRejectRequest(notification)}
+                               disabled={loading}
+                               className="flex-1"
+                             >
+                               <X className="h-4 w-4 mr-1" />
+                               Refuser
+                             </Button>
+                           </div>
+                         </>
+                       )}
+
+                       {notification.type === 'follow_request' && !notification.read && (
+                         <>
+                           <Separator className="my-3" />
+                           <div className="flex gap-2">
+                             <Button
+                               size="sm"
+                               onClick={() => handleAcceptFollow(notification)}
+                               disabled={loading}
+                               className="flex-1"
+                             >
+                               <Check className="h-4 w-4 mr-1" />
+                               Accepter
+                             </Button>
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               onClick={() => handleRejectFollow(notification)}
+                               disabled={loading}
+                               className="flex-1"
+                             >
+                               <X className="h-4 w-4 mr-1" />
+                               Refuser
+                             </Button>
+                           </div>
+                         </>
+                       )}
+                     </div>
+                   </div>
                 </CardContent>
               </Card>
             ))
