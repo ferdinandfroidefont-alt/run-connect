@@ -5,8 +5,8 @@ import { MapStyleSelector } from './MapStyleSelector';
 import { SessionFilters } from './SessionFilters';
 import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
-import { NotificationCenter } from './NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,7 @@ interface Filter {
 
 export const InteractiveMap = () => {
   const { user } = useAuth();
+  const { setRefreshSessions } = useAppContext();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
@@ -72,6 +73,11 @@ export const InteractiveMap = () => {
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Register refresh function with context
+  useEffect(() => {
+    setRefreshSessions(() => loadSessions);
+  }, [setRefreshSessions]);
 
   // Load sessions from database
   const loadSessions = async () => {
@@ -515,7 +521,6 @@ export const InteractiveMap = () => {
               RunConnect
             </h1>
             <div className="flex items-center gap-2">
-              <NotificationCenter onSessionUpdated={loadSessions} />
               <Button
                 size="sm"
                 onClick={() => setIsCreateDialogOpen(true)}

@@ -2,6 +2,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { BottomNavigation } from './BottomNavigation';
+import { NotificationCenter } from './NotificationCenter';
+import { useAppContext } from '@/contexts/AppContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,6 +11,7 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
+  const { refreshSessions } = useAppContext();
 
   if (loading) {
     return (
@@ -24,6 +27,10 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Notification Center - Fixed in top right */}
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationCenter onSessionUpdated={refreshSessions} />
+      </div>
       <main className="pb-16">{children}</main>
       <BottomNavigation />
     </div>
