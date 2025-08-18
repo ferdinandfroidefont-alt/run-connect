@@ -75,9 +75,7 @@ export const InteractiveMap = () => {
       const sessionsWithProfiles = await Promise.all(
         (data || []).map(async (session) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('username, display_name')
-            .eq('user_id', session.organizer_id)
+            .rpc('get_public_profile', { profile_user_id: session.organizer_id })
             .single();
           
           return {
