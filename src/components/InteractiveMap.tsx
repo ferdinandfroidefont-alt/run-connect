@@ -506,16 +506,24 @@ export const InteractiveMap = () => {
           <div className="mt-3 flex justify-center">
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-auto justify-center text-center font-normal bg-card/90 backdrop-blur-sm",
-                    "border-primary/20 hover:bg-primary/5"
-                  )}
-                >
-                  <Calendar className="mr-2 h-4 w-4 text-primary" />
-                  {format(filters.selected_date, "EEEE d MMMM", { locale: fr })}
-                </Button>
+                <div className="relative cursor-pointer">
+                  {/* Calendar Icon Style */}
+                  <div className="w-16 h-16 bg-red-500 rounded-t-lg relative shadow-lg">
+                    {/* Top holes */}
+                    <div className="absolute -top-2 left-3 w-2 h-4 bg-white rounded-full"></div>
+                    <div className="absolute -top-2 right-3 w-2 h-4 bg-white rounded-full"></div>
+                    {/* Month text */}
+                    <div className="text-white text-xs font-bold text-center pt-2">
+                      {format(filters.selected_date, "MMM", { locale: fr }).toUpperCase()}
+                    </div>
+                  </div>
+                  {/* Calendar body */}
+                  <div className="w-16 h-12 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
+                    <div className="text-black text-xl font-bold">
+                      {format(filters.selected_date, "d")}
+                    </div>
+                  </div>
+                </div>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="center">
                 <CalendarComponent
