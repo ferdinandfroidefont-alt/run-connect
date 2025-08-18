@@ -44,7 +44,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const filePath = `${userId}/${fileName}`; // Mettre dans un dossier avec l'ID utilisateur
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
