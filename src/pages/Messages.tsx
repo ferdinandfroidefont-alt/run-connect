@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { 
   MessageCircle, 
   Users, 
@@ -57,6 +58,7 @@ const Messages = () => {
   const [searchUsers, setSearchUsers] = useState("");
   const [availableUsers, setAvailableUsers] = useState<Profile[]>([]);
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -466,6 +468,20 @@ const Messages = () => {
           </Button>
         </div>
 
+        {/* User Search Bar */}
+        <Card>
+          <CardContent className="p-4">
+            <Button
+              onClick={() => setShowUserSearch(true)}
+              variant="outline"
+              className="w-full justify-start text-muted-foreground"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Rechercher des utilisateurs...
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Conversations */}
         <Card>
           <CardHeader className="flex flex-row items-center space-y-0 pb-3">
@@ -532,6 +548,13 @@ const Messages = () => {
             </p>
           </CardContent>
         </Card>
+
+        {/* User Search Dialog */}
+        <UserSearchDialog
+          open={showUserSearch}
+          onOpenChange={setShowUserSearch}
+          onStartConversation={startConversation}
+        />
       </div>
     </div>
   );
