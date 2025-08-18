@@ -68,14 +68,28 @@ export const InteractiveMap = () => {
     try {
       const { data, error } = await supabase
         .from('sessions')
-        .select(`
-          *,
-          profiles!organizer_id (username, display_name)
-        `)
+        .select('*')
         .gte('scheduled_at', new Date().toISOString());
 
       if (error) throw error;
-      setSessions(data || []);
+      
+      // Get organizer profiles separately
+      const sessionsWithProfiles = await Promise.all(
+        (data || []).map(async (session) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, display_name')
+            .eq('user_id', session.organizer_id)
+            .single();
+          
+          return {
+            ...session,
+            profiles: profile || { username: 'Utilisateur', display_name: null }
+          };
+        })
+      );
+      
+      setSessions(sessionsWithProfiles as Session[]);
     } catch (error) {
       console.error('Error loading sessions:', error);
       toast.error('Erreur lors du chargement des séances');
