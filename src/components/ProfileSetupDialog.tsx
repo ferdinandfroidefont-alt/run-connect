@@ -135,8 +135,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
       }
 
       toast({
-        title: "Profil configuré !",
-        description: "Votre profil a été créé avec succès.",
+        title: "Compte créé avec succès !",
+        description: "Bienvenue dans RunConnect !",
       });
 
       onOpenChange(false);
@@ -258,32 +258,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
 
           <div className="flex gap-2 pt-4">
             <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                if (!username.trim()) {
-                  toast({
-                    title: "Nom d'utilisateur requis",
-                    description: "Vous devez choisir un nom d'utilisateur pour continuer.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                onOpenChange(false);
-                window.location.href = '/';
-              }}
-              className="flex-1"
-              disabled={isLoading}
-            >
-              Plus tard
-            </Button>
-            <Button
               type="submit"
-              className="flex-1"
+              className="w-full"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Terminer
+              Confirmer et créer mon compte
             </Button>
           </div>
         </form>

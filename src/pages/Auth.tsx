@@ -66,9 +66,10 @@ const Auth = () => {
         });
         if (error) throw error;
         
+        // Pour l'inscription, montrer directement le setup de profil
         toast({
-          title: "Inscription réussie !",
-          description: "Vérifiez votre email pour confirmer votre compte.",
+          title: "Vérifiez votre email",
+          description: "Un email de confirmation vous a été envoyé.",
         });
       } else {
         // For signin, send OTP avec shouldCreateUser: true pour créer le compte si nécessaire
@@ -270,7 +271,7 @@ const Auth = () => {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="password"
-                    placeholder="Votre mot de passe"
+                    placeholder="Mot de passe (min. 6 caractères)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
@@ -286,7 +287,7 @@ const Auth = () => {
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Créer mon compte
+                Continuer
               </Button>
             </form>
           ) : (
