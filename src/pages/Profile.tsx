@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Settings, LogOut, Crown } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
 interface Profile {
@@ -15,6 +16,7 @@ interface Profile {
   avatar_url: string | null;
   age: number | null;
   bio: string | null;
+  phone: string | null;
   is_premium: boolean;
 }
 
@@ -24,6 +26,8 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Profile>>({});
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -54,18 +58,75 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAvatarPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadAvatar = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${user?.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erreur upload avatar:', error);
+      return null;
+    }
+  };
+
   const updateProfile = async () => {
     try {
       setLoading(true);
+      let avatarUrl = formData.avatar_url;
+
+      // Upload nouvel avatar si sélectionné
+      if (avatarFile) {
+        const uploadedUrl = await uploadAvatar(avatarFile);
+        if (uploadedUrl) {
+          avatarUrl = uploadedUrl;
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible d'uploader la photo de profil.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update(formData)
+        .update({ ...formData, avatar_url: avatarUrl })
         .eq('user_id', user?.id);
 
       if (error) throw error;
       
-      setProfile({ ...profile!, ...formData });
+      setProfile({ ...profile!, ...formData, avatar_url: avatarUrl });
       setIsEditing(false);
+      setAvatarFile(null);
+      setAvatarPreview("");
       toast({
         title: "Profil mis à jour !",
         description: "Vos modifications ont été sauvegardées.",
@@ -96,18 +157,57 @@ const Profile = () => {
           <h1 className="text-2xl font-bold text-foreground">Mon Profil</h1>
         </div>
 
+        {/* Avatar Section */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center">
-              <User className="h-5 w-5 text-primary mr-2" />
-              <CardTitle className="text-lg">Informations</CardTitle>
+          <CardContent className="flex flex-col items-center py-6">
+            <div className="relative mb-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
+                <AvatarFallback className="text-lg">
+                  {profile?.display_name?.[0]?.toUpperCase() || 
+                   profile?.username?.[0]?.toUpperCase() || 
+                   user?.email?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              {isEditing && (
+                <label 
+                  htmlFor="avatar-upload" 
+                  className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90"
+                >
+                  <Camera className="h-4 w-4" />
+                </label>
+              )}
             </div>
+            {isEditing && (
+              <>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Cliquez sur l'icône pour changer votre photo
+                </p>
+              </>
+            )}
+            <h2 className="text-xl font-semibold">{profile?.display_name || profile?.username}</h2>
             {profile?.is_premium && (
-              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 mt-2">
                 <Crown className="h-3 w-3 mr-1" />
                 Premium
               </Badge>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center">
+              <User className="h-5 w-5 text-primary mr-2" />
+              <CardTitle className="text-lg">Informations</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {isEditing ? (
@@ -135,6 +235,14 @@ const Profile = () => {
                   />
                 </div>
                 <div>
+                  <label className="text-sm font-medium">Téléphone</label>
+                  <Input
+                    value={formData.phone || ''}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="06 12 34 56 78"
+                  />
+                </div>
+                <div>
                   <label className="text-sm font-medium">Bio</label>
                   <Input
                     value={formData.bio || ''}
@@ -144,9 +252,15 @@ const Profile = () => {
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={updateProfile} disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sauvegarder
                   </Button>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  <Button variant="outline" onClick={() => {
+                    setIsEditing(false);
+                    setAvatarFile(null);
+                    setAvatarPreview("");
+                    setFormData(profile || {});
+                  }}>
                     Annuler
                   </Button>
                 </div>
@@ -167,6 +281,12 @@ const Profile = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Âge</p>
                     <p className="font-medium">{profile.age} ans</p>
+                  </div>
+                )}
+                {profile?.phone && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Téléphone</p>
+                    <p className="font-medium">{profile.phone}</p>
                   </div>
                 )}
                 {profile?.bio && (
