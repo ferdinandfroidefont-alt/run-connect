@@ -55,6 +55,7 @@ export const InteractiveMap = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [presetLocation, setPresetLocation] = useState<{lat: number, lng: number} | null>(null);
   const [filters, setFilters] = useState<Filter>({
     activity_types: [],
     session_types: [],
@@ -218,6 +219,41 @@ export const InteractiveMap = () => {
 
         setIsMapLoaded(true);
 
+        // Add event listeners for map interactions
+        let touchTimer: NodeJS.Timeout | null = null;
+        let clickTimer: NodeJS.Timeout | null = null;
+
+        // Double-click handler for creating sessions
+        map.current.addListener('dblclick', (event: google.maps.MapMouseEvent) => {
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
+          handleCreateSessionAtLocation(event.latLng);
+        });
+
+        // Long press handler for mobile
+        map.current.addListener('mousedown', (event: google.maps.MapMouseEvent) => {
+          touchTimer = setTimeout(() => {
+            handleCreateSessionAtLocation(event.latLng);
+            touchTimer = null;
+          }, 800); // 800ms for long press
+        });
+
+        map.current.addListener('mouseup', () => {
+          if (touchTimer) {
+            clearTimeout(touchTimer);
+            touchTimer = null;
+          }
+        });
+
+        map.current.addListener('mousemove', () => {
+          if (touchTimer) {
+            clearTimeout(touchTimer);
+            touchTimer = null;
+          }
+        });
+
         // Try to get user's location
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
@@ -325,6 +361,16 @@ export const InteractiveMap = () => {
     }
   };
 
+  const handleCreateSessionAtLocation = (latLng: google.maps.LatLng | null) => {
+    if (!latLng || !user) {
+      toast.error("Connectez-vous pour créer une séance");
+      return;
+    }
+    
+    setPresetLocation({ lat: latLng.lat(), lng: latLng.lng() });
+    setIsCreateDialogOpen(true);
+    toast.success("Double-cliquez ou appuyez longuement pour créer une séance ici !");
+  };
 
   return (
     <div className="relative w-full h-screen bg-background">
@@ -394,9 +440,13 @@ export const InteractiveMap = () => {
       {/* Create Session Dialog */}
       <CreateSessionDialog
         isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
+        onClose={() => {
+          setIsCreateDialogOpen(false);
+          setPresetLocation(null);
+        }}
         onSessionCreated={loadSessions}
         map={map.current}
+        presetLocation={presetLocation}
       />
 
       {/* Session Details Dialog */}

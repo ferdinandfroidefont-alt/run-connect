@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,13 +15,17 @@ interface CreateSessionDialogProps {
   onClose: () => void;
   onSessionCreated: () => void;
   map: google.maps.Map | null;
+  presetLocation?: { lat: number; lng: number } | null;
 }
 
-export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map }: CreateSessionDialogProps) => {
+export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation }: CreateSessionDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -52,6 +56,99 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map }: 
     { value: 'modere', label: 'Modéré' },
     { value: 'intense', label: 'Intense' },
   ];
+
+  // Auto-select preset location when dialog opens
+  useEffect(() => {
+    if (presetLocation && isOpen) {
+      handleReverseGeocode(presetLocation.lat, presetLocation.lng);
+    }
+  }, [presetLocation, isOpen]);
+
+  const handleReverseGeocode = async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+        body: {
+          lat: lat,
+          lng: lng,
+          type: 'reverse'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.status === 'OK' && data?.results?.[0]) {
+        setSelectedLocation({
+          lat: lat,
+          lng: lng,
+          name: data.results[0].formatted_address
+        });
+        setFormData(prev => ({ ...prev, location_name: data.results[0].formatted_address }));
+        toast({ title: "Lieu sélectionné !" });
+      }
+    } catch (error) {
+      console.error('Erreur géocodage:', error);
+      toast({ title: "Erreur", description: "Erreur lors de la géolocalisation", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchLocation = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      
+      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+        body: {
+          address: query,
+          type: 'geocode'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.status === 'OK' && data?.results) {
+        setSearchResults(data.results.slice(0, 5)); // Limit to 5 results
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Erreur recherche:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectSearchResult = (result: any) => {
+    const location = result.geometry.location;
+    setSelectedLocation({
+      lat: location.lat,
+      lng: location.lng,
+      name: result.formatted_address
+    });
+    setFormData(prev => ({ ...prev, location_name: result.formatted_address }));
+    setLocationSearch(result.formatted_address);
+    setSearchResults([]);
+    toast({ title: "Lieu sélectionné !" });
+  };
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (locationSearch) {
+        handleSearchLocation(locationSearch);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [locationSearch]);
 
   const handleSelectLocation = async () => {
     if (!map) return;
@@ -133,6 +230,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map }: 
         location_name: ""
       });
       setSelectedLocation(null);
+      setLocationSearch("");
+      setSearchResults([]);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
@@ -237,6 +336,38 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map }: 
           <div>
             <Label>Lieu de rendez-vous</Label>
             <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  placeholder="Rechercher un lieu..."
+                  value={locationSearch}
+                  onChange={(e) => setLocationSearch(e.target.value)}
+                  className="w-full"
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                
+                {searchResults.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleSelectSearchResult(result)}
+                        className="w-full px-4 py-2 text-left hover:bg-accent hover:text-accent-foreground text-sm border-b border-border last:border-b-0"
+                      >
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                          <span>{result.formatted_address}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
               <Button
                 type="button"
                 onClick={handleSelectLocation}
@@ -244,8 +375,9 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map }: 
                 className="w-full"
               >
                 <MapPin className="h-4 w-4 mr-2" />
-                {selectedLocation ? "Changer le lieu" : "Sélectionner sur la carte"}
+                {selectedLocation ? "Changer le lieu (carte)" : "Sélectionner sur la carte"}
               </Button>
+              
               {selectedLocation && (
                 <p className="text-sm text-muted-foreground">
                   📍 {selectedLocation.name}
