@@ -503,29 +503,29 @@ export const InteractiveMap = () => {
           </div>
           
           {/* Date Filter */}
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex justify-start pl-2">
             <Popover>
               <PopoverTrigger asChild>
                 <div className="relative cursor-pointer">
                   {/* Calendar Icon Style */}
-                  <div className="w-16 h-16 bg-red-500 rounded-t-lg relative shadow-lg">
+                  <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
                     {/* Top holes */}
-                    <div className="absolute -top-2 left-3 w-2 h-4 bg-white rounded-full"></div>
-                    <div className="absolute -top-2 right-3 w-2 h-4 bg-white rounded-full"></div>
+                    <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
+                    <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
                     {/* Month text */}
-                    <div className="text-white text-xs font-bold text-center pt-2">
+                    <div className="text-white text-xs font-bold text-center pt-1.5">
                       {format(filters.selected_date, "MMM", { locale: fr }).toUpperCase()}
                     </div>
                   </div>
                   {/* Calendar body */}
-                  <div className="w-16 h-12 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
-                    <div className="text-black text-xl font-bold">
+                  <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
+                    <div className="text-black text-lg font-bold">
                       {format(filters.selected_date, "d")}
                     </div>
                   </div>
                 </div>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="center">
+              <PopoverContent className="w-auto p-0" align="start">
                 <CalendarComponent
                   mode="single"
                   selected={filters.selected_date}
