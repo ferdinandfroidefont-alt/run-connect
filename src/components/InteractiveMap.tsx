@@ -244,8 +244,31 @@ export const InteractiveMap = () => {
 
     loadSessions();
 
-    // Initialize search autocomplete when map is loaded
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sessions'
+        },
+        () => {
+          loadSessions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, filters.selected_date]);
+
+  // Initialize search autocomplete separately
+  useEffect(() => {
     if (isMapLoaded && searchInputRef.current && !searchAutocomplete) {
+      console.log('Initializing search autocomplete...');
+      
       const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
         types: ['geocode'],
         componentRestrictions: { country: 'fr' }
@@ -253,6 +276,8 @@ export const InteractiveMap = () => {
 
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
+        console.log('Place selected:', place);
+        
         if (place.geometry && place.geometry.location && map.current) {
           // Center map on selected location
           map.current.setCenter(place.geometry.location);
@@ -267,25 +292,9 @@ export const InteractiveMap = () => {
       });
 
       setSearchAutocomplete(autocomplete);
+      console.log('Search autocomplete initialized');
     }
-
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sessions'
-        },
-        () => loadSessions()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+  }, [isMapLoaded, searchAutocomplete]);
 
   // Update markers when sessions or filters change
   useEffect(() => {
