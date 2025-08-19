@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, MapPin, Calendar, PersonStanding, Bike } from 'lucide-react';
 import { toast } from 'sonner';
@@ -75,7 +76,25 @@ export const InteractiveMap = () => {
     friends_only: false
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [userProfile, setUserProfile] = useState<{username: string, display_name: string, avatar_url: string | null} | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Load user profile
+  useEffect(() => {
+    if (user) {
+      const loadUserProfile = async () => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, display_name, avatar_url')
+          .eq('user_id', user.id)
+          .single();
+        
+        setUserProfile(profile);
+      };
+      
+      loadUserProfile();
+    }
+  }, [user]);
 
   // Register refresh function with context
   useEffect(() => {
@@ -565,6 +584,17 @@ export const InteractiveMap = () => {
             <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
               RunConnect
             </h1>
+            
+            {/* User Profile Avatar */}
+            {userProfile && (
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.display_name || userProfile.username} />
+                <AvatarFallback>
+                  {(userProfile.display_name || userProfile.username || 'U').charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
+            
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
             </div>
