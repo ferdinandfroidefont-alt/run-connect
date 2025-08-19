@@ -682,7 +682,7 @@ export const InteractiveMap = () => {
       
       {/* User Sessions Button - Below Filters */}
       {user && (
-        <div className="absolute top-32 right-4 z-10">
+        <div className="absolute top-44 right-4 z-10">
           <Button
             onClick={() => setIsUserSessionsOpen(true)}
             size="sm"
