@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond } from "lucide-react";
+import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -130,6 +130,32 @@ const Leaderboard = () => {
       setLoading(false);
     }
   };
+
+  // Fonction pour calculer les dates de la saison actuelle
+  const getCurrentSeasonDates = () => {
+    // Date de début de référence (première saison)
+    const startRef = new Date('2024-08-15'); // 15 août 2024
+    const now = new Date();
+    
+    // Durée d'une saison en millisecondes (45 jours)
+    const seasonDuration = 45 * 24 * 60 * 60 * 1000;
+    
+    // Calculer combien de saisons se sont écoulées depuis la référence
+    const timeSinceStart = now.getTime() - startRef.getTime();
+    const seasonsElapsed = Math.floor(timeSinceStart / seasonDuration);
+    
+    // Calculer le début et la fin de la saison actuelle
+    const currentSeasonStart = new Date(startRef.getTime() + (seasonsElapsed * seasonDuration));
+    const currentSeasonEnd = new Date(currentSeasonStart.getTime() + seasonDuration - 1);
+    
+    return {
+      start: currentSeasonStart,
+      end: currentSeasonEnd,
+      number: seasonsElapsed + 1
+    };
+  };
+
+  const seasonDates = getCurrentSeasonDates();
 
   const getUserRank = (points: number): string => {
     if (points >= 5000) return 'diamant';
@@ -359,11 +385,26 @@ const Leaderboard = () => {
           </TabsList>
 
           <TabsContent value="seasonal" className="mt-4">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold flex items-center gap-2 text-primary">
-                <TrendingUp className="h-6 w-6" />
-                Classement Saison
-              </h2>
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold flex items-center justify-center gap-2 text-primary">
+                  <TrendingUp className="h-6 w-6" />
+                  Classement Saison {seasonDates.number}
+                </h2>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {seasonDates.start.toLocaleDateString('fr-FR', { 
+                      day: 'numeric', 
+                      month: 'long' 
+                    })} - {seasonDates.end.toLocaleDateString('fr-FR', { 
+                      day: 'numeric', 
+                      month: 'long',
+                      year: 'numeric' 
+                    })}
+                  </span>
+                </div>
+              </div>
               <LeaderboardList data={seasonalLeaderboard} showSeasonal />
             </div>
           </TabsContent>
