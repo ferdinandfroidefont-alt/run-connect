@@ -15,7 +15,7 @@ export const MapControls: React.FC<MapControlsProps> = ({
   onToggle3D,
 }) => {
   return (
-    <div className="absolute bottom-6 left-6 flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
       {/* Additional Controls - moved above zoom controls */}
       <div className="bg-map-control/90 backdrop-blur-sm border border-map-control-border rounded-lg shadow-map-control overflow-hidden">
         <button

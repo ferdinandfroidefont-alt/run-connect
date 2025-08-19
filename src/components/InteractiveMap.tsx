@@ -567,25 +567,6 @@ export const InteractiveMap = () => {
             </h1>
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
-              
-              {/* Locate Me Button and Style Selector in header */}
-              <div className="flex items-center gap-2">
-                {/* Locate Me Button */}
-                <Button
-                  onClick={handleLocateMe}
-                  size="sm"
-                  variant="outline"
-                  className="bg-card/90 backdrop-blur-sm shadow-map-control"
-                >
-                  <MapPin className="h-4 w-4" />
-                </Button>
-                
-                {/* Style Selector */}
-                <MapStyleSelector
-                  currentStyle={currentStyle}
-                  onStyleChange={handleStyleChange}
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -665,13 +646,33 @@ export const InteractiveMap = () => {
       {/* Filters */}
       <SessionFilters filters={filters} onFiltersChange={setFilters} />
       
-      {/* Map Controls - back to original position */}
-      <MapControls
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetView={handleResetView}
-        onToggle3D={handleToggle3D}
-      />
+      {/* All Map Controls - grouped together on the left */}
+      <div className="absolute bottom-6 left-6 flex flex-col gap-2">
+        {/* Locate Me and Style Selector */}
+        <div className="flex flex-col gap-2">
+          <Button
+            onClick={handleLocateMe}
+            size="sm"
+            variant="outline"
+            className="w-10 h-10 bg-card/90 backdrop-blur-sm shadow-map-control"
+          >
+            <MapPin className="h-4 w-4" />
+          </Button>
+          
+          <MapStyleSelector
+            currentStyle={currentStyle}
+            onStyleChange={handleStyleChange}
+          />
+        </div>
+        
+        {/* Zoom and 3D Controls */}
+        <MapControls
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onResetView={handleResetView}
+          onToggle3D={handleToggle3D}
+        />
+      </div>
       
 
       {/* Create Session Dialog */}
