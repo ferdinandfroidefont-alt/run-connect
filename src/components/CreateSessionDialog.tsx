@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, Crown, UserCheck } from "lucide-react";
 
 interface CreateSessionDialogProps {
@@ -22,6 +23,7 @@ interface CreateSessionDialogProps {
 export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation }: CreateSessionDialogProps) => {
   const { user, subscriptionInfo } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [locationSearch, setLocationSearch] = useState("");
@@ -419,11 +421,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 checked={formData.friends_only}
                 onCheckedChange={(checked) => {
                   if (checked && !subscriptionInfo?.subscribed) {
-                    toast({
-                      title: "Fonctionnalité Premium",
-                      description: "L'option 'Amis uniquement' est réservée aux membres Premium.",
-                      variant: "destructive",
-                    });
+                    onClose();
+                    navigate('/subscription');
                     return;
                   }
                   setFormData(prev => ({ ...prev, friends_only: checked }));
