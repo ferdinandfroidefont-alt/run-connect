@@ -13,8 +13,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -58,8 +59,9 @@ interface Filter {
 }
 
 export const InteractiveMap = () => {
-  const { user } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
   const { setRefreshSessions, setOpenCreateSession } = useAppContext();
+  const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
@@ -657,22 +659,36 @@ export const InteractiveMap = () => {
               </PopoverContent>
             </Popover>
 
-            {/* Friends Only Filter */}
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
-                filters.friends_only
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-              )}
-            >
-              <div className="flex items-center gap-1">
-                <PersonStanding size={16} />
-                <Bike size={16} />
-              </div>
-              <span className="text-sm font-medium">Amis uniquement</span>
-            </button>
+            {/* Friends Only Filter - Premium Feature */}
+            {subscriptionInfo?.subscribed ? (
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
+                  filters.friends_only
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  <PersonStanding size={16} />
+                  <Bike size={16} />
+                </div>
+                <span className="text-sm font-medium">Amis uniquement</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/subscription')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+              >
+                <div className="flex items-center gap-1">
+                  <PersonStanding size={16} />
+                  <Bike size={16} />
+                </div>
+                <span className="text-sm font-medium">Amis uniquement</span>
+                <Crown size={14} className="text-yellow-500" />
+              </button>
+            )}
           </div>
         </div>
       </div>
