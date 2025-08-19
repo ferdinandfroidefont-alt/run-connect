@@ -41,6 +41,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [hasRequested, setHasRequested] = useState(false);
 
   if (!session) return null;
 
@@ -121,8 +122,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       if (notificationError) throw notificationError;
 
+      setHasRequested(true);
       toast({ title: "Demande envoyée !", description: "Le créateur va recevoir votre demande" });
-      onClose();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
@@ -317,10 +318,13 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             ) : isScheduled ? (
               <Button
                 onClick={handleRequestJoin}
-                disabled={loading || isFull}
+                disabled={loading || isFull || hasRequested}
                 className="w-full"
               >
-                {loading ? "Envoi..." : isFull ? "Complet" : "Demander à rejoindre"}
+                {loading ? "Envoi..." : 
+                 hasRequested ? "Demande en cours" :
+                 isFull ? "Complet" : 
+                 "Demander à rejoindre"}
               </Button>
             ) : (
               <Badge variant="destructive" className="justify-center py-2">
