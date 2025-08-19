@@ -6,6 +6,7 @@ import { SessionFilters } from './SessionFilters';
 import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { NotificationCenter } from './NotificationCenter';
+import { UserSessionsDialog } from './UserSessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,6 +79,7 @@ export const InteractiveMap = () => {
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [userProfile, setUserProfile] = useState<{username: string, display_name: string, avatar_url: string | null} | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
 
   // Load user profile
   useEffect(() => {
@@ -680,6 +682,19 @@ export const InteractiveMap = () => {
       
       {/* All Map Controls - grouped together on the left */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
+        {/* User Sessions Button */}
+        {user && (
+          <Button
+            onClick={() => setIsUserSessionsOpen(true)}
+            size="sm"
+            variant="outline"
+            className="w-auto px-3 h-10 bg-card/90 backdrop-blur-sm shadow-map-control"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Mes séances
+          </Button>
+        )}
+        
         {/* Locate Me and Style Selector */}
         <div className="flex flex-col gap-2">
           <Button
@@ -724,6 +739,12 @@ export const InteractiveMap = () => {
         session={selectedSession}
         onClose={() => setSelectedSession(null)}
         onSessionUpdated={loadSessions}
+      />
+
+      {/* User Sessions Dialog */}
+      <UserSessionsDialog
+        isOpen={isUserSessionsOpen}
+        onClose={() => setIsUserSessionsOpen(false)}
       />
     </div>
   );
