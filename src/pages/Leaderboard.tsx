@@ -143,17 +143,17 @@ const Leaderboard = () => {
   const getRankBorderColor = (userRank: string): string => {
     switch (userRank) {
       case 'diamant':
-        return 'border-cyan-400';
+        return 'border-4 border-cyan-400 shadow-lg shadow-cyan-400/50 ring-2 ring-cyan-300/30';
       case 'platine':
-        return 'border-purple-500';
+        return 'border-4 border-purple-500 shadow-lg shadow-purple-500/50 ring-2 ring-purple-300/30';
       case 'or':
-        return 'border-yellow-500';
+        return 'border-4 border-yellow-500 shadow-lg shadow-yellow-500/50 ring-2 ring-yellow-300/30';
       case 'argent':
-        return 'border-gray-400';
+        return 'border-4 border-gray-400 shadow-lg shadow-gray-400/50 ring-2 ring-gray-300/30';
       case 'bronze':
-        return 'border-amber-600';
+        return 'border-4 border-amber-600 shadow-lg shadow-amber-600/50 ring-2 ring-amber-300/30';
       default:
-        return 'border-white';
+        return 'border-2 border-gray-300';
     }
   };
 
@@ -229,9 +229,9 @@ const Leaderboard = () => {
               <div className="w-8 flex justify-center">
                 {getRankIcon(item.rank)}
               </div>
-              <Avatar className={`h-12 w-12 border-2 ${getRankBorderColor(item.user_rank)}`}>
+              <Avatar className={`h-14 w-14 ${getRankBorderColor(item.user_rank)} transition-all duration-300 hover:scale-105`}>
                 <AvatarImage src={item.profile?.avatar_url} />
-                <AvatarFallback>
+                <AvatarFallback className="text-lg font-bold">
                   {item.profile?.display_name?.[0] || item.profile?.username?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
