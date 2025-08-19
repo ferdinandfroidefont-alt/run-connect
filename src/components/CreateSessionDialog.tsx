@@ -416,24 +416,35 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 </Label>
                 <Crown className="h-3 w-3 text-yellow-500" />
               </div>
-              <Switch
-                id="friends_only"
-                checked={formData.friends_only}
-                onCheckedChange={(checked) => {
-                  if (checked && !subscriptionInfo?.subscribed) {
+              {subscriptionInfo?.subscribed ? (
+                <Switch
+                  id="friends_only"
+                  checked={formData.friends_only}
+                  onCheckedChange={(checked) => {
+                    setFormData(prev => ({ ...prev, friends_only: checked }));
+                  }}
+                />
+              ) : (
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => {
                     onClose();
                     navigate('/subscription');
-                    return;
-                  }
-                  setFormData(prev => ({ ...prev, friends_only: checked }));
-                }}
-                disabled={!subscriptionInfo?.subscribed}
-              />
+                  }}
+                >
+                  <Switch
+                    id="friends_only"
+                    checked={false}
+                    disabled={true}
+                    className="pointer-events-none"
+                  />
+                </div>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               {subscriptionInfo?.subscribed 
                 ? "Seuls vos amis pourront voir et rejoindre cette séance"
-                : "Fonctionnalité réservée aux membres Premium"
+                : "Cliquez pour devenir Premium et accéder à cette fonctionnalité"
               }
             </p>
           </div>
