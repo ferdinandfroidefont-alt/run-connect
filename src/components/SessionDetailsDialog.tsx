@@ -43,9 +43,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
 
-  // Early return if no session
-  if (!session) return null;
-
   // Check if user has already requested to join this session
   useEffect(() => {
     const checkExistingRequest = async () => {
@@ -64,6 +61,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
     checkExistingRequest();
   }, [user, session]);
+
+  // Early return if no session - AFTER all hooks
+  if (!session) return null;
 
   const isOrganizer = user?.id === session.organizer_id;
   const isScheduled = new Date(session.scheduled_at) > new Date();
