@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 
@@ -24,6 +26,7 @@ interface Profile {
 
 const Profile = () => {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -386,6 +389,35 @@ const Profile = () => {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center">
+              <Settings className="h-5 w-5 text-primary mr-2" />
+              <CardTitle className="text-lg">Paramètres</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Theme Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Mode clair
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Basculer entre le mode sombre et clair
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={theme === 'light'}
+                onCheckedChange={(checked) => setTheme(checked ? 'light' : 'dark')}
+              />
+            </div>
           </CardContent>
         </Card>
 

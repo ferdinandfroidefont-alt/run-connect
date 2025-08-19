@@ -126,6 +126,11 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    /* Mode sombre par défaut */
+    @apply dark;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
