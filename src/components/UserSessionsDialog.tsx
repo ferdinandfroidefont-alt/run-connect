@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserSession {
@@ -46,6 +46,8 @@ export const UserSessionsDialog = ({ isOpen, onClose }: UserSessionsDialogProps)
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const dialogContentRef = React.useRef<HTMLDivElement>(null);
 
   // Load user's upcoming sessions
   const loadUserSessions = async () => {
@@ -111,6 +113,34 @@ export const UserSessionsDialog = ({ isOpen, onClose }: UserSessionsDialogProps)
     }
   }, [isOpen, user]);
 
+  // Check if scroll button should be shown
+  useEffect(() => {
+    const checkScroll = () => {
+      const element = dialogContentRef.current;
+      if (element && sessions.length > 2) {
+        const hasScroll = element.scrollHeight > element.clientHeight;
+        setShowScrollButton(hasScroll);
+      } else {
+        setShowScrollButton(false);
+      }
+    };
+
+    if (isOpen && !selectedSession) {
+      // Delay check to ensure content is rendered
+      setTimeout(checkScroll, 100);
+    }
+  }, [isOpen, sessions, selectedSession]);
+
+  const scrollDown = () => {
+    const element = dialogContentRef.current;
+    if (element) {
+      element.scrollBy({
+        top: 300,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const handleSessionClick = async (session: UserSession) => {
     setSelectedSession(session);
     await loadSessionParticipants(session.id);
@@ -143,7 +173,7 @@ export const UserSessionsDialog = ({ isOpen, onClose }: UserSessionsDialogProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" ref={dialogContentRef}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
@@ -288,6 +318,21 @@ export const UserSessionsDialog = ({ isOpen, onClose }: UserSessionsDialogProps)
                 <p className="text-sm text-muted-foreground">
                   Vous n'avez organisé aucune séance prochainement.
                 </p>
+              </div>
+            )}
+            
+            {/* Scroll Down Button */}
+            {showScrollButton && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  onClick={scrollDown}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  Voir plus de séances
+                </Button>
               </div>
             )}
           </div>
