@@ -399,6 +399,10 @@ export type Database = {
         Args: { points_to_remove: number; user_id_param: string }
         Returns: undefined
       }
+      trigger_season_reset: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
