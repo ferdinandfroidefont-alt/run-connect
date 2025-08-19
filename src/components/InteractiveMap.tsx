@@ -682,19 +682,6 @@ export const InteractiveMap = () => {
       
       {/* All Map Controls - grouped together on the left */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
-        {/* User Sessions Button */}
-        {user && (
-          <Button
-            onClick={() => setIsUserSessionsOpen(true)}
-            size="sm"
-            variant="outline"
-            className="w-auto px-3 h-10 bg-card/90 backdrop-blur-sm shadow-map-control"
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Mes séances
-          </Button>
-        )}
-        
         {/* Locate Me and Style Selector */}
         <div className="flex flex-col gap-2">
           <Button
@@ -720,6 +707,21 @@ export const InteractiveMap = () => {
           onToggle3D={handleToggle3D}
         />
       </div>
+
+      {/* User Sessions Button - Bottom Right */}
+      {user && (
+        <div className="absolute bottom-6 right-6 flex flex-col gap-2">
+          <Button
+            onClick={() => setIsUserSessionsOpen(true)}
+            size="sm"
+            variant="outline"
+            className="w-auto px-3 h-10 bg-card/90 backdrop-blur-sm shadow-map-control"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Mes séances
+          </Button>
+        </div>
+      )}
       
 
       {/* Create Session Dialog */}
