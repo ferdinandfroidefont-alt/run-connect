@@ -66,9 +66,42 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
   };
 
   const shareSession = async (session: Session) => {
-    if (!user) return;
+    if (!user || !conversationId) return;
 
     try {
+      console.log('Attempting to share session:', {
+        conversationId,
+        sessionId: session.id,
+        userId: user.id
+      });
+
+      // Verify user can send messages to this conversation
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .single();
+
+      if (convError) {
+        console.error('Error fetching conversation:', convError);
+        throw new Error('Impossible d\'accéder à cette conversation');
+      }
+
+      // For group conversations, check membership
+      if (conversation.is_group) {
+        const { data: membership, error: memberError } = await supabase
+          .from('group_members')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (memberError || !membership) {
+          console.error('User is not a member of this group:', memberError);
+          throw new Error('Vous n\'êtes pas membre de ce groupe');
+        }
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert([{
@@ -79,7 +112,10 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
           session_id: session.id
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting message:', error);
+        throw error;
+      }
 
       // Update conversation timestamp
       await supabase
@@ -98,7 +134,7 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
       console.error('Error sharing session:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de partager la séance",
+        description: error.message || "Impossible de partager la séance",
         variant: "destructive"
       });
     }
