@@ -193,6 +193,12 @@ export const InteractiveMap = () => {
     });
 
     console.log(`Creating markers for ${filteredSessions.length} sessions`);
+    console.log('Sessions with profiles:', filteredSessions.map(s => ({ 
+      id: s.id, 
+      title: s.title, 
+      hasProfile: !!s.profiles, 
+      avatarUrl: s.profiles?.avatar_url 
+    })));
 
     // Create markers for filtered sessions with error handling
     const markerPromises = filteredSessions.map(async (session, index) => {
@@ -263,6 +269,9 @@ export const InteractiveMap = () => {
 
   const createCustomMarker = (session: Session): Promise<string> => {
     return new Promise((resolve) => {
+      console.log('Creating custom marker for session:', session.id, session.title);
+      console.log('Session profile data:', session.profiles);
+      
       // Validation des données de session
       if (!session || !session.profiles) {
         console.warn('Session or profiles missing:', session);
@@ -275,12 +284,16 @@ export const InteractiveMap = () => {
       const initials = (session.profiles.display_name || session.profiles.username || 'U')
         .charAt(0).toUpperCase();
 
+      console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
+
       // Créer un marqueur SVG pour éviter les problèmes de CORS avec canvas
       const createSvgMarker = (avatarUrl?: string) => {
+        console.log('Creating SVG marker with avatar:', !!avatarUrl);
+        
         const svg = `
           <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <clipPath id="circle-clip">
+              <clipPath id="circle-clip-${session.id}">
                 <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 6}"/>
               </clipPath>
             </defs>
@@ -292,7 +305,7 @@ export const InteractiveMap = () => {
             ${avatarUrl ? `
               <!-- Image de profil -->
               <image href="${avatarUrl}" x="6" y="6" width="${size-12}" height="${size-12}" 
-                     clip-path="url(#circle-clip)" preserveAspectRatio="xMidYMid slice"/>
+                     clip-path="url(#circle-clip-${session.id})" preserveAspectRatio="xMidYMid slice"/>
             ` : `
               <!-- Initiales si pas d'image -->
               <text x="${size/2}" y="${size/2}" font-family="Arial, sans-serif" 
@@ -304,6 +317,7 @@ export const InteractiveMap = () => {
         
         const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
         const svgUrl = URL.createObjectURL(svgBlob);
+        console.log('Created SVG URL:', svgUrl);
         return svgUrl;
       };
 
