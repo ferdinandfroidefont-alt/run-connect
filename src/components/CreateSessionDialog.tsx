@@ -101,6 +101,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       return;
     }
 
+    console.log('Recherche de lieu pour:', query);
+
     try {
       setIsSearching(true);
       
@@ -111,16 +113,28 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         }
       });
 
-      if (error) throw error;
+      console.log('Réponse proxy Google Maps:', { data, error });
+
+      if (error) {
+        console.error('Erreur lors de l\'appel au proxy:', error);
+        throw error;
+      }
 
       if (data?.status === 'OK' && data?.results) {
+        console.log('Résultats trouvés:', data.results.length);
         setSearchResults(data.results.slice(0, 5)); // Limit to 5 results
       } else {
+        console.log('Aucun résultat ou statut non OK:', data?.status);
         setSearchResults([]);
       }
     } catch (error) {
       console.error('Erreur recherche:', error);
       setSearchResults([]);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de rechercher le lieu. Vérifiez votre connexion.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsSearching(false);
     }
