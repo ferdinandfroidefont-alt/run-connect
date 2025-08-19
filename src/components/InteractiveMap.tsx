@@ -339,9 +339,12 @@ export const InteractiveMap = () => {
       // Si l'utilisateur a une photo de profil, la charger
       if (session.profiles.avatar_url) {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
+        // Pas besoin de crossOrigin pour les images Supabase
         img.onload = () => drawMarker(img);
-        img.onerror = () => drawMarker(); // Fallback aux initiales si l'image ne charge pas
+        img.onerror = (error) => {
+          console.warn('Failed to load avatar image:', session.profiles.avatar_url, error);
+          drawMarker(); // Fallback aux initiales si l'image ne charge pas
+        };
         img.src = session.profiles.avatar_url;
       } else {
         // Pas de photo, utiliser les initiales
