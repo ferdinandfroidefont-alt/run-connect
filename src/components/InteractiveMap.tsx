@@ -652,6 +652,10 @@ export const InteractiveMap = () => {
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
         onToggle3D={handleToggle3D}
+        onPanUp={() => map.current && map.current.panBy(0, -100)}
+        onPanDown={() => map.current && map.current.panBy(0, 100)}
+        onPanLeft={() => map.current && map.current.panBy(-100, 0)}
+        onPanRight={() => map.current && map.current.panBy(100, 0)}
       />
 
       {/* Locate Me Button */}
