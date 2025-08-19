@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 interface AppContextType {
   refreshSessions: () => void;
@@ -22,9 +22,9 @@ interface AppProviderProps {
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [refreshSessions, setRefreshSessionsState] = useState<() => void>(() => () => {});
 
-  const setRefreshSessions = (refresh: () => void) => {
+  const setRefreshSessions = useCallback((refresh: () => void) => {
     setRefreshSessionsState(() => refresh);
-  };
+  }, []);
 
   return (
     <AppContext.Provider value={{ refreshSessions, setRefreshSessions }}>

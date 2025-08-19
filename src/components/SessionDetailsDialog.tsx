@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,7 +43,24 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
 
-  if (!session) return null;
+  // Check if user has already requested to join this session
+  useEffect(() => {
+    const checkExistingRequest = async () => {
+      if (!user || !session) return;
+
+      const { data } = await supabase
+        .from('session_requests')
+        .select('id')
+        .eq('session_id', session.id)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .single();
+
+      setHasRequested(!!data);
+    };
+
+    checkExistingRequest();
+  }, [user, session]);
 
   const isOrganizer = user?.id === session.organizer_id;
   const isScheduled = new Date(session.scheduled_at) > new Date();
