@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 
@@ -23,6 +23,9 @@ interface Profile {
   bio: string | null;
   phone: string | null;
   is_premium: boolean;
+  notifications_enabled?: boolean;
+  rgpd_accepted?: boolean;
+  security_rules_accepted?: boolean;
 }
 
 const Profile = () => {
@@ -42,12 +45,17 @@ const Profile = () => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       fetchProfile();
       fetchFollowCounts();
+    }
+    // Check notification permission
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
     }
   }, [user]);
 
@@ -241,6 +249,58 @@ const Profile = () => {
       });
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      try {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        
+        // Update profile with new permission
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({ notifications_enabled: permission === 'granted' })
+            .eq('user_id', user.id);
+        }
+        
+        toast({
+          title: permission === 'granted' ? "Notifications activées" : "Notifications refusées",
+          description: permission === 'granted' ? 
+            "Vous recevrez désormais des notifications." : 
+            "Vous ne recevrez pas de notifications."
+        });
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+      }
+    }
+  };
+
+  const updatePrivacySettings = async (field: string, value: boolean) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ [field]: value })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? { ...prev, [field]: value } : null);
+      
+      toast({
+        title: "Paramètres mis à jour",
+        description: "Vos préférences ont été sauvegardées."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les paramètres",
+        variant: "destructive"
+      });
     }
   };
 
@@ -497,6 +557,110 @@ const Profile = () => {
                   "Modifier"
                 )}
               </Button>
+            </div>
+
+            {/* Notifications */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Bell className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Notifications
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Recevoir des notifications push
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {notificationPermission === 'denied' && (
+                  <span className="text-xs text-red-600">Refusées</span>
+                )}
+                {notificationPermission === 'granted' && (
+                  <span className="text-xs text-green-600">Autorisées</span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={requestNotificationPermission}
+                  disabled={notificationPermission === 'granted'}
+                >
+                  {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Privacy & Legal Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center">
+              <Shield className="h-5 w-5 text-primary mr-2" />
+              <CardTitle className="text-lg">Confidentialité & Légal</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* RGPD */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Règlement RGPD
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Traitement des données personnelles
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={profile?.rgpd_accepted || false}
+                onCheckedChange={(checked) => updatePrivacySettings('rgpd_accepted', checked)}
+              />
+            </div>
+
+            {/* Security Rules */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Shield className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Règles de sécurité
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Règles d'utilisation et sécurité
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={profile?.security_rules_accepted || false}
+                onCheckedChange={(checked) => updatePrivacySettings('security_rules_accepted', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Support */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center">
+              <Mail className="h-5 w-5 text-primary mr-2" />
+              <CardTitle className="text-lg">Support</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Besoin d'aide ? Contactez notre équipe support
+              </p>
+              <a 
+                href="mailto:ferdinand.froidefont@gmail.com"
+                className="inline-flex items-center gap-2 text-primary hover:underline"
+              >
+                <Mail className="h-4 w-4" />
+                ferdinand.froidefont@gmail.com
+              </a>
             </div>
           </CardContent>
         </Card>
