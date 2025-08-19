@@ -140,6 +140,23 @@ const Leaderboard = () => {
     return 'novice';
   };
 
+  const getRankBorderColor = (userRank: string): string => {
+    switch (userRank) {
+      case 'diamant':
+        return 'border-cyan-400';
+      case 'platine':
+        return 'border-purple-500';
+      case 'or':
+        return 'border-yellow-500';
+      case 'argent':
+        return 'border-gray-400';
+      case 'bronze':
+        return 'border-amber-600';
+      default:
+        return 'border-white';
+    }
+  };
+
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
@@ -212,7 +229,7 @@ const Leaderboard = () => {
               <div className="w-8 flex justify-center">
                 {getRankIcon(item.rank)}
               </div>
-              <Avatar className="h-10 w-10">
+              <Avatar className={`h-12 w-12 border-2 ${getRankBorderColor(item.user_rank)}`}>
                 <AvatarImage src={item.profile?.avatar_url} />
                 <AvatarFallback>
                   {item.profile?.display_name?.[0] || item.profile?.username?.[0] || '?'}
@@ -325,21 +342,31 @@ const Leaderboard = () => {
         </Card>
 
         {/* Leaderboard Tabs */}
-        <Tabs defaultValue="global" className="w-full">
+        <Tabs defaultValue="seasonal" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="global" className="flex items-center gap-1">
-              <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">Global</span>
-            </TabsTrigger>
             <TabsTrigger value="seasonal" className="flex items-center gap-1">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Saison</span>
+            </TabsTrigger>
+            <TabsTrigger value="global" className="flex items-center gap-1">
+              <Globe className="h-4 w-4" />
+              <span className="hidden sm:inline">Global</span>
             </TabsTrigger>
             <TabsTrigger value="friends" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Amis</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="seasonal" className="mt-4">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold flex items-center gap-2 text-primary">
+                <TrendingUp className="h-6 w-6" />
+                Classement Saison
+              </h2>
+              <LeaderboardList data={seasonalLeaderboard} showSeasonal />
+            </div>
+          </TabsContent>
 
           <TabsContent value="global" className="mt-4">
             <div className="space-y-2">
@@ -351,15 +378,6 @@ const Leaderboard = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="seasonal" className="mt-4">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Cette saison
-              </h2>
-              <LeaderboardList data={seasonalLeaderboard} showSeasonal />
-            </div>
-          </TabsContent>
 
           <TabsContent value="friends" className="mt-4">
             <div className="space-y-2">
