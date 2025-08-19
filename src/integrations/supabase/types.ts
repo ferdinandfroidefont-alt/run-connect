@@ -185,7 +185,11 @@ export type Database = {
           id: string
           is_premium: boolean | null
           is_private: boolean | null
+          notifications_enabled: boolean | null
+          onboarding_completed: boolean | null
           phone: string | null
+          rgpd_accepted: boolean | null
+          security_rules_accepted: boolean | null
           updated_at: string
           user_id: string | null
           username: string | null
@@ -199,7 +203,11 @@ export type Database = {
           id?: string
           is_premium?: boolean | null
           is_private?: boolean | null
+          notifications_enabled?: boolean | null
+          onboarding_completed?: boolean | null
           phone?: string | null
+          rgpd_accepted?: boolean | null
+          security_rules_accepted?: boolean | null
           updated_at?: string
           user_id?: string | null
           username?: string | null
@@ -213,7 +221,11 @@ export type Database = {
           id?: string
           is_premium?: boolean | null
           is_private?: boolean | null
+          notifications_enabled?: boolean | null
+          onboarding_completed?: boolean | null
           phone?: string | null
+          rgpd_accepted?: boolean | null
+          security_rules_accepted?: boolean | null
           updated_at?: string
           user_id?: string | null
           username?: string | null

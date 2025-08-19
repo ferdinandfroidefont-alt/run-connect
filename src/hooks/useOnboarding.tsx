@@ -22,7 +22,7 @@ export const useOnboarding = () => {
         .from('profiles')
         .select('onboarding_completed, created_at')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error checking onboarding status:', error);
@@ -34,7 +34,7 @@ export const useOnboarding = () => {
       const createdRecently = profile?.created_at && 
         Date.now() - new Date(profile.created_at).getTime() < 5 * 60 * 1000; // 5 minutes
 
-      setNeedsOnboarding(!profile?.onboarding_completed || createdRecently);
+      setNeedsOnboarding(!profile?.onboarding_completed || !!createdRecently);
     } catch (error) {
       console.error('Error in checkOnboardingStatus:', error);
     } finally {

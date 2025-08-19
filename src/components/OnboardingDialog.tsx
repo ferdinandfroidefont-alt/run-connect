@@ -88,7 +88,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-md" hideCloseButton>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center">
             Configuration de votre compte
