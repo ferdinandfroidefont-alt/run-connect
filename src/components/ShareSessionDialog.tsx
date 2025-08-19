@@ -1,0 +1,229 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { MapPin, Calendar, Users, Clock, Send } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+
+interface Session {
+  id: string;
+  title: string;
+  description: string;
+  activity_type: string;
+  location_name: string;
+  scheduled_at: string;
+  max_participants: number;
+  current_participants: number;
+  intensity: string;
+  organizer_id: string;
+}
+
+interface ShareSessionDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  conversationId: string;
+  onSessionShared: () => void;
+}
+
+export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionShared }: ShareSessionDialogProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+
+  // Load user's sessions
+  const loadSessions = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('organizer_id', user.id)
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at', { ascending: true });
+
+      if (error) throw error;
+      setSessions(data || []);
+    } catch (error: any) {
+      console.error('Error loading sessions:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les séances",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const shareSession = async (session: Session) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert([{
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: `🏃‍♂️ Séance partagée: ${session.title}`,
+          message_type: 'session_share',
+          session_id: session.id
+        }]);
+
+      if (error) throw error;
+
+      // Update conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      toast({
+        title: "Succès",
+        description: "Séance partagée avec succès!"
+      });
+
+      onSessionShared();
+      onClose();
+    } catch (error: any) {
+      console.error('Error sharing session:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de partager la séance",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getIntensityColor = (intensity: string) => {
+    switch (intensity?.toLowerCase()) {
+      case 'faible': return 'bg-green-100 text-green-800';
+      case 'modérée': return 'bg-yellow-100 text-yellow-800';
+      case 'élevée': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadSessions();
+    }
+  }, [isOpen, user]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5" />
+            Partager une séance
+          </DialogTitle>
+        </DialogHeader>
+
+        <ScrollArea className="max-h-96">
+          <div className="space-y-3">
+            {loading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Chargement des séances...</p>
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Aucune séance à venir</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Créez une séance pour la partager
+                </p>
+              </div>
+            ) : (
+              sessions.map((session) => (
+                <Card 
+                  key={session.id} 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedSession?.id === session.id ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => setSelectedSession(session)}
+                >
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      {/* Title and Activity */}
+                      <div>
+                        <h3 className="font-semibold text-sm">{session.title}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {session.activity_type}
+                          </Badge>
+                          {session.intensity && (
+                            <Badge className={`text-xs ${getIntensityColor(session.intensity)}`}>
+                              {session.intensity}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Date and Time */}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {format(new Date(session.scheduled_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                        </span>
+                      </div>
+
+                      {/* Location */}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span>{session.location_name}</span>
+                      </div>
+
+                      {/* Participants */}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        <span>
+                          {session.current_participants}
+                          {session.max_participants && `/${session.max_participants}`} participants
+                        </span>
+                      </div>
+
+                      {/* Description */}
+                      {session.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {session.description}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-4">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+          >
+            Annuler
+          </Button>
+          <Button
+            onClick={() => selectedSession && shareSession(selectedSession)}
+            disabled={!selectedSession}
+            className="flex-1"
+          >
+            <Send className="h-4 w-4 mr-1" />
+            Partager
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

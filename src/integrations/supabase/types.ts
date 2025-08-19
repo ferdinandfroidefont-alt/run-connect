@@ -17,26 +17,73 @@ export type Database = {
       conversations: {
         Row: {
           created_at: string
+          created_by: string | null
+          group_avatar_url: string | null
+          group_description: string | null
+          group_name: string | null
           id: string
+          is_group: boolean | null
           participant_1: string
           participant_2: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          group_avatar_url?: string | null
+          group_description?: string | null
+          group_name?: string | null
           id?: string
+          is_group?: boolean | null
           participant_1: string
           participant_2: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          group_avatar_url?: string | null
+          group_description?: string | null
+          group_name?: string | null
           id?: string
+          is_group?: boolean | null
           participant_1?: string
           participant_2?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      group_members: {
+        Row: {
+          conversation_id: string
+          id: string
+          is_admin: boolean | null
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          is_admin?: boolean | null
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          is_admin?: boolean | null
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -47,8 +94,10 @@ export type Database = {
           file_type: string | null
           file_url: string | null
           id: string
+          message_type: string | null
           read_at: string | null
           sender_id: string
+          session_id: string | null
         }
         Insert: {
           content: string
@@ -58,8 +107,10 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          message_type?: string | null
           read_at?: string | null
           sender_id: string
+          session_id?: string | null
         }
         Update: {
           content?: string
@@ -69,8 +120,10 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          message_type?: string | null
           read_at?: string | null
           sender_id?: string
+          session_id?: string | null
         }
         Relationships: [
           {
@@ -78,6 +131,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]
