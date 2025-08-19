@@ -270,86 +270,46 @@ export const InteractiveMap = () => {
         return;
       }
 
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
       const size = 50;
-      
-      canvas.width = size;
-      canvas.height = size;
-      
-      if (!ctx) {
-        resolve(getFallbackIcon(session.activity_type));
-        return;
-      }
+      const color = getActivityColor(session.activity_type);
+      const initials = (session.profiles.display_name || session.profiles.username || 'U')
+        .charAt(0).toUpperCase();
 
-      const drawMarker = (profileImage?: HTMLImageElement) => {
-        // Clear canvas
-        ctx.clearRect(0, 0, size, size);
-
-        // Dessiner le cercle de fond
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2 - 3, 0, 2 * Math.PI);
-        ctx.fillStyle = getActivityColor(session.activity_type);
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        if (profileImage) {
-          // Créer un masque circulaire pour l'image de profil
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(size / 2, size / 2, size / 2 - 6, 0, 2 * Math.PI);
-          ctx.clip();
-          // Calculer les dimensions pour un crop centré (object-fit: cover)
-          const imgAspect = profileImage.width / profileImage.height;
-          const targetSize = size - 12;
-          let drawWidth, drawHeight, drawX, drawY;
-
-          if (imgAspect > 1) {
-            // Image plus large que haute - crop horizontalement
-            drawHeight = targetSize;
-            drawWidth = drawHeight * imgAspect;
-            drawX = 6 + (targetSize - drawWidth) / 2;
-            drawY = 6;
-          } else {
-            // Image plus haute que large - crop verticalement
-            drawWidth = targetSize;
-            drawHeight = drawWidth / imgAspect;
-            drawX = 6;
-            drawY = 6 + (targetSize - drawHeight) / 2;
-          }
-
-          ctx.drawImage(profileImage, drawX, drawY, drawWidth, drawHeight);
-          ctx.restore();
-        } else {
-          // Afficher les initiales si pas de photo
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 16px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const initials = (session.profiles.display_name || session.profiles.username || 'U')
-            .charAt(0).toUpperCase();
-          ctx.fillText(initials, size / 2, size / 2);
-        }
-
-        resolve(canvas.toDataURL());
+      // Créer un marqueur SVG pour éviter les problèmes de CORS avec canvas
+      const createSvgMarker = (avatarUrl?: string) => {
+        const svg = `
+          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <clipPath id="circle-clip">
+                <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 6}"/>
+              </clipPath>
+            </defs>
+            
+            <!-- Cercle de fond avec couleur d'activité -->
+            <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 3}" 
+                    fill="${color}" stroke="white" stroke-width="4"/>
+            
+            ${avatarUrl ? `
+              <!-- Image de profil -->
+              <image href="${avatarUrl}" x="6" y="6" width="${size-12}" height="${size-12}" 
+                     clip-path="url(#circle-clip)" preserveAspectRatio="xMidYMid slice"/>
+            ` : `
+              <!-- Initiales si pas d'image -->
+              <text x="${size/2}" y="${size/2}" font-family="Arial, sans-serif" 
+                    font-size="16" font-weight="bold" fill="white" 
+                    text-anchor="middle" dominant-baseline="central">${initials}</text>
+            `}
+          </svg>
+        `;
+        
+        const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+        return svgUrl;
       };
 
-      // Si l'utilisateur a une photo de profil, la charger
-      if (session.profiles.avatar_url) {
-        const img = new Image();
-        // Pas besoin de crossOrigin pour les images Supabase
-        img.onload = () => drawMarker(img);
-        img.onerror = (error) => {
-          console.warn('Failed to load avatar image:', session.profiles.avatar_url, error);
-          drawMarker(); // Fallback aux initiales si l'image ne charge pas
-        };
-        img.src = session.profiles.avatar_url;
-      } else {
-        // Pas de photo, utiliser les initiales
-        drawMarker();
-      }
+      // Créer le marqueur avec ou sans avatar
+      const markerUrl = createSvgMarker(session.profiles.avatar_url);
+      resolve(markerUrl);
     });
   };
 
