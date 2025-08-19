@@ -70,7 +70,16 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
     try {
       const { session_id, request_user_id } = notification.data;
 
-      // Add user to session participants
+      // FIRST: Update request status to 'accepted'
+      const { error: requestError } = await supabase
+        .from('session_requests')
+        .update({ status: 'accepted' })
+        .eq('session_id', session_id)
+        .eq('user_id', request_user_id);
+
+      if (requestError) throw requestError;
+
+      // THEN: Add user to session participants
       const { error: participantError } = await supabase
         .from('session_participants')
         .insert([{
@@ -97,15 +106,6 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
 
         if (updateError) throw updateError;
       }
-
-      // Update request status
-      const { error: requestError } = await supabase
-        .from('session_requests')
-        .update({ status: 'accepted' })
-        .eq('session_id', session_id)
-        .eq('user_id', request_user_id);
-
-      if (requestError) throw requestError;
 
       // Mark notification as read
       await markAsRead(notification.id);
