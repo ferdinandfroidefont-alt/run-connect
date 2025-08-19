@@ -43,6 +43,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
 
+  // Early return if no session
+  if (!session) return null;
+
   // Check if user has already requested to join this session
   useEffect(() => {
     const checkExistingRequest = async () => {
@@ -54,7 +57,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         .eq('session_id', session.id)
         .eq('user_id', user.id)
         .eq('status', 'pending')
-        .single();
+        .maybeSingle();
 
       setHasRequested(!!data);
     };
