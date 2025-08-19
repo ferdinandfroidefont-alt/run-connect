@@ -568,15 +568,8 @@ export const InteractiveMap = () => {
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
               
-              {/* Map Controls */}
+              {/* Locate Me Button and Style Selector in header */}
               <div className="flex items-center gap-2">
-                <MapControls
-                  onZoomIn={handleZoomIn}
-                  onZoomOut={handleZoomOut}
-                  onResetView={handleResetView}
-                  onToggle3D={handleToggle3D}
-                />
-                
                 {/* Locate Me Button */}
                 <Button
                   onClick={handleLocateMe}
@@ -671,6 +664,14 @@ export const InteractiveMap = () => {
 
       {/* Filters */}
       <SessionFilters filters={filters} onFiltersChange={setFilters} />
+      
+      {/* Map Controls - back to original position */}
+      <MapControls
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onResetView={handleResetView}
+        onToggle3D={handleToggle3D}
+      />
       
 
       {/* Create Session Dialog */}
