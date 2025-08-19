@@ -17,7 +17,11 @@ import {
   Send, 
   ArrowLeft, 
   Search,
-  Plus
+  Plus,
+  Paperclip,
+  Check,
+  CheckCheck,
+  Image
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -45,6 +49,9 @@ interface Message {
   content: string;
   created_at: string;
   read_at: string | null;
+  file_url?: string | null;
+  file_type?: string | null;
+  file_name?: string | null;
   sender: Profile;
 }
 
@@ -61,6 +68,7 @@ const Messages = () => {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -154,6 +162,21 @@ const Messages = () => {
     }
   };
 
+  // Mark message as read
+  const markMessageAsRead = async (messageId: string) => {
+    if (!user) return;
+    
+    try {
+      await supabase
+        .from('messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', messageId)
+        .neq('sender_id', user.id); // Don't mark own messages as read
+    } catch (error: any) {
+      console.error('Error marking message as read:', error);
+    }
+  };
+
   // Send a message
   const sendMessage = async () => {
     if (!user || !selectedConversation || !newMessage.trim()) return;
@@ -183,6 +206,65 @@ const Messages = () => {
       toast({ title: "Erreur", description: "Impossible d'envoyer le message", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Upload file to Supabase Storage
+  const uploadFile = async (file: File) => {
+    if (!user || !selectedConversation) return;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `messages/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Send message with file attachment
+      const { error } = await supabase
+        .from('messages')
+        .insert([{
+          conversation_id: selectedConversation.id,
+          sender_id: user.id,
+          content: file.type.startsWith('image/') ? 'Image partagée' : 'Fichier partagé',
+          file_url: publicUrl,
+          file_type: file.type,
+          file_name: file.name
+        }]);
+
+      if (error) throw error;
+
+      // Update conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', selectedConversation.id);
+
+      loadMessages(selectedConversation.id);
+      loadConversations();
+      toast({ title: "Succès", description: "Fichier envoyé avec succès" });
+    } catch (error: any) {
+      toast({ title: "Erreur", description: "Impossible d'envoyer le fichier", variant: "destructive" });
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      uploadFile(file);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -402,20 +484,54 @@ const Messages = () => {
                           </span>
                         </div>
                       )}
-                      <div
-                        className={`rounded-lg p-3 ${
-                          isOwnMessage
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                        <p className={`text-xs mt-1 ${
-                          isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                        }`}>
-                          {format(new Date(message.created_at), 'HH:mm')}
-                        </p>
-                      </div>
+                       <div
+                         className={`rounded-lg p-3 ${
+                           isOwnMessage
+                             ? 'bg-primary text-primary-foreground'
+                             : 'bg-muted'
+                         }`}
+                         onClick={() => !isOwnMessage && markMessageAsRead(message.id)}
+                       >
+                         {/* File attachment */}
+                         {message.file_url && (
+                           <div className="mb-2">
+                             {message.file_type?.startsWith('image/') ? (
+                               <img 
+                                 src={message.file_url} 
+                                 alt={message.file_name || "Image"}
+                                 className="max-w-full h-auto rounded-lg"
+                                 style={{ maxHeight: '200px' }}
+                               />
+                             ) : (
+                               <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                                 <Paperclip className="h-4 w-4" />
+                                 <span className="text-sm truncate">{message.file_name}</span>
+                               </div>
+                             )}
+                           </div>
+                         )}
+                         
+                         <p className="text-sm">{message.content}</p>
+                         
+                         <div className={`flex items-center justify-between mt-1 ${
+                           isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                         }`}>
+                           <span className="text-xs">
+                             {format(new Date(message.created_at), 'HH:mm')}
+                           </span>
+                           
+                           {/* Read status for own messages */}
+                           {isOwnMessage && (
+                             <div className="flex items-center">
+                               {message.read_at ? (
+                                 <CheckCheck className="h-3 w-3 text-blue-500" />
+                               ) : (
+                                 <Check className="h-3 w-3" />
+                               )}
+                             </div>
+                           )}
+                         </div>
+                       </div>
                     </div>
                   </div>
                 );
@@ -427,6 +543,31 @@ const Messages = () => {
           {/* Message input */}
           <div className="p-4 border-t border-border">
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) uploadFile(file);
+                  };
+                  input.click();
+                }}
+                className="px-3"
+              >
+                <Image className="h-4 w-4" />
+              </Button>
               <Input
                 placeholder="Tapez votre message..."
                 value={newMessage}
@@ -442,6 +583,15 @@ const Messages = () => {
                 <Send className="h-4 w-4" />
               </Button>
             </div>
+            
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="*/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
           </div>
         </div>
       </div>
