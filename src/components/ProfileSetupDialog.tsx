@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2 } from "lucide-react";
@@ -26,18 +27,53 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
   const [password, setPassword] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [showCropEditor, setShowCropEditor] = useState(false);
+  const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const { toast } = useToast();
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatarFile(file);
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez sélectionner un fichier image.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Vérifier la taille du fichier (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Erreur",
+          description: "La taille du fichier ne doit pas dépasser 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string);
+        const imageSrc = e.target?.result as string;
+        setOriginalImageSrc(imageSrc);
+        setShowCropEditor(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (croppedImageBlob: Blob) => {
+    // Créer un fichier à partir du blob croppé
+    const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
+    setAvatarFile(croppedFile);
+    
+    // Créer l'URL de prévisualisation
+    const previewUrl = URL.createObjectURL(croppedImageBlob);
+    setAvatarPreview(previewUrl);
+    
+    setShowCropEditor(false);
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
@@ -313,6 +349,14 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
           </div>
           </form>
         </div>
+
+        {/* Image Crop Editor */}
+        <ImageCropEditor
+          open={showCropEditor}
+          onClose={() => setShowCropEditor(false)}
+          imageSrc={originalImageSrc}
+          onCropComplete={handleCropComplete}
+        />
       </DialogContent>
     </Dialog>
   );

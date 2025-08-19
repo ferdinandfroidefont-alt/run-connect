@@ -225,7 +225,26 @@ export const InteractiveMap = () => {
           ctx.beginPath();
           ctx.arc(size / 2, size / 2, size / 2 - 6, 0, 2 * Math.PI);
           ctx.clip();
-          ctx.drawImage(profileImage, 6, 6, size - 12, size - 12);
+          // Calculer les dimensions pour un crop centré (object-fit: cover)
+          const imgAspect = profileImage.width / profileImage.height;
+          const targetSize = size - 12;
+          let drawWidth, drawHeight, drawX, drawY;
+
+          if (imgAspect > 1) {
+            // Image plus large que haute - crop horizontalement
+            drawHeight = targetSize;
+            drawWidth = drawHeight * imgAspect;
+            drawX = 6 + (targetSize - drawWidth) / 2;
+            drawY = 6;
+          } else {
+            // Image plus haute que large - crop verticalement
+            drawWidth = targetSize;
+            drawHeight = drawWidth / imgAspect;
+            drawX = 6;
+            drawY = 6 + (targetSize - drawHeight) / 2;
+          }
+
+          ctx.drawImage(profileImage, drawX, drawY, drawWidth, drawHeight);
           ctx.restore();
         } else {
           // Afficher les initiales si pas de photo

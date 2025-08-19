@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { User, Settings, LogOut, Crown, Camera, Users, Heart } from "lucide-react";
 import { Loader2 } from "lucide-react";
@@ -29,6 +30,8 @@ const Profile = () => {
   const [formData, setFormData] = useState<Partial<Profile>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [showCropEditor, setShowCropEditor] = useState(false);
+  const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
   const [followerCount, setFollowerCount] = useState(0);
@@ -88,13 +91,46 @@ const Profile = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatarFile(file);
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez sélectionner un fichier image.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Vérifier la taille du fichier (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Erreur",
+          description: "La taille du fichier ne doit pas dépasser 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string);
+        const imageSrc = e.target?.result as string;
+        setOriginalImageSrc(imageSrc);
+        setShowCropEditor(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (croppedImageBlob: Blob) => {
+    // Créer un fichier à partir du blob croppé
+    const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
+    setAvatarFile(croppedFile);
+    
+    // Créer l'URL de prévisualisation
+    const previewUrl = URL.createObjectURL(croppedImageBlob);
+    setAvatarPreview(previewUrl);
+    
+    setShowCropEditor(false);
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
@@ -376,6 +412,14 @@ const Profile = () => {
           type={followDialogType}
           followerCount={followerCount}
           followingCount={followingCount}
+        />
+
+        {/* Image Crop Editor */}
+        <ImageCropEditor
+          open={showCropEditor}
+          onClose={() => setShowCropEditor(false)}
+          imageSrc={originalImageSrc}
+          onCropComplete={handleCropComplete}
         />
       </div>
     </div>
