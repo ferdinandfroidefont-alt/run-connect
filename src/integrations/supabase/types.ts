@@ -307,7 +307,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_monthly_reset: string | null
           last_weekly_reset: string | null
+          monthly_points: number | null
           total_points: number | null
           updated_at: string
           user_id: string
@@ -316,7 +318,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_monthly_reset?: string | null
           last_weekly_reset?: string | null
+          monthly_points?: number | null
           total_points?: number | null
           updated_at?: string
           user_id: string
@@ -325,7 +329,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_monthly_reset?: string | null
           last_weekly_reset?: string | null
+          monthly_points?: number | null
           total_points?: number | null
           updated_at?: string
           user_id?: string
@@ -384,6 +390,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      get_user_rank: {
+        Args: { points: number }
+        Returns: string
       }
       remove_user_points: {
         Args: { points_to_remove: number; user_id_param: string }

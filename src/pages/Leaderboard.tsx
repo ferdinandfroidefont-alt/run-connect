@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe } from "lucide-react";
+import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -11,18 +11,20 @@ interface LeaderboardUser {
   user_id: string;
   total_points: number;
   weekly_points: number;
+  monthly_points: number;
   profile: {
     username: string;
     display_name: string;
     avatar_url: string;
   };
   rank: number;
+  user_rank: string;
 }
 
 const Leaderboard = () => {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [weeklyLeaderboard, setWeeklyLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardUser[]>([]);
   const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -41,7 +43,8 @@ const Leaderboard = () => {
         .select(`
           user_id,
           total_points,
-          weekly_points
+          weekly_points,
+          monthly_points
         `)
         .order('total_points', { ascending: false })
         .limit(50);
@@ -64,18 +67,19 @@ const Leaderboard = () => {
             display_name: 'Unknown User',
             avatar_url: ''
           },
-          rank: index + 1
+          rank: index + 1,
+          user_rank: getUserRank(item.total_points)
         };
       }) || [];
 
       setLeaderboard(globalLeaderboard);
 
-      // Create weekly leaderboard
-      const weeklyLeaderboard = [...globalLeaderboard]
-        .sort((a, b) => b.weekly_points - a.weekly_points)
+      // Create monthly leaderboard
+      const monthlyLeaderboard = [...globalLeaderboard]
+        .sort((a, b) => b.monthly_points - a.monthly_points)
         .map((item, index) => ({ ...item, rank: index + 1 }));
 
-      setWeeklyLeaderboard(weeklyLeaderboard);
+      setMonthlyLeaderboard(monthlyLeaderboard);
 
       // Find user's rank
       const currentUserRank = globalLeaderboard.find(u => u.user_id === user?.id)?.rank;
@@ -94,7 +98,7 @@ const Leaderboard = () => {
         if (friendIds.length > 0) {
           const { data: friendsScores } = await supabase
             .from('user_scores')
-            .select('user_id, total_points, weekly_points')
+            .select('user_id, total_points, weekly_points, monthly_points')
             .in('user_id', friendIds);
 
           const { data: friendsProfiles } = await supabase
@@ -111,7 +115,8 @@ const Leaderboard = () => {
                 display_name: 'Unknown User',
                 avatar_url: ''
               },
-              rank: index + 1
+              rank: index + 1,
+              user_rank: getUserRank(item.total_points)
             };
           }).sort((a, b) => b.total_points - a.total_points)
           .map((item, index) => ({ ...item, rank: index + 1 })) || [];
@@ -124,6 +129,14 @@ const Leaderboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getUserRank = (points: number): string => {
+    if (points >= 3000) return 'platine';
+    if (points >= 2000) return 'or';
+    if (points >= 1000) return 'argent';
+    if (points >= 500) return 'bronze';
+    return 'novice';
   };
 
   const getRankIcon = (rank: number) => {
@@ -139,7 +152,47 @@ const Leaderboard = () => {
     }
   };
 
-  const LeaderboardList = ({ data, showWeekly = false }: { data: LeaderboardUser[], showWeekly?: boolean }) => (
+  const getRankBadge = (userRank: string) => {
+    switch (userRank) {
+      case 'platine':
+        return (
+          <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
+            <Gem className="h-3 w-3 mr-1" />
+            Platine
+          </Badge>
+        );
+      case 'or':
+        return (
+          <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
+            <Award className="h-3 w-3 mr-1" />
+            Or
+          </Badge>
+        );
+      case 'argent':
+        return (
+          <Badge variant="secondary" className="bg-gradient-to-r from-gray-400 to-gray-600 text-white border-0">
+            <Medal className="h-3 w-3 mr-1" />
+            Argent
+          </Badge>
+        );
+      case 'bronze':
+        return (
+          <Badge variant="secondary" className="bg-gradient-to-r from-amber-600 to-amber-800 text-white border-0">
+            <Coins className="h-3 w-3 mr-1" />
+            Bronze
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline">
+            <Star className="h-3 w-3 mr-1" />
+            Novice
+          </Badge>
+        );
+    }
+  };
+
+  const LeaderboardList = ({ data, showMonthly = false }: { data: LeaderboardUser[], showMonthly?: boolean }) => (
     <div className="space-y-2">
       {data.map((item) => (
         <Card 
@@ -157,10 +210,13 @@ const Leaderboard = () => {
                   {item.profile?.display_name?.[0] || item.profile?.username?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-medium">
-                  {item.profile?.display_name || item.profile?.username}
-                </p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">
+                    {item.profile?.display_name || item.profile?.username}
+                  </p>
+                  {getRankBadge(item.user_rank)}
+                </div>
                 <p className="text-sm text-muted-foreground">
                   @{item.profile?.username}
                 </p>
@@ -168,11 +224,11 @@ const Leaderboard = () => {
             </div>
             <div className="text-right">
               <p className="font-bold text-primary">
-                {showWeekly ? item.weekly_points : item.total_points} pts
+                {showMonthly ? item.monthly_points : item.total_points} pts
               </p>
-              {!showWeekly && (
+              {!showMonthly && (
                 <p className="text-xs text-muted-foreground">
-                  +{item.weekly_points} cette semaine
+                  +{item.monthly_points} ce mois
                 </p>
               )}
             </div>
@@ -207,32 +263,48 @@ const Leaderboard = () => {
           )}
         </div>
 
-        {/* Points Info */}
+        {/* Rank System Info */}
         <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-accent/5">
           <CardHeader>
-            <CardTitle className="text-center">Système de points</CardTitle>
+            <CardTitle className="text-center">Système de rangs</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Crown className="h-4 w-4 text-yellow-500 mr-2" />
-                <span className="text-sm">Créer une séance</span>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 text-gray-500 mr-2" />
+                  <span className="text-sm">Novice</span>
+                </div>
+                <span className="text-xs">0-499 pts</span>
               </div>
-              <span className="text-sm font-bold">+10 pts</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Medal className="h-4 w-4 text-blue-500 mr-2" />
-                <span className="text-sm">Rejoindre une séance</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Coins className="h-4 w-4 text-amber-600 mr-2" />
+                  <span className="text-sm">Bronze</span>
+                </div>
+                <span className="text-xs">500+ pts</span>
               </div>
-              <span className="text-sm font-bold">+30 pts</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Trophy className="h-4 w-4 text-green-500 mr-2" />
-                <span className="text-sm">Quelqu'un rejoint votre séance</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Medal className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm">Argent</span>
+                </div>
+                <span className="text-xs">1000+ pts</span>
               </div>
-              <span className="text-sm font-bold">+50 pts</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Award className="h-4 w-4 text-yellow-500 mr-2" />
+                  <span className="text-sm">Or</span>
+                </div>
+                <span className="text-xs">2000+ pts</span>
+              </div>
+              <div className="flex items-center justify-between col-span-2">
+                <div className="flex items-center">
+                  <Gem className="h-4 w-4 text-purple-500 mr-2" />
+                  <span className="text-sm">Platine</span>
+                </div>
+                <span className="text-xs">3000+ pts</span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -244,9 +316,9 @@ const Leaderboard = () => {
               <Globe className="h-4 w-4" />
               <span className="hidden sm:inline">Global</span>
             </TabsTrigger>
-            <TabsTrigger value="weekly" className="flex items-center gap-1">
+            <TabsTrigger value="monthly" className="flex items-center gap-1">
               <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Semaine</span>
+              <span className="hidden sm:inline">Mois</span>
             </TabsTrigger>
             <TabsTrigger value="friends" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
@@ -264,13 +336,13 @@ const Leaderboard = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="weekly" className="mt-4">
+          <TabsContent value="monthly" className="mt-4">
             <div className="space-y-2">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Cette semaine
+                Ce mois
               </h2>
-              <LeaderboardList data={weeklyLeaderboard} showWeekly />
+              <LeaderboardList data={monthlyLeaderboard} showMonthly />
             </div>
           </TabsContent>
 
