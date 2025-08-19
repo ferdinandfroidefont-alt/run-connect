@@ -10,6 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -25,7 +26,8 @@ interface Profile {
 }
 
 const Profile = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -258,7 +260,30 @@ const Profile = () => {
                 </p>
               </>
             )}
-            <h2 className="text-xl font-semibold">{profile?.display_name || profile?.username}</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-xl font-semibold">{profile?.display_name || profile?.username}</h2>
+              {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                <Crown className="h-5 w-5 text-yellow-500" />
+              )}
+            </div>
+            <div className="flex gap-2 items-center mb-4">
+              {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                  {subscriptionInfo?.subscription_tier || 'Premium'}
+                </Badge>
+              )}
+              {!subscriptionInfo?.subscribed && (
+                <Button 
+                  onClick={() => navigate('/subscription')}
+                  variant="outline" 
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Crown className="h-4 w-4" />
+                  Devenir Premium
+                </Button>
+              )}
+            </div>
             <div className="flex gap-4 mt-2">
               <button
                 onClick={() => {
@@ -281,12 +306,6 @@ const Profile = () => {
                 <p className="text-sm text-muted-foreground">Abonnements</p>
               </button>
             </div>
-            {profile?.is_premium && (
-              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 mt-2">
-                <Crown className="h-3 w-3 mr-1" />
-                Premium
-              </Badge>
-            )}
           </CardContent>
         </Card>
 

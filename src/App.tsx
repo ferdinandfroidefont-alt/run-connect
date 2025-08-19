@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Messages from "./pages/Messages";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
+import Subscription from "./pages/Subscription";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/messages" element={<Layout><Messages /></Layout>} />
             <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
             <Route path="/profile" element={<Layout><Profile /></Layout>} />
+            <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
