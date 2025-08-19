@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 
@@ -41,6 +41,7 @@ const Profile = () => {
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -207,6 +208,39 @@ const Profile = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de récupérer votre adresse email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email envoyé !",
+        description: "Vérifiez votre boîte email pour réinitialiser votre mot de passe.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -436,6 +470,33 @@ const Profile = () => {
                 checked={theme === 'light'}
                 onCheckedChange={(checked) => setTheme(checked ? 'light' : 'dark')}
               />
+            </div>
+
+            {/* Password Reset */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Key className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Mot de passe
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Changer votre mot de passe par email
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePasswordReset}
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Modifier"
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>

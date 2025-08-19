@@ -10,16 +10,27 @@ import { Loader2, Mail, Lock, KeyRound } from "lucide-react";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [authStep, setAuthStep] = useState<'email' | 'otp' | 'password'>('email');
+  const [authStep, setAuthStep] = useState<'email' | 'otp' | 'password' | 'reset'>('email');
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [newUserId, setNewUserId] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
+    // Vérifier si c'est une réinitialisation de mot de passe
+    const urlParams = new URLSearchParams(window.location.search);
+    const isReset = urlParams.get('reset') === 'true';
+    
+    if (isReset) {
+      setAuthStep('reset');
+      return;
+    }
+
     // Vérifier si l'utilisateur est déjà connecté
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -173,17 +184,68 @@ const Auth = () => {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Succès !",
+        description: "Votre mot de passe a été mis à jour.",
+      });
+      
+      // Rediriger vers l'accueil
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-accent/20 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-map-panel">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">RunConnect</CardTitle>
           <CardDescription>
-            {authStep === 'otp' 
-              ? "Entrez le code reçu par email"
-              : authMode === 'signup' 
-                ? "Créez votre compte pour rejoindre la communauté" 
-                : "Connectez-vous à votre compte"
+            {authStep === 'reset'
+              ? "Définissez votre nouveau mot de passe"
+              : authStep === 'otp' 
+                ? "Entrez le code reçu par email"
+                : authMode === 'signup' 
+                  ? "Créez votre compte pour rejoindre la communauté" 
+                  : "Connectez-vous à votre compte"
             }
           </CardDescription>
         </CardHeader>
@@ -209,7 +271,49 @@ const Auth = () => {
             </div>
           </div>
 
-          {authStep === 'otp' ? (
+          {authStep === 'reset' ? (
+            // Password Reset Form
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    placeholder="Nouveau mot de passe"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    placeholder="Confirmer le mot de passe"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || newPassword !== confirmPassword}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Mettre à jour le mot de passe
+              </Button>
+            </form>
+          ) : authStep === 'otp' ? (
             // OTP Verification Form
             <form onSubmit={handleOtpSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -374,13 +478,15 @@ const Auth = () => {
           )}
 
           <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
-              className="text-sm text-primary hover:underline"
-            >
-              {authMode === 'signup' ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
-            </button>
+            {authStep !== 'reset' && (
+              <button
+                type="button"
+                onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
+                className="text-sm text-primary hover:underline"
+              >
+                {authMode === 'signup' ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
