@@ -234,7 +234,12 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       if (error) throw error;
 
       toast({ title: "Séance créée avec succès !" });
-      onSessionCreated();
+      
+      // Force refresh sessions to ensure the new session appears with profile
+      setTimeout(() => {
+        onSessionCreated();
+      }, 100);
+      
       onClose();
       
       // Reset form

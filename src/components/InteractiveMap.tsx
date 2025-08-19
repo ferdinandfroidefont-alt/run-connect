@@ -150,11 +150,15 @@ export const InteractiveMap = () => {
       // Get organizer profiles for all sessions
       const sessionsWithProfiles = [];
       for (const session of data || []) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('username, display_name, avatar_url')
           .eq('user_id', session.organizer_id)
-          .single();
+          .maybeSingle();
+        
+        if (profileError) {
+          console.error('Error fetching profile for organizer:', session.organizer_id, profileError);
+        }
         
         sessionsWithProfiles.push({
           ...session,
