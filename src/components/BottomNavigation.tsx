@@ -1,13 +1,13 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Map, MessageCircle, Trophy, User, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/contexts/AppContext';
 
 const navItems = [
-  { path: '/', icon: Map, label: 'Carte' },
-  { path: '/messages', icon: MessageCircle, label: 'Messages' },
-  { path: '/leaderboard', icon: Trophy, label: 'Classement' },
-  { path: '/profile', icon: User, label: 'Profil' },
+  { path: '/', emoji: '🗺️', label: 'Carte' },
+  { path: '/messages', emoji: '💬', label: 'Messages' },
+  { path: '/leaderboard', emoji: '🏆', label: 'Classement' },
+  { path: '/profile', emoji: '👤', label: 'Profil' },
 ];
 
 export const BottomNavigation = () => {
@@ -18,7 +18,7 @@ export const BottomNavigation = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
       <div className="flex items-center justify-around py-2">
-        {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
+        {navItems.slice(0, 2).map(({ path, emoji, label }) => {
           const isActive = location.pathname === path;
           
           return (
@@ -32,7 +32,7 @@ export const BottomNavigation = () => {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <Icon size={20} />
+              <span className="text-xl">{emoji}</span>
               <span className="text-xs font-medium">{label}</span>
             </button>
           );
@@ -54,7 +54,7 @@ export const BottomNavigation = () => {
           <span className="text-xs font-medium">Créer</span>
         </button>
 
-        {navItems.slice(2).map(({ path, icon: Icon, label }) => {
+        {navItems.slice(2).map(({ path, emoji, label }) => {
           const isActive = location.pathname === path;
           
           return (
@@ -68,7 +68,7 @@ export const BottomNavigation = () => {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <Icon size={20} />
+              <span className="text-xl">{emoji}</span>
               <span className="text-xs font-medium">{label}</span>
             </button>
           );
