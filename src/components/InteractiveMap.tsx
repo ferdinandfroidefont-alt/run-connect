@@ -652,18 +652,14 @@ export const InteractiveMap = () => {
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
         onToggle3D={handleToggle3D}
-        onPanUp={() => map.current && map.current.panBy(0, -100)}
-        onPanDown={() => map.current && map.current.panBy(0, 100)}
-        onPanLeft={() => map.current && map.current.panBy(-100, 0)}
-        onPanRight={() => map.current && map.current.panBy(100, 0)}
       />
 
-      {/* Locate Me Button - moved above style selector */}
+      {/* Locate Me Button */}
       <Button
         onClick={handleLocateMe}
         size="sm"
         variant="outline"
-        className="absolute bottom-20 right-6 bg-card/90 backdrop-blur-sm shadow-map-control"
+        className="absolute bottom-6 right-6 bg-card/90 backdrop-blur-sm shadow-map-control"
       >
         <MapPin className="h-4 w-4" />
       </Button>
