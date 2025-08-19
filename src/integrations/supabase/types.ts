@@ -288,6 +288,7 @@ export type Database = {
           created_at: string
           current_participants: number | null
           description: string | null
+          friends_only: boolean | null
           id: string
           intensity: string | null
           is_private: boolean | null
@@ -306,6 +307,7 @@ export type Database = {
           created_at?: string
           current_participants?: number | null
           description?: string | null
+          friends_only?: boolean | null
           id?: string
           intensity?: string | null
           is_private?: boolean | null
@@ -324,6 +326,7 @@ export type Database = {
           created_at?: string
           current_participants?: number | null
           description?: string | null
+          friends_only?: boolean | null
           id?: string
           intensity?: string | null
           is_private?: boolean | null

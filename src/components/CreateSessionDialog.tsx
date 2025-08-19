@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Crown, UserCheck } from "lucide-react";
 
 interface CreateSessionDialogProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ interface CreateSessionDialogProps {
 }
 
 export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation }: CreateSessionDialogProps) => {
-  const { user } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
@@ -34,7 +35,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     intensity: "",
     scheduled_at: "",
     max_participants: "",
-    location_name: ""
+    location_name: "",
+    friends_only: false
   });
 
   const activityTypes = [
@@ -223,7 +225,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           location_name: formData.location_name,
           scheduled_at: formData.scheduled_at,
           max_participants: parseInt(formData.max_participants) || null,
-          current_participants: 0
+          current_participants: 0,
+          friends_only: formData.friends_only
         }]);
 
       if (error) throw error;
@@ -241,7 +244,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         intensity: "",
         scheduled_at: "",
         max_participants: "",
-        location_name: ""
+        location_name: "",
+        friends_only: false
       });
       setSelectedLocation(null);
       setLocationSearch("");
@@ -398,6 +402,41 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Premium Feature: Friends Only */}
+          <div className="border rounded-lg p-4 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                <Label htmlFor="friends_only" className="text-sm font-medium">
+                  Amis uniquement
+                </Label>
+                <Crown className="h-3 w-3 text-yellow-500" />
+              </div>
+              <Switch
+                id="friends_only"
+                checked={formData.friends_only}
+                onCheckedChange={(checked) => {
+                  if (checked && !subscriptionInfo?.subscribed) {
+                    toast({
+                      title: "Fonctionnalité Premium",
+                      description: "L'option 'Amis uniquement' est réservée aux membres Premium.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  setFormData(prev => ({ ...prev, friends_only: checked }));
+                }}
+                disabled={!subscriptionInfo?.subscribed}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {subscriptionInfo?.subscribed 
+                ? "Seuls vos amis pourront voir et rejoindre cette séance"
+                : "Fonctionnalité réservée aux membres Premium"
+              }
+            </p>
           </div>
 
           <div>
