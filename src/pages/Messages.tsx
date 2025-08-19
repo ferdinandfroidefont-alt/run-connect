@@ -784,22 +784,39 @@ const Messages = () => {
                     className="flex items-center gap-3 p-4 hover:bg-muted cursor-pointer"
                   >
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={conversation.other_participant.avatar_url || ""} />
-                      <AvatarFallback>
-                        {(conversation.other_participant.display_name || conversation.other_participant.username || "").charAt(0).toUpperCase()}
-                      </AvatarFallback>
+                      {conversation.is_group ? (
+                        <>
+                          <AvatarImage src={conversation.group_avatar_url || ""} />
+                          <AvatarFallback>
+                            <Users className="h-6 w-6" />
+                          </AvatarFallback>
+                        </>
+                      ) : (
+                        <>
+                          <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                          <AvatarFallback>
+                            {(conversation.other_participant?.display_name || conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </>
+                      )}
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-sm truncate">
-                          {conversation.other_participant.display_name || conversation.other_participant.username}
+                          {conversation.is_group 
+                            ? conversation.group_name 
+                            : (conversation.other_participant?.display_name || conversation.other_participant?.username || "Utilisateur inconnu")
+                          }
                         </p>
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        @{conversation.other_participant.username}
+                        {conversation.is_group 
+                          ? `${conversation.group_members?.length || 0} membres`
+                          : `@${conversation.other_participant?.username || "utilisateur"}`
+                        }
                       </p>
                     </div>
                   </div>
