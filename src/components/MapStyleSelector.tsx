@@ -40,7 +40,7 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="absolute top-6 right-6">
+    <div className="absolute bottom-20 right-6">
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -52,7 +52,7 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
 
       {/* Style Options */}
       {isOpen && (
-        <div className="absolute top-14 right-0 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-map-panel p-3 min-w-[200px]">
+        <div className="absolute bottom-14 right-0 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-map-panel p-3 min-w-[200px]">
           <h3 className="text-sm font-medium text-foreground mb-3">Style de carte</h3>
           <div className="grid grid-cols-2 gap-2">
             {mapStyles.map((style) => {
