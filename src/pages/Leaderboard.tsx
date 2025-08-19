@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar } from "lucide-react";
+import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface LeaderboardUser {
   user_id: string;
@@ -22,12 +24,13 @@ interface LeaderboardUser {
 }
 
 const Leaderboard = () => {
-  const { user } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [seasonalLeaderboard, setSeasonalLeaderboard] = useState<LeaderboardUser[]>([]);
   const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -296,6 +299,56 @@ const Leaderboard = () => {
           <div className="text-center">
             <Trophy className="h-12 w-12 text-primary mx-auto mb-4 animate-bounce" />
             <p>Chargement du classement...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user is premium
+  if (!subscriptionInfo?.subscribed) {
+    return (
+      <div className="min-h-screen bg-background p-4 pb-20">
+        <div className="max-w-md mx-auto">
+          <div className="text-center py-8">
+            <h1 className="text-2xl font-bold text-foreground mb-6">Classement</h1>
+            
+            <Card className="border-2 border-yellow-500/20 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20">
+              <CardContent className="p-8 text-center space-y-6">
+                <div className="relative">
+                  <Lock className="h-16 w-16 text-yellow-500 mx-auto" />
+                  <Crown className="h-8 w-8 text-yellow-600 absolute -top-1 -right-1" />
+                </div>
+                
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold text-foreground">
+                    Fonctionnalité Premium
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Le classement est réservé aux membres Premium. 
+                    Découvrez votre rang et comparez-vous avec vos amis !
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>✨ Classement global et saisonnier</p>
+                    <p>🏆 Système de rangs avancé</p>
+                    <p>👥 Classement entre amis</p>
+                    <p>📊 Statistiques détaillées</p>
+                  </div>
+                </div>
+                
+                <Button 
+                  onClick={() => navigate('/subscription')}
+                  className="w-full gap-2"
+                  size="lg"
+                >
+                  <Crown className="h-4 w-4" />
+                  Devenir Premium
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
