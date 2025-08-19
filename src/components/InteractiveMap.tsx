@@ -585,15 +585,17 @@ export const InteractiveMap = () => {
               RunConnect
             </h1>
             
-            {/* User Profile Avatar */}
-            {userProfile && (
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.display_name || userProfile.username} />
-                <AvatarFallback>
-                  {(userProfile.display_name || userProfile.username || 'U').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            )}
+            {/* User Profile Avatar - Centered */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              {userProfile && (
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.display_name || userProfile.username} />
+                  <AvatarFallback>
+                    {(userProfile.display_name || userProfile.username || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
             
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
