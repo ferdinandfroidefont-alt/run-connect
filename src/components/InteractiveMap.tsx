@@ -587,7 +587,7 @@ export const InteractiveMap = () => {
             
             {/* User Profile Avatar */}
             {userProfile && (
-              <Avatar className="w-10 h-10">
+              <Avatar className="w-12 h-12">
                 <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.display_name || userProfile.username} />
                 <AvatarFallback>
                   {(userProfile.display_name || userProfile.username || 'U').charAt(0).toUpperCase()}
