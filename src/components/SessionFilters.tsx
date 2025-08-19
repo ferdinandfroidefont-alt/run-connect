@@ -10,6 +10,7 @@ interface Filter {
   session_types: string[];
   search_query: string;
   selected_date: Date;
+  friends_only: boolean;
 }
 
 interface SessionFiltersProps {
@@ -55,7 +56,8 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
       activity_types: [],
       session_types: [],
       search_query: filters.search_query,
-      selected_date: filters.selected_date
+      selected_date: filters.selected_date,
+      friends_only: false
     });
   };
 

@@ -11,7 +11,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -52,6 +52,7 @@ interface Filter {
   session_types: string[];
   search_query: string;
   selected_date: Date;
+  friends_only: boolean;
 }
 
 export const InteractiveMap = () => {
@@ -70,7 +71,8 @@ export const InteractiveMap = () => {
     activity_types: [],
     session_types: [],
     search_query: '',
-    selected_date: new Date()
+    selected_date: new Date(),
+    friends_only: false
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -91,31 +93,53 @@ export const InteractiveMap = () => {
       const endOfDay = new Date(filters.selected_date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('sessions')
         .select('*')
         .gte('scheduled_at', startOfDay.toISOString())
         .lte('scheduled_at', endOfDay.toISOString());
 
+      // If friends_only filter is active, only show sessions from friends
+      if (filters.friends_only && user) {
+        // Get user's friends first
+        const { data: friends } = await supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', user.id)
+          .eq('status', 'accepted');
+
+        const friendIds = friends?.map(f => f.following_id) || [];
+        
+        if (friendIds.length > 0) {
+          query = query.in('organizer_id', friendIds);
+        } else {
+          // If user has no friends, show no sessions
+          setSessions([]);
+          return;
+        }
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       
-      // Get organizer profiles separately
-      const sessionsWithProfiles = await Promise.all(
-        (data || []).map(async (session) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('username, display_name, avatar_url')
-            .eq('user_id', session.organizer_id)
-            .single();
-          
-          return {
-            ...session,
-            profiles: profile || { username: 'Utilisateur', display_name: null, avatar_url: null }
-          };
-        })
-      );
       
-      setSessions(sessionsWithProfiles as Session[]);
+      // Get organizer profiles for all sessions
+      const sessionsWithProfiles = [];
+      for (const session of data || []) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, display_name, avatar_url')
+          .eq('user_id', session.organizer_id)
+          .single();
+        
+        sessionsWithProfiles.push({
+          ...session,
+          profiles: profile || { username: 'Utilisateur', display_name: 'Utilisateur', avatar_url: null }
+        });
+      }
+
+      setSessions(sessionsWithProfiles);
     } catch (error) {
       console.error('Error loading sessions:', error);
       toast.error('Erreur lors du chargement des séances');
@@ -270,7 +294,7 @@ export const InteractiveMap = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, filters.selected_date]);
+  }, [user, filters.selected_date, filters.friends_only]);
 
   // Initialize search autocomplete separately
   useEffect(() => {
@@ -541,8 +565,9 @@ export const InteractiveMap = () => {
             />
           </div>
           
-          {/* Date Filter */}
-          <div className="mt-3 flex justify-start pl-2">
+          {/* Date Filter and Friends Filter */}
+          <div className="mt-3 flex justify-start pl-2 gap-3">
+            {/* Date Filter */}
             <Popover>
               <PopoverTrigger asChild>
                 <div className="relative cursor-pointer">
@@ -578,6 +603,23 @@ export const InteractiveMap = () => {
                 />
               </PopoverContent>
             </Popover>
+
+            {/* Friends Only Filter */}
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
+              className={cn(
+                "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all shadow-lg border-2",
+                filters.friends_only
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              )}
+            >
+              <div className="flex items-center gap-1">
+                <PersonStanding size={16} />
+                <Bike size={16} />
+              </div>
+              <span className="text-xs font-medium">Amis uniquement</span>
+            </button>
           </div>
         </div>
       </div>
