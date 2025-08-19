@@ -19,6 +19,7 @@ import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { Bell, Check, X, User, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Notification {
   id: string;
@@ -281,13 +282,14 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
             {unreadCount > 0 ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}` : 'Aucune nouvelle notification'}
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-6 space-y-4">
-          {notifications.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Aucune notification
-            </p>
-          ) : (
-            notifications.map((notification) => (
+        <ScrollArea className="h-[calc(100vh-8rem)] mt-6">
+          <div className="space-y-4 pr-4">
+            {notifications.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Aucune notification
+              </p>
+            ) : (
+              notifications.map((notification) => (
               <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''}`}>
                 <CardContent className="p-4">
                    <div className="flex items-start gap-3">
@@ -393,7 +395,8 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
               </Card>
             ))
           )}
-        </div>
+          </div>
+        </ScrollArea>
         
         {/* Profile Preview Dialog */}
         <ProfilePreviewDialog
