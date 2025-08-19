@@ -136,7 +136,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           data: {
             session_id: session.id,
             request_user_id: user.id,
-            session_title: session.title
+            session_title: session.title,
+            requester_name: profile?.display_name || profile?.username || 'Utilisateur',
+            requester_avatar: profile?.avatar_url
           }
         }]);
 
