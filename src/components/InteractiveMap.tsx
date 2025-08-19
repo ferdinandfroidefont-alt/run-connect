@@ -627,17 +627,17 @@ export const InteractiveMap = () => {
             <button
               onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all shadow-lg border-2",
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
                 filters.friends_only
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
               )}
             >
               <div className="flex items-center gap-1">
-                <PersonStanding size={14} />
-                <Bike size={14} />
+                <PersonStanding size={16} />
+                <Bike size={16} />
               </div>
-              <span className="text-xs font-medium leading-tight">Amis uniquement</span>
+              <span className="text-sm font-medium">Amis uniquement</span>
             </button>
           </div>
         </div>
