@@ -580,19 +580,21 @@ export const InteractiveMap = () => {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="flex items-center justify-between px-4 py-2">
+          <div className="relative flex items-center justify-between px-4 py-2">
             <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
               RunConnect
             </h1>
             
-            {/* User Profile Avatar */}
+            {/* User Profile Avatar - Centered */}
             {userProfile && (
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.display_name || userProfile.username} />
-                <AvatarFallback>
-                  {(userProfile.display_name || userProfile.username || 'U').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="absolute left-1/2 transform -translate-x-1/2">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.display_name || userProfile.username} />
+                  <AvatarFallback>
+                    {(userProfile.display_name || userProfile.username || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
             )}
             
             <div className="flex items-center gap-2">
