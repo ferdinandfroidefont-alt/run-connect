@@ -567,6 +567,32 @@ export const InteractiveMap = () => {
             </h1>
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
+              
+              {/* Map Controls */}
+              <div className="flex items-center gap-2">
+                <MapControls
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onResetView={handleResetView}
+                  onToggle3D={handleToggle3D}
+                />
+                
+                {/* Locate Me Button */}
+                <Button
+                  onClick={handleLocateMe}
+                  size="sm"
+                  variant="outline"
+                  className="bg-card/90 backdrop-blur-sm shadow-map-control"
+                >
+                  <MapPin className="h-4 w-4" />
+                </Button>
+                
+                {/* Style Selector */}
+                <MapStyleSelector
+                  currentStyle={currentStyle}
+                  onStyleChange={handleStyleChange}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -646,29 +672,6 @@ export const InteractiveMap = () => {
       {/* Filters */}
       <SessionFilters filters={filters} onFiltersChange={setFilters} />
       
-      {/* Map Controls */}
-      <MapControls
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetView={handleResetView}
-        onToggle3D={handleToggle3D}
-      />
-
-      {/* Locate Me Button */}
-      <Button
-        onClick={handleLocateMe}
-        size="sm"
-        variant="outline"
-        className="absolute bottom-6 right-6 bg-card/90 backdrop-blur-sm shadow-map-control"
-      >
-        <MapPin className="h-4 w-4" />
-      </Button>
-      
-      {/* Style Selector */}
-      <MapStyleSelector
-        currentStyle={currentStyle}
-        onStyleChange={handleStyleChange}
-      />
 
       {/* Create Session Dialog */}
       <CreateSessionDialog
