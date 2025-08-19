@@ -192,9 +192,21 @@ export const InteractiveMap = () => {
       return matchesActivity && matchesType && matchesSearch;
     });
 
-    // Create markers for filtered sessions
-    for (const session of filteredSessions) {
+    console.log(`Creating markers for ${filteredSessions.length} sessions`);
+
+    // Create markers for filtered sessions with error handling
+    const markerPromises = filteredSessions.map(async (session, index) => {
       try {
+        // Ensure session has valid data
+        if (!session.location_lat || !session.location_lng || !session.profiles) {
+          console.warn(`Session ${session.id} missing required data:`, {
+            lat: session.location_lat,
+            lng: session.location_lng,
+            profiles: session.profiles
+          });
+          return null;
+        }
+
         const markerIcon = await createCustomMarker(session);
         
         const marker = new google.maps.Marker({
@@ -212,15 +224,52 @@ export const InteractiveMap = () => {
           setSelectedSession(session);
         });
 
-        markers.current.push(marker);
+        return marker;
       } catch (error) {
-        console.error('Error creating marker for session:', session.id, error);
+        console.error(`Error creating marker for session ${session.id}:`, error);
+        
+        // Create a basic marker as fallback
+        try {
+          const fallbackMarker = new google.maps.Marker({
+            position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
+            map: map.current,
+            title: session.title,
+            icon: {
+              url: getFallbackIcon(session.activity_type),
+              scaledSize: new google.maps.Size(40, 40),
+              anchor: new google.maps.Point(20, 40)
+            }
+          });
+
+          fallbackMarker.addListener('click', () => {
+            setSelectedSession(session);
+          });
+
+          return fallbackMarker;
+        } catch (fallbackError) {
+          console.error(`Failed to create fallback marker for session ${session.id}:`, fallbackError);
+          return null;
+        }
       }
-    }
+    });
+
+    // Wait for all markers to be created and add successful ones
+    const createdMarkers = await Promise.all(markerPromises);
+    const validMarkers = createdMarkers.filter(marker => marker !== null);
+    
+    markers.current = validMarkers;
+    console.log(`Successfully created ${validMarkers.length} markers out of ${filteredSessions.length} sessions`);
   };
 
   const createCustomMarker = (session: Session): Promise<string> => {
     return new Promise((resolve) => {
+      // Validation des données de session
+      if (!session || !session.profiles) {
+        console.warn('Session or profiles missing:', session);
+        resolve(getFallbackIcon(session?.activity_type || 'course'));
+        return;
+      }
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const size = 50;
