@@ -3,6 +3,8 @@ import { createContext, useContext, useState, useCallback, ReactNode } from 'rea
 interface AppContextType {
   refreshSessions: () => void;
   setRefreshSessions: (refresh: () => void) => void;
+  openCreateSession: () => void;
+  setOpenCreateSession: (openFunction: () => void) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -21,13 +23,23 @@ interface AppProviderProps {
 
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [refreshSessions, setRefreshSessionsState] = useState<() => void>(() => () => {});
+  const [openCreateSession, setOpenCreateSessionState] = useState<() => void>(() => () => {});
 
   const setRefreshSessions = useCallback((refresh: () => void) => {
     setRefreshSessionsState(() => refresh);
   }, []);
 
+  const setOpenCreateSession = useCallback((openFunction: () => void) => {
+    setOpenCreateSessionState(() => openFunction);
+  }, []);
+
   return (
-    <AppContext.Provider value={{ refreshSessions, setRefreshSessions }}>
+    <AppContext.Provider value={{ 
+      refreshSessions, 
+      setRefreshSessions, 
+      openCreateSession,
+      setOpenCreateSession 
+    }}>
       {children}
     </AppContext.Provider>
   );

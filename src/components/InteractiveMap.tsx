@@ -56,7 +56,7 @@ interface Filter {
 
 export const InteractiveMap = () => {
   const { user } = useAuth();
-  const { setRefreshSessions } = useAppContext();
+  const { setRefreshSessions, setOpenCreateSession } = useAppContext();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
@@ -78,7 +78,8 @@ export const InteractiveMap = () => {
   // Register refresh function with context
   useEffect(() => {
     setRefreshSessions(() => loadSessions);
-  }, [setRefreshSessions]);
+    setOpenCreateSession(() => setIsCreateDialogOpen(true));
+  }, [setRefreshSessions, setOpenCreateSession]);
 
   // Load sessions from database
   const loadSessions = async () => {
