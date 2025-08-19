@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins } from "lucide-react";
+import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -11,7 +11,7 @@ interface LeaderboardUser {
   user_id: string;
   total_points: number;
   weekly_points: number;
-  monthly_points: number;
+  seasonal_points: number;
   profile: {
     username: string;
     display_name: string;
@@ -24,7 +24,7 @@ interface LeaderboardUser {
 const Leaderboard = () => {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [seasonalLeaderboard, setSeasonalLeaderboard] = useState<LeaderboardUser[]>([]);
   const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -44,7 +44,7 @@ const Leaderboard = () => {
           user_id,
           total_points,
           weekly_points,
-          monthly_points
+          seasonal_points
         `)
         .order('total_points', { ascending: false })
         .limit(50);
@@ -74,12 +74,12 @@ const Leaderboard = () => {
 
       setLeaderboard(globalLeaderboard);
 
-      // Create monthly leaderboard
-      const monthlyLeaderboard = [...globalLeaderboard]
-        .sort((a, b) => b.monthly_points - a.monthly_points)
+      // Create seasonal leaderboard
+      const seasonalLeaderboard = [...globalLeaderboard]
+        .sort((a, b) => b.seasonal_points - a.seasonal_points)
         .map((item, index) => ({ ...item, rank: index + 1 }));
 
-      setMonthlyLeaderboard(monthlyLeaderboard);
+      setSeasonalLeaderboard(seasonalLeaderboard);
 
       // Find user's rank
       const currentUserRank = globalLeaderboard.find(u => u.user_id === user?.id)?.rank;
@@ -98,7 +98,7 @@ const Leaderboard = () => {
         if (friendIds.length > 0) {
           const { data: friendsScores } = await supabase
             .from('user_scores')
-            .select('user_id, total_points, weekly_points, monthly_points')
+            .select('user_id, total_points, weekly_points, seasonal_points')
             .in('user_id', friendIds);
 
           const { data: friendsProfiles } = await supabase
@@ -132,6 +132,7 @@ const Leaderboard = () => {
   };
 
   const getUserRank = (points: number): string => {
+    if (points >= 5000) return 'diamant';
     if (points >= 3000) return 'platine';
     if (points >= 2000) return 'or';
     if (points >= 1000) return 'argent';
@@ -154,6 +155,13 @@ const Leaderboard = () => {
 
   const getRankBadge = (userRank: string) => {
     switch (userRank) {
+      case 'diamant':
+        return (
+          <Badge variant="secondary" className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white border-0">
+            <Diamond className="h-3 w-3 mr-1" />
+            Diamant
+          </Badge>
+        );
       case 'platine':
         return (
           <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
@@ -192,7 +200,7 @@ const Leaderboard = () => {
     }
   };
 
-  const LeaderboardList = ({ data, showMonthly = false }: { data: LeaderboardUser[], showMonthly?: boolean }) => (
+  const LeaderboardList = ({ data, showSeasonal = false }: { data: LeaderboardUser[], showSeasonal?: boolean }) => (
     <div className="space-y-2">
       {data.map((item) => (
         <Card 
@@ -224,11 +232,11 @@ const Leaderboard = () => {
             </div>
             <div className="text-right">
               <p className="font-bold text-primary">
-                {showMonthly ? item.monthly_points : item.total_points} pts
+                {showSeasonal ? item.seasonal_points : item.total_points} pts
               </p>
-              {!showMonthly && (
+              {!showSeasonal && (
                 <p className="text-xs text-muted-foreground">
-                  +{item.monthly_points} ce mois
+                  +{item.seasonal_points} cette saison
                 </p>
               )}
             </div>
@@ -298,12 +306,19 @@ const Leaderboard = () => {
                 </div>
                 <span className="text-xs">2000+ pts</span>
               </div>
-              <div className="flex items-center justify-between col-span-2">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Gem className="h-4 w-4 text-purple-500 mr-2" />
                   <span className="text-sm">Platine</span>
                 </div>
                 <span className="text-xs">3000+ pts</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Diamond className="h-4 w-4 text-cyan-400 mr-2" />
+                  <span className="text-sm">Diamant</span>
+                </div>
+                <span className="text-xs">5000+ pts</span>
               </div>
             </div>
           </CardContent>
@@ -316,9 +331,9 @@ const Leaderboard = () => {
               <Globe className="h-4 w-4" />
               <span className="hidden sm:inline">Global</span>
             </TabsTrigger>
-            <TabsTrigger value="monthly" className="flex items-center gap-1">
+            <TabsTrigger value="seasonal" className="flex items-center gap-1">
               <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Mois</span>
+              <span className="hidden sm:inline">Saison</span>
             </TabsTrigger>
             <TabsTrigger value="friends" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
@@ -336,13 +351,13 @@ const Leaderboard = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="monthly" className="mt-4">
+          <TabsContent value="seasonal" className="mt-4">
             <div className="space-y-2">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Ce mois
+                Cette saison
               </h2>
-              <LeaderboardList data={monthlyLeaderboard} showMonthly />
+              <LeaderboardList data={seasonalLeaderboard} showSeasonal />
             </div>
           </TabsContent>
 

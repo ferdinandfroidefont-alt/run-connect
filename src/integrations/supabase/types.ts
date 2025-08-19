@@ -307,9 +307,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          last_monthly_reset: string | null
+          last_seasonal_reset: string | null
           last_weekly_reset: string | null
-          monthly_points: number | null
+          seasonal_points: number | null
           total_points: number | null
           updated_at: string
           user_id: string
@@ -318,9 +318,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          last_monthly_reset?: string | null
+          last_seasonal_reset?: string | null
           last_weekly_reset?: string | null
-          monthly_points?: number | null
+          seasonal_points?: number | null
           total_points?: number | null
           updated_at?: string
           user_id: string
@@ -329,9 +329,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          last_monthly_reset?: string | null
+          last_seasonal_reset?: string | null
           last_weekly_reset?: string | null
-          monthly_points?: number | null
+          seasonal_points?: number | null
           total_points?: number | null
           updated_at?: string
           user_id?: string
