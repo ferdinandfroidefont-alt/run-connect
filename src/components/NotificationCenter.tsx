@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { Bell, Check, X, User, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -39,6 +40,8 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [profilePreviewUserId, setProfilePreviewUserId] = useState<string | null>(null);
+  const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -252,6 +255,11 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
     }
   };
 
+  const handleOpenProfilePreview = (userId: string) => {
+    setProfilePreviewUserId(userId);
+    setIsProfilePreviewOpen(true);
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -283,13 +291,35 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
               <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''}`}>
                 <CardContent className="p-4">
                    <div className="flex items-start gap-3">
-                     <div className="flex-shrink-0">
-                       {notification.type === 'follow_request' ? (
-                         <UserPlus className="h-5 w-5 text-primary" />
-                       ) : (
-                         <User className="h-5 w-5 text-primary" />
-                       )}
-                     </div>
+                     {/* Avatar for session_request and follow_request with user data */}
+                     {(notification.type === 'session_request' || notification.type === 'follow_request') && 
+                      notification.data && (notification.data.follower_avatar || notification.data.requester_avatar) ? (
+                       <div 
+                         className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                         onClick={() => handleOpenProfilePreview(
+                           notification.data.follower_id || notification.data.request_user_id
+                         )}
+                       >
+                         <Avatar className="w-10 h-10">
+                           <AvatarImage 
+                             src={notification.data.follower_avatar || notification.data.requester_avatar} 
+                             alt={notification.data.follower_name || notification.data.requester_name || 'Utilisateur'} 
+                           />
+                           <AvatarFallback>
+                             {(notification.data.follower_name || notification.data.requester_name || 'U').charAt(0).toUpperCase()}
+                           </AvatarFallback>
+                         </Avatar>
+                       </div>
+                     ) : (
+                       <div className="flex-shrink-0">
+                         {notification.type === 'follow_request' ? (
+                           <UserPlus className="h-5 w-5 text-primary" />
+                         ) : (
+                           <User className="h-5 w-5 text-primary" />
+                         )}
+                       </div>
+                     )}
+                     
                      <div className="flex-1 min-w-0">
                        <div className="flex items-center justify-between mb-1">
                          <h4 className="text-sm font-medium">{notification.title}</h4>
@@ -364,6 +394,16 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
             ))
           )}
         </div>
+        
+        {/* Profile Preview Dialog */}
+        <ProfilePreviewDialog
+          userId={profilePreviewUserId}
+          isOpen={isProfilePreviewOpen}
+          onClose={() => {
+            setIsProfilePreviewOpen(false);
+            setProfilePreviewUserId(null);
+          }}
+        />
       </SheetContent>
     </Sheet>
   );
