@@ -580,7 +580,7 @@ export const InteractiveMap = () => {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="relative flex items-center justify-between px-4 py-2">
+          <div className="relative flex items-center justify-between px-4 py-3">
             <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
               RunConnect
             </h1>
