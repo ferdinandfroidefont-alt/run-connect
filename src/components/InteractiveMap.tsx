@@ -267,46 +267,6 @@ export const InteractiveMap = () => {
           setSelectedSession(session);
         });
 
-        // Add route polyline if session has a route
-        if (session.routes && session.routes.coordinates && Array.isArray(session.routes.coordinates)) {
-          console.log('Drawing route for session:', session.id, 'Route coordinates:', session.routes.coordinates.length);
-          
-          const path = session.routes.coordinates.map((coord: any) => {
-            // Handle different coordinate formats
-            if (coord.lat !== undefined && coord.lng !== undefined) {
-              return { lat: Number(coord.lat), lng: Number(coord.lng) };
-            } else if (Array.isArray(coord) && coord.length >= 2) {
-              return { lat: Number(coord[0]), lng: Number(coord[1]) };
-            } else {
-              console.warn('Invalid coordinate format:', coord);
-              return null;
-            }
-          }).filter(coord => coord !== null);
-
-          if (path.length > 0) {
-            const polyline = new google.maps.Polyline({
-              path: path,
-              geodesic: true,
-              strokeColor: getActivityColor(session.activity_type),
-              strokeOpacity: 0.9,
-              strokeWeight: 4,
-              map: map.current,
-              clickable: true
-            });
-
-            sessionPolylines.current.push(polyline);
-
-            // Add click listener to polyline to show session details
-            polyline.addListener('click', () => {
-              setSelectedSession(session);
-            });
-            
-            console.log('Route polyline created successfully with', path.length, 'points');
-          } else {
-            console.warn('No valid coordinates found for route');
-          }
-        }
-
         return marker;
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
