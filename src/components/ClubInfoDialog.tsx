@@ -90,16 +90,32 @@ export const ClubInfoDialog = ({
     
     setLoading(true);
     try {
-      const { data: memberIds } = await supabase
+      console.log('🔍 Loading members for conversation:', conversationId);
+      
+      const { data: memberIds, error: memberError } = await supabase
         .from('group_members')
         .select('user_id, is_admin, joined_at')
         .eq('conversation_id', conversationId);
 
+      console.log('📊 Member IDs result:', { memberIds, memberError });
+
+      if (memberError) {
+        console.error('Error fetching member IDs:', memberError);
+        throw memberError;
+      }
+
       if (memberIds && memberIds.length > 0) {
-        const { data: memberProfiles } = await supabase
+        const { data: memberProfiles, error: profileError } = await supabase
           .from('profiles')
           .select('user_id, username, display_name, avatar_url')
           .in('user_id', memberIds.map(m => m.user_id));
+
+        console.log('👥 Member profiles result:', { memberProfiles, profileError });
+
+        if (profileError) {
+          console.error('Error fetching member profiles:', profileError);
+          throw profileError;
+        }
 
         const membersWithProfiles = memberIds.map(member => {
           const profile = memberProfiles?.find(p => p.user_id === member.user_id);
@@ -119,15 +135,20 @@ export const ClubInfoDialog = ({
           );
         });
 
+        console.log('✅ Final members with profiles:', membersWithProfiles);
         setMembers(membersWithProfiles);
+      } else {
+        console.log('⚠️ No members found for this club');
+        setMembers([]);
       }
     } catch (error) {
-      console.error('Error loading group members:', error);
+      console.error('❌ Error loading group members:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger les membres du club",
         variant: "destructive"
       });
+      setMembers([]);
     } finally {
       setLoading(false);
     }
