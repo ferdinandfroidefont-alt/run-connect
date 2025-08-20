@@ -187,6 +187,10 @@ export type Database = {
           id: string
           is_premium: boolean | null
           is_private: boolean | null
+          notif_follow_request: boolean | null
+          notif_friend_session: boolean | null
+          notif_message: boolean | null
+          notif_session_request: boolean | null
           notifications_enabled: boolean | null
           onboarding_completed: boolean | null
           phone: string | null
@@ -211,6 +215,10 @@ export type Database = {
           id?: string
           is_premium?: boolean | null
           is_private?: boolean | null
+          notif_follow_request?: boolean | null
+          notif_friend_session?: boolean | null
+          notif_message?: boolean | null
+          notif_session_request?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           phone?: string | null
@@ -235,6 +243,10 @@ export type Database = {
           id?: string
           is_premium?: boolean | null
           is_private?: boolean | null
+          notif_follow_request?: boolean | null
+          notif_friend_session?: boolean | null
+          notif_message?: boolean | null
+          notif_session_request?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           phone?: string | null
