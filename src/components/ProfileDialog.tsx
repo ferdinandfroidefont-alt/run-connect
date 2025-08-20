@@ -328,8 +328,9 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
             <DialogTitle className="text-center text-2xl font-bold">Mon Profil</DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 px-6 pb-6">
-            <div className="space-y-4 pb-4">
+          <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
+            <div className="space-y-4 pb-4 min-h-full"
+                 style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
               {/* Avatar Section */}
               <Card>
                 <CardContent className="flex flex-col items-center py-6">
