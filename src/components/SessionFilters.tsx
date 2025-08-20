@@ -11,6 +11,7 @@ interface Filter {
   search_query: string;
   selected_date: Date;
   friends_only: boolean;
+  selected_club_id: string | null;
 }
 
 interface SessionFiltersProps {
@@ -57,7 +58,8 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
       session_types: [],
       search_query: filters.search_query,
       selected_date: filters.selected_date,
-      friends_only: false
+      friends_only: false,
+      selected_club_id: null
     });
   };
 

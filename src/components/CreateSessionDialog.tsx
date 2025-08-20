@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool, Route, TrendingUp } from "lucide-react";
+import { ClubSelector } from "./ClubSelector";
 
   // Add type declaration for global polyline reference
   declare global {
@@ -60,7 +61,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     interval_count: "", // Nombre de fractions
     location_name: "",
     friends_only: false,
-    image_url: ""
+    image_url: "",
+    club_id: null
   });
 
   const activityTypes = [
@@ -427,7 +429,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           current_participants: 0,
           friends_only: formData.friends_only,
           image_url: imageUrl,
-          route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null
+          route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null,
+          club_id: formData.club_id
         }]);
 
       if (error) throw error;
@@ -456,7 +459,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         interval_count: "",
         location_name: "",
         friends_only: false,
-        image_url: ""
+        image_url: "",
+        club_id: null
       });
       setSelectedLocation(null);
       setLocationSearch("");
@@ -526,6 +530,18 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Club Selection (optional) */}
+          <div>
+            <Label>Club associé (optionnel)</Label>
+            <ClubSelector
+              selectedClubId={formData.club_id}
+              onClubSelect={(clubId) => setFormData(prev => ({ ...prev, club_id: clubId }))}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Associez cette séance à un de vos clubs
+            </p>
           </div>
 
           <div>

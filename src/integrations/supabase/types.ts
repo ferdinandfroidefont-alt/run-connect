@@ -371,6 +371,7 @@ export type Database = {
       sessions: {
         Row: {
           activity_type: string
+          club_id: string | null
           created_at: string
           current_participants: number | null
           description: string | null
@@ -397,6 +398,7 @@ export type Database = {
         }
         Insert: {
           activity_type: string
+          club_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
@@ -423,6 +425,7 @@ export type Database = {
         }
         Update: {
           activity_type?: string
+          club_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
@@ -448,6 +451,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sessions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sessions_route_id_fkey"
             columns: ["route_id"]

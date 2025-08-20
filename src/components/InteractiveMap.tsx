@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
+import { ClubSelector } from './ClubSelector';
 
 // Declare global google maps types
 declare global {
@@ -47,6 +48,7 @@ interface Session {
   max_participants: number;
   current_participants: number;
   organizer_id: string;
+  club_id?: string | null;
   image_url?: string;
   profiles: {
     username: string;
@@ -68,6 +70,7 @@ interface Filter {
   search_query: string;
   selected_date: Date;
   friends_only: boolean;
+  selected_club_id: string | null;
 }
 
 export const InteractiveMap = () => {
@@ -89,7 +92,8 @@ export const InteractiveMap = () => {
     session_types: [],
     search_query: '',
     selected_date: new Date(),
-    friends_only: false
+    friends_only: false,
+    selected_club_id: null
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [userProfile, setUserProfile] = useState<{username: string, display_name: string, avatar_url: string | null} | null>(null);
@@ -147,6 +151,11 @@ export const InteractiveMap = () => {
         .select('*')
         .gte('scheduled_at', startOfDay.toISOString())
         .lte('scheduled_at', endOfDay.toISOString());
+
+      // If club filter is active, only show sessions from that club
+      if (filters.selected_club_id) {
+        query = query.eq('club_id', filters.selected_club_id);
+      }
 
       // If friends_only filter is active, only show sessions from friends
       if (filters.friends_only && user) {
@@ -474,7 +483,7 @@ export const InteractiveMap = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, filters.selected_date, filters.friends_only]);
+  }, [user, filters.selected_date, filters.friends_only, filters.selected_club_id]);
 
   // Initialize search autocomplete separately
   useEffect(() => {
@@ -1058,6 +1067,14 @@ export const InteractiveMap = () => {
           
           {/* Date Filter and Friends Filter */}
           <div className="mt-3 flex justify-start pl-0 gap-3">
+            {/* Club Selector */}
+            <div className="w-48">
+              <ClubSelector
+                selectedClubId={filters.selected_club_id}
+                onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
+              />
+            </div>
+            
             {/* Date Filter */}
             <Popover>
               <PopoverTrigger asChild>
