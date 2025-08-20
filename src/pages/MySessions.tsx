@@ -6,13 +6,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Users, Filter, Edit, Save, X } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Filter, Edit, Save, X, Route, TrendingUp, Mountain, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useNavigate } from "react-router-dom";
 
 interface UserSession {
   id: string;
@@ -40,13 +41,30 @@ interface Participant {
   };
 }
 
+interface UserRoute {
+  id: string;
+  name: string;
+  description: string | null;
+  total_distance: number | null;
+  total_elevation_gain: number | null;
+  total_elevation_loss: number | null;
+  min_elevation: number | null;
+  max_elevation: number | null;
+  created_at: string;
+  coordinates: any;
+}
+
 export default function MySessions() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [routes, setRoutes] = useState<UserRoute[]>([]);
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
+  const [routesLoading, setRoutesLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserSession>>({});
 
@@ -109,7 +127,60 @@ export default function MySessions() {
 
   useEffect(() => {
     loadUserSessions();
-  }, [user]);
+    if (currentView === 'routes') {
+      loadUserRoutes();
+    }
+  }, [user, currentView]);
+
+  // Load user's routes
+  const loadUserRoutes = async () => {
+    if (!user) return;
+
+    setRoutesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('routes')
+        .select('*')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRoutes(data || []);
+    } catch (error) {
+      console.error('Error fetching user routes:', error);
+      toast.error('Erreur lors du chargement de vos itinéraires');
+    } finally {
+      setRoutesLoading(false);
+    }
+  };
+
+  const deleteRoute = async (routeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('routes')
+        .delete()
+        .eq('id', routeId)
+        .eq('created_by', user?.id);
+
+      if (error) throw error;
+
+      setRoutes(prev => prev.filter(route => route.id !== routeId));
+      toast.success('Itinéraire supprimé avec succès');
+    } catch (error) {
+      toast.error('Impossible de supprimer l\'itinéraire');
+    }
+  };
+
+  const formatDistance = (meters: number | null) => {
+    if (!meters) return "N/A";
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${Math.round(meters / 1000 * 10) / 10} km`;
+  };
+
+  const formatElevation = (meters: number | null) => {
+    if (!meters) return "N/A";
+    return `${Math.round(meters)} m`;
+  };
 
   const handleSessionClick = async (session: UserSession) => {
     setSelectedSession(session);
@@ -400,94 +471,239 @@ export default function MySessions() {
 
   return (
     <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-xl font-bold">Mes Séances</h1>
-        <div className="flex items-center gap-2">
-          <Filter size={14} className="text-muted-foreground" />
-          <select 
-            value={filter} 
-            onChange={(e) => setFilter(e.target.value as 'all' | 'upcoming' | 'completed')}
-            className="bg-background border border-border rounded-md px-2 py-1 text-xs"
+      {/* Header with Tab Selector */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex bg-muted rounded-lg p-1">
+          <Button
+            onClick={() => setCurrentView('sessions')}
+            variant={currentView === 'sessions' ? 'default' : 'ghost'}
+            size="sm"
+            className="gap-2"
           >
-            <option value="all">Toutes</option>
-            <option value="upcoming">À venir</option>
-            <option value="completed">Terminées</option>
-          </select>
+            <Users className="h-4 w-4" />
+            Mes Séances
+          </Button>
+          <Button
+            onClick={() => setCurrentView('routes')}
+            variant={currentView === 'routes' ? 'default' : 'ghost'}
+            size="sm"
+            className="gap-2"
+          >
+            <Route className="h-4 w-4" />
+            Mes Itinéraires
+          </Button>
         </div>
+        
+        {currentView === 'sessions' ? (
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-muted-foreground" />
+            <select 
+              value={filter} 
+              onChange={(e) => setFilter(e.target.value as 'all' | 'upcoming' | 'completed')}
+              className="bg-background border border-border rounded-md px-2 py-1 text-xs"
+            >
+              <option value="all">Toutes</option>
+              <option value="upcoming">À venir</option>
+              <option value="completed">Terminées</option>
+            </select>
+          </div>
+        ) : (
+          <Button
+            onClick={() => navigate('/')}
+            size="sm"
+            className="gap-2"
+          >
+            <Route className="h-4 w-4" />
+            Créer un itinéraire
+          </Button>
+        )}
       </div>
 
+      {/* Content Area */}
       <div className="flex-1">
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-            <p className="text-xs text-muted-foreground mt-2">Chargement...</p>
-          </div>
-        ) : filteredSessions.length > 0 ? (
-          <div className="space-y-2">
-            {filteredSessions.slice(0, 6).map((session) => (
-              <Card 
-                key={session.id} 
-                className="cursor-pointer hover:shadow-sm transition-shadow"
-                onClick={() => handleSessionClick(session)}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-2 flex-1 min-w-0">
-                      {session.image_url && (
-                        <img 
-                          src={session.image_url} 
-                          alt={session.title}
-                          className="w-10 h-10 object-cover rounded flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-sm">{getActivityIcon(session.activity_type)}</span>
-                          <h3 className="text-sm font-medium truncate">{session.title}</h3>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar size={10} />
-                            <span>{format(new Date(session.scheduled_at), 'dd/MM')}</span>
-                            <Clock size={10} className="ml-1" />
-                            <span>{format(new Date(session.scheduled_at), 'HH:mm')}</span>
+        {currentView === 'sessions' ? (
+          // Sessions View
+          loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+              <p className="text-xs text-muted-foreground mt-2">Chargement...</p>
+            </div>
+          ) : filteredSessions.length > 0 ? (
+            <div className="space-y-2">
+              {filteredSessions.slice(0, 6).map((session) => (
+                <Card 
+                  key={session.id} 
+                  className="cursor-pointer hover:shadow-sm transition-shadow"
+                  onClick={() => handleSessionClick(session)}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2 flex-1 min-w-0">
+                        {session.image_url && (
+                          <img 
+                            src={session.image_url} 
+                            alt={session.title}
+                            className="w-10 h-10 object-cover rounded flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="text-sm">{getActivityIcon(session.activity_type)}</span>
+                            <h3 className="text-sm font-medium truncate">{session.title}</h3>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Users size={10} />
-                            <span>{session.current_participants || 0}</span>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar size={10} />
+                              <span>{format(new Date(session.scheduled_at), 'dd/MM')}</span>
+                              <Clock size={10} className="ml-1" />
+                              <span>{format(new Date(session.scheduled_at), 'HH:mm')}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Users size={10} />
+                              <span>{session.current_participants || 0}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {getStatusBadge(session)}
+                        <Badge variant="outline" className="text-xs px-1 py-0">Créateur</Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {getStatusBadge(session)}
-                      <Badge variant="outline" className="text-xs px-1 py-0">Créateur</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filteredSessions.length > 6 && (
-              <div className="text-center py-2">
-                <p className="text-xs text-muted-foreground">
-                  +{filteredSessions.length - 6} autres séances
-                </p>
-              </div>
-            )}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {filteredSessions.length > 6 && (
+                <div className="text-center py-2">
+                  <p className="text-xs text-muted-foreground">
+                    +{filteredSessions.length - 6} autres séances
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <div className="text-3xl mb-2">⚽</div>
+              <h3 className="text-base font-semibold mb-1">Aucune séance trouvée</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                {filter === 'all' 
+                  ? "Créez votre première séance !" 
+                  : filter === 'upcoming'
+                  ? "Planifiez votre prochaine activité !"
+                  : "Aucune séance terminée."}
+              </p>
+              <Button size="sm">Créer une séance</Button>
+            </div>
+          )
         ) : (
-          <div className="text-center py-6">
-            <div className="text-3xl mb-2">⚽</div>
-            <h3 className="text-base font-semibold mb-1">Aucune séance trouvée</h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              {filter === 'all' 
-                ? "Créez votre première séance !" 
-                : filter === 'upcoming'
-                ? "Planifiez votre prochaine activité !"
-                : "Aucune séance terminée."}
-            </p>
-            <Button size="sm">Créer une séance</Button>
-          </div>
+          // Routes View
+          routesLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+              <p className="text-xs text-muted-foreground mt-2">Chargement des itinéraires...</p>
+            </div>
+          ) : routes.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {routes.map((route) => (
+                <Card key={route.id} className="hover:shadow-sm transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{route.name}</CardTitle>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(route.created_at).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => deleteRoute(route.id)}
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-3">
+                    {route.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {route.description}
+                      </p>
+                    )}
+
+                    {/* Statistics */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                        <MapPin className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Distance</p>
+                          <p className="text-sm font-semibold">{formatDistance(route.total_distance)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Dénivelé +</p>
+                          <p className="text-sm font-semibold">{formatElevation(route.total_elevation_gain)}</p>
+                        </div>
+                      </div>
+
+                      {route.min_elevation && route.max_elevation && (
+                        <>
+                          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                            <Mountain className="h-4 w-4 text-orange-600" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Alt. min</p>
+                              <p className="text-sm font-semibold">{formatElevation(route.min_elevation)}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                            <Mountain className="h-4 w-4 text-red-600" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Alt. max</p>
+                              <p className="text-sm font-semibold">{formatElevation(route.max_elevation)}</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Route className="h-3 w-3" />
+                        {Array.isArray(route.coordinates) ? route.coordinates.length : 0} points
+                      </div>
+                      {route.total_elevation_loss && (
+                        <Badge variant="secondary" className="text-xs">
+                          ↘️ {formatElevation(route.total_elevation_loss)}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Route className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">Aucun itinéraire créé</h3>
+              <p className="text-muted-foreground mb-4">
+                Utilisez le bouton crayon sur la carte pour créer votre premier itinéraire
+              </p>
+              <Button onClick={() => navigate('/')} className="gap-2">
+                <MapPin className="h-4 w-4" />
+                Aller à la carte
+              </Button>
+            </div>
+          )
         )}
       </div>
     </div>

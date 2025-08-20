@@ -576,13 +576,13 @@ const Profile = () => {
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={() => navigate('/my-routes')}
+                  onClick={() => navigate('/my-sessions')}
                   size="sm"
                   variant="outline"
                   className="gap-2"
                 >
                   <Route className="h-4 w-4" />
-                  Mes itinéraires
+                  Voir mes séances/itinéraires
                 </Button>
                 <Button
                   onClick={() => navigate('/')}
@@ -651,7 +651,7 @@ const Profile = () => {
                 {userRoutes.length > 3 && (
                   <div className="text-center pt-2">
                     <Button
-                      onClick={() => navigate('/my-routes')}
+                      onClick={() => navigate('/my-sessions')}
                       variant="ghost"
                       size="sm"
                       className="text-primary hover:text-primary"
