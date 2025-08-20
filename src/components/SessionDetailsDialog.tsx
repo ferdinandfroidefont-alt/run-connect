@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { RoutePreview } from "./RoutePreview";
 
 interface Session {
   id: string;
@@ -336,12 +337,21 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           {session.routes && (
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <Route className="h-4 w-4 text-primary" />
                   <span className="font-medium">Itinéraire</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <p className="text-sm font-medium">{session.routes.name}</p>
+                  
+                  {/* Mini carte de l'itinéraire */}
+                  <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                    <RoutePreview 
+                      coordinates={session.routes.coordinates}
+                      activityType={session.activity_type}
+                    />
+                  </div>
+                  
                   <div className="flex gap-4 text-xs text-muted-foreground">
                     <span>Distance: {(session.routes.total_distance / 1000).toFixed(1)} km</span>
                     <span>Dénivelé: {Math.round(session.routes.total_elevation_gain)}m</span>
