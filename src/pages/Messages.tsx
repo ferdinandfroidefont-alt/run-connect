@@ -15,6 +15,7 @@ import { CreateGroupDialog } from "@/components/CreateGroupDialog";
 import { EditGroupDialog } from "@/components/EditGroupDialog";
 import { GroupInfoDialog } from "@/components/GroupInfoDialog";
 import { ShareSessionDialog } from "@/components/ShareSessionDialog";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { 
   MessageCircle, 
   Users, 
@@ -99,6 +100,7 @@ const Messages = () => {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showShareSession, setShowShareSession] = useState(false);
   const [shareSessionConversationId, setShareSessionConversationId] = useState("");
+  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -623,7 +625,10 @@ const Messages = () => {
                     <div className={`max-w-[70%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
                       {!isOwnMessage && (
                         <div className="flex items-center gap-2 mb-1">
-                          <Avatar className="h-6 w-6">
+                          <Avatar 
+                            className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                            onClick={() => setSelectedProfileUserId(message.sender.user_id)}
+                          >
                             <AvatarImage src={message.sender.avatar_url || ""} />
                             <AvatarFallback>
                               {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
@@ -983,6 +988,12 @@ const Messages = () => {
               loadConversations();
             }
           }}
+        />
+
+        {/* Profile Preview Dialog */}
+        <ProfilePreviewDialog
+          userId={selectedProfileUserId}
+          onClose={() => setSelectedProfileUserId(null)}
         />
       </div>
     </div>
