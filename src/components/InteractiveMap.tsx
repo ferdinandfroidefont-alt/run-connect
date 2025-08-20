@@ -8,6 +8,7 @@ import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { NotificationCenter } from './NotificationCenter';
 import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
+import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,6 +86,8 @@ export const InteractiveMap = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   // Load user profile
   useEffect(() => {
@@ -572,14 +575,20 @@ export const InteractiveMap = () => {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
               };
+              setUserLocation(pos); // Store user location for nearby sessions
               map.current?.setCenter(pos);
               map.current?.setZoom(14);
               toast.success("Position détectée !");
             },
             () => {
               toast.info("Localisation non disponible, centré sur Paris");
+              // Set default location (Paris) for nearby sessions
+              setUserLocation({ lat: 48.8566, lng: 2.3522 });
             }
           );
+        } else {
+          // Set default location if geolocation is not supported
+          setUserLocation({ lat: 48.8566, lng: 2.3522 });
         }
 
         toast.success("Carte Google Maps prête !");
@@ -816,8 +825,7 @@ export const InteractiveMap = () => {
             size="sm"
             className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
             onClick={() => {
-              // TODO: Implémenter la logique des séances à proximité
-              toast.info("Fonctionnalité en cours de développement");
+              setShowNearbySessionsDialog(true);
             }}
           >
             <MapPin className="h-4 w-4 mr-2" />
@@ -883,6 +891,13 @@ export const InteractiveMap = () => {
       <UserSessionsDialog
         isOpen={isUserSessionsOpen}
         onClose={() => setIsUserSessionsOpen(false)}
+      />
+
+      {/* Nearby Sessions Dialog */}
+      <NearbySessionsDialog
+        isOpen={showNearbySessionsDialog}
+        onClose={() => setShowNearbySessionsDialog(false)}
+        userLocation={userLocation}
       />
     </div>
   );
