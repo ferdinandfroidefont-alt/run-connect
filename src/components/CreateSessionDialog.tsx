@@ -491,27 +491,33 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           </div>
 
           {/* Create Route Option */}
-          <div className="border rounded-lg p-4 bg-muted/20">
+          <div className="border rounded-lg p-4 bg-muted/20" style={{backgroundColor: '#ffcccc'}}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <PenTool className="h-4 w-4" />
-                <Label className="text-sm font-medium">
-                  Créer un itinéraire
+                <PenTool className="h-4 w-4 text-red-500" />
+                <Label className="text-sm font-medium text-red-700">
+                  Créer un itinéraire (DEBUG: Cette section devrait être visible)
                 </Label>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleCreateRoute}
+                onClick={() => {
+                  console.log('🎯 DEBUG: Dessiner button clicked!', { onCreateRoute: !!onCreateRoute });
+                  handleCreateRoute();
+                }}
                 disabled={!onCreateRoute}
+                className="bg-red-100 border-red-300"
               >
-                <PenTool className="h-3 w-3 mr-1" />
-                Dessiner
+                <PenTool className="h-3 w-3 mr-1 text-red-600" />
+                Dessiner (DEBUG)
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Créez un itinéraire personnalisé sur la carte pour votre séance
+              <br />
+              <span className="text-red-600">DEBUG: onCreateRoute disponible = {onCreateRoute ? 'OUI' : 'NON'}</span>
             </p>
           </div>
 
