@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { FcGoogle } from "react-icons/fc";
-import { Loader2, Mail, Lock, KeyRound } from "lucide-react";
+import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +14,7 @@ const Auth = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -161,13 +162,40 @@ const Auth = () => {
     }
   };
 
-  const handlePasswordSignin = async (e: React.FormEvent) => {
+  const handleUsernameOrEmailSignin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      let emailToUse = usernameOrEmail;
+      
+      // Vérifier si c'est un username (ne contient pas @)
+      if (!usernameOrEmail.includes('@')) {
+        // C'est un username, récupérer l'email associé
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('username', usernameOrEmail)
+          .single();
+          
+        if (profileError || !profile) {
+          throw new Error('Nom d\'utilisateur non trouvé');
+        }
+
+        // Récupérer l'email du user
+        const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(profile.user_id);
+        
+        if (userError || !user?.email) {
+          // Fallback: essayer de récupérer l'email via la table profiles ou utiliser une autre méthode
+          // Comme on ne peut pas utiliser admin.getUserById côté client, on va utiliser une approche différente
+          throw new Error('Impossible de récupérer l\'email associé au nom d\'utilisateur');
+        }
+        
+        emailToUse = user.email;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: emailToUse,
         password,
       });
       if (error) throw error;
@@ -435,15 +463,15 @@ const Auth = () => {
               </div>
 
               {/* Password Signin */}
-              <form onSubmit={handlePasswordSignin} className="space-y-4">
+              <form onSubmit={handleUsernameOrEmailSignin} className="space-y-4">
                 <div className="space-y-2">
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      type="email"
-                      placeholder="votre.email@exemple.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      type="text"
+                      placeholder="Pseudonyme ou email"
+                      value={usernameOrEmail}
+                      onChange={(e) => setUsernameOrEmail(e.target.value)}
                       className="pl-10"
                       required
                     />
@@ -471,7 +499,7 @@ const Auth = () => {
                   disabled={isLoading}
                 >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Se connecter avec mot de passe
+                  Se connecter
                 </Button>
               </form>
             </div>
