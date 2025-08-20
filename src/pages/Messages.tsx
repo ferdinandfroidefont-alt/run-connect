@@ -99,6 +99,7 @@ const Messages = () => {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [groupInfoData, setGroupInfoData] = useState<any>(null);
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -581,15 +582,16 @@ const Messages = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('🔍 Club avatar clicked - DEBUGGING:');
-                      console.log('- selectedConversation:', selectedConversation);
-                      console.log('- selectedConversation.id:', selectedConversation.id);
-                      console.log('- selectedConversation.is_group:', selectedConversation.is_group);
-                      console.log('- showGroupInfo current state:', showGroupInfo);
-                      console.log('- user?.id:', user?.id);
-                      console.log('- selectedConversation.created_by:', selectedConversation.created_by);
-                      setShowGroupInfo(true);
-                      console.log('- showGroupInfo set to true');
+                       console.log('🔍 Club avatar clicked - DEBUGGING:');
+                       console.log('- selectedConversation:', selectedConversation);
+                       console.log('- selectedConversation.id:', selectedConversation.id);
+                       console.log('- selectedConversation.is_group:', selectedConversation.is_group);
+                       console.log('- showGroupInfo current state:', showGroupInfo);
+                       console.log('- user?.id:', user?.id);
+                       console.log('- selectedConversation.created_by:', selectedConversation.created_by);
+                       setGroupInfoData(selectedConversation);
+                       setShowGroupInfo(true);
+                       console.log('- showGroupInfo set to true');
                     }}
                   >
                     <AvatarImage src={selectedConversation.group_avatar_url || ""} />
@@ -602,13 +604,14 @@ const Messages = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('🔍 Club name clicked - DEBUGGING:');
-                      console.log('- selectedConversation:', selectedConversation);
-                      console.log('- selectedConversation.id:', selectedConversation.id);
-                      console.log('- selectedConversation.is_group:', selectedConversation.is_group);
-                      console.log('- showGroupInfo current state:', showGroupInfo);
-                      setShowGroupInfo(true);
-                      console.log('- showGroupInfo set to true');
+                       console.log('🔍 Club name clicked - DEBUGGING:');
+                       console.log('- selectedConversation:', selectedConversation);
+                       console.log('- selectedConversation.id:', selectedConversation.id);
+                       console.log('- selectedConversation.is_group:', selectedConversation.is_group);
+                       console.log('- showGroupInfo current state:', showGroupInfo);
+                       setGroupInfoData(selectedConversation);
+                       setShowGroupInfo(true);
+                       console.log('- showGroupInfo set to true');
                     }}
                   >
                     <p className="font-medium text-sm">{selectedConversation.group_name}</p>
@@ -879,15 +882,16 @@ const Messages = () => {
                   >
                     <Avatar 
                       className="h-12 w-12 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (conversation.is_group) {
-                          setSelectedConversation(conversation);
-                          setShowGroupInfo(true);
-                        } else {
-                          setSelectedProfileUserId(conversation.other_participant?.user_id || null);
-                        }
-                      }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         if (conversation.is_group) {
+                           setSelectedConversation(conversation);
+                           setGroupInfoData(conversation);
+                           setShowGroupInfo(true);
+                         } else {
+                           setSelectedProfileUserId(conversation.other_participant?.user_id || null);
+                         }
+                       }}
                     >
                       {conversation.is_group ? (
                         <>
@@ -978,12 +982,13 @@ const Messages = () => {
           onClose={() => {
             console.log('🔍 ClubInfoDialog onClose called');
             setShowGroupInfo(false);
+            setGroupInfoData(null);
           }}
-          conversationId={selectedConversation?.id || ''}
-          groupName={selectedConversation?.group_name || ""}
-          groupDescription={selectedConversation?.group_description || null}
-          groupAvatarUrl={selectedConversation?.group_avatar_url || null}
-          isAdmin={selectedConversation?.created_by === user?.id}
+          conversationId={groupInfoData?.id || ''}
+          groupName={groupInfoData?.group_name || ""}
+          groupDescription={groupInfoData?.group_description || null}
+          groupAvatarUrl={groupInfoData?.group_avatar_url || null}
+          isAdmin={groupInfoData?.created_by === user?.id}
           onEditGroup={() => {
             setShowGroupInfo(false);
             setShowEditGroup(true);
