@@ -129,9 +129,35 @@ All colors MUST be HSL.
   html {
     /* Mode sombre par défaut */
     @apply dark;
+    /* Masquer les barres de défilement sur HTML */
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html::-webkit-scrollbar {
+    display: none;
   }
 
   body {
     @apply bg-background text-foreground;
+    /* Masquer les barres de défilement sur body */
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Masquer toutes les barres de défilement */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
   }
 }

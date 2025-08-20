@@ -240,7 +240,14 @@ export default function MySessions() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
+    <div 
+      className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col overflow-hidden"
+      style={{ 
+        scrollbarWidth: 'none', 
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch'
+      }}
+    >
       <div className="flex items-center justify-between mb-3">
         <h1 className="text-xl font-bold">Mes Séances</h1>
         <div className="flex items-center gap-2">
@@ -257,14 +264,14 @@ export default function MySessions() {
         </div>
       </div>
 
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden">
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
             <p className="text-xs text-muted-foreground mt-2">Chargement...</p>
           </div>
         ) : filteredSessions.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-2 h-full">
             {filteredSessions.slice(0, 6).map((session) => (
               <Card 
                 key={session.id} 
