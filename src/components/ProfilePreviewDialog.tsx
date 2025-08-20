@@ -263,8 +263,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               </Card>
             )}
 
-            {/* Age */}
-            {profile.age && (
+            {/* Age - Only show for own profile */}
+            {profile.age && isOwnProfile && (
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-2">
