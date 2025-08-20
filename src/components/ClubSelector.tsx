@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { Users, ChevronDown, Check } from 'lucide-react';
+import { Users, ChevronDown, Check, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface Club {
   id: string;
@@ -24,7 +25,8 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
   selectedClubId,
   onClubSelect
 }) => {
-  const { user } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
+  const navigate = useNavigate();
   const [clubs, setClubs] = useState<Club[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -134,30 +136,54 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       
       <PopoverContent className="w-80 p-2" align="start">
         <div className="space-y-1">
-          {/* Option "Tous les clubs" */}
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full justify-start h-auto p-3",
-              !selectedClubId && "bg-accent"
-            )}
-            onClick={() => handleClubSelect(null)}
-          >
-            <div className="flex items-center gap-2 w-full">
-              <div className="flex-shrink-0">
-                <Users className="h-4 w-4" />
-              </div>
-              <div className="flex-1 text-left">
-                <div className="font-medium">Tous les clubs</div>
-                <div className="text-xs text-muted-foreground">
-                  Afficher toutes les sessions
-                </div>
-              </div>
-              {!selectedClubId && (
-                <Check className="h-4 w-4 text-primary" />
+          {/* Option "Tous les clubs" - Premium Feature */}
+          {subscriptionInfo?.subscribed ? (
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start h-auto p-3",
+                !selectedClubId && "bg-accent"
               )}
-            </div>
-          </Button>
+              onClick={() => handleClubSelect(null)}
+            >
+              <div className="flex items-center gap-2 w-full">
+                <div className="flex-shrink-0">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="font-medium">Tous les clubs</div>
+                  <div className="text-xs text-muted-foreground">
+                    Afficher toutes les sessions
+                  </div>
+                </div>
+                {!selectedClubId && (
+                  <Check className="h-4 w-4 text-primary" />
+                )}
+              </div>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              className="w-full justify-start h-auto p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+              onClick={() => {
+                navigate('/subscription');
+                setIsOpen(false);
+              }}
+            >
+              <div className="flex items-center gap-2 w-full">
+                <div className="flex-shrink-0">
+                  <Users className="h-4 w-4 text-yellow-700" />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="font-medium text-yellow-700">Tous les clubs</div>
+                  <div className="text-xs text-yellow-600">
+                    Fonctionnalité premium
+                  </div>
+                </div>
+                <Crown className="h-4 w-4 text-yellow-500" />
+              </div>
+            </Button>
+          )}
 
           {/* Liste des clubs */}
           {clubs.map((club) => (
