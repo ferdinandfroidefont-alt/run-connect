@@ -584,6 +584,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_email_from_username: {
+        Args: { username_param: string }
+        Returns: string
+      }
       get_follower_count: {
         Args: { profile_user_id: string }
         Returns: number

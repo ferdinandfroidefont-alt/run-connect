@@ -172,26 +172,14 @@ const Auth = () => {
       // Vérifier si c'est un username (ne contient pas @)
       if (!usernameOrEmail.includes('@')) {
         // C'est un username, récupérer l'email associé
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('user_id')
-          .eq('username', usernameOrEmail)
-          .single();
+        const { data: userEmail, error: emailError } = await supabase
+          .rpc('get_email_from_username', { username_param: usernameOrEmail });
           
-        if (profileError || !profile) {
+        if (emailError || !userEmail) {
           throw new Error('Nom d\'utilisateur non trouvé');
         }
-
-        // Récupérer l'email du user
-        const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(profile.user_id);
         
-        if (userError || !user?.email) {
-          // Fallback: essayer de récupérer l'email via la table profiles ou utiliser une autre méthode
-          // Comme on ne peut pas utiliser admin.getUserById côté client, on va utiliser une approche différente
-          throw new Error('Impossible de récupérer l\'email associé au nom d\'utilisateur');
-        }
-        
-        emailToUse = user.email;
+        emailToUse = userEmail;
       }
 
       const { error } = await supabase.auth.signInWithPassword({
