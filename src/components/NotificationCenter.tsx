@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
-import { Bell, Check, X, User, UserPlus } from "lucide-react";
+import { Bell, Check, X, User, UserPlus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -256,6 +256,33 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
     }
   };
 
+  // Delete notification
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      // Update local state
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      
+      toast({ 
+        title: "Notification supprimée", 
+        description: "La notification a été supprimée avec succès" 
+      });
+    } catch (error: any) {
+      console.error('Error deleting notification:', error);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de supprimer la notification", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const handleOpenProfilePreview = (userId: string) => {
     setProfilePreviewUserId(userId);
     setIsProfilePreviewOpen(true);
@@ -323,12 +350,26 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                      )}
                      
                      <div className="flex-1 min-w-0">
-                       <div className="flex items-center justify-between mb-1">
-                         <h4 className="text-sm font-medium">{notification.title}</h4>
-                         {!notification.read && (
-                           <Badge variant="secondary" className="text-xs">Nouveau</Badge>
-                         )}
-                       </div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-sm font-medium">{notification.title}</h4>
+                          <div className="flex items-center gap-2">
+                            {!notification.read && (
+                              <Badge variant="secondary" className="text-xs">Nouveau</Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNotification(notification.id);
+                              }}
+                              className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                              title="Supprimer la notification"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
                        <p className="text-sm text-muted-foreground mb-2">
                          {notification.message}
                        </p>
