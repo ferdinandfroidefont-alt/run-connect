@@ -238,17 +238,25 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
                         </p>
                       )}
 
-                      {/* Send Button */}
-                      <div className="pt-2">
-                        <Button
-                          onClick={() => shareSession(session)}
-                          size="sm"
-                          className="w-full"
-                        >
-                          <Send className="h-3 w-3 mr-1" />
-                          Envoyer dans la conversation
-                        </Button>
-                      </div>
+                       {/* Send Button - VISIBLE */}
+                       <div className="pt-3 border-t border-gray-200">
+                         <Button
+                           onClick={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             console.log('🚀 Bouton ENVOYER cliqué pour session:', session.title, session.id);
+                             shareSession(session);
+                           }}
+                           size="sm"
+                           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2"
+                         >
+                           <Send className="h-4 w-4 mr-2" />
+                           ENVOYER DANS LA CONVERSATION
+                         </Button>
+                         <p className="text-xs text-center mt-1 text-gray-500">
+                           Cliquez pour envoyer cette séance
+                         </p>
+                       </div>
                     </div>
                   </CardContent>
                 </Card>
