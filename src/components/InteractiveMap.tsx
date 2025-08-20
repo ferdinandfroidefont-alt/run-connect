@@ -1187,7 +1187,7 @@ export const InteractiveMap = () => {
 
       {/* Nearby Sessions Button */}
       {user && (
-        <div className="absolute top-28 right-4 z-10">
+        <div className="absolute top-32 right-4 z-10">
           <Button 
             variant="default"
             size="sm"
@@ -1203,7 +1203,7 @@ export const InteractiveMap = () => {
       )}
 
       {/* Filters - positioned below Nearby Sessions */}
-      <div className="absolute top-40 right-4 z-10">
+      <div className="absolute top-44 right-4 z-10">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
