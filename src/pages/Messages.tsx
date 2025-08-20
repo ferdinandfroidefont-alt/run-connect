@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { CreateGroupDialog } from "@/components/CreateGroupDialog";
+import { EditGroupDialog } from "@/components/EditGroupDialog";
 import { ShareSessionDialog } from "@/components/ShareSessionDialog";
 import { 
   MessageCircle, 
@@ -27,7 +28,9 @@ import {
   Calendar,
   UserPlus,
   MapPin,
-  Clock
+  Clock,
+  Settings,
+  MoreVertical
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -91,6 +94,7 @@ const Messages = () => {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showEditGroup, setShowEditGroup] = useState(false);
   const [showShareSession, setShowShareSession] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -539,13 +543,24 @@ const Messages = () => {
               )}
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowShareSession(true)}
-            >
-              <Calendar className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-1">
+              {selectedConversation.is_group && selectedConversation.created_by === user?.id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowEditGroup(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowShareSession(true)}
+              >
+                <Calendar className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -853,6 +868,28 @@ const Messages = () => {
             setShowCreateGroup(false);
           }}
         />
+
+        {/* Edit Group Dialog */}
+        {selectedConversation?.is_group && (
+          <EditGroupDialog
+            isOpen={showEditGroup}
+            onClose={() => setShowEditGroup(false)}
+            conversationId={selectedConversation.id}
+            groupName={selectedConversation.group_name || ""}
+            groupDescription={selectedConversation.group_description}
+            isAdmin={selectedConversation.created_by === user?.id}
+            onGroupUpdated={() => {
+              loadConversations();
+              if (selectedConversation) {
+                // Reload the conversation to get updated info
+                const updatedConv = conversations.find(c => c.id === selectedConversation.id);
+                if (updatedConv) {
+                  setSelectedConversation(updatedConv);
+                }
+              }
+            }}
+          />
+        )}
 
         {/* Share Session Dialog */}
         <ShareSessionDialog
