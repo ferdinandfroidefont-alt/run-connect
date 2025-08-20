@@ -1057,7 +1057,7 @@ export const InteractiveMap = () => {
           </div>
           
           {/* Date Filter and Friends Filter */}
-          <div className="mt-3 flex justify-start pl-2 gap-3">
+          <div className="mt-3 flex justify-start pl-0 gap-3">
             {/* Date Filter */}
             <Popover>
               <PopoverTrigger asChild>
