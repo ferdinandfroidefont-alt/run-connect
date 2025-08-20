@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -30,6 +30,13 @@ interface Session {
     username: string;
     display_name: string;
   };
+  routes?: {
+    id: string;
+    name: string;
+    coordinates: any[];
+    total_distance: number;
+    total_elevation_gain: number;
+  } | null;
 }
 
 interface SessionDetailsDialogProps {
@@ -321,6 +328,25 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   <span className="font-medium">Description</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{session.description}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Itinéraire */}
+          {session.routes && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Route className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Itinéraire</span>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{session.routes.name}</p>
+                  <div className="flex gap-4 text-xs text-muted-foreground">
+                    <span>Distance: {(session.routes.total_distance / 1000).toFixed(1)} km</span>
+                    <span>Dénivelé: {Math.round(session.routes.total_elevation_gain)}m</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
