@@ -1016,9 +1016,9 @@ export const InteractiveMap = () => {
   };
 
   return (
-    <div className="relative w-full h-screen bg-background">
+    <div className="relative w-full h-screen bg-background pb-16">
       {/* Map Container */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div ref={mapContainer} className="absolute inset-0 bottom-16" />
       
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
