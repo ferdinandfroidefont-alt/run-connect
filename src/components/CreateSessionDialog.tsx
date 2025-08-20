@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, Route } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool } from "lucide-react";
 
 interface CreateSessionDialogProps {
   isOpen: boolean;
@@ -490,7 +490,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           <div className="border rounded-lg p-4 bg-muted/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Route className="h-4 w-4" />
+                <PenTool className="h-4 w-4" />
                 <Label className="text-sm font-medium">
                   Créer un itinéraire
                 </Label>
@@ -502,7 +502,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 onClick={handleCreateRoute}
                 disabled={!onCreateRoute}
               >
-                <Route className="h-3 w-3 mr-1" />
+                <PenTool className="h-3 w-3 mr-1" />
                 Dessiner
               </Button>
             </div>
