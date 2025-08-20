@@ -202,11 +202,19 @@ const Messages = () => {
         })
       );
 
-      // Sort conversations by most recent message (most recent first)
+      // Sort conversations by most recent activity (messages or conversation updates)
       const sortedConversations = conversationsWithProfiles
         .filter(Boolean)
         .sort((a, b) => {
-          return new Date(b.last_message_date).getTime() - new Date(a.last_message_date).getTime();
+          // Use the most recent between last message date and conversation updated_at
+          const aDate = a.last_message_date && new Date(a.last_message_date) > new Date(a.updated_at) 
+            ? a.last_message_date 
+            : a.updated_at;
+          const bDate = b.last_message_date && new Date(b.last_message_date) > new Date(b.updated_at) 
+            ? b.last_message_date 
+            : b.updated_at;
+          
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
         });
 
       setConversations(sortedConversations);
