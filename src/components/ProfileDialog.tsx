@@ -323,13 +323,13 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0">
-          <DialogHeader className="p-6 pb-0">
+        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
+          <DialogHeader className="p-6 pb-0 shrink-0">
             <DialogTitle className="text-center text-2xl font-bold">Mon Profil</DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="h-full px-6 pb-6">
-            <div className="space-y-4">
+          <ScrollArea className="flex-1 px-6 pb-6">
+            <div className="space-y-4 pb-4">
               {/* Avatar Section */}
               <Card>
                 <CardContent className="flex flex-col items-center py-6">
@@ -694,6 +694,11 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                   </Button>
                 </CardContent>
               </Card>
+            </div>
+            
+            {/* Indicateur de scroll en bas */}
+            <div className="flex justify-center pt-4 pb-2">
+              <div className="h-1 w-12 bg-muted rounded-full opacity-50"></div>
             </div>
           </ScrollArea>
         </DialogContent>
