@@ -66,7 +66,15 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
   };
 
   const shareSession = async (session: Session) => {
-    if (!user || !conversationId) return;
+    if (!user || !conversationId) {
+      console.error('Missing user or conversationId:', { user: !!user, conversationId });
+      toast({
+        title: "Erreur",
+        description: "Informations manquantes pour partager la séance",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       console.log('Attempting to share session:', {

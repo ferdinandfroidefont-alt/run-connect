@@ -544,19 +544,32 @@ const Messages = () => {
             </div>
 
             <div className="flex gap-1">
-              {selectedConversation.is_group && selectedConversation.created_by === user?.id && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowEditGroup(true)}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
+              {selectedConversation.is_group && (
+                <>
+                  {/* Check if user is admin by looking at group_members table */}
+                  {selectedConversation.group_members?.some(
+                    member => member.user_id === user?.id && 
+                    (selectedConversation.created_by === user?.id || 
+                     // Add additional admin check here if needed
+                     false)
+                  ) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEditGroup(true)}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
               )}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowShareSession(true)}
+                onClick={() => {
+                  console.log('Share button clicked, conversationId:', selectedConversation?.id);
+                  setShowShareSession(true);
+                }}
               >
                 <Calendar className="h-4 w-4" />
               </Button>
@@ -897,6 +910,7 @@ const Messages = () => {
           onClose={() => setShowShareSession(false)}
           conversationId={selectedConversation?.id || ""}
           onSessionShared={() => {
+            console.log('Session shared, refreshing messages');
             if (selectedConversation) {
               loadMessages(selectedConversation.id);
               loadConversations();
