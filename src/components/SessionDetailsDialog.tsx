@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route } from "lucide-react";
 import { format } from "date-fns";
@@ -35,6 +36,7 @@ interface Session {
   profiles: {
     username: string;
     display_name: string;
+    avatar_url?: string;
   };
   routes?: {
     id: string;
@@ -244,8 +246,14 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             <div className={`w-3 h-3 rounded-full ${getActivityColor(session.activity_type)}`} />
             {session.title}
           </DialogTitle>
-          <DialogDescription>
-            Organisé par {session.profiles.display_name || session.profiles.username}
+          <DialogDescription className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
+              <AvatarFallback className="text-xs">
+                {(session.profiles.display_name || session.profiles.username)?.charAt(0)?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span>Organisé par {session.profiles.display_name || session.profiles.username}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -423,9 +431,17 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 <User className="h-4 w-4 text-primary" />
                 <span className="font-medium">Organisateur</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {session.profiles.display_name || session.profiles.username}
-              </p>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
+                  <AvatarFallback className="text-sm">
+                    {(session.profiles.display_name || session.profiles.username)?.charAt(0)?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">
+                  {session.profiles.display_name || session.profiles.username}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
