@@ -871,17 +871,24 @@ const Messages = () => {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-border">
+                <div className="divide-y divide-border">
                 {conversations.map((conversation) => (
                   <div
                     key={conversation.id}
-                    onClick={() => {
-                      setSelectedConversation(conversation);
-                      loadMessages(conversation.id);
-                    }}
                     className="flex items-center gap-3 p-4 hover:bg-muted cursor-pointer"
                   >
-                    <Avatar className="h-12 w-12">
+                    <Avatar 
+                      className="h-12 w-12 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (conversation.is_group) {
+                          setSelectedConversation(conversation);
+                          setShowGroupInfo(true);
+                        } else {
+                          setSelectedProfileUserId(conversation.other_participant?.user_id || null);
+                        }
+                      }}
+                    >
                       {conversation.is_group ? (
                         <>
                           <AvatarImage src={conversation.group_avatar_url || ""} />
@@ -898,7 +905,13 @@ const Messages = () => {
                         </>
                       )}
                     </Avatar>
-                    <div className="flex-1 min-w-0">
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => {
+                        setSelectedConversation(conversation);
+                        loadMessages(conversation.id);
+                      }}
+                    >
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-sm truncate">
                           {conversation.is_group 
