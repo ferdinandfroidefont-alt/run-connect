@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Calendar, Users, Clock, UserPlus, Filter } from "lucide-react";
 import { format } from "date-fns";
@@ -63,6 +65,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   const [loading, setLoading] = useState(false);
   const [selectedDistance, setSelectedDistance] = useState("25");
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
+  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
   // Load nearby sessions
   const loadNearbySessions = async () => {
@@ -228,158 +231,180 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   }, [isOpen, selectedDistance, selectedActivity, userLocation]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Séances à proximité
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Séances à proximité
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Filters */}
-        <div className="flex gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filtres:</span>
+          {/* Filters */}
+          <div className="flex gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium">Filtres:</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="Distance"
+                value={selectedDistance}
+                onChange={(e) => setSelectedDistance(e.target.value)}
+                className="w-24"
+                min="1"
+                max="500"
+              />
+              <span className="text-sm text-muted-foreground">km</span>
+            </div>
+
+            <Select value={selectedActivity} onValueChange={setSelectedActivity}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Sport" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les sports</SelectItem>
+                {ACTIVITY_TYPES.map(activity => (
+                  <SelectItem key={activity.value} value={activity.value}>
+                    {activity.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              placeholder="Distance"
-              value={selectedDistance}
-              onChange={(e) => setSelectedDistance(e.target.value)}
-              className="w-24"
-              min="1"
-              max="500"
-            />
-            <span className="text-sm text-muted-foreground">km</span>
-          </div>
 
-          <Select value={selectedActivity} onValueChange={setSelectedActivity}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Sport" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les sports</SelectItem>
-              {ACTIVITY_TYPES.map(activity => (
-                <SelectItem key={activity.value} value={activity.value}>
-                  {activity.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <Separator />
 
-        <Separator />
-
-        {/* Sessions List */}
-        <ScrollArea className="max-h-96">
-          <div className="space-y-3">
-            {loading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Recherche des séances...</p>
-              </div>
-            ) : sessions.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Aucune séance trouvée</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Essayez d'élargir votre zone de recherche
-                </p>
-              </div>
-            ) : (
-              sessions.map((session) => (
-                <Card key={session.id} className="transition-all hover:shadow-md">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* Header */}
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{session.title}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            par {session.profiles?.username || session.profiles?.display_name}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-primary">
-                            {getDistanceToSession(session)}
+          {/* Sessions List */}
+          <ScrollArea className="max-h-96">
+            <div className="space-y-3">
+              {loading ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Recherche des séances...</p>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Aucune séance trouvée</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Essayez d'élargir votre zone de recherche
+                  </p>
+                </div>
+              ) : (
+                sessions.map((session) => (
+                  <Card key={session.id} className="transition-all hover:shadow-md">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* Header */}
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <Avatar 
+                              className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+                              onClick={() => setSelectedProfile(session.organizer_id)}
+                            >
+                              <AvatarImage src={session.profiles?.avatar_url || ""} />
+                              <AvatarFallback className="text-xs">
+                                {(session.profiles?.username || session.profiles?.display_name)?.charAt(0)?.toUpperCase() || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h3 className="font-semibold">{session.title}</h3>
+                              <p 
+                                className="text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors"
+                                onClick={() => setSelectedProfile(session.organizer_id)}
+                              >
+                                par {session.profiles?.username || session.profiles?.display_name}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-primary">
+                              {getDistanceToSession(session)}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Badges */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="text-xs">
-                          {ACTIVITY_TYPES.find(a => a.value === session.activity_type)?.label || session.activity_type}
-                        </Badge>
-                        {session.intensity && (
-                          <Badge className={`text-xs ${getIntensityColor(session.intensity)}`}>
-                            {session.intensity}
+                        {/* Badges */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs">
+                            {ACTIVITY_TYPES.find(a => a.value === session.activity_type)?.label || session.activity_type}
                           </Badge>
-                        )}
-                        {session.friends_only && (
-                          <Badge variant="secondary" className="text-xs">
-                            Amis uniquement
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Details */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>
-                            {format(new Date(session.scheduled_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
-                          </span>
+                          {session.intensity && (
+                            <Badge className={`text-xs ${getIntensityColor(session.intensity)}`}>
+                              {session.intensity}
+                            </Badge>
+                          )}
+                          {session.friends_only && (
+                            <Badge variant="secondary" className="text-xs">
+                              Amis uniquement
+                            </Badge>
+                          )}
                         </div>
 
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          <span>{session.location_name}</span>
+                        {/* Details */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            <span>
+                              {format(new Date(session.scheduled_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            <span>{session.location_name}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Users className="h-3 w-3" />
+                            <span>
+                              {session.current_participants}
+                              {session.max_participants && `/${session.max_participants}`} participants
+                            </span>
+                          </div>
+
+                          {session.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {session.description}
+                            </p>
+                          )}
                         </div>
 
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Users className="h-3 w-3" />
-                          <span>
-                            {session.current_participants}
-                            {session.max_participants && `/${session.max_participants}`} participants
-                          </span>
+                        {/* Join Button */}
+                        <div className="pt-2 border-t">
+                          <Button
+                            onClick={() => joinSession(session)}
+                            size="sm"
+                            className="w-full"
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            {session.friends_only ? "Demander à participer" : "Rejoindre la séance"}
+                          </Button>
                         </div>
-
-                        {session.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {session.description}
-                          </p>
-                        )}
                       </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
 
-                      {/* Join Button */}
-                      <div className="pt-2 border-t">
-                        <Button
-                          onClick={() => joinSession(session)}
-                          size="sm"
-                          className="w-full"
-                        >
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          {session.friends_only ? "Demander à participer" : "Rejoindre la séance"}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+          {/* Actions */}
+          <div className="pt-4">
+            <Button variant="outline" onClick={onClose} className="w-full">
+              Fermer
+            </Button>
           </div>
-        </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
-        {/* Actions */}
-        <div className="pt-4">
-          <Button variant="outline" onClick={onClose} className="w-full">
-            Fermer
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Profile Preview Dialog */}
+      <ProfilePreviewDialog 
+        userId={selectedProfile} 
+        onClose={() => setSelectedProfile(null)} 
+      />
+    </>
   );
 };
