@@ -281,6 +281,16 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
   const handleCreateRoute = () => {
     console.log('🎯 handleCreateRoute called - starting route creation mode');
+    
+    if (!user) {
+      toast({ 
+        title: "Connexion requise", 
+        description: "Vous devez être connecté pour créer un itinéraire",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (onCreateRoute) {
       onClose(); // Ferme le dialog
       onCreateRoute(); // Lance le mode création d'itinéraire
@@ -291,6 +301,11 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       });
     } else {
       console.log('❌ onCreateRoute is not available');
+      toast({ 
+        title: "Erreur", 
+        description: "Fonction de création d'itinéraire non disponible",
+        variant: "destructive"
+      });
     }
   };
 
