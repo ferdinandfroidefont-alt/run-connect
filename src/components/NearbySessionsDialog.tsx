@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -53,14 +54,6 @@ const ACTIVITY_TYPES = [
   { value: "basketball", label: "Basketball" },
   { value: "tennis", label: "Tennis" },
   { value: "autre", label: "Autre" }
-];
-
-const DISTANCE_OPTIONS = [
-  { value: "5", label: "5 km" },
-  { value: "10", label: "10 km" },
-  { value: "25", label: "25 km" },
-  { value: "50", label: "50 km" },
-  { value: "100", label: "100 km" }
 ];
 
 export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySessionsDialogProps) => {
@@ -251,18 +244,18 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             <span className="text-sm font-medium">Filtres:</span>
           </div>
           
-          <Select value={selectedDistance} onValueChange={setSelectedDistance}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Distance" />
-            </SelectTrigger>
-            <SelectContent>
-              {DISTANCE_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              placeholder="Distance"
+              value={selectedDistance}
+              onChange={(e) => setSelectedDistance(e.target.value)}
+              className="w-24"
+              min="1"
+              max="500"
+            />
+            <span className="text-sm text-muted-foreground">km</span>
+          </div>
 
           <Select value={selectedActivity} onValueChange={setSelectedActivity}>
             <SelectTrigger className="w-40">
