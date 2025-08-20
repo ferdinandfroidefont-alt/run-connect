@@ -1067,14 +1067,6 @@ export const InteractiveMap = () => {
           
           {/* Date Filter and Friends Filter */}
           <div className="mt-3 flex justify-start pl-0 gap-3">
-            {/* Club Selector */}
-            <div className="w-48">
-              <ClubSelector
-                selectedClubId={filters.selected_club_id}
-                onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
-              />
-            </div>
-            
             {/* Date Filter */}
             <Popover>
               <PopoverTrigger asChild>
@@ -1142,6 +1134,14 @@ export const InteractiveMap = () => {
                 <Crown size={14} className="text-yellow-500" />
               </button>
             )}
+            
+            {/* Club Selector */}
+            <div className="w-48">
+              <ClubSelector
+                selectedClubId={filters.selected_club_id}
+                onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
+              />
+            </div>
           </div>
         </div>
       </div>
