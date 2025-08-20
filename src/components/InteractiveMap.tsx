@@ -814,12 +814,9 @@ export const InteractiveMap = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <SessionFilters filters={filters} onFiltersChange={setFilters} />
-      
-      {/* User Sessions Button - Below Filters */}
+      {/* Nearby Sessions Button - Now Above Filters */}
       {user && (
-        <div className="absolute top-44 right-4 z-10">
+        <div className="absolute top-32 right-4 z-10">
           <Button 
             variant="default"
             size="sm"
@@ -833,6 +830,11 @@ export const InteractiveMap = () => {
           </Button>
         </div>
       )}
+
+      {/* Filters - Now Below Nearby Sessions Button */}
+      <div className="absolute top-44 right-4 z-10">
+        <SessionFilters filters={filters} onFiltersChange={setFilters} />
+      </div>
       
       {/* All Map Controls - grouped together on the left */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
