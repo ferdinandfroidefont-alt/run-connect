@@ -13,7 +13,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool, Route, TrendingUp } from "lucide-react";
 
-interface CreateSessionDialogProps {
+  // Add type declaration for global polyline reference
+  declare global {
+    interface Window {
+      currentRoutePolyline: google.maps.Polyline | null;
+    }
+  }
+
+  interface CreateSessionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSessionCreated: () => void;
@@ -82,7 +89,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     try {
       const { data, error } = await supabase
         .from('routes')
-        .select('id, name, description, total_distance, total_elevation_gain, created_at')
+        .select('*')
         .eq('created_by', user.id)
         .order('created_at', { ascending: false });
 
@@ -92,6 +99,40 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       console.error('Error loading user routes:', error);
     } finally {
       setRoutesLoading(false);
+    }
+  };
+
+  // Fonction pour afficher l'itinéraire sélectionné sur la carte
+  const displaySelectedRoute = (routeId: string) => {
+    const route = userRoutes.find(r => r.id === routeId);
+    if (route && map && route.coordinates) {
+      // Effacer les tracés précédents
+      if (window.currentRoutePolyline) {
+        window.currentRoutePolyline.setMap(null);
+      }
+
+      // Créer le nouveau tracé
+      const path = route.coordinates.map((coord: any) => ({
+        lat: coord.lat,
+        lng: coord.lng
+      }));
+
+      const polyline = new google.maps.Polyline({
+        path: path,
+        geodesic: true,
+        strokeColor: '#3b82f6',
+        strokeOpacity: 1.0,
+        strokeWeight: 3,
+        map: map
+      });
+
+      // Stocker la référence pour pouvoir l'effacer plus tard
+      window.currentRoutePolyline = polyline;
+
+      // Ajuster la vue pour inclure tout l'itinéraire
+      const bounds = new google.maps.LatLngBounds();
+      path.forEach(point => bounds.extend(point));
+      map.fitBounds(bounds);
     }
   };
 
@@ -375,7 +416,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           max_participants: parseInt(formData.max_participants) || null,
           current_participants: 0,
           friends_only: formData.friends_only,
-          image_url: imageUrl
+          image_url: imageUrl,
+          route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null
         }]);
 
       if (error) throw error;
@@ -404,8 +446,12 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       setSelectedLocation(null);
       setLocationSearch("");
       setSearchResults([]);
-      setSelectedImage(null);
-      setImagePreview(null);
+      setSelectedRoute('');
+      // Effacer l'itinéraire affiché sur la carte
+      if (window.currentRoutePolyline) {
+        window.currentRoutePolyline.setMap(null);
+        window.currentRoutePolyline = null;
+      }
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
@@ -594,7 +640,10 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                       <p className="text-xs text-muted-foreground mt-1">Chargement des itinéraires...</p>
                     </div>
                   ) : userRoutes.length > 0 ? (
-                    <Select value={selectedRoute} onValueChange={setSelectedRoute}>
+                    <Select value={selectedRoute} onValueChange={(value) => {
+                      setSelectedRoute(value);
+                      displaySelectedRoute(value);
+                    }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner un itinéraire" />
                       </SelectTrigger>

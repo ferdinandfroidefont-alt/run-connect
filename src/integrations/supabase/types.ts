@@ -366,6 +366,7 @@ export type Database = {
           location_name: string
           max_participants: number | null
           organizer_id: string
+          route_id: string | null
           scheduled_at: string
           session_type: string
           title: string
@@ -386,6 +387,7 @@ export type Database = {
           location_name: string
           max_participants?: number | null
           organizer_id: string
+          route_id?: string | null
           scheduled_at: string
           session_type: string
           title: string
@@ -406,12 +408,21 @@ export type Database = {
           location_name?: string
           max_participants?: number | null
           organizer_id?: string
+          route_id?: string | null
           scheduled_at?: string
           session_type?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sessions_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscribers: {
         Row: {

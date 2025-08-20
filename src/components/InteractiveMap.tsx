@@ -53,6 +53,13 @@ interface Session {
     display_name: string;
     avatar_url: string | null;
   };
+  routes?: {
+    id: string;
+    name: string;
+    coordinates: any[];
+    total_distance: number;
+    total_elevation_gain: number;
+  } | null;
 }
 
 interface Filter {
@@ -70,6 +77,7 @@ export const InteractiveMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
+  const sessionPolylines = useRef<google.maps.Polyline[]>([]);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState('roadmap');
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -164,23 +172,31 @@ export const InteractiveMap = () => {
 
       if (error) throw error;
       
-      
-      // Get organizer profiles for all sessions
+      // Get organizer profiles and routes for all sessions
       const sessionsWithProfiles = [];
       for (const session of data || []) {
-        const { data: profile, error: profileError } = await supabase
+        // Get organizer profile
+        const { data: profile } = await supabase
           .from('profiles')
           .select('username, display_name, avatar_url')
           .eq('user_id', session.organizer_id)
           .maybeSingle();
         
-        if (profileError) {
-          console.error('Error fetching profile for organizer:', session.organizer_id, profileError);
+        // Get route if session has one
+        let route = null;
+        if (session.route_id) {
+          const { data: routeData } = await supabase
+            .from('routes')
+            .select('id, name, coordinates, total_distance, total_elevation_gain')
+            .eq('id', session.route_id)
+            .maybeSingle();
+          route = routeData;
         }
         
         sessionsWithProfiles.push({
           ...session,
-          profiles: profile || { username: 'Utilisateur', display_name: 'Utilisateur', avatar_url: null }
+          profiles: profile || { username: 'Utilisateur', display_name: 'Utilisateur', avatar_url: null },
+          routes: route
         });
       }
 
@@ -195,9 +211,11 @@ export const InteractiveMap = () => {
   const createMarkers = async () => {
     if (!map.current || !window.google) return;
 
-    // Clear existing markers
+    // Clear existing markers and polylines
     markers.current.forEach(marker => marker.setMap(null));
+    sessionPolylines.current.forEach(polyline => polyline.setMap(null));
     markers.current = [];
+    sessionPolylines.current = [];
 
     // Filter sessions based on current filters
     const filteredSessions = sessions.filter(session => {
@@ -215,7 +233,8 @@ export const InteractiveMap = () => {
       id: s.id, 
       title: s.title, 
       hasProfile: !!s.profiles, 
-      avatarUrl: s.profiles?.avatar_url 
+      avatarUrl: s.profiles?.avatar_url,
+      hasRoute: !!s.routes
     })));
 
     // Create markers for filtered sessions with error handling
@@ -247,6 +266,30 @@ export const InteractiveMap = () => {
         marker.addListener('click', () => {
           setSelectedSession(session);
         });
+
+        // Add route polyline if session has a route
+        if (session.routes && session.routes.coordinates && Array.isArray(session.routes.coordinates)) {
+          const path = session.routes.coordinates.map((coord: any) => ({
+            lat: coord.lat,
+            lng: coord.lng
+          }));
+
+          const polyline = new google.maps.Polyline({
+            path: path,
+            geodesic: true,
+            strokeColor: getActivityColor(session.activity_type),
+            strokeOpacity: 0.8,
+            strokeWeight: 3,
+            map: map.current
+          });
+
+          sessionPolylines.current.push(polyline);
+
+          // Add click listener to polyline to show session details
+          polyline.addListener('click', () => {
+            setSelectedSession(session);
+          });
+        }
 
         return marker;
       } catch (error) {
