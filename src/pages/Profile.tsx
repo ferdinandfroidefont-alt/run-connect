@@ -574,15 +574,26 @@ const Profile = () => {
                 <Route className="h-5 w-5 text-primary mr-2" />
                 <CardTitle className="text-lg">Mes Parcours ({userRoutes.length})</CardTitle>
               </div>
-              <Button
-                onClick={() => navigate('/')}
-                size="sm"
-                variant="outline"
-                className="gap-2"
-              >
-                <MapPin className="h-4 w-4" />
-                Créer un parcours
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => navigate('/my-routes')}
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Route className="h-4 w-4" />
+                  Mes itinéraires
+                </Button>
+                <Button
+                  onClick={() => navigate('/')}
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <MapPin className="h-4 w-4" />
+                  Créer
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -598,7 +609,7 @@ const Profile = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {userRoutes.map((route) => (
+                {userRoutes.slice(0, 3).map((route) => (
                   <div key={route.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -637,6 +648,18 @@ const Profile = () => {
                     </Button>
                   </div>
                 ))}
+                {userRoutes.length > 3 && (
+                  <div className="text-center pt-2">
+                    <Button
+                      onClick={() => navigate('/my-routes')}
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary hover:text-primary"
+                    >
+                      Voir tous les itinéraires ({userRoutes.length})
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
