@@ -302,6 +302,7 @@ export type Database = {
           description: string | null
           friends_only: boolean | null
           id: string
+          image_url: string | null
           intensity: string | null
           is_private: boolean | null
           location_lat: number
@@ -321,6 +322,7 @@ export type Database = {
           description?: string | null
           friends_only?: boolean | null
           id?: string
+          image_url?: string | null
           intensity?: string | null
           is_private?: boolean | null
           location_lat: number
@@ -340,6 +342,7 @@ export type Database = {
           description?: string | null
           friends_only?: boolean | null
           id?: string
+          image_url?: string | null
           intensity?: string | null
           is_private?: boolean | null
           location_lat?: number

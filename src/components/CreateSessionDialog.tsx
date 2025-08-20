@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, Users, Crown, UserCheck } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X } from "lucide-react";
 
 interface CreateSessionDialogProps {
   isOpen: boolean;
@@ -29,6 +29,9 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
   const [locationSearch, setLocationSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -38,7 +41,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     scheduled_at: "",
     max_participants: "",
     location_name: "",
-    friends_only: false
+    friends_only: false,
+    image_url: ""
   });
 
   const activityTypes = [
@@ -207,12 +211,91 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Vérifier la taille (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ 
+          title: "Erreur", 
+          description: "L'image ne doit pas dépasser 5MB", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // Vérifier le type
+      if (!file.type.startsWith('image/')) {
+        toast({ 
+          title: "Erreur", 
+          description: "Veuillez sélectionner une image", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Créer un aperçu
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setFormData(prev => ({ ...prev, image_url: "" }));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      setUploadingImage(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('session-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Obtenir l'URL publique
+      const { data } = supabase.storage
+        .from('session-images')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erreur upload image:', error);
+      toast({ 
+        title: "Erreur", 
+        description: "Erreur lors de l'upload de l'image", 
+        variant: "destructive" 
+      });
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !selectedLocation) return;
 
     setLoading(true);
     try {
+      // Upload de l'image si sélectionnée
+      let imageUrl = null;
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+      }
+
       const { error } = await supabase
         .from('sessions')
         .insert([{
@@ -228,7 +311,8 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           scheduled_at: formData.scheduled_at,
           max_participants: parseInt(formData.max_participants) || null,
           current_participants: 0,
-          friends_only: formData.friends_only
+          friends_only: formData.friends_only,
+          image_url: imageUrl
         }]);
 
       if (error) throw error;
@@ -252,11 +336,14 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         scheduled_at: "",
         max_participants: "",
         location_name: "",
-        friends_only: false
+        friends_only: false,
+        image_url: ""
       });
       setSelectedLocation(null);
       setLocationSearch("");
       setSearchResults([]);
+      setSelectedImage(null);
+      setImagePreview(null);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
@@ -411,6 +498,51 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </div>
           </div>
 
+          {/* Image Upload */}
+          <div>
+            <Label>Image du lieu (optionnel)</Label>
+            <div className="space-y-3">
+              {!imagePreview ? (
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="session-image"
+                  />
+                  <label 
+                    htmlFor="session-image" 
+                    className="cursor-pointer flex flex-col items-center gap-2"
+                  >
+                    <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Ajouter une photo du lieu
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      JPG, PNG, WebP - Max 5MB
+                    </span>
+                  </label>
+                </div>
+              ) : (
+                <div className="relative">
+                  <img 
+                    src={imagePreview} 
+                    alt="Aperçu" 
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Premium Feature: Friends Only */}
           <div className="border rounded-lg p-4 bg-muted/20">
             <div className="flex items-center justify-between">
@@ -468,10 +600,10 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           <div className="flex gap-2 pt-4">
             <Button
               type="submit"
-              disabled={loading || !selectedLocation}
+              disabled={loading || !selectedLocation || uploadingImage}
               className="flex-1"
             >
-              {loading ? "Création..." : "Créer la séance"}
+              {uploadingImage ? "Upload image..." : loading ? "Création..." : "Créer la séance"}
             </Button>
             <Button type="button" variant="outline" onClick={onClose}>
               Annuler

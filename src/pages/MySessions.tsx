@@ -23,6 +23,7 @@ interface UserSession {
   max_participants: number;
   current_participants: number;
   created_at: string;
+  image_url?: string;
 }
 
 interface Participant {
@@ -165,22 +166,33 @@ export default function MySessions() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">{getActivityIcon(selectedSession.activity_type)}</span>
-              {selectedSession.title}
-            </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {format(new Date(selectedSession.scheduled_at), 'PPP à HH:mm', { locale: fr })}
-              </div>
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {selectedSession.location_name}
-              </div>
-              <div className="flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                {participants.length} participant{participants.length > 1 ? 's' : ''}
+            <div className="flex items-start gap-4">
+              {selectedSession.image_url && (
+                <img 
+                  src={selectedSession.image_url} 
+                  alt={selectedSession.title}
+                  className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+                />
+              )}
+              <div className="flex-1">
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">{getActivityIcon(selectedSession.activity_type)}</span>
+                  {selectedSession.title}
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-2">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {format(new Date(selectedSession.scheduled_at), 'PPP à HH:mm', { locale: fr })}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {selectedSession.location_name}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    {participants.length} participant{participants.length > 1 ? 's' : ''}
+                  </div>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -260,14 +272,23 @@ export default function MySessions() {
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <span className="text-xl">{getActivityIcon(session.activity_type)}</span>
-                      {session.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-2">
-                      {getStatusBadge(session)}
-                      <Badge variant="outline">Créateur</Badge>
+                  <div className="flex gap-3">
+                    {session.image_url && (
+                      <img 
+                        src={session.image_url} 
+                        alt={session.title}
+                        className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                      />
+                    )}
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <span className="text-xl">{getActivityIcon(session.activity_type)}</span>
+                        {session.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-2">
+                        {getStatusBadge(session)}
+                        <Badge variant="outline">Créateur</Badge>
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">

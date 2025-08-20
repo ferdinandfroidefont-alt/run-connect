@@ -44,6 +44,7 @@ interface Session {
   max_participants: number;
   current_participants: number;
   organizer_id: string;
+  image_url?: string;
   profiles: {
     username: string;
     display_name: string;

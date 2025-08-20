@@ -25,6 +25,7 @@ interface Session {
   max_participants: number;
   current_participants: number;
   organizer_id: string;
+  image_url?: string;
   profiles: {
     username: string;
     display_name: string;
@@ -236,6 +237,19 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Image du lieu */}
+          {session.image_url && (
+            <Card>
+              <CardContent className="p-0">
+                <img 
+                  src={session.image_url} 
+                  alt={session.title}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Activity and Session Type */}
           <div className="flex gap-2">
             <Badge variant="secondary">
