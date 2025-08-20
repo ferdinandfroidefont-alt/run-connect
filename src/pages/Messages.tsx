@@ -513,7 +513,14 @@ const Messages = () => {
               
               {selectedConversation.is_group ? (
                 <>
-                  <Avatar className="h-8 w-8">
+                  <Avatar 
+                    className={`h-8 w-8 ${selectedConversation.created_by === user?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
+                    onClick={() => {
+                      if (selectedConversation.created_by === user?.id) {
+                        setShowEditGroup(true);
+                      }
+                    }}
+                  >
                     <AvatarImage src={selectedConversation.group_avatar_url || ""} />
                     <AvatarFallback>
                       <Users className="h-4 w-4" />
@@ -544,20 +551,6 @@ const Messages = () => {
             </div>
 
             <div className="flex gap-1">
-              {selectedConversation.is_group && (
-                <>
-                  {/* Check if user is the creator/admin of the group */}
-                  {selectedConversation.created_by === user?.id && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowEditGroup(true)}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  )}
-                </>
-              )}
               <Button
                 variant="outline"
                 size="sm"
