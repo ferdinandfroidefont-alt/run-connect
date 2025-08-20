@@ -253,13 +253,19 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           {/* Activity and Session Type */}
           <div className="flex gap-2">
             <Badge variant="secondary">
-              {session.activity_type.charAt(0).toUpperCase() + session.activity_type.slice(1)}
+              {session.activity_type ? 
+                session.activity_type.charAt(0).toUpperCase() + session.activity_type.slice(1) : 
+                'Activité'
+              }
             </Badge>
             <Badge variant="outline">
-              {session.session_type.replace('_', ' ')}
+              {session.session_type ? session.session_type.replace('_', ' ') : 'Type de séance'}
             </Badge>
             <Badge className={getIntensityColor(session.intensity)}>
-              {session.intensity.charAt(0).toUpperCase() + session.intensity.slice(1)}
+              {session.intensity ? 
+                session.intensity.charAt(0).toUpperCase() + session.intensity.slice(1) : 
+                'Intensité'
+              }
             </Badge>
           </div>
 
