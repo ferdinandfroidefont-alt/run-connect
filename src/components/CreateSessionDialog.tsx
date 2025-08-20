@@ -640,36 +640,42 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                       <p className="text-xs text-muted-foreground mt-1">Chargement des itinéraires...</p>
                     </div>
                   ) : userRoutes.length > 0 ? (
-                    <Select value={selectedRoute} onValueChange={(value) => {
-                      setSelectedRoute(value);
-                      displaySelectedRoute(value);
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un itinéraire" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userRoutes.map((route) => (
-                          <SelectItem key={route.id} value={route.id}>
-                            <div className="flex items-center gap-2 w-full">
-                              <Route className="h-3 w-3" />
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">{route.name}</div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span>{formatDistance(route.total_distance)}</span>
-                                  {route.total_elevation_gain && (
-                                    <>
-                                      <span>•</span>
-                                      <TrendingUp className="h-3 w-3" />
-                                      <span>{formatElevation(route.total_elevation_gain)}</span>
-                                    </>
-                                  )}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Sélectionner un itinéraire</Label>
+                      <div className="max-h-48 overflow-y-auto border rounded-md bg-background">
+                        <div className="space-y-1 p-2">
+                          {userRoutes.map((route) => (
+                            <div
+                              key={route.id}
+                              onClick={() => {
+                                setSelectedRoute(route.id);
+                                displaySelectedRoute(route.id);
+                              }}
+                              className={`p-3 rounded-md cursor-pointer transition-colors hover:bg-muted ${
+                                selectedRoute === route.id ? 'bg-primary/10 border-primary border' : 'border border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <Route className="h-4 w-4 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm truncate">{route.name}</div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                    <span>{formatDistance(route.total_distance)}</span>
+                                    {route.total_elevation_gain && (
+                                      <>
+                                        <span>•</span>
+                                        <TrendingUp className="h-3 w-3" />
+                                        <span>{formatElevation(route.total_elevation_gain)}</span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="text-center py-4 text-muted-foreground">
                       <Route className="h-8 w-8 mx-auto mb-2 opacity-50" />
