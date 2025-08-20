@@ -1202,29 +1202,28 @@ export const InteractiveMap = () => {
         </div>
       )}
 
-      {/* Filters - Now Below Nearby Sessions Button */}
-      <div className="absolute top-48 right-4 z-10">
+      {/* Filters - repositioned to top right */}
+      <div className="absolute top-4 right-4 z-10">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
-      {/* All Map Controls - grouped together on the left */}
-      <div className="absolute bottom-6 left-6 flex flex-col gap-2">
-        {/* Locate Me and Style Selector */}
-        <div className="flex flex-col gap-2">
-          <Button
-            onClick={handleLocateMe}
-            size="sm"
-            variant="outline"
-            className="w-10 h-10 bg-card/90 backdrop-blur-sm shadow-map-control"
-          >
-            <MapPin className="h-4 w-4" />
-          </Button>
-          
-          <MapStyleSelector
-            currentStyle={currentStyle}
-            onStyleChange={handleStyleChange}
-          />
-        </div>
+      {/* All Map Controls - repositioned to left side center */}
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+        {/* Locate Me Button */}
+        <Button
+          onClick={handleLocateMe}
+          size="sm"
+          variant="outline"
+          className="w-12 h-12 bg-card/90 backdrop-blur-sm shadow-map-control"
+        >
+          <MapPin className="h-4 w-4" />
+        </Button>
+        
+        {/* Map Style Selector */}
+        <MapStyleSelector
+          currentStyle={currentStyle}
+          onStyleChange={handleStyleChange}
+        />
         
         {/* Zoom and 3D Controls */}
         <MapControls
