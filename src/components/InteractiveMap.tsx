@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -1141,7 +1141,7 @@ export const InteractiveMap = () => {
       
       {/* All Map Controls - grouped together on the left */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
-        {/* Locate Me and Style Selector */}
+        {/* Locate Me, Route Creation and Style Selector */}
         <div className="flex flex-col gap-2">
           <Button
             onClick={handleLocateMe}
@@ -1151,6 +1151,24 @@ export const InteractiveMap = () => {
           >
             <MapPin className="h-4 w-4" />
           </Button>
+          
+          {/* Route Creation Button - Permanent Pencil Button */}
+          {user && (
+            <Button
+              onClick={handleCreateRoute}
+              size="sm"
+              variant={isRouteCreationMode ? "default" : "outline"}
+              className={cn(
+                "w-10 h-10 shadow-map-control",
+                isRouteCreationMode 
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                  : "bg-card/90 backdrop-blur-sm hover:bg-primary/10"
+              )}
+              title="Créer un itinéraire"
+            >
+              <PenTool className="h-4 w-4" />
+            </Button>
+          )}
           
           <MapStyleSelector
             currentStyle={currentStyle}
