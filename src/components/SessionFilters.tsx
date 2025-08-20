@@ -66,26 +66,24 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   return (
     <>
       {/* Filter Toggle Button */}
-      <div className="absolute top-44 right-4 z-10">
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          size="sm"
-          variant="outline"
-          className="bg-card/90 backdrop-blur-sm shadow-map-control"
-        >
-          <Filter className="h-4 w-4 mr-1" />
-          Filtres
-          {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-2 h-5 px-1 text-xs">
-              {activeFiltersCount}
-            </Badge>
-          )}
-        </Button>
-      </div>
+      <Button
+        onClick={() => setIsOpen(!isOpen)}
+        size="sm"
+        variant="outline"
+        className="bg-card/90 backdrop-blur-sm shadow-map-control"
+      >
+        <Filter className="h-4 w-4 mr-1" />
+        Filtres
+        {activeFiltersCount > 0 && (
+          <Badge variant="secondary" className="ml-2 h-5 px-1 text-xs">
+            {activeFiltersCount}
+          </Badge>
+        )}
+      </Button>
 
       {/* Filters Panel */}
       {isOpen && (
-        <Card className="absolute top-44 right-16 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
+        <Card className="absolute top-12 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Filtres</h3>
