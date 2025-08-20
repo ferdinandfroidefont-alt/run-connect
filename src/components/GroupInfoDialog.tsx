@@ -42,6 +42,13 @@ export const GroupInfoDialog = ({
   isAdmin,
   onEditGroup
 }: GroupInfoDialogProps) => {
+  console.log('🔍 GroupInfoDialog render - DEBUGGING:');
+  console.log('- isOpen:', isOpen);
+  console.log('- conversationId:', conversationId);
+  console.log('- groupName:', groupName);
+  console.log('- groupDescription:', groupDescription);
+  console.log('- groupAvatarUrl:', groupAvatarUrl);
+  console.log('- isAdmin:', isAdmin);
   const { user } = useAuth();
   const { toast } = useToast();
   const [members, setMembers] = useState<GroupMember[]>([]);

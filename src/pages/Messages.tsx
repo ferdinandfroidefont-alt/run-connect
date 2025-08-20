@@ -537,10 +537,19 @@ const Messages = () => {
               {selectedConversation.is_group ? (
                 <>
                   <Avatar 
-                    className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => {
-                      console.log('Group avatar clicked, opening group info');
+                    className="h-8 w-8 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-primary/50 transition-all duration-200"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('🔍 Group avatar clicked - DEBUGGING:');
+                      console.log('- selectedConversation:', selectedConversation);
+                      console.log('- selectedConversation.id:', selectedConversation.id);
+                      console.log('- selectedConversation.is_group:', selectedConversation.is_group);
+                      console.log('- showGroupInfo current state:', showGroupInfo);
+                      console.log('- user?.id:', user?.id);
+                      console.log('- selectedConversation.created_by:', selectedConversation.created_by);
                       setShowGroupInfo(true);
+                      console.log('- showGroupInfo set to true');
                     }}
                   >
                     <AvatarImage src={selectedConversation.group_avatar_url || ""} />
@@ -549,10 +558,17 @@ const Messages = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div 
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => {
-                      console.log('Group name clicked, opening group info');
+                    className="cursor-pointer hover:opacity-80 hover:bg-muted/30 rounded p-1 -m-1 transition-all duration-200"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('🔍 Group name clicked - DEBUGGING:');
+                      console.log('- selectedConversation:', selectedConversation);
+                      console.log('- selectedConversation.id:', selectedConversation.id);
+                      console.log('- selectedConversation.is_group:', selectedConversation.is_group);
+                      console.log('- showGroupInfo current state:', showGroupInfo);
                       setShowGroupInfo(true);
+                      console.log('- showGroupInfo set to true');
                     }}
                   >
                     <p className="font-medium text-sm">{selectedConversation.group_name}</p>
@@ -906,7 +922,10 @@ const Messages = () => {
         {selectedConversation?.is_group && (
           <GroupInfoDialog
             isOpen={showGroupInfo}
-            onClose={() => setShowGroupInfo(false)}
+            onClose={() => {
+              console.log('🔍 GroupInfoDialog onClose called');
+              setShowGroupInfo(false);
+            }}
             conversationId={selectedConversation.id}
             groupName={selectedConversation.group_name || ""}
             groupDescription={selectedConversation.group_description}
@@ -917,6 +936,14 @@ const Messages = () => {
               setShowEditGroup(true);
             }}
           />
+        )}
+        
+        {/* DEBUG: Force render GroupInfoDialog when showGroupInfo is true */}
+        {showGroupInfo && !selectedConversation?.is_group && (
+          <div style={{position: 'fixed', top: 0, left: 0, background: 'red', color: 'white', padding: '10px', zIndex: 9999}}>
+            DEBUG: showGroupInfo is true but selectedConversation.is_group is false!
+            <br />selectedConversation: {JSON.stringify(selectedConversation, null, 2)}
+          </div>
         )}
 
         {/* Edit Group Dialog - available globally */}
