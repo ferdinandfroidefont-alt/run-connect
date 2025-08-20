@@ -202,11 +202,11 @@ export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGro
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={member.avatar_url || ""} />
                         <AvatarFallback>
-                          {(member.display_name || member.username || "").charAt(0).toUpperCase()}
+                          {(member.username || member.display_name || "").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-xs">
-                        {member.display_name || member.username}
+                        {member.username || member.display_name}
                       </span>
                       <Button
                         variant="ghost"
@@ -264,11 +264,11 @@ export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGro
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={profile.avatar_url || ""} />
                           <AvatarFallback>
-                            {(profile.display_name || profile.username || "").charAt(0).toUpperCase()}
+                            {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium">{profile.display_name || profile.username}</p>
+                          <p className="text-sm font-medium">{profile.username || profile.display_name}</p>
                           <p className="text-xs text-muted-foreground">@{profile.username}</p>
                         </div>
                       </div>

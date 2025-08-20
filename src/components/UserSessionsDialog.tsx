@@ -204,15 +204,15 @@ export const UserSessionsDialog = ({ isOpen, onClose }: UserSessionsDialogProps)
                           <Avatar className="w-8 h-8">
                             <AvatarImage 
                               src={participant.profiles.avatar_url || undefined} 
-                              alt={participant.profiles.display_name || participant.profiles.username} 
+                              alt={participant.profiles.username || participant.profiles.display_name} 
                             />
                             <AvatarFallback>
-                              {(participant.profiles.display_name || participant.profiles.username || 'U').charAt(0).toUpperCase()}
+                              {(participant.profiles.username || participant.profiles.display_name || 'U').charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
                             <div className="font-medium text-sm">
-                              {participant.profiles.display_name || participant.profiles.username}
+                             {participant.profiles.username || participant.profiles.display_name}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               Inscrit le {format(new Date(participant.joined_at), 'dd/MM/yyyy à HH:mm', { locale: fr })}

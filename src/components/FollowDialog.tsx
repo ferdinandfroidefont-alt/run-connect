@@ -159,12 +159,12 @@ export const FollowDialog = ({
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={userItem.avatar_url} />
                   <AvatarFallback>
-                    {userItem.display_name?.[0] || userItem.username?.[0] || '?'}
+                    {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="font-medium">
-                    {userItem.display_name || userItem.username}
+                    {userItem.username || userItem.display_name}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     @{userItem.username}

@@ -137,7 +137,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         .insert([{
           session_id: session.id,
           user_id: user.id,
-          requester_name: profile?.display_name || profile?.username || 'Utilisateur',
+          requester_name: profile?.username || profile?.display_name || 'Utilisateur',
           requester_avatar: profile?.avatar_url
         }]);
 
@@ -149,13 +149,13 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         .insert([{
           user_id: session.organizer_id,
           title: 'Nouvelle demande de participation',
-          message: `${profile?.display_name || profile?.username || 'Quelqu\'un'} souhaite rejoindre votre séance "${session.title}"`,
+          message: `${profile?.username || profile?.display_name || 'Quelqu\'un'} souhaite rejoindre votre séance "${session.title}"`,
           type: 'session_request',
           data: {
             session_id: session.id,
             request_user_id: user.id,
             session_title: session.title,
-            requester_name: profile?.display_name || profile?.username || 'Utilisateur',
+            requester_name: profile?.username || profile?.display_name || 'Utilisateur',
             requester_avatar: profile?.avatar_url
           }
         }]);
@@ -253,12 +253,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               className="h-6 w-6 cursor-pointer hover:opacity-80 transition-opacity" 
               onClick={() => setShowOrganizerProfile(true)}
             >
-              <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
+              <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.username || session.profiles.display_name} />
               <AvatarFallback className="text-xs">
-                {(session.profiles.display_name || session.profiles.username)?.charAt(0)?.toUpperCase()}
+                {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span>Organisé par {session.profiles.display_name || session.profiles.username}</span>
+            <span>Organisé par {session.profiles.username || session.profiles.display_name}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -441,13 +441,13 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity" 
                   onClick={() => setShowOrganizerProfile(true)}
                 >
-                  <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
+                  <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.username || session.profiles.display_name} />
                   <AvatarFallback className="text-sm">
-                    {(session.profiles.display_name || session.profiles.username)?.charAt(0)?.toUpperCase()}
+                    {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm text-muted-foreground">
-                  {session.profiles.display_name || session.profiles.username}
+                  {session.profiles.username || session.profiles.display_name}
                 </span>
               </div>
             </CardContent>

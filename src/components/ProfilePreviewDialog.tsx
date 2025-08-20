@@ -189,13 +189,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 <Avatar className="h-20 w-20 mb-4">
                   <AvatarImage src={profile.avatar_url || ""} />
                   <AvatarFallback className="text-lg">
-                    {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
+                    {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex items-center gap-2 mb-2">
                   <h2 className="text-xl font-semibold">
-                    {profile.display_name || profile.username}
+                    {profile.username || profile.display_name}
                   </h2>
                   {profile.is_premium && (
                     <Crown className="h-5 w-5 text-yellow-500" />

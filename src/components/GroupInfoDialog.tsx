@@ -86,8 +86,8 @@ export const GroupInfoDialog = ({
         membersWithProfiles.sort((a, b) => {
           if (a.is_admin && !b.is_admin) return -1;
           if (!a.is_admin && b.is_admin) return 1;
-          return (a.display_name || a.username || '').localeCompare(
-            b.display_name || b.username || ''
+          return (a.username || a.display_name || '').localeCompare(
+            b.username || b.display_name || ''
           );
         });
 
@@ -198,7 +198,7 @@ export const GroupInfoDialog = ({
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={member.avatar_url || ""} />
                           <AvatarFallback>
-                            {(member.display_name || member.username || "").charAt(0).toUpperCase()}
+                            {(member.username || member.display_name || "").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         {member.is_admin && (
@@ -211,7 +211,7 @@ export const GroupInfoDialog = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm truncate">
-                            {member.display_name || member.username}
+                            {member.username || member.display_name}
                             {member.user_id === user?.id && (
                               <span className="text-muted-foreground"> (vous)</span>
                             )}

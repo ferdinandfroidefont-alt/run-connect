@@ -128,7 +128,7 @@ export const EditGroupDialog = ({
       
       toast({
         title: "Succès",
-        description: `${profile.display_name || profile.username} a été ajouté au groupe`
+        description: `${profile.username || profile.display_name} a été ajouté au groupe`
       });
     } catch (error: any) {
       console.error('Error adding member:', error);
@@ -158,7 +158,7 @@ export const EditGroupDialog = ({
       
       toast({
         title: "Succès",
-        description: `${removedMember?.display_name || removedMember?.username} a été retiré du groupe`
+        description: `${removedMember?.username || removedMember?.display_name} a été retiré du groupe`
       });
     } catch (error: any) {
       console.error('Error removing member:', error);
@@ -280,12 +280,12 @@ export const EditGroupDialog = ({
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={member.avatar_url || ""} />
                         <AvatarFallback>
-                          {(member.display_name || member.username || "").charAt(0).toUpperCase()}
+                          {(member.username || member.display_name || "").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">
-                          {member.display_name || member.username}
+                          {member.username || member.display_name}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           @{member.username} {member.is_admin && "• Admin"}
@@ -347,11 +347,11 @@ export const EditGroupDialog = ({
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={profile.avatar_url || ""} />
                           <AvatarFallback>
-                            {(profile.display_name || profile.username || "").charAt(0).toUpperCase()}
+                            {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium">{profile.display_name || profile.username}</p>
+                          <p className="text-sm font-medium">{profile.username || profile.display_name}</p>
                           <p className="text-xs text-muted-foreground">@{profile.username}</p>
                         </div>
                       </div>

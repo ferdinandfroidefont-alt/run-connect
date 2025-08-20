@@ -111,7 +111,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
           <Avatar className="h-12 w-12">
             <AvatarImage src={suggestion.avatar_url} />
             <AvatarFallback>
-              {suggestion.display_name?.[0] || suggestion.username?.[0] || '?'}
+              {suggestion.username?.[0] || suggestion.display_name?.[0] || '?'}
             </AvatarFallback>
           </Avatar>
           
@@ -119,7 +119,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
             <div className="flex items-center justify-between mb-1">
               <div>
                 <p className="font-medium truncate">
-                  {suggestion.display_name || suggestion.username}
+                  {suggestion.username || suggestion.display_name}
                 </p>
                 <p className="text-sm text-muted-foreground truncate">
                   @{suggestion.username}

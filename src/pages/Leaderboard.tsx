@@ -261,13 +261,13 @@ const Leaderboard = () => {
               <Avatar className={`h-14 w-14 ${getRankBorderColor(item.user_rank)} transition-all duration-300 hover:scale-105`}>
                 <AvatarImage src={item.profile?.avatar_url} />
                 <AvatarFallback className="text-lg font-bold">
-                  {item.profile?.display_name?.[0] || item.profile?.username?.[0] || '?'}
+                  {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-medium">
-                    {item.profile?.display_name || item.profile?.username}
+                    {item.profile?.username || item.profile?.display_name}
                   </p>
                   {getRankBadge(item.user_rank)}
                 </div>

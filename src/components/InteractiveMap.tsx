@@ -316,7 +316,7 @@ export const InteractiveMap = () => {
 
     const size = 50;
     const color = getActivityColor(session.activity_type);
-    const initials = (session.profiles.display_name || session.profiles.username || 'U')
+    const initials = (session.profiles.username || session.profiles.display_name || 'U')
       .charAt(0).toUpperCase();
 
     console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
@@ -1023,9 +1023,9 @@ export const InteractiveMap = () => {
             {userProfile && (
               <div className="absolute left-1/2 transform -translate-x-1/2">
                 <Avatar className="w-12 h-12">
-                  <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.display_name || userProfile.username} />
+                  <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                   <AvatarFallback>
-                    {(userProfile.display_name || userProfile.username || 'U').charAt(0).toUpperCase()}
+                    {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </div>

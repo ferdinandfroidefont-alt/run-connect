@@ -298,7 +298,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                         <div>
                           <h3 className="font-semibold">{session.title}</h3>
                           <p className="text-sm text-muted-foreground">
-                            par {session.profiles?.display_name || session.profiles?.username}
+                            par {session.profiles?.username || session.profiles?.display_name}
                           </p>
                         </div>
                         <div className="text-right">

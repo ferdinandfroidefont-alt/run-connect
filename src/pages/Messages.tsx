@@ -505,11 +505,11 @@ const Messages = () => {
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={profile.avatar_url || ""} />
                   <AvatarFallback>
-                    {(profile.display_name || profile.username || "").charAt(0).toUpperCase()}
+                    {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">{profile.display_name || profile.username}</p>
+                  <p className="font-medium">{profile.username || profile.display_name}</p>
                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
                 </div>
               </div>
@@ -583,12 +583,12 @@ const Messages = () => {
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
                     <AvatarFallback>
-                      {(selectedConversation.other_participant?.display_name || selectedConversation.other_participant?.username || "").charAt(0).toUpperCase()}
+                      {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-medium text-sm">
-                      {selectedConversation.other_participant?.display_name || selectedConversation.other_participant?.username}
+                      {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
                     </p>
                   </div>
                 </>
@@ -626,11 +626,11 @@ const Messages = () => {
                           <Avatar className="h-6 w-6">
                             <AvatarImage src={message.sender.avatar_url || ""} />
                             <AvatarFallback>
-                              {(message.sender.display_name || message.sender.username || "").charAt(0).toUpperCase()}
+                              {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-xs text-muted-foreground">
-                            {message.sender.display_name || message.sender.username}
+                            {message.sender.username || message.sender.display_name}
                           </span>
                         </div>
                       )}
@@ -861,7 +861,7 @@ const Messages = () => {
                         <>
                           <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
                           <AvatarFallback>
-                            {(conversation.other_participant?.display_name || conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
+                            {(conversation.other_participant?.username || conversation.other_participant?.display_name || "U").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </>
                       )}
@@ -871,7 +871,7 @@ const Messages = () => {
                         <p className="font-medium text-sm truncate">
                           {conversation.is_group 
                             ? conversation.group_name 
-                            : (conversation.other_participant?.display_name || conversation.other_participant?.username || "Utilisateur inconnu")
+                            : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
                           }
                         </p>
                         <span className="text-xs text-muted-foreground">

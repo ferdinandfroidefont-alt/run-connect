@@ -367,7 +367,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                     </>
                   )}
                   <div className="flex items-center gap-2 mb-2">
-                    <h2 className="text-xl font-semibold">{profile?.display_name || profile?.username}</h2>
+                    <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
                     {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                       <Crown className="h-5 w-5 text-yellow-500" />
                     )}

@@ -201,13 +201,13 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
               <Avatar className="h-20 w-20 mx-auto">
                 <AvatarImage src={selectedProfile.avatar_url || ""} />
                 <AvatarFallback className="text-lg">
-                  {(selectedProfile.display_name || selectedProfile.username || "").charAt(0).toUpperCase()}
+                  {(selectedProfile.username || selectedProfile.display_name || "").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
               <div>
                 <h3 className="text-lg font-semibold">
-                  {selectedProfile.display_name || selectedProfile.username}
+                  {selectedProfile.username || selectedProfile.display_name}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   @{selectedProfile.username}
@@ -342,12 +342,12 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={profile.avatar_url || ""} />
                   <AvatarFallback>
-                    {(profile.display_name || profile.username || "").charAt(0).toUpperCase()}
+                    {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">
-                    {profile.display_name || profile.username}
+                    {profile.username || profile.display_name}
                   </p>
                   <div className="flex items-center gap-2">
                     <p className="text-sm text-muted-foreground truncate">
