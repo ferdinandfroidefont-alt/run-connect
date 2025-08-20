@@ -3,7 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, Clock, MapPin, Users, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Clock, MapPin, Users, Filter, Edit, Save, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +47,8 @@ export default function MySessions() {
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<UserSession>>({});
 
   // Load user's sessions
   const loadUserSessions = async () => {
@@ -108,7 +113,51 @@ export default function MySessions() {
 
   const handleSessionClick = async (session: UserSession) => {
     setSelectedSession(session);
+    setEditForm(session);
+    setIsEditing(false);
     await loadSessionParticipants(session.id);
+  };
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    if (selectedSession) {
+      setEditForm(selectedSession);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedSession || !editForm) return;
+
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          title: editForm.title,
+          description: editForm.description,
+          activity_type: editForm.activity_type,
+          session_type: editForm.session_type,
+          intensity: editForm.intensity,
+          location_name: editForm.location_name,
+          max_participants: editForm.max_participants
+        })
+        .eq('id', selectedSession.id);
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedSession = { ...selectedSession, ...editForm };
+      setSelectedSession(updatedSession);
+      setSessions(sessions.map(s => s.id === selectedSession.id ? updatedSession : s));
+      setIsEditing(false);
+      toast.success('Séance modifiée avec succès');
+    } catch (error) {
+      console.error('Error updating session:', error);
+      toast.error('Erreur lors de la modification de la séance');
+    }
   };
 
   const getActivityColor = (activityType: string) => {
@@ -154,7 +203,7 @@ export default function MySessions() {
   if (selectedSession) {
     return (
       <div className="container mx-auto px-4 py-6 pb-24">
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center justify-between mb-6">
           <Button
             variant="outline"
             size="sm"
@@ -162,6 +211,37 @@ export default function MySessions() {
           >
             ← Retour aux séances
           </Button>
+          {!isEditing ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEditClick}
+              className="flex items-center gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              Modifier
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelEdit}
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Annuler
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEdit}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Sauvegarder
+              </Button>
+            </div>
+          )}
         </div>
 
         <Card>
@@ -175,31 +255,110 @@ export default function MySessions() {
                 />
               )}
               <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">{getActivityIcon(selectedSession.activity_type)}</span>
-                  {selectedSession.title}
-                </CardTitle>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-2">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {format(new Date(selectedSession.scheduled_at), 'PPP à HH:mm', { locale: fr })}
+                {!isEditing ? (
+                  <>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="text-2xl">{getActivityIcon(selectedSession.activity_type)}</span>
+                      {selectedSession.title}
+                    </CardTitle>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-2">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {format(new Date(selectedSession.scheduled_at), 'PPP à HH:mm', { locale: fr })}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {selectedSession.location_name}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        {participants.length} participant{participants.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Titre</label>
+                      <Input
+                        value={editForm.title || ''}
+                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Type d'activité</label>
+                        <Select
+                          value={editForm.activity_type || ''}
+                          onValueChange={(value) => setEditForm({ ...editForm, activity_type: value })}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="course">Course 🏃‍♂️</SelectItem>
+                            <SelectItem value="velo">Vélo 🚴‍♂️</SelectItem>
+                            <SelectItem value="marche">Marche 🚶‍♂️</SelectItem>
+                            <SelectItem value="natation">Natation 🏊‍♂️</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Intensité</label>
+                        <Select
+                          value={editForm.intensity || ''}
+                          onValueChange={(value) => setEditForm({ ...editForm, intensity: value })}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="facile">Facile</SelectItem>
+                            <SelectItem value="modere">Modéré</SelectItem>
+                            <SelectItem value="intense">Intense</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Lieu</label>
+                      <Input
+                        value={editForm.location_name || ''}
+                        onChange={(e) => setEditForm({ ...editForm, location_name: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Nombre maximum de participants</label>
+                      <Input
+                        type="number"
+                        value={editForm.max_participants || ''}
+                        onChange={(e) => setEditForm({ ...editForm, max_participants: parseInt(e.target.value) })}
+                        className="mt-1"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {selectedSession.location_name}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    {participants.length} participant{participants.length > 1 ? 's' : ''}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              {selectedSession.description}
-            </p>
+            {!isEditing ? (
+              <p className="text-sm text-muted-foreground mb-4">
+                {selectedSession.description}
+              </p>
+            ) : (
+              <div className="mb-4">
+                <label className="text-sm font-medium">Description</label>
+                <Textarea
+                  value={editForm.description || ''}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            )}
             
             <div className="space-y-3">
               <h4 className="font-medium">Participants inscrits :</h4>
