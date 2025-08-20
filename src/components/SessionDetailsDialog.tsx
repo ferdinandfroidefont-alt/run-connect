@@ -12,6 +12,7 @@ import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route } from "lucid
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
+import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 
 interface Session {
   id: string;
@@ -58,6 +59,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
+  const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
 
   // Check if user has already requested to join this session
   useEffect(() => {
@@ -247,7 +249,10 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             {session.title}
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
+            <Avatar 
+              className="h-6 w-6 cursor-pointer hover:opacity-80 transition-opacity" 
+              onClick={() => setShowOrganizerProfile(true)}
+            >
               <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
               <AvatarFallback className="text-xs">
                 {(session.profiles.display_name || session.profiles.username)?.charAt(0)?.toUpperCase()}
@@ -432,7 +437,10 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 <span className="font-medium">Organisateur</span>
               </div>
               <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
+                <Avatar 
+                  className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity" 
+                  onClick={() => setShowOrganizerProfile(true)}
+                >
                   <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
                   <AvatarFallback className="text-sm">
                     {(session.profiles.display_name || session.profiles.username)?.charAt(0)?.toUpperCase()}
@@ -483,6 +491,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           </div>
         </div>
       </DialogContent>
+
+      {/* Profile Preview Dialog */}
+      <ProfilePreviewDialog
+        userId={showOrganizerProfile ? session.organizer_id : null}
+        onClose={() => setShowOrganizerProfile(false)}
+      />
     </Dialog>
   );
 };

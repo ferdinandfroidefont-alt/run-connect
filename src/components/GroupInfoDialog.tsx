@@ -248,8 +248,7 @@ export const GroupInfoDialog = ({
 
       {/* Profile Preview Dialog */}
       <ProfilePreviewDialog
-        userId={selectedUserId}
-        isOpen={showProfilePreview}
+        userId={showProfilePreview ? selectedUserId : null}
         onClose={() => {
           setShowProfilePreview(false);
           setSelectedUserId(null);

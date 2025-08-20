@@ -400,8 +400,7 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
         
         {/* Profile Preview Dialog */}
         <ProfilePreviewDialog
-          userId={profilePreviewUserId}
-          isOpen={isProfilePreviewOpen}
+          userId={isProfilePreviewOpen ? profilePreviewUserId : null}
           onClose={() => {
             setIsProfilePreviewOpen(false);
             setProfilePreviewUserId(null);

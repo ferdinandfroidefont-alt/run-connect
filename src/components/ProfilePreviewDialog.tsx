@@ -1,91 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { User, UserPlus, Users, Trophy } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface Profile {
   user_id: string;
   username: string;
-  display_name: string;
+  display_name: string | null;
   avatar_url: string | null;
+  age: number | null;
   bio: string | null;
+  is_premium: boolean;
   created_at: string;
-}
-
-interface UserStats {
-  follower_count: number;
-  following_count: number;
-  total_points: number;
 }
 
 interface ProfilePreviewDialogProps {
   userId: string | null;
-  isOpen: boolean;
   onClose: () => void;
 }
 
-export const ProfilePreviewDialog = ({ userId, isOpen, onClose }: ProfilePreviewDialogProps) => {
+export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogProps) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followLoading, setFollowLoading] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (userId && isOpen) {
-      loadProfile();
+    if (userId && userId !== user?.id) {
+      fetchProfile();
       checkFollowStatus();
+      fetchFollowCounts();
     }
-  }, [userId, isOpen]);
+  }, [userId, user]);
 
-  const loadProfile = async () => {
+  const fetchProfile = async () => {
     if (!userId) return;
-
+    
     try {
       setLoading(true);
-      
-      // Get profile
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('user_id, username, display_name, avatar_url, age, bio, is_premium, created_at')
         .eq('user_id', userId)
         .single();
 
-      if (profileError) throw profileError;
-
-      // Get stats
-      const [followerCount, followingCount, userScore] = await Promise.all([
-        supabase.rpc('get_follower_count', { profile_user_id: userId }),
-        supabase.rpc('get_following_count', { profile_user_id: userId }),
-        supabase
-          .from('user_scores')
-          .select('total_points')
-          .eq('user_id', userId)
-          .single()
-      ]);
-
-      setProfile(profileData);
-      setStats({
-        follower_count: followerCount.data || 0,
-        following_count: followingCount.data || 0,
-        total_points: userScore.data?.total_points || 0
+      if (error) throw error;
+      setProfile(data);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger le profil",
+        variant: "destructive",
       });
-    } catch (error) {
-      console.error('Error loading profile:', error);
+      onClose();
     } finally {
       setLoading(false);
     }
   };
 
   const checkFollowStatus = async () => {
-    if (!user || !userId || user.id === userId) return;
+    if (!user || !userId) return;
 
     try {
       const { data } = await supabase
@@ -102,12 +88,36 @@ export const ProfilePreviewDialog = ({ userId, isOpen, onClose }: ProfilePreview
     }
   };
 
-  const handleFollow = async () => {
-    if (!user || !userId) return;
+  const fetchFollowCounts = async () => {
+    if (!userId) return;
 
     try {
-      setFollowLoading(true);
+      // Count followers
+      const { data: followerData } = await supabase
+        .from('user_follows')
+        .select('id', { count: 'exact' })
+        .eq('following_id', userId)
+        .eq('status', 'accepted');
 
+      // Count following
+      const { data: followingData } = await supabase
+        .from('user_follows')
+        .select('id', { count: 'exact' })
+        .eq('follower_id', userId)
+        .eq('status', 'accepted');
+
+      setFollowerCount(followerData?.length || 0);
+      setFollowingCount(followingData?.length || 0);
+    } catch (error) {
+      console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!user || !userId) return;
+
+    setActionLoading(true);
+    try {
       if (isFollowing) {
         // Unfollow
         const { error } = await supabase
@@ -117,8 +127,10 @@ export const ProfilePreviewDialog = ({ userId, isOpen, onClose }: ProfilePreview
           .eq('following_id', userId);
 
         if (error) throw error;
+
         setIsFollowing(false);
-        toast.success('Vous ne suivez plus cet utilisateur');
+        setFollowerCount(prev => Math.max(0, prev - 1));
+        toast({ title: "Vous ne suivez plus cette personne" });
       } else {
         // Follow
         const { error } = await supabase
@@ -126,124 +138,151 @@ export const ProfilePreviewDialog = ({ userId, isOpen, onClose }: ProfilePreview
           .insert([{
             follower_id: user.id,
             following_id: userId,
-            status: 'pending'
+            status: 'accepted' // For now, auto-accept follows
           }]);
 
         if (error) throw error;
-        toast.success('Demande de suivi envoyée');
+
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1);
+        toast({ title: "Vous suivez maintenant cette personne" });
       }
     } catch (error: any) {
-      toast.error('Erreur: ' + error.message);
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
-      setFollowLoading(false);
+      setActionLoading(false);
     }
   };
 
-  if (!profile) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+  if (!userId || userId === user?.id) {
+    return null;
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+    <Dialog open={!!userId} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Profil utilisateur</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profil utilisateur
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Profile Header */}
-          <div className="flex items-center gap-4">
-            <Avatar className="w-16 h-16">
-              <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name || profile.username} />
-              <AvatarFallback className="text-lg">
-                {(profile.display_name || profile.username || 'U').charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold">{profile.display_name || profile.username}</h3>
-              <p className="text-sm text-muted-foreground">@{profile.username}</p>
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : profile ? (
+          <div className="space-y-4">
+            {/* Profile Header */}
+            <Card>
+              <CardContent className="flex flex-col items-center py-6">
+                <Avatar className="h-20 w-20 mb-4">
+                  <AvatarImage src={profile.avatar_url || ""} />
+                  <AvatarFallback className="text-lg">
+                    {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-xl font-semibold">
+                    {profile.display_name || profile.username}
+                  </h2>
+                  {profile.is_premium && (
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                  )}
+                </div>
 
-          {/* Bio */}
-          {profile.bio && (
-            <Card>
-              <CardContent className="p-3">
-                <p className="text-sm">{profile.bio}</p>
-              </CardContent>
-            </Card>
-          )}
+                {profile.is_premium && (
+                  <Badge className="bg-orange-100 text-orange-800 border-orange-200 mb-4">
+                    Premium
+                  </Badge>
+                )}
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-3 text-center">
-                <div className="flex items-center justify-center mb-1">
-                  <Users className="h-4 w-4 text-primary" />
+                <div className="flex gap-4 mb-4">
+                  <div className="text-center">
+                    <p className="font-bold text-lg">{followerCount}</p>
+                    <p className="text-sm text-muted-foreground">Abonnés</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-lg">{followingCount}</p>
+                    <p className="text-sm text-muted-foreground">Abonnements</p>
+                  </div>
                 </div>
-                <div className="text-lg font-semibold">{stats?.follower_count || 0}</div>
-                <div className="text-xs text-muted-foreground">Abonnés</div>
+
+                {user && (
+                  <Button
+                    onClick={handleFollowToggle}
+                    disabled={actionLoading}
+                    variant={isFollowing ? "outline" : "default"}
+                    className="w-full"
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : isFollowing ? (
+                      <UserMinus className="h-4 w-4 mr-2" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                    {actionLoading 
+                      ? "Chargement..." 
+                      : isFollowing 
+                      ? "Ne plus suivre" 
+                      : "Suivre"
+                    }
+                  </Button>
+                )}
               </CardContent>
             </Card>
-            
+
+            {/* Bio */}
+            {profile.bio && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Heart className="h-4 w-4 text-primary" />
+                    <span className="font-medium">À propos</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{profile.bio}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Age */}
+            {profile.age && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Âge</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{profile.age} ans</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Member since */}
             <Card>
-              <CardContent className="p-3 text-center">
-                <div className="flex items-center justify-center mb-1">
-                  <UserPlus className="h-4 w-4 text-primary" />
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Membre depuis</span>
                 </div>
-                <div className="text-lg font-semibold">{stats?.following_count || 0}</div>
-                <div className="text-xs text-muted-foreground">Abonnements</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-3 text-center">
-                <div className="flex items-center justify-center mb-1">
-                  <Trophy className="h-4 w-4 text-primary" />
-                </div>
-                <div className="text-lg font-semibold">{stats?.total_points || 0}</div>
-                <div className="text-xs text-muted-foreground">Points</div>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(profile.created_at), "MMMM yyyy", { locale: fr })}
+                </p>
               </CardContent>
             </Card>
           </div>
-
-          {/* Member since */}
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                <span className="text-sm">
-                  Membre depuis {new Date(profile.created_at).toLocaleDateString('fr-FR', { 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Actions */}
-          {user && user.id !== userId && (
-            <Button
-              onClick={handleFollow}
-              disabled={followLoading}
-              className="w-full"
-              variant={isFollowing ? "outline" : "default"}
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              {followLoading ? "..." : isFollowing ? "Ne plus suivre" : "Suivre"}
-            </Button>
-          )}
-        </div>
+        ) : (
+          <div className="text-center p-8">
+            <p className="text-muted-foreground">Profil non trouvé</p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
