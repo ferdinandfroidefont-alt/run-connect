@@ -21,7 +21,7 @@ interface GroupMember extends Profile {
   joined_at: string;
 }
 
-interface GroupInfoDialogProps {
+interface ClubInfoDialogProps {
   isOpen: boolean;
   onClose: () => void;
   conversationId: string;
@@ -32,7 +32,7 @@ interface GroupInfoDialogProps {
   onEditGroup: () => void;
 }
 
-export const GroupInfoDialog = ({ 
+export const ClubInfoDialog = ({ 
   isOpen, 
   onClose, 
   conversationId, 
@@ -41,7 +41,7 @@ export const GroupInfoDialog = ({
   groupAvatarUrl,
   isAdmin,
   onEditGroup
-}: GroupInfoDialogProps) => {
+}: ClubInfoDialogProps) => {
   console.log('🔍 GroupInfoDialog render - DEBUGGING:');
   console.log('- isOpen:', isOpen);
   console.log('- conversationId:', conversationId);
@@ -97,7 +97,7 @@ export const GroupInfoDialog = ({
       console.error('Error loading group members:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger les membres du groupe",
+        description: "Impossible de charger les membres du club",
         variant: "destructive"
       });
     } finally {
@@ -125,7 +125,7 @@ export const GroupInfoDialog = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Informations du groupe
+              Informations du club
             </DialogTitle>
           </DialogHeader>
 
@@ -154,7 +154,7 @@ export const GroupInfoDialog = ({
             {/* Members List */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-sm">Membres du groupe</h4>
+                <h4 className="font-medium text-sm">Membres du club</h4>
                 {isAdmin && (
                   <Button
                     variant="outline"

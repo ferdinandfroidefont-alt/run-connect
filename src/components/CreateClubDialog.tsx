@@ -18,13 +18,13 @@ interface Profile {
   avatar_url: string | null;
 }
 
-interface CreateGroupDialogProps {
+interface CreateClubDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onGroupCreated: (groupId: string) => void;
 }
 
-export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGroupDialogProps) => {
+export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClubDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [groupName, setGroupName] = useState("");
@@ -118,7 +118,7 @@ export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGro
 
       toast({
         title: "Succès",
-        description: "Groupe créé avec succès!"
+        description: "Club créé avec succès!"
       });
 
       onGroupCreated(conversation.id);
@@ -132,7 +132,7 @@ export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGro
       console.error('Error creating group:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de créer le groupe",
+        description: "Impossible de créer le club",
         variant: "destructive"
       });
     } finally {
@@ -147,17 +147,17 @@ export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGro
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Créer un groupe
+              Créer un club
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Group Name */}
             <div>
-              <Label htmlFor="groupName">Nom du groupe *</Label>
+              <Label htmlFor="groupName">Nom du club *</Label>
               <Input
                 id="groupName"
-                placeholder="Ex: Groupe Football Paris"
+                placeholder="Ex: Club Football Paris"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 maxLength={50}
@@ -169,7 +169,7 @@ export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGro
               <Label htmlFor="groupDescription">Description (optionnel)</Label>
               <Textarea
                 id="groupDescription"
-                placeholder="Décrivez votre groupe..."
+                placeholder="Décrivez votre club..."
                 value={groupDescription}
                 onChange={(e) => setGroupDescription(e.target.value)}
                 maxLength={200}
@@ -292,7 +292,7 @@ export const CreateGroupDialog = ({ isOpen, onClose, onGroupCreated }: CreateGro
                 disabled={!groupName.trim() || loading}
                 className="flex-1"
               >
-                {loading ? "Création..." : "Créer le groupe"}
+                {loading ? "Création..." : "Créer le club"}
               </Button>
             </div>
           </div>

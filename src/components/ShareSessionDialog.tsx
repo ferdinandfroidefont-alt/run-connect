@@ -105,7 +105,7 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
 
         if (memberError || !membership) {
           console.error('User is not a member of this group:', memberError);
-          throw new Error('Vous n\'êtes pas membre de ce groupe');
+          throw new Error('Vous n\'êtes pas membre de ce club');
         }
       }
 

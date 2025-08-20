@@ -11,9 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
-import { CreateGroupDialog } from "@/components/CreateGroupDialog";
-import { EditGroupDialog } from "@/components/EditGroupDialog";
-import { GroupInfoDialog } from "@/components/GroupInfoDialog";
+import { CreateClubDialog } from "@/components/CreateClubDialog";
+import { EditClubDialog } from "@/components/EditClubDialog";
+import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { ShareSessionDialog } from "@/components/ShareSessionDialog";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { 
@@ -117,7 +117,7 @@ const Messages = () => {
     if (!user) return;
 
     try {
-      // Get both direct conversations and group conversations
+      // Get both direct conversations and club conversations
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select('*')
@@ -130,7 +130,7 @@ const Messages = () => {
       const conversationsWithProfiles = await Promise.all(
         (conversationsData || []).map(async (conv) => {
           if (conv.is_group) {
-            // For groups, check if user is a member
+            // For clubs, check if user is a member
             const { data: membership } = await supabase
               .from('group_members')
               .select('*')
@@ -140,7 +140,7 @@ const Messages = () => {
 
             if (!membership) return null; // User is not a member
 
-            // Get group members profiles separately
+            // Get club members profiles separately
             const { data: memberIds } = await supabase
               .from('group_members')
               .select('user_id')
@@ -544,7 +544,7 @@ const Messages = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('🔍 Group avatar clicked - DEBUGGING:');
+                      console.log('🔍 Club avatar clicked - DEBUGGING:');
                       console.log('- selectedConversation:', selectedConversation);
                       console.log('- selectedConversation.id:', selectedConversation.id);
                       console.log('- selectedConversation.is_group:', selectedConversation.is_group);
@@ -565,7 +565,7 @@ const Messages = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('🔍 Group name clicked - DEBUGGING:');
+                      console.log('🔍 Club name clicked - DEBUGGING:');
                       console.log('- selectedConversation:', selectedConversation);
                       console.log('- selectedConversation.id:', selectedConversation.id);
                       console.log('- selectedConversation.is_group:', selectedConversation.is_group);
@@ -807,7 +807,7 @@ const Messages = () => {
               className="bg-primary hover:bg-primary/90"
             >
               <Users className="h-4 w-4 mr-1" />
-              Groupe
+              Club
             </Button>
           </div>
         </div>
@@ -915,8 +915,8 @@ const Messages = () => {
           onStartConversation={startConversation}
         />
 
-        {/* Create Group Dialog */}
-        <CreateGroupDialog
+        {/* Create Club Dialog */}
+        <CreateClubDialog
           isOpen={showCreateGroup}
           onClose={() => setShowCreateGroup(false)}
           onGroupCreated={(groupId) => {
@@ -925,11 +925,11 @@ const Messages = () => {
           }}
         />
 
-        {/* Group Info Dialog - FIXED: Remove conditional rendering */}
-        <GroupInfoDialog
+        {/* Club Info Dialog - FIXED: Remove conditional rendering */}
+        <ClubInfoDialog
           isOpen={showGroupInfo && selectedConversation?.is_group === true}
           onClose={() => {
-            console.log('🔍 GroupInfoDialog onClose called');
+            console.log('🔍 ClubInfoDialog onClose called');
             setShowGroupInfo(false);
           }}
           conversationId={selectedConversation?.id || ''}
@@ -943,7 +943,7 @@ const Messages = () => {
           }}
         />
         
-        {/* DEBUG: Force render GroupInfoDialog when showGroupInfo is true */}
+        {/* DEBUG: Force render ClubInfoDialog when showGroupInfo is true */}
         {showGroupInfo && !selectedConversation?.is_group && (
           <div style={{position: 'fixed', top: 0, left: 0, background: 'red', color: 'white', padding: '10px', zIndex: 9999}}>
             DEBUG: showGroupInfo is true but selectedConversation.is_group is false!
@@ -951,9 +951,9 @@ const Messages = () => {
           </div>
         )}
 
-        {/* Edit Group Dialog - available globally */}
+        {/* Edit Club Dialog - available globally */}
         {selectedConversation?.is_group && (
-          <EditGroupDialog
+          <EditClubDialog
             isOpen={showEditGroup}
             onClose={() => setShowEditGroup(false)}
             conversationId={selectedConversation.id}

@@ -186,7 +186,7 @@ const Subscription = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
-                <span>Groupes privés</span>
+                <span>Clubs privés</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
@@ -236,7 +236,7 @@ const Subscription = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
-                <span>Groupes privés</span>
+                <span>Clubs privés</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
@@ -281,9 +281,9 @@ const Subscription = () => {
               </p>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium">Groupes privés</h4>
+              <h4 className="font-medium">Clubs privés</h4>
               <p className="text-sm text-muted-foreground">
-                Créez des groupes privés pour courir avec vos amis
+                Créez des clubs privés pour courir avec vos amis
               </p>
             </div>
             <div className="space-y-2">

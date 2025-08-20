@@ -23,7 +23,7 @@ interface GroupMember extends Profile {
   joined_at: string;
 }
 
-interface EditGroupDialogProps {
+interface EditClubDialogProps {
   isOpen: boolean;
   onClose: () => void;
   conversationId: string;
@@ -33,7 +33,7 @@ interface EditGroupDialogProps {
   onGroupUpdated: () => void;
 }
 
-export const EditGroupDialog = ({ 
+export const EditClubDialog = ({ 
   isOpen, 
   onClose, 
   conversationId, 
@@ -41,7 +41,7 @@ export const EditGroupDialog = ({
   groupDescription: initialGroupDescription,
   isAdmin,
   onGroupUpdated 
-}: EditGroupDialogProps) => {
+}: EditClubDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [groupName, setGroupName] = useState(initialGroupName);
@@ -128,7 +128,7 @@ export const EditGroupDialog = ({
       
       toast({
         title: "Succès",
-        description: `${profile.username || profile.display_name} a été ajouté au groupe`
+        description: `${profile.username || profile.display_name} a été ajouté au club`
       });
     } catch (error: any) {
       console.error('Error adding member:', error);
@@ -158,7 +158,7 @@ export const EditGroupDialog = ({
       
       toast({
         title: "Succès",
-        description: `${removedMember?.username || removedMember?.display_name} a été retiré du groupe`
+        description: `${removedMember?.username || removedMember?.display_name} a été retiré du club`
       });
     } catch (error: any) {
       console.error('Error removing member:', error);
@@ -188,7 +188,7 @@ export const EditGroupDialog = ({
 
       toast({
         title: "Succès",
-        description: "Groupe modifié avec succès!"
+        description: "Club modifié avec succès!"
       });
 
       onGroupUpdated();
@@ -197,7 +197,7 @@ export const EditGroupDialog = ({
       console.error('Error updating group:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de modifier le groupe",
+        description: "Impossible de modifier le club",
         variant: "destructive"
       });
     } finally {
@@ -225,17 +225,17 @@ export const EditGroupDialog = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
-              Modifier le groupe
+              Modifier le club
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Group Name */}
             <div>
-              <Label htmlFor="groupName">Nom du groupe *</Label>
+              <Label htmlFor="groupName">Nom du club *</Label>
               <Input
                 id="groupName"
-                placeholder="Ex: Groupe Football Paris"
+                placeholder="Ex: Club Football Paris"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 maxLength={50}
@@ -248,7 +248,7 @@ export const EditGroupDialog = ({
               <Label htmlFor="groupDescription">Description (optionnel)</Label>
               <Textarea
                 id="groupDescription"
-                placeholder="Décrivez votre groupe..."
+                placeholder="Décrivez votre club..."
                 value={groupDescription}
                 onChange={(e) => setGroupDescription(e.target.value)}
                 maxLength={200}
