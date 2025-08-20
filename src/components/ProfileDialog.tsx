@@ -28,6 +28,10 @@ interface Profile {
   notifications_enabled?: boolean;
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
+  walking_records?: any;
+  running_records?: any;
+  cycling_records?: any;
+  swimming_records?: any;
 }
 
 interface ProfileDialogProps {
@@ -53,6 +57,12 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const [followingCount, setFollowingCount] = useState(0);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [recordsData, setRecordsData] = useState({
+    walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
+    running: { '5k': '', '10k': '', '21k': '', '42k': '' },
+    cycling: { '25k': '', '50k': '', '100k': '', '200k': '' },
+    swimming: { '100m': '', '500m': '', '1000m': '', '1500m': '' }
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -195,7 +205,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
 
       const { error } = await supabase
         .from('profiles')
-        .update({ ...formData, avatar_url: avatarUrl })
+        .update({ 
+          ...formData, 
+          avatar_url: avatarUrl,
+          walking_records: recordsData.walking,
+          running_records: recordsData.running,
+          cycling_records: recordsData.cycling,
+          swimming_records: recordsData.swimming
+        })
         .eq('user_id', user?.id);
 
       if (error) throw error;
@@ -476,6 +493,13 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                           setAvatarFile(null);
                           setAvatarPreview("");
                           setFormData(profile || {});
+                          // Reset records data
+                          setRecordsData({
+                            walking: profile?.walking_records || { '5k': '', '10k': '', '21k': '', '42k': '' },
+                            running: profile?.running_records || { '5k': '', '10k': '', '21k': '', '42k': '' },
+                            cycling: profile?.cycling_records || { '25k': '', '50k': '', '100k': '', '200k': '' },
+                            swimming: profile?.swimming_records || { '100m': '', '500m': '', '1000m': '', '1500m': '' }
+                          });
                         }}>
                           Annuler
                         </Button>
@@ -515,6 +539,186 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         <Settings className="h-4 w-4 mr-2" />
                         Modifier le profil
                       </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Sports Records Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center">
+                    <Heart className="h-5 w-5 text-primary mr-2" />
+                    <CardTitle className="text-lg">Records Sportifs</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isEditing ? (
+                    <div className="space-y-6">
+                      {/* Walking Records */}
+                      <div>
+                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
+                          🚶‍♂️ Marche
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(recordsData.walking).map(([distance, time]) => (
+                            <div key={distance}>
+                              <label className="text-xs font-medium">{distance}</label>
+                              <Input
+                                placeholder="00:00:00"
+                                value={time}
+                                onChange={(e) => setRecordsData(prev => ({
+                                  ...prev,
+                                  walking: { ...prev.walking, [distance]: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Running Records */}
+                      <div>
+                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
+                          🏃‍♂️ Course à pied
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(recordsData.running).map(([distance, time]) => (
+                            <div key={distance}>
+                              <label className="text-xs font-medium">{distance}</label>
+                              <Input
+                                placeholder="00:00:00"
+                                value={time}
+                                onChange={(e) => setRecordsData(prev => ({
+                                  ...prev,
+                                  running: { ...prev.running, [distance]: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Cycling Records */}
+                      <div>
+                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
+                          🚴‍♂️ Vélo
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(recordsData.cycling).map(([distance, time]) => (
+                            <div key={distance}>
+                              <label className="text-xs font-medium">{distance}</label>
+                              <Input
+                                placeholder="00:00:00"
+                                value={time}
+                                onChange={(e) => setRecordsData(prev => ({
+                                  ...prev,
+                                  cycling: { ...prev.cycling, [distance]: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Swimming Records */}
+                      <div>
+                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
+                          🏊‍♂️ Natation
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(recordsData.swimming).map(([distance, time]) => (
+                            <div key={distance}>
+                              <label className="text-xs font-medium">{distance}</label>
+                              <Input
+                                placeholder="00:00:00"
+                                value={time}
+                                onChange={(e) => setRecordsData(prev => ({
+                                  ...prev,
+                                  swimming: { ...prev.swimming, [distance]: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <p className="mb-4">Cliquez sur "Modifier le profil" pour ajouter vos records</p>
+                      
+                      {/* Display existing records if any */}
+                      {(profile?.walking_records && Object.values(profile.walking_records).some(v => v)) && (
+                        <div className="text-left mb-4">
+                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
+                            🚶‍♂️ Marche
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {Object.entries(profile.walking_records).map(([distance, time]) => 
+                              time && (
+                                <div key={distance} className="flex justify-between">
+                                  <span>{distance}</span>
+                                   <span className="font-mono">{String(time)}</span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {(profile?.running_records && Object.values(profile.running_records).some(v => v)) && (
+                        <div className="text-left mb-4">
+                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
+                            🏃‍♂️ Course à pied
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {Object.entries(profile.running_records).map(([distance, time]) => 
+                              time && (
+                                <div key={distance} className="flex justify-between">
+                                  <span>{distance}</span>
+                                   <span className="font-mono">{String(time)}</span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {(profile?.cycling_records && Object.values(profile.cycling_records).some(v => v)) && (
+                        <div className="text-left mb-4">
+                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
+                            🚴‍♂️ Vélo
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {Object.entries(profile.cycling_records).map(([distance, time]) => 
+                              time && (
+                                <div key={distance} className="flex justify-between">
+                                  <span>{distance}</span>
+                                   <span className="font-mono">{String(time)}</span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {(profile?.swimming_records && Object.values(profile.swimming_records).some(v => v)) && (
+                        <div className="text-left mb-4">
+                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
+                            🏊‍♂️ Natation
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {Object.entries(profile.swimming_records).map(([distance, time]) => 
+                              time && (
+                                <div key={distance} className="flex justify-between">
+                                  <span>{distance}</span>
+                                  <span className="font-mono">{String(time)}</span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
