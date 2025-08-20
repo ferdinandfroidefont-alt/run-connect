@@ -284,23 +284,45 @@ export const InteractiveMap = () => {
 
     console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
 
-    // Créer un marqueur SVG simple avec initiales
-    const svg = `
-      <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <dropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
-          </filter>
-        </defs>
-        <circle cx="${size/2}" cy="${size/2}" r="${(size-4)/2}" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>
-        <text x="${size/2}" y="${size/2}" text-anchor="middle" dominant-baseline="central" 
-              fill="white" font-family="Arial, sans-serif" font-size="${size/3}" font-weight="bold">
-          ${initials}
-        </text>
-      </svg>
-    `;
-
-    return 'data:image/svg+xml;base64,' + btoa(svg);
+    // Créer un marqueur SVG avec photo de profil et fallback vers initiales
+    const avatarUrl = session.profiles.avatar_url;
+    
+    if (avatarUrl) {
+      const svg = `
+        <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <clipPath id="circleClip">
+              <circle cx="${size/2}" cy="${size/2}" r="${(size-6)/2}"/>
+            </clipPath>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <dropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+            </filter>
+          </defs>
+          <circle cx="${size/2}" cy="${size/2}" r="${(size-2)/2}" fill="white" filter="url(#shadow)"/>
+          <image href="${avatarUrl}" x="3" y="3" width="${size-6}" height="${size-6}" 
+                 clip-path="url(#circleClip)" preserveAspectRatio="xMidYMid slice"/>
+          <circle cx="${size/2}" cy="${size/2}" r="${(size-2)/2}" fill="none" stroke="white" stroke-width="2"/>
+        </svg>
+      `;
+      return 'data:image/svg+xml;base64,' + btoa(svg);
+    } else {
+      // Fallback avec initiales si pas d'avatar
+      const svg = `
+        <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <dropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+            </filter>
+          </defs>
+          <circle cx="${size/2}" cy="${size/2}" r="${(size-4)/2}" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>
+          <text x="${size/2}" y="${size/2}" text-anchor="middle" dominant-baseline="central" 
+                fill="white" font-family="Arial, sans-serif" font-size="${size/3}" font-weight="bold">
+            ${initials}
+          </text>
+        </svg>
+      `;
+      return 'data:image/svg+xml;base64,' + btoa(svg);
+    }
   };
 
   const getActivityColor = (activityType: string) => {
