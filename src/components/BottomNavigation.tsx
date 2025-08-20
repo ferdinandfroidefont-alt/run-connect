@@ -7,7 +7,6 @@ const navItems = [
   { path: '/', emoji: '🗺️', label: 'Carte' },
   { path: '/messages', emoji: '💬', label: 'Messages' },
   { path: '/leaderboard', emoji: '🏆', label: 'Classement' },
-  { path: '/profile', emoji: '👤', label: 'Profil' },
 ];
 
 export const BottomNavigation = () => {

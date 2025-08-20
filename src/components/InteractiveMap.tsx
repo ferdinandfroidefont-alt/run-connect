@@ -6,6 +6,7 @@ import { SessionFilters } from './SessionFilters';
 import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { NotificationCenter } from './NotificationCenter';
+import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
@@ -82,6 +83,7 @@ export const InteractiveMap = () => {
   const [userProfile, setUserProfile] = useState<{username: string, display_name: string, avatar_url: string | null} | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
 
   // Load user profile
   useEffect(() => {
@@ -706,7 +708,10 @@ export const InteractiveMap = () => {
             
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
-              <div className="text-lg cursor-pointer hover:opacity-70 transition-opacity">
+              <div 
+                className="text-lg cursor-pointer hover:opacity-70 transition-opacity"
+                onClick={() => setShowProfileDialog(true)}
+              >
                 ⚙️
               </div>
             </div>
@@ -863,6 +868,11 @@ export const InteractiveMap = () => {
         session={selectedSession}
         onClose={() => setSelectedSession(null)}
         onSessionUpdated={loadSessions}
+      />
+      
+      <ProfileDialog 
+        open={showProfileDialog}
+        onOpenChange={setShowProfileDialog}
       />
 
       {/* User Sessions Dialog */}
