@@ -8,7 +8,7 @@ const navItems = [{
   label: 'Carte'
 }, {
   path: '/my-sessions',
-  emoji: '🚴',
+  emoji: '🚴‍♂️',
   label: 'Mes Séances'
 }, {
   path: '/messages',
