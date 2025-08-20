@@ -66,20 +66,22 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   return (
     <>
       {/* Filter Toggle Button */}
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        size="sm"
-        variant="outline"
-        className="bg-card/90 backdrop-blur-sm shadow-map-control"
-      >
-        <Filter className="h-4 w-4 mr-1" />
-        Filtres
-        {activeFiltersCount > 0 && (
-          <Badge variant="secondary" className="ml-2 h-5 px-1 text-xs">
-            {activeFiltersCount}
-          </Badge>
-        )}
-      </Button>
+      <div>
+        <Button
+          onClick={() => setIsOpen(!isOpen)}
+          size="sm"
+          variant="outline"
+          className="bg-card/90 backdrop-blur-sm shadow-map-control"
+        >
+          <Filter className="h-4 w-4 mr-1" />
+          Filtres
+          {activeFiltersCount > 0 && (
+            <Badge variant="secondary" className="ml-2 h-5 px-1 text-xs">
+              {activeFiltersCount}
+            </Badge>
+          )}
+        </Button>
+      </div>
 
       {/* Filters Panel */}
       {isOpen && (
