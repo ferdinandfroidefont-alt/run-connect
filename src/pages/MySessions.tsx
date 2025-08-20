@@ -1,4 +1,6 @@
 import { RouteDialog } from '@/components/RouteDialog';
+import { RouteCard } from '@/components/RouteCard';
+import { RouteEditDialog } from '@/components/RouteEditDialog';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +74,7 @@ export default function MySessions() {
   const [editingRoute, setEditingRoute] = useState<any>(null);
   const [routeEditLoading, setRouteEditLoading] = useState(false);
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
+  const [isAdvancedEditOpen, setIsAdvancedEditOpen] = useState(false);
 
   // Load user's sessions
   const loadUserSessions = async () => {
@@ -197,7 +200,7 @@ export default function MySessions() {
 
   const editRoute = (route: any) => {
     setEditingRoute(route);
-    setIsRouteEditDialogOpen(true);
+    setIsAdvancedEditOpen(true);
   };
 
   const handleSaveRouteEdit = async (routeName: string, routeDescription: string) => {
@@ -673,102 +676,14 @@ export default function MySessions() {
               <p className="text-xs text-muted-foreground mt-2">Chargement des itinéraires...</p>
             </div>
           ) : routes.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {routes.map((route) => (
-                <Card key={route.id} className="hover:shadow-sm transition-shadow">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">{route.name}</CardTitle>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(route.created_at).toLocaleDateString('fr-FR', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          onClick={() => editRoute(route)}
-                          size="sm"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-primary hover:bg-primary/10 -mt-2 -mr-1"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => deleteRoute(route.id)}
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 space-y-3">
-                    {route.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {route.description}
-                      </p>
-                    )}
-
-                    {/* Statistics */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                        <MapPin className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Distance</p>
-                          <p className="text-sm font-semibold">{formatDistance(route.total_distance)}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Dénivelé +</p>
-                          <p className="text-sm font-semibold">{formatElevation(route.total_elevation_gain)}</p>
-                        </div>
-                      </div>
-
-                      {route.min_elevation && route.max_elevation && (
-                        <>
-                          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <Mountain className="h-4 w-4 text-orange-600" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">Alt. min</p>
-                              <p className="text-sm font-semibold">{formatElevation(route.min_elevation)}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <Mountain className="h-4 w-4 text-red-600" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">Alt. max</p>
-                              <p className="text-sm font-semibold">{formatElevation(route.max_elevation)}</p>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Additional Info */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Route className="h-3 w-3" />
-                        {Array.isArray(route.coordinates) ? route.coordinates.length : 0} points
-                      </div>
-                      {route.total_elevation_loss && (
-                        <Badge variant="secondary" className="text-xs">
-                          ↘️ {formatElevation(route.total_elevation_loss)}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                <RouteCard
+                  key={route.id}
+                  route={route}
+                  onEdit={editRoute}
+                  onDelete={deleteRoute}
+                />
               ))}
             </div>
           ) : (
@@ -787,7 +702,7 @@ export default function MySessions() {
         )}
       </div>
 
-      {/* Route Edit Dialog */}
+      {/* Route Edit Dialogs */}
       <RouteDialog
         isOpen={isRouteEditDialogOpen}
         onClose={() => {
@@ -799,6 +714,16 @@ export default function MySessions() {
         initialName={editingRoute?.name || ''}
         initialDescription={editingRoute?.description || ''}
         loading={routeEditLoading}
+      />
+
+      <RouteEditDialog
+        isOpen={isAdvancedEditOpen}
+        onClose={() => {
+          setIsAdvancedEditOpen(false);
+          setEditingRoute(null);
+        }}
+        route={editingRoute}
+        onRouteUpdated={loadUserRoutes}
       />
     </div>
   );
