@@ -27,7 +27,11 @@ interface Session {
   current_participants: number;
   organizer_id: string;
   image_url?: string;
-  distance_km?: number; // Nouveau champ pour la distance
+  distance_km?: number;
+  pace_general?: string; // Allure générale
+  interval_distance?: number; // Distance par fraction
+  interval_pace?: string; // Allure des fractions
+  interval_count?: number; // Nombre de fractions
   profiles: {
     username: string;
     display_name: string;
@@ -302,6 +306,41 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 <p className="text-sm text-muted-foreground">
                   {session.distance_km} km
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Allure - Footing ou Sortie longue */}
+          {session.pace_general && (session.session_type === 'footing' || session.session_type === 'sortie_longue') && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Allure prévue</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {session.pace_general}/km
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Informations fractionné */}
+          {session.session_type === 'fractionne' && (session.interval_distance || session.interval_pace || session.interval_count) && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Séance fractionné</span>
+                </div>
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  {session.interval_count && session.interval_distance && (
+                    <p>{session.interval_count} × {session.interval_distance} km</p>
+                  )}
+                  {session.interval_pace && (
+                    <p>Allure: {session.interval_pace}/km</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}

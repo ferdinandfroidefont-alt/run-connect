@@ -361,12 +361,16 @@ export type Database = {
           id: string
           image_url: string | null
           intensity: string | null
+          interval_count: number | null
+          interval_distance: number | null
+          interval_pace: string | null
           is_private: boolean | null
           location_lat: number
           location_lng: number
           location_name: string
           max_participants: number | null
           organizer_id: string
+          pace_general: string | null
           route_id: string | null
           scheduled_at: string
           session_type: string
@@ -383,12 +387,16 @@ export type Database = {
           id?: string
           image_url?: string | null
           intensity?: string | null
+          interval_count?: number | null
+          interval_distance?: number | null
+          interval_pace?: string | null
           is_private?: boolean | null
           location_lat: number
           location_lng: number
           location_name: string
           max_participants?: number | null
           organizer_id: string
+          pace_general?: string | null
           route_id?: string | null
           scheduled_at: string
           session_type: string
@@ -405,12 +413,16 @@ export type Database = {
           id?: string
           image_url?: string | null
           intensity?: string | null
+          interval_count?: number | null
+          interval_distance?: number | null
+          interval_pace?: string | null
           is_private?: boolean | null
           location_lat?: number
           location_lng?: number
           location_name?: string
           max_participants?: number | null
           organizer_id?: string
+          pace_general?: string | null
           route_id?: string | null
           scheduled_at?: string
           session_type?: string

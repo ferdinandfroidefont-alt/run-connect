@@ -53,7 +53,11 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     session_type: "",
     scheduled_at: "",
     max_participants: "",
-    distance_km: "", // Nouveau champ pour la distance
+    distance_km: "",
+    pace_general: "", // Allure générale pour footing/sortie longue
+    interval_distance: "", // Distance de chaque fraction
+    interval_pace: "", // Allure de chaque fraction
+    interval_count: "", // Nombre de fractions
     location_name: "",
     friends_only: false,
     image_url: ""
@@ -415,7 +419,11 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           location_name: formData.location_name,
           scheduled_at: formData.scheduled_at,
           max_participants: parseInt(formData.max_participants) || null,
-          distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null, // Nouveau champ
+          distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null,
+          pace_general: formData.pace_general || null,
+          interval_distance: formData.interval_distance ? parseFloat(formData.interval_distance) : null,
+          interval_pace: formData.interval_pace || null,
+          interval_count: formData.interval_count ? parseInt(formData.interval_count) : null,
           current_participants: 0,
           friends_only: formData.friends_only,
           image_url: imageUrl,
@@ -441,7 +449,11 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         session_type: "",
         scheduled_at: "",
         max_participants: "",
-        distance_km: "", // Reset du nouveau champ
+        distance_km: "",
+        pace_general: "",
+        interval_distance: "",
+        interval_pace: "",
+        interval_count: "",
         location_name: "",
         friends_only: false,
         image_url: ""
@@ -552,6 +564,64 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
               min="0"
             />
           </div>
+
+          {/* Champs d'allure selon le type de séance */}
+          {(formData.session_type === 'footing' || formData.session_type === 'sortie_longue') && (
+            <div>
+              <Label htmlFor="pace_general">Allure prévue (min:sec/km)</Label>
+              <Input
+                id="pace_general"
+                type="text"
+                value={formData.pace_general}
+                onChange={(e) => setFormData(prev => ({ ...prev, pace_general: e.target.value }))}
+                placeholder="ex: 5:30"
+                pattern="[0-9]{1,2}:[0-9]{2}"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Format: mm:ss (ex: 5:30 pour 5min30s/km)</p>
+            </div>
+          )}
+
+          {formData.session_type === 'fractionne' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="interval_distance">Distance par fraction (km)</Label>
+                  <Input
+                    id="interval_distance"
+                    type="number"
+                    step="0.1"
+                    value={formData.interval_distance}
+                    onChange={(e) => setFormData(prev => ({ ...prev, interval_distance: e.target.value }))}
+                    placeholder="ex: 1.0"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="interval_count">Nombre de fractions</Label>
+                  <Input
+                    id="interval_count"
+                    type="number"
+                    value={formData.interval_count}
+                    onChange={(e) => setFormData(prev => ({ ...prev, interval_count: e.target.value }))}
+                    placeholder="ex: 6"
+                    min="1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="interval_pace">Allure des fractions (min:sec/km)</Label>
+                <Input
+                  id="interval_pace"
+                  type="text"
+                  value={formData.interval_pace}
+                  onChange={(e) => setFormData(prev => ({ ...prev, interval_pace: e.target.value }))}
+                  placeholder="ex: 4:00"
+                  pattern="[0-9]{1,2}:[0-9]{2}"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Format: mm:ss (ex: 4:00 pour 4min/km)</p>
+              </div>
+            </div>
+          )}
 
           <div>
             <Label>Lieu de rendez-vous</Label>
