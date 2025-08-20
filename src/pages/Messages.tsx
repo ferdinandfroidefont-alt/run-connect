@@ -98,6 +98,7 @@ const Messages = () => {
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showShareSession, setShowShareSession] = useState(false);
+  const [shareSessionConversationId, setShareSessionConversationId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -600,6 +601,7 @@ const Messages = () => {
                 size="sm"
                 onClick={() => {
                   console.log('Share button clicked, conversationId:', selectedConversation?.id);
+                  setShareSessionConversationId(selectedConversation?.id || "");
                   setShowShareSession(true);
                 }}
               >
@@ -969,8 +971,11 @@ const Messages = () => {
         {/* Share Session Dialog - available globally */}
         <ShareSessionDialog
           isOpen={showShareSession}
-          onClose={() => setShowShareSession(false)}
-          conversationId={selectedConversation?.id || ""}
+          onClose={() => {
+            setShowShareSession(false);
+            setShareSessionConversationId("");
+          }}
+          conversationId={shareSessionConversationId}
           onSessionShared={() => {
             console.log('Session shared, refreshing messages');
             if (selectedConversation) {
