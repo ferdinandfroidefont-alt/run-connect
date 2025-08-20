@@ -356,6 +356,7 @@ export type Database = {
           created_at: string
           current_participants: number | null
           description: string | null
+          distance_km: number | null
           friends_only: boolean | null
           id: string
           image_url: string | null
@@ -377,6 +378,7 @@ export type Database = {
           created_at?: string
           current_participants?: number | null
           description?: string | null
+          distance_km?: number | null
           friends_only?: boolean | null
           id?: string
           image_url?: string | null
@@ -398,6 +400,7 @@ export type Database = {
           created_at?: string
           current_participants?: number | null
           description?: string | null
+          distance_km?: number | null
           friends_only?: boolean | null
           id?: string
           image_url?: string | null

@@ -53,6 +53,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     session_type: "",
     scheduled_at: "",
     max_participants: "",
+    distance_km: "", // Nouveau champ pour la distance
     location_name: "",
     friends_only: false,
     image_url: ""
@@ -414,6 +415,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           location_name: formData.location_name,
           scheduled_at: formData.scheduled_at,
           max_participants: parseInt(formData.max_participants) || null,
+          distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null, // Nouveau champ
           current_participants: 0,
           friends_only: formData.friends_only,
           image_url: imageUrl,
@@ -439,6 +441,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         session_type: "",
         scheduled_at: "",
         max_participants: "",
+        distance_km: "", // Reset du nouveau champ
         location_name: "",
         friends_only: false,
         image_url: ""
@@ -534,6 +537,19 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
               onChange={(e) => setFormData(prev => ({ ...prev, max_participants: e.target.value }))}
               placeholder="Laisser vide pour illimité"
               min="1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="distance_km">Distance prévue (km)</Label>
+            <Input
+              id="distance_km"
+              type="number"
+              step="0.1"
+              value={formData.distance_km}
+              onChange={(e) => setFormData(prev => ({ ...prev, distance_km: e.target.value }))}
+              placeholder="ex: 5.2"
+              min="0"
             />
           </div>
 

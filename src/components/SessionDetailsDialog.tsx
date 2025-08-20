@@ -27,6 +27,7 @@ interface Session {
   current_participants: number;
   organizer_id: string;
   image_url?: string;
+  distance_km?: number; // Nouveau champ pour la distance
   profiles: {
     username: string;
     display_name: string;
@@ -289,6 +290,21 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               </p>
             </CardContent>
           </Card>
+
+          {/* Distance prévue */}
+          {session.distance_km && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Route className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Distance prévue</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {session.distance_km} km
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Location */}
           <Card>
