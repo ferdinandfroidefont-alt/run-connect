@@ -171,7 +171,7 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
           
           {/* Badge avec date et boutons d'action */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
-            <Badge variant="secondary" className="bg-white/90 text-xs">
+            <Badge variant="secondary" className="bg-white/90 text-xs text-black">
               {format(new Date(route.created_at), 'dd MMM yyyy', { locale: fr })}
             </Badge>
             <div className="flex gap-1">
@@ -179,17 +179,17 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
                 variant="secondary"
                 size="sm"
                 onClick={() => onEdit(route)}
-                className="bg-white/90 hover:bg-white shadow-sm"
+                className="bg-white/90 hover:bg-white shadow-sm text-black hover:text-black"
               >
-                <Edit className="h-3 w-3" />
+                <Edit className="h-3 w-3 text-black" />
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => onDelete(route.id)}
-                className="bg-white/90 hover:bg-white shadow-sm"
+                className="bg-white/90 hover:bg-white shadow-sm text-black hover:text-black"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-3 w-3 text-black" />
               </Button>
             </div>
           </div>
