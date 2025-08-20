@@ -88,28 +88,18 @@ export const ClubInfoDialog = ({
   const loadGroupMembers = async () => {
     if (!conversationId) return;
     
-    console.log('🔍 loadGroupMembers called with conversationId:', conversationId);
     setLoading(true);
     try {
-      const { data: memberIds, error: memberIdsError } = await supabase
+      const { data: memberIds } = await supabase
         .from('group_members')
         .select('user_id, is_admin, joined_at')
         .eq('conversation_id', conversationId);
 
-      console.log('🔍 memberIds query result:', { memberIds, memberIdsError });
-
-      if (memberIdsError) throw memberIdsError;
-
       if (memberIds && memberIds.length > 0) {
-        console.log('🔍 Found members, fetching profiles...');
-        const { data: memberProfiles, error: profilesError } = await supabase
+        const { data: memberProfiles } = await supabase
           .from('profiles')
           .select('user_id, username, display_name, avatar_url')
           .in('user_id', memberIds.map(m => m.user_id));
-
-        console.log('🔍 memberProfiles query result:', { memberProfiles, profilesError });
-
-        if (profilesError) throw profilesError;
 
         const membersWithProfiles = memberIds.map(member => {
           const profile = memberProfiles?.find(p => p.user_id === member.user_id);
@@ -129,11 +119,7 @@ export const ClubInfoDialog = ({
           );
         });
 
-        console.log('🔍 Final members with profiles:', membersWithProfiles);
         setMembers(membersWithProfiles);
-      } else {
-        console.log('🔍 No members found for conversation:', conversationId);
-        setMembers([]);
       }
     } catch (error) {
       console.error('Error loading group members:', error);
