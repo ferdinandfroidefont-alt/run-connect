@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, X } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, X, Smartphone } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -938,6 +938,43 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
                     />
                   </div>
+
+                  {/* Contacts Access - Only show on mobile */}
+                  {typeof window !== 'undefined' && (window as any).Capacitor && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Smartphone className="h-4 w-4" />
+                        <div className="grid gap-1.5">
+                          <label className="text-sm font-medium leading-none">
+                            Accès aux contacts
+                          </label>
+                          <p className="text-xs text-muted-foreground">
+                            Trouvez vos amis dans vos contacts
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const { Contacts } = await import('@capacitor-community/contacts');
+                            const result = await Contacts.requestPermissions();
+                            if (result.contacts === 'granted') {
+                              toast({
+                                title: "Contacts autorisés",
+                                description: "Vous verrez maintenant de meilleures suggestions d'amis"
+                              });
+                            }
+                          } catch (error) {
+                            console.error('Error requesting contacts permission:', error);
+                          }
+                        }}
+                      >
+                        Autoriser
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
