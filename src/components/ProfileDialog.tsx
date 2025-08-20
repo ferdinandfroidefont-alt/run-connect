@@ -11,11 +11,12 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, X, Smartphone } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, X, Smartphone, Share2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useShareProfile } from "@/hooks/useShareProfile";
 
 interface Profile {
   username: string;
@@ -44,6 +45,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { shareProfile } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -937,6 +939,36 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       checked={profile?.allow_friend_suggestions !== false}
                       onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
                     />
+                  </div>
+
+                  {/* Share Profile */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Share2 className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Partager mon profil
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Partagez votre profil sur Instagram, WhatsApp...
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (profile) {
+                          shareProfile({
+                            username: profile.username,
+                            displayName: profile.display_name,
+                            bio: profile.bio
+                          });
+                        }
+                      }}
+                    >
+                      Partager
+                    </Button>
                   </div>
 
                   {/* Contacts Access - Only show on mobile */}

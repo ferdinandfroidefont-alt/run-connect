@@ -11,9 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2 } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
+import { useShareProfile } from "@/hooks/useShareProfile";
 
 interface Profile {
   username: string;
@@ -41,6 +42,7 @@ const Profile = () => {
   const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { shareProfile } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -748,6 +750,36 @@ const Profile = () => {
                   {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
                 </Button>
               </div>
+            </div>
+
+            {/* Share Profile */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Share2 className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Partager mon profil
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Partagez votre profil sur Instagram, WhatsApp...
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (profile) {
+                    shareProfile({
+                      username: profile.username,
+                      displayName: profile.display_name,
+                      bio: profile.bio
+                    });
+                  }
+                }}
+              >
+                Partager
+              </Button>
             </div>
           </CardContent>
         </Card>
