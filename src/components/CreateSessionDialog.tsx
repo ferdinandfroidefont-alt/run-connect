@@ -280,13 +280,17 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
   };
 
   const handleCreateRoute = () => {
+    console.log('🎯 handleCreateRoute called - starting route creation mode');
     if (onCreateRoute) {
       onClose(); // Ferme le dialog
       onCreateRoute(); // Lance le mode création d'itinéraire
+      console.log('✓ onCreateRoute called successfully');
       toast({ 
         title: "Mode itinéraire activé", 
         description: "Cliquez sur la carte pour dessiner votre itinéraire" 
       });
+    } else {
+      console.log('❌ onCreateRoute is not available');
     }
   };
 

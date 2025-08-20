@@ -650,7 +650,10 @@ export const InteractiveMap = () => {
 
 
   const handleCreateRoute = () => {
+    console.log('🗺️ InteractiveMap handleCreateRoute called');
     setIsRouteCreationMode(true);
+    console.log('✓ Route creation mode set to true');
+    
     // Clear any existing route
     if (routePath.current) {
       routePath.current.setMap(null);
@@ -664,13 +667,17 @@ export const InteractiveMap = () => {
     
     // Hide all existing markers when creating route
     markers.current.forEach(marker => marker.setVisible(false));
+    console.log(`Hidden ${markers.current.length} markers`);
     
     // Add click listeners to map for route creation
     if (map.current) {
       const clickListener = map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
+        console.log('🎯 Map clicked during route creation', event.latLng?.toString());
         if (isRouteCreationMode && event.latLng) {
           waypoints.current.push(event.latLng);
+          console.log(`Added waypoint ${waypoints.current.length}: ${event.latLng.toString()}`);
           if (waypoints.current.length >= 2) {
+            console.log('Creating directions route with', waypoints.current.length, 'waypoints');
             createDirectionsRoute();
           }
         }
@@ -678,6 +685,9 @@ export const InteractiveMap = () => {
       
       // Store listener to remove later
       map.current.set('routeClickListener', clickListener);
+      console.log('✓ Click listener added to map');
+    } else {
+      console.log('❌ Map not available');
     }
   };
 
