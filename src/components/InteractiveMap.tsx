@@ -92,8 +92,11 @@ export const InteractiveMap = () => {
   const [isRouteCreationMode, setIsRouteCreationMode] = useState(false);
   const routePath = useRef<google.maps.Polyline | null>(null);
   const routeCoordinates = useRef<google.maps.LatLng[]>([]);
+  const waypoints = useRef<google.maps.LatLng[]>([]);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
   const elevationService = useRef<google.maps.ElevationService | null>(null);
+  const directionsService = useRef<google.maps.DirectionsService | null>(null);
+  const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
 
   // Load user profile
   useEffect(() => {
@@ -538,6 +541,19 @@ export const InteractiveMap = () => {
 
         setIsMapLoaded(true);
 
+        // Initialize elevation and directions services
+        elevationService.current = new google.maps.ElevationService();
+        directionsService.current = new google.maps.DirectionsService();
+        directionsRenderer.current = new google.maps.DirectionsRenderer({
+          draggable: false,
+          map: null, // Don't attach to map by default
+          polylineOptions: {
+            strokeColor: '#3b82f6',
+            strokeOpacity: 1.0,
+            strokeWeight: 4,
+          }
+        });
+
         // Add event listeners for map interactions
         let touchTimer: NodeJS.Timeout | null = null;
         let clickTimer: NodeJS.Timeout | null = null;
@@ -639,7 +655,11 @@ export const InteractiveMap = () => {
     if (routePath.current) {
       routePath.current.setMap(null);
     }
+    if (directionsRenderer.current) {
+      directionsRenderer.current.setMap(null);
+    }
     routeCoordinates.current = [];
+    waypoints.current = [];
     setRouteElevations([]);
     
     // Hide all existing markers when creating route
@@ -649,15 +669,61 @@ export const InteractiveMap = () => {
     if (map.current) {
       const clickListener = map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
         if (isRouteCreationMode && event.latLng) {
-          routeCoordinates.current.push(event.latLng);
-          updateRoutePath();
-          updateElevationProfile();
+          waypoints.current.push(event.latLng);
+          if (waypoints.current.length >= 2) {
+            createDirectionsRoute();
+          }
         }
       });
       
       // Store listener to remove later
       map.current.set('routeClickListener', clickListener);
     }
+  };
+
+  const createDirectionsRoute = () => {
+    if (!directionsService.current || !directionsRenderer.current || waypoints.current.length < 2) return;
+
+    const origin = waypoints.current[0];
+    const destination = waypoints.current[waypoints.current.length - 1];
+    const waypointsForDirections = waypoints.current.slice(1, -1).map(point => ({
+      location: point,
+      stopover: true
+    }));
+
+    const request: google.maps.DirectionsRequest = {
+      origin: origin,
+      destination: destination,
+      waypoints: waypointsForDirections,
+      travelMode: google.maps.TravelMode.WALKING, // or BICYCLING for cycling routes
+      optimizeWaypoints: false
+    };
+
+    directionsService.current.route(request, (result, status) => {
+      if (status === 'OK' && result) {
+        // Set the directions renderer to display the route
+        directionsRenderer.current!.setMap(map.current);
+        directionsRenderer.current!.setDirections(result);
+
+        // Extract coordinates from the route for elevation calculation
+        const route = result.routes[0];
+        routeCoordinates.current = [];
+        
+        route.legs.forEach(leg => {
+          leg.steps.forEach(step => {
+            step.path.forEach(point => {
+              routeCoordinates.current.push(point);
+            });
+          });
+        });
+
+        // Update elevation profile with the new route
+        updateElevationProfile();
+      } else {
+        toast.error('Impossible de créer un itinéraire suivant les routes');
+        console.error('Directions request failed due to:', status);
+      }
+    });
   };
 
   const updateElevationProfile = async () => {
@@ -756,7 +822,7 @@ export const InteractiveMap = () => {
   };
 
   const finishRouteCreation = async () => {
-    if (routeCoordinates.current.length < 2) {
+    if (waypoints.current.length < 2) {
       toast('Vous devez tracer au moins 2 points pour créer un itinéraire');
       return;
     }
@@ -771,6 +837,11 @@ export const InteractiveMap = () => {
         if (listener) {
           google.maps.event.removeListener(listener);
         }
+      }
+      
+      // Clear directions renderer
+      if (directionsRenderer.current) {
+        directionsRenderer.current.setMap(null);
       }
       
       // Show markers again
@@ -793,7 +864,11 @@ export const InteractiveMap = () => {
     if (routePath.current) {
       routePath.current.setMap(null);
     }
+    if (directionsRenderer.current) {
+      directionsRenderer.current.setMap(null);
+    }
     routeCoordinates.current = [];
+    waypoints.current = [];
     setRouteElevations([]);
     
     // Show markers again
@@ -999,14 +1074,14 @@ export const InteractiveMap = () => {
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
           <div className="bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
             <span className="text-sm font-medium">
-              Mode création d'itinéraire - Cliquez sur la carte pour tracer votre parcours
+              Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
             </span>
             <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={finishRouteCreation}
-                disabled={routeCoordinates.current.length < 2}
+                disabled={waypoints.current.length < 2}
               >
                 Terminer
               </Button>
