@@ -57,7 +57,12 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const [followingCount, setFollowingCount] = useState(0);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
-  const [recordsData, setRecordsData] = useState({
+  const [recordsData, setRecordsData] = useState<{
+    walking: Record<string, string>;
+    running: Record<string, string>;
+    cycling: Record<string, string>;
+    swimming: Record<string, string>;
+  }>({
     walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
     running: { '5k': '', '10k': '', '21k': '', '42k': '' },
     cycling: { '25k': '', '50k': '', '100k': '', '200k': '' },
@@ -106,6 +111,24 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       if (error) throw error;
       setProfile(data);
       setFormData(data);
+      // Initialize records data safely
+      const defaultRecords = {
+        walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
+        running: { '5k': '', '10k': '', '21k': '', '42k': '' },
+        cycling: { '25k': '', '50k': '', '100k': '', '200k': '' },
+        swimming: { '100m': '', '500m': '', '1000m': '', '1500m': '' }
+      };
+      
+      setRecordsData({
+        walking: (data.walking_records && typeof data.walking_records === 'object') ? 
+          { ...defaultRecords.walking, ...data.walking_records } : defaultRecords.walking,
+        running: (data.running_records && typeof data.running_records === 'object') ? 
+          { ...defaultRecords.running, ...data.running_records } : defaultRecords.running,
+        cycling: (data.cycling_records && typeof data.cycling_records === 'object') ? 
+          { ...defaultRecords.cycling, ...data.cycling_records } : defaultRecords.cycling,
+        swimming: (data.swimming_records && typeof data.swimming_records === 'object') ? 
+          { ...defaultRecords.swimming, ...data.swimming_records } : defaultRecords.swimming
+      });
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -493,13 +516,24 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                           setAvatarFile(null);
                           setAvatarPreview("");
                           setFormData(profile || {});
-                          // Reset records data
-                          setRecordsData({
-                            walking: profile?.walking_records || { '5k': '', '10k': '', '21k': '', '42k': '' },
-                            running: profile?.running_records || { '5k': '', '10k': '', '21k': '', '42k': '' },
-                            cycling: profile?.cycling_records || { '25k': '', '50k': '', '100k': '', '200k': '' },
-                            swimming: profile?.swimming_records || { '100m': '', '500m': '', '1000m': '', '1500m': '' }
-                          });
+                           // Reset records data safely
+                           const defaultRecords = {
+                             walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
+                             running: { '5k': '', '10k': '', '21k': '', '42k': '' },
+                             cycling: { '25k': '', '50k': '', '100k': '', '200k': '' },
+                             swimming: { '100m': '', '500m': '', '1000m': '', '1500m': '' }
+                           };
+                           
+                           setRecordsData({
+                             walking: (profile?.walking_records && typeof profile.walking_records === 'object') ? 
+                               { ...defaultRecords.walking, ...profile.walking_records } : defaultRecords.walking,
+                             running: (profile?.running_records && typeof profile.running_records === 'object') ? 
+                               { ...defaultRecords.running, ...profile.running_records } : defaultRecords.running,
+                             cycling: (profile?.cycling_records && typeof profile.cycling_records === 'object') ? 
+                               { ...defaultRecords.cycling, ...profile.cycling_records } : defaultRecords.cycling,
+                             swimming: (profile?.swimming_records && typeof profile.swimming_records === 'object') ? 
+                               { ...defaultRecords.swimming, ...profile.swimming_records } : defaultRecords.swimming
+                           });
                         }}>
                           Annuler
                         </Button>
@@ -648,7 +682,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       <p className="mb-4">Cliquez sur "Modifier le profil" pour ajouter vos records</p>
                       
                       {/* Display existing records if any */}
-                      {(profile?.walking_records && Object.values(profile.walking_records).some(v => v)) && (
+                      {(profile?.walking_records && typeof profile.walking_records === 'object' && Object.values(profile.walking_records).some(v => v)) && (
                         <div className="text-left mb-4">
                           <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
                             🚶‍♂️ Marche
@@ -666,7 +700,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         </div>
                       )}
 
-                      {(profile?.running_records && Object.values(profile.running_records).some(v => v)) && (
+                      {(profile?.running_records && typeof profile.running_records === 'object' && Object.values(profile.running_records).some(v => v)) && (
                         <div className="text-left mb-4">
                           <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
                             🏃‍♂️ Course à pied
@@ -684,7 +718,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         </div>
                       )}
 
-                      {(profile?.cycling_records && Object.values(profile.cycling_records).some(v => v)) && (
+                      {(profile?.cycling_records && typeof profile.cycling_records === 'object' && Object.values(profile.cycling_records).some(v => v)) && (
                         <div className="text-left mb-4">
                           <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
                             🚴‍♂️ Vélo
@@ -702,7 +736,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         </div>
                       )}
 
-                      {(profile?.swimming_records && Object.values(profile.swimming_records).some(v => v)) && (
+                      {(profile?.swimming_records && typeof profile.swimming_records === 'object' && Object.values(profile.swimming_records).some(v => v)) && (
                         <div className="text-left mb-4">
                           <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
                             🏊‍♂️ Natation

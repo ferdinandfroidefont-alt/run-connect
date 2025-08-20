@@ -197,6 +197,7 @@ export type Database = {
           updated_at: string
           user_id: string | null
           username: string | null
+          walking_records: Json | null
         }
         Insert: {
           age?: number | null
@@ -219,6 +220,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           username?: string | null
+          walking_records?: Json | null
         }
         Update: {
           age?: number | null
@@ -241,6 +243,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           username?: string | null
+          walking_records?: Json | null
         }
         Relationships: []
       }
