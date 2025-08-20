@@ -1207,8 +1207,8 @@ export const InteractiveMap = () => {
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
-      {/* All Map Controls - repositioned to left side center */}
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
+      {/* All Map Controls - repositioned to left side */}
+      <div className="absolute left-4 top-3/4 -translate-y-1/2 flex flex-col gap-3 z-10">
         {/* Locate Me Button */}
         <Button
           onClick={handleLocateMe}
