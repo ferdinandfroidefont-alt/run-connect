@@ -56,6 +56,7 @@ interface Conversation {
   other_participant?: Profile;
   group_members?: Profile[];
   last_message?: Message;
+  unread_count?: number;
 }
 
 interface Message {
@@ -123,9 +124,17 @@ const Messages = () => {
 
       if (error) throw error;
 
-      // Process conversations with profiles
+      // Process conversations with profiles and unread counts
       const conversationsWithProfiles = await Promise.all(
         (conversationsData || []).map(async (conv) => {
+          // Count unread messages for this conversation
+          const { count: unreadCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .neq('sender_id', user.id)
+            .is('read_at', null);
+
           if (conv.is_group) {
             // For clubs, check if user is a member
             const { data: membership } = await supabase
@@ -150,7 +159,8 @@ const Messages = () => {
 
             return {
               ...conv,
-              group_members: memberProfiles || []
+              group_members: memberProfiles || [],
+              unread_count: unreadCount || 0
             };
           } else {
             // Direct conversation
@@ -171,13 +181,26 @@ const Messages = () => {
                 username: 'Utilisateur inconnu',
                 display_name: 'Utilisateur inconnu',
                 avatar_url: null
-              }
+              },
+              unread_count: unreadCount || 0
             };
           }
         })
       );
 
-      setConversations(conversationsWithProfiles.filter(Boolean));
+      // Sort conversations: unread messages first, then by updated_at
+      const sortedConversations = conversationsWithProfiles
+        .filter(Boolean)
+        .sort((a, b) => {
+          // First, prioritize conversations with unread messages
+          if (a.unread_count > 0 && b.unread_count === 0) return -1;
+          if (a.unread_count === 0 && b.unread_count > 0) return 1;
+          
+          // Then sort by updated_at (most recent first)
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
+
+      setConversations(sortedConversations);
     } catch (error: any) {
       console.error('Error loading conversations:', error);
       toast({ title: "Erreur", description: "Impossible de charger les conversations", variant: "destructive" });
@@ -866,9 +889,16 @@ const Messages = () => {
                             : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
                           }
                         </p>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {conversation.unread_count && conversation.unread_count > 0 && (
+                            <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {conversation.is_group 
