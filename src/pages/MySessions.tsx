@@ -240,11 +240,11 @@ export default function MySessions() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 pb-24 max-h-screen overflow-hidden">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Mes Séances</h1>
+    <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
+      <div className="flex items-center justify-between mb-3">
+        <h1 className="text-xl font-bold">Mes Séances</h1>
         <div className="flex items-center gap-2">
-          <Filter size={16} className="text-muted-foreground" />
+          <Filter size={14} className="text-muted-foreground" />
           <select 
             value={filter} 
             onChange={(e) => setFilter(e.target.value as 'all' | 'upcoming' | 'completed')}
@@ -257,93 +257,75 @@ export default function MySessions() {
         </div>
       </div>
 
-      <div className="h-[calc(100vh-200px)] overflow-y-auto">
+      <div className="flex-1">
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-sm text-muted-foreground mt-2">Chargement...</p>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+            <p className="text-xs text-muted-foreground mt-2">Chargement...</p>
           </div>
         ) : filteredSessions.length > 0 ? (
-          <div className="grid gap-3">
-            {filteredSessions.map((session) => (
+          <div className="space-y-2">
+            {filteredSessions.slice(0, 6).map((session) => (
               <Card 
                 key={session.id} 
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="cursor-pointer hover:shadow-sm transition-shadow"
                 onClick={() => handleSessionClick(session)}
               >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex gap-3">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2 flex-1 min-w-0">
                       {session.image_url && (
                         <img 
                           src={session.image_url} 
                           alt={session.title}
-                          className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                          className="w-10 h-10 object-cover rounded flex-shrink-0"
                         />
                       )}
-                      <div>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <span className="text-lg">{getActivityIcon(session.activity_type)}</span>
-                          {session.title}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          {getStatusBadge(session)}
-                          <Badge variant="outline" className="text-xs">Créateur</Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-sm">{getActivityIcon(session.activity_type)}</span>
+                          <h3 className="text-sm font-medium truncate">{session.title}</h3>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar size={10} />
+                            <span>{format(new Date(session.scheduled_at), 'dd/MM')}</span>
+                            <Clock size={10} className="ml-1" />
+                            <span>{format(new Date(session.scheduled_at), 'HH:mm')}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users size={10} />
+                            <span>{session.current_participants || 0}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {session.activity_type}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {session.session_type}
-                      </Badge>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {getStatusBadge(session)}
+                      <Badge variant="outline" className="text-xs px-1 py-0">Créateur</Badge>
                     </div>
                   </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-2 pt-0">
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={12} />
-                      <span>{format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock size={12} />
-                      <span>{format(new Date(session.scheduled_at), 'HH:mm')}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users size={12} />
-                      <span>{session.current_participants || 0}</span>
-                      {session.max_participants && <span>/{session.max_participants}</span>}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin size={12} />
-                    <span className="truncate">{session.location_name}</span>
-                  </div>
-                  
-                  {session.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-1">
-                      {session.description}
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             ))}
+            {filteredSessions.length > 6 && (
+              <div className="text-center py-2">
+                <p className="text-xs text-muted-foreground">
+                  +{filteredSessions.length - 6} autres séances
+                </p>
+              </div>
+            )}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-3">⚽</div>
-            <h3 className="text-lg font-semibold mb-2">Aucune séance trouvée</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+          <div className="text-center py-6">
+            <div className="text-3xl mb-2">⚽</div>
+            <h3 className="text-base font-semibold mb-1">Aucune séance trouvée</h3>
+            <p className="text-xs text-muted-foreground mb-3">
               {filter === 'all' 
-                ? "Vous n'avez pas encore organisé de séances. Créez votre première séance !" 
+                ? "Créez votre première séance !" 
                 : filter === 'upcoming'
-                ? "Aucune séance à venir. Planifiez votre prochaine activité !"
-                : "Aucune séance terminée trouvée."}
+                ? "Planifiez votre prochaine activité !"
+                : "Aucune séance terminée."}
             </p>
             <Button size="sm">Créer une séance</Button>
           </div>
