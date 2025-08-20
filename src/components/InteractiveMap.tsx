@@ -1058,24 +1058,6 @@ export const InteractiveMap = () => {
           
           {/* Date Filter and Friends Filter */}
           <div className="mt-3 flex justify-start pl-2 gap-3">
-            {/* Route Creation Button - Permanent Pencil Button */}
-            {user && (
-              <Button
-                onClick={handleCreateRoute}
-                size="sm"
-                variant={isRouteCreationMode ? "default" : "outline"}
-                className={cn(
-                  "w-12 h-12 shadow-lg",
-                  isRouteCreationMode 
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                    : "bg-white hover:bg-primary/10 border-gray-200"
-                )}
-                title="Créer un itinéraire"
-              >
-                <PenTool className="h-5 w-5" />
-              </Button>
-            )}
-            
             {/* Date Filter */}
             <Popover>
               <PopoverTrigger asChild>
@@ -1209,6 +1191,24 @@ export const InteractiveMap = () => {
       
       {/* All Map Controls - repositioned to left side */}
       <div className="absolute left-4 top-3/4 -translate-y-1/2 flex flex-col gap-3 z-10">
+        {/* Route Creation Button - Pencil Button */}
+        {user && (
+          <Button
+            onClick={handleCreateRoute}
+            size="sm"
+            variant={isRouteCreationMode ? "default" : "outline"}
+            className={cn(
+              "w-12 h-12 p-0 shadow-map-control flex items-center justify-center",
+              isRouteCreationMode 
+                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                : "bg-card/90 backdrop-blur-sm"
+            )}
+            title="Créer un itinéraire"
+          >
+            <PenTool className="h-5 w-5" />
+          </Button>
+        )}
+        
         {/* Locate Me Button */}
         <Button
           onClick={handleLocateMe}
