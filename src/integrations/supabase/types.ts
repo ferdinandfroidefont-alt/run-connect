@@ -605,6 +605,12 @@ export type Database = {
           username: string
         }[]
       }
+      get_user_group_conversations: {
+        Args: { user_id_param: string }
+        Returns: {
+          conversation_id: string
+        }[]
+      }
       get_user_rank: {
         Args: { points: number }
         Returns: string
