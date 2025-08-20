@@ -9,7 +9,6 @@ import { Users, UserCheck, Heart, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { OnlineStatus } from "@/components/OnlineStatus";
 
 interface FollowUser {
   user_id: string;
@@ -186,26 +185,22 @@ export const FollowDialog = ({
         users.map((userItem) => (
           <Card key={userItem.user_id}>
             <CardContent className="flex items-center justify-between p-4">
-               <div className="flex items-center gap-3">
-                 <Avatar className="h-12 w-12">
-                   <AvatarImage src={userItem.avatar_url} />
-                   <AvatarFallback>
-                     {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
-                   </AvatarFallback>
-                 </Avatar>
-                 <div className="flex-1">
-                   <div className="flex items-center gap-2">
-                     <p className="font-medium">
-                       {userItem.username || userItem.display_name}
-                     </p>
-                     <OnlineStatus userId={userItem.user_id} size="sm" />
-                   </div>
-                   <p className="text-sm text-muted-foreground">
-                     @{userItem.username}
-                   </p>
-                   <OnlineStatus userId={userItem.user_id} showText size="sm" className="mt-1" />
-                 </div>
-               </div>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={userItem.avatar_url} />
+                  <AvatarFallback>
+                    {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">
+                    {userItem.username || userItem.display_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    @{userItem.username}
+                  </p>
+                </div>
+              </div>
               {showUnfollowButton && (
                 <Button
                   size="sm"

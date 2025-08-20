@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Circle } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
@@ -25,13 +25,6 @@ interface Profile {
   phone: string | null;
   is_premium: boolean;
   notifications_enabled?: boolean;
-  notif_session_request?: boolean;
-  notif_message?: boolean;
-  notif_follow_request?: boolean;
-  notif_friend_session?: boolean;
-  is_online?: boolean;
-  last_seen?: string;
-  show_online_status?: boolean;
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
 }
@@ -734,10 +727,10 @@ const Profile = () => {
                 <Bell className="h-4 w-4" />
                 <div className="grid gap-1.5">
                   <label className="text-sm font-medium leading-none">
-                    Notifications générales
+                    Notifications
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    Autoriser les notifications push
+                    Recevoir des notifications push
                   </p>
                 </div>
               </div>
@@ -758,88 +751,6 @@ const Profile = () => {
                 </Button>
               </div>
             </div>
-
-            {/* Detailed Notification Settings - Only show if permissions are granted */}
-            {notificationPermission === 'granted' && (
-              <>
-                {/* Session Request Notifications */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4" />
-                    <div className="grid gap-1.5">
-                      <label className="text-sm font-medium leading-none">
-                        Demandes de participation
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Quelqu'un veut participer à votre séance
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={profile?.notif_session_request || false}
-                    onCheckedChange={(checked) => updatePrivacySettings('notif_session_request', checked)}
-                  />
-                </div>
-
-                {/* Message Notifications */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4" />
-                    <div className="grid gap-1.5">
-                      <label className="text-sm font-medium leading-none">
-                        Messages
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Quelqu'un vous a envoyé un message
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={profile?.notif_message || false}
-                    onCheckedChange={(checked) => updatePrivacySettings('notif_message', checked)}
-                  />
-                </div>
-
-                {/* Follow Request Notifications */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Heart className="h-4 w-4" />
-                    <div className="grid gap-1.5">
-                      <label className="text-sm font-medium leading-none">
-                        Demandes de suivi
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Quelqu'un veut vous suivre
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={profile?.notif_follow_request || false}
-                    onCheckedChange={(checked) => updatePrivacySettings('notif_follow_request', checked)}
-                  />
-                </div>
-
-                {/* Premium Feature - Friend Session Notifications */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Crown className="h-4 w-4" />
-                    <div className="grid gap-1.5">
-                      <label className="text-sm font-medium leading-none">
-                        Séances d'amis {profile?.is_premium || subscriptionInfo?.subscribed ? '' : '(Premium)'}
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Votre ami a créé une séance
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={profile?.notif_friend_session || false}
-                    onCheckedChange={(checked) => updatePrivacySettings('notif_friend_session', checked)}
-                    disabled={!(profile?.is_premium || subscriptionInfo?.subscribed)}
-                  />
-                </div>
-              </>
-            )}
 
             {/* Share Profile */}
             <div className="flex items-center justify-between">
@@ -882,25 +793,6 @@ const Profile = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Show Online Status Setting */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Circle className="h-4 w-4" />
-                <div className="grid gap-1.5">
-                  <label className="text-sm font-medium leading-none">
-                    Afficher mon statut en ligne
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    Permettre à vos amis de voir si vous êtes connecté
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={profile?.show_online_status || false}
-                onCheckedChange={(checked) => updatePrivacySettings('show_online_status', checked)}
-              />
-            </div>
-
             {/* RGPD */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
