@@ -447,8 +447,10 @@ export const InteractiveMap = () => {
 
   // Update markers when sessions or filters change
   useEffect(() => {
-    createMarkers();
-  }, [sessions, filters]);
+    if (isMapLoaded && map.current) {
+      createMarkers();
+    }
+  }, [sessions, filters, isMapLoaded]);
 
   useEffect(() => {
     if (!mapContainer.current || isMapLoaded) return;
