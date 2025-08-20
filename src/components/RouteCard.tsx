@@ -169,31 +169,29 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
             style={{ minHeight: '192px' }}
           />
           
-          {/* Boutons d'action en overlay */}
-          <div className="absolute top-2 right-2 flex gap-1">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onEdit(route)}
-              className="bg-white/90 hover:bg-white shadow-sm"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onDelete(route.id)}
-              className="bg-white/90 hover:bg-white shadow-sm"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-
-          {/* Badge avec date */}
-          <div className="absolute top-2 left-2">
+          {/* Badge avec date et boutons d'action */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
             <Badge variant="secondary" className="bg-white/90 text-xs">
               {format(new Date(route.created_at), 'dd MMM yyyy', { locale: fr })}
             </Badge>
+            <div className="flex gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onEdit(route)}
+                className="bg-white/90 hover:bg-white shadow-sm"
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onDelete(route.id)}
+                className="bg-white/90 hover:bg-white shadow-sm"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </div>
 
