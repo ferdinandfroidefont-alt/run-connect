@@ -1066,80 +1066,77 @@ export const InteractiveMap = () => {
           </div>
           
           {/* Date Filter and Friends Filter */}
-          <div className="mt-3 flex flex-col gap-3">
-            {/* First row: Date Filter and Friends Filter */}
-            <div className="flex justify-start gap-3">
-              {/* Date Filter */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <div className="relative cursor-pointer">
-                    {/* Calendar Icon Style */}
-                    <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
-                      {/* Top holes */}
-                      <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
-                      <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
-                      {/* Month text */}
-                      <div className="text-white text-xs font-bold text-center pt-1.5">
-                        {format(filters.selected_date, "MMM", { locale: fr }).toUpperCase()}
-                      </div>
-                    </div>
-                    {/* Calendar body */}
-                    <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
-                      <div className="text-black text-lg font-bold">
-                        {format(filters.selected_date, "d")}
-                      </div>
+          <div className="mt-3 flex justify-start gap-3">
+            {/* Date Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="relative cursor-pointer">
+                  {/* Calendar Icon Style */}
+                  <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
+                    {/* Top holes */}
+                    <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
+                    <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
+                    {/* Month text */}
+                    <div className="text-white text-xs font-bold text-center pt-1.5">
+                      {format(filters.selected_date, "MMM", { locale: fr }).toUpperCase()}
                     </div>
                   </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={filters.selected_date}
-                    onSelect={(date) => {
-                      if (date) {
-                        setFilters(prev => ({ ...prev, selected_date: date }));
-                      }
-                    }}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+                  {/* Calendar body */}
+                  <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
+                    <div className="text-black text-lg font-bold">
+                      {format(filters.selected_date, "d")}
+                    </div>
+                  </div>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filters.selected_date}
+                  onSelect={(date) => {
+                    if (date) {
+                      setFilters(prev => ({ ...prev, selected_date: date }));
+                    }
+                  }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
 
-              {/* Friends Only Filter - Premium Feature */}
-              {subscriptionInfo?.subscribed ? (
-                <button
-                  onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
-                    filters.friends_only
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                  )}
-                >
-                  <div className="flex items-center gap-1">
-                    <PersonStanding size={16} />
-                    <Bike size={16} />
-                  </div>
-                  <span className="text-sm font-medium">Amis uniquement</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate('/subscription')}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
-                >
-                  <div className="flex items-center gap-1">
-                    <PersonStanding size={16} />
-                    <Bike size={16} />
-                  </div>
-                  <span className="text-sm font-medium">Amis uniquement</span>
-                  <Crown size={14} className="text-yellow-500" />
-                </button>
-              )}
-            </div>
+            {/* Friends Only Filter - Premium Feature */}
+            {subscriptionInfo?.subscribed ? (
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
+                  filters.friends_only
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  <PersonStanding size={16} />
+                  <Bike size={16} />
+                </div>
+                <span className="text-sm font-medium">Amis uniquement</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/subscription')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+              >
+                <div className="flex items-center gap-1">
+                  <PersonStanding size={16} />
+                  <Bike size={16} />
+                </div>
+                <span className="text-sm font-medium">Amis uniquement</span>
+                <Crown size={14} className="text-yellow-500" />
+              </button>
+            )}
             
-            {/* Second row: Club Selector */}
-            <div className="w-48">
+            {/* Club Selector - positioned slightly higher and to the right */}
+            <div className="w-48 -mt-1 ml-4">
               <ClubSelector
                 selectedClubId={filters.selected_club_id}
                 onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
