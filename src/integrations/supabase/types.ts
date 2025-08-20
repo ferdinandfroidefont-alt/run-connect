@@ -181,6 +181,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          cycling_records: Json | null
           display_name: string | null
           id: string
           is_premium: boolean | null
@@ -189,7 +190,10 @@ export type Database = {
           onboarding_completed: boolean | null
           phone: string | null
           rgpd_accepted: boolean | null
+          running_records: Json | null
           security_rules_accepted: boolean | null
+          swimming_records: Json | null
+          triathlon_records: Json | null
           updated_at: string
           user_id: string | null
           username: string | null
@@ -199,6 +203,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          cycling_records?: Json | null
           display_name?: string | null
           id?: string
           is_premium?: boolean | null
@@ -207,7 +212,10 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           rgpd_accepted?: boolean | null
+          running_records?: Json | null
           security_rules_accepted?: boolean | null
+          swimming_records?: Json | null
+          triathlon_records?: Json | null
           updated_at?: string
           user_id?: string | null
           username?: string | null
@@ -217,6 +225,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          cycling_records?: Json | null
           display_name?: string | null
           id?: string
           is_premium?: boolean | null
@@ -225,7 +234,10 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           rgpd_accepted?: boolean | null
+          running_records?: Json | null
           security_rules_accepted?: boolean | null
+          swimming_records?: Json | null
+          triathlon_records?: Json | null
           updated_at?: string
           user_id?: string | null
           username?: string | null

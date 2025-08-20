@@ -20,6 +20,10 @@ interface Profile {
   bio: string | null;
   is_premium: boolean;
   created_at: string;
+  running_records: any;
+  cycling_records: any;
+  swimming_records: any;
+  triathlon_records: any;
 }
 
 interface ProfilePreviewDialogProps {
@@ -57,7 +61,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, username, display_name, avatar_url, age, bio, is_premium, created_at')
+        .select('user_id, username, display_name, avatar_url, age, bio, is_premium, created_at, running_records, cycling_records, swimming_records, triathlon_records')
         .eq('user_id', userId)
         .single();
 
@@ -274,6 +278,87 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   <p className="text-sm text-muted-foreground">{profile.age} ans</p>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Sports Records - Show to everyone except own profile */}
+            {!isOwnProfile && (
+              <>
+                {/* Running Records */}
+                {profile.running_records && Object.keys(profile.running_records).length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">🏃‍♂️ Records Course à pied</span>
+                      </div>
+                      <div className="space-y-1">
+                         {Object.entries(profile.running_records).map(([distance, time]) => (
+                          <div key={distance} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{distance}</span>
+                            <span className="font-mono">{String(time)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Cycling Records */}
+                {profile.cycling_records && Object.keys(profile.cycling_records).length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">🚴‍♂️ Records Cyclisme</span>
+                      </div>
+                      <div className="space-y-1">
+                         {Object.entries(profile.cycling_records).map(([distance, time]) => (
+                          <div key={distance} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{distance}</span>
+                            <span className="font-mono">{String(time)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Swimming Records */}
+                {profile.swimming_records && Object.keys(profile.swimming_records).length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">🏊‍♂️ Records Natation</span>
+                      </div>
+                      <div className="space-y-1">
+                         {Object.entries(profile.swimming_records).map(([distance, time]) => (
+                          <div key={distance} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{distance}</span>
+                            <span className="font-mono">{String(time)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Triathlon Records */}
+                {profile.triathlon_records && Object.keys(profile.triathlon_records).length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">🏊‍♂️🚴‍♂️🏃‍♂️ Records Triathlon</span>
+                      </div>
+                      <div className="space-y-1">
+                         {Object.entries(profile.triathlon_records).map(([distance, time]) => (
+                          <div key={distance} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{distance}</span>
+                            <span className="font-mono">{String(time)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
 
             {/* Member since */}
