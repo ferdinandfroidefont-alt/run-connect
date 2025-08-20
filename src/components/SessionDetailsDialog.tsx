@@ -59,14 +59,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
+  const [isParticipant, setIsParticipant] = useState(false);
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
 
-  // Check if user has already requested to join this session
+  // Check if user has already requested to join this session or is a participant
   useEffect(() => {
-    const checkExistingRequest = async () => {
+    const checkUserStatus = async () => {
       if (!user || !session) return;
 
-      const { data } = await supabase
+      // Check for pending request
+      const { data: requestData } = await supabase
         .from('session_requests')
         .select('id')
         .eq('session_id', session.id)
@@ -74,10 +76,20 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         .eq('status', 'pending')
         .maybeSingle();
 
-      setHasRequested(!!data);
+      setHasRequested(!!requestData);
+
+      // Check if user is a participant
+      const { data: participantData } = await supabase
+        .from('session_participants')
+        .select('id')
+        .eq('session_id', session.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      setIsParticipant(!!participantData);
     };
 
-    checkExistingRequest();
+    checkUserStatus();
   }, [user, session]);
 
   // Early return if no session - AFTER all hooks
@@ -171,6 +183,30 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     }
   };
 
+  const handleCancelRequest = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      // Delete the pending request
+      const { error } = await supabase
+        .from('session_requests')
+        .delete()
+        .eq('session_id', session.id)
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      setHasRequested(false);
+      toast({ title: "Demande annulée", description: "Votre demande de participation a été annulée" });
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLeaveSession = async () => {
     if (!user) return;
 
@@ -195,6 +231,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       if (updateError) throw updateError;
 
+      setIsParticipant(false);
       toast({ title: "Vous avez quitté la séance" });
       onSessionUpdated();
       onClose();
@@ -472,14 +509,31 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   {loading ? "Suppression..." : "Supprimer la séance"}
                 </Button>
               </>
+            ) : isParticipant ? (
+              <Button
+                onClick={handleLeaveSession}
+                disabled={loading}
+                variant="destructive"
+                className="w-full"
+              >
+                {loading ? "Traitement..." : "Quitter la séance"}
+              </Button>
+            ) : hasRequested ? (
+              <Button
+                onClick={handleCancelRequest}
+                disabled={loading}
+                variant="outline"
+                className="w-full"
+              >
+                {loading ? "Annulation..." : "Annuler ma demande"}
+              </Button>
             ) : isScheduled ? (
               <Button
                 onClick={handleRequestJoin}
-                disabled={loading || isFull || hasRequested}
+                disabled={loading || isFull}
                 className="w-full"
               >
-                {loading ? "Envoi..." : 
-                 hasRequested ? "Demande en cours" :
+                {loading ? "Envoi..." :
                  isFull ? "Complet" : 
                  "Demander à rejoindre"}
               </Button>

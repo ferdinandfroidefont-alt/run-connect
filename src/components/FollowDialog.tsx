@@ -139,16 +139,46 @@ export const FollowDialog = ({
     }
   };
 
-  const UserList = ({ users, showUnfollowButton = false }: { 
+  const removeFollower = async (followerUserId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_follows')
+        .delete()
+        .eq('follower_id', followerUserId)
+        .eq('following_id', user.id);
+
+      if (error) throw error;
+
+      // Remove from followers list
+      setFollowers(prev => prev.filter(u => u.user_id !== followerUserId));
+      toast({
+        title: "Abonné supprimé",
+        description: "Cet utilisateur ne vous suit plus"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer cet abonné",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const UserList = ({ users, showUnfollowButton = false, showRemoveButton = false }: { 
     users: FollowUser[], 
-    showUnfollowButton?: boolean 
+    showUnfollowButton?: boolean,
+    showRemoveButton?: boolean
   }) => (
     <div className="space-y-3">
       {users.length === 0 ? (
         <div className="text-center py-8">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">
-            {showUnfollowButton ? "Vous ne suivez personne pour le moment" : "Aucun abonné pour le moment"}
+            {showUnfollowButton ? "Vous ne suivez personne pour le moment" : 
+             showRemoveButton ? "Aucun abonné pour le moment" :
+             "Aucun abonné pour le moment"}
           </p>
         </div>
       ) : (
@@ -180,6 +210,17 @@ export const FollowDialog = ({
                 >
                   <X className="h-4 w-4 mr-1" />
                   Ne plus suivre
+                </Button>
+              )}
+              {showRemoveButton && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => removeFollower(userItem.user_id)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Supprimer
                 </Button>
               )}
             </CardContent>
@@ -225,7 +266,7 @@ export const FollowDialog = ({
                   <p className="text-sm text-muted-foreground">Chargement...</p>
                 </div>
               ) : (
-                <UserList users={followers} />
+                <UserList users={followers} showRemoveButton />
               )}
             </div>
           </TabsContent>
