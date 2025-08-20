@@ -5,6 +5,7 @@ import { useAppContext } from '@/contexts/AppContext';
 
 const navItems = [
   { path: '/', emoji: '🗺️', label: 'Carte' },
+  { path: '/my-sessions', emoji: '⚽', label: 'Mes Séances' },
   { path: '/messages', emoji: '💬', label: 'Messages' },
   { path: '/leaderboard', emoji: '🏆', label: 'Classement' },
 ];

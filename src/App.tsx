@@ -9,6 +9,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import MySessions from "./pages/MySessions";
 import Messages from "./pages/Messages";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
@@ -29,6 +30,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Layout><Index /></Layout>} />
+            <Route path="/my-sessions" element={<Layout><MySessions /></Layout>} />
             <Route path="/messages" element={<Layout><Messages /></Layout>} />
             <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
             <Route path="/profile" element={<Layout><Profile /></Layout>} />
