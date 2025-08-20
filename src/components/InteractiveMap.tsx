@@ -811,6 +811,18 @@ export const InteractiveMap = () => {
       {/* User Sessions Button - Below Filters */}
       {user && (
         <div className="absolute top-44 right-4 z-10">
+          <Button 
+            variant="default"
+            size="sm"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+            onClick={() => {
+              // TODO: Implémenter la logique des séances à proximité
+              toast.info("Fonctionnalité en cours de développement");
+            }}
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Séances à proximité
+          </Button>
         </div>
       )}
       
