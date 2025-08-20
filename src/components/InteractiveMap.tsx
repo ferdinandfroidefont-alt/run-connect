@@ -267,64 +267,109 @@ export const InteractiveMap = () => {
     console.log(`Successfully created ${validMarkers.length} markers out of ${filteredSessions.length} sessions`);
   };
 
-  const createCustomMarker = (session: Session): Promise<string> => {
-    return new Promise((resolve) => {
-      console.log('Creating custom marker for session:', session.id, session.title);
-      console.log('Session profile data:', session.profiles);
+  const createCustomMarker = async (session: Session): Promise<string> => {
+    console.log('Creating custom marker for session:', session.id, session.title);
+    console.log('Session profile data:', session.profiles);
+    
+    // Validation des données de session
+    if (!session || !session.profiles) {
+      console.warn('Session or profiles missing:', session);
+      return getFallbackIcon(session?.activity_type || 'course');
+    }
+
+    const size = 50;
+    const color = getActivityColor(session.activity_type);
+    const initials = (session.profiles.display_name || session.profiles.username || 'U')
+      .charAt(0).toUpperCase();
+
+    console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
+
+    // Créer un marqueur en utilisant Canvas pour mieux gérer les images
+    const createCanvasMarker = async (avatarUrl?: string): Promise<string> => {
+      console.log('Creating canvas marker with avatar:', !!avatarUrl);
       
-      // Validation des données de session
-      if (!session || !session.profiles) {
-        console.warn('Session or profiles missing:', session);
-        resolve(getFallbackIcon(session?.activity_type || 'course'));
-        return;
-      }
-
-      const size = 50;
-      const color = getActivityColor(session.activity_type);
-      const initials = (session.profiles.display_name || session.profiles.username || 'U')
-        .charAt(0).toUpperCase();
-
-      console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
-
-      // Créer un marqueur SVG pour éviter les problèmes de CORS avec canvas
-      const createSvgMarker = (avatarUrl?: string) => {
-        console.log('Creating SVG marker with avatar:', !!avatarUrl);
+      return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
         
-        const svg = `
-          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <clipPath id="circle-clip-${session.id}">
-                <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 6}"/>
-              </clipPath>
-            </defs>
+        // Fonction pour finaliser le marqueur
+        const finishMarker = (useInitials: boolean = false) => {
+          if (useInitials) {
+            // Dessiner le fond avec la couleur d'activité
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2 - 3, 0, 2 * Math.PI);
+            ctx.fill();
             
-            <!-- Cercle de fond avec couleur d'activité -->
-            <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 3}" 
-                    fill="${color}" stroke="white" stroke-width="4"/>
+            // Bordure blanche
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 4;
+            ctx.stroke();
             
-            ${avatarUrl ? `
-              <!-- Image de profil -->
-              <image href="${avatarUrl}" x="6" y="6" width="${size-12}" height="${size-12}" 
-                     clip-path="url(#circle-clip-${session.id})" preserveAspectRatio="xMidYMid slice"/>
-            ` : `
-              <!-- Initiales si pas d'image -->
-              <text x="${size/2}" y="${size/2}" font-family="Arial, sans-serif" 
-                    font-size="16" font-weight="bold" fill="white" 
-                    text-anchor="middle" dominant-baseline="central">${initials}</text>
-            `}
-          </svg>
-        `;
+            // Initiales en blanc
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(initials, size/2, size/2);
+          }
+          
+          const dataUrl = canvas.toDataURL('image/png');
+          console.log('Canvas marker created successfully');
+          resolve(dataUrl);
+        };
         
-        const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
-        const svgUrl = URL.createObjectURL(svgBlob);
-        console.log('Created SVG URL:', svgUrl);
-        return svgUrl;
-      };
+        if (avatarUrl) {
+          const img = new Image();
+          // Pas de crossOrigin pour éviter les problèmes CORS
+          img.onload = () => {
+            console.log('Avatar image loaded successfully for canvas');
+            
+            // Dessiner la bordure blanche d'abord
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2 - 1, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Créer un masque circulaire pour l'image
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2 - 4, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Dessiner l'image de profil
+            ctx.drawImage(img, 4, 4, size-8, size-8);
+            ctx.restore();
+            
+            finishMarker(false);
+          };
+          
+          img.onerror = (error) => {
+            console.log('Avatar image failed to load, using initials', error);
+            finishMarker(true);
+          };
+          
+          // Ajouter un timeout pour éviter d'attendre indéfiniment
+          setTimeout(() => {
+            if (!img.complete) {
+              console.log('Avatar image timeout, using initials');
+              finishMarker(true);
+            }
+          }, 3000);
+          
+          img.src = avatarUrl;
+        } else {
+          console.log('No avatar URL, using initials');
+          finishMarker(true);
+        }
+      });
+    };
 
-      // Créer le marqueur avec ou sans avatar
-      const markerUrl = createSvgMarker(session.profiles.avatar_url);
-      resolve(markerUrl);
-    });
+    // Créer le marqueur avec ou sans avatar
+    const markerUrl = await createCanvasMarker(session.profiles.avatar_url);
+    return markerUrl;
   };
 
   const getActivityColor = (activityType: string) => {
