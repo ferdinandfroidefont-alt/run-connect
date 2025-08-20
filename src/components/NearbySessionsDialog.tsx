@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
+import { ShareSessionToConversationDialog } from "@/components/ShareSessionToConversationDialog";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Users, Clock, UserPlus, Filter } from "lucide-react";
+import { MapPin, Calendar, Users, Clock, UserPlus, Filter, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -66,6 +67,8 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   const [selectedDistance, setSelectedDistance] = useState("25");
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [selectedSessionToShare, setSelectedSessionToShare] = useState<Session | null>(null);
 
   // Load nearby sessions
   const loadNearbySessions = async () => {
@@ -372,15 +375,26 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                           )}
                         </div>
 
-                        {/* Join Button */}
-                        <div className="pt-2 border-t">
+                        {/* Action Buttons */}
+                        <div className="pt-2 border-t flex gap-2">
                           <Button
                             onClick={() => joinSession(session)}
                             size="sm"
-                            className="w-full"
+                            className="flex-1"
                           >
                             <UserPlus className="h-4 w-4 mr-2" />
-                            {session.friends_only ? "Demander à participer" : "Rejoindre la séance"}
+                            {session.friends_only ? "Demander" : "Rejoindre"}
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setSelectedSessionToShare(session);
+                              setShowShareDialog(true);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="px-3"
+                          >
+                            <Share2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -404,6 +418,20 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
       <ProfilePreviewDialog 
         userId={selectedProfile} 
         onClose={() => setSelectedProfile(null)} 
+      />
+
+      {/* Share Session Dialog */}
+      <ShareSessionToConversationDialog
+        isOpen={showShareDialog}
+        onClose={() => {
+          setShowShareDialog(false);
+          setSelectedSessionToShare(null);
+        }}
+        session={selectedSessionToShare}
+        onSessionShared={() => {
+          setShowShareDialog(false);
+          setSelectedSessionToShare(null);
+        }}
       />
     </>
   );

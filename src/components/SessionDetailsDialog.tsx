@@ -8,11 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
+import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
 
 interface Session {
   id: string;
@@ -61,6 +62,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [hasRequested, setHasRequested] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   // Check if user has already requested to join this session or is a participant
   useEffect(() => {
@@ -494,6 +496,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-2">
+            {/* Share Button - Available to everyone */}
+            <Button
+              onClick={() => setShowShareDialog(true)}
+              variant="outline"
+              className="w-full"
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              Partager la séance
+            </Button>
+
             {isOrganizer ? (
               <>
                 <Badge variant="secondary" className="justify-center py-2">
@@ -550,6 +562,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       <ProfilePreviewDialog
         userId={showOrganizerProfile ? session.organizer_id : null}
         onClose={() => setShowOrganizerProfile(false)}
+      />
+
+      {/* Share Session Dialog */}
+      <ShareSessionToConversationDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        session={session}
+        onSessionShared={() => {
+          setShowShareDialog(false);
+        }}
       />
     </Dialog>
   );
