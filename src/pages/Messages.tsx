@@ -918,25 +918,23 @@ const Messages = () => {
           }}
         />
 
-        {/* Group Info Dialog - available globally */}
-        {selectedConversation?.is_group && (
-          <GroupInfoDialog
-            isOpen={showGroupInfo}
-            onClose={() => {
-              console.log('🔍 GroupInfoDialog onClose called');
-              setShowGroupInfo(false);
-            }}
-            conversationId={selectedConversation.id}
-            groupName={selectedConversation.group_name || ""}
-            groupDescription={selectedConversation.group_description}
-            groupAvatarUrl={selectedConversation.group_avatar_url}
-            isAdmin={selectedConversation.created_by === user?.id}
-            onEditGroup={() => {
-              setShowGroupInfo(false);
-              setShowEditGroup(true);
-            }}
-          />
-        )}
+        {/* Group Info Dialog - FIXED: Remove conditional rendering */}
+        <GroupInfoDialog
+          isOpen={showGroupInfo && selectedConversation?.is_group === true}
+          onClose={() => {
+            console.log('🔍 GroupInfoDialog onClose called');
+            setShowGroupInfo(false);
+          }}
+          conversationId={selectedConversation?.id || ''}
+          groupName={selectedConversation?.group_name || ""}
+          groupDescription={selectedConversation?.group_description || null}
+          groupAvatarUrl={selectedConversation?.group_avatar_url || null}
+          isAdmin={selectedConversation?.created_by === user?.id}
+          onEditGroup={() => {
+            setShowGroupInfo(false);
+            setShowEditGroup(true);
+          }}
+        />
         
         {/* DEBUG: Force render GroupInfoDialog when showGroupInfo is true */}
         {showGroupInfo && !selectedConversation?.is_group && (
