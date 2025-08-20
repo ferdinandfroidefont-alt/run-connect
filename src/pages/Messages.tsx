@@ -310,7 +310,7 @@ const Messages = () => {
           file_url: publicUrl,
           file_type: file.type,
           file_name: file.name,
-          message_type: file.type.startsWith('image/') ? 'image' : 'file'
+          message_type: 'file'
         }]);
 
       if (error) {
