@@ -55,8 +55,9 @@ interface Conversation {
   created_by?: string;
   other_participant?: Profile;
   group_members?: Profile[];
-  last_message?: Message;
+  last_message?: any; // Simplified type for sorting purposes
   unread_count?: number;
+  last_message_date?: string;
 }
 
 interface Message {
@@ -124,7 +125,7 @@ const Messages = () => {
 
       if (error) throw error;
 
-      // Process conversations with profiles and unread counts
+      // Process conversations with profiles, unread counts, and last message
       const conversationsWithProfiles = await Promise.all(
         (conversationsData || []).map(async (conv) => {
           // Count unread messages for this conversation
@@ -134,6 +135,15 @@ const Messages = () => {
             .eq('conversation_id', conv.id)
             .neq('sender_id', user.id)
             .is('read_at', null);
+
+          // Get the last message for this conversation
+          const { data: lastMessageData } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
           if (conv.is_group) {
             // For clubs, check if user is a member
@@ -160,7 +170,9 @@ const Messages = () => {
             return {
               ...conv,
               group_members: memberProfiles || [],
-              unread_count: unreadCount || 0
+              unread_count: unreadCount || 0,
+              last_message: lastMessageData,
+              last_message_date: lastMessageData?.created_at || conv.updated_at
             };
           } else {
             // Direct conversation
@@ -182,22 +194,19 @@ const Messages = () => {
                 display_name: 'Utilisateur inconnu',
                 avatar_url: null
               },
-              unread_count: unreadCount || 0
+              unread_count: unreadCount || 0,
+              last_message: lastMessageData,
+              last_message_date: lastMessageData?.created_at || conv.updated_at
             };
           }
         })
       );
 
-      // Sort conversations: unread messages first, then by updated_at
+      // Sort conversations by most recent message (most recent first)
       const sortedConversations = conversationsWithProfiles
         .filter(Boolean)
         .sort((a, b) => {
-          // First, prioritize conversations with unread messages
-          if (a.unread_count > 0 && b.unread_count === 0) return -1;
-          if (a.unread_count === 0 && b.unread_count > 0) return 1;
-          
-          // Then sort by updated_at (most recent first)
-          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+          return new Date(b.last_message_date).getTime() - new Date(a.last_message_date).getTime();
         });
 
       setConversations(sortedConversations);
