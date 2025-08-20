@@ -37,8 +37,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followingCount, setFollowingCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
 
+  console.log('ProfilePreviewDialog - userId:', userId, 'user?.id:', user?.id);
+
   useEffect(() => {
     if (userId && userId !== user?.id) {
+      console.log('Fetching profile for userId:', userId);
       fetchProfile();
       checkFollowStatus();
       fetchFollowCounts();

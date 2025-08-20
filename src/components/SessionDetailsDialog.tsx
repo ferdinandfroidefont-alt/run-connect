@@ -251,7 +251,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           <DialogDescription className="flex items-center gap-2">
             <Avatar 
               className="h-6 w-6 cursor-pointer hover:opacity-80 transition-opacity" 
-              onClick={() => setShowOrganizerProfile(true)}
+              onClick={() => {
+                console.log('Avatar clicked, setting showOrganizerProfile to true');
+                console.log('Organizer ID:', session.organizer_id);
+                setShowOrganizerProfile(true);
+              }}
             >
               <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
               <AvatarFallback className="text-xs">
@@ -439,7 +443,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               <div className="flex items-center gap-3">
                 <Avatar 
                   className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity" 
-                  onClick={() => setShowOrganizerProfile(true)}
+                  onClick={() => {
+                    console.log('Organizer avatar clicked, setting showOrganizerProfile to true');
+                    console.log('Organizer ID:', session.organizer_id);
+                    setShowOrganizerProfile(true);
+                  }}
                 >
                   <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.display_name || session.profiles.username} />
                   <AvatarFallback className="text-sm">
