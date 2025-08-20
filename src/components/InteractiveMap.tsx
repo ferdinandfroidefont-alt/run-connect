@@ -815,7 +815,7 @@ export const InteractiveMap = () => {
       )}
       
       {/* All Map Controls - grouped together on the left */}
-      <div className="absolute bottom-20 left-6 flex flex-col gap-2">
+      <div className="absolute bottom-6 left-6 flex flex-col gap-2">
         {/* Locate Me and Style Selector */}
         <div className="flex flex-col gap-2">
           <Button
