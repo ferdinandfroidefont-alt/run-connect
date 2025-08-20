@@ -626,19 +626,6 @@ export const InteractiveMap = () => {
     }
   };
 
-  const handleZoomIn = () => {
-    if (map.current) {
-      const currentZoom = map.current.getZoom() || 8;
-      map.current.setZoom(currentZoom + 1);
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (map.current) {
-      const currentZoom = map.current.getZoom() || 8;
-      map.current.setZoom(currentZoom - 1);
-    }
-  };
 
   const handleResetView = () => {
     if (map.current) {
@@ -857,8 +844,6 @@ export const InteractiveMap = () => {
         
         {/* Zoom and 3D Controls */}
         <MapControls
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
           onResetView={handleResetView}
           onToggle3D={handleToggle3D}
         />
