@@ -49,7 +49,7 @@ export const BottomNavigation = () => {
         }
       }} className="flex flex-col items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-lg">
           <Plus size={24} />
-          <span className="text-xs font-medium">CpORGRAMME UNE S2ANCEr</span>
+          <span className="text-xs font-medium">PROGRAMME UNE SÉANCE</span>
         </button>
 
         {navItems.slice(2).map(({
