@@ -673,11 +673,28 @@ export const InteractiveMap = () => {
     if (map.current) {
       const clickListener = map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
         console.log('🎯 Map clicked during route creation', event.latLng?.toString());
-        if (isRouteCreationMode && event.latLng) {
+        console.log('🔍 Route creation mode state:', isRouteCreationMode);
+        if (event.latLng) {
           waypoints.current.push(event.latLng);
-          console.log(`Added waypoint ${waypoints.current.length}: ${event.latLng.toString()}`);
+          console.log(`✅ Added waypoint ${waypoints.current.length}: ${event.latLng.toString()}`);
+          
+          // Create visual marker for the waypoint
+          const marker = new google.maps.Marker({
+            position: event.latLng,
+            map: map.current,
+            title: `Point ${waypoints.current.length}`,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: '#3b82f6',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2
+            }
+          });
+          
           if (waypoints.current.length >= 2) {
-            console.log('Creating directions route with', waypoints.current.length, 'waypoints');
+            console.log('🚀 Creating directions route with', waypoints.current.length, 'waypoints');
             createDirectionsRoute();
           }
         }
