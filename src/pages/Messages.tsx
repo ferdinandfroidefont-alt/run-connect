@@ -722,7 +722,7 @@ const Messages = () => {
               >
                 <Send className="h-4 w-4" />
               </Button>
-            </div>
+             </div>
             
             {/* Hidden file input */}
             <input
@@ -882,7 +882,7 @@ const Messages = () => {
           }}
         />
 
-        {/* Edit Group Dialog */}
+        {/* Edit Group Dialog - available globally */}
         {selectedConversation?.is_group && (
           <EditGroupDialog
             isOpen={showEditGroup}
@@ -904,7 +904,7 @@ const Messages = () => {
           />
         )}
 
-        {/* Share Session Dialog */}
+        {/* Share Session Dialog - available globally */}
         <ShareSessionDialog
           isOpen={showShareSession}
           onClose={() => setShowShareSession(false)}
