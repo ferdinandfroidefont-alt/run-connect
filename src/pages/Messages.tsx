@@ -275,20 +275,30 @@ const Messages = () => {
   const uploadFile = async (file: File) => {
     if (!user || !selectedConversation) return;
 
+    console.log('Starting file upload:', file.name, file.type);
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `messages/${fileName}`;
+    const filePath = `${user.id}/${fileName}`;
 
     try {
+      setLoading(true);
+      
+      // Upload to message-files bucket
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from('message-files')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from('message-files')
         .getPublicUrl(filePath);
+
+      console.log('File uploaded successfully, public URL:', publicUrl);
 
       // Send message with file attachment
       const { error } = await supabase
@@ -299,10 +309,14 @@ const Messages = () => {
           content: file.type.startsWith('image/') ? 'Image partagée' : 'Fichier partagé',
           file_url: publicUrl,
           file_type: file.type,
-          file_name: file.name
+          file_name: file.name,
+          message_type: file.type.startsWith('image/') ? 'image' : 'file'
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Message insert error:', error);
+        throw error;
+      }
 
       // Update conversation timestamp
       await supabase
@@ -314,7 +328,14 @@ const Messages = () => {
       loadConversations();
       toast({ title: "Succès", description: "Fichier envoyé avec succès" });
     } catch (error: any) {
-      toast({ title: "Erreur", description: "Impossible d'envoyer le fichier", variant: "destructive" });
+      console.error('Upload failed:', error);
+      toast({ 
+        title: "Erreur", 
+        description: error.message || "Impossible d'envoyer le fichier", 
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -676,6 +697,7 @@ const Messages = () => {
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 className="px-3"
+                disabled={loading}
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
@@ -683,9 +705,10 @@ const Messages = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  if (loading) return;
                   const input = document.createElement('input');
                   input.type = 'file';
-                  input.accept = 'image/*';
+                  input.accept = 'image/*,video/*';
                   input.onchange = (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0];
                     if (file) uploadFile(file);
@@ -693,6 +716,7 @@ const Messages = () => {
                   input.click();
                 }}
                 className="px-3"
+                disabled={loading}
               >
                 <Image className="h-4 w-4" />
               </Button>
@@ -719,6 +743,7 @@ const Messages = () => {
               accept="*/*"
               onChange={handleFileSelect}
               className="hidden"
+              disabled={loading}
             />
           </div>
         </div>
