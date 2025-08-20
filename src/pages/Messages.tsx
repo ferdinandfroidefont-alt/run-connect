@@ -13,6 +13,7 @@ import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { CreateGroupDialog } from "@/components/CreateGroupDialog";
 import { EditGroupDialog } from "@/components/EditGroupDialog";
+import { GroupInfoDialog } from "@/components/GroupInfoDialog";
 import { ShareSessionDialog } from "@/components/ShareSessionDialog";
 import { 
   MessageCircle, 
@@ -95,6 +96,7 @@ const Messages = () => {
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showShareSession, setShowShareSession] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -535,12 +537,8 @@ const Messages = () => {
               {selectedConversation.is_group ? (
                 <>
                   <Avatar 
-                    className={`h-8 w-8 ${selectedConversation.created_by === user?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
-                    onClick={() => {
-                      if (selectedConversation.created_by === user?.id) {
-                        setShowEditGroup(true);
-                      }
-                    }}
+                    className="h-8 w-8 cursor-pointer hover:opacity-80"
+                    onClick={() => setShowGroupInfo(true)}
                   >
                     <AvatarImage src={selectedConversation.group_avatar_url || ""} />
                     <AvatarFallback>
@@ -894,6 +892,23 @@ const Messages = () => {
             setShowCreateGroup(false);
           }}
         />
+
+        {/* Group Info Dialog - available globally */}
+        {selectedConversation?.is_group && (
+          <GroupInfoDialog
+            isOpen={showGroupInfo}
+            onClose={() => setShowGroupInfo(false)}
+            conversationId={selectedConversation.id}
+            groupName={selectedConversation.group_name || ""}
+            groupDescription={selectedConversation.group_description}
+            groupAvatarUrl={selectedConversation.group_avatar_url}
+            isAdmin={selectedConversation.created_by === user?.id}
+            onEditGroup={() => {
+              setShowGroupInfo(false);
+              setShowEditGroup(true);
+            }}
+          />
+        )}
 
         {/* Edit Group Dialog - available globally */}
         {selectedConversation?.is_group && (
