@@ -232,6 +232,62 @@ export type Database = {
         }
         Relationships: []
       }
+      routes: {
+        Row: {
+          coordinates: Json
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          max_elevation: number | null
+          min_elevation: number | null
+          name: string
+          session_id: string | null
+          total_distance: number | null
+          total_elevation_gain: number | null
+          total_elevation_loss: number | null
+          updated_at: string
+        }
+        Insert: {
+          coordinates: Json
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          max_elevation?: number | null
+          min_elevation?: number | null
+          name: string
+          session_id?: string | null
+          total_distance?: number | null
+          total_elevation_gain?: number | null
+          total_elevation_loss?: number | null
+          updated_at?: string
+        }
+        Update: {
+          coordinates?: Json
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          max_elevation?: number | null
+          min_elevation?: number | null
+          name?: string
+          session_id?: string | null
+          total_distance?: number | null
+          total_elevation_gain?: number | null
+          total_elevation_loss?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_participants: {
         Row: {
           id: string

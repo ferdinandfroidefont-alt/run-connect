@@ -23,6 +23,7 @@ import { fr } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { ElevationProfile } from './ElevationProfile';
 
 // Declare global google maps types
 declare global {
@@ -91,6 +92,8 @@ export const InteractiveMap = () => {
   const [isRouteCreationMode, setIsRouteCreationMode] = useState(false);
   const routePath = useRef<google.maps.Polyline | null>(null);
   const routeCoordinates = useRef<google.maps.LatLng[]>([]);
+  const [routeElevations, setRouteElevations] = useState<number[]>([]);
+  const elevationService = useRef<google.maps.ElevationService | null>(null);
 
   // Load user profile
   useEffect(() => {
@@ -637,6 +640,10 @@ export const InteractiveMap = () => {
       routePath.current.setMap(null);
     }
     routeCoordinates.current = [];
+    setRouteElevations([]);
+    
+    // Hide all existing markers when creating route
+    markers.current.forEach(marker => marker.setVisible(false));
     
     // Add click listeners to map for route creation
     if (map.current) {
@@ -644,12 +651,153 @@ export const InteractiveMap = () => {
         if (isRouteCreationMode && event.latLng) {
           routeCoordinates.current.push(event.latLng);
           updateRoutePath();
+          updateElevationProfile();
         }
       });
       
       // Store listener to remove later
       map.current.set('routeClickListener', clickListener);
     }
+  };
+
+  const updateElevationProfile = async () => {
+    if (!elevationService.current || routeCoordinates.current.length === 0) return;
+    
+    try {
+      const elevationRequest = {
+        path: routeCoordinates.current,
+        samples: Math.min(routeCoordinates.current.length, 256) // Limit samples
+      };
+      
+      elevationService.current.getElevationAlongPath(elevationRequest, (results, status) => {
+        if (status === 'OK' && results) {
+          const elevations = results.map(result => result.elevation);
+          setRouteElevations(elevations);
+        }
+      });
+    } catch (error) {
+      console.error('Erreur lors du calcul du dénivelé:', error);
+    }
+  };
+
+  const calculateRouteStats = () => {
+    if (routeElevations.length === 0) return null;
+    
+    let totalDistance = 0;
+    let elevationGain = 0;
+    let elevationLoss = 0;
+    const minElevation = Math.min(...routeElevations);
+    const maxElevation = Math.max(...routeElevations);
+    
+    // Calculate total distance
+    for (let i = 1; i < routeCoordinates.current.length; i++) {
+      const distance = google.maps.geometry.spherical.computeDistanceBetween(
+        routeCoordinates.current[i - 1], 
+        routeCoordinates.current[i]
+      );
+      totalDistance += distance;
+    }
+    
+    // Calculate elevation gain/loss
+    for (let i = 1; i < routeElevations.length; i++) {
+      const diff = routeElevations[i] - routeElevations[i - 1];
+      if (diff > 0) {
+        elevationGain += diff;
+      } else {
+        elevationLoss += Math.abs(diff);
+      }
+    }
+    
+    return {
+      totalDistance: Math.round(totalDistance),
+      elevationGain: Math.round(elevationGain),
+      elevationLoss: Math.round(elevationLoss),
+      minElevation: Math.round(minElevation),
+      maxElevation: Math.round(maxElevation)
+    };
+  };
+
+  const saveRoute = async () => {
+    if (!user || routeCoordinates.current.length < 2) return;
+    
+    const routeStats = calculateRouteStats();
+    if (!routeStats) return;
+    
+    try {
+      const coordinates = routeCoordinates.current.map((coord, index) => ({
+        lat: coord.lat(),
+        lng: coord.lng(),
+        elevation: routeElevations[index] || 0
+      }));
+      
+      const { error } = await supabase
+        .from('routes')
+        .insert({
+          name: 'Mon itinéraire',
+          description: 'Itinéraire créé sur la carte',
+          coordinates: coordinates,
+          total_distance: routeStats.totalDistance,
+          total_elevation_gain: routeStats.elevationGain,
+          total_elevation_loss: routeStats.elevationLoss,
+          min_elevation: routeStats.minElevation,
+          max_elevation: routeStats.maxElevation,
+          created_by: user.id
+        });
+      
+      if (error) throw error;
+      
+      toast('Itinéraire enregistré avec succès!');
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement:', error);
+      toast('Erreur lors de l\'enregistrement de l\'itinéraire');
+      return false;
+    }
+  };
+
+  const finishRouteCreation = async () => {
+    if (routeCoordinates.current.length < 2) {
+      toast('Vous devez tracer au moins 2 points pour créer un itinéraire');
+      return;
+    }
+    
+    const success = await saveRoute();
+    if (success) {
+      setIsRouteCreationMode(false);
+      
+      // Remove click listener
+      if (map.current) {
+        const listener = map.current.get('routeClickListener');
+        if (listener) {
+          google.maps.event.removeListener(listener);
+        }
+      }
+      
+      // Show markers again
+      markers.current.forEach(marker => marker.setVisible(true));
+    }
+  };
+
+  const cancelRouteCreation = () => {
+    setIsRouteCreationMode(false);
+    
+    // Remove click listener
+    if (map.current) {
+      const listener = map.current.get('routeClickListener');
+      if (listener) {
+        google.maps.event.removeListener(listener);
+      }
+    }
+    
+    // Clear route
+    if (routePath.current) {
+      routePath.current.setMap(null);
+    }
+    routeCoordinates.current = [];
+    setRouteElevations([]);
+    
+    // Show markers again
+    markers.current.forEach(marker => marker.setVisible(true));
   };
 
   const updateRoutePath = () => {
@@ -670,40 +818,6 @@ export const InteractiveMap = () => {
     });
     
     routePath.current.setMap(map.current);
-  };
-
-  const finishRouteCreation = () => {
-    setIsRouteCreationMode(false);
-    
-    // Remove click listener
-    if (map.current) {
-      const listener = map.current.get('routeClickListener');
-      if (listener) {
-        google.maps.event.removeListener(listener);
-      }
-    }
-    
-    // Here you can save the route or do something with it
-    console.log('Route created with', routeCoordinates.current.length, 'points');
-    toast('Itinéraire créé avec succès!');
-  };
-
-  const cancelRouteCreation = () => {
-    setIsRouteCreationMode(false);
-    
-    // Remove click listener
-    if (map.current) {
-      const listener = map.current.get('routeClickListener');
-      if (listener) {
-        google.maps.event.removeListener(listener);
-      }
-    }
-    
-    // Clear route
-    if (routePath.current) {
-      routePath.current.setMap(null);
-    }
-    routeCoordinates.current = [];
   };
 
   const handleResetView = () => {
@@ -905,6 +1019,16 @@ export const InteractiveMap = () => {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Elevation Profile - Show during route creation */}
+      {isRouteCreationMode && (
+        <div className="absolute bottom-6 right-6 z-20">
+          <ElevationProfile 
+            elevations={routeElevations}
+            routeStats={calculateRouteStats()}
+          />
         </div>
       )}
 
