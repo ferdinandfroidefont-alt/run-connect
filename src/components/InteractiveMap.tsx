@@ -810,15 +810,6 @@ export const InteractiveMap = () => {
       {/* User Sessions Button - Below Filters */}
       {user && (
         <div className="absolute top-44 right-4 z-10">
-          <Button
-            onClick={() => setIsUserSessionsOpen(true)}
-            size="sm"
-            variant="outline"
-            className="w-auto px-3 h-10 bg-card/90 backdrop-blur-sm shadow-map-control"
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Mes séances
-          </Button>
         </div>
       )}
       
