@@ -88,6 +88,9 @@ export const InteractiveMap = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [isRouteCreationMode, setIsRouteCreationMode] = useState(false);
+  const routePath = useRef<google.maps.Polyline | null>(null);
+  const routeCoordinates = useRef<google.maps.LatLng[]>([]);
 
   // Load user profile
   useEffect(() => {
@@ -627,6 +630,82 @@ export const InteractiveMap = () => {
   };
 
 
+  const handleCreateRoute = () => {
+    setIsRouteCreationMode(true);
+    // Clear any existing route
+    if (routePath.current) {
+      routePath.current.setMap(null);
+    }
+    routeCoordinates.current = [];
+    
+    // Add click listeners to map for route creation
+    if (map.current) {
+      const clickListener = map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
+        if (isRouteCreationMode && event.latLng) {
+          routeCoordinates.current.push(event.latLng);
+          updateRoutePath();
+        }
+      });
+      
+      // Store listener to remove later
+      map.current.set('routeClickListener', clickListener);
+    }
+  };
+
+  const updateRoutePath = () => {
+    if (!map.current || routeCoordinates.current.length === 0) return;
+    
+    // Remove existing path
+    if (routePath.current) {
+      routePath.current.setMap(null);
+    }
+    
+    // Create new path
+    routePath.current = new google.maps.Polyline({
+      path: routeCoordinates.current,
+      geodesic: true,
+      strokeColor: '#3b82f6',
+      strokeOpacity: 1.0,
+      strokeWeight: 4,
+    });
+    
+    routePath.current.setMap(map.current);
+  };
+
+  const finishRouteCreation = () => {
+    setIsRouteCreationMode(false);
+    
+    // Remove click listener
+    if (map.current) {
+      const listener = map.current.get('routeClickListener');
+      if (listener) {
+        google.maps.event.removeListener(listener);
+      }
+    }
+    
+    // Here you can save the route or do something with it
+    console.log('Route created with', routeCoordinates.current.length, 'points');
+    toast('Itinéraire créé avec succès!');
+  };
+
+  const cancelRouteCreation = () => {
+    setIsRouteCreationMode(false);
+    
+    // Remove click listener
+    if (map.current) {
+      const listener = map.current.get('routeClickListener');
+      if (listener) {
+        google.maps.event.removeListener(listener);
+      }
+    }
+    
+    // Clear route
+    if (routePath.current) {
+      routePath.current.setMap(null);
+    }
+    routeCoordinates.current = [];
+  };
+
   const handleResetView = () => {
     if (map.current) {
       map.current.panTo({ lat: 48.8566, lng: 2.3522 });
@@ -801,6 +880,34 @@ export const InteractiveMap = () => {
         </div>
       </div>
 
+      {/* Route Creation Mode Banner */}
+      {isRouteCreationMode && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
+            <span className="text-sm font-medium">
+              Mode création d'itinéraire - Cliquez sur la carte pour tracer votre parcours
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={finishRouteCreation}
+                disabled={routeCoordinates.current.length < 2}
+              >
+                Terminer
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={cancelRouteCreation}
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Nearby Sessions Button - Now Above Filters */}
       {user && (
         <div className="absolute top-32 right-4 z-10">
@@ -819,7 +926,7 @@ export const InteractiveMap = () => {
       )}
 
       {/* Filters - Now Below Nearby Sessions Button */}
-      <div className="absolute top-32 right-4 z-10">
+      <div className="absolute top-48 right-4 z-10">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
@@ -860,6 +967,7 @@ export const InteractiveMap = () => {
         onSessionCreated={loadSessions}
         map={map.current}
         presetLocation={presetLocation}
+        onCreateRoute={handleCreateRoute}
       />
 
       {/* Session Details Dialog */}

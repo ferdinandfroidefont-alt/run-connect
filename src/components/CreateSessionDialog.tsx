@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, Route } from "lucide-react";
 
 interface CreateSessionDialogProps {
   isOpen: boolean;
@@ -18,9 +18,10 @@ interface CreateSessionDialogProps {
   onSessionCreated: () => void;
   map: google.maps.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
+  onCreateRoute?: () => void;
 }
 
-export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation }: CreateSessionDialogProps) => {
+export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation, onCreateRoute }: CreateSessionDialogProps) => {
   const { user, subscriptionInfo } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [createRoute, setCreateRoute] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -277,6 +279,17 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     }
   };
 
+  const handleCreateRoute = () => {
+    if (onCreateRoute) {
+      onClose(); // Ferme le dialog
+      onCreateRoute(); // Lance le mode création d'itinéraire
+      toast({ 
+        title: "Mode itinéraire activé", 
+        description: "Cliquez sur la carte pour dessiner votre itinéraire" 
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !selectedLocation) return;
@@ -471,6 +484,31 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Create Route Option */}
+          <div className="border rounded-lg p-4 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Route className="h-4 w-4" />
+                <Label className="text-sm font-medium">
+                  Créer un itinéraire
+                </Label>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCreateRoute}
+                disabled={!onCreateRoute}
+              >
+                <Route className="h-3 w-3 mr-1" />
+                Dessiner
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Créez un itinéraire personnalisé sur la carte pour votre séance
+            </p>
           </div>
 
           {/* Image Upload */}
