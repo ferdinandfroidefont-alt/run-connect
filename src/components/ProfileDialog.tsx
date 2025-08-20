@@ -609,6 +609,25 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                             </div>
                           ))}
                         </div>
+                        <div className="mt-2 flex gap-2">
+                          <Input
+                            placeholder="Distance custom (ex: 3k)"
+                            className="text-xs"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                const target = e.target as HTMLInputElement;
+                                const distance = target.value.trim();
+                                if (distance && !recordsData.walking[distance]) {
+                                  setRecordsData(prev => ({
+                                    ...prev,
+                                    walking: { ...prev.walking, [distance]: '' }
+                                  }));
+                                  target.value = '';
+                                }
+                              }
+                            }}
+                          />
+                        </div>
                       </div>
 
                       {/* Running Records */}
@@ -630,6 +649,25 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                               />
                             </div>
                           ))}
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <Input
+                            placeholder="Distance custom (ex: 15k)"
+                            className="text-xs"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                const target = e.target as HTMLInputElement;
+                                const distance = target.value.trim();
+                                if (distance && !recordsData.running[distance]) {
+                                  setRecordsData(prev => ({
+                                    ...prev,
+                                    running: { ...prev.running, [distance]: '' }
+                                  }));
+                                  target.value = '';
+                                }
+                              }
+                            }}
+                          />
                         </div>
                       </div>
 
@@ -653,6 +691,25 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                             </div>
                           ))}
                         </div>
+                        <div className="mt-2 flex gap-2">
+                          <Input
+                            placeholder="Distance custom (ex: 80k)"
+                            className="text-xs"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                const target = e.target as HTMLInputElement;
+                                const distance = target.value.trim();
+                                if (distance && !recordsData.cycling[distance]) {
+                                  setRecordsData(prev => ({
+                                    ...prev,
+                                    cycling: { ...prev.cycling, [distance]: '' }
+                                  }));
+                                  target.value = '';
+                                }
+                              }
+                            }}
+                          />
+                        </div>
                       </div>
 
                       {/* Swimming Records */}
@@ -674,6 +731,25 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                               />
                             </div>
                           ))}
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <Input
+                            placeholder="Distance custom (ex: 2000m)"
+                            className="text-xs"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                const target = e.target as HTMLInputElement;
+                                const distance = target.value.trim();
+                                if (distance && !recordsData.swimming[distance]) {
+                                  setRecordsData(prev => ({
+                                    ...prev,
+                                    swimming: { ...prev.swimming, [distance]: '' }
+                                  }));
+                                  target.value = '';
+                                }
+                              }
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
