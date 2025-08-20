@@ -1171,9 +1171,9 @@ export const InteractiveMap = () => {
       {user && (
         <div className="absolute top-32 right-4 z-10">
           <Button 
-            variant="default"
+            variant="outline"
             size="sm"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+            className="bg-white text-black hover:bg-gray-50 shadow-lg border-gray-200"
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
