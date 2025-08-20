@@ -1,3 +1,4 @@
+import { RouteDialog } from './RouteDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { MapControls } from './MapControls';
@@ -94,6 +95,8 @@ export const InteractiveMap = () => {
   const routeCoordinates = useRef<google.maps.LatLng[]>([]);
   const waypoints = useRef<google.maps.LatLng[]>([]);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
+  const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
+  const [routeSaving, setRouteSaving] = useState(false);
   const elevationService = useRef<google.maps.ElevationService | null>(null);
   const directionsService = useRef<google.maps.DirectionsService | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
@@ -810,11 +813,11 @@ export const InteractiveMap = () => {
     };
   };
 
-  const saveRoute = async () => {
-    if (!user || routeCoordinates.current.length < 2) return;
+  const saveRoute = async (routeName: string, routeDescription: string) => {
+    if (!user || routeCoordinates.current.length < 2) return false;
     
     const routeStats = calculateRouteStats();
-    if (!routeStats) return;
+    if (!routeStats) return false;
     
     try {
       const coordinates = routeCoordinates.current.map((coord, index) => ({
@@ -826,8 +829,8 @@ export const InteractiveMap = () => {
       const { error } = await supabase
         .from('routes')
         .insert({
-          name: 'Mon itinéraire',
-          description: 'Itinéraire créé sur la carte',
+          name: routeName,
+          description: routeDescription,
           coordinates: coordinates,
           total_distance: routeStats.totalDistance,
           total_elevation_gain: routeStats.elevationGain,
@@ -848,14 +851,22 @@ export const InteractiveMap = () => {
     }
   };
 
-  const finishRouteCreation = async () => {
+  const finishRouteCreation = () => {
     if (waypoints.current.length < 2) {
       toast('Vous devez tracer au moins 2 points pour créer un itinéraire');
       return;
     }
     
-    const success = await saveRoute();
+    setIsRouteDialogOpen(true);
+  };
+
+  const handleSaveRoute = async (routeName: string, routeDescription: string) => {
+    setRouteSaving(true);
+    const success = await saveRoute(routeName, routeDescription);
+    setRouteSaving(false);
+    
     if (success) {
+      setIsRouteDialogOpen(false);
       setIsRouteCreationMode(false);
       
       // Remove click listener
@@ -866,13 +877,16 @@ export const InteractiveMap = () => {
         }
       }
       
-      // Clear directions renderer
+      // Clear route data
       if (directionsRenderer.current) {
         directionsRenderer.current.setMap(null);
       }
+      routeCoordinates.current = [];
+      waypoints.current = [];
+      setRouteElevations([]);
       
       // Show markers again
-      markers.current.forEach(marker => marker.setVisible(true));
+      loadSessions();
     }
   };
 
@@ -1237,6 +1251,14 @@ export const InteractiveMap = () => {
         isOpen={showNearbySessionsDialog}
         onClose={() => setShowNearbySessionsDialog(false)}
         userLocation={userLocation}
+      />
+      {/* Route Dialog */}
+      <RouteDialog
+        isOpen={isRouteDialogOpen}
+        onClose={() => setIsRouteDialogOpen(false)}
+        onSave={handleSaveRoute}
+        title="Créer un itinéraire"
+        loading={routeSaving}
       />
     </div>
   );

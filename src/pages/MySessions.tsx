@@ -1,3 +1,4 @@
+import { RouteDialog } from '@/components/RouteDialog';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,13 +7,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Users, Filter, Edit, Save, X, Route, TrendingUp, Mountain, Trash2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Filter, Edit, Edit2, Save, X, Route, TrendingUp, Mountain, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from "react-router-dom";
 
 interface UserSession {
@@ -56,6 +57,7 @@ interface UserRoute {
 
 export default function MySessions() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
@@ -67,6 +69,9 @@ export default function MySessions() {
   const [routesLoading, setRoutesLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserSession>>({});
+  const [editingRoute, setEditingRoute] = useState<any>(null);
+  const [routeEditLoading, setRouteEditLoading] = useState(false);
+  const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
 
   // Load user's sessions
   const loadUserSessions = async () => {
@@ -88,7 +93,11 @@ export default function MySessions() {
       setSessions(data || []);
     } catch (error) {
       console.error('Error loading user sessions:', error);
-      toast.error('Erreur lors du chargement de vos séances');
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement de vos séances",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -121,7 +130,11 @@ export default function MySessions() {
       setParticipants(participantsWithProfiles);
     } catch (error) {
       console.error('Error loading participants:', error);
-      toast.error('Erreur lors du chargement des participants');
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des participants",
+        variant: "destructive",
+      });
     }
   };
 
@@ -148,7 +161,11 @@ export default function MySessions() {
       setRoutes(data || []);
     } catch (error) {
       console.error('Error fetching user routes:', error);
-      toast.error('Erreur lors du chargement de vos itinéraires');
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement de vos itinéraires",
+        variant: "destructive",
+      });
     } finally {
       setRoutesLoading(false);
     }
@@ -165,9 +182,55 @@ export default function MySessions() {
       if (error) throw error;
 
       setRoutes(prev => prev.filter(route => route.id !== routeId));
-      toast.success('Itinéraire supprimé avec succès');
+      toast({
+        title: "Succès",
+        description: "Itinéraire supprimé avec succès",
+      });
     } catch (error) {
-      toast.error('Impossible de supprimer l\'itinéraire');
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'itinéraire",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const editRoute = (route: any) => {
+    setEditingRoute(route);
+    setIsRouteEditDialogOpen(true);
+  };
+
+  const handleSaveRouteEdit = async (routeName: string, routeDescription: string) => {
+    if (!editingRoute) return;
+    
+    setRouteEditLoading(true);
+    try {
+      const { error } = await supabase
+        .from('routes')
+        .update({
+          name: routeName,
+          description: routeDescription
+        })
+        .eq('id', editingRoute.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Itinéraire modifié avec succès",
+      });
+      setIsRouteEditDialogOpen(false);
+      setEditingRoute(null);
+      loadUserRoutes();
+    } catch (error) {
+      console.error('Error updating route:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier l'itinéraire",
+        variant: "destructive",
+      });
+    } finally {
+      setRouteEditLoading(false);
     }
   };
 
@@ -224,10 +287,17 @@ export default function MySessions() {
       setSelectedSession(updatedSession);
       setSessions(sessions.map(s => s.id === selectedSession.id ? updatedSession : s));
       setIsEditing(false);
-      toast.success('Séance modifiée avec succès');
+      toast({
+        title: "Succès",
+        description: "Séance modifiée avec succès",
+      });
     } catch (error) {
       console.error('Error updating session:', error);
-      toast.error('Erreur lors de la modification de la séance');
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la modification de la séance",
+        variant: "destructive",
+      });
     }
   };
 
@@ -619,14 +689,24 @@ export default function MySessions() {
                           })}
                         </div>
                       </div>
-                      <Button
-                        onClick={() => deleteRoute(route.id)}
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          onClick={() => editRoute(route)}
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-primary hover:bg-primary/10 -mt-2 -mr-1"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => deleteRoute(route.id)}
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0 space-y-3">
@@ -706,6 +786,20 @@ export default function MySessions() {
           )
         )}
       </div>
+
+      {/* Route Edit Dialog */}
+      <RouteDialog
+        isOpen={isRouteEditDialogOpen}
+        onClose={() => {
+          setIsRouteEditDialogOpen(false);
+          setEditingRoute(null);
+        }}
+        onSave={handleSaveRouteEdit}
+        title="Modifier l'itinéraire"
+        initialName={editingRoute?.name || ''}
+        initialDescription={editingRoute?.description || ''}
+        loading={routeEditLoading}
+      />
     </div>
   );
 }
