@@ -66,7 +66,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   return (
     <>
       {/* Filter Toggle Button */}
-      <div className="absolute top-32 right-4 z-10">
+      <div className="absolute top-36 right-4 z-10">
         <Button
           onClick={() => setIsOpen(!isOpen)}
           size="sm"
@@ -85,7 +85,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
 
       {/* Filters Panel */}
       {isOpen && (
-        <Card className="absolute top-32 right-16 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
+        <Card className="absolute top-36 right-16 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Filtres</h3>
