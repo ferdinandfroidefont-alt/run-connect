@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool, Route, TrendingUp } from "lucide-react";
 
 interface CreateSessionDialogProps {
   isOpen: boolean;
@@ -34,6 +35,10 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [createRoute, setCreateRoute] = useState(false);
+  const [routeMode, setRouteMode] = useState<'new' | 'existing'>('new');
+  const [userRoutes, setUserRoutes] = useState<any[]>([]);
+  const [selectedRoute, setSelectedRoute] = useState<string>('');
+  const [routesLoading, setRoutesLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -65,7 +70,41 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     if (presetLocation && isOpen) {
       handleReverseGeocode(presetLocation.lat, presetLocation.lng);
     }
-  }, [presetLocation, isOpen]);
+    if (isOpen && user) {
+      loadUserRoutes();
+    }
+  }, [presetLocation, isOpen, user]);
+
+  const loadUserRoutes = async () => {
+    if (!user) return;
+
+    setRoutesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('routes')
+        .select('id, name, description, total_distance, total_elevation_gain, created_at')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUserRoutes(data || []);
+    } catch (error) {
+      console.error('Error loading user routes:', error);
+    } finally {
+      setRoutesLoading(false);
+    }
+  };
+
+  const formatDistance = (meters: number | null) => {
+    if (!meters) return "N/A";
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${Math.round(meters / 1000 * 10) / 10} km`;
+  };
+
+  const formatElevation = (meters: number | null) => {
+    if (!meters) return "N/A";
+    return `${Math.round(meters)} m`;
+  };
 
   const handleReverseGeocode = async (lat: number, lng: number) => {
     try {
@@ -505,31 +544,93 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </div>
           </div>
 
-          {/* Create Route Option */}
+          {/* Route Selection Option */}
           <div className="border rounded-lg p-4 bg-muted/20">
-            <div className="flex items-center justify-between">
+            <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <PenTool className="h-4 w-4" />
+                <Route className="h-4 w-4" />
                 <Label className="text-sm font-medium">
-                  Créer un itinéraire
+                  Itinéraire (optionnel)
                 </Label>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCreateRoute}
-                disabled={!onCreateRoute}
-              >
-                <PenTool className="h-3 w-3 mr-1" />
-                Dessiner
-              </Button>
+              
+              <RadioGroup value={routeMode} onValueChange={(value: 'new' | 'existing') => setRouteMode(value)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="new" id="new-route" />
+                  <Label htmlFor="new-route" className="text-sm cursor-pointer">
+                    Créer un nouvel itinéraire
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="existing" id="existing-route" />
+                  <Label htmlFor="existing-route" className="text-sm cursor-pointer">
+                    Utiliser un itinéraire existant
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {routeMode === 'new' ? (
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCreateRoute}
+                    disabled={!onCreateRoute}
+                    className="w-full gap-2"
+                  >
+                    <PenTool className="h-3 w-3" />
+                    Dessiner un itinéraire
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Créez un itinéraire personnalisé sur la carte pour votre séance
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {routesLoading ? (
+                    <div className="text-center py-2">
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                      <p className="text-xs text-muted-foreground mt-1">Chargement des itinéraires...</p>
+                    </div>
+                  ) : userRoutes.length > 0 ? (
+                    <Select value={selectedRoute} onValueChange={setSelectedRoute}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un itinéraire" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userRoutes.map((route) => (
+                          <SelectItem key={route.id} value={route.id}>
+                            <div className="flex items-center gap-2 w-full">
+                              <Route className="h-3 w-3" />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm truncate">{route.name}</div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{formatDistance(route.total_distance)}</span>
+                                  {route.total_elevation_gain && (
+                                    <>
+                                      <span>•</span>
+                                      <TrendingUp className="h-3 w-3" />
+                                      <span>{formatElevation(route.total_elevation_gain)}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      <Route className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Aucun itinéraire trouvé</p>
+                      <p className="text-xs">Créez d'abord un itinéraire avec le bouton crayon sur la carte</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Créez un itinéraire personnalisé sur la carte pour votre séance
-              <br />
-              <span className="text-primary">💡 Astuce : Utilisez le bouton crayon ✏️ en bas à gauche de la carte</span>
-            </p>
           </div>
 
           {/* Image Upload */}
