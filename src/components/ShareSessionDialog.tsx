@@ -36,7 +36,6 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
   const { toast } = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
 
   // Load user's sessions
   const loadSessions = async () => {
@@ -190,10 +189,7 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
               sessions.map((session) => (
                 <Card 
                   key={session.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedSession?.id === session.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => setSelectedSession(session)}
+                  className="transition-all hover:shadow-md"
                 >
                   <CardContent className="p-4">
                     <div className="space-y-3">
@@ -241,6 +237,18 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
                           {session.description}
                         </p>
                       )}
+
+                      {/* Send Button */}
+                      <div className="pt-2">
+                        <Button
+                          onClick={() => shareSession(session)}
+                          size="sm"
+                          className="w-full"
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Envoyer dans la conversation
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -250,21 +258,13 @@ export const ShareSessionDialog = ({ isOpen, onClose, conversationId, onSessionS
         </ScrollArea>
 
         {/* Actions */}
-        <div className="flex gap-2 pt-4">
+        <div className="pt-4">
           <Button
             variant="outline"
             onClick={onClose}
-            className="flex-1"
+            className="w-full"
           >
-            Annuler
-          </Button>
-          <Button
-            onClick={() => selectedSession && shareSession(selectedSession)}
-            disabled={!selectedSession}
-            className="flex-1"
-          >
-            <Send className="h-4 w-4 mr-1" />
-            Partager
+            Fermer
           </Button>
         </div>
       </DialogContent>
