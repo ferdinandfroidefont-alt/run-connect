@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 
@@ -26,6 +26,15 @@ interface Profile {
   notifications_enabled?: boolean;
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
+}
+
+interface UserRoute {
+  id: string;
+  name: string;
+  description: string | null;
+  total_distance: number | null;
+  total_elevation_gain: number | null;
+  created_at: string;
 }
 
 const Profile = () => {
@@ -46,12 +55,15 @@ const Profile = () => {
   const [followingCount, setFollowingCount] = useState(0);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [userRoutes, setUserRoutes] = useState<UserRoute[]>([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       fetchProfile();
       fetchFollowCounts();
+      fetchUserRoutes();
     }
     // Check notification permission
     if ('Notification' in window) {
@@ -77,6 +89,55 @@ const Profile = () => {
       setFollowingCount(followingData || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  const fetchUserRoutes = async () => {
+    if (!user) return;
+
+    setRoutesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('routes')
+        .select('id, name, description, total_distance, total_elevation_gain, created_at')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUserRoutes(data || []);
+    } catch (error) {
+      console.error('Error fetching user routes:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger vos parcours",
+        variant: "destructive",
+      });
+    } finally {
+      setRoutesLoading(false);
+    }
+  };
+
+  const deleteRoute = async (routeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('routes')
+        .delete()
+        .eq('id', routeId)
+        .eq('created_by', user?.id);
+
+      if (error) throw error;
+
+      setUserRoutes(prev => prev.filter(route => route.id !== routeId));
+      toast({
+        title: "Parcours supprimé",
+        description: "Le parcours a été supprimé avec succès",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le parcours",
+        variant: "destructive",
+      });
     }
   };
 
@@ -500,6 +561,82 @@ const Profile = () => {
                   <Settings className="h-4 w-4 mr-2" />
                   Modifier le profil
                 </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Mes Parcours Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Route className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Mes Parcours ({userRoutes.length})</CardTitle>
+              </div>
+              <Button
+                onClick={() => navigate('/')}
+                size="sm"
+                variant="outline"
+                className="gap-2"
+              >
+                <MapPin className="h-4 w-4" />
+                Créer un parcours
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {routesLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : userRoutes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Route className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">Aucun parcours créé</p>
+                <p className="text-xs">Utilisez le bouton crayon sur la carte pour créer votre premier parcours</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {userRoutes.map((route) => (
+                  <div key={route.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-sm truncate">{route.name}</h4>
+                        <Calendar className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(route.created_at).toLocaleDateString('fr-FR')}
+                        </span>
+                      </div>
+                      {route.description && (
+                        <p className="text-xs text-muted-foreground truncate mb-2">
+                          {route.description}
+                        </p>
+                      )}
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        {route.total_distance && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {Math.round(route.total_distance / 1000 * 10) / 10} km
+                          </span>
+                        )}
+                        {route.total_elevation_gain && (
+                          <span className="flex items-center gap-1">
+                            ↗️ {Math.round(route.total_elevation_gain)} m
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => deleteRoute(route.id)}
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
