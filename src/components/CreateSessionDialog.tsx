@@ -37,7 +37,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     description: "",
     activity_type: "",
     session_type: "",
-    intensity: "",
     scheduled_at: "",
     max_participants: "",
     location_name: "",
@@ -57,12 +56,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     { value: 'sortie_longue', label: 'Sortie longue' },
     { value: 'fractionne', label: 'Fractionné' },
     { value: 'competition', label: 'Compétition' },
-  ];
-
-  const intensityLevels = [
-    { value: 'facile', label: 'Facile' },
-    { value: 'modere', label: 'Modéré' },
-    { value: 'intense', label: 'Intense' },
   ];
 
   // Auto-select preset location when dialog opens
@@ -304,7 +297,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           description: formData.description,
           activity_type: formData.activity_type,
           session_type: formData.session_type,
-          intensity: formData.intensity,
           location_lat: selectedLocation.lat,
           location_lng: selectedLocation.lng,
           location_name: formData.location_name,
@@ -332,7 +324,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         description: "",
         activity_type: "",
         session_type: "",
-        intensity: "",
         scheduled_at: "",
         max_participants: "",
         location_name: "",
@@ -399,22 +390,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 {sessionTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="intensity">Intensité</Label>
-            <Select value={formData.intensity} onValueChange={(value) => setFormData(prev => ({ ...prev, intensity: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir l'intensité" />
-              </SelectTrigger>
-              <SelectContent>
-                {intensityLevels.map((level) => (
-                  <SelectItem key={level.value} value={level.value}>
-                    {level.label}
                   </SelectItem>
                 ))}
               </SelectContent>
