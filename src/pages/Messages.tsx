@@ -972,9 +972,9 @@ const Messages = () => {
           }}
         />
 
-        {/* Club Info Dialog - FIXED: Remove conditional rendering */}
+        {/* Club Info Dialog */}
         <ClubInfoDialog
-          isOpen={showGroupInfo && selectedConversation?.is_group === true}
+          isOpen={showGroupInfo}
           onClose={() => {
             console.log('🔍 ClubInfoDialog onClose called');
             setShowGroupInfo(false);
@@ -990,13 +990,7 @@ const Messages = () => {
           }}
         />
         
-        {/* DEBUG: Force render ClubInfoDialog when showGroupInfo is true */}
-        {showGroupInfo && !selectedConversation?.is_group && (
-          <div style={{position: 'fixed', top: 0, left: 0, background: 'red', color: 'white', padding: '10px', zIndex: 9999}}>
-            DEBUG: showGroupInfo is true but selectedConversation.is_group is false!
-            <br />selectedConversation: {JSON.stringify(selectedConversation, null, 2)}
-          </div>
-        )}
+        {/* Debug info removed - functionality should work now */}
 
         {/* Edit Club Dialog - available globally */}
         {selectedConversation?.is_group && (
