@@ -14,7 +14,6 @@ import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
-import { ShareSessionDialog } from "@/components/ShareSessionDialog";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { 
   MessageCircle, 
@@ -98,8 +97,6 @@ const Messages = () => {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
-  const [showShareSession, setShowShareSession] = useState(false);
-  const [shareSessionConversationId, setShareSessionConversationId] = useState("");
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -598,17 +595,7 @@ const Messages = () => {
             </div>
 
             <div className="flex gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log('Share button clicked, conversationId:', selectedConversation?.id);
-                  setShareSessionConversationId(selectedConversation?.id || "");
-                  setShowShareSession(true);
-                }}
-              >
-                <Calendar className="h-4 w-4" />
-              </Button>
+              {/* Bouton de partage retiré */}
             </div>
           </div>
 
@@ -972,23 +959,6 @@ const Messages = () => {
             }}
           />
         )}
-
-        {/* Share Session Dialog - available globally */}
-        <ShareSessionDialog
-          isOpen={showShareSession}
-          onClose={() => {
-            setShowShareSession(false);
-            setShareSessionConversationId("");
-          }}
-          conversationId={shareSessionConversationId}
-          onSessionShared={() => {
-            console.log('Session shared, refreshing messages');
-            if (selectedConversation) {
-              loadMessages(selectedConversation.id);
-              loadConversations();
-            }
-          }}
-        />
 
         {/* Profile Preview Dialog */}
         <ProfilePreviewDialog
