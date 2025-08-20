@@ -546,13 +546,8 @@ const Messages = () => {
             <div className="flex gap-1">
               {selectedConversation.is_group && (
                 <>
-                  {/* Check if user is admin by looking at group_members table */}
-                  {selectedConversation.group_members?.some(
-                    member => member.user_id === user?.id && 
-                    (selectedConversation.created_by === user?.id || 
-                     // Add additional admin check here if needed
-                     false)
-                  ) && (
+                  {/* Check if user is the creator/admin of the group */}
+                  {selectedConversation.created_by === user?.id && (
                     <Button
                       variant="outline"
                       size="sm"
