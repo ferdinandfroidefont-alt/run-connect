@@ -284,45 +284,118 @@ export const InteractiveMap = () => {
 
     console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
 
-    // Créer un marqueur SVG avec photo de profil et fallback vers initiales
-    const avatarUrl = session.profiles.avatar_url;
-    
-    if (avatarUrl) {
-      const svg = `
-        <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <clipPath id="circleClip">
-              <circle cx="${size/2}" cy="${size/2}" r="${(size-6)/2}"/>
-            </clipPath>
-            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <dropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
-            </filter>
-          </defs>
-          <circle cx="${size/2}" cy="${size/2}" r="${(size-2)/2}" fill="white" filter="url(#shadow)"/>
-          <image href="${avatarUrl}" x="3" y="3" width="${size-6}" height="${size-6}" 
-                 clip-path="url(#circleClip)" preserveAspectRatio="xMidYMid slice"/>
-          <circle cx="${size/2}" cy="${size/2}" r="${(size-2)/2}" fill="none" stroke="white" stroke-width="2"/>
-        </svg>
-      `;
-      return 'data:image/svg+xml;base64,' + btoa(svg);
-    } else {
-      // Fallback avec initiales si pas d'avatar
-      const svg = `
-        <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <dropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
-            </filter>
-          </defs>
-          <circle cx="${size/2}" cy="${size/2}" r="${(size-4)/2}" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>
-          <text x="${size/2}" y="${size/2}" text-anchor="middle" dominant-baseline="central" 
-                fill="white" font-family="Arial, sans-serif" font-size="${size/3}" font-weight="bold">
-            ${initials}
-          </text>
-        </svg>
-      `;
-      return 'data:image/svg+xml;base64,' + btoa(svg);
-    }
+    // Créer un marqueur Canvas avec photo de profil
+    return new Promise<string>((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+      
+      // Fonction pour dessiner le marqueur final
+      const drawMarker = (useAvatar: boolean = false, img?: HTMLImageElement) => {
+        // Nettoyer le canvas
+        ctx.clearRect(0, 0, size, size);
+        
+        if (useAvatar && img) {
+          // Dessiner le fond blanc avec ombre
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 2;
+          
+          ctx.fillStyle = 'white';
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // Réinitialiser l'ombre
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          
+          // Créer un masque circulaire pour l'image
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2 - 4, 0, 2 * Math.PI);
+          ctx.clip();
+          
+          // Dessiner l'image de profil en gardant les proportions
+          const imgSize = size - 8;
+          ctx.drawImage(img, 4, 4, imgSize, imgSize);
+          ctx.restore();
+          
+          // Bordure blanche
+          ctx.strokeStyle = 'white';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
+          ctx.stroke();
+        } else {
+          // Fallback avec initiales
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 2;
+          
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // Réinitialiser l'ombre
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          
+          // Bordure blanche
+          ctx.strokeStyle = 'white';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
+          ctx.stroke();
+          
+          // Initiales
+          ctx.fillStyle = 'white';
+          ctx.font = `bold ${size/3}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(initials, size/2, size/2 + 1);
+        }
+        
+        resolve(canvas.toDataURL('image/png'));
+      };
+      
+      // Essayer de charger l'avatar
+      const avatarUrl = session.profiles.avatar_url;
+      if (avatarUrl) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+          console.log('Avatar loaded successfully for Canvas marker');
+          drawMarker(true, img);
+        };
+        
+        img.onerror = () => {
+          console.log('Avatar failed to load, using initials');
+          drawMarker(false);
+        };
+        
+        // Timeout de sécurité
+        setTimeout(() => {
+          if (!img.complete) {
+            console.log('Avatar timeout, using initials');
+            drawMarker(false);
+          }
+        }, 2000);
+        
+        img.src = avatarUrl;
+      } else {
+        drawMarker(false);
+      }
+    });
   };
 
   const getActivityColor = (activityType: string) => {
