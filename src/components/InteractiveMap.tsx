@@ -284,92 +284,23 @@ export const InteractiveMap = () => {
 
     console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
 
-    // Créer un marqueur en utilisant Canvas pour mieux gérer les images
-    const createCanvasMarker = async (avatarUrl?: string): Promise<string> => {
-      console.log('Creating canvas marker with avatar:', !!avatarUrl);
-      
-      return new Promise((resolve) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d')!;
-        
-        // Fonction pour finaliser le marqueur
-        const finishMarker = (useInitials: boolean = false) => {
-          if (useInitials) {
-            // Dessiner le fond avec la couleur d'activité
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(size/2, size/2, size/2 - 3, 0, 2 * Math.PI);
-            ctx.fill();
-            
-            // Bordure blanche
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 4;
-            ctx.stroke();
-            
-            // Initiales en blanc
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(initials, size/2, size/2);
-          }
-          
-          const dataUrl = canvas.toDataURL('image/png');
-          console.log('Canvas marker created successfully');
-          resolve(dataUrl);
-        };
-        
-        if (avatarUrl) {
-          const img = new Image();
-          // Pas de crossOrigin pour éviter les problèmes CORS
-          img.onload = () => {
-            console.log('Avatar image loaded successfully for canvas');
-            
-            // Dessiner la bordure blanche d'abord
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(size/2, size/2, size/2 - 1, 0, 2 * Math.PI);
-            ctx.fill();
-            
-            // Créer un masque circulaire pour l'image
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(size/2, size/2, size/2 - 4, 0, 2 * Math.PI);
-            ctx.clip();
-            
-            // Dessiner l'image de profil
-            ctx.drawImage(img, 4, 4, size-8, size-8);
-            ctx.restore();
-            
-            finishMarker(false);
-          };
-          
-          img.onerror = (error) => {
-            console.log('Avatar image failed to load, using initials', error);
-            finishMarker(true);
-          };
-          
-          // Ajouter un timeout pour éviter d'attendre indéfiniment
-          setTimeout(() => {
-            if (!img.complete) {
-              console.log('Avatar image timeout, using initials');
-              finishMarker(true);
-            }
-          }, 3000);
-          
-          img.src = avatarUrl;
-        } else {
-          console.log('No avatar URL, using initials');
-          finishMarker(true);
-        }
-      });
-    };
+    // Créer un marqueur SVG simple avec initiales
+    const svg = `
+      <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <dropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+          </filter>
+        </defs>
+        <circle cx="${size/2}" cy="${size/2}" r="${(size-4)/2}" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>
+        <text x="${size/2}" y="${size/2}" text-anchor="middle" dominant-baseline="central" 
+              fill="white" font-family="Arial, sans-serif" font-size="${size/3}" font-weight="bold">
+          ${initials}
+        </text>
+      </svg>
+    `;
 
-    // Créer le marqueur avec ou sans avatar
-    const markerUrl = await createCanvasMarker(session.profiles.avatar_url);
-    return markerUrl;
+    return 'data:image/svg+xml;base64,' + btoa(svg);
   };
 
   const getActivityColor = (activityType: string) => {
