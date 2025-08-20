@@ -532,16 +532,34 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </Select>
           </div>
 
-          {/* Club Selection (optional) */}
-          <div>
-            <Label>Club associé (optionnel)</Label>
+          {/* Club Selection (optionnel) */}
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Session pour un club</Label>
             <ClubSelector
               selectedClubId={formData.club_id}
               onClubSelect={(clubId) => setFormData(prev => ({ ...prev, club_id: clubId }))}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Associez cette séance à un de vos clubs
-            </p>
+            {formData.club_id ? (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Users className="h-4 w-4" />
+                  <span className="text-sm font-medium">Session privée pour le club</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  Seuls les membres de ce club pourront voir et rejoindre cette séance
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm font-medium">Session publique</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Cette séance sera visible par tous les utilisateurs
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
