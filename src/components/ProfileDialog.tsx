@@ -28,6 +28,7 @@ interface Profile {
   notifications_enabled?: boolean;
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
+  allow_friend_suggestions?: boolean;
   walking_records?: any;
   running_records?: any;
   cycling_records?: any;
@@ -917,6 +918,25 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
                       </Button>
                     </div>
+                  </div>
+
+                  {/* Friend Suggestions */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Suggestions d'amis
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Autoriser les suggestions et être suggéré
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.allow_friend_suggestions !== false}
+                      onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
+                    />
                   </div>
                 </CardContent>
               </Card>
