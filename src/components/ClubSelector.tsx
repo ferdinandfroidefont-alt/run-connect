@@ -187,47 +187,84 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
 
           {/* Liste des clubs */}
           {clubs.map((club) => (
-            <Button
-              key={club.id}
-              variant="ghost"
-              className={cn(
-                "w-full justify-start h-auto p-3",
-                selectedClubId === club.id && "bg-accent"
-              )}
-              onClick={() => handleClubSelect(club.id)}
-            >
-              <div className="flex items-center gap-2 w-full">
-                <div className="flex-shrink-0">
-                  {club.group_avatar_url ? (
-                    <img 
-                      src={club.group_avatar_url} 
-                      alt={club.group_name}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="h-4 w-4" />
+            subscriptionInfo?.subscribed ? (
+              <Button
+                key={club.id}
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start h-auto p-3",
+                  selectedClubId === club.id && "bg-accent"
+                )}
+                onClick={() => handleClubSelect(club.id)}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <div className="flex-shrink-0">
+                    {club.group_avatar_url ? (
+                      <img 
+                        src={club.group_avatar_url} 
+                        alt={club.group_name}
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-medium truncate">{club.group_name}</div>
+                    {club.group_description && (
+                      <div className="text-xs text-muted-foreground truncate">
+                        {club.group_description}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {club.member_count}
+                    </Badge>
+                    {selectedClubId === club.id && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </div>
+                </div>
+              </Button>
+            ) : (
+              <Button
+                key={club.id}
+                variant="ghost"
+                className="w-full justify-start h-auto p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+                onClick={() => {
+                  navigate('/subscription');
+                  setIsOpen(false);
+                }}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <div className="flex-shrink-0">
+                    {club.group_avatar_url ? (
+                      <img 
+                        src={club.group_avatar_url} 
+                        alt={club.group_name}
+                        className="h-8 w-8 rounded-full object-cover opacity-60"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-yellow-600" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-medium truncate text-yellow-700">{club.group_name}</div>
+                    <div className="text-xs text-yellow-600">
+                      Fonctionnalité premium
                     </div>
-                  )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-yellow-500" />
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="font-medium truncate">{club.group_name}</div>
-                  {club.group_description && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {club.group_description}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {club.member_count}
-                  </Badge>
-                  {selectedClubId === club.id && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
-                </div>
-              </div>
-            </Button>
+              </Button>
+            )
           ))}
         </div>
       </PopoverContent>
