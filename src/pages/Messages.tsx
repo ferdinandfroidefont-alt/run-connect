@@ -635,7 +635,7 @@ const Messages = () => {
                          onClick={() => !isOwnMessage && markMessageAsRead(message.id)}
                        >
                           {/* Session sharing */}
-                          {message.message_type === 'session_share' && message.session && (
+                          {message.message_type === 'session' && message.session && (
                             <div className="mb-2 p-3 bg-background/50 rounded border">
                               <div className="flex items-center gap-2 mb-2">
                                 <Calendar className="h-4 w-4 text-primary" />

@@ -134,7 +134,7 @@ export const ShareSessionToConversationDialog = ({
           conversation_id: conversationId,
           sender_id: user.id,
           content: `🏃‍♂️ Séance partagée: ${session.title}`,
-          message_type: 'session_share',
+          message_type: 'session',
           session_id: session.id
         }]);
 
