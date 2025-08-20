@@ -37,16 +37,18 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followingCount, setFollowingCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
 
-  console.log('ProfilePreviewDialog - userId:', userId, 'user?.id:', user?.id);
+  // If user is viewing their own profile, show a simplified version or redirect
+  const isOwnProfile = userId === user?.id;
 
   useEffect(() => {
-    if (userId && userId !== user?.id) {
-      console.log('Fetching profile for userId:', userId);
+    if (userId) {
       fetchProfile();
-      checkFollowStatus();
+      if (!isOwnProfile) {
+        checkFollowStatus();
+      }
       fetchFollowCounts();
     }
-  }, [userId, user]);
+  }, [userId, user, isOwnProfile]);
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -161,7 +163,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
-  if (!userId || userId === user?.id) {
+  if (!userId) {
     return null;
   }
 
@@ -206,6 +208,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </Badge>
                 )}
 
+                {isOwnProfile && (
+                  <Badge variant="secondary" className="mb-4">
+                    Votre profil
+                  </Badge>
+                )}
+
                 <div className="flex gap-4 mb-4">
                   <div className="text-center">
                     <p className="font-bold text-lg">{followerCount}</p>
@@ -217,7 +225,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </div>
                 </div>
 
-                {user && (
+                {!isOwnProfile && user && (
                   <Button
                     onClick={handleFollowToggle}
                     disabled={actionLoading}
