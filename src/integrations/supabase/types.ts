@@ -185,8 +185,10 @@ export type Database = {
           cycling_records: Json | null
           display_name: string | null
           id: string
+          is_online: boolean | null
           is_premium: boolean | null
           is_private: boolean | null
+          last_seen: string | null
           notif_follow_request: boolean | null
           notif_friend_session: boolean | null
           notif_message: boolean | null
@@ -197,6 +199,7 @@ export type Database = {
           rgpd_accepted: boolean | null
           running_records: Json | null
           security_rules_accepted: boolean | null
+          show_online_status: boolean | null
           swimming_records: Json | null
           triathlon_records: Json | null
           updated_at: string
@@ -213,8 +216,10 @@ export type Database = {
           cycling_records?: Json | null
           display_name?: string | null
           id?: string
+          is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
+          last_seen?: string | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null
@@ -225,6 +230,7 @@ export type Database = {
           rgpd_accepted?: boolean | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
+          show_online_status?: boolean | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
           updated_at?: string
@@ -241,8 +247,10 @@ export type Database = {
           cycling_records?: Json | null
           display_name?: string | null
           id?: string
+          is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
+          last_seen?: string | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null
@@ -253,6 +261,7 @@ export type Database = {
           rgpd_accepted?: boolean | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
+          show_online_status?: boolean | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
           updated_at?: string

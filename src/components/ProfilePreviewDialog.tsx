@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { OnlineStatus } from "@/components/OnlineStatus";
 
 interface Profile {
   user_id: string;
@@ -205,6 +206,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   {profile.is_premium && (
                     <Crown className="h-5 w-5 text-yellow-500" />
                   )}
+                </div>
+
+                {/* Online Status */}
+                <div className="mb-2">
+                  <OnlineStatus userId={profile.user_id} showText size="md" />
                 </div>
 
                 {profile.is_premium && (

@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2 } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Circle } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
@@ -29,6 +29,9 @@ interface Profile {
   notif_message?: boolean;
   notif_follow_request?: boolean;
   notif_friend_session?: boolean;
+  is_online?: boolean;
+  last_seen?: string;
+  show_online_status?: boolean;
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
 }
@@ -879,6 +882,25 @@ const Profile = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Show Online Status Setting */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Circle className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Afficher mon statut en ligne
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Permettre à vos amis de voir si vous êtes connecté
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={profile?.show_online_status || false}
+                onCheckedChange={(checked) => updatePrivacySettings('show_online_status', checked)}
+              />
+            </div>
+
             {/* RGPD */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">

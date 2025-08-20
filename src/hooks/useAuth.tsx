@@ -54,9 +54,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Check subscription when user signs in
+        // Update online status and last seen
         if (session?.user) {
           setTimeout(() => {
+            updateOnlineStatus(session.user.id, true);
             refreshSubscription();
           }, 0);
         } else {
@@ -71,19 +72,79 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Check subscription for existing session
+      // Update online status and check subscription for existing session
       if (session?.user) {
         setTimeout(() => {
+          updateOnlineStatus(session.user.id, true);
           refreshSubscription();
         }, 0);
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Set up beforeunload listener to update offline status
+    const handleBeforeUnload = () => {
+      if (user) {
+        updateOnlineStatus(user.id, false);
+      }
+    };
+
+    // Set up visibility change listener
+    const handleVisibilityChange = () => {
+      if (user) {
+        const isOnline = !document.hidden;
+        updateOnlineStatus(user.id, isOnline);
+      }
+    };
+
+    // Set up periodic last seen update
+    const intervalId = setInterval(() => {
+      if (user && !document.hidden) {
+        updateLastSeen(user.id);
+      }
+    }, 30000); // Update every 30 seconds
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [user]);
+
+  const updateOnlineStatus = async (userId: string, isOnline: boolean) => {
+    try {
+      await supabase
+        .from('profiles')
+        .update({ 
+          is_online: isOnline,
+          last_seen: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+    } catch (error) {
+      console.error('Error updating online status:', error);
+    }
+  };
+
+  const updateLastSeen = async (userId: string) => {
+    try {
+      await supabase
+        .from('profiles')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('user_id', userId);
+    } catch (error) {
+      console.error('Error updating last seen:', error);
+    }
+  };
 
   const signOut = async () => {
     try {
+      // Update offline status before signing out
+      if (user) {
+        await updateOnlineStatus(user.id, false);
+      }
       await supabase.auth.signOut({ scope: 'global' });
       window.location.href = '/auth';
     } catch (error) {
