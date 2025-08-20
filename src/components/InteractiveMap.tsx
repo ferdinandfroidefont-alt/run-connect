@@ -1208,15 +1208,15 @@ export const InteractiveMap = () => {
       </div>
       
       {/* All Map Controls - repositioned to left side center */}
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
         {/* Locate Me Button */}
         <Button
           onClick={handleLocateMe}
           size="sm"
           variant="outline"
-          className="w-12 h-12 bg-card/90 backdrop-blur-sm shadow-map-control"
+          className="w-12 h-12 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center"
         >
-          <MapPin className="h-4 w-4" />
+          <MapPin className="h-5 w-5" />
         </Button>
         
         {/* Map Style Selector */}

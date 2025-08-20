@@ -44,7 +44,7 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 bg-map-control/90 backdrop-blur-sm border border-map-control-border rounded-lg flex items-center justify-center shadow-map-control hover:bg-map-control-hover transition-colors"
+        className="w-12 h-12 p-0 bg-map-control/90 backdrop-blur-sm border border-map-control-border rounded-lg flex items-center justify-center shadow-map-control hover:bg-map-control-hover transition-colors"
         title="Styles de carte"
       >
         <Palette size={20} className="text-foreground" />
