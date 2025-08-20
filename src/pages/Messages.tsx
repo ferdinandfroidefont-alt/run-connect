@@ -537,18 +537,27 @@ const Messages = () => {
               {selectedConversation.is_group ? (
                 <>
                   <Avatar 
-                    className="h-8 w-8 cursor-pointer hover:opacity-80"
-                    onClick={() => setShowGroupInfo(true)}
+                    className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => {
+                      console.log('Group avatar clicked, opening group info');
+                      setShowGroupInfo(true);
+                    }}
                   >
                     <AvatarImage src={selectedConversation.group_avatar_url || ""} />
                     <AvatarFallback>
                       <Users className="h-4 w-4" />
                     </AvatarFallback>
                   </Avatar>
-                  <div>
+                  <div 
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => {
+                      console.log('Group name clicked, opening group info');
+                      setShowGroupInfo(true);
+                    }}
+                  >
                     <p className="font-medium text-sm">{selectedConversation.group_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {selectedConversation.group_members?.length || 0} membres
+                      {selectedConversation.group_members?.length || 0} membres • Cliquez pour voir
                     </p>
                   </div>
                 </>
