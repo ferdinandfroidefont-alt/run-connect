@@ -1193,7 +1193,7 @@ export const InteractiveMap = () => {
               setShowNearbySessionsDialog(true);
             }}
           >
-            <MapPin className="h-3 w-3" />
+            📍🏃
           </Button>
         </div>
       )}
