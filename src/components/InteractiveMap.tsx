@@ -1094,43 +1094,46 @@ export const InteractiveMap = () => {
               </PopoverContent>
             </Popover>
 
-            {/* Friends Only Filter - Premium Feature */}
-            {subscriptionInfo?.subscribed ? (
-              <button
-                onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
-                  filters.friends_only
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                )}
-              >
-                <div className="flex items-center gap-1">
-                  <PersonStanding size={16} />
-                  <Bike size={16} />
-                </div>
-                <span className="text-sm font-medium">Amis uniquement</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate('/subscription')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
-              >
-                <div className="flex items-center gap-1">
-                  <PersonStanding size={16} />
-                  <Bike size={16} />
-                </div>
-                <span className="text-sm font-medium">Amis uniquement</span>
-                <Crown size={14} className="text-yellow-500" />
-              </button>
-            )}
-            
-            {/* Club Selector - positioned exactly as shown in reference image */}
-            <div className="w-48 mt-2 -ml-2">
-              <ClubSelector
-                selectedClubId={filters.selected_club_id}
-                onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
-              />
+            {/* Friends Only Filter and Club Selector - stacked vertically */}
+            <div className="flex flex-col gap-2">
+              {/* Friends Only Filter - Premium Feature */}
+              {subscriptionInfo?.subscribed ? (
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
+                    filters.friends_only
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                  )}
+                >
+                  <div className="flex items-center gap-1">
+                    <PersonStanding size={16} />
+                    <Bike size={16} />
+                  </div>
+                  <span className="text-sm font-medium">Amis uniquement</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/subscription')}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+                >
+                  <div className="flex items-center gap-1">
+                    <PersonStanding size={16} />
+                    <Bike size={16} />
+                  </div>
+                  <span className="text-sm font-medium">Amis uniquement</span>
+                  <Crown size={14} className="text-yellow-500" />
+                </button>
+              )}
+              
+              {/* Club Selector positioned directly under "Amis uniquement" */}
+              <div className="w-48">
+                <ClubSelector
+                  selectedClubId={filters.selected_club_id}
+                  onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
+                />
+              </div>
             </div>
           </div>
         </div>
