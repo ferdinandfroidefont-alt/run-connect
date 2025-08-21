@@ -72,10 +72,9 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
         <Button
           onClick={() => setIsOpen(!isOpen)}
           variant="outline"
-          className="bg-card/90 backdrop-blur-sm shadow-map-control h-7 px-2 py-1"
+          className="bg-card/90 backdrop-blur-sm shadow-map-control h-7 w-8 px-1"
         >
-          <Filter className="h-3 w-3 mr-1" />
-          <span className="text-xs">Filtres</span>
+          <Filter className="h-3 w-3" />
           {activeFiltersCount > 0 && (
             <Badge variant="secondary" className="ml-2 h-5 px-1 text-xs">
               {activeFiltersCount}
