@@ -1194,7 +1194,7 @@ export const InteractiveMap = () => {
       )}
 
       {/* Filters - positioned below Nearby Sessions */}
-      <div className="absolute top-44 right-4 z-10">
+      <div className="absolute top-40 right-4 z-10">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
