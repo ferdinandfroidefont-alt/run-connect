@@ -560,7 +560,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           </div>
 
           {/* Club Selection (premium feature) */}
-          <div className="space-y-2">
+          <div className="space-y-2 mt-3 ml-2">
             <div className="flex items-center gap-2">
               <Label className="text-base font-medium">Session pour un club</Label>
               <Crown className="h-4 w-4 text-yellow-500" />
