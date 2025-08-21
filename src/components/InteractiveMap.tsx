@@ -1006,7 +1006,7 @@ export const InteractiveMap = () => {
   };
 
   return (
-    <div className="relative w-full h-screen bg-background">
+    <div className="relative w-full h-[calc(100vh-4rem)] bg-background">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
       
