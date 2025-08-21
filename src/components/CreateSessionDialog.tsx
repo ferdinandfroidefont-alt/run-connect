@@ -196,26 +196,54 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     try {
       setIsSearching(true);
       
-      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-        body: {
-          address: query,
-          type: 'geocode'
-        }
-      });
+      // Utiliser directement l'API Google Maps côté client
+      if (window.google && window.google.maps && window.google.maps.places) {
+        const service = new google.maps.places.PlacesService(document.createElement('div'));
+        
+        const request = {
+          query: query,
+          fields: ['name', 'geometry', 'formatted_address', 'place_id']
+        };
 
-      console.log('Réponse proxy Google Maps:', { data, error });
-
-      if (error) {
-        console.error('Erreur lors de l\'appel au proxy:', error);
-        throw error;
-      }
-
-      if (data?.status === 'OK' && data?.results) {
-        console.log('Résultats trouvés:', data.results.length);
-        setSearchResults(data.results.slice(0, 5)); // Limit to 5 results
+        service.textSearch(request, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            console.log('Résultats trouvés:', results.length);
+            // Convertir au format attendu
+            const formattedResults = results.slice(0, 5).map(result => ({
+              formatted_address: result.formatted_address || result.name,
+              geometry: {
+                location: {
+                  lat: result.geometry?.location?.lat() || 0,
+                  lng: result.geometry?.location?.lng() || 0
+                }
+              },
+              place_id: result.place_id
+            }));
+            setSearchResults(formattedResults);
+          } else {
+            console.log('Aucun résultat ou erreur:', status);
+            setSearchResults([]);
+          }
+          setIsSearching(false);
+        });
       } else {
-        console.log('Aucun résultat ou statut non OK:', data?.status);
-        setSearchResults([]);
+        // Fallback au proxy si Google Maps n'est pas chargé
+        const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+          body: {
+            address: query,
+            type: 'geocode'
+          }
+        });
+
+        if (error) throw error;
+
+        if (data?.status === 'OK' && data?.results) {
+          console.log('Résultats trouvés via proxy:', data.results.length);
+          setSearchResults(data.results.slice(0, 5));
+        } else {
+          setSearchResults([]);
+        }
+        setIsSearching(false);
       }
     } catch (error) {
       console.error('Erreur recherche:', error);
@@ -225,7 +253,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         description: "Impossible de rechercher le lieu. Vérifiez votre connexion.", 
         variant: "destructive" 
       });
-    } finally {
       setIsSearching(false);
     }
   };
