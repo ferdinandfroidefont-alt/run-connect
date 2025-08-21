@@ -1140,7 +1140,7 @@ export const InteractiveMap = () => {
       {/* Route Creation Mode Banner */}
       {isRouteCreationMode && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
+          <div className="bg-blue-600 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
             <span className="text-sm font-medium">
               Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
             </span>
