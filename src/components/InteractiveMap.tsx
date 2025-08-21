@@ -1032,6 +1032,9 @@ export const InteractiveMap = () => {
             
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
+              <div className="cursor-pointer hover:opacity-70 transition-opacity">
+                ❓
+              </div>
               <div 
                 className="text-lg cursor-pointer hover:opacity-70 transition-opacity"
                 onClick={() => setShowProfileDialog(true)}
