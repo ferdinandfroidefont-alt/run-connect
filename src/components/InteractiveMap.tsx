@@ -1126,7 +1126,7 @@ export const InteractiveMap = () => {
             )}
             
             {/* Club Selector - positioned slightly higher and to the right */}
-            <div className="w-48 -mt-1 ml-4">
+            <div className="w-48 mt-1 ml-1">
               <ClubSelector
                 selectedClubId={filters.selected_club_id}
                 onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
