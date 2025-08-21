@@ -822,7 +822,7 @@ const Messages = () => {
               Restez en contact avec la communauté
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             <Button
               onClick={() => setShowNewConversation(true)}
               size="sm"
