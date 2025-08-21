@@ -1101,29 +1101,29 @@ export const InteractiveMap = () => {
                 <button
                   onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9",
+                    "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all shadow-md border h-7",
                     filters.friends_only
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                   )}
                 >
-                  <div className="flex items-center gap-1">
-                    <PersonStanding size={16} />
-                    <Bike size={16} />
+                  <div className="flex items-center gap-0.5">
+                    <PersonStanding size={12} />
+                    <Bike size={12} />
                   </div>
-                  <span className="text-sm font-medium">Amis uniquement</span>
+                  <span className="text-xs font-medium">Amis uniquement</span>
                 </button>
               ) : (
                 <button
                   onClick={() => navigate('/subscription')}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-lg border-2 h-9 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md transition-all shadow-md border h-7 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
                 >
-                  <div className="flex items-center gap-1">
-                    <PersonStanding size={16} />
-                    <Bike size={16} />
+                  <div className="flex items-center gap-0.5">
+                    <PersonStanding size={12} />
+                    <Bike size={12} />
                   </div>
-                  <span className="text-sm font-medium">Amis uniquement</span>
-                  <Crown size={14} className="text-yellow-500" />
+                  <span className="text-xs font-medium">Amis uniquement</span>
+                  <Crown size={10} className="text-yellow-500" />
                 </button>
               )}
               
@@ -1182,14 +1182,13 @@ export const InteractiveMap = () => {
         <div className="absolute top-32 right-4 z-10">
           <Button 
             variant="outline"
-            size="sm"
-            className="bg-white text-black hover:bg-gray-50 shadow-lg border-gray-200"
+            className="bg-white text-black hover:bg-gray-50 shadow-md border-gray-200 h-7 px-2 py-1"
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
           >
-            <MapPin className="h-4 w-4 mr-2" />
-            Séances à proximité
+            <MapPin className="h-3 w-3 mr-1" />
+            <span className="text-xs">Séances à proximité</span>
           </Button>
         </div>
       )}

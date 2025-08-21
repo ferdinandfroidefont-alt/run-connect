@@ -117,20 +117,20 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="w-full justify-between bg-card hover:bg-accent"
+          className="w-full justify-between bg-card hover:bg-accent h-7 px-2 py-1"
         >
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <span className="truncate">
+          <div className="flex items-center gap-1.5">
+            <Users className="h-3 w-3" />
+            <span className="truncate text-xs">
               {selectedClub ? selectedClub.group_name : 'Tous les clubs'}
             </span>
             {selectedClub && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="secondary" className="ml-1 text-xs px-1">
                 {selectedClub.member_count}
               </Badge>
             )}
           </div>
-          <ChevronDown className="h-4 w-4 shrink-0" />
+          <ChevronDown className="h-3 w-3 shrink-0" />
         </Button>
       </PopoverTrigger>
       
