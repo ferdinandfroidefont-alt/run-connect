@@ -587,23 +587,13 @@ export const InteractiveMap = () => {
 
         // Add event listeners for map interactions
         let touchTimer: NodeJS.Timeout | null = null;
-        let clickTimer: NodeJS.Timeout | null = null;
 
-        // Double-click handler for creating sessions
-        map.current.addListener('dblclick', (event: google.maps.MapMouseEvent) => {
-          if (clickTimer) {
-            clearTimeout(clickTimer);
-            clickTimer = null;
-          }
-          handleCreateSessionAtLocation(event.latLng);
-        });
-
-        // Long press handler for mobile
+        // Long press handler for creating sessions (mobile-friendly)
         map.current.addListener('mousedown', (event: google.maps.MapMouseEvent) => {
           touchTimer = setTimeout(() => {
             handleCreateSessionAtLocation(event.latLng);
             touchTimer = null;
-          }, 800); // 800ms for long press
+          }, 600); // 600ms for long press (reduced for better UX)
         });
 
         map.current.addListener('mouseup', () => {
