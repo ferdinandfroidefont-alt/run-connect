@@ -1140,14 +1140,14 @@ export const InteractiveMap = () => {
       {/* Route Creation Mode Banner */}
       {isRouteCreationMode && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
+          <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
             <span className="text-sm font-medium">
               Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
             </span>
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant="secondary"
+                className="bg-white text-blue-600 hover:bg-gray-100 font-medium"
                 onClick={finishRouteCreation}
                 disabled={waypoints.current.length < 2}
               >
