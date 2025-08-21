@@ -141,46 +141,50 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
             <Button
               variant="ghost"
               className={cn(
-                "w-full justify-start h-auto p-3",
+                "w-full justify-start h-16 p-3",
                 !selectedClubId && "bg-accent"
               )}
               onClick={() => handleClubSelect(null)}
             >
-              <div className="flex items-center gap-2 w-full">
+              <div className="flex items-center gap-3 w-full">
                 <div className="flex-shrink-0">
-                  <Users className="h-4 w-4" />
+                  <Users className="h-5 w-5" />
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="font-medium">Tous les clubs</div>
-                  <div className="text-xs text-muted-foreground">
+                <div className="flex-1 text-left min-w-0">
+                  <div className="font-medium text-base leading-tight">Tous les clubs</div>
+                  <div className="text-xs text-muted-foreground leading-tight">
                     Afficher toutes les sessions
                   </div>
                 </div>
                 {!selectedClubId && (
-                  <Check className="h-4 w-4 text-primary" />
+                  <div className="flex-shrink-0">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
                 )}
               </div>
             </Button>
           ) : (
             <Button
               variant="ghost"
-              className="w-full justify-start h-auto p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+              className="w-full justify-start h-16 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
               onClick={() => {
                 navigate('/subscription');
                 setIsOpen(false);
               }}
             >
-              <div className="flex items-center gap-2 w-full">
+              <div className="flex items-center gap-3 w-full">
                 <div className="flex-shrink-0">
-                  <Users className="h-4 w-4 text-yellow-700" />
+                  <Users className="h-5 w-5 text-yellow-700" />
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-yellow-700">Tous les clubs</div>
-                  <div className="text-xs text-yellow-600">
+                <div className="flex-1 text-left min-w-0">
+                  <div className="font-medium text-base leading-tight text-yellow-700">Tous les clubs</div>
+                  <div className="text-xs text-yellow-600 leading-tight">
                     Fonctionnalité premium
                   </div>
                 </div>
-                <Crown className="h-4 w-4 text-yellow-500" />
+                <div className="flex-shrink-0">
+                  <Crown className="h-4 w-4 text-yellow-500" />
+                </div>
               </div>
             </Button>
           )}
@@ -192,12 +196,12 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
                 key={club.id}
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start h-auto p-3",
+                  "w-full justify-start h-16 p-3",
                   selectedClubId === club.id && "bg-accent"
                 )}
                 onClick={() => handleClubSelect(club.id)}
               >
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex items-center gap-3 w-full">
                   <div className="flex-shrink-0">
                     {club.group_avatar_url ? (
                       <img 
@@ -211,15 +215,15 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-medium truncate">{club.group_name}</div>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="font-medium text-base leading-tight truncate">{club.group_name}</div>
                     {club.group_description && (
-                      <div className="text-xs text-muted-foreground truncate">
+                      <div className="text-xs text-muted-foreground leading-tight truncate">
                         {club.group_description}
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge variant="secondary" className="text-xs">
                       {club.member_count}
                     </Badge>
@@ -233,13 +237,13 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
               <Button
                 key={club.id}
                 variant="ghost"
-                className="w-full justify-start h-auto p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
+                className="w-full justify-start h-16 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
                 onClick={() => {
                   navigate('/subscription');
                   setIsOpen(false);
                 }}
               >
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex items-center gap-3 w-full">
                   <div className="flex-shrink-0">
                     {club.group_avatar_url ? (
                       <img 
@@ -253,13 +257,13 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-medium truncate text-yellow-700">{club.group_name}</div>
-                    <div className="text-xs text-yellow-600">
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="font-medium text-base leading-tight truncate text-yellow-700">{club.group_name}</div>
+                    <div className="text-xs text-yellow-600 leading-tight">
                       Fonctionnalité premium
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Crown className="h-4 w-4 text-yellow-500" />
                   </div>
                 </div>
