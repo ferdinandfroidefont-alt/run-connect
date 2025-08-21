@@ -117,20 +117,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="w-full justify-between bg-card hover:bg-accent h-7 px-2 py-1"
+          className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
         >
-          <div className="flex items-center gap-1.5">
-            <Users className="h-3 w-3" />
-            <span className="truncate text-xs">
-              {selectedClub ? selectedClub.group_name : 'Tous les clubs'}
-            </span>
-            {selectedClub && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1">
-                {selectedClub.member_count}
-              </Badge>
-            )}
-          </div>
-          <ChevronDown className="h-3 w-3 shrink-0" />
+          <Users className="h-3 w-3" />
         </Button>
       </PopoverTrigger>
       
