@@ -544,12 +544,11 @@ export default function MySessions() {
 
   return (
     <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
-      {/* Header with Tab Selector */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex bg-muted rounded-lg p-1">
+      <div className="flex items-center justify-end mb-4">
+        <div className="flex gap-2">
           <Button
             onClick={() => setCurrentView('sessions')}
-            variant={currentView === 'sessions' ? 'default' : 'ghost'}
+            variant={currentView === 'sessions' ? 'default' : 'outline'}
             size="sm"
             className="gap-2"
           >
@@ -558,7 +557,7 @@ export default function MySessions() {
           </Button>
           <Button
             onClick={() => setCurrentView('routes')}
-            variant={currentView === 'routes' ? 'default' : 'ghost'}
+            variant={currentView === 'routes' ? 'default' : 'outline'}
             size="sm"
             className="gap-2"
           >
@@ -566,30 +565,6 @@ export default function MySessions() {
             Mes Itinéraires
           </Button>
         </div>
-        
-        {currentView === 'sessions' ? (
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-muted-foreground" />
-            <select 
-              value={filter} 
-              onChange={(e) => setFilter(e.target.value as 'all' | 'upcoming' | 'completed')}
-              className="bg-background border border-border rounded-md px-2 py-1 text-xs"
-            >
-              <option value="all">Toutes</option>
-              <option value="upcoming">À venir</option>
-              <option value="completed">Terminées</option>
-            </select>
-          </div>
-        ) : (
-          <Button
-            onClick={() => navigate('/')}
-            size="sm"
-            className="gap-2"
-          >
-            <Route className="h-4 w-4" />
-            Créer un itinéraire
-          </Button>
-        )}
       </div>
 
       {/* Content Area */}
