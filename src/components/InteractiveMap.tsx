@@ -1204,14 +1204,14 @@ export const InteractiveMap = () => {
             size="sm"
             variant={isRouteCreationMode ? "default" : "outline"}
             className={cn(
-              "w-12 h-12 p-0 shadow-map-control flex items-center justify-center",
+              "w-8 h-7 p-0 shadow-map-control flex items-center justify-center",
               isRouteCreationMode 
                 ? "bg-primary text-primary-foreground hover:bg-primary/90" 
                 : "bg-card/90 backdrop-blur-sm"
             )}
             title="Créer un itinéraire"
           >
-            <PenTool className="h-5 w-5" />
+            <PenTool className="h-3 w-3" />
           </Button>
         )}
         
@@ -1220,9 +1220,9 @@ export const InteractiveMap = () => {
           onClick={handleLocateMe}
           size="sm"
           variant="outline"
-          className="w-12 h-12 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center"
+          className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center"
         >
-          <MapPin className="h-5 w-5" />
+          <MapPin className="h-3 w-3" />
         </Button>
         
         {/* Map Style Selector */}
