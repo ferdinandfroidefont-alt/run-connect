@@ -26,6 +26,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
+import { HelpDialog } from './HelpDialog';
 
 // Declare global google maps types
 declare global {
@@ -100,6 +101,7 @@ export const InteractiveMap = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isRouteCreationMode, setIsRouteCreationMode] = useState(false);
@@ -1032,7 +1034,10 @@ export const InteractiveMap = () => {
             
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
-              <div className="cursor-pointer hover:opacity-70 transition-opacity">
+              <div 
+                className="cursor-pointer hover:opacity-70 transition-opacity"
+                onClick={() => setShowHelpDialog(true)}
+              >
                 ❓
               </div>
               <div 
@@ -1279,6 +1284,12 @@ export const InteractiveMap = () => {
         onClose={() => setShowNearbySessionsDialog(false)}
         userLocation={userLocation}
       />
+      {/* Help Dialog */}
+      <HelpDialog
+        isOpen={showHelpDialog}
+        onClose={() => setShowHelpDialog(false)}
+      />
+
       {/* Route Dialog */}
       <RouteDialog
         isOpen={isRouteDialogOpen}
