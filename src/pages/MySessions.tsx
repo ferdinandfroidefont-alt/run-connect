@@ -544,26 +544,38 @@ export default function MySessions() {
 
   return (
     <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
-      <div className="flex items-center justify-end mb-4">
-        <div className="flex gap-2">
+      <div className="space-y-4 mb-4">
+        <div className="flex items-center justify-center">
           <Button
-            onClick={() => setCurrentView('sessions')}
-            variant={currentView === 'sessions' ? 'default' : 'outline'}
-            size="sm"
-            className="gap-2"
-          >
-            <Users className="h-4 w-4" />
-            Mes Séances
-          </Button>
-          <Button
-            onClick={() => setCurrentView('routes')}
-            variant={currentView === 'routes' ? 'default' : 'outline'}
+            onClick={() => navigate('/')}
             size="sm"
             className="gap-2"
           >
             <Route className="h-4 w-4" />
-            Mes Itinéraires
+            Créer un itinéraire
           </Button>
+        </div>
+        <div className="flex items-center justify-center">
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setCurrentView('sessions')}
+              variant={currentView === 'sessions' ? 'default' : 'outline'}
+              size="sm"
+              className="gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Mes Séances
+            </Button>
+            <Button
+              onClick={() => setCurrentView('routes')}
+              variant={currentView === 'routes' ? 'default' : 'outline'}
+              size="sm"
+              className="gap-2"
+            >
+              <Route className="h-4 w-4" />
+              Mes Itinéraires
+            </Button>
+          </div>
         </div>
       </div>
 
