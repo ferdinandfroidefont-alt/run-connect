@@ -404,10 +404,7 @@ export const ClubInfoDialog = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        onClose();
-                        onEditGroup();
-                      }}
+                      onClick={onEditGroup}
                     >
                       <Settings className="h-4 w-4 mr-1" />
                       Gérer
