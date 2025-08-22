@@ -183,19 +183,19 @@ const Subscription = () => {
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
+                <span>Messages illimités</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500" />
+                <span>Accès au classement</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500" />
                 <span>Sessions illimitées</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
                 <span>Clubs privés</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Statistiques avancées</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Support prioritaire</span>
               </li>
             </ul>
             <Button 
@@ -233,19 +233,19 @@ const Subscription = () => {
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
+                <span>Messages illimités</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500" />
+                <span>Accès au classement</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500" />
                 <span>Sessions illimitées</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
                 <span>Clubs privés</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Statistiques avancées</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Support prioritaire</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
@@ -311,6 +311,18 @@ const Subscription = () => {
         <CardContent>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
+              <h4 className="font-medium">Messages illimités</h4>
+              <p className="text-sm text-muted-foreground">
+                Échangez sans limite (3 messages/jour pour les utilisateurs gratuits)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium">Accès au classement</h4>
+              <p className="text-sm text-muted-foreground">
+                Consultez votre rang et comparez-vous avec vos amis
+              </p>
+            </div>
+            <div className="space-y-2">
               <h4 className="font-medium">Sessions illimitées</h4>
               <p className="text-sm text-muted-foreground">
                 Créez et participez à un nombre illimité de sessions de course
@@ -320,18 +332,6 @@ const Subscription = () => {
               <h4 className="font-medium">Clubs privés</h4>
               <p className="text-sm text-muted-foreground">
                 Créez des clubs privés pour courir avec vos amis
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium">Statistiques avancées</h4>
-              <p className="text-sm text-muted-foreground">
-                Analysez vos performances avec des statistiques détaillées
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium">Support prioritaire</h4>
-              <p className="text-sm text-muted-foreground">
-                Bénéficiez d'un support client prioritaire et réactif
               </p>
             </div>
           </div>
