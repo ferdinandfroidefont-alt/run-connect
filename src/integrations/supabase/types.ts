@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       conversations: {
         Row: {
+          club_code: string | null
           created_at: string
           created_by: string | null
           group_avatar_url: string | null
@@ -28,6 +29,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          club_code?: string | null
           created_at?: string
           created_by?: string | null
           group_avatar_url?: string | null
@@ -40,6 +42,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          club_code?: string | null
           created_at?: string
           created_by?: string | null
           group_avatar_url?: string | null
@@ -604,6 +607,10 @@ export type Database = {
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      generate_club_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_email_from_username: {
         Args: { username_param: string }
