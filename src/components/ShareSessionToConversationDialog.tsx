@@ -127,6 +127,32 @@ export const ShareSessionToConversationDialog = ({
 
     setSharingTo(conversationId);
     try {
+      // Check if this conversation is a group/club
+      const conversation = conversations.find(c => c.id === conversationId);
+      const isClub = conversation?.is_group;
+
+      // If sharing to a club and user owns the session, update session visibility
+      if (isClub && session.organizer_id === user.id) {
+        const { error: sessionError } = await supabase
+          .from('sessions')
+          .update({ 
+            club_id: conversationId,
+            friends_only: false // Ensure it's visible in the club
+          })
+          .eq('id', session.id)
+          .eq('organizer_id', user.id); // Security check
+
+        if (sessionError) {
+          console.error('Error updating session visibility:', sessionError);
+          toast({
+            title: "Erreur",
+            description: "Impossible de modifier la visibilité de la séance",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
       // Create message with session data
       const { error } = await supabase
         .from('messages')
@@ -148,7 +174,9 @@ export const ShareSessionToConversationDialog = ({
 
       toast({
         title: "Séance partagée !",
-        description: "La séance a été envoyée dans la conversation"
+        description: isClub && session.organizer_id === user.id 
+          ? "La séance a été partagée et rendue visible pour le club"
+          : "La séance a été envoyée dans la conversation"
       });
 
       onSessionShared();
