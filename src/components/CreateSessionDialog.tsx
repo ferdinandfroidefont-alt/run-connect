@@ -60,7 +60,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     interval_pace: "", // Allure de chaque fraction
     interval_count: "", // Nombre de fractions
     location_name: "",
-    friends_only: false,
+    friends_only: true, // Toujours activé par défaut
     image_url: "",
     club_id: null
   });
@@ -495,7 +495,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         interval_pace: "",
         interval_count: "",
         location_name: "",
-        friends_only: false,
+    friends_only: true, // Activé par défaut
         image_url: "",
         club_id: null
       });
@@ -906,6 +906,17 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 id="friends_only"
                 checked={formData.friends_only}
                 onCheckedChange={(checked) => {
+                  // Si l'utilisateur essaie de désactiver "amis uniquement" sans premium
+                  if (!checked && !subscriptionInfo?.subscribed) {
+                    toast({
+                      title: "Abonnement requis",
+                      description: "Les séances publiques nécessitent un abonnement premium",
+                      variant: "destructive"
+                    });
+                    onClose();
+                    navigate('/subscription');
+                    return;
+                  }
                   setFormData(prev => ({ ...prev, friends_only: checked }));
                 }}
               />
