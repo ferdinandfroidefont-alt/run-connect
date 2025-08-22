@@ -74,7 +74,19 @@ interface Filter {
   selected_club_id: string | null;
 }
 
-export const InteractiveMap = () => {
+interface InteractiveMapProps {
+  initialLat?: number;
+  initialLng?: number;
+  initialZoom?: number;
+  highlightSessionId?: string;
+}
+
+export const InteractiveMap = ({ 
+  initialLat, 
+  initialLng, 
+  initialZoom, 
+  highlightSessionId 
+}: InteractiveMapProps = {}) => {
   const { user, subscriptionInfo } = useAuth();
   const { setRefreshSessions, setOpenCreateSession, setOpenCreateRoute } = useAppContext();
   const navigate = useNavigate();
@@ -504,6 +516,32 @@ export const InteractiveMap = () => {
     // Fallback simple SVG data URL
     return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiNlZjQ0NDQiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNlZjQ0NDQiLz48L3N2Zz4=';
   };
+
+  // Handle shared session link parameters
+  useEffect(() => {
+    if (isMapLoaded && map.current && initialLat && initialLng) {
+      // Center map on shared session location
+      const sessionLocation = { lat: initialLat, lng: initialLng };
+      map.current.setCenter(sessionLocation);
+      
+      if (initialZoom) {
+        map.current.setZoom(initialZoom);
+      }
+      
+      console.log('Map centered on shared session:', sessionLocation);
+    }
+  }, [isMapLoaded, initialLat, initialLng, initialZoom]);
+
+  // Highlight and open shared session when sessions are loaded
+  useEffect(() => {
+    if (highlightSessionId && sessions.length > 0) {
+      const sharedSession = sessions.find(session => session.id === highlightSessionId);
+      if (sharedSession) {
+        setSelectedSession(sharedSession);
+        console.log('Opened shared session:', sharedSession.title);
+      }
+    }
+  }, [highlightSessionId, sessions]);
 
   // Real-time updates for sessions
   useEffect(() => {

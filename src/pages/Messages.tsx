@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { CreateClubDialog } from "@/components/CreateClubDialog";
@@ -88,6 +89,7 @@ interface Message {
 const Messages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -268,19 +270,34 @@ const Messages = () => {
     }
   };
 
-  // Mark message as read
-  const markMessageAsRead = async (messageId: string) => {
-    if (!user) return;
+  const markAllMessagesAsRead = async () => {
+    if (!user || !selectedConversation) return;
     
     try {
       await supabase
         .from('messages')
         .update({ read_at: new Date().toISOString() })
-        .eq('id', messageId)
-        .neq('sender_id', user.id); // Don't mark own messages as read
+        .eq('conversation_id', selectedConversation.id)
+        .neq('sender_id', user.id)
+        .is('read_at', null);
+        
+      // Refresh messages to show updated read status
+      loadMessages(selectedConversation.id);
+      loadConversations(); // Update unread counts
     } catch (error: any) {
-      console.error('Error marking message as read:', error);
+      console.error('Error marking all messages as read:', error);
     }
+  };
+
+  const handleSessionClick = (session: any) => {
+    // Redirect to map with session location
+    const params = new URLSearchParams({
+      lat: session.location_lat.toString(),
+      lng: session.location_lng.toString(),
+      zoom: '15',
+      sessionId: session.id
+    });
+    navigate(`/?${params.toString()}`);
   };
 
   // Send a message
@@ -679,37 +696,45 @@ const Messages = () => {
                            </span>
                          </div>
                        )}
-                       <div
-                         className={`rounded-lg p-3 ${
-                           isOwnMessage
-                             ? 'bg-primary text-primary-foreground'
-                             : 'bg-muted'
-                         }`}
-                         onClick={() => !isOwnMessage && markMessageAsRead(message.id)}
-                       >
-                          {/* Session sharing */}
-                          {message.message_type === 'session' && message.session && (
-                            <div className="mb-2 p-3 bg-background/50 rounded border">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Calendar className="h-4 w-4 text-primary" />
-                                <span className="font-medium text-sm">{message.session.title}</span>
-                              </div>
-                              <div className="space-y-1 text-xs">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  <span>{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{message.session.location_name}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Users className="h-3 w-3" />
-                                  <span>{message.session.current_participants}/{message.session.max_participants} participants</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                        <div
+                          className={`rounded-lg p-3 ${
+                            isOwnMessage
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                           {/* Session sharing */}
+                           {message.message_type === 'session' && message.session && (
+                             <div 
+                               className="mb-2 p-3 bg-background/50 rounded border cursor-pointer hover:bg-background/70 transition-colors"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleSessionClick(message.session);
+                               }}
+                             >
+                               <div className="flex items-center justify-between mb-2">
+                                 <div className="flex items-center gap-2">
+                                   <Calendar className="h-4 w-4 text-primary" />
+                                   <span className="font-medium text-sm">{message.session.title}</span>
+                                 </div>
+                                 <span className="text-xs text-muted-foreground">Cliquer pour voir sur la carte</span>
+                               </div>
+                               <div className="space-y-1 text-xs">
+                                 <div className="flex items-center gap-1">
+                                   <Clock className="h-3 w-3" />
+                                   <span>{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
+                                 </div>
+                                 <div className="flex items-center gap-1">
+                                   <MapPin className="h-3 w-3" />
+                                   <span>{message.session.location_name}</span>
+                                 </div>
+                                 <div className="flex items-center gap-1">
+                                   <Users className="h-3 w-3" />
+                                   <span>{message.session.current_participants}/{message.session.max_participants} participants</span>
+                                 </div>
+                               </div>
+                             </div>
+                           )}
 
                           {/* File attachment */}
                           {message.file_url && (
