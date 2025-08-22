@@ -67,6 +67,91 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
     }
   }, [user]);
 
+  const handleAcceptClubInvitation = async (notification: Notification) => {
+    if (!user || notification.type !== 'club_invitation') return;
+
+    setLoading(true);
+    try {
+      const { invitation_id } = notification.data;
+
+      // Appeler la fonction pour accepter l'invitation
+      const { data, error } = await supabase.rpc('accept_club_invitation', {
+        invitation_id
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        toast({
+          title: "Succès",
+          description: "Vous avez rejoint le club !"
+        });
+
+        // Marquer la notification comme lue
+        await supabase
+          .from('notifications')
+          .update({ read: true })
+          .eq('id', notification.id);
+
+        fetchNotifications();
+        onSessionUpdated?.();
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Invitation introuvable ou expirée",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error('Error accepting club invitation:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accepter l'invitation",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeclineClubInvitation = async (notification: Notification) => {
+    if (!user || notification.type !== 'club_invitation') return;
+
+    setLoading(true);
+    try {
+      const { invitation_id } = notification.data;
+
+      // Appeler la fonction pour refuser l'invitation
+      const { data, error } = await supabase.rpc('decline_club_invitation', {
+        invitation_id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invitation refusée",
+        description: "L'invitation a été refusée"
+      });
+
+      // Marquer la notification comme lue
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notification.id);
+
+      fetchNotifications();
+    } catch (error: any) {
+      console.error('Error declining club invitation:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de refuser l'invitation",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAcceptRequest = async (notification: Notification) => {
     if (!user || notification.type !== 'session_request') return;
 
@@ -320,34 +405,36 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
               <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''}`}>
                 <CardContent className="p-4">
                    <div className="flex items-start gap-3">
-                     {/* Avatar for session_request and follow_request with user data */}
-                     {(notification.type === 'session_request' || notification.type === 'follow_request') && 
-                      notification.data && (notification.data.follower_avatar || notification.data.requester_avatar) ? (
-                       <div 
-                         className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                         onClick={() => handleOpenProfilePreview(
-                           notification.data.follower_id || notification.data.request_user_id
-                         )}
-                       >
-                         <Avatar className="w-10 h-10">
-                           <AvatarImage 
-                             src={notification.data.follower_avatar || notification.data.requester_avatar} 
-                             alt={notification.data.follower_name || notification.data.requester_name || 'Utilisateur'} 
-                           />
-                           <AvatarFallback>
-                             {(notification.data.follower_name || notification.data.requester_name || 'U').charAt(0).toUpperCase()}
-                           </AvatarFallback>
-                         </Avatar>
-                       </div>
-                     ) : (
-                       <div className="flex-shrink-0">
-                         {notification.type === 'follow_request' ? (
-                           <UserPlus className="h-5 w-5 text-primary" />
-                         ) : (
-                           <User className="h-5 w-5 text-primary" />
-                         )}
-                       </div>
-                     )}
+                    {/* Avatar for session_request, follow_request, and club_invitation with user data */}
+                      {((notification.type === 'session_request' || notification.type === 'follow_request' || notification.type === 'club_invitation') && 
+                       notification.data && (notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar)) ? (
+                        <div 
+                          className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => handleOpenProfilePreview(
+                            notification.data.follower_id || notification.data.request_user_id || notification.data.inviter_id
+                          )}
+                        >
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage 
+                              src={notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar} 
+                              alt={notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || 'Utilisateur'} 
+                            />
+                            <AvatarFallback>
+                              {(notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || 'U').charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                      ) : (
+                        <div className="flex-shrink-0">
+                          {notification.type === 'follow_request' ? (
+                            <UserPlus className="h-5 w-5 text-primary" />
+                          ) : notification.type === 'club_invitation' ? (
+                            <UserPlus className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <User className="h-5 w-5 text-primary" />
+                          )}
+                        </div>
+                      )}
                      
                      <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
@@ -404,7 +491,34 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                          </>
                        )}
 
-                       {notification.type === 'follow_request' && !notification.read && (
+                        {notification.type === 'club_invitation' && !notification.read && (
+                          <>
+                            <Separator className="my-3" />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleAcceptClubInvitation(notification)}
+                                disabled={loading}
+                                className="flex-1"
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Rejoindre
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeclineClubInvitation(notification)}
+                                disabled={loading}
+                                className="flex-1"
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Refuser
+                              </Button>
+                            </div>
+                          </>
+                        )}
+
+                        {notification.type === 'follow_request' && !notification.read && (
                          <>
                            <Separator className="my-3" />
                            <div className="flex gap-2">

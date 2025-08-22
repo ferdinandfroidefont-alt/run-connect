@@ -196,30 +196,37 @@ export const ClubInfoDialog = ({
     setInviteLoading(true);
     try {
       const { error } = await supabase
-        .from('group_members')
+        .from('club_invitations')
         .insert([{
-          conversation_id: conversationId,
-          user_id: userId,
-          is_admin: false
+          club_id: conversationId,
+          inviter_id: user?.id,
+          invited_user_id: userId
         }]);
 
       if (error) throw error;
 
       toast({
         title: "Succès",
-        description: "Membre ajouté au club avec succès"
+        description: "Invitation envoyée avec succès"
       });
 
       setSearchQuery("");
       setSearchResults([]);
       setShowInviteDialog(false);
-      loadGroupMembers();
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible d'ajouter ce membre",
-        variant: "destructive"
-      });
+      if (error.code === '23505') {
+        toast({
+          title: "Information",
+          description: "Cet utilisateur a déjà été invité",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: error.message || "Impossible d'envoyer l'invitation",
+          variant: "destructive"
+        });
+      }
     } finally {
       setInviteLoading(false);
     }

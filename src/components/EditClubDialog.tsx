@@ -135,11 +135,11 @@ export const EditClubDialog = ({
 
     try {
       const { error } = await supabase
-        .from('group_members')
+        .from('club_invitations')
         .insert([{
-          conversation_id: conversationId,
-          user_id: profile.user_id,
-          is_admin: false
+          club_id: conversationId,
+          inviter_id: user?.id,
+          invited_user_id: profile.user_id
         }]);
 
       if (error) throw error;
@@ -147,19 +147,26 @@ export const EditClubDialog = ({
       setShowUserSearch(false);
       setSearchQuery("");
       setSearchResults([]);
-      loadGroupMembers();
       
       toast({
         title: "Succès",
-        description: `${profile.username || profile.display_name} a été ajouté au club`
+        description: `Invitation envoyée à ${profile.username || profile.display_name}`
       });
     } catch (error: any) {
-      console.error('Error adding member:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'ajouter ce membre",
-        variant: "destructive"
-      });
+      console.error('Error sending invitation:', error);
+      if (error.code === '23505') {
+        toast({
+          title: "Information",
+          description: "Cet utilisateur a déjà été invité",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'envoyer l'invitation",
+          variant: "destructive"
+        });
+      }
     }
   };
 
