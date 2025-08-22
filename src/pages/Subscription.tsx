@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Check, Loader2 } from 'lucide-react';
+import { Crown, Check, Loader2, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { DonationDialog } from '@/components/DonationDialog';
 
 const Subscription = () => {
   const { user, session, subscriptionInfo, refreshSubscription } = useAuth();
@@ -263,6 +264,41 @@ const Subscription = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Donation Section */}
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">
+            <Heart className="h-5 w-5 text-red-500" />
+            Soutenez RunConnect
+          </CardTitle>
+          <CardDescription>
+            Vous aimez RunConnect ? Soutenez-nous avec un don pour nous aider à améliorer l'expérience pour tous
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Votre soutien nous aide à maintenir et développer de nouvelles fonctionnalités pour la communauté des coureurs.
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <DonationDialog
+              trigger={
+                <Button className="bg-red-500 hover:bg-red-600 text-white">
+                  <Heart className="h-4 w-4 mr-2" />
+                  Faire un don
+                </Button>
+              }
+            />
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">
+              Don sécurisé via Stripe • Aucune inscription requise • Montant libre
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Features */}
       <Card>

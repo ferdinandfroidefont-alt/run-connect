@@ -14,6 +14,8 @@ import Messages from "./pages/Messages";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
+import DonationSuccess from "./pages/DonationSuccess";
+import DonationCanceled from "./pages/DonationCanceled";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
             <Route path="/profile" element={<Layout><Profile /></Layout>} />
             <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
+            <Route path="/donation-success" element={<DonationSuccess />} />
+            <Route path="/donation-canceled" element={<DonationCanceled />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
