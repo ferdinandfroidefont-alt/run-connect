@@ -306,6 +306,56 @@ export default function MySessions() {
     }
   };
 
+  const handleDeleteSession = async () => {
+    if (!selectedSession) return;
+
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette séance ? Cette action est irréversible.')) {
+      return;
+    }
+
+    try {
+      // Supprimer d'abord les participants de la séance
+      const { error: participantsError } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', selectedSession.id);
+
+      if (participantsError) throw participantsError;
+
+      // Supprimer les demandes de participation
+      const { error: requestsError } = await supabase
+        .from('session_requests')
+        .delete()
+        .eq('session_id', selectedSession.id);
+
+      if (requestsError) throw requestsError;
+
+      // Supprimer la séance
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', selectedSession.id)
+        .eq('organizer_id', user?.id);
+
+      if (error) throw error;
+
+      // Retourner à la liste et mettre à jour l'état local
+      setSelectedSession(null);
+      setSessions(sessions.filter(s => s.id !== selectedSession.id));
+      toast({
+        title: "Succès",
+        description: "Séance supprimée avec succès",
+      });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la suppression de la séance",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getActivityColor = (activityType: string) => {
     const colors: Record<string, string> = {
       'course': 'bg-red-500',
@@ -358,15 +408,26 @@ export default function MySessions() {
             ← Retour aux séances
           </Button>
           {!isEditing ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEditClick}
-              className="flex items-center gap-2"
-            >
-              <Edit className="h-4 w-4" />
-              Modifier
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEditClick}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Modifier
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteSession}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Supprimer
+              </Button>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Button
