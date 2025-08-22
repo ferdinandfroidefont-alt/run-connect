@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      club_invitations: {
+        Row: {
+          club_id: string
+          created_at: string
+          id: string
+          invited_user_id: string
+          inviter_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          id?: string
+          invited_user_id: string
+          inviter_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          id?: string
+          invited_user_id?: string
+          inviter_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_invitations_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           club_code: string | null
@@ -592,6 +630,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_club_invitation: {
+        Args: { invitation_id: string }
+        Returns: boolean
+      }
       accept_follow_request: {
         Args: { follow_id: string }
         Returns: boolean
@@ -607,6 +649,10 @@ export type Database = {
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      decline_club_invitation: {
+        Args: { invitation_id: string }
+        Returns: boolean
       }
       generate_club_code: {
         Args: Record<PropertyKey, never>
