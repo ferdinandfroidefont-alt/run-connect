@@ -1104,34 +1104,21 @@ export const InteractiveMap = () => {
 
             {/* Friends Only Filter and Club Selector - stacked vertically */}
             <div className="flex flex-col gap-2">
-              {/* Friends Only Filter - Premium Feature */}
-              {subscriptionInfo?.subscribed ? (
-                <button
-                  onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
-                  className={cn(
-                    "flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7",
-                    filters.friends_only
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                  )}
-                >
-                  <div className="flex items-center gap-0.5">
-                    <PersonStanding size={12} />
-                    <Bike size={12} />
-                  </div>
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate('/subscription')}
-                  className="flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7 bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200 hover:from-yellow-100 hover:to-orange-100 relative"
-                >
-                  <div className="flex items-center gap-0.5">
-                    <PersonStanding size={12} />
-                    <Bike size={12} />
-                  </div>
-                  <Crown size={8} className="text-yellow-500 absolute -top-1 -right-1" />
-                </button>
-              )}
+              {/* Friends Only Filter */}
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
+                className={cn(
+                  "flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7",
+                  filters.friends_only
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                )}
+              >
+                <div className="flex items-center gap-0.5">
+                  <PersonStanding size={12} />
+                  <Bike size={12} />
+                </div>
+              </button>
               
               {/* Club Selector positioned directly under "Amis uniquement" */}
               <div className="w-48">

@@ -125,16 +125,15 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       
       <PopoverContent className="w-80 p-2" align="start">
         <div className="space-y-1">
-          {/* Option "Tous les clubs" - Premium Feature */}
-          {subscriptionInfo?.subscribed ? (
-            <Button
-              variant="ghost"
-              className={cn(
-                "w-full justify-start h-16 p-3",
-                !selectedClubId && "bg-accent"
-              )}
-              onClick={() => handleClubSelect(null)}
-            >
+          {/* Option "Tous les clubs" */}
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start h-16 p-3",
+              !selectedClubId && "bg-accent"
+            )}
+            onClick={() => handleClubSelect(null)}
+          >
               <div className="flex items-center gap-3 w-full">
                 <div className="flex-shrink-0">
                   <Users className="h-5 w-5" />
@@ -152,112 +151,50 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
                 )}
               </div>
             </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              className="w-full justify-start h-16 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
-              onClick={() => {
-                navigate('/subscription');
-                setIsOpen(false);
-              }}
-            >
-              <div className="flex items-center gap-3 w-full">
-                <div className="flex-shrink-0">
-                  <Users className="h-5 w-5 text-yellow-700" />
-                </div>
-                <div className="flex-1 text-left min-w-0">
-                  <div className="font-medium text-base leading-tight text-yellow-700">Tous les clubs</div>
-                  <div className="text-xs text-yellow-600 leading-tight">
-                    Fonctionnalité premium
-                  </div>
-                </div>
-                <div className="flex-shrink-0">
-                  <Crown className="h-4 w-4 text-yellow-500" />
-                </div>
-              </div>
-            </Button>
-          )}
 
           {/* Liste des clubs */}
           {clubs.map((club) => (
-            subscriptionInfo?.subscribed ? (
-              <Button
-                key={club.id}
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start h-16 p-3",
-                  selectedClubId === club.id && "bg-accent"
-                )}
-                onClick={() => handleClubSelect(club.id)}
-              >
-                <div className="flex items-center gap-3 w-full">
-                  <div className="flex-shrink-0">
-                    {club.group_avatar_url ? (
-                      <img 
-                        src={club.group_avatar_url} 
-                        alt={club.group_name}
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-4 w-4" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="font-medium text-base leading-tight truncate">{club.group_name}</div>
-                    {club.group_description && (
-                      <div className="text-xs text-muted-foreground leading-tight truncate">
-                        {club.group_description}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge variant="secondary" className="text-xs">
-                      {club.member_count}
-                    </Badge>
-                    {selectedClubId === club.id && (
-                      <Check className="h-4 w-4 text-primary" />
-                    )}
-                  </div>
-                </div>
-              </Button>
-            ) : (
-              <Button
-                key={club.id}
-                variant="ghost"
-                className="w-full justify-start h-16 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:from-yellow-100 hover:to-orange-100"
-                onClick={() => {
-                  navigate('/subscription');
-                  setIsOpen(false);
-                }}
-              >
-                <div className="flex items-center gap-3 w-full">
-                  <div className="flex-shrink-0">
-                    {club.group_avatar_url ? (
-                      <img 
-                        src={club.group_avatar_url} 
-                        alt={club.group_name}
-                        className="h-8 w-8 rounded-full object-cover opacity-60"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-yellow-600" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="font-medium text-base leading-tight truncate text-yellow-700">{club.group_name}</div>
-                    <div className="text-xs text-yellow-600 leading-tight">
-                      Fonctionnalité premium
+            <Button
+              key={club.id}
+              variant="ghost"
+              className={cn(
+                "w-full justify-start h-16 p-3",
+                selectedClubId === club.id && "bg-accent"
+              )}
+              onClick={() => handleClubSelect(club.id)}
+            >
+              <div className="flex items-center gap-3 w-full">
+                <div className="flex-shrink-0">
+                  {club.group_avatar_url ? (
+                    <img 
+                      src={club.group_avatar_url} 
+                      alt={club.group_name}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="h-4 w-4" />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Crown className="h-4 w-4 text-yellow-500" />
-                  </div>
+                  )}
                 </div>
-              </Button>
-            )
+                <div className="flex-1 text-left min-w-0">
+                  <div className="font-medium text-base leading-tight truncate">{club.group_name}</div>
+                  {club.group_description && (
+                    <div className="text-xs text-muted-foreground leading-tight truncate">
+                      {club.group_description}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Badge variant="secondary" className="text-xs">
+                    {club.member_count}
+                  </Badge>
+                  {selectedClubId === club.id && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+              </div>
+            </Button>
           ))}
         </div>
       </PopoverContent>

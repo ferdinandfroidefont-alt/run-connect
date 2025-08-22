@@ -559,59 +559,35 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </Select>
           </div>
 
-          {/* Club Selection (premium feature) */}
+          {/* Club Selection */}
           <div className="space-y-2 mt-3 ml-2">
             <div className="flex items-center gap-2">
               <Label className="text-base font-medium">Session pour un club</Label>
-              <Crown className="h-4 w-4 text-yellow-500" />
             </div>
             
-            {subscriptionInfo?.subscribed ? (
-              <>
-                <ClubSelector
-                  selectedClubId={formData.club_id}
-                  onClubSelect={(clubId) => setFormData(prev => ({ ...prev, club_id: clubId }))}
-                />
-                {formData.club_id ? (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-blue-700">
-                      <Users className="h-4 w-4" />
-                      <span className="text-sm font-medium">Session privée pour le club</span>
-                    </div>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Seuls les membres de ce club pourront voir et rejoindre cette séance
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm font-medium">Session publique</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Cette séance sera visible par tous les utilisateurs
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-center gap-2 text-yellow-700 mb-2">
+            <ClubSelector
+              selectedClubId={formData.club_id}
+              onClubSelect={(clubId) => setFormData(prev => ({ ...prev, club_id: clubId }))}
+            />
+            {formData.club_id ? (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-700">
                   <Users className="h-4 w-4" />
-                  <span className="text-sm font-medium">Fonctionnalité Premium</span>
-                  <Crown className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm font-medium">Session privée pour le club</span>
                 </div>
-                <p className="text-xs text-yellow-600 mb-3">
-                  Créez des sessions privées pour vos clubs avec un abonnement premium
+                <p className="text-xs text-blue-600 mt-1">
+                  Seuls les membres de ce club pourront voir et rejoindre cette séance
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/subscription')}
-                  className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                >
-                  Découvrir Premium
-                </Button>
+              </div>
+            ) : (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm font-medium">Session publique</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Cette séance sera visible par tous les utilisateurs
+                </p>
               </div>
             )}
           </div>
