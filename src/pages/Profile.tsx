@@ -15,6 +15,7 @@ import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Be
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
+import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
 
 interface Profile {
   username: string;
@@ -750,6 +751,31 @@ const Profile = () => {
                   {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
                 </Button>
               </div>
+            </div>
+
+            {/* Contacts Permission */}
+            <ContactsPermissionButton />
+
+            {/* Contacts Access and Friend Suggestions */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Suggestions d'amis
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Voir des suggestions basées sur vos contacts et amis d'amis
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/messages')}
+              >
+                Voir suggestions
+              </Button>
             </div>
 
             {/* Share Profile */}
