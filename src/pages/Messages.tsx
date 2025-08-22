@@ -1038,6 +1038,8 @@ const Messages = () => {
           groupName={groupInfoData?.group_name || ""}
           groupDescription={groupInfoData?.group_description || null}
           groupAvatarUrl={groupInfoData?.group_avatar_url || null}
+          clubCode={groupInfoData?.club_code || ""}
+          createdBy={groupInfoData?.created_by || ""}
           isAdmin={groupInfoData?.created_by === user?.id}
           onEditGroup={() => {
             setShowGroupInfo(false);

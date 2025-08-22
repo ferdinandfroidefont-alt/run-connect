@@ -16,7 +16,8 @@ import {
   UserMinus, 
   Trash2, 
   Search,
-  AlertTriangle
+  AlertTriangle,
+  Copy
 } from "lucide-react";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import {
@@ -50,6 +51,8 @@ interface ClubInfoDialogProps {
   groupDescription: string | null;
   groupAvatarUrl: string | null;
   isAdmin: boolean;
+  clubCode: string;
+  createdBy: string;
   onEditGroup: () => void;
 }
 
@@ -61,6 +64,8 @@ export const ClubInfoDialog = ({
   groupDescription,
   groupAvatarUrl,
   isAdmin,
+  clubCode,
+  createdBy,
   onEditGroup
 }: ClubInfoDialogProps) => {
   console.log('🔍 GroupInfoDialog render - DEBUGGING:');
@@ -336,6 +341,42 @@ export const ClubInfoDialog = ({
                 </p>
               </div>
             </div>
+
+            {/* Club Code - only visible to creator */}
+            {createdBy === user?.id && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-primary">Code du club (privé)</p>
+                    <p className="text-xs text-muted-foreground mb-2">Partagez ce code pour inviter des membres</p>
+                    <Badge variant="outline" className="font-mono">
+                      {clubCode}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(clubCode);
+                        toast({
+                          title: "Code copié !",
+                          description: "Le code du club a été copié dans le presse-papiers"
+                        });
+                      } catch (error) {
+                        toast({
+                          title: "Erreur",
+                          description: "Impossible de copier le code",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                  >
+                    <span className="text-xs">Copier</span>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Members List */}
             <div>
