@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OnlineStatus } from "@/components/OnlineStatus";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -536,24 +537,27 @@ const Messages = () => {
 
           {/* Users list */}
           <div className="px-4">
-            {availableUsers.map((profile) => (
-              <div
-                key={profile.user_id}
-                onClick={() => startConversation(profile.user_id)}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={profile.avatar_url || ""} />
-                  <AvatarFallback>
-                    {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{profile.username || profile.display_name}</p>
-                  <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                </div>
-              </div>
-            ))}
+             {availableUsers.map((profile) => (
+               <div
+                 key={profile.user_id}
+                 onClick={() => startConversation(profile.user_id)}
+                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
+               >
+                 <div className="relative">
+                   <Avatar className="h-10 w-10">
+                     <AvatarImage src={profile.avatar_url || ""} />
+                     <AvatarFallback>
+                       {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
+                     </AvatarFallback>
+                   </Avatar>
+                   <OnlineStatus userId={profile.user_id} className="w-3 h-3" />
+                 </div>
+                 <div>
+                   <p className="font-medium">{profile.username || profile.display_name}</p>
+                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                 </div>
+               </div>
+             ))}
           </div>
         </div>
       </div>
@@ -622,12 +626,15 @@ const Messages = () => {
                 </>
               ) : (
                 <>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                    <AvatarFallback>
-                      {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
+                      <AvatarFallback>
+                        {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} />
+                  </div>
                   <div>
                     <p className="font-medium text-sm">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
@@ -653,22 +660,25 @@ const Messages = () => {
                     className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`max-w-[70%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
-                      {!isOwnMessage && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <Avatar 
-                            className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                            onClick={() => setSelectedProfileUserId(message.sender.user_id)}
-                          >
-                            <AvatarImage src={message.sender.avatar_url || ""} />
-                            <AvatarFallback>
-                              {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs text-muted-foreground">
-                            {message.sender.username || message.sender.display_name}
-                          </span>
-                        </div>
-                      )}
+                       {!isOwnMessage && (
+                         <div className="flex items-center gap-2 mb-1">
+                           <div className="relative">
+                             <Avatar 
+                               className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                               onClick={() => setSelectedProfileUserId(message.sender.user_id)}
+                             >
+                               <AvatarImage src={message.sender.avatar_url || ""} />
+                               <AvatarFallback>
+                                 {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
+                               </AvatarFallback>
+                             </Avatar>
+                             <OnlineStatus userId={message.sender.user_id} className="w-2 h-2" />
+                           </div>
+                           <span className="text-xs text-muted-foreground">
+                             {message.sender.username || message.sender.display_name}
+                           </span>
+                         </div>
+                       )}
                        <div
                          className={`rounded-lg p-3 ${
                            isOwnMessage
@@ -876,39 +886,42 @@ const Messages = () => {
             ) : (
                 <div className="divide-y divide-border">
                 {conversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    className="flex items-center gap-3 p-4 hover:bg-muted cursor-pointer"
-                  >
-                    <Avatar 
-                      className="h-12 w-12 cursor-pointer"
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         if (conversation.is_group) {
-                           setSelectedConversation(conversation);
-                           setGroupInfoData(conversation);
-                           setShowGroupInfo(true);
-                         } else {
-                           setSelectedProfileUserId(conversation.other_participant?.user_id || null);
-                         }
-                       }}
-                    >
-                      {conversation.is_group ? (
-                        <>
-                          <AvatarImage src={conversation.group_avatar_url || ""} />
-                          <AvatarFallback>
-                            <Users className="h-6 w-6" />
-                          </AvatarFallback>
-                        </>
-                      ) : (
-                        <>
-                          <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                          <AvatarFallback>
-                            {(conversation.other_participant?.username || conversation.other_participant?.display_name || "U").charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </>
-                      )}
-                    </Avatar>
+                   <div
+                     key={conversation.id}
+                     className="flex items-center gap-3 p-4 hover:bg-muted cursor-pointer"
+                   >
+                     <div className="relative">
+                       <Avatar 
+                         className="h-12 w-12 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (conversation.is_group) {
+                              setSelectedConversation(conversation);
+                              setGroupInfoData(conversation);
+                              setShowGroupInfo(true);
+                            } else {
+                              setSelectedProfileUserId(conversation.other_participant?.user_id || null);
+                            }
+                          }}
+                       >
+                         {conversation.is_group ? (
+                           <>
+                             <AvatarImage src={conversation.group_avatar_url || ""} />
+                             <AvatarFallback>
+                               <Users className="h-6 w-6" />
+                             </AvatarFallback>
+                           </>
+                         ) : (
+                           <>
+                             <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                             <AvatarFallback>
+                               {(conversation.other_participant?.username || conversation.other_participant?.display_name || "U").charAt(0).toUpperCase()}
+                             </AvatarFallback>
+                           </>
+                         )}
+                       </Avatar>
+                       {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
+                     </div>
                     <div 
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => {

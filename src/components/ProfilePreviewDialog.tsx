@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OnlineStatus } from "./OnlineStatus";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -41,6 +42,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
+  const [areFriends, setAreFriends] = useState(false);
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -50,6 +52,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       fetchProfile();
       if (!isOwnProfile) {
         checkFollowStatus();
+        checkFriendStatus();
       }
       fetchFollowCounts();
     }
@@ -98,6 +101,22 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
+  const checkFriendStatus = async () => {
+    if (!user || !userId || isOwnProfile) return;
+
+    try {
+      const { data: friendsData } = await supabase.rpc('are_users_friends', {
+        user1_id: user.id,
+        user2_id: userId
+      });
+      
+      setAreFriends(friendsData || false);
+    } catch (error) {
+      console.error('Error checking friend status:', error);
+      setAreFriends(false);
+    }
+  };
+
   const fetchFollowCounts = async () => {
     if (!userId) return;
 
@@ -140,6 +159,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
         setIsFollowing(false);
         setFollowerCount(prev => Math.max(0, prev - 1));
+        setAreFriends(false); // No longer friends if we unfollowed
         toast({ title: "Vous ne suivez plus cette personne" });
       } else {
         // Follow
@@ -155,7 +175,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
         setIsFollowing(true);
         setFollowerCount(prev => prev + 1);
+        setAreFriends(false); // Reset until we can check again
         toast({ title: "Vous suivez maintenant cette personne" });
+        
+        // Check if we're now friends after following
+        setTimeout(() => {
+          checkFriendStatus();
+        }, 500);
       }
     } catch (error: any) {
       toast({
@@ -191,12 +217,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             {/* Profile Header */}
             <Card>
               <CardContent className="flex flex-col items-center py-6">
-                <Avatar className="h-20 w-20 mb-4">
-                  <AvatarImage src={profile.avatar_url || ""} />
-                  <AvatarFallback className="text-lg">
-                    {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative mb-4">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={profile.avatar_url || ""} />
+                    <AvatarFallback className="text-lg">
+                      {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!isOwnProfile && areFriends && <OnlineStatus userId={profile.user_id} />}
+                </div>
                 
                 <div className="flex items-center gap-2 mb-2">
                   <h2 className="text-xl font-semibold">
