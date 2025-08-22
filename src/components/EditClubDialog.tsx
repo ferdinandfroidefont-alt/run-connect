@@ -230,6 +230,11 @@ export const EditClubDialog = ({
 
   useEffect(() => {
     if (isOpen) {
+      console.log('🔍 EditClubDialog debug - DEBUGGING:');
+      console.log('- createdBy:', createdBy);
+      console.log('- user?.id:', user?.id);
+      console.log('- clubCode:', clubCode);
+      console.log('- createdBy === user?.id:', createdBy === user?.id);
       setGroupName(initialGroupName);
       setGroupDescription(initialGroupDescription || "");
       loadGroupMembers();
