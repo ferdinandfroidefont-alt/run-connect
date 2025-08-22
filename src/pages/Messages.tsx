@@ -462,6 +462,10 @@ const Messages = () => {
             other_participant: otherParticipant
           });
           loadMessages(existingConv.id);
+          // Marquer les messages comme lus automatiquement
+          setTimeout(() => {
+            markAllMessagesAsRead();
+          }, 100);
         }
       } else {
         // Create new conversation
@@ -957,13 +961,17 @@ const Messages = () => {
                        </Avatar>
                        {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
                      </div>
-                    <div 
-                      className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => {
-                        setSelectedConversation(conversation);
-                        loadMessages(conversation.id);
-                      }}
-                    >
+                     <div 
+                       className="flex-1 min-w-0 cursor-pointer"
+                       onClick={() => {
+                         setSelectedConversation(conversation);
+                         loadMessages(conversation.id);
+                         // Marquer les messages comme lus automatiquement
+                         setTimeout(() => {
+                           markAllMessagesAsRead();
+                         }, 100);
+                       }}
+                     >
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-sm truncate">
                           {conversation.is_group 
@@ -1018,6 +1026,10 @@ const Messages = () => {
             if (clubConv) {
               setSelectedConversation(clubConv);
               loadMessages(clubId);
+              // Marquer les messages comme lus automatiquement
+              setTimeout(() => {
+                markAllMessagesAsRead();
+              }, 100);
             }
             setShowUserSearch(false);
           }}
