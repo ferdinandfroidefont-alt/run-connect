@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from '@/contexts/AppContext';
 
 interface UserSession {
   id: string;
@@ -61,6 +62,7 @@ export default function MySessions() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { openCreateRoute } = useAppContext();
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -547,7 +549,13 @@ export default function MySessions() {
       <div className="space-y-4 mb-4">
         <div className="flex items-center justify-center">
           <Button
-            onClick={() => navigate('/')}
+            onClick={() => {
+              navigate('/');
+              // Attendre un peu que la navigation se fasse, puis ouvrir le mode création
+              setTimeout(() => {
+                openCreateRoute();
+              }, 100);
+            }}
             size="sm"
             className="gap-2"
           >

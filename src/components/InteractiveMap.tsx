@@ -76,7 +76,7 @@ interface Filter {
 
 export const InteractiveMap = () => {
   const { user, subscriptionInfo } = useAuth();
-  const { setRefreshSessions, setOpenCreateSession } = useAppContext();
+  const { setRefreshSessions, setOpenCreateSession, setOpenCreateRoute } = useAppContext();
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
@@ -136,7 +136,8 @@ export const InteractiveMap = () => {
   useEffect(() => {
     setRefreshSessions(() => loadSessions);
     setOpenCreateSession(() => setIsCreateDialogOpen(true));
-  }, [setRefreshSessions, setOpenCreateSession]);
+    setOpenCreateRoute(handleCreateRoute);
+  }, [setRefreshSessions, setOpenCreateSession, setOpenCreateRoute]);
 
   // Load sessions from database
   const loadSessions = async () => {

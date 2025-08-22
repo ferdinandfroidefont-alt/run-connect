@@ -5,6 +5,8 @@ interface AppContextType {
   setRefreshSessions: (refresh: () => void) => void;
   openCreateSession: () => void;
   setOpenCreateSession: (openFunction: () => void) => void;
+  openCreateRoute: () => void;
+  setOpenCreateRoute: (openFunction: () => void) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -24,6 +26,7 @@ interface AppProviderProps {
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [refreshSessions, setRefreshSessionsState] = useState<() => void>(() => () => {});
   const [openCreateSession, setOpenCreateSessionState] = useState<() => void>(() => () => {});
+  const [openCreateRoute, setOpenCreateRouteState] = useState<() => void>(() => () => {});
 
   const setRefreshSessions = useCallback((refresh: () => void) => {
     setRefreshSessionsState(() => refresh);
@@ -33,12 +36,18 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     setOpenCreateSessionState(() => openFunction);
   }, []);
 
+  const setOpenCreateRoute = useCallback((openFunction: () => void) => {
+    setOpenCreateRouteState(() => openFunction);
+  }, []);
+
   return (
     <AppContext.Provider value={{ 
       refreshSessions, 
       setRefreshSessions, 
       openCreateSession,
-      setOpenCreateSession 
+      setOpenCreateSession,
+      openCreateRoute,
+      setOpenCreateRoute
     }}>
       {children}
     </AppContext.Provider>
