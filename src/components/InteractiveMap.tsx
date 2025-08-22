@@ -183,9 +183,52 @@ export const InteractiveMap = () => {
 
       if (error) throw error;
       
+      // Filter sessions based on visibility rules
+      let visibleSessions = data || [];
+      
+      if (user) {
+        // Get user's friends for visibility checks
+        const { data: userFriends } = await supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', user.id)
+          .eq('status', 'accepted');
+
+        const friendIds = userFriends?.map(f => f.following_id) || [];
+        
+        // Get user's clubs for visibility checks
+        const { data: userClubs } = await supabase
+          .from('group_members')
+          .select('conversation_id')
+          .eq('user_id', user.id);
+
+        const clubIds = userClubs?.map(c => c.conversation_id) || [];
+
+        // Filter sessions based on visibility rules
+        visibleSessions = visibleSessions.filter(session => {
+          // User can always see their own sessions
+          if (session.organizer_id === user.id) {
+            return true;
+          }
+
+          // Sessions for specific clubs - only visible to club members
+          if (session.club_id) {
+            return clubIds.includes(session.club_id);
+          }
+
+          // Sessions marked as friends_only - only visible to friends
+          if (session.friends_only) {
+            return friendIds.includes(session.organizer_id);
+          }
+
+          // Public sessions (not friends_only and no club_id) - visible to everyone
+          return !session.friends_only && !session.club_id;
+        });
+      }
+      
       // Get organizer profiles and routes for all sessions
       const sessionsWithProfiles = [];
-      for (const session of data || []) {
+      for (const session of visibleSessions) {
         // Get organizer profile
         const { data: profile } = await supabase
           .from('profiles')
