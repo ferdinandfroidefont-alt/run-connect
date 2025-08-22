@@ -22,7 +22,25 @@ export const useContacts = () => {
   const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
-    setIsNative(Capacitor.isNativePlatform());
+    const checkNativeStatus = async () => {
+      const native = Capacitor.isNativePlatform();
+      console.log('🔍 Capacitor native check:', native);
+      console.log('🔍 Platform:', Capacitor.getPlatform());
+      setIsNative(native);
+      
+      // Vérifier les permissions au démarrage si on est sur mobile
+      if (native) {
+        try {
+          const result = await Contacts.checkPermissions();
+          console.log('🔍 Initial contacts permission check:', result);
+          setHasPermission(result.contacts === 'granted');
+        } catch (error) {
+          console.error('Error checking initial contacts permissions:', error);
+        }
+      }
+    };
+    
+    checkNativeStatus();
   }, []);
 
   const checkPermissions = async () => {
@@ -40,15 +58,26 @@ export const useContacts = () => {
   };
 
   const requestPermissions = async () => {
-    if (!isNative) return false;
+    console.log('🔍 Requesting contacts permissions...');
+    console.log('🔍 isNative:', isNative);
+    console.log('🔍 Platform:', Capacitor.getPlatform());
+    
+    if (!isNative) {
+      console.log('❌ Not on native platform');
+      return false;
+    }
     
     try {
+      console.log('🔍 Calling Contacts.requestPermissions()...');
       const result = await Contacts.requestPermissions();
+      console.log('🔍 Permission result:', result);
+      
       const granted = result.contacts === 'granted';
       setHasPermission(granted);
+      console.log('🔍 Permission granted:', granted);
       return granted;
     } catch (error) {
-      console.error('Error requesting contacts permissions:', error);
+      console.error('❌ Error requesting contacts permissions:', error);
       return false;
     }
   };

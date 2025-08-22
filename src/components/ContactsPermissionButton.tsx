@@ -8,6 +8,9 @@ export const ContactsPermissionButton = () => {
   const { toast } = useToast();
 
   const handleRequestPermission = async () => {
+    console.log('🔍 ContactsPermissionButton - handleRequestPermission called');
+    console.log('🔍 isNative:', isNative);
+    
     if (!isNative) {
       toast({
         title: "Fonction mobile uniquement",
@@ -18,7 +21,10 @@ export const ContactsPermissionButton = () => {
     }
 
     try {
+      console.log('🔍 Requesting permissions...');
       const granted = await requestPermissions();
+      console.log('🔍 Permission granted:', granted);
+      
       if (granted) {
         toast({
           title: "Contacts autorisés",
@@ -32,10 +38,10 @@ export const ContactsPermissionButton = () => {
         });
       }
     } catch (error) {
-      console.error('Error requesting contacts permission:', error);
+      console.error('❌ Error requesting contacts permission:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'accéder aux contacts",
+        description: "Impossible d'accéder aux contacts. Vérifiez que vous êtes sur l'application mobile.",
         variant: "destructive"
       });
     }
