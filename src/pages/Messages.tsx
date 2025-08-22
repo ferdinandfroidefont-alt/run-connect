@@ -17,6 +17,7 @@ import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { 
   MessageCircle, 
   Users, 
@@ -117,6 +118,9 @@ const Messages = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Profile navigation
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
   // Load conversations
   const loadConversations = async () => {
@@ -564,12 +568,15 @@ const Messages = () => {
                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
                >
                  <div className="relative">
-                   <Avatar className="h-10 w-10">
-                     <AvatarImage src={profile.avatar_url || ""} />
-                     <AvatarFallback>
-                       {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
-                     </AvatarFallback>
-                   </Avatar>
+                    <Avatar 
+                      className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigateToProfile(profile.user_id)}
+                    >
+                      <AvatarImage src={profile.avatar_url || ""} />
+                      <AvatarFallback>
+                        {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                    <OnlineStatus userId={profile.user_id} className="w-3 h-3" />
                  </div>
                  <div>
@@ -683,10 +690,10 @@ const Messages = () => {
                        {!isOwnMessage && (
                          <div className="flex items-center gap-2 mb-1">
                            <div className="relative">
-                             <Avatar 
-                               className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                               onClick={() => setSelectedProfileUserId(message.sender.user_id)}
-                             >
+                              <Avatar 
+                                className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                onClick={() => navigateToProfile(message.sender.user_id)}
+                              >
                                <AvatarImage src={message.sender.avatar_url || ""} />
                                <AvatarFallback>
                                  {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
@@ -921,16 +928,16 @@ const Messages = () => {
                      <div className="relative">
                        <Avatar 
                          className="h-12 w-12 cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (conversation.is_group) {
-                              setSelectedConversation(conversation);
-                              setGroupInfoData(conversation);
-                              setShowGroupInfo(true);
-                            } else {
-                              setSelectedProfileUserId(conversation.other_participant?.user_id || null);
-                            }
-                          }}
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             if (conversation.is_group) {
+                               setSelectedConversation(conversation);
+                               setGroupInfoData(conversation);
+                               setShowGroupInfo(true);
+                             } else {
+                               conversation.other_participant && navigateToProfile(conversation.other_participant.user_id);
+                             }
+                           }}
                        >
                          {conversation.is_group ? (
                            <>
@@ -1078,8 +1085,8 @@ const Messages = () => {
 
         {/* Profile Preview Dialog */}
         <ProfilePreviewDialog
-          userId={selectedProfileUserId}
-          onClose={() => setSelectedProfileUserId(null)}
+          userId={showProfilePreview ? selectedUserId : null}
+          onClose={closeProfilePreview}
         />
       </div>
     </div>

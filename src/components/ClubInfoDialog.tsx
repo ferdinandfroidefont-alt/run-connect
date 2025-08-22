@@ -20,6 +20,7 @@ import {
   Copy
 } from "lucide-react";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,10 +78,9 @@ export const ClubInfoDialog = ({
   console.log('- isAdmin:', isAdmin);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showProfilePreview, setShowProfilePreview] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
@@ -160,10 +160,7 @@ export const ClubInfoDialog = ({
   };
 
   const handleMemberClick = (member: GroupMember) => {
-    if (member.user_id === user?.id) return; // Don't show preview for self
-    
-    setSelectedUserId(member.user_id);
-    setShowProfilePreview(true);
+    navigateToProfile(member.user_id);
   };
 
   // Search for users to invite
@@ -438,8 +435,8 @@ export const ClubInfoDialog = ({
                     >
                       <div className="relative">
                         <Avatar 
-                          className="h-10 w-10 cursor-pointer"
-                          onClick={() => handleMemberClick(member)}
+                          className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => navigateToProfile(member.user_id)}
                         >
                           <AvatarImage src={member.avatar_url || ""} />
                           <AvatarFallback>
@@ -519,10 +516,7 @@ export const ClubInfoDialog = ({
       {/* Profile Preview Dialog */}
       <ProfilePreviewDialog
         userId={showProfilePreview ? selectedUserId : null}
-        onClose={() => {
-          setShowProfilePreview(false);
-          setSelectedUserId(null);
-        }}
+        onClose={closeProfilePreview}
       />
 
       {/* Invite Members Dialog */}

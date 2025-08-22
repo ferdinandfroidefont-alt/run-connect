@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 
 interface LeaderboardUser {
   user_id: string;
@@ -31,6 +33,7 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
   const navigate = useNavigate();
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
   useEffect(() => {
     if (user) {
@@ -258,7 +261,10 @@ const Leaderboard = () => {
               <div className="w-8 flex justify-center">
                 {getRankIcon(item.rank)}
               </div>
-              <Avatar className={`h-14 w-14 ${getRankBorderColor(item.user_rank)} transition-all duration-300 hover:scale-105`}>
+              <Avatar 
+                className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
+                onClick={() => navigateToProfile(item.user_id)}
+              >
                 <AvatarImage src={item.profile?.avatar_url} />
                 <AvatarFallback className="text-lg font-bold">
                   {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
@@ -495,6 +501,12 @@ const Leaderboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Profile Preview Dialog */}
+      <ProfilePreviewDialog
+        userId={showProfilePreview ? selectedUserId : null}
+        onClose={closeProfilePreview}
+      />
     </div>
   );
 };
