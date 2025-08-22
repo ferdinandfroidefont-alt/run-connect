@@ -7,6 +7,9 @@ export const ContactsPermissionButton = () => {
   const { isNative, hasPermission, requestPermissions } = useContacts();
   const { toast } = useToast();
 
+  // Debug logs
+  console.log('🔍 ContactsPermissionButton render - isNative:', isNative, 'hasPermission:', hasPermission);
+
   const handleRequestPermission = async () => {
     console.log('🔍 ContactsPermissionButton - handleRequestPermission called');
     console.log('🔍 isNative:', isNative);

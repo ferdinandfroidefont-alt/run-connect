@@ -23,9 +23,21 @@ export const useContacts = () => {
 
   useEffect(() => {
     const checkNativeStatus = async () => {
-      const native = Capacitor.isNativePlatform();
-      console.log('🔍 Capacitor native check:', native);
-      console.log('🔍 Platform:', Capacitor.getPlatform());
+      // Détection alternative pour le développement Lovable
+      const isCapacitorNative = Capacitor.isNativePlatform();
+      const platform = Capacitor.getPlatform();
+      const isLikelyMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasCapacitorAPI = !!(window as any).Capacitor;
+      
+      // Si on a l'API Capacitor ET qu'on est sur un appareil mobile, on considère qu'on est natif
+      const native = isCapacitorNative || (hasCapacitorAPI && isLikelyMobile && (platform === 'ios' || platform === 'android'));
+      
+      console.log('🔍 Capacitor native check:', isCapacitorNative);
+      console.log('🔍 Platform:', platform);
+      console.log('🔍 User agent suggests mobile:', isLikelyMobile);
+      console.log('🔍 Has Capacitor API:', hasCapacitorAPI);
+      console.log('🔍 Final native detection:', native);
+      
       setIsNative(native);
       
       // Vérifier les permissions au démarrage si on est sur mobile
