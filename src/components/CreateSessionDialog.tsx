@@ -606,41 +606,80 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </p>
           </div>
 
-          {/* Club Selection - Deuxième filtre */}
-          <div className="border rounded-lg p-4 bg-blue-50/50 border-blue-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-600" />
-                <Label htmlFor="club_mode" className="text-sm font-medium">
-                  Clubs uniquement
-                </Label>
-              </div>
-              <Switch
-                id="club_mode"
-                checked={!!formData.club_id}
-                onCheckedChange={(checked) => {
-                  if (!checked) {
-                    setFormData(prev => ({ ...prev, club_id: null }));
-                  }
-                }}
-              />
-            </div>
-            
-            {!!formData.club_id && (
-              <div className="mt-3">
-                <ClubSelector
-                  selectedClubId={formData.club_id}
-                  onClubSelect={(clubId) => setFormData(prev => ({ ...prev, club_id: clubId }))}
-                />
-              </div>
-            )}
-            
-            <p className="text-xs text-blue-600 mt-2">
-              {formData.club_id 
-                ? "Seuls les membres de ce club pourront voir cette séance" 
-                : "Cette séance sera visible par tous les amis"}
-            </p>
-          </div>
+           {/* Club Selection - Deuxième filtre */}
+           <div className="border rounded-lg p-4 bg-blue-50/50 border-blue-200">
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-2">
+                 <Users className="h-4 w-4 text-blue-600" />
+                 <Label htmlFor="club_mode" className="text-sm font-medium">
+                   Clubs uniquement
+                 </Label>
+               </div>
+               <Switch
+                 id="club_mode"
+                 checked={!!formData.club_id}
+                 onCheckedChange={async (checked) => {
+                   if (!checked) {
+                     setFormData(prev => ({ ...prev, club_id: null }));
+                   } else {
+                     // Si on active le switch mais qu'aucun club n'est sélectionné,
+                     // on doit sélectionner le premier club disponible
+                     if (!formData.club_id) {
+                       // Charger les clubs de l'utilisateur pour sélectionner le premier
+                       try {
+                         const { data: memberData } = await supabase
+                           .from('group_members')
+                           .select('conversation_id')
+                           .eq('user_id', user?.id)
+                           .limit(1);
+                         
+                         if (memberData && memberData.length > 0) {
+                           const firstClubId = memberData[0].conversation_id;
+                           setFormData(prev => ({ ...prev, club_id: firstClubId }));
+                         } else {
+                           // Pas de clubs disponibles, on désactive le switch
+                           toast({
+                             title: "Aucun club",
+                             description: "Vous devez être membre d'un club pour utiliser cette option",
+                             variant: "destructive"
+                           });
+                         }
+                       } catch (error) {
+                         console.error('Erreur lors du chargement des clubs:', error);
+                         toast({
+                           title: "Erreur",
+                           description: "Impossible de charger vos clubs",
+                           variant: "destructive"
+                         });
+                       }
+                     }
+                   }
+                 }}
+               />
+             </div>
+             
+             {!!formData.club_id && (
+               <div className="mt-3">
+                 <ClubSelector
+                   selectedClubId={formData.club_id}
+                   onClubSelect={(clubId) => {
+                     if (clubId) {
+                       setFormData(prev => ({ ...prev, club_id: clubId }));
+                     } else {
+                       // Si on désélectionne le club, on désactive le switch
+                       setFormData(prev => ({ ...prev, club_id: null }));
+                     }
+                   }}
+                 />
+               </div>
+             )}
+             
+             <p className="text-xs text-blue-600 mt-2">
+               {formData.club_id 
+                 ? "Seuls les membres de ce club pourront voir cette séance" 
+                 : "Cette séance sera visible par tous les amis"}
+             </p>
+           </div>
 
           <div>
             <Label htmlFor="scheduled_at">Date et heure</Label>
