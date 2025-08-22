@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OnlineStatus } from "./OnlineStatus";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -124,13 +125,20 @@ export const FollowDialog = ({
 
       if (error) throw error;
 
-      // Remove from following list
+      // Remove from following list and update UI immediately
       setFollowing(prev => prev.filter(u => u.user_id !== targetUserId));
+      
+      // Trigger a refresh of follow data to update counts
+      setTimeout(() => {
+        fetchFollowData();
+      }, 500);
+      
       toast({
         title: "Désabonné",
         description: "Vous ne suivez plus cet utilisateur"
       });
     } catch (error: any) {
+      console.error('Error unfollowing user:', error);
       toast({
         title: "Erreur",
         description: "Impossible de se désabonner",
@@ -151,13 +159,31 @@ export const FollowDialog = ({
 
       if (error) throw error;
 
-      // Remove from followers list
+      // Remove from followers list and update UI immediately
       setFollowers(prev => prev.filter(u => u.user_id !== followerUserId));
+      
+      // Send notification to the removed follower
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: followerUserId,
+          type: 'follower_removed',
+          title: 'Abonné supprimé',
+          message: `${user.email} a supprimé votre abonnement`,
+          data: { removed_by: user.id }
+        });
+      
+      // Trigger a refresh of follow data to update counts
+      setTimeout(() => {
+        fetchFollowData();
+      }, 500);
+      
       toast({
         title: "Abonné supprimé",
         description: "Cet utilisateur ne vous suit plus"
       });
     } catch (error: any) {
+      console.error('Error removing follower:', error);
       toast({
         title: "Erreur",
         description: "Impossible de supprimer cet abonné",
@@ -186,12 +212,15 @@ export const FollowDialog = ({
           <Card key={userItem.user_id}>
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={userItem.avatar_url} />
-                  <AvatarFallback>
-                    {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={userItem.avatar_url} />
+                    <AvatarFallback>
+                      {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <OnlineStatus userId={userItem.user_id} />
+                </div>
                 <div>
                   <p className="font-medium">
                     {userItem.username || userItem.display_name}

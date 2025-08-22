@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OnlineStatus } from "./OnlineStatus";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -114,7 +115,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
     }
   };
 
-  // Follow/unfollow user
+  // Follow/unfollow user with improved error handling and status updates
   const toggleFollow = async () => {
     if (!user || !selectedProfile) return;
 
@@ -129,8 +130,11 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           .eq('following_id', selectedProfile.user_id);
 
         if (error) throw error;
+        
         setFollowStatus(null);
         setIsFollowing(false);
+        setAreFriends(false); // Reset friends status since we unfollowed
+        
         toast({ title: "Succès", description: "Vous ne suivez plus cet utilisateur" });
       } else if (followStatus === 'pending') {
         // Cancel pending request
@@ -141,27 +145,60 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           .eq('following_id', selectedProfile.user_id);
 
         if (error) throw error;
+        
         setFollowStatus(null);
         setIsFollowing(false);
+        
         toast({ title: "Succès", description: "Demande de suivi annulée" });
       } else {
-        // Send follow request (will be pending by default)
+        // Send follow request - check if target user has auto-accept
+        const { data: targetProfile } = await supabase
+          .from('profiles')
+          .select('is_private')
+          .eq('user_id', selectedProfile.user_id)
+          .single();
+
+        const initialStatus = targetProfile?.is_private ? 'pending' : 'accepted';
+        
         const { error } = await supabase
           .from('user_follows')
           .insert([{
             follower_id: user.id,
             following_id: selectedProfile.user_id,
-            status: 'pending'
+            status: initialStatus
           }]);
 
         if (error) throw error;
-        setFollowStatus('pending');
-        setIsFollowing(false);
-        setAreFriends(false); // Reset friends status
-        toast({ title: "Demande envoyée", description: "Votre demande de suivi a été envoyée" });
+        
+        setFollowStatus(initialStatus);
+        setIsFollowing(initialStatus === 'accepted');
+        
+        if (initialStatus === 'accepted') {
+          // Check if we're now friends
+          const { data: friendsData } = await supabase.rpc('are_users_friends', {
+            user1_id: user.id,
+            user2_id: selectedProfile.user_id
+          });
+          setAreFriends(friendsData || false);
+          
+          toast({ 
+            title: "Suivi avec succès", 
+            description: "Vous suivez maintenant cet utilisateur" 
+          });
+        } else {
+          toast({ 
+            title: "Demande envoyée", 
+            description: "Votre demande de suivi a été envoyée" 
+          });
+        }
       }
     } catch (error: any) {
-      toast({ title: "Erreur", description: "Impossible de modifier le suivi", variant: "destructive" });
+      console.error('Error toggling follow:', error);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de modifier le suivi", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -198,12 +235,15 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           <div className="space-y-4">
             {/* Profile Header */}
             <div className="text-center space-y-3">
-              <Avatar className="h-20 w-20 mx-auto">
-                <AvatarImage src={selectedProfile.avatar_url || ""} />
-                <AvatarFallback className="text-lg">
-                  {(selectedProfile.username || selectedProfile.display_name || "").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative mx-auto w-20">
+                <Avatar className="h-20 w-20 mx-auto">
+                  <AvatarImage src={selectedProfile.avatar_url || ""} />
+                  <AvatarFallback className="text-lg">
+                    {(selectedProfile.username || selectedProfile.display_name || "").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {areFriends && <OnlineStatus userId={selectedProfile.user_id} />}
+              </div>
               
               <div>
                 <h3 className="text-lg font-semibold">
@@ -339,12 +379,15 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
                 onClick={() => setSelectedProfile(profile)}
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
               >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={profile.avatar_url || ""} />
-                  <AvatarFallback>
-                    {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={profile.avatar_url || ""} />
+                    <AvatarFallback>
+                      {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <OnlineStatus userId={profile.user_id} className="w-3 h-3" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">
                     {profile.username || profile.display_name}
