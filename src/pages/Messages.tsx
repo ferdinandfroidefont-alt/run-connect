@@ -1042,37 +1042,39 @@ const Messages = () => {
           createdBy={groupInfoData?.created_by || ""}
           isAdmin={groupInfoData?.created_by === user?.id}
           onEditGroup={() => {
+            console.log('🔍 onEditGroup called from ClubInfoDialog');
             setShowGroupInfo(false);
-            setShowEditGroup(true);
+            setTimeout(() => {
+              setShowEditGroup(true);
+            }, 100);
           }}
         />
         
         {/* Debug info removed - functionality should work now */}
 
         {/* Edit Club Dialog - available globally */}
-        {selectedConversation?.is_group && (
-          <EditClubDialog
-            isOpen={showEditGroup}
-            onClose={() => setShowEditGroup(false)}
-            conversationId={selectedConversation.id}
-            groupName={selectedConversation.group_name || ""}
-            groupDescription={selectedConversation.group_description}
-            groupAvatarUrl={selectedConversation.group_avatar_url}
-            clubCode={selectedConversation.club_code || ""}
-            createdBy={selectedConversation.created_by || ""}
-            isAdmin={selectedConversation.created_by === user?.id}
-            onGroupUpdated={() => {
-              loadConversations();
-              if (selectedConversation) {
-                // Reload the conversation to get updated info
-                const updatedConv = conversations.find(c => c.id === selectedConversation.id);
-                if (updatedConv) {
-                  setSelectedConversation(updatedConv);
-                }
+        <EditClubDialog
+          isOpen={showEditGroup}
+          onClose={() => setShowEditGroup(false)}
+          conversationId={groupInfoData?.id || selectedConversation?.id || ""}
+          groupName={groupInfoData?.group_name || selectedConversation?.group_name || ""}
+          groupDescription={groupInfoData?.group_description || selectedConversation?.group_description}
+          groupAvatarUrl={groupInfoData?.group_avatar_url || selectedConversation?.group_avatar_url}
+          clubCode={groupInfoData?.club_code || selectedConversation?.club_code || ""}
+          createdBy={groupInfoData?.created_by || selectedConversation?.created_by || ""}
+          isAdmin={(groupInfoData?.created_by || selectedConversation?.created_by) === user?.id}
+          onGroupUpdated={() => {
+            loadConversations();
+            setShowEditGroup(false);
+            if (selectedConversation) {
+              // Reload the conversation to get updated info
+              const updatedConv = conversations.find(c => c.id === selectedConversation.id);
+              if (updatedConv) {
+                setSelectedConversation(updatedConv);
               }
-            }}
-          />
-        )}
+            }
+          }}
+        />
 
         {/* Profile Preview Dialog */}
         <ProfilePreviewDialog
