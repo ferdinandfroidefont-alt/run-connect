@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { UserSearchDialog } from "@/components/UserSearchDialog";
+import { UniversalSearchDialog } from "@/components/UniversalSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
@@ -54,6 +54,7 @@ interface Conversation {
   group_name?: string;
   group_description?: string;
   group_avatar_url?: string;
+  club_code?: string;
   created_by?: string;
   other_participant?: Profile;
   group_members?: Profile[];
@@ -1000,10 +1001,19 @@ const Messages = () => {
         </Card>
 
         {/* User Search Dialog */}
-        <UserSearchDialog
+        <UniversalSearchDialog
           open={showUserSearch}
           onOpenChange={setShowUserSearch}
           onStartConversation={startConversation}
+          onJoinClub={(clubId) => {
+            // Find the club conversation and set it as selected
+            const clubConv = conversations.find(c => c.id === clubId);
+            if (clubConv) {
+              setSelectedConversation(clubConv);
+              loadMessages(clubId);
+            }
+            setShowUserSearch(false);
+          }}
         />
 
         {/* Create Club Dialog */}
@@ -1045,6 +1055,8 @@ const Messages = () => {
             conversationId={selectedConversation.id}
             groupName={selectedConversation.group_name || ""}
             groupDescription={selectedConversation.group_description}
+            clubCode={selectedConversation.club_code || ""}
+            createdBy={selectedConversation.created_by || ""}
             isAdmin={selectedConversation.created_by === user?.id}
             onGroupUpdated={() => {
               loadConversations();

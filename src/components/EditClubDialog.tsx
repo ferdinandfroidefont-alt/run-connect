@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Users, Search, Settings, Trash2 } from "lucide-react";
+import { X, Plus, Users, Search, Settings, Trash2, Copy } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -29,6 +30,8 @@ interface EditClubDialogProps {
   conversationId: string;
   groupName: string;
   groupDescription: string | null;
+  clubCode: string;
+  createdBy: string;
   isAdmin: boolean;
   onGroupUpdated: () => void;
 }
@@ -39,6 +42,8 @@ export const EditClubDialog = ({
   conversationId, 
   groupName: initialGroupName, 
   groupDescription: initialGroupDescription,
+  clubCode,
+  createdBy,
   isAdmin,
   onGroupUpdated 
 }: EditClubDialogProps) => {
@@ -51,6 +56,24 @@ export const EditClubDialog = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Copy club code to clipboard
+  const copyClubCode = async () => {
+    try {
+      await navigator.clipboard.writeText(clubCode);
+      toast({
+        title: "Code copié !",
+        description: "Le code du club a été copié dans le presse-papiers"
+      });
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de copier le code",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Load group members
   const loadGroupMembers = async () => {
@@ -256,6 +279,32 @@ export const EditClubDialog = ({
                 disabled={!isAdmin}
               />
             </div>
+
+            {/* Club Code - only visible to creator */}
+            {createdBy === user?.id && (
+              <div>
+                <Label>Code du club (privé)</Label>
+                <Card>
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Partagez ce code pour inviter des membres</p>
+                        <Badge variant="outline" className="font-mono mt-1">
+                          {clubCode}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyClubCode}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Members */}
             <div>
