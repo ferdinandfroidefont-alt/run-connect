@@ -80,6 +80,8 @@ interface Message {
     title: string;
     activity_type: string;
     location_name: string;
+    location_lat: number;
+    location_lng: number;
     scheduled_at: string;
     max_participants: number;
     current_participants: number;
@@ -235,7 +237,7 @@ const Messages = () => {
         .from('messages')
         .select(`
           *,
-          session:sessions(id, title, activity_type, location_name, scheduled_at, max_participants, current_participants)
+          session:sessions(id, title, activity_type, location_name, location_lat, location_lng, scheduled_at, max_participants, current_participants)
         `)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
