@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
+import { PushNotificationButton } from "@/components/PushNotificationButton";
 
 interface Profile {
   username: string;
@@ -755,6 +756,7 @@ const Profile = () => {
 
             {/* Contacts Permission */}
             <ContactsPermissionButton />
+            <PushNotificationButton />
 
             {/* Contacts Access and Friend Suggestions */}
             <div className="flex items-center justify-between">
