@@ -569,6 +569,43 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </Select>
           </div>
 
+          {/* Friends Only (Free Feature) - Premier filtre */}
+          <div className="border rounded-lg p-4 bg-green-50/50 border-green-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-green-600" />
+                <Label htmlFor="friends_only" className="text-sm font-medium">
+                  Amis uniquement (recommandé)
+                </Label>
+              </div>
+              <Switch
+                id="friends_only"
+                checked={formData.friends_only}
+                onCheckedChange={(checked) => {
+                  // Si l'utilisateur essaie de désactiver "amis uniquement" sans premium
+                  if (!checked && !subscriptionInfo?.subscribed) {
+                    toast({
+                      title: "Abonnement requis",
+                      description: "Les séances publiques nécessitent un abonnement premium",
+                      variant: "destructive"
+                    });
+                    onClose();
+                    navigate('/subscription');
+                    return;
+                  }
+                  setFormData(prev => ({ ...prev, friends_only: checked }));
+                }}
+              />
+            </div>
+            <p className="text-xs text-green-600 mt-2">
+              {formData.friends_only 
+                ? "Seuls vos amis pourront voir cette séance (gratuit)" 
+                : subscriptionInfo?.subscribed 
+                  ? "Cette séance sera visible par tous" 
+                  : "Fonctionnalité premium requise"}
+            </p>
+          </div>
+
           {/* Club Selection */}
           <div className="space-y-2 mt-3 ml-2">
             <div className="flex items-center gap-2">
@@ -891,44 +928,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Friends Only (Free Feature) */}
-          <div className="border rounded-lg p-4 bg-green-50/50 border-green-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-4 w-4 text-green-600" />
-                <Label htmlFor="friends_only" className="text-sm font-medium">
-                  Amis uniquement (recommandé)
-                </Label>
-              </div>
-              <Switch
-                id="friends_only"
-                checked={formData.friends_only}
-                onCheckedChange={(checked) => {
-                  // Si l'utilisateur essaie de désactiver "amis uniquement" sans premium
-                  if (!checked && !subscriptionInfo?.subscribed) {
-                    toast({
-                      title: "Abonnement requis",
-                      description: "Les séances publiques nécessitent un abonnement premium",
-                      variant: "destructive"
-                    });
-                    onClose();
-                    navigate('/subscription');
-                    return;
-                  }
-                  setFormData(prev => ({ ...prev, friends_only: checked }));
-                }}
-              />
-            </div>
-            <p className="text-xs text-green-700 mt-2">
-              {formData.friends_only 
-                ? "Seuls vos amis pourront voir et rejoindre cette séance" 
-                : subscriptionInfo?.subscribed 
-                  ? "Cette séance sera visible par tous les utilisateurs"
-                  : "⚠️ Les séances publiques nécessitent un abonnement premium"
-              }
-            </p>
           </div>
 
           <div>
