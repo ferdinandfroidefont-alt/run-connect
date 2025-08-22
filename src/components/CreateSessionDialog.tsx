@@ -606,37 +606,40 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </p>
           </div>
 
-          {/* Club Selection */}
-          <div className="space-y-2 mt-3 ml-2">
-            <div className="flex items-center gap-2">
-              <Label className="text-base font-medium">Session pour un club</Label>
+          {/* Club Selection - Deuxième filtre */}
+          <div className="border rounded-lg p-4 bg-blue-50/50 border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                <Label htmlFor="club_mode" className="text-sm font-medium">
+                  Clubs uniquement
+                </Label>
+              </div>
+              <Switch
+                id="club_mode"
+                checked={!!formData.club_id}
+                onCheckedChange={(checked) => {
+                  if (!checked) {
+                    setFormData(prev => ({ ...prev, club_id: null }));
+                  }
+                }}
+              />
             </div>
             
-            <ClubSelector
-              selectedClubId={formData.club_id}
-              onClubSelect={(clubId) => setFormData(prev => ({ ...prev, club_id: clubId }))}
-            />
-            {formData.club_id ? (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <Users className="h-4 w-4" />
-                  <span className="text-sm font-medium">Session privée pour le club</span>
-                </div>
-                <p className="text-xs text-blue-600 mt-1">
-                  Seuls les membres de ce club pourront voir et rejoindre cette séance
-                </p>
-              </div>
-            ) : (
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <MapPin className="h-4 w-4" />
-                  <span className="text-sm font-medium">Session publique</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Cette séance sera visible par tous les utilisateurs
-                </p>
+            {!!formData.club_id && (
+              <div className="mt-3">
+                <ClubSelector
+                  selectedClubId={formData.club_id}
+                  onClubSelect={(clubId) => setFormData(prev => ({ ...prev, club_id: clubId }))}
+                />
               </div>
             )}
+            
+            <p className="text-xs text-blue-600 mt-2">
+              {formData.club_id 
+                ? "Seuls les membres de ce club pourront voir cette séance" 
+                : "Cette séance sera visible par tous les amis"}
+            </p>
           </div>
 
           <div>
