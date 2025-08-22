@@ -90,7 +90,7 @@ export default function MySessions() {
         .from('sessions')
         .select('*')
         .eq('organizer_id', user.id)
-        .order('scheduled_at', { ascending: true });
+        .order('scheduled_at', { ascending: false });
 
       const { data, error } = await query;
 
