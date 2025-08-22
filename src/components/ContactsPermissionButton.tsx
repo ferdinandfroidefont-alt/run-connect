@@ -7,10 +7,16 @@ export const ContactsPermissionButton = () => {
   const { isNative, hasPermission, requestPermissions } = useContacts();
   const { toast } = useToast();
 
-  // Only show on native platforms
-  if (!isNative) return null;
-
   const handleRequestPermission = async () => {
+    if (!isNative) {
+      toast({
+        title: "Fonction mobile uniquement",
+        description: "L'accès aux contacts n'est disponible que sur l'application mobile",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const granted = await requestPermissions();
       if (granted) {
@@ -44,7 +50,7 @@ export const ContactsPermissionButton = () => {
             Accès aux contacts
           </label>
           <p className="text-xs text-muted-foreground">
-            Trouvez vos amis dans vos contacts
+            {isNative ? "Trouvez vos amis dans vos contacts" : "Disponible uniquement sur mobile"}
           </p>
         </div>
       </div>
@@ -52,9 +58,9 @@ export const ContactsPermissionButton = () => {
         variant="outline"
         size="sm"
         onClick={handleRequestPermission}
-        disabled={hasPermission}
+        disabled={hasPermission && isNative}
       >
-        {hasPermission ? 'Autorisé' : 'Autoriser'}
+        {isNative ? (hasPermission ? 'Autorisé' : 'Autoriser') : 'Mobile uniquement'}
       </Button>
     </div>
   );
