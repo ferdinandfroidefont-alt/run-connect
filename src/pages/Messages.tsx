@@ -147,6 +147,8 @@ const Messages = () => {
             .neq('sender_id', user.id)
             .is('read_at', null);
 
+          console.log(`🔍 Conversation ${conv.id}: ${unreadCount} messages non lus (excluant les messages de l'utilisateur)`);
+
           // Get the last message for this conversation
           const { data: lastMessageData } = await supabase
             .from('messages')
