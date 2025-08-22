@@ -94,6 +94,33 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_message_limits: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          message_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           conversation_id: string
@@ -646,6 +673,10 @@ export type Database = {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
       }
+      can_user_send_message: {
+        Args: { user_id_param: string }
+        Returns: boolean
+      }
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -657,6 +688,10 @@ export type Database = {
       generate_club_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_daily_message_count: {
+        Args: { user_id_param: string }
+        Returns: number
       }
       get_email_from_username: {
         Args: { username_param: string }
@@ -702,6 +737,10 @@ export type Database = {
       get_user_rank: {
         Args: { points: number }
         Returns: string
+      }
+      increment_daily_message_count: {
+        Args: { user_id_param: string }
+        Returns: number
       }
       remove_user_points: {
         Args: { points_to_remove: number; user_id_param: string }

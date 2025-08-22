@@ -18,6 +18,7 @@ import { EditClubDialog } from "@/components/EditClubDialog";
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { MessageLimitDialog } from "@/components/MessageLimitDialog";
 import { 
   MessageCircle, 
   Users, 
@@ -34,7 +35,8 @@ import {
   MapPin,
   Clock,
   Settings,
-  MoreVertical
+  MoreVertical,
+  Crown
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -91,7 +93,7 @@ interface Message {
 }
 
 const Messages = () => {
-  const { user } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -108,6 +110,8 @@ const Messages = () => {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [groupInfoData, setGroupInfoData] = useState<any>(null);
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
+  const [messagesLeft, setMessagesLeft] = useState<number>(3);
+  const [showMessageLimitDialog, setShowMessageLimitDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -309,9 +313,74 @@ const Messages = () => {
     navigate(`/?${params.toString()}`);
   };
 
+  // Check daily message limit for non-premium users
+  const checkDailyMessageLimit = async () => {
+    if (!user || subscriptionInfo?.subscribed) {
+      setMessagesLeft(999); // Unlimited for premium users
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_daily_message_count', {
+        user_id_param: user.id
+      });
+
+      if (error) {
+        console.error('Error checking daily message limit:', error);
+        setMessagesLeft(3); // Fallback to default
+        return;
+      }
+
+      const currentCount = data || 0;
+      const remaining = Math.max(0, 3 - currentCount);
+      setMessagesLeft(remaining);
+    } catch (error) {
+      console.error('Error checking daily message limit:', error);
+      setMessagesLeft(3);
+    }
+  };
+
+  // Check if user can send message (returns false if limit reached)
+  const canSendMessage = async (): Promise<boolean> => {
+    if (!user) return false;
+    
+    // Premium users can always send messages
+    if (subscriptionInfo?.subscribed) return true;
+
+    try {
+      const { data, error } = await supabase.rpc('can_user_send_message', {
+        user_id_param: user.id
+      });
+
+      if (error) {
+        console.error('Error checking message permission:', error);
+        return messagesLeft > 0; // Fallback to local state
+      }
+
+      return data === true;
+    } catch (error) {
+      console.error('Error checking message permission:', error);
+      return messagesLeft > 0;
+    }
+  };
+
   // Send a message
   const sendMessage = async () => {
     if (!user || !selectedConversation || !newMessage.trim()) return;
+
+    // Check if user can send message (for non-premium users)
+    if (!subscriptionInfo?.subscribed) {
+      const canSend = await canSendMessage();
+      if (!canSend) {
+        setShowMessageLimitDialog(true);
+        return;
+      }
+
+      // Show warning dialog when approaching limit
+      if (messagesLeft <= 1) {
+        setShowMessageLimitDialog(true);
+      }
+    }
 
     setLoading(true);
     try {
@@ -324,6 +393,23 @@ const Messages = () => {
         }]);
 
       if (error) throw error;
+
+      // Increment daily message count for non-premium users
+      if (!subscriptionInfo?.subscribed) {
+        try {
+          const { data } = await supabase.rpc('increment_daily_message_count', {
+            user_id_param: user.id
+          });
+          
+          if (data) {
+            const remaining = Math.max(0, 3 - data);
+            setMessagesLeft(remaining);
+          }
+        } catch (countError) {
+          console.error('Error updating message count:', countError);
+          // Continue with message sending even if count update fails
+        }
+      }
 
       // Update conversation timestamp
       await supabase
@@ -503,8 +589,16 @@ const Messages = () => {
   useEffect(() => {
     if (user) {
       loadConversations();
+      checkDailyMessageLimit();
     }
   }, [user]);
+
+  // Refresh message limit when subscription changes
+  useEffect(() => {
+    if (user) {
+      checkDailyMessageLimit();
+    }
+  }, [subscriptionInfo]);
 
   useEffect(() => {
     const timeoutId = setTimeout(searchForUsers, 300);
@@ -890,6 +984,28 @@ const Messages = () => {
               <Users className="h-4 w-4 mr-1" />
               Club
             </Button>
+            {/* Message limit indicator for non-premium users */}
+            {!subscriptionInfo?.subscribed && (
+              <div className="text-center mt-2">
+                <div className="flex items-center justify-center gap-1">
+                  <MessageCircle className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {messagesLeft > 0 ? `${messagesLeft}/3 messages restants` : 'Limite atteinte'}
+                  </span>
+                </div>
+                {messagesLeft <= 1 && (
+                  <Button
+                    onClick={() => navigate('/subscription')}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-6 p-1 text-yellow-600 hover:text-yellow-700"
+                  >
+                    <Crown className="h-3 w-3 mr-1" />
+                    Premium
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1101,6 +1217,13 @@ const Messages = () => {
         <ProfilePreviewDialog
           userId={showProfilePreview ? selectedUserId : null}
           onClose={closeProfilePreview}
+        />
+
+        {/* Message Limit Dialog */}
+        <MessageLimitDialog
+          open={showMessageLimitDialog}
+          onOpenChange={setShowMessageLimitDialog}
+          messagesLeft={messagesLeft}
         />
       </div>
     </div>
