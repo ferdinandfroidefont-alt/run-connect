@@ -1057,6 +1057,7 @@ const Messages = () => {
             conversationId={selectedConversation.id}
             groupName={selectedConversation.group_name || ""}
             groupDescription={selectedConversation.group_description}
+            groupAvatarUrl={selectedConversation.group_avatar_url}
             clubCode={selectedConversation.club_code || ""}
             createdBy={selectedConversation.created_by || ""}
             isAdmin={selectedConversation.created_by === user?.id}

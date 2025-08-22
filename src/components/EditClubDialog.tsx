@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Users, Search, Settings, Trash2, Copy } from "lucide-react";
+import { X, Plus, Users, Search, Settings, Trash2, Copy, Camera, Upload } from "lucide-react";
+import { ImageCropEditor } from "./ImageCropEditor";
 
 interface Profile {
   user_id: string;
@@ -30,6 +31,7 @@ interface EditClubDialogProps {
   conversationId: string;
   groupName: string;
   groupDescription: string | null;
+  groupAvatarUrl: string | null;
   clubCode: string;
   createdBy: string;
   isAdmin: boolean;
@@ -42,6 +44,7 @@ export const EditClubDialog = ({
   conversationId, 
   groupName: initialGroupName, 
   groupDescription: initialGroupDescription,
+  groupAvatarUrl: initialGroupAvatarUrl,
   clubCode,
   createdBy,
   isAdmin,
@@ -51,11 +54,102 @@ export const EditClubDialog = ({
   const { toast } = useToast();
   const [groupName, setGroupName] = useState(initialGroupName);
   const [groupDescription, setGroupDescription] = useState(initialGroupDescription || "");
+  const [groupAvatarUrl, setGroupAvatarUrl] = useState(initialGroupAvatarUrl || "");
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showImageCrop, setShowImageCrop] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // Handle club avatar upload
+  const handleAvatarSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier image",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erreur", 
+        description: "L'image ne doit pas dépasser 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setSelectedImage(e.target?.result as string);
+      setShowImageCrop(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCroppedImage = async (croppedImageBlob: Blob) => {
+    if (!user || !isAdmin) return;
+
+    setAvatarUploading(true);
+    try {
+      // Create unique filename
+      const timestamp = Date.now();
+      const filename = `${user.id}/club/${conversationId}-${timestamp}.jpg`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filename, croppedImageBlob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filename);
+
+      // Update conversation with new avatar URL
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({ group_avatar_url: publicUrl })
+        .eq('id', conversationId);
+
+      if (updateError) throw updateError;
+
+      setGroupAvatarUrl(publicUrl);
+      setShowImageCrop(false);
+      setSelectedImage(null);
+
+      toast({
+        title: "Succès",
+        description: "Photo de profil mise à jour"
+      });
+
+      onGroupUpdated();
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour la photo de profil",
+        variant: "destructive"
+      });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   // Copy club code to clipboard
   const copyClubCode = async () => {
@@ -244,9 +338,10 @@ export const EditClubDialog = ({
       console.log('- createdBy === user?.id:', createdBy === user?.id);
       setGroupName(initialGroupName);
       setGroupDescription(initialGroupDescription || "");
+      setGroupAvatarUrl(initialGroupAvatarUrl || "");
       loadGroupMembers();
     }
-  }, [isOpen, initialGroupName, initialGroupDescription]);
+  }, [isOpen, initialGroupName, initialGroupDescription, initialGroupAvatarUrl]);
 
   useEffect(() => {
     const timeoutId = setTimeout(searchUsers, 300);
@@ -265,6 +360,70 @@ export const EditClubDialog = ({
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Club Avatar - only editable by creator */}
+            {createdBy === user?.id && (
+              <div>
+                <Label>Photo de profil du club</Label>
+                <div className="flex items-center gap-4 mt-2">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={groupAvatarUrl || ""} />
+                    <AvatarFallback>
+                      <Users className="h-8 w-8" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => document.getElementById('club-avatar-upload')?.click()}
+                      disabled={avatarUploading}
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      {groupAvatarUrl ? 'Changer' : 'Ajouter'}
+                    </Button>
+                    {groupAvatarUrl && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const { error } = await supabase
+                              .from('conversations')
+                              .update({ group_avatar_url: null })
+                              .eq('id', conversationId);
+                            
+                            if (error) throw error;
+                            
+                            setGroupAvatarUrl("");
+                            onGroupUpdated();
+                            toast({
+                              title: "Photo supprimée",
+                              description: "La photo de profil a été supprimée"
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Erreur",
+                              description: "Impossible de supprimer la photo",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    id="club-avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarSelect}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Group Name */}
             <div>
               <Label htmlFor="groupName">Nom du club *</Label>
@@ -444,6 +603,17 @@ export const EditClubDialog = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Image Crop Dialog */}
+      <ImageCropEditor
+        open={showImageCrop}
+        imageSrc={selectedImage || ""}
+        onCropComplete={handleCroppedImage}
+        onClose={() => {
+          setShowImageCrop(false);
+          setSelectedImage(null);
+        }}
+      />
     </>
   );
 };
