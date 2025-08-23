@@ -39,6 +39,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followRequestSent, setFollowRequestSent] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
@@ -87,15 +88,20 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (!user || !userId) return;
 
     try {
-      const { data } = await supabase
+      const { data: followData } = await supabase
         .from('user_follows')
-        .select('id')
+        .select('status')
         .eq('follower_id', user.id)
         .eq('following_id', userId)
-        .eq('status', 'accepted')
         .maybeSingle();
 
-      setIsFollowing(!!data);
+      if (followData) {
+        setIsFollowing(followData.status === 'accepted');
+        setFollowRequestSent(followData.status === 'pending');
+      } else {
+        setIsFollowing(false);
+        setFollowRequestSent(false);
+      }
     } catch (error) {
       console.error('Error checking follow status:', error);
     }
@@ -147,8 +153,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
     setActionLoading(true);
     try {
-      if (isFollowing) {
-        // Unfollow
+      if (isFollowing || followRequestSent) {
+        // Unfollow or cancel request
         const { error } = await supabase
           .from('user_follows')
           .delete()
@@ -158,30 +164,28 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         if (error) throw error;
 
         setIsFollowing(false);
-        setFollowerCount(prev => Math.max(0, prev - 1));
-        setAreFriends(false); // No longer friends if we unfollowed
-        toast({ title: "Vous ne suivez plus cette personne" });
+        setFollowRequestSent(false);
+        if (isFollowing) {
+          setFollowerCount(prev => Math.max(0, prev - 1));
+          setAreFriends(false);
+          toast({ title: "Vous ne suivez plus cette personne" });
+        } else {
+          toast({ title: "Demande de suivi annulée" });
+        }
       } else {
-        // Follow
+        // Send follow request
         const { error } = await supabase
           .from('user_follows')
           .insert([{
             follower_id: user.id,
             following_id: userId,
-            status: 'accepted' // For now, auto-accept follows
+            status: 'pending'
           }]);
 
         if (error) throw error;
 
-        setIsFollowing(true);
-        setFollowerCount(prev => prev + 1);
-        setAreFriends(false); // Reset until we can check again
-        toast({ title: "Vous suivez maintenant cette personne" });
-        
-        // Check if we're now friends after following
-        setTimeout(() => {
-          checkFriendStatus();
-        }, 500);
+        setFollowRequestSent(true);
+        toast({ title: "Demande de suivi envoyée" });
       }
     } catch (error: any) {
       toast({
@@ -263,7 +267,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   <Button
                     onClick={handleFollowToggle}
                     disabled={actionLoading}
-                    variant={isFollowing ? "outline" : "default"}
+                    variant={isFollowing ? "outline" : followRequestSent ? "secondary" : "default"}
                     className="w-full"
                   >
                     {actionLoading ? (
@@ -277,7 +281,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       ? "Chargement..." 
                       : isFollowing 
                       ? "Ne plus suivre" 
-                      : "Suivre"
+                      : followRequestSent
+                      ? "Demande envoyée"
+                      : "Demander à suivre"
                     }
                   </Button>
                 )}
