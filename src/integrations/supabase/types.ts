@@ -753,6 +753,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      update_push_token: {
+        Args: { push_token_param: string; user_id_param: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
