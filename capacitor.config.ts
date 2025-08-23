@@ -11,6 +11,9 @@ const config: CapacitorConfig = {
   plugins: {
     Contacts: {
       permissions: ['contacts']
+    },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"]
     }
   }
 };

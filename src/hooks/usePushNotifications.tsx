@@ -50,12 +50,16 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     try {
-      await supabase
-        .from('profiles')
-        .update({ push_token: pushToken })
-        .eq('user_id', user.id);
+      const { error } = await supabase.rpc('update_push_token', {
+        user_id_param: user.id,
+        push_token_param: pushToken
+      });
       
-      setToken(pushToken);
+      if (error) {
+        console.error('Error saving push token:', error);
+      } else {
+        setToken(pushToken);
+      }
     } catch (error) {
       console.error('Error saving push token:', error);
     }

@@ -264,6 +264,7 @@ export type Database = {
           notifications_enabled: boolean | null
           onboarding_completed: boolean | null
           phone: string | null
+          push_token: string | null
           rgpd_accepted: boolean | null
           running_records: Json | null
           security_rules_accepted: boolean | null
@@ -295,6 +296,7 @@ export type Database = {
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          push_token?: string | null
           rgpd_accepted?: boolean | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
@@ -326,6 +328,7 @@ export type Database = {
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          push_token?: string | null
           rgpd_accepted?: boolean | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
