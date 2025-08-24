@@ -715,6 +715,7 @@ export type Database = {
           display_name: string
           mutual_friend_names: string[]
           mutual_friends_count: number
+          source: string
           user_id: string
           username: string
         }[]

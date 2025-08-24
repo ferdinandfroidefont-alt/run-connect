@@ -16,6 +16,7 @@ interface FriendSuggestion {
   avatar_url: string;
   mutual_friends_count: number;
   mutual_friend_names: string[];
+  source: string;
   is_contact?: boolean;
 }
 
@@ -47,10 +48,10 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
     if (!user) return;
 
     try {
-      // Get regular friend suggestions
+      // Get friend suggestions with proper priority (max 5)
       const { data, error } = await supabase.rpc('get_friend_suggestions', {
         current_user_id: user.id,
-        suggestion_limit: compact ? 3 : 10
+        suggestion_limit: 5
       });
 
       if (error) throw error;
@@ -63,17 +64,29 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
           const contacts = await loadContacts();
           const contactSuggestions = await findContactSuggestions(contacts);
           
-          // Merge contact suggestions with regular suggestions, prioritizing contacts
-          const regularSuggestions = allSuggestions.filter(
-            (regular: FriendSuggestion) => !contactSuggestions.some(
-              (contact: FriendSuggestion) => contact.user_id === regular.user_id
-            )
+          // Prioritize contact suggestions: contacts > mutual friends > active users
+          const mutualFriendSuggestions = allSuggestions.filter(
+            (s: FriendSuggestion) => s.source === 'mutual_friends' && 
+            !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
           );
           
-          allSuggestions = [...contactSuggestions, ...regularSuggestions];
+          const activeUserSuggestions = allSuggestions.filter(
+            (s: FriendSuggestion) => s.source === 'active_users' && 
+            !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
+          );
+          
+          // Combine in priority order and limit to 5
+          allSuggestions = [
+            ...contactSuggestions,
+            ...mutualFriendSuggestions,
+            ...activeUserSuggestions
+          ].slice(0, 5);
         } catch (contactError) {
           console.error('Error loading contact suggestions:', contactError);
         }
+      } else {
+        // Limit to 5 when no contacts
+        allSuggestions = allSuggestions.slice(0, 5);
       }
 
       setSuggestions(allSuggestions);
@@ -127,6 +140,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         avatar_url: profile.avatar_url || '',
         mutual_friends_count: 0,
         mutual_friend_names: [],
+        source: 'contacts',
         is_contact: true
       }));
 
@@ -170,12 +184,17 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
 
       if (error) throw error;
 
-      // Remove from suggestions
+      // Remove from suggestions and refresh to get new ones
       setSuggestions(prev => prev.filter(s => s.user_id !== targetUserId));
       toast({ 
         title: "Demande envoyée", 
         description: "Votre demande de suivi a été envoyée" 
       });
+
+      // Refresh suggestions to fill the gap
+      setTimeout(() => {
+        fetchSuggestions();
+      }, 500);
     } catch (error: any) {
       toast({ 
         title: "Erreur", 
@@ -188,6 +207,11 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   const dismissSuggestion = (userId: string) => {
     setDismissedSuggestions(prev => new Set([...prev, userId]));
     setSuggestions(prev => prev.filter(s => s.user_id !== userId));
+    
+    // Refresh suggestions to get new ones
+    setTimeout(() => {
+      fetchSuggestions();
+    }, 300);
   };
 
   const visibleSuggestions = suggestions.filter(s => !dismissedSuggestions.has(s.user_id));
@@ -280,10 +304,14 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
                   <Smartphone className="h-3 w-3 mr-1" />
                   Dans vos contacts
                 </Badge>
-              ) : (
+              ) : suggestion.source === 'mutual_friends' ? (
                 <Badge variant="secondary" className="text-xs">
                   <Users className="h-3 w-3 mr-1" />
                   {suggestion.mutual_friends_count} ami{suggestion.mutual_friends_count > 1 ? 's' : ''} en commun
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs">
+                  Utilisateur actif
                 </Badge>
               )}
               
@@ -312,7 +340,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   if (compact) {
     return (
       <div className="space-y-2">
-        {visibleSuggestions.slice(0, 3).map(suggestion => (
+        {visibleSuggestions.slice(0, 5).map(suggestion => (
           <SuggestionCard key={suggestion.user_id} suggestion={suggestion} />
         ))}
       </div>
