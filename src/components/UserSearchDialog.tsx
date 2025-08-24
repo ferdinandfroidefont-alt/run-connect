@@ -151,46 +151,24 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
         
         toast({ title: "Succès", description: "Demande de suivi annulée" });
       } else {
-        // Send follow request - check if target user has auto-accept
-        const { data: targetProfile } = await supabase
-          .from('profiles')
-          .select('is_private')
-          .eq('user_id', selectedProfile.user_id)
-          .single();
-
-        const initialStatus = targetProfile?.is_private ? 'pending' : 'accepted';
-        
+        // Send follow request - always use pending status for all users
         const { error } = await supabase
           .from('user_follows')
           .insert([{
             follower_id: user.id,
             following_id: selectedProfile.user_id,
-            status: initialStatus
+            status: 'pending'
           }]);
 
         if (error) throw error;
         
-        setFollowStatus(initialStatus);
-        setIsFollowing(initialStatus === 'accepted');
+        setFollowStatus('pending');
+        setIsFollowing(false);
         
-        if (initialStatus === 'accepted') {
-          // Check if we're now friends
-          const { data: friendsData } = await supabase.rpc('are_users_friends', {
-            user1_id: user.id,
-            user2_id: selectedProfile.user_id
-          });
-          setAreFriends(friendsData || false);
-          
-          toast({ 
-            title: "Suivi avec succès", 
-            description: "Vous suivez maintenant cet utilisateur" 
-          });
-        } else {
-          toast({ 
-            title: "Demande envoyée", 
-            description: "Votre demande de suivi a été envoyée" 
-          });
-        }
+        toast({ 
+          title: "Demande envoyée", 
+          description: "Votre demande de suivi a été envoyée" 
+        });
       }
     } catch (error: any) {
       console.error('Error toggling follow:', error);
