@@ -27,7 +27,6 @@ import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { HelpDialog } from './HelpDialog';
-import { FriendSuggestions } from './FriendSuggestions';
 
 // Declare global google maps types
 declare global {
@@ -1368,13 +1367,6 @@ export const InteractiveMap = ({
         title="Créer un itinéraire"
         loading={routeSaving}
       />
-
-      {/* Friend Suggestions - Show when user is authenticated */}
-      {user && (
-        <div className="absolute bottom-6 left-6 z-10 max-w-sm">
-          <FriendSuggestions compact={true} />
-        </div>
-      )}
     </div>
   );
 };
