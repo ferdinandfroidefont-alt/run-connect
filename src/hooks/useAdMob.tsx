@@ -34,12 +34,7 @@ export const useAdMob = (userIsPremium: boolean = false) => {
 
   // Initialisation AdMob
   const initializeAdMob = useCallback(async () => {
-    if (!Capacitor.isNativePlatform()) {
-      console.log('AdMob: Plateforme web détectée - les pubs ne s\'affichent que sur mobile natif');
-      return;
-    }
-    
-    if (stateRef.current.isInitialized) {
+    if (!Capacitor.isNativePlatform() || stateRef.current.isInitialized) {
       return;
     }
 
