@@ -14,6 +14,7 @@ import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
+import { useAdMob } from '@/hooks/useAdMob';
 
 interface Session {
   id: string;
@@ -56,7 +57,8 @@ interface SessionDetailsDialogProps {
 }
 
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
-  const { user } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
+  const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
@@ -178,6 +180,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       setHasRequested(true);
       toast({ title: "Demande envoyée !", description: "Le créateur va recevoir votre demande" });
+      
+      // Afficher une interstitielle après avoir rejoint (si conditions remplies)
+      showAdAfterJoiningSession();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {

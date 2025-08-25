@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^7.0.3",
     "@capacitor-community/contacts": "^7.0.0",
     "@capacitor/android": "^8.0.0-alpha.1",
     "@capacitor/cli": "^8.0.0-alpha.1",

@@ -32,6 +32,7 @@ import { ClubSelector } from "./ClubSelector";
 
 export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation, onCreateRoute }: CreateSessionDialogProps) => {
   const { user, subscriptionInfo } = useAuth();
+  const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -473,6 +474,9 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       if (error) throw error;
 
       toast({ title: "Séance créée avec succès !" });
+      
+      // Afficher une interstitielle après la création (si conditions remplies)
+      showAdAfterSessionCreation();
       
       // Force refresh sessions to ensure the new session appears with profile
       setTimeout(() => {

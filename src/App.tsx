@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
+import { AdMobInitializer } from "@/components/AdMobInitializer";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MySessions from "./pages/MySessions";
@@ -26,6 +27,7 @@ const App = () => (
       <AuthProvider>
         <AppProvider>
           <TooltipProvider>
+          <AdMobInitializer />
           <Toaster />
           <Sonner />
         <BrowserRouter>
