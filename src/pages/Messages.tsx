@@ -913,7 +913,10 @@ const Messages = () => {
               ) : (
                 <>
                   <div className="relative">
-                    <Avatar className="h-8 w-8">
+                    <Avatar 
+                      className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                      onClick={() => navigateToProfile(selectedConversation.other_participant?.user_id || "")}
+                    >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
                       <AvatarFallback>
                         {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
@@ -921,7 +924,10 @@ const Messages = () => {
                     </Avatar>
                     <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} />
                   </div>
-                  <div>
+                  <div 
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigateToProfile(selectedConversation.other_participant?.user_id || "")}
+                  >
                     <p className="font-medium text-sm">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
                     </p>
