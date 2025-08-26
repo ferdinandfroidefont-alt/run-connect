@@ -692,6 +692,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_common_clubs: {
+        Args: { user_1_id: string; user_2_id: string }
+        Returns: {
+          club_avatar_url: string
+          club_code: string
+          club_description: string
+          club_id: string
+          club_name: string
+        }[]
+      }
       get_daily_message_count: {
         Args: { user_id_param: string }
         Returns: number
