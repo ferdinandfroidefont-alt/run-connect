@@ -118,7 +118,15 @@ export const InteractiveMap = ({
   const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [isRouteCreationMode, setIsRouteCreationMode] = useState(false);
+  
+  // Check URL parameters for route creation mode
+  const [isRouteCreationMode, setIsRouteCreationMode] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldCreateRoute = urlParams.get('createRoute') === 'true';
+    console.log('🔍 Initial route creation mode from URL:', shouldCreateRoute);
+    return shouldCreateRoute;
+  });
+  
   const routePath = useRef<google.maps.Polyline | null>(null);
   const routeCoordinates = useRef<google.maps.LatLng[]>([]);
   const waypoints = useRef<google.maps.LatLng[]>([]);
@@ -128,6 +136,22 @@ export const InteractiveMap = ({
   const elevationService = useRef<google.maps.ElevationService | null>(null);
   const directionsService = useRef<google.maps.DirectionsService | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
+
+  // Handle URL parameter changes for route creation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldCreateRoute = urlParams.get('createRoute') === 'true';
+    
+    if (shouldCreateRoute && !isRouteCreationMode) {
+      console.log('🎯 URL parameter detected - activating route creation mode');
+      setIsRouteCreationMode(true);
+      
+      // Clear the URL parameter after activation
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      console.log('✅ URL parameter cleared');
+    }
+  }, [isRouteCreationMode]);
 
   // Load user profile
   useEffect(() => {
@@ -758,10 +782,16 @@ export const InteractiveMap = ({
 
   const handleCreateRoute = () => {
     console.log('🗺️ InteractiveMap handleCreateRoute called');
+    console.log('🔍 Current isRouteCreationMode state:', isRouteCreationMode);
     
     // Always ensure route creation mode is activated
     setIsRouteCreationMode(true);
     console.log('✓ Route creation mode set to true');
+    
+    // Force a re-render by logging the state change
+    setTimeout(() => {
+      console.log('🔄 Route creation mode after state change:', isRouteCreationMode);
+    }, 50);
     
     // Clear any existing route
     if (routePath.current) {
@@ -1303,7 +1333,10 @@ export const InteractiveMap = ({
         {/* Route Creation Button - Pencil Button */}
         {user && (
           <Button
-            onClick={handleCreateRoute}
+            onClick={() => {
+              console.log('🖱️ Pencil button clicked directly');
+              handleCreateRoute();
+            }}
             size="sm"
             variant={isRouteCreationMode ? "default" : "outline"}
             className={cn(

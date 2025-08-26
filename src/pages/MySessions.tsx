@@ -620,12 +620,8 @@ export default function MySessions() {
         <div className="flex items-center justify-center">
           <Button
             onClick={() => {
-              navigate('/');
-              // Attendre plus longtemps pour que la page se charge complètement
-              setTimeout(() => {
-                console.log('🎯 Calling openCreateRoute from MySessions');
-                openCreateRoute();
-              }, 300);
+              console.log('🚀 "Créer un itinéraire" clicked - starting navigation with URL parameter');
+              navigate('/?createRoute=true');
             }}
             size="sm"
             className="gap-2"
