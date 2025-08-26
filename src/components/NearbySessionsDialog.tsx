@@ -65,6 +65,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDistance, setSelectedDistance] = useState("25");
+  const [selectedUnit, setSelectedUnit] = useState("km");
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -104,12 +105,15 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
       // Filter by distance and activity
       const filteredSessions = sessionsWithProfiles.filter(session => {
         // Distance filter
-        const distance = calculateDistance(
+        const distanceInKm = calculateDistance(
           userLocation.lat,
           userLocation.lng,
           session.location_lat,
           session.location_lng
         );
+        
+        // Convert distance based on selected unit
+        const distance = selectedUnit === "m" ? distanceInKm * 1000 : distanceInKm;
         
         if (distance > parseInt(selectedDistance)) return false;
 
@@ -218,20 +222,28 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
 
   const getDistanceToSession = (session: Session): string => {
     if (!userLocation) return '';
-    const distance = calculateDistance(
+    const distanceInKm = calculateDistance(
       userLocation.lat,
       userLocation.lng,
       session.location_lat,
       session.location_lng
     );
-    return `${distance.toFixed(1)} km`;
+    
+    if (selectedUnit === "m") {
+      const distanceInM = distanceInKm * 1000;
+      return distanceInM < 1000 
+        ? `${Math.round(distanceInM)} m`
+        : `${distanceInKm.toFixed(1)} km`;
+    }
+    
+    return `${distanceInKm.toFixed(1)} km`;
   };
 
   useEffect(() => {
     if (isOpen) {
       loadNearbySessions();
     }
-  }, [isOpen, selectedDistance, selectedActivity, userLocation]);
+  }, [isOpen, selectedDistance, selectedUnit, selectedActivity, userLocation]);
 
   return (
     <>
@@ -261,7 +273,15 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                 min="1"
                 max="500"
               />
-              <span className="text-sm text-muted-foreground">km</span>
+              <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                <SelectTrigger className="w-16">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="km">km</SelectItem>
+                  <SelectItem value="m">m</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Select value={selectedActivity} onValueChange={setSelectedActivity}>
