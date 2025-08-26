@@ -732,6 +732,27 @@ export type Database = {
           username: string
         }[]
       }
+      get_public_profile_safe: {
+        Args: { profile_user_id: string }
+        Returns: {
+          age: number
+          avatar_url: string
+          bio: string
+          created_at: string
+          cycling_records: Json
+          display_name: string
+          id: string
+          is_online: boolean
+          is_premium: boolean
+          last_seen: string
+          running_records: Json
+          swimming_records: Json
+          triathlon_records: Json
+          user_id: string
+          username: string
+          walking_records: Json
+        }[]
+      }
       get_user_group_conversations: {
         Args: { user_id_param: string }
         Returns: {
