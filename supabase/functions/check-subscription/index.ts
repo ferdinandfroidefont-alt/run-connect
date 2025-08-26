@@ -45,6 +45,29 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // First check if user already has manual premium access
+    const { data: existingSubscriber } = await supabaseClient
+      .from('subscribers')
+      .select('*')
+      .eq('email', user.email)
+      .maybeSingle();
+
+    // If user has manual premium access (like admin override), return that data
+    if (existingSubscriber?.stripe_customer_id === 'admin_override' && existingSubscriber.subscribed) {
+      logStep("Found manual premium access (admin override)", { 
+        email: user.email, 
+        tier: existingSubscriber.subscription_tier 
+      });
+      return new Response(JSON.stringify({
+        subscribed: true,
+        subscription_tier: existingSubscriber.subscription_tier,
+        subscription_end: existingSubscriber.subscription_end
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
