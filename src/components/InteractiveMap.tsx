@@ -1003,6 +1003,9 @@ export const InteractiveMap = ({
       
       // Show markers again
       loadSessions();
+      
+      // Rediriger vers la page "Mes itinéraires"
+      navigate('/my-sessions?tab=routes');
     }
   };
 

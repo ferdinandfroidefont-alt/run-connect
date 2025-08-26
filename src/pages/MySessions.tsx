@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAppContext } from '@/contexts/AppContext';
 
 interface UserSession {
@@ -62,6 +62,7 @@ export default function MySessions() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { openCreateRoute } = useAppContext();
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
@@ -142,6 +143,14 @@ export default function MySessions() {
       });
     }
   };
+
+  // Vérifier le paramètre URL pour ouvrir l'onglet routes
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('tab') === 'routes') {
+      setCurrentView('routes');
+    }
+  }, [location.search]);
 
   useEffect(() => {
     loadUserSessions();
