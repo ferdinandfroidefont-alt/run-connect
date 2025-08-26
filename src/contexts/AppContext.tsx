@@ -31,13 +31,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [openCreateRoute, setOpenCreateRouteState] = useState<() => void>(() => () => {});
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => {
     const saved = localStorage.getItem('soundEnabled');
-    const result = saved !== null ? JSON.parse(saved) : true;
-    console.log('🔊 AppContext: soundEnabled initialized to:', result);
-    return result;
+    return saved !== null ? JSON.parse(saved) : true;
   });
 
   useEffect(() => {
-    console.log('🔊 AppContext: saving soundEnabled to localStorage:', soundEnabled);
     localStorage.setItem('soundEnabled', JSON.stringify(soundEnabled));
   }, [soundEnabled]);
 

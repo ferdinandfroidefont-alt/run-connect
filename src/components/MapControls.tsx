@@ -13,22 +13,23 @@ export const MapControls: React.FC<MapControlsProps> = ({
   return (
     <div className="flex flex-col gap-3">
       {/* Additional Controls - moved above zoom controls */}
-      <div className="bg-white/95 backdrop-blur-sm border-2 border-gray-300 rounded-lg shadow-map-control overflow-hidden">
+      <div className="bg-map-control/90 backdrop-blur-sm border border-map-control-border rounded-lg shadow-map-control overflow-hidden">
         <button
           onClick={onResetView}
-          className="w-10 h-10 p-0 flex items-center justify-center hover:bg-gray-50 transition-colors border-b border-gray-300"
+          className="w-8 h-7 p-0 flex items-center justify-center hover:bg-map-control-hover transition-colors border-b border-map-control-border"
           title="Réinitialiser la vue"
         >
-          <RotateCcw size={16} className="text-foreground" />
+          <RotateCcw size={12} className="text-foreground" />
         </button>
         <button
           onClick={onToggle3D}
-          className="w-10 h-10 p-0 flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-8 h-7 p-0 flex items-center justify-center hover:bg-map-control-hover transition-colors"
           title="Basculer en 3D"
         >
-          <Box size={16} className="text-foreground" />
+          <Box size={12} className="text-foreground" />
         </button>
       </div>
+
     </div>
   );
 };
