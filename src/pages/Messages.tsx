@@ -13,9 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { UniversalSearchDialog } from "@/components/UniversalSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
+import { ClubInfoDialog } from "@/components/ClubInfoDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
-import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { MessageLimitDialog } from "@/components/MessageLimitDialog";
@@ -36,7 +37,8 @@ import {
   Clock,
   Settings,
   MoreVertical,
-  Crown
+  Crown,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -343,6 +345,94 @@ const Messages = () => {
       sessionId: session.id
     });
     navigate(`/?${params.toString()}`);
+  };
+
+  // Delete conversation
+  const deleteConversation = async () => {
+    if (!selectedConversation || !user) return;
+
+    try {
+      // Show confirmation dialog
+      const confirmDelete = window.confirm(
+        selectedConversation.is_group 
+          ? `Êtes-vous sûr de vouloir supprimer ce club "${selectedConversation.group_name}" ?`
+          : `Êtes-vous sûr de vouloir supprimer cette conversation avec ${selectedConversation.other_participant?.username} ?`
+      );
+
+      if (!confirmDelete) return;
+
+      if (selectedConversation.is_group) {
+        // For groups, only the creator can delete the entire group
+        if (selectedConversation.created_by === user.id) {
+          // Delete all group members first
+          await supabase
+            .from('group_members')
+            .delete()
+            .eq('conversation_id', selectedConversation.id);
+          
+          // Delete all messages
+          await supabase
+            .from('messages')
+            .delete()
+            .eq('conversation_id', selectedConversation.id);
+          
+          // Delete the conversation
+          const { error } = await supabase
+            .from('conversations')
+            .delete()
+            .eq('id', selectedConversation.id);
+          
+          if (error) throw error;
+          
+          toast({
+            title: "Club supprimé",
+            description: "Le club a été supprimé avec succès"
+          });
+        } else {
+          // For non-creators, just leave the group
+          const { error } = await supabase
+            .from('group_members')
+            .delete()
+            .eq('conversation_id', selectedConversation.id)
+            .eq('user_id', user.id);
+          
+          if (error) throw error;
+          
+          toast({
+            title: "Club quitté",
+            description: "Vous avez quitté le club"
+          });
+        }
+      } else {
+        // For direct conversations, delete all messages and the conversation
+        await supabase
+          .from('messages')
+          .delete()
+          .eq('conversation_id', selectedConversation.id);
+        
+        const { error } = await supabase
+          .from('conversations')
+          .delete()
+          .eq('id', selectedConversation.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Conversation supprimée",
+          description: "La conversation a été supprimée avec succès"
+        });
+      }
+
+      // Go back to conversations list
+      setSelectedConversation(null);
+      loadConversations();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la conversation",
+        variant: "destructive"
+      });
+    }
   };
 
   // Check daily message limit for non-premium users
@@ -842,7 +932,25 @@ const Messages = () => {
             </div>
 
             <div className="flex gap-1">
-              {/* Bouton de partage retiré */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    onClick={deleteConversation}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {selectedConversation.is_group && selectedConversation.created_by !== user?.id 
+                      ? "Quitter le club" 
+                      : "Supprimer"
+                    }
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
