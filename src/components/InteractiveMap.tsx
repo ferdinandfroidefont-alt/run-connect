@@ -1119,15 +1119,21 @@ export const InteractiveMap = ({
               RunConnect
             </h1>
             
-            {/* User Profile Avatar - Centered */}
+            {/* User Profile Avatar - Centered - Clickable to access profile */}
             {userProfile && (
               <div className="absolute left-1/2 transform -translate-x-1/2">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
-                  <AvatarFallback>
-                    {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <Button
+                  onClick={() => navigate('/profile')}
+                  variant="ghost"
+                  className="rounded-full p-1 hover:bg-transparent"
+                >
+                  <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all">
+                    <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
               </div>
             )}
             
