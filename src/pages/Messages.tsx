@@ -919,10 +919,15 @@ const Messages = () => {
                         e.preventDefault();
                         e.stopPropagation();
                         console.log('🔍 Avatar clicked - userId:', selectedConversation.other_participant?.user_id);
-                        console.log('🔍 Current showProfilePreview state:', showProfilePreview);
-                        alert('Avatar cliqué ! UserID: ' + selectedConversation.other_participant?.user_id);
+                        console.log('🔍 Current showProfilePreview state before:', showProfilePreview);
+                        console.log('🔍 Current selectedUserId before:', selectedUserId);
                         navigateToProfile(selectedConversation.other_participant?.user_id || "");
                         console.log('🔍 After navigateToProfile call');
+                        // Force un re-render en mettant un timeout pour voir les changements de state
+                        setTimeout(() => {
+                          console.log('🔍 State after timeout - showProfilePreview:', showProfilePreview);
+                          console.log('🔍 State after timeout - selectedUserId:', selectedUserId);
+                        }, 100);
                       }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />

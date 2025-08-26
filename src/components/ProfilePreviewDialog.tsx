@@ -215,8 +215,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   };
 
   if (!userId) {
+    console.log('🔍 ProfilePreviewDialog - NO USER ID, returning null');
     return null;
   }
+
+  console.log('🔍 ProfilePreviewDialog rendering with userId:', userId);
+  console.log('🔍 ProfilePreviewDialog isOwnProfile:', isOwnProfile);
 
   return (
     <Dialog open={!!userId} onOpenChange={() => onClose()}>
