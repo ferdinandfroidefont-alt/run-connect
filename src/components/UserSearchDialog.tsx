@@ -122,22 +122,22 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
     setLoading(true);
     try {
       if (followStatus === 'accepted') {
-        // Unfollow - remove the follow relationship
+        // Unfollow - marquer comme "unfollowed" au lieu de supprimer
         const { error } = await supabase
           .from('user_follows')
-          .delete()
+          .update({ status: 'unfollowed' })
           .eq('follower_id', user.id)
           .eq('following_id', selectedProfile.user_id);
 
         if (error) throw error;
         
-        setFollowStatus(null);
+        setFollowStatus('unfollowed');
         setIsFollowing(false);
-        setAreFriends(false); // Reset friends status since we unfollowed
+        setAreFriends(false);
         
         toast({ title: "Succès", description: "Vous ne suivez plus cet utilisateur" });
-      } else if (followStatus === 'pending') {
-        // Cancel pending request
+      } else if (followStatus === 'pending' || followStatus === 'unfollowed') {
+        // Cancel pending request ou supprimer unfollowed
         const { error } = await supabase
           .from('user_follows')
           .delete()
@@ -149,26 +149,59 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
         setFollowStatus(null);
         setIsFollowing(false);
         
-        toast({ title: "Succès", description: "Demande de suivi annulée" });
+        const message = followStatus === 'pending' 
+          ? "Demande de suivi annulée" 
+          : "Relation supprimée";
+        toast({ title: "Succès", description: message });
       } else {
-        // Send follow request - always use pending status for all users
-        const { error } = await supabase
+        // Vérifier s'il y a une relation précédente
+        const { data: existingFollow } = await supabase
           .from('user_follows')
-          .insert([{
-            follower_id: user.id,
-            following_id: selectedProfile.user_id,
-            status: 'pending'
-          }]);
+          .select('status')
+          .eq('follower_id', user.id)
+          .eq('following_id', selectedProfile.user_id)
+          .maybeSingle();
 
-        if (error) throw error;
-        
-        setFollowStatus('pending');
-        setIsFollowing(false);
-        
-        toast({ 
-          title: "Demande envoyée", 
-          description: "Votre demande de suivi a été envoyée" 
-        });
+        if (existingFollow && existingFollow.status === 'unfollowed') {
+          // Réactiver une relation précédemment acceptée
+          const { error } = await supabase
+            .from('user_follows')
+            .update({ status: 'accepted' })
+            .eq('follower_id', user.id)
+            .eq('following_id', selectedProfile.user_id);
+
+          if (error) throw error;
+
+          setFollowStatus('accepted');
+          setIsFollowing(true);
+          
+          const { data: friendsData } = await supabase.rpc('are_users_friends', {
+            user1_id: user.id,
+            user2_id: selectedProfile.user_id
+          });
+          setAreFriends(friendsData || false);
+          
+          toast({ title: "Réabonnement réussi", description: "Vous suivez de nouveau cet utilisateur" });
+        } else {
+          // Send follow request - toujours pending pour nouveau
+          const { error } = await supabase
+            .from('user_follows')
+            .insert([{
+              follower_id: user.id,
+              following_id: selectedProfile.user_id,
+              status: 'pending'
+            }]);
+
+          if (error) throw error;
+          
+          setFollowStatus('pending');
+          setIsFollowing(false);
+          
+          toast({ 
+            title: "Demande envoyée", 
+            description: "Votre demande de suivi a été envoyée" 
+          });
+        }
       }
     } catch (error: any) {
       console.error('Error toggling follow:', error);
@@ -287,12 +320,17 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
                     <UserCheck className="h-4 w-4 mr-2" />
                     Suivi
                   </>
-                ) : followStatus === 'pending' ? (
-                  <>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    En attente
-                  </>
-                ) : (
+                 ) : followStatus === 'pending' ? (
+                   <>
+                     <UserPlus className="h-4 w-4 mr-2" />
+                     En attente
+                   </>
+                 ) : followStatus === 'unfollowed' ? (
+                   <>
+                     <UserPlus className="h-4 w-4 mr-2" />
+                     Suivre à nouveau
+                   </>
+                 ) : (
                   <>
                     <UserPlus className="h-4 w-4 mr-2" />
                     Suivre

@@ -170,40 +170,74 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     setActionLoading(true);
     try {
       if (isFollowing || followRequestSent) {
-        // Unfollow or cancel request
-        const { error } = await supabase
-          .from('user_follows')
-          .delete()
-          .eq('follower_id', user.id)
-          .eq('following_id', userId);
-
-        if (error) throw error;
-
-        setIsFollowing(false);
-        setFollowRequestSent(false);
+        // Unfollow ou annuler la demande
         if (isFollowing) {
+          // Marquer comme "unfollowed" au lieu de supprimer
+          const { error } = await supabase
+            .from('user_follows')
+            .update({ status: 'unfollowed' })
+            .eq('follower_id', user.id)
+            .eq('following_id', userId);
+
+          if (error) throw error;
+
+          setIsFollowing(false);
+          setFollowRequestSent(false);
           // Seulement décrémenter si c'était une relation 'accepted'
           setFollowerCount(prev => Math.max(0, prev - 1));
           setAreFriends(false);
           toast({ title: "Vous ne suivez plus cette personne" });
         } else {
-          // C'était juste une demande 'pending' annulée, pas de changement du compteur
+          // Annuler une demande pending
+          const { error } = await supabase
+            .from('user_follows')
+            .delete()
+            .eq('follower_id', user.id)
+            .eq('following_id', userId);
+
+          if (error) throw error;
+
+          setIsFollowing(false);
+          setFollowRequestSent(false);
           toast({ title: "Demande de suivi annulée" });
         }
       } else {
-        // Send follow request
-        const { error } = await supabase
+        // Vérifier s'il y a une relation précédente "unfollowed"
+        const { data: existingFollow } = await supabase
           .from('user_follows')
-          .insert([{
-            follower_id: user.id,
-            following_id: userId,
-            status: 'pending'
-          }]);
+          .select('status')
+          .eq('follower_id', user.id)
+          .eq('following_id', userId)
+          .maybeSingle();
 
-        if (error) throw error;
+        if (existingFollow && existingFollow.status === 'unfollowed') {
+          // Réactiver une relation précédemment acceptée
+          const { error } = await supabase
+            .from('user_follows')
+            .update({ status: 'accepted' })
+            .eq('follower_id', user.id)
+            .eq('following_id', userId);
 
-        setFollowRequestSent(true);
-        toast({ title: "Demande de suivi envoyée" });
+          if (error) throw error;
+
+          setIsFollowing(true);
+          setFollowRequestSent(false);
+          toast({ title: "Réabonnement réussi" });
+        } else {
+          // Nouvelle demande de suivi
+          const { error } = await supabase
+            .from('user_follows')
+            .insert([{
+              follower_id: user.id,
+              following_id: userId,
+              status: 'pending'
+            }]);
+
+          if (error) throw error;
+
+          setFollowRequestSent(true);
+          toast({ title: "Demande de suivi envoyée" });
+        }
       }
     } catch (error: any) {
       toast({
@@ -295,14 +329,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     ) : (
                       <UserPlus className="h-4 w-4 mr-2" />
                     )}
-                    {actionLoading 
-                      ? "Chargement..." 
-                      : isFollowing 
-                      ? "Ne plus suivre" 
-                      : followRequestSent
-                      ? "Demande envoyée"
-                      : "Demander à suivre"
-                    }
+                     {actionLoading 
+                       ? "Chargement..." 
+                       : isFollowing 
+                       ? "Ne plus suivre" 
+                       : followRequestSent
+                       ? "Demande envoyée"
+                       : "Demander à suivre"
+                     }
                   </Button>
                 )}
               </CardContent>
