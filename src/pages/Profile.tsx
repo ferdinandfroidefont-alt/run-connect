@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -43,6 +43,9 @@ interface UserRoute {
 const Profile = () => {
   const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const viewingUserId = searchParams.get('user'); // ID de l'utilisateur à voir
+  const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
   const { theme, setTheme } = useTheme();
   const { shareProfile } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -67,26 +70,29 @@ const Profile = () => {
     if (user) {
       fetchProfile();
       fetchFollowCounts();
-      fetchUserRoutes();
+      if (!isViewingOtherUser) {
+        fetchUserRoutes();
+      }
     }
     // Check notification permission
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
-  }, [user]);
+  }, [user, viewingUserId, isViewingOtherUser]);
 
   const fetchFollowCounts = async () => {
-    if (!user) return;
+    const targetUserId = viewingUserId || user?.id;
+    if (!targetUserId) return;
 
     try {
       // Get follower count
       const { data: followerData } = await supabase.rpc('get_follower_count', { 
-        profile_user_id: user.id 
+        profile_user_id: targetUserId 
       });
       
       // Get following count
       const { data: followingData } = await supabase.rpc('get_following_count', { 
-        profile_user_id: user.id 
+        profile_user_id: targetUserId 
       });
       
       setFollowerCount(followerData || 0);
@@ -147,19 +153,44 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
+      const targetUserId = viewingUserId || user?.id;
+      if (!targetUserId) return;
 
-      if (error) throw error;
-      setProfile(data);
-      setFormData(data);
+      if (isViewingOtherUser) {
+        // Viewing another user's profile - use public profile function
+        const { data, error } = await supabase.rpc('get_public_profile_safe', {
+          profile_user_id: targetUserId
+        });
+        
+        if (error) throw error;
+        if (data && data.length > 0) {
+          // Pour les profils publics, on ajoute des valeurs par défaut pour les champs manquants
+          const publicProfile = {
+            ...data[0],
+            phone: null, // Les profils publics ne montrent pas le téléphone
+            notifications_enabled: false,
+            rgpd_accepted: false,
+            security_rules_accepted: false
+          };
+          setProfile(publicProfile);
+          setFormData(publicProfile);
+        }
+      } else {
+        // Viewing own profile - get full profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', targetUserId)
+          .single();
+
+        if (error) throw error;
+        setProfile(data);
+        setFormData(data);
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Impossible de charger votre profil",
+        description: "Impossible de charger le profil",
         variant: "destructive",
       });
     } finally {
@@ -381,7 +412,21 @@ const Profile = () => {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-md mx-auto space-y-4">
         <div className="text-center py-8">
-          <h1 className="text-2xl font-bold text-foreground">Mon Profil</h1>
+          <div className="flex items-center gap-3 justify-center mb-2">
+            {isViewingOtherUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="gap-2"
+              >
+                ← Retour
+              </Button>
+            )}
+            <h1 className="text-2xl font-bold text-foreground">
+              {isViewingOtherUser ? 'Profil utilisateur' : 'Mon Profil'}
+            </h1>
+          </div>
         </div>
 
         {/* Avatar Section */}

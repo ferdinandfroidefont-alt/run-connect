@@ -918,7 +918,8 @@ const Messages = () => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        navigateToProfile(selectedConversation.other_participant?.user_id || "");
+                        // Navigation directe vers la page profil
+                        navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                       }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
@@ -932,7 +933,8 @@ const Messages = () => {
                     className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigateToProfile(selectedConversation.other_participant?.user_id || "");
+                      // Navigation directe vers la page profil
+                      navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                     }}
                   >
                     <p className="font-medium text-sm">
