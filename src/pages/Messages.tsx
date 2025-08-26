@@ -18,7 +18,8 @@ import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
-import { ProfileImageViewer } from "@/components/ProfileImageViewer";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { MessageLimitDialog } from "@/components/MessageLimitDialog";
 import { 
   MessageCircle, 
@@ -126,16 +127,8 @@ const Messages = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Profile image viewer
-  const [showProfileImage, setShowProfileImage] = useState(false);
-  const [selectedUserAvatar, setSelectedUserAvatar] = useState<string | null>(null);
-  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
-  
-  const handleAvatarClick = (avatarUrl: string | null, username: string) => {
-    setSelectedUserAvatar(avatarUrl);
-    setSelectedUsername(username);
-    setShowProfileImage(true);
-  };
+  // Profile navigation
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
   // Load conversations
   const loadConversations = async () => {
@@ -834,13 +827,10 @@ const Messages = () => {
                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
                >
                  <div className="relative">
-                     <Avatar 
-                       className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         handleAvatarClick(profile.avatar_url, profile.username || profile.display_name || 'Utilisateur');
-                       }}
-                     >
+                    <Avatar 
+                      className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigateToProfile(profile.user_id)}
+                    >
                       <AvatarImage src={profile.avatar_url || ""} />
                       <AvatarFallback>
                         {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
@@ -928,10 +918,8 @@ const Messages = () => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        handleAvatarClick(
-                          selectedConversation.other_participant?.avatar_url,
-                          selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || 'Utilisateur'
-                        );
+                        // Navigation directe vers la page profil
+                        navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                       }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
@@ -945,10 +933,8 @@ const Messages = () => {
                     className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleAvatarClick(
-                        selectedConversation.other_participant?.avatar_url,
-                        selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || 'Utilisateur'
-                      );
+                      // Navigation directe vers la page profil
+                      navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                     }}
                   >
                     <p className="font-medium text-sm">
@@ -997,15 +983,9 @@ const Messages = () => {
                          <div className="flex items-center gap-2 mb-1">
                            <div className="relative">
                               <Avatar 
-                                 className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   handleAvatarClick(
-                                     message.sender.avatar_url,
-                                     message.sender.username || message.sender.display_name || 'Utilisateur'
-                                   );
-                                 }}
-                               >
+                                className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                onClick={() => navigateToProfile(message.sender.user_id)}
+                              >
                                <AvatarImage src={message.sender.avatar_url || ""} />
                                <AvatarFallback>
                                  {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
@@ -1302,12 +1282,9 @@ const Messages = () => {
                                setSelectedConversation(conversation);
                                setGroupInfoData(conversation);
                                setShowGroupInfo(true);
-                              } else {
-                                conversation.other_participant && handleAvatarClick(
-                                  conversation.other_participant.avatar_url,
-                                  conversation.other_participant.username || conversation.other_participant.display_name || 'Utilisateur'
-                                );
-                              }
+                             } else {
+                               conversation.other_participant && navigateToProfile(conversation.other_participant.user_id);
+                             }
                            }}
                        >
                          {conversation.is_group ? (
@@ -1458,12 +1435,10 @@ const Messages = () => {
           }}
         />
 
-        {/* Profile Image Viewer */}
-        <ProfileImageViewer
-          isOpen={showProfileImage}
-          onClose={() => setShowProfileImage(false)}
-          avatarUrl={selectedUserAvatar}
-          username={selectedUsername}
+        {/* Profile Preview Dialog */}
+        <ProfilePreviewDialog
+          userId={showProfilePreview ? selectedUserId : null}
+          onClose={closeProfilePreview}
         />
 
         {/* Message Limit Dialog */}
