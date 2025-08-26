@@ -1310,11 +1310,12 @@ export const InteractiveMap = ({
           <Button
             onClick={handleCreateRoute}
             size="sm"
+            variant={isRouteCreationMode ? "default" : "outline"}
             className={cn(
-              "w-8 h-7 p-0 shadow-map-control flex items-center justify-center transition-all",
+              "w-8 h-7 p-0 shadow-map-control flex items-center justify-center",
               isRouteCreationMode 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-primary" 
-                : "bg-card/90 backdrop-blur-sm border border-border hover:bg-accent"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                : "bg-card/90 backdrop-blur-sm"
             )}
             title="Créer un itinéraire"
           >
