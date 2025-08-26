@@ -17,6 +17,7 @@ import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
+import { SoundSettings } from "@/components/SoundSettings";
 
 interface Profile {
   username: string;
@@ -998,6 +999,9 @@ const Profile = () => {
             {/* Contacts Permission */}
             <ContactsPermissionButton />
             <PushNotificationButton />
+            
+            {/* Sound Feedback Settings */}
+            <SoundSettings />
 
             {/* Contacts Access and Friend Suggestions */}
             <div className="flex items-center justify-between">
