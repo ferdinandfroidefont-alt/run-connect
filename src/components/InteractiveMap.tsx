@@ -862,9 +862,19 @@ export const InteractiveMap = ({
     if (!elevationService.current || routeCoordinates.current.length === 0) return;
     
     try {
+      // Pour les longs itinéraires, on augmente significativement le nombre d'échantillons
+      // Plus de points = calcul plus précis du dénivelé
+      const routeLength = routeCoordinates.current.length;
+      let samples = Math.max(100, Math.min(routeLength * 2, 512)); // Minimum 100 points, maximum 512 (limite API)
+      
+      // Pour les très longs itinéraires, on prend le maximum de points possible
+      if (routeLength > 100) {
+        samples = 512; // Maximum autorisé par l'API Google Maps
+      }
+
       const elevationRequest = {
         path: routeCoordinates.current,
-        samples: Math.min(routeCoordinates.current.length, 256) // Limit samples
+        samples: samples
       };
       
       elevationService.current.getElevationAlongPath(elevationRequest, (results, status) => {
@@ -896,13 +906,18 @@ export const InteractiveMap = ({
       totalDistance += distance;
     }
     
-    // Calculate elevation gain/loss
+    // Calculate elevation gain/loss avec un seuil minimum pour éviter le bruit
+    // On ignore les variations très petites qui peuvent être dues à l'imprécision des données
+    const elevationThreshold = 1; // Minimum 1m de différence pour compter comme un dénivelé
+    
     for (let i = 1; i < routeElevations.length; i++) {
       const diff = routeElevations[i] - routeElevations[i - 1];
-      if (diff > 0) {
-        elevationGain += diff;
-      } else {
-        elevationLoss += Math.abs(diff);
+      if (Math.abs(diff) >= elevationThreshold) {
+        if (diff > 0) {
+          elevationGain += diff;
+        } else {
+          elevationLoss += Math.abs(diff);
+        }
       }
     }
     
