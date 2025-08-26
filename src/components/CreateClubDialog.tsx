@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Users, Search } from "lucide-react";
+import { X, Plus, Users, Search, Camera, Trash2 } from "lucide-react";
+import { ImageCropEditor } from "./ImageCropEditor";
 
 interface Profile {
   user_id: string;
@@ -29,11 +30,15 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
   const { toast } = useToast();
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
+  const [groupAvatarUrl, setGroupAvatarUrl] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<Profile[]>([]);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showImageCrop, setShowImageCrop] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const searchUsers = async () => {
     if (!searchQuery.trim()) {
@@ -69,6 +74,86 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
     setSelectedMembers(selectedMembers.filter(m => m.user_id !== userId));
   };
 
+  // Handle club avatar upload
+  const handleAvatarSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier image",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erreur", 
+        description: "L'image ne doit pas dépasser 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setSelectedImage(e.target?.result as string);
+      setShowImageCrop(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCroppedImage = async (croppedImageBlob: Blob) => {
+    if (!user) return;
+
+    setAvatarUploading(true);
+    try {
+      // Create unique filename
+      const timestamp = Date.now();
+      const filename = `${user.id}/club/new-${timestamp}.jpg`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filename, croppedImageBlob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filename);
+
+      setGroupAvatarUrl(publicUrl);
+      setShowImageCrop(false);
+      setSelectedImage(null);
+
+      toast({
+        title: "Succès",
+        description: "Photo de profil ajoutée"
+      });
+
+      
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter la photo de profil",
+        variant: "destructive"
+      });
+      
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleCreateGroup = async () => {
     if (!user || !groupName.trim()) return;
 
@@ -81,6 +166,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
           is_group: true,
           group_name: groupName.trim(),
           group_description: groupDescription.trim() || null,
+          group_avatar_url: groupAvatarUrl || null,
           created_by: user.id,
           participant_1: user.id, // Required field, set to creator for groups
           participant_2: user.id  // Required field, set to creator for groups
@@ -127,6 +213,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
       // Reset form
       setGroupName("");
       setGroupDescription("");
+      setGroupAvatarUrl("");
       setSelectedMembers([]);
     } catch (error: any) {
       console.error('Error creating group:', error);
@@ -152,6 +239,52 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Club Avatar */}
+            <div>
+              <Label>Photo de profil du club (optionnel)</Label>
+              <div className="flex items-center gap-4 mt-2">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={groupAvatarUrl || ""} />
+                  <AvatarFallback>
+                    <Users className="h-8 w-8" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => document.getElementById('create-club-avatar-upload')?.click()}
+                    disabled={avatarUploading}
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    {groupAvatarUrl ? 'Changer' : 'Ajouter'}
+                  </Button>
+                  {groupAvatarUrl && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setGroupAvatarUrl("");
+                        toast({
+                          title: "Photo supprimée",
+                          description: "La photo de profil a été supprimée"
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <input
+                  id="create-club-avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarSelect}
+                />
+              </div>
+            </div>
+
             {/* Group Name */}
             <div>
               <Label htmlFor="groupName">Nom du club *</Label>
@@ -298,6 +431,19 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Image Crop Modal */}
+      {showImageCrop && selectedImage && (
+        <ImageCropEditor
+          open={showImageCrop}
+          onClose={() => {
+            setShowImageCrop(false);
+            setSelectedImage(null);
+          }}
+          imageSrc={selectedImage}
+          onCropComplete={handleCroppedImage}
+        />
+      )}
     </>
   );
 };
