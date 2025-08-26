@@ -57,12 +57,11 @@ const Leaderboard = () => {
 
       if (globalError) throw globalError;
 
-      // Get profiles for users in leaderboard
+      // Get profiles for users in leaderboard using secure function
       const userIds = globalData?.map(item => item.user_id) || [];
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url')
-        .in('user_id', userIds);
+      const { data: profilesData } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: userIds
+      });
 
       const globalLeaderboard = globalData?.map((item, index) => {
         const profile = profilesData?.find(p => p.user_id === item.user_id);

@@ -47,18 +47,39 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: [] // Will be populated by search
+      });
+
+      // If we need to search, do a limited search first to get IDs
+      const { data: searchData, error: searchError } = await supabase
         .from('profiles')
-        .select('user_id, username, display_name, avatar_url, bio, is_private')
+        .select('user_id')
         .neq('user_id', user?.id)
         .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+        .eq('is_private', false) // Only search public profiles
         .limit(20);
 
-      if (error) throw error;
+      if (searchError) throw searchError;
+
+      const userIds = searchData?.map(item => item.user_id) || [];
+      
+      if (userIds.length === 0) {
+        setSearchResults([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get safe public profiles for found users
+      const { data: profilesData, error: profilesError } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: userIds
+      });
+
+      if (profilesError) throw profilesError;
 
       // Load follower counts for each profile
       const profilesWithStats = await Promise.all(
-        (data || []).map(async (profile) => {
+        (profilesData || []).map(async (profile) => {
           const { data: followerData } = await supabase.rpc('get_follower_count', { 
             profile_user_id: profile.user_id 
           });
@@ -68,6 +89,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           
           return {
             ...profile,
+            is_private: false, // Ces profils sont déjà filtrés comme publics
             follower_count: followerData || 0,
             following_count: followingData || 0
           };

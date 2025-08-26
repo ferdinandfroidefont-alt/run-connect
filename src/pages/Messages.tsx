@@ -189,10 +189,9 @@ const Messages = () => {
               .select('user_id')
               .eq('conversation_id', conv.id);
 
-            const { data: memberProfiles } = await supabase
-              .from('profiles')
-              .select('user_id, username, display_name, avatar_url')
-              .in('user_id', memberIds?.map(m => m.user_id) || []);
+            const { data: memberProfiles } = await supabase.rpc('get_safe_public_profiles', {
+              profile_user_ids: memberIds?.map(m => m.user_id) || []
+            });
 
             return {
               ...conv,
@@ -207,11 +206,11 @@ const Messages = () => {
               ? conv.participant_2 
               : conv.participant_1;
             
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('user_id, username, display_name, avatar_url')
-              .eq('user_id', otherParticipantId)
-              .single();
+            const { data: profileArray } = await supabase.rpc('get_safe_public_profile', {
+              profile_user_id: otherParticipantId
+            });
+            
+            const profile = profileArray && profileArray.length > 0 ? profileArray[0] : null;
 
             return {
               ...conv,

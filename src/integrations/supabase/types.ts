@@ -778,6 +778,20 @@ export type Database = {
           username: string
         }[]
       }
+      get_safe_public_profiles: {
+        Args: { profile_user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          bio: string
+          created_at: string
+          display_name: string
+          is_online: boolean
+          is_premium: boolean
+          show_online_status: boolean
+          user_id: string
+          username: string
+        }[]
+      }
       get_user_group_conversations: {
         Args: { user_id_param: string }
         Returns: {
