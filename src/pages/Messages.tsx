@@ -916,9 +916,11 @@ const Messages = () => {
                     <Avatar 
                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         console.log('🔍 Avatar clicked - userId:', selectedConversation.other_participant?.user_id);
                         console.log('🔍 Current showProfilePreview state:', showProfilePreview);
+                        alert('Avatar cliqué ! UserID: ' + selectedConversation.other_participant?.user_id);
                         navigateToProfile(selectedConversation.other_participant?.user_id || "");
                         console.log('🔍 After navigateToProfile call');
                       }}
