@@ -7,18 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
-import { Switch } from "@/components/ui/switch";
-import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, X, Smartphone, Share2, Trash2 } from "lucide-react";
+import { User, Crown, Camera } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useShareProfile } from "@/hooks/useShareProfile";
-import { ContactsPermissionButton } from "./ContactsPermissionButton";
 
 interface Profile {
   username: string;
@@ -28,10 +23,6 @@ interface Profile {
   bio: string | null;
   phone: string | null;
   is_premium: boolean;
-  notifications_enabled?: boolean;
-  rgpd_accepted?: boolean;
-  security_rules_accepted?: boolean;
-  allow_friend_suggestions?: boolean;
   walking_records?: any;
   running_records?: any;
   cycling_records?: any;
@@ -44,10 +35,8 @@ interface ProfileDialogProps {
 }
 
 export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
-  const { user, session, signOut, subscriptionInfo, refreshSubscription } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
-  const { shareProfile } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -60,8 +49,6 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [recordsData, setRecordsData] = useState<{
     walking: Record<string, string>;
     running: Record<string, string>;
@@ -80,24 +67,17 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       fetchProfile();
       fetchFollowCounts();
     }
-    // Check notification permission
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
   }, [user, open]);
 
   const fetchFollowCounts = async () => {
     if (!user) return;
-
     try {
       const { data: followerData } = await supabase.rpc('get_follower_count', { 
         profile_user_id: user.id 
       });
-      
       const { data: followingData } = await supabase.rpc('get_following_count', { 
         profile_user_id: user.id 
       });
-      
       setFollowerCount(followerData || 0);
       setFollowingCount(followingData || 0);
     } catch (error) {
@@ -116,7 +96,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       if (error) throw error;
       setProfile(data);
       setFormData(data);
-      // Initialize records data safely
+      
       const defaultRecords = {
         walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
         running: { '5k': '', '10k': '', '21k': '', '42k': '' },
@@ -156,16 +136,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
         });
         return;
       }
-
       if (file.size > 5 * 1024 * 1024) {
         toast({
-          title: "Erreur",
+          title: "Erreur", 
           description: "La taille du fichier ne doit pas dépasser 5MB.",
           variant: "destructive",
         });
         return;
       }
-
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageSrc = e.target?.result as string;
@@ -179,10 +157,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const handleCropComplete = (croppedImageBlob: Blob) => {
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
     setAvatarFile(croppedFile);
-    
     const previewUrl = URL.createObjectURL(croppedImageBlob);
     setAvatarPreview(previewUrl);
-    
     setShowCropEditor(false);
   };
 
@@ -196,9 +172,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
         .from('avatars')
         .upload(filePath, file);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       const { data } = supabase.storage
         .from('avatars')
@@ -264,132 +238,6 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!user?.email) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de récupérer votre adresse email.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsChangingPassword(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Email envoyé !",
-        description: "Vérifiez votre boîte email pour réinitialiser votre mot de passe.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
-
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window) {
-      try {
-        const permission = await Notification.requestPermission();
-        setNotificationPermission(permission);
-        
-        if (user) {
-          await supabase
-            .from('profiles')
-            .update({ notifications_enabled: permission === 'granted' })
-            .eq('user_id', user.id);
-        }
-        
-        toast({
-          title: permission === 'granted' ? "Notifications activées" : "Notifications refusées",
-          description: permission === 'granted' ? 
-            "Vous recevrez désormais des notifications." : 
-            "Vous ne recevrez pas de notifications."
-        });
-      } catch (error) {
-        console.error('Error requesting notification permission:', error);
-      }
-    }
-  };
-
-  const updatePrivacySettings = async (field: string, value: boolean) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ [field]: value })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setProfile(prev => prev ? { ...prev, [field]: value } : null);
-      
-      toast({
-        title: "Paramètres mis à jour",
-        description: "Vos préférences ont été sauvegardées."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour les paramètres",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleSignOut = () => {
-    signOut();
-    onOpenChange(false);
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!user || !session) return;
-
-    try {
-      setLoading(true);
-      
-      // Call the delete-account edge function
-      const { data, error } = await supabase.functions.invoke('delete-account', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Compte supprimé",
-        description: "Votre compte a été supprimé avec succès.",
-      });
-
-      // Sign out and redirect
-      signOut();
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error('Delete account error:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer votre compte. Contactez le support.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -411,8 +259,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
           </DialogHeader>
           
           <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
-            <div className="space-y-4 pb-4 min-h-full"
-                 style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
+            <div className="space-y-4 pb-4 min-h-full">
               {/* Avatar Section */}
               <Card>
                 <CardContent className="flex flex-col items-center py-6">
@@ -500,6 +347,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                 </CardContent>
               </Card>
 
+              {/* Informations personnelles */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center">
@@ -553,30 +401,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Sauvegarder
                         </Button>
-                        <Button variant="outline" onClick={() => {
-                          setIsEditing(false);
-                          setAvatarFile(null);
-                          setAvatarPreview("");
-                          setFormData(profile || {});
-                           // Reset records data safely
-                           const defaultRecords = {
-                             walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
-                             running: { '5k': '', '10k': '', '21k': '', '42k': '' },
-                             cycling: { '25k': '', '50k': '', '100k': '', '200k': '' },
-                             swimming: { '100m': '', '500m': '', '1000m': '', '1500m': '' }
-                           };
-                           
-                           setRecordsData({
-                             walking: (profile?.walking_records && typeof profile.walking_records === 'object') ? 
-                               { ...defaultRecords.walking, ...profile.walking_records } : defaultRecords.walking,
-                             running: (profile?.running_records && typeof profile.running_records === 'object') ? 
-                               { ...defaultRecords.running, ...profile.running_records } : defaultRecords.running,
-                             cycling: (profile?.cycling_records && typeof profile.cycling_records === 'object') ? 
-                               { ...defaultRecords.cycling, ...profile.cycling_records } : defaultRecords.cycling,
-                             swimming: (profile?.swimming_records && typeof profile.swimming_records === 'object') ? 
-                               { ...defaultRecords.swimming, ...profile.swimming_records } : defaultRecords.swimming
-                           });
-                        }}>
+                        <Button variant="outline" onClick={() => setIsEditing(false)}>
                           Annuler
                         </Button>
                       </div>
@@ -612,538 +437,18 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         </div>
                       )}
                       <Button onClick={() => setIsEditing(true)} className="w-full">
-                        <Settings className="h-4 w-4 mr-2" />
+                        <User className="h-4 w-4 mr-2" />
                         Modifier le profil
                       </Button>
                     </div>
                   )}
                 </CardContent>
               </Card>
-
-              {/* Sports Records Section */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Heart className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Records Sportifs</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {isEditing ? (
-                    <div className="space-y-6">
-                      {/* Walking Records */}
-                      <div>
-                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
-                          🚶‍♂️ Marche
-                        </h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(recordsData.walking).map(([distance, time]) => (
-                            <div key={distance}>
-                              <label className="text-xs font-medium">{distance}</label>
-                              <Input
-                                placeholder="00:00:00"
-                                value={time}
-                                onChange={(e) => setRecordsData(prev => ({
-                                  ...prev,
-                                  walking: { ...prev.walking, [distance]: e.target.value }
-                                }))}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-2 flex gap-2">
-                          <Input
-                            placeholder="Distance custom (ex: 3k)"
-                            className="text-xs"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                const target = e.target as HTMLInputElement;
-                                const distance = target.value.trim();
-                                if (distance && !recordsData.walking[distance]) {
-                                  setRecordsData(prev => ({
-                                    ...prev,
-                                    walking: { ...prev.walking, [distance]: '' }
-                                  }));
-                                  target.value = '';
-                                }
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Running Records */}
-                      <div>
-                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
-                          🏃‍♂️ Course à pied
-                        </h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(recordsData.running).map(([distance, time]) => (
-                            <div key={distance}>
-                              <label className="text-xs font-medium">{distance}</label>
-                              <Input
-                                placeholder="00:00:00"
-                                value={time}
-                                onChange={(e) => setRecordsData(prev => ({
-                                  ...prev,
-                                  running: { ...prev.running, [distance]: e.target.value }
-                                }))}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-2 flex gap-2">
-                          <Input
-                            placeholder="Distance custom (ex: 15k)"
-                            className="text-xs"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                const target = e.target as HTMLInputElement;
-                                const distance = target.value.trim();
-                                if (distance && !recordsData.running[distance]) {
-                                  setRecordsData(prev => ({
-                                    ...prev,
-                                    running: { ...prev.running, [distance]: '' }
-                                  }));
-                                  target.value = '';
-                                }
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Cycling Records */}
-                      <div>
-                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
-                          🚴‍♂️ Vélo
-                        </h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(recordsData.cycling).map(([distance, time]) => (
-                            <div key={distance}>
-                              <label className="text-xs font-medium">{distance}</label>
-                              <Input
-                                placeholder="00:00:00"
-                                value={time}
-                                onChange={(e) => setRecordsData(prev => ({
-                                  ...prev,
-                                  cycling: { ...prev.cycling, [distance]: e.target.value }
-                                }))}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-2 flex gap-2">
-                          <Input
-                            placeholder="Distance custom (ex: 80k)"
-                            className="text-xs"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                const target = e.target as HTMLInputElement;
-                                const distance = target.value.trim();
-                                if (distance && !recordsData.cycling[distance]) {
-                                  setRecordsData(prev => ({
-                                    ...prev,
-                                    cycling: { ...prev.cycling, [distance]: '' }
-                                  }));
-                                  target.value = '';
-                                }
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Swimming Records */}
-                      <div>
-                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
-                          🏊‍♂️ Natation
-                        </h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(recordsData.swimming).map(([distance, time]) => (
-                            <div key={distance}>
-                              <label className="text-xs font-medium">{distance}</label>
-                              <Input
-                                placeholder="00:00:00"
-                                value={time}
-                                onChange={(e) => setRecordsData(prev => ({
-                                  ...prev,
-                                  swimming: { ...prev.swimming, [distance]: e.target.value }
-                                }))}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-2 flex gap-2">
-                          <Input
-                            placeholder="Distance custom (ex: 2000m)"
-                            className="text-xs"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                const target = e.target as HTMLInputElement;
-                                const distance = target.value.trim();
-                                if (distance && !recordsData.swimming[distance]) {
-                                  setRecordsData(prev => ({
-                                    ...prev,
-                                    swimming: { ...prev.swimming, [distance]: '' }
-                                  }));
-                                  target.value = '';
-                                }
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted-foreground">
-                      <p className="mb-4">Cliquez sur "Modifier le profil" pour ajouter vos records</p>
-                      
-                      {/* Display existing records if any */}
-                      {(profile?.walking_records && typeof profile.walking_records === 'object' && Object.values(profile.walking_records).some(v => v)) && (
-                        <div className="text-left mb-4">
-                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
-                            🚶‍♂️ Marche
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {Object.entries(profile.walking_records).map(([distance, time]) => 
-                              time && (
-                                <div key={distance} className="flex justify-between">
-                                  <span>{distance}</span>
-                                   <span className="font-mono">{String(time)}</span>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {(profile?.running_records && typeof profile.running_records === 'object' && Object.values(profile.running_records).some(v => v)) && (
-                        <div className="text-left mb-4">
-                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
-                            🏃‍♂️ Course à pied
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {Object.entries(profile.running_records).map(([distance, time]) => 
-                              time && (
-                                <div key={distance} className="flex justify-between">
-                                  <span>{distance}</span>
-                                   <span className="font-mono">{String(time)}</span>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {(profile?.cycling_records && typeof profile.cycling_records === 'object' && Object.values(profile.cycling_records).some(v => v)) && (
-                        <div className="text-left mb-4">
-                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
-                            🚴‍♂️ Vélo
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {Object.entries(profile.cycling_records).map(([distance, time]) => 
-                              time && (
-                                <div key={distance} className="flex justify-between">
-                                  <span>{distance}</span>
-                                   <span className="font-mono">{String(time)}</span>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {(profile?.swimming_records && typeof profile.swimming_records === 'object' && Object.values(profile.swimming_records).some(v => v)) && (
-                        <div className="text-left mb-4">
-                          <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
-                            🏊‍♂️ Natation
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {Object.entries(profile.swimming_records).map(([distance, time]) => 
-                              time && (
-                                <div key={distance} className="flex justify-between">
-                                  <span>{distance}</span>
-                                  <span className="font-mono">{String(time)}</span>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Settings className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Paramètres</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Theme Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          Mode clair
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Basculer entre le mode sombre et clair
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={theme === 'light'}
-                      onCheckedChange={(checked) => setTheme(checked ? 'light' : 'dark')}
-                    />
-                  </div>
-
-                  {/* Password Reset */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Key className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Mot de passe
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Changer votre mot de passe par email
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePasswordReset}
-                      disabled={isChangingPassword}
-                    >
-                      {isChangingPassword ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Modifier"
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Notifications */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Bell className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Notifications
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Recevoir des notifications push
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {notificationPermission === 'denied' && (
-                        <span className="text-xs text-red-600">Refusées</span>
-                      )}
-                      {notificationPermission === 'granted' && (
-                        <span className="text-xs text-green-600">Autorisées</span>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={requestNotificationPermission}
-                        disabled={notificationPermission === 'granted'}
-                      >
-                        {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Friend Suggestions */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Suggestions d'amis
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Autoriser les suggestions et être suggéré
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={profile?.allow_friend_suggestions !== false}
-                      onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
-                    />
-                  </div>
-
-                  {/* Share Profile */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Share2 className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Partager mon profil
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Partagez votre profil sur Instagram, WhatsApp...
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (profile) {
-                          shareProfile({
-                            username: profile.username,
-                            displayName: profile.display_name,
-                            bio: profile.bio
-                          });
-                        }
-                      }}
-                    >
-                      Partager
-                    </Button>
-                  </div>
-
-                  {/* Contacts Access - Only show on mobile */}
-                  <ContactsPermissionButton />
-                </CardContent>
-              </Card>
-
-              {/* Privacy & Legal Settings */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Shield className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Confidentialité & Légal</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* RGPD */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Règlement RGPD
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Traitement des données personnelles
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={profile?.rgpd_accepted || false}
-                      onCheckedChange={(checked) => updatePrivacySettings('rgpd_accepted', checked)}
-                    />
-                  </div>
-
-                  {/* Security Rules */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Règles de sécurité
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Règles d'utilisation et sécurité
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={profile?.security_rules_accepted || false}
-                      onCheckedChange={(checked) => updatePrivacySettings('security_rules_accepted', checked)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Support */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Mail className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Support</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      Besoin d'aide ? Contactez notre équipe support
-                    </p>
-                    <a 
-                      href="mailto:ferdinand.froidefont@gmail.com"
-                      className="inline-flex items-center gap-2 text-primary hover:underline"
-                    >
-                      <Mail className="h-4 w-4" />
-                      ferdinand.froidefont@gmail.com
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleSignOut}
-                    className="w-full text-destructive hover:text-destructive"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Se déconnecter
-                  </Button>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer mon compte
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Supprimer votre compte</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Êtes-vous sûr de vouloir supprimer définitivement votre compte ? 
-                          Cette action est irréversible et toutes vos données seront perdues.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={handleDeleteAccount}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Supprimer définitivement
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </CardContent>
-              </Card>
-            </div>
-            
-            {/* Indicateur de scroll en bas */}
-            <div className="flex justify-center pt-4 pb-2">
-              <div className="h-1 w-12 bg-muted rounded-full opacity-50"></div>
             </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
-      {/* Follow Dialog */}
       <FollowDialog
         open={showFollowDialog}
         onOpenChange={setShowFollowDialog}
@@ -1152,7 +457,6 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
         followingCount={followingCount}
       />
 
-      {/* Image Crop Editor */}
       <ImageCropEditor
         open={showCropEditor}
         onClose={() => setShowCropEditor(false)}

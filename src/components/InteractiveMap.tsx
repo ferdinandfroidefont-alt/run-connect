@@ -7,7 +7,7 @@ import { SessionFilters } from './SessionFilters';
 import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { NotificationCenter } from './NotificationCenter';
-import { ProfileDialog } from './ProfileDialog';
+import { SettingsDialog } from './SettingsDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
 import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -112,7 +112,7 @@ export const InteractiveMap = ({
   const [userProfile, setUserProfile] = useState<{username: string, display_name: string, avatar_url: string | null} | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -1146,7 +1146,7 @@ export const InteractiveMap = ({
               </div>
               <div 
                 className="text-lg cursor-pointer hover:opacity-70 transition-opacity"
-                onClick={() => setShowProfileDialog(true)}
+                onClick={() => setShowSettingsDialog(true)}
               >
                 ⚙️
               </div>
@@ -1358,9 +1358,9 @@ export const InteractiveMap = ({
         onSessionUpdated={loadSessions}
       />
       
-      <ProfileDialog 
-        open={showProfileDialog}
-        onOpenChange={setShowProfileDialog}
+      <SettingsDialog 
+        open={showSettingsDialog}
+        onOpenChange={setShowSettingsDialog}
       />
 
       {/* User Sessions Dialog */}
