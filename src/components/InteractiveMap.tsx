@@ -8,6 +8,7 @@ import { CreateSessionDialog } from './CreateSessionDialog';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { NotificationCenter } from './NotificationCenter';
 import { SettingsDialog } from './SettingsDialog';
+import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
 import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -112,6 +113,7 @@ export const InteractiveMap = ({
   const [userProfile, setUserProfile] = useState<{username: string, display_name: string, avatar_url: string | null} | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
@@ -1123,7 +1125,7 @@ export const InteractiveMap = ({
             {userProfile && (
               <div className="absolute left-1/2 transform -translate-x-1/2">
                 <div 
-                  onClick={() => navigate('/profile')}
+                  onClick={() => setShowProfileDialog(true)}
                   className="cursor-pointer"
                 >
                   <Avatar className="w-12 h-12">
@@ -1358,6 +1360,11 @@ export const InteractiveMap = ({
         onSessionUpdated={loadSessions}
       />
       
+      <ProfileDialog 
+        open={showProfileDialog}
+        onOpenChange={setShowProfileDialog}
+      />
+
       <SettingsDialog 
         open={showSettingsDialog}
         onOpenChange={setShowSettingsDialog}
