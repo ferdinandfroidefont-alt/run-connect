@@ -621,10 +621,11 @@ export default function MySessions() {
           <Button
             onClick={() => {
               navigate('/');
-              // Attendre que la navigation se fasse, puis activer le mode création
+              // Attendre plus longtemps pour que la page se charge complètement
               setTimeout(() => {
+                console.log('🎯 Calling openCreateRoute from MySessions');
                 openCreateRoute();
-              }, 100);
+              }, 300);
             }}
             size="sm"
             className="gap-2"
