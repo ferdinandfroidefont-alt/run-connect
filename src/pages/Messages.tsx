@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { MessageSectionHeader, shouldShowSectionHeader } from "../components/MessageTimestamp";
 
 interface Profile {
   user_id: string;
@@ -977,43 +978,64 @@ const Messages = () => {
 
           {/* Messages */}
           <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {messages.map((message) => {
+            <div className="space-y-2">
+              {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
+                const previousMessage = index > 0 ? messages[index - 1] : null;
+                const showHeader = shouldShowSectionHeader(message, previousMessage);
+                const [showIndividualTime, setShowIndividualTime] = useState(false);
+                
                 return (
-                  <div
-                    key={message.id}
-                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[70%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
-                       {!isOwnMessage && (
-                         <div className="flex items-center gap-2 mb-1">
-                           <div className="relative">
-                               <Avatar 
-                                 className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   handleAvatarClick(message.sender.avatar_url, message.sender.username || message.sender.display_name || "Utilisateur");
-                                 }}
-                               >
-                               <AvatarImage src={message.sender.avatar_url || ""} />
-                               <AvatarFallback>
-                                 {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
-                               </AvatarFallback>
-                             </Avatar>
-                             <OnlineStatus userId={message.sender.user_id} className="w-2 h-2" />
-                           </div>
-                           <span className="text-xs text-muted-foreground">
-                             {message.sender.username || message.sender.display_name}
-                           </span>
-                         </div>
-                       )}
+                  <div key={message.id}>
+                    {showHeader && (
+                      <MessageSectionHeader timestamp={message.created_at} />
+                    )}
+                    
+                    <div
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}
+                      onMouseEnter={() => setShowIndividualTime(true)}
+                      onMouseLeave={() => setShowIndividualTime(false)}
+                      onClick={() => setShowIndividualTime(!showIndividualTime)}
+                    >
+                      <div className={`max-w-[70%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
+                        {!isOwnMessage && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="relative">
+                                <Avatar 
+                                  className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAvatarClick(message.sender.avatar_url, message.sender.username || message.sender.display_name || "Utilisateur");
+                                  }}
+                                >
+                                <AvatarImage src={message.sender.avatar_url || ""} />
+                                <AvatarFallback>
+                                  {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <OnlineStatus userId={message.sender.user_id} className="w-2 h-2" />
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {message.sender.username || message.sender.display_name}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Individual timestamp - appears on hover/click */}
+                        {showIndividualTime && (
+                          <div className={`absolute -top-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
+                            <div className="bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+                              {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
+                            </div>
+                          </div>
+                        )}
+                        
                         <div
-                          className={`rounded-lg p-3 ${
+                          className={`rounded-lg p-3 transition-all duration-200 ${
                             isOwnMessage
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
-                          }`}
+                          } ${showIndividualTime ? 'shadow-lg' : ''}`}
                         >
                            {/* Session sharing */}
                            {message.message_type === 'session' && message.session && (
@@ -1069,26 +1091,29 @@ const Messages = () => {
                           
                           <p className="text-sm">{message.content}</p>
                          
-                         <div className={`flex items-center justify-between mt-1 ${
-                           isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                         }`}>
-                           <span className="text-xs">
-                             {format(new Date(message.created_at), 'HH:mm')}
-                           </span>
-                           
-                           {/* Read status for own messages */}
+                           {/* Read status for own messages - minimal display */}
                            {isOwnMessage && (
-                             <div className="flex items-center">
-                               {message.read_at ? (
-                                 <CheckCheck className="h-3 w-3 text-blue-500" />
-                               ) : (
-                                 <Check className="h-3 w-3" />
-                               )}
+                             <div className={`flex justify-end mt-1 ${
+                               isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                             }`}>
+                               <div className="flex items-center">
+                                 {message.read_at ? (
+                                   <CheckCheck className="h-3 w-3 text-blue-500" />
+                                 ) : (
+                                   <Check className="h-3 w-3" />
+                                 )}
+                               </div>
                              </div>
                            )}
-                         </div>
-                       </div>
-          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
 
           {/* Delete Confirmation Dialog */}
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1123,12 +1148,6 @@ const Messages = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
 
           {/* Message input */}
           <div className="p-4 border-t border-border">
