@@ -686,8 +686,17 @@ const Messages = () => {
             <h1 className="text-lg font-semibold">Nouvelle conversation</h1>
           </div>
 
+          {/* Reminder about friends only */}
+          <div className="px-4 pt-2 pb-2">
+            <div className="bg-muted/50 rounded-lg p-3 border border-border/50">
+              <p className="text-sm text-muted-foreground text-center font-medium">
+                💬 Uniquement pour les amis
+              </p>
+            </div>
+          </div>
+
           {/* Search */}
-          <div className="p-4">
+          <div className="p-4 pt-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
