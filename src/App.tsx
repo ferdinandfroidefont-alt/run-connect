@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { SoundProvider } from "@/contexts/SoundContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
@@ -25,13 +24,12 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <SoundProvider>
-        <AuthProvider>
-          <AppProvider>
-            <TooltipProvider>
-            <AdMobInitializer />
-            <Toaster />
-            <Sonner />
+      <AuthProvider>
+        <AppProvider>
+          <TooltipProvider>
+          <AdMobInitializer />
+          <Toaster />
+          <Sonner />
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
@@ -49,7 +47,6 @@ const App = () => (
       </TooltipProvider>
     </AppProvider>
   </AuthProvider>
-</SoundProvider>
 </ThemeProvider>
 </QueryClientProvider>
 );
