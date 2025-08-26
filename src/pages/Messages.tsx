@@ -918,16 +918,7 @@ const Messages = () => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('🔍 Avatar clicked - userId:', selectedConversation.other_participant?.user_id);
-                        console.log('🔍 Current showProfilePreview state before:', showProfilePreview);
-                        console.log('🔍 Current selectedUserId before:', selectedUserId);
                         navigateToProfile(selectedConversation.other_participant?.user_id || "");
-                        console.log('🔍 After navigateToProfile call');
-                        // Force un re-render en mettant un timeout pour voir les changements de state
-                        setTimeout(() => {
-                          console.log('🔍 State after timeout - showProfilePreview:', showProfilePreview);
-                          console.log('🔍 State after timeout - selectedUserId:', selectedUserId);
-                        }, 100);
                       }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
@@ -941,7 +932,6 @@ const Messages = () => {
                     className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log('🔍 Username clicked - userId:', selectedConversation.other_participant?.user_id);
                       navigateToProfile(selectedConversation.other_participant?.user_id || "");
                     }}
                   >
@@ -1444,20 +1434,9 @@ const Messages = () => {
         />
 
         {/* Profile Preview Dialog */}
-        {(() => {
-          console.log('🔍 ProfilePreviewDialog props:', { 
-            showProfilePreview, 
-            selectedUserId, 
-            userId: showProfilePreview ? selectedUserId : null 
-          });
-          return null;
-        })()}
         <ProfilePreviewDialog
           userId={showProfilePreview ? selectedUserId : null}
-          onClose={() => {
-            console.log('🔍 ProfilePreviewDialog onClose called');
-            closeProfilePreview();
-          }}
+          onClose={closeProfilePreview}
         />
 
         {/* Message Limit Dialog */}

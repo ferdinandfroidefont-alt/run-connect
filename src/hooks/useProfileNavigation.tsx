@@ -7,18 +7,10 @@ export const useProfileNavigation = () => {
   const [showProfilePreview, setShowProfilePreview] = useState(false);
 
   const navigateToProfile = (userId: string) => {
-    console.log('🔍 navigateToProfile called with userId:', userId);
-    console.log('🔍 Current user ID:', user?.id);
-    
     // Ne pas ouvrir le profil si c'est l'utilisateur actuel
-    if (userId === user?.id) {
-      console.log('🔍 Blocked: trying to view own profile');
-      return;
-    }
+    if (!userId || userId === user?.id) return;
     
-    console.log('🔍 Setting selectedUserId to:', userId);
     setSelectedUserId(userId);
-    console.log('🔍 Setting showProfilePreview to true');
     setShowProfilePreview(true);
   };
 
