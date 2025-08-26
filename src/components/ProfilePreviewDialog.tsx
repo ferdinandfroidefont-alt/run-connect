@@ -64,14 +64,30 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url, age, bio, is_premium, created_at, walking_records, running_records, cycling_records, swimming_records, triathlon_records')
-        .eq('user_id', userId)
-        .single();
+      
+      if (isOwnProfile) {
+        // For own profile, can access all fields
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url, age, bio, is_premium, created_at, walking_records, running_records, cycling_records, swimming_records, triathlon_records')
+          .eq('user_id', userId)
+          .single();
 
-      if (error) throw error;
-      setProfile(data);
+        if (error) throw error;
+        setProfile(data);
+      } else {
+        // For other users, use secure function that respects privacy settings
+        const { data, error } = await supabase.rpc('get_public_profile_safe', {
+          profile_user_id: userId
+        });
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          setProfile(data[0]);
+        } else {
+          throw new Error('Profil non trouvé');
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
