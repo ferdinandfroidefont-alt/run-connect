@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { UniversalSearchDialog } from "@/components/UniversalSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
@@ -110,6 +111,7 @@ const Messages = () => {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [groupInfoData, setGroupInfoData] = useState<any>(null);
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const [messagesLeft, setMessagesLeft] = useState<number>(3);
@@ -348,18 +350,15 @@ const Messages = () => {
   };
 
   // Delete conversation
+  const confirmDeleteConversation = () => {
+    setShowDeleteDialog(true);
+  };
+
   const deleteConversation = async () => {
     if (!selectedConversation || !user) return;
 
     try {
-      // Show confirmation dialog
-      const confirmDelete = window.confirm(
-        selectedConversation.is_group 
-          ? `Êtes-vous sûr de vouloir supprimer ce club "${selectedConversation.group_name}" ?`
-          : `Êtes-vous sûr de vouloir supprimer cette conversation avec ${selectedConversation.other_participant?.username} ?`
-      );
-
-      if (!confirmDelete) return;
+      setShowDeleteDialog(false);
 
       if (selectedConversation.is_group) {
         // For groups, only the creator can delete the entire group
@@ -940,7 +939,7 @@ const Messages = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem 
-                    onClick={deleteConversation}
+                    onClick={confirmDeleteConversation}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -1064,8 +1063,42 @@ const Messages = () => {
                            )}
                          </div>
                        </div>
-                    </div>
-                  </div>
+          </div>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Confirmer la suppression</DialogTitle>
+                <DialogDescription>
+                  {selectedConversation?.is_group 
+                    ? selectedConversation.created_by === user?.id
+                      ? `Êtes-vous sûr de vouloir supprimer définitivement le club "${selectedConversation.group_name}" ? Cette action est irréversible.`
+                      : `Êtes-vous sûr de vouloir quitter le club "${selectedConversation.group_name}" ?`
+                    : `Êtes-vous sûr de vouloir supprimer cette conversation avec ${selectedConversation?.other_participant?.username || selectedConversation?.other_participant?.display_name} ? Tous les messages seront perdus.`
+                  }
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteDialog(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={deleteConversation}
+                >
+                  {selectedConversation?.is_group && selectedConversation.created_by !== user?.id 
+                    ? "Quitter" 
+                    : "Supprimer"
+                  }
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
                 );
               })}
               <div ref={messagesEndRef} />
