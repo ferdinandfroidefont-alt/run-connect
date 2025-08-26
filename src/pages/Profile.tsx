@@ -441,7 +441,7 @@ const Profile = () => {
                    user?.email?.[0]?.toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
-              {isEditing && (
+              {isEditing && !isViewingOtherUser && (
                 <label 
                   htmlFor="avatar-upload" 
                   className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90"
@@ -450,7 +450,7 @@ const Profile = () => {
                 </label>
               )}
             </div>
-            {isEditing && (
+            {isEditing && !isViewingOtherUser && (
               <>
                 <input
                   id="avatar-upload"
@@ -470,24 +470,26 @@ const Profile = () => {
                 <Crown className="h-5 w-5 text-yellow-500" />
               )}
             </div>
-            <div className="flex gap-2 items-center mb-4">
-              {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-                  {subscriptionInfo?.subscription_tier || 'Premium'}
-                </Badge>
-              )}
-              {!subscriptionInfo?.subscribed && (
-                <Button 
-                  onClick={() => navigate('/subscription')}
-                  variant="outline" 
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Crown className="h-4 w-4" />
-                  Devenir Premium
-                </Button>
-              )}
-            </div>
+            {!isViewingOtherUser && (
+              <div className="flex gap-2 items-center mb-4">
+                {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                  <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                    {subscriptionInfo?.subscription_tier || 'Premium'}
+                  </Badge>
+                )}
+                {!subscriptionInfo?.subscribed && (
+                  <Button 
+                    onClick={() => navigate('/subscription')}
+                    variant="outline" 
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Crown className="h-4 w-4" />
+                    Devenir Premium
+                  </Button>
+                )}
+              </div>
+            )}
             <div className="flex gap-4 mt-2">
               <button
                 onClick={() => {
@@ -606,45 +608,48 @@ const Profile = () => {
                     <p className="font-medium">{profile.bio}</p>
                   </div>
                 )}
-                <Button onClick={() => setIsEditing(true)} className="w-full">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Modifier le profil
-                </Button>
+                 {!isViewingOtherUser && (
+                  <Button onClick={() => setIsEditing(true)} className="w-full">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Modifier le profil
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Mes Parcours Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Route className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Mes Parcours ({userRoutes.length})</CardTitle>
+        {/* Mes Parcours Section - Only for own profile */}
+        {!isViewingOtherUser && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Route className="h-5 w-5 text-primary mr-2" />
+                  <CardTitle className="text-lg">Mes Parcours ({userRoutes.length})</CardTitle>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => navigate('/my-sessions')}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Route className="h-4 w-4" />
+                    Voir mes séances/itinéraires
+                  </Button>
+                  <Button
+                    onClick={() => navigate('/')}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <MapPin className="h-4 w-4" />
+                    Créer
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => navigate('/my-sessions')}
-                  size="sm"
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Route className="h-4 w-4" />
-                  Voir mes séances/itinéraires
-                </Button>
-                <Button
-                  onClick={() => navigate('/')}
-                  size="sm"
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <MapPin className="h-4 w-4" />
-                  Créer
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
+            </CardHeader>
           <CardContent>
             {routesLoading ? (
               <div className="flex justify-center py-4">
@@ -713,7 +718,10 @@ const Profile = () => {
             )}
           </CardContent>
         </Card>
+        )}
 
+        {/* Settings - Only for own profile */}
+        {!isViewingOtherUser && (
         <Card>
           <CardHeader>
             <div className="flex items-center">
@@ -856,8 +864,10 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {/* Privacy & Legal Settings */}
+        {/* Privacy & Legal Settings - Only for own profile */}
+        {!isViewingOtherUser && (
         <Card>
           <CardHeader>
             <div className="flex items-center">
@@ -905,8 +915,10 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {/* Support */}
+        {/* Support - Only for own profile */}
+        {!isViewingOtherUser && (
         <Card>
           <CardHeader>
             <div className="flex items-center">
@@ -929,7 +941,10 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+        )}
 
+        {/* Actions - Only for own profile */}
+        {!isViewingOtherUser && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Actions</CardTitle>
@@ -945,6 +960,7 @@ const Profile = () => {
             </Button>
           </CardContent>
         </Card>
+        )}
 
         {/* Follow Dialog */}
         <FollowDialog
