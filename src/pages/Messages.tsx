@@ -915,7 +915,10 @@ const Messages = () => {
                   <div className="relative">
                     <Avatar 
                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                      onClick={() => navigateToProfile(selectedConversation.other_participant?.user_id || "")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateToProfile(selectedConversation.other_participant?.user_id || "");
+                      }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
                       <AvatarFallback>
@@ -926,7 +929,10 @@ const Messages = () => {
                   </div>
                   <div 
                     className="cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => navigateToProfile(selectedConversation.other_participant?.user_id || "")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigateToProfile(selectedConversation.other_participant?.user_id || "");
+                    }}
                   >
                     <p className="font-medium text-sm">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
