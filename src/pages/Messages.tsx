@@ -539,7 +539,7 @@ const Messages = () => {
     }
   };
 
-  // Search for users to start new conversation
+  // Search for users to start new conversation (friends only)
   const searchForUsers = async () => {
     if (!searchUsers.trim()) {
       setAvailableUsers([]);
@@ -547,17 +547,38 @@ const Messages = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      // First, get users who match the search query
+      const { data: searchResults, error: searchError } = await supabase
         .from('profiles')
         .select('user_id, username, display_name, avatar_url')
         .neq('user_id', user?.id)
         .or(`username.ilike.%${searchUsers}%,display_name.ilike.%${searchUsers}%`)
-        .limit(10);
+        .limit(20); // Get more results to filter
 
-      if (error) throw error;
-      setAvailableUsers(data || []);
+      if (searchError) throw searchError;
+
+      if (!searchResults || searchResults.length === 0) {
+        setAvailableUsers([]);
+        return;
+      }
+
+      // Filter to only include friends using the are_users_friends function
+      const friendsPromises = searchResults.map(async (profile) => {
+        const { data: isFriend } = await supabase.rpc('are_users_friends', {
+          user1_id: user?.id,
+          user2_id: profile.user_id
+        });
+        
+        return isFriend ? profile : null;
+      });
+
+      const friendsResults = await Promise.all(friendsPromises);
+      const friends = friendsResults.filter((profile): profile is Profile => profile !== null);
+
+      setAvailableUsers(friends.slice(0, 10)); // Limit to 10 results
     } catch (error: any) {
-      console.error('Error searching users:', error);
+      console.error('Error searching friends:', error);
+      setAvailableUsers([]);
     }
   };
 
