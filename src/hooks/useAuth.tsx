@@ -98,6 +98,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, session, loading, subscriptionInfo, refreshSubscription, signOut }}>
+      {/* Debug subscription info */}
+      {user?.email === 'ferdinand.froidefont@gmail.com' && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 10, 
+          right: 10, 
+          background: 'black', 
+          color: 'white', 
+          padding: '10px', 
+          fontSize: '12px',
+          zIndex: 9999,
+          borderRadius: '5px'
+        }}>
+          <div>Email: {user.email}</div>
+          <div>Subscribed: {subscriptionInfo?.subscribed ? 'YES' : 'NO'}</div>
+          <div>Tier: {subscriptionInfo?.subscription_tier || 'None'}</div>
+          <button 
+            onClick={refreshSubscription}
+            style={{ marginTop: '5px', padding: '2px 5px' }}
+          >
+            Refresh
+          </button>
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );
