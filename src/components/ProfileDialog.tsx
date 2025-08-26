@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -255,7 +255,15 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
           <DialogHeader className="p-6 pb-0 shrink-0">
-            <DialogTitle className="text-center text-2xl font-bold">Mon Profil</DialogTitle>
+            <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+              <button 
+                onClick={() => onOpenChange(false)}
+                className="flex items-center justify-center p-1 rounded-full hover:bg-accent transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              Mon Profil
+            </DialogTitle>
           </DialogHeader>
           
           <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
