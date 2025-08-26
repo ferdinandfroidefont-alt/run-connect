@@ -25,6 +25,7 @@ interface FollowDialogProps {
   type: 'followers' | 'following';
   followerCount: number;
   followingCount: number;
+  targetUserId?: string; // ID de l'utilisateur dont on veut voir les abonnés/abonnements
 }
 
 export const FollowDialog = ({ 
@@ -32,7 +33,8 @@ export const FollowDialog = ({
   onOpenChange, 
   type, 
   followerCount, 
-  followingCount 
+  followingCount,
+  targetUserId 
 }: FollowDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -44,26 +46,30 @@ export const FollowDialog = ({
     if (open && user) {
       fetchFollowData();
     }
-  }, [open, user]);
+  }, [open, user, targetUserId]);
 
   const fetchFollowData = async () => {
     if (!user) return;
 
+    // Utiliser l'ID de l'utilisateur cible ou l'utilisateur connecté
+    const userId = targetUserId || user.id;
+    const isViewingOwnProfile = !targetUserId || targetUserId === user.id;
+
     try {
       setLoading(true);
 
-      // Fetch followers (people who follow me)
+      // Fetch followers (people who follow the target user)
       const { data: followersData } = await supabase
         .from('user_follows')
         .select('follower_id, status')
-        .eq('following_id', user.id)
+        .eq('following_id', userId)
         .eq('status', 'accepted');
 
-      // Fetch following (people I follow)  
+      // Fetch following (people the target user follows)  
       const { data: followingData } = await supabase
         .from('user_follows')
         .select('following_id, status')
-        .eq('follower_id', user.id)
+        .eq('follower_id', userId)
         .eq('status', 'accepted');
 
       // Get profiles for followers
@@ -196,7 +202,10 @@ export const FollowDialog = ({
     users: FollowUser[], 
     showUnfollowButton?: boolean,
     showRemoveButton?: boolean
-  }) => (
+  }) => {
+    const isViewingOwnProfile = !targetUserId || targetUserId === user?.id;
+    
+    return (
     <div className="space-y-3">
       {users.length === 0 ? (
         <div className="text-center py-8">
@@ -229,35 +238,37 @@ export const FollowDialog = ({
                     @{userItem.username}
                   </p>
                 </div>
-              </div>
-              {showUnfollowButton && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => unfollowUser(userItem.user_id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Ne plus suivre
-                </Button>
-              )}
-              {showRemoveButton && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => removeFollower(userItem.user_id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Supprimer
-                </Button>
-              )}
+               </div>
+               {/* Afficher les boutons seulement si on consulte son propre profil */}
+               {isViewingOwnProfile && showUnfollowButton && (
+                 <Button
+                   size="sm"
+                   variant="outline"
+                   onClick={() => unfollowUser(userItem.user_id)}
+                   className="text-destructive hover:text-destructive"
+                 >
+                   <X className="h-4 w-4 mr-1" />
+                   Ne plus suivre
+                 </Button>
+               )}
+               {isViewingOwnProfile && showRemoveButton && (
+                 <Button
+                   size="sm"
+                   variant="outline"
+                   onClick={() => removeFollower(userItem.user_id)}
+                   className="text-destructive hover:text-destructive"
+                 >
+                   <X className="h-4 w-4 mr-1" />
+                   Supprimer
+                 </Button>
+               )}
             </CardContent>
           </Card>
         ))
-      )}
-    </div>
-  );
+       )}
+     </div>
+   );
+ };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

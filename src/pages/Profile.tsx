@@ -1157,6 +1157,7 @@ const Profile = () => {
           type={followDialogType}
           followerCount={followerCount}
           followingCount={followingCount}
+          targetUserId={viewingUserId || undefined}
         />
 
         {/* Image Crop Editor */}
