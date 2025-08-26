@@ -917,7 +917,10 @@ const Messages = () => {
                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                       onClick={(e) => {
                         e.stopPropagation();
+                        console.log('🔍 Avatar clicked - userId:', selectedConversation.other_participant?.user_id);
+                        console.log('🔍 Current showProfilePreview state:', showProfilePreview);
                         navigateToProfile(selectedConversation.other_participant?.user_id || "");
+                        console.log('🔍 After navigateToProfile call');
                       }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
@@ -931,6 +934,7 @@ const Messages = () => {
                     className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
+                      console.log('🔍 Username clicked - userId:', selectedConversation.other_participant?.user_id);
                       navigateToProfile(selectedConversation.other_participant?.user_id || "");
                     }}
                   >
@@ -1433,9 +1437,20 @@ const Messages = () => {
         />
 
         {/* Profile Preview Dialog */}
+        {(() => {
+          console.log('🔍 ProfilePreviewDialog props:', { 
+            showProfilePreview, 
+            selectedUserId, 
+            userId: showProfilePreview ? selectedUserId : null 
+          });
+          return null;
+        })()}
         <ProfilePreviewDialog
           userId={showProfilePreview ? selectedUserId : null}
-          onClose={closeProfilePreview}
+          onClose={() => {
+            console.log('🔍 ProfilePreviewDialog onClose called');
+            closeProfilePreview();
+          }}
         />
 
         {/* Message Limit Dialog */}
