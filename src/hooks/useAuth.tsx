@@ -29,17 +29,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!session) return;
     
     try {
+      console.log('🔍 SUBSCRIPTION CHECK: Starting check for user', session.user?.email);
+      
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
       
+      console.log('🔍 SUBSCRIPTION CHECK: Response received', { data, error });
+      
       if (error) {
         console.error('Error checking subscription:', error);
         return;
       }
       
+      console.log('🔍 SUBSCRIPTION CHECK: Setting subscription info', data);
       setSubscriptionInfo(data);
     } catch (error) {
       console.error('Error refreshing subscription:', error);
