@@ -1274,10 +1274,11 @@ export const InteractiveMap = ({
         <div className="absolute top-32 right-4 z-10">
           <Button 
             variant="outline"
-            className="bg-white text-black hover:bg-gray-50 shadow-md border-gray-200 h-7 w-8 px-1"
+            className="bg-white/95 text-black hover:bg-gray-50 shadow-md border-2 border-gray-300 h-10 w-12 px-1"
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
+            title="Sessions à proximité"
           >
             📍🏃
           </Button>
@@ -1298,14 +1299,14 @@ export const InteractiveMap = ({
             size="sm"
             variant={isRouteCreationMode ? "default" : "outline"}
             className={cn(
-              "w-8 h-7 p-0 shadow-map-control flex items-center justify-center",
+              "w-10 h-10 p-0 shadow-map-control flex items-center justify-center border-2",
               isRouteCreationMode 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                : "bg-card/90 backdrop-blur-sm"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-primary" 
+                : "bg-white/95 text-foreground backdrop-blur-sm border-gray-300 hover:bg-gray-50"
             )}
             title="Créer un itinéraire"
           >
-            <PenTool className="h-3 w-3" />
+            <PenTool className="h-4 w-4" />
           </Button>
         )}
         
@@ -1314,9 +1315,10 @@ export const InteractiveMap = ({
           onClick={handleLocateMe}
           size="sm"
           variant="outline"
-          className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center"
+          className="w-10 h-10 p-0 bg-white/95 text-foreground backdrop-blur-sm shadow-map-control flex items-center justify-center border-2 border-gray-300 hover:bg-gray-50"
+          title="Me localiser"
         >
-          <MapPin className="h-3 w-3" />
+          <MapPin className="h-4 w-4" />
         </Button>
         
         {/* Map Style Selector */}
