@@ -18,8 +18,7 @@ import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
-import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
-import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { AvatarViewer } from "@/components/AvatarViewer";
 import { MessageLimitDialog } from "@/components/MessageLimitDialog";
 import { 
   MessageCircle, 
@@ -113,7 +112,8 @@ const Messages = () => {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [groupInfoData, setGroupInfoData] = useState<any>(null);
-  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
+  const [showAvatarViewer, setShowAvatarViewer] = useState(false);
+  const [selectedAvatarData, setSelectedAvatarData] = useState<{ url: string | null; username: string } | null>(null);
   const [messagesLeft, setMessagesLeft] = useState<number>(3);
   const [showMessageLimitDialog, setShowMessageLimitDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -127,8 +127,12 @@ const Messages = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Profile navigation
-  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+  // Avatar viewer
+  const handleAvatarClick = (avatarUrl: string | null, username: string) => {
+    console.log('Avatar cliqué ! UserID:', username);
+    setSelectedAvatarData({ url: avatarUrl, username });
+    setShowAvatarViewer(true);
+  };
 
   // Load conversations
   const loadConversations = async () => {
@@ -827,10 +831,13 @@ const Messages = () => {
                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
                >
                  <div className="relative">
-                    <Avatar 
-                      className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigateToProfile(profile.user_id)}
-                    >
+                     <Avatar 
+                       className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         handleAvatarClick(profile.avatar_url, profile.username || profile.display_name || "Utilisateur");
+                       }}
+                     >
                       <AvatarImage src={profile.avatar_url || ""} />
                       <AvatarFallback>
                         {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
@@ -982,10 +989,13 @@ const Messages = () => {
                        {!isOwnMessage && (
                          <div className="flex items-center gap-2 mb-1">
                            <div className="relative">
-                              <Avatar 
-                                className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                onClick={() => navigateToProfile(message.sender.user_id)}
-                              >
+                               <Avatar 
+                                 className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleAvatarClick(message.sender.avatar_url, message.sender.username || message.sender.display_name || "Utilisateur");
+                                 }}
+                               >
                                <AvatarImage src={message.sender.avatar_url || ""} />
                                <AvatarFallback>
                                  {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
@@ -1274,18 +1284,18 @@ const Messages = () => {
                      className="flex items-center gap-3 p-4 hover:bg-muted cursor-pointer"
                    >
                      <div className="relative">
-                       <Avatar 
-                         className="h-12 w-12 cursor-pointer"
-                           onClick={(e) => {
-                             e.stopPropagation();
-                             if (conversation.is_group) {
-                               setSelectedConversation(conversation);
-                               setGroupInfoData(conversation);
-                               setShowGroupInfo(true);
-                             } else {
-                               conversation.other_participant && navigateToProfile(conversation.other_participant.user_id);
-                             }
-                           }}
+                        <Avatar 
+                          className="h-12 w-12 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (conversation.is_group) {
+                                setSelectedConversation(conversation);
+                                setGroupInfoData(conversation);
+                                setShowGroupInfo(true);
+                              } else if (conversation.other_participant) {
+                                handleAvatarClick(conversation.other_participant.avatar_url, conversation.other_participant.username || conversation.other_participant.display_name || "Utilisateur");
+                              }
+                            }}
                        >
                          {conversation.is_group ? (
                            <>
@@ -1435,10 +1445,12 @@ const Messages = () => {
           }}
         />
 
-        {/* Profile Preview Dialog */}
-        <ProfilePreviewDialog
-          userId={showProfilePreview ? selectedUserId : null}
-          onClose={closeProfilePreview}
+        {/* Avatar Viewer */}
+        <AvatarViewer
+          open={showAvatarViewer}
+          onClose={() => setShowAvatarViewer(false)}
+          avatarUrl={selectedAvatarData?.url || null}
+          username={selectedAvatarData?.username || "Utilisateur"}
         />
 
         {/* Message Limit Dialog */}
