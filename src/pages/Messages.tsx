@@ -307,18 +307,27 @@ const Messages = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', conversationId)
         .neq('sender_id', user.id)
-        .is('read_at', null);
+        .is('read_at', null)
+        .select('id');
 
       if (error) {
         console.error('Error marking messages as read:', error);
       } else {
+        const markedCount = data?.length || 0;
+        console.log(`📖 Marked ${markedCount} messages as read for conversation ${conversationId}`);
+        
         // Update conversations list to reflect new unread counts
         loadConversations();
+        
+        // Force update of unread count in bottom navigation
+        window.dispatchEvent(new CustomEvent('messages-read', { 
+          detail: { conversationId, markedCount }
+        }));
       }
     } catch (error: any) {
       console.error('Error marking messages as read:', error);

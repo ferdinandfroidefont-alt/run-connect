@@ -61,6 +61,7 @@ export const BottomNavigation = () => {
         }
 
         setTotalUnreadCount(totalUnread);
+        console.log('📊 Total unread messages updated:', totalUnread);
       } catch (error) {
         console.error('Error fetching unread count:', error);
       }
@@ -68,16 +69,29 @@ export const BottomNavigation = () => {
 
     fetchUnreadCount();
 
-    // Écouter les changements en temps réel
+    // Listen for custom messages-read events
+    const handleMessagesRead = () => {
+      console.log('🔄 Custom messages-read event detected');
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('messages-read', handleMessagesRead);
+
+    // Subscribe to realtime changes for messages
     const channel = supabase
       .channel('unread-messages-count')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
-        console.log('Message change detected, updating unread count');
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'messages' 
+      }, () => {
+        console.log('🔄 Message change detected, updating unread count');
         fetchUnreadCount();
       })
       .subscribe();
 
     return () => {
+      window.removeEventListener('messages-read', handleMessagesRead);
       supabase.removeChannel(channel);
     };
   }, [user]);
