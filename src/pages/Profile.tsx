@@ -29,6 +29,11 @@ interface Profile {
   notifications_enabled?: boolean;
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
+  running_records?: any;
+  cycling_records?: any;
+  swimming_records?: any;
+  triathlon_records?: any;
+  walking_records?: any;
 }
 
 interface UserRoute {
@@ -64,6 +69,7 @@ const Profile = () => {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [userRoutes, setUserRoutes] = useState<UserRoute[]>([]);
   const [routesLoading, setRoutesLoading] = useState(false);
+  const [commonClubs, setCommonClubs] = useState<any[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,6 +78,8 @@ const Profile = () => {
       fetchFollowCounts();
       if (!isViewingOtherUser) {
         fetchUserRoutes();
+      } else {
+        fetchCommonClubs();
       }
     }
     // Check notification permission
@@ -99,6 +107,22 @@ const Profile = () => {
       setFollowingCount(followingData || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  const fetchCommonClubs = async () => {
+    if (!user || !viewingUserId) return;
+
+    try {
+      const { data, error } = await supabase.rpc('get_common_clubs', {
+        user_1_id: user.id,
+        user_2_id: viewingUserId
+      });
+
+      if (error) throw error;
+      setCommonClubs(data || []);
+    } catch (error) {
+      console.error('Error fetching common clubs:', error);
     }
   };
 
@@ -515,6 +539,8 @@ const Profile = () => {
           </CardContent>
         </Card>
 
+        {/* Informations Section - Only for own profile */}
+        {!isViewingOtherUser && (
         <Card>
           <CardHeader>
             <div className="flex items-center">
@@ -608,7 +634,7 @@ const Profile = () => {
                     <p className="font-medium">{profile.bio}</p>
                   </div>
                 )}
-                 {!isViewingOtherUser && (
+                {!isViewingOtherUser && (
                   <Button onClick={() => setIsEditing(true)} className="w-full">
                     <Settings className="h-4 w-4 mr-2" />
                     Modifier le profil
@@ -618,6 +644,168 @@ const Profile = () => {
             )}
           </CardContent>
         </Card>
+        )}
+
+        {/* Bio Section - Only for other users */}
+        {isViewingOtherUser && profile?.bio && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center">
+                <User className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Bio</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-foreground">{profile.bio}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Records Section - For other users */}
+        {isViewingOtherUser && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center">
+                <Crown className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Records</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Running Records */}
+              {profile?.running_records && typeof profile.running_records === 'object' && Object.keys(profile.running_records).length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    🏃‍♂️ Course à pied
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {Object.entries(profile.running_records).map(([distance, time]) => (
+                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
+                        <span>{distance}</span>
+                        <span className="font-medium">{String(time)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cycling Records */}
+              {profile?.cycling_records && typeof profile.cycling_records === 'object' && Object.keys(profile.cycling_records).length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    🚴‍♂️ Cyclisme
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {Object.entries(profile.cycling_records).map(([distance, time]) => (
+                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
+                        <span>{distance}</span>
+                        <span className="font-medium">{String(time)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Swimming Records */}
+              {profile?.swimming_records && typeof profile.swimming_records === 'object' && Object.keys(profile.swimming_records).length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    🏊‍♂️ Natation
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {Object.entries(profile.swimming_records).map(([distance, time]) => (
+                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
+                        <span>{distance}</span>
+                        <span className="font-medium">{String(time)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Triathlon Records */}
+              {profile?.triathlon_records && typeof profile.triathlon_records === 'object' && Object.keys(profile.triathlon_records).length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    🏊‍♂️🚴‍♂️🏃‍♂️ Triathlon
+                  </h4>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    {Object.entries(profile.triathlon_records).map(([distance, time]) => (
+                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
+                        <span>{distance}</span>
+                        <span className="font-medium">{String(time)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Walking Records */}
+              {profile?.walking_records && typeof profile.walking_records === 'object' && Object.keys(profile.walking_records).length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    🚶‍♂️ Marche
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {Object.entries(profile.walking_records).map(([distance, time]) => (
+                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
+                        <span>{distance}</span>
+                        <span className="font-medium">{String(time)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* No records message */}
+              {(!profile?.running_records || typeof profile.running_records !== 'object' || Object.keys(profile.running_records).length === 0) &&
+               (!profile?.cycling_records || typeof profile.cycling_records !== 'object' || Object.keys(profile.cycling_records).length === 0) &&
+               (!profile?.swimming_records || typeof profile.swimming_records !== 'object' || Object.keys(profile.swimming_records).length === 0) &&
+               (!profile?.triathlon_records || typeof profile.triathlon_records !== 'object' || Object.keys(profile.triathlon_records).length === 0) &&
+               (!profile?.walking_records || typeof profile.walking_records !== 'object' || Object.keys(profile.walking_records).length === 0) && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Crown className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Aucun record enregistré</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Common Clubs Section - For other users */}
+        {isViewingOtherUser && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center">
+                <Users className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Clubs en commun ({commonClubs.length})</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {commonClubs.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Aucun club en commun</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {commonClubs.map((club) => (
+                    <div key={club.club_id} className="flex items-center gap-3 p-3 border rounded-lg bg-card">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{club.club_name}</h4>
+                        {club.club_description && (
+                          <p className="text-xs text-muted-foreground mt-1">{club.club_description}</p>
+                        )}
+                        {club.club_code && (
+                          <p className="text-xs text-primary mt-1">Code: {club.club_code}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Mes Parcours Section - Only for own profile */}
         {!isViewingOtherUser && (
