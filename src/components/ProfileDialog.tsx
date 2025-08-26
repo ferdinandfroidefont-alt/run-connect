@@ -254,17 +254,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
-          <DialogHeader className="p-6 pb-0 shrink-0">
-            <div className="flex items-center justify-between">
-              <button 
-                onClick={() => onOpenChange(false)}
-                className="flex items-center justify-center p-2 rounded-full hover:bg-accent transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <DialogTitle className="text-2xl font-bold">Mon Profil</DialogTitle>
-              <div className="w-9"></div> {/* Spacer pour centrer le titre */}
-            </div>
+          <DialogHeader className="p-6 pb-0 shrink-0 relative">
+            <button 
+              onClick={() => onOpenChange(false)}
+              className="absolute top-6 left-6 flex items-center justify-center p-2 rounded-full hover:bg-accent transition-colors z-10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <DialogTitle className="text-center text-2xl font-bold">Mon Profil</DialogTitle>
           </DialogHeader>
           
           <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
