@@ -1367,16 +1367,16 @@ const Messages = () => {
                             : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
                           }
                         </p>
-                        <div className="flex items-center gap-2">
-                          {conversation.unread_count && conversation.unread_count > 0 && (
-                            <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
-                              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                            </Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
-                          </span>
-                        </div>
+                         <div className="flex items-center gap-2">
+                           {conversation.unread_count > 0 && (
+                             <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                               {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                             </Badge>
+                           )}
+                           <span className="text-xs text-muted-foreground">
+                             {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
+                           </span>
+                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {conversation.is_group 
