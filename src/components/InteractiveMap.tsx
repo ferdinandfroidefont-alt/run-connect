@@ -758,6 +758,13 @@ export const InteractiveMap = ({
 
   const handleCreateRoute = () => {
     console.log('🗺️ InteractiveMap handleCreateRoute called');
+    
+    // Prevent multiple calls if already in route creation mode
+    if (isRouteCreationMode) {
+      console.log('⚠️ Already in route creation mode, ignoring call');
+      return;
+    }
+    
     setIsRouteCreationMode(true);
     console.log('✓ Route creation mode set to true');
     
