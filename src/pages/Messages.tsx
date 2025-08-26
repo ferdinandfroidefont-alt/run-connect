@@ -881,16 +881,15 @@ const Messages = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                       console.log('🔍 Club avatar clicked - DEBUGGING:');
-                       console.log('- selectedConversation:', selectedConversation);
-                       console.log('- selectedConversation.id:', selectedConversation.id);
-                       console.log('- selectedConversation.is_group:', selectedConversation.is_group);
-                       console.log('- showGroupInfo current state:', showGroupInfo);
-                       console.log('- user?.id:', user?.id);
-                       console.log('- selectedConversation.created_by:', selectedConversation.created_by);
-                       setGroupInfoData(selectedConversation);
-                       setShowGroupInfo(true);
-                       console.log('- showGroupInfo set to true');
+                      console.log('🔍 Club avatar clicked - redirecting to club settings');
+                      // Fermer la conversation et ouvrir les paramètres du club
+                      const clubData = selectedConversation;
+                      setSelectedConversation(null); // Ferme la conversation
+                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
+                      setTimeout(() => {
+                        setGroupInfoData(clubData);
+                        setShowGroupInfo(true);
+                      }, 100);
                     }}
                   >
                     <AvatarImage src={selectedConversation.group_avatar_url || ""} />
@@ -903,14 +902,15 @@ const Messages = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                       console.log('🔍 Club name clicked - DEBUGGING:');
-                       console.log('- selectedConversation:', selectedConversation);
-                       console.log('- selectedConversation.id:', selectedConversation.id);
-                       console.log('- selectedConversation.is_group:', selectedConversation.is_group);
-                       console.log('- showGroupInfo current state:', showGroupInfo);
-                       setGroupInfoData(selectedConversation);
-                       setShowGroupInfo(true);
-                       console.log('- showGroupInfo set to true');
+                      console.log('🔍 Club name clicked - redirecting to club settings');
+                      // Fermer la conversation et ouvrir les paramètres du club
+                      const clubData = selectedConversation;
+                      setSelectedConversation(null); // Ferme la conversation
+                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
+                      setTimeout(() => {
+                        setGroupInfoData(clubData);
+                        setShowGroupInfo(true);
+                      }, 100);
                     }}
                   >
                     <p className="font-medium text-sm">{selectedConversation.group_name}</p>
