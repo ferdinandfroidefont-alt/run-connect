@@ -11,10 +11,11 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, X, Smartphone, Share2 } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, X, Smartphone, Share2, Trash2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "./ContactsPermissionButton";
@@ -43,7 +44,7 @@ interface ProfileDialogProps {
 }
 
 export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
-  const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
+  const { user, session, signOut, subscriptionInfo, refreshSubscription } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { shareProfile } = useShareProfile();
@@ -350,6 +351,43 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const handleSignOut = () => {
     signOut();
     onOpenChange(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user || !session) return;
+
+    try {
+      setLoading(true);
+      
+      // Call the delete-account edge function
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Compte supprimé",
+        description: "Votre compte a été supprimé avec succès.",
+      });
+
+      // Sign out and redirect
+      signOut();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer votre compte. Contactez le support.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading && open) {
@@ -1054,7 +1092,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                 <CardHeader>
                   <CardTitle className="text-lg">Actions</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-2">
                   <Button 
                     variant="outline" 
                     onClick={handleSignOut}
@@ -1063,6 +1101,36 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                     <LogOut className="h-4 w-4 mr-2" />
                     Se déconnecter
                   </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer mon compte
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Supprimer votre compte</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Êtes-vous sûr de vouloir supprimer définitivement votre compte ? 
+                          Cette action est irréversible et toutes vos données seront perdues.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteAccount}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Supprimer définitivement
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </CardContent>
               </Card>
             </div>
