@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar } from "lucide-react";
+import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download } from "lucide-react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
 
 interface RouteCardProps {
   route: {
@@ -48,6 +49,40 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
       return `${h}h${min.toString().padStart(2, '0')}min`;
     }
     return `${min}min`;
+  };
+
+  const handleExportGPX = () => {
+    if (!route.coordinates || !Array.isArray(route.coordinates)) {
+      console.error('Coordonnées invalides pour l\'export GPX');
+      return;
+    }
+
+    // Convertir les coordonnées au format GPX
+    const trackPoints: GPXTrackPoint[] = route.coordinates.map((coord: any) => {
+      if (coord.lat !== undefined && coord.lng !== undefined) {
+        return {
+          lat: Number(coord.lat),
+          lng: Number(coord.lng),
+          elevation: coord.elevation ? Number(coord.elevation) : undefined
+        };
+      } else if (Array.isArray(coord) && coord.length >= 2) {
+        return {
+          lat: Number(coord[0]),
+          lng: Number(coord[1]),
+          elevation: coord.length > 2 ? Number(coord[2]) : undefined
+        };
+      }
+      return null;
+    }).filter((point): point is NonNullable<typeof point> => point !== null);
+
+    if (trackPoints.length === 0) {
+      console.error('Aucun point valide trouvé pour l\'export GPX');
+      return;
+    }
+
+    const gpxContent = exportToGPX(route.name, trackPoints, route.description || undefined);
+    const filename = route.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    downloadGPXFile(filename, gpxContent);
   };
 
   useEffect(() => {
@@ -175,6 +210,15 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
               {format(new Date(route.created_at), 'dd MMM yyyy', { locale: fr })}
             </Badge>
             <div className="flex gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleExportGPX}
+                className="bg-white/90 hover:bg-white shadow-sm text-black hover:text-black"
+                title="Exporter en GPX"
+              >
+                <Download className="h-3 w-3 text-black" />
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"
