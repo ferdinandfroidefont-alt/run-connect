@@ -302,6 +302,29 @@ const Messages = () => {
     }
   };
 
+  // Mark messages as read when opening a conversation
+  const markMessagesAsReadOnOpen = async (conversationId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', user.id)
+        .is('read_at', null);
+
+      if (error) {
+        console.error('Error marking messages as read:', error);
+      } else {
+        // Update conversations list to reflect new unread counts
+        loadConversations();
+      }
+    } catch (error: any) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
   const handleSessionClick = (session: any) => {
     // Redirect to map with session location
     const params = new URLSearchParams({
@@ -551,6 +574,7 @@ const Messages = () => {
           });
           loadMessages(existingConv.id);
           // Marquer les messages comme lus automatiquement
+          markMessagesAsReadOnOpen(existingConv.id);
           setTimeout(() => {
             markAllMessagesAsRead();
           }, 100);
@@ -619,7 +643,14 @@ const Messages = () => {
           table: 'messages',
           filter: `conversation_id=eq.${selectedConversation.id}`
         },
-        () => {
+        (payload) => {
+          const newMessage = payload.new as Message;
+          
+          // If message is from another user, mark as read immediately since conversation is open
+          if (newMessage.sender_id !== user?.id) {
+            markMessagesAsReadOnOpen(selectedConversation.id);
+          }
+          
           loadMessages(selectedConversation.id);
         }
       )
@@ -1081,14 +1112,12 @@ const Messages = () => {
                      </div>
                      <div 
                        className="flex-1 min-w-0 cursor-pointer"
-                       onClick={() => {
-                         setSelectedConversation(conversation);
-                         loadMessages(conversation.id);
-                         // Marquer les messages comme lus automatiquement
-                         setTimeout(() => {
-                           markAllMessagesAsRead();
-                         }, 100);
-                       }}
+                        onClick={() => {
+                          setSelectedConversation(conversation);
+                          loadMessages(conversation.id);
+                          // Marquer les messages comme lus automatiquement
+                          markMessagesAsReadOnOpen(conversation.id);
+                        }}
                      >
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-sm truncate">
@@ -1142,12 +1171,10 @@ const Messages = () => {
             // Find the club conversation and set it as selected
             const clubConv = conversations.find(c => c.id === clubId);
             if (clubConv) {
-              setSelectedConversation(clubConv);
-              loadMessages(clubId);
-              // Marquer les messages comme lus automatiquement
-              setTimeout(() => {
-                markAllMessagesAsRead();
-              }, 100);
+               setSelectedConversation(clubConv);
+               loadMessages(clubId);
+               // Marquer les messages comme lus automatiquement
+               markMessagesAsReadOnOpen(clubId);
             }
             setShowUserSearch(false);
           }}

@@ -71,7 +71,10 @@ export const BottomNavigation = () => {
     // Écouter les changements en temps réel
     const channel = supabase
       .channel('unread-messages-count')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fetchUnreadCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+        console.log('Message change detected, updating unread count');
+        fetchUnreadCount();
+      })
       .subscribe();
 
     return () => {
