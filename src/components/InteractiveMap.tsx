@@ -912,12 +912,11 @@ export const InteractiveMap = ({
     
     for (let i = 1; i < routeElevations.length; i++) {
       const diff = routeElevations[i] - routeElevations[i - 1];
-      if (Math.abs(diff) >= elevationThreshold) {
-        if (diff > 0) {
-          elevationGain += diff;
-        } else {
-          elevationLoss += Math.abs(diff);
-        }
+      // Suppression du seuil pour capturer tous les dénivelés, même petits
+      if (diff > 0) {
+        elevationGain += diff;
+      } else if (diff < 0) {
+        elevationLoss += Math.abs(diff);
       }
     }
     
