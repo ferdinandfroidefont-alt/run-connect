@@ -700,6 +700,7 @@ export type Database = {
           club_description: string
           club_id: string
           club_name: string
+          created_by: string
         }[]
       }
       get_daily_message_count: {

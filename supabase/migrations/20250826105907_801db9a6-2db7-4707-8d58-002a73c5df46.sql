@@ -1,0 +1,32 @@
+-- Drop existing function and recreate it with created_by field
+DROP FUNCTION IF EXISTS public.get_common_clubs(uuid, uuid);
+
+CREATE OR REPLACE FUNCTION public.get_common_clubs(user_1_id uuid, user_2_id uuid)
+ RETURNS TABLE(club_id uuid, club_name text, club_description text, club_avatar_url text, club_code text, created_by uuid)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  RETURN QUERY
+  SELECT DISTINCT
+    c.id,
+    c.group_name,
+    c.group_description,
+    c.group_avatar_url,
+    c.club_code,
+    c.created_by
+  FROM conversations c
+  WHERE c.is_group = true
+    AND c.id IN (
+      SELECT gm1.conversation_id 
+      FROM group_members gm1 
+      WHERE gm1.user_id = user_1_id
+    )
+    AND c.id IN (
+      SELECT gm2.conversation_id 
+      FROM group_members gm2 
+      WHERE gm2.user_id = user_2_id
+    );
+END;
+$function$;

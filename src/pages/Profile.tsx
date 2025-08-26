@@ -795,7 +795,7 @@ const Profile = () => {
                         {club.club_description && (
                           <p className="text-xs text-muted-foreground mt-1">{club.club_description}</p>
                         )}
-                        {club.club_code && (
+                        {club.club_code && club.created_by === user?.id && (
                           <p className="text-xs text-primary mt-1">Code: {club.club_code}</p>
                         )}
                       </div>
