@@ -117,6 +117,7 @@ const Messages = () => {
   const [selectedAvatarData, setSelectedAvatarData] = useState<{ url: string | null; username: string } | null>(null);
   const [messagesLeft, setMessagesLeft] = useState<number>(3);
   const [showMessageLimitDialog, setShowMessageLimitDialog] = useState(false);
+  const [visibleTimestamps, setVisibleTimestamps] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -983,7 +984,19 @@ const Messages = () => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
                 const showHeader = shouldShowSectionHeader(message, previousMessage);
-                const [showIndividualTime, setShowIndividualTime] = useState(false);
+                const showIndividualTime = visibleTimestamps.has(message.id);
+                
+                const toggleTimestamp = () => {
+                  setVisibleTimestamps(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(message.id)) {
+                      newSet.delete(message.id);
+                    } else {
+                      newSet.add(message.id);
+                    }
+                    return newSet;
+                  });
+                };
                 
                 return (
                   <div key={message.id}>
@@ -993,9 +1006,13 @@ const Messages = () => {
                     
                     <div
                       className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}
-                      onMouseEnter={() => setShowIndividualTime(true)}
-                      onMouseLeave={() => setShowIndividualTime(false)}
-                      onClick={() => setShowIndividualTime(!showIndividualTime)}
+                      onMouseEnter={() => setVisibleTimestamps(prev => new Set(prev).add(message.id))}
+                      onMouseLeave={() => setVisibleTimestamps(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(message.id);
+                        return newSet;
+                      })}
+                      onClick={toggleTimestamp}
                     >
                       <div className={`max-w-[70%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
                         {!isOwnMessage && (
