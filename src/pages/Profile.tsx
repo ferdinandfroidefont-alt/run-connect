@@ -11,12 +11,13 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2 } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface Profile {
   username: string;
@@ -53,6 +54,7 @@ const Profile = () => {
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
   const { theme, setTheme } = useTheme();
   const { shareProfile } = useShareProfile();
+  const { soundEnabled, setSoundEnabled } = useAppContext();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -993,6 +995,25 @@ const Profile = () => {
                   {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
                 </Button>
               </div>
+            </div>
+
+            {/* Sound Feedback */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Volume2 className="h-4 w-4" />
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium leading-none">
+                    Retour sonore
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Son discret lors des interactions avec les boutons
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={soundEnabled}
+                onCheckedChange={setSoundEnabled}
+              />
             </div>
 
             {/* Contacts Permission */}
