@@ -182,10 +182,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         setIsFollowing(false);
         setFollowRequestSent(false);
         if (isFollowing) {
+          // Seulement décrémenter si c'était une relation 'accepted'
           setFollowerCount(prev => Math.max(0, prev - 1));
           setAreFriends(false);
           toast({ title: "Vous ne suivez plus cette personne" });
         } else {
+          // C'était juste une demande 'pending' annulée, pas de changement du compteur
           toast({ title: "Demande de suivi annulée" });
         }
       } else {
