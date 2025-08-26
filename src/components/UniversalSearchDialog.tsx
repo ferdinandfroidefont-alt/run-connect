@@ -327,13 +327,8 @@ export const UniversalSearchDialog = ({
           });
         } else {
           // Nouvelle relation - vérifier si le profil est privé
-          const { data: targetProfile } = await supabase
-            .from('profiles')
-            .select('is_private')
-            .eq('user_id', selectedProfile.user_id)
-            .maybeSingle();
-
-          const initialStatus = targetProfile?.is_private ? 'pending' : 'accepted';
+          // Toutes les demandes de suivi nécessitent une confirmation
+          const initialStatus = 'pending';
           
           const { error } = await supabase
             .from('user_follows')
@@ -346,25 +341,12 @@ export const UniversalSearchDialog = ({
           if (error) throw error;
           
           setFollowStatus(initialStatus);
-          setIsFollowing(initialStatus === 'accepted');
+          setIsFollowing(false);
           
-          if (initialStatus === 'accepted') {
-            const { data: friendsData } = await supabase.rpc('are_users_friends', {
-              user1_id: user.id,
-              user2_id: selectedProfile.user_id
-            });
-            setAreFriends(friendsData || false);
-            
-            toast({ 
-              title: "Suivi avec succès", 
-              description: "Vous suivez maintenant cet utilisateur" 
-            });
-          } else {
-            toast({ 
-              title: "Demande envoyée", 
-              description: "Votre demande de suivi a été envoyée" 
-            });
-          }
+          toast({ 
+            title: "Demande envoyée", 
+            description: "Votre demande de suivi a été envoyée" 
+          });
         }
       }
     } catch (error: any) {
