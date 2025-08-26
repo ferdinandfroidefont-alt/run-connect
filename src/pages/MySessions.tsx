@@ -620,7 +620,11 @@ export default function MySessions() {
         <div className="flex items-center justify-center">
           <Button
             onClick={() => {
-              openCreateRoute();
+              navigate('/');
+              // Attendre que la navigation se fasse, puis activer le mode création
+              setTimeout(() => {
+                openCreateRoute();
+              }, 100);
             }}
             size="sm"
             className="gap-2"
