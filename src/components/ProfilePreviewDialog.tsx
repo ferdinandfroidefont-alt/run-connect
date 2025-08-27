@@ -307,24 +307,35 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 )}
 
                 {/* Badge Strava vérifié */}
-                {profile.strava_connected && profile.strava_verified_at ? (
-                  <div className="mb-4">
-                    <button
-                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                    >
-                      <span className="text-orange-600">🏃</span>
-                      ✓ Utilisateur vérifié Strava
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mb-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                      <span className="text-gray-500">⚠️</span>
-                      Utilisateur non vérifié
-                    </div>
-                  </div>
-                )}
+                {(() => {
+                  console.log('ProfilePreviewDialog - Profile state:', {
+                    strava_connected: profile.strava_connected,
+                    strava_verified_at: profile.strava_verified_at
+                  });
+                  
+                  if (profile.strava_connected && profile.strava_verified_at) {
+                    return (
+                      <div className="mb-4">
+                        <button
+                          onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                        >
+                          <span className="text-orange-600">🏃</span>
+                          ✓ Utilisateur vérifié Strava
+                        </button>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="mb-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                          <span className="text-gray-500">⚠️</span>
+                          Utilisateur non vérifié (autre profil)
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
 
                 <div className="flex gap-4 mb-4">
                   <div className="text-center">
