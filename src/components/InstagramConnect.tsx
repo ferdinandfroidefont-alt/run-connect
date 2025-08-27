@@ -162,7 +162,10 @@ export const InstagramConnect = ({ profile, onProfileUpdate, isOwnProfile }: Ins
           </div>
         ) : (
           <Button
-            onClick={handleInstagramConnect}
+            onClick={() => {
+              console.log('🚀 Instagram connect button clicked!');
+              handleInstagramConnect();
+            }}
             disabled={loading}
             className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
           >
