@@ -70,7 +70,9 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
   const activityTypes = [
     { value: 'course', label: 'Course à pied' },
+    { value: 'trail', label: 'Trail' },
     { value: 'velo', label: 'Vélo' },
+    { value: 'vtt', label: 'VTT' },
     { value: 'marche', label: 'Marche' },
     { value: 'natation', label: 'Natation' },
   ];

@@ -531,7 +531,9 @@ export const InteractiveMap = ({
   const getActivityColor = (activityType: string) => {
     const colors: Record<string, string> = {
       'course': '#ef4444',
+      'trail': '#f97316', // Orange pour le trail
       'velo': '#3b82f6', 
+      'vtt': '#059669', // Vert pour le VTT
       'marche': '#22c55e',
       'natation': '#0d9488'
     };

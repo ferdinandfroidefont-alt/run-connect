@@ -48,7 +48,9 @@ interface NearbySessionsDialogProps {
 
 const ACTIVITY_TYPES = [
   { value: "course", label: "Course" },
+  { value: "trail", label: "Trail" },
   { value: "velo", label: "Vélo" },
+  { value: "vtt", label: "VTT" },
   { value: "natation", label: "Natation" },
   { value: "randonnee", label: "Randonnée" },
   { value: "fitness", label: "Fitness" },
