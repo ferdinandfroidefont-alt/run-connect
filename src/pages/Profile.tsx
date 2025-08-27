@@ -19,6 +19,7 @@ import { ContactsPermissionButton } from "@/components/ContactsPermissionButton"
 import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { useAppContext } from "@/contexts/AppContext";
 import { StravaConnect } from "@/components/StravaConnect";
+import { SettingsDialog } from "@/components/SettingsDialog";
 
 interface Profile {
   username: string;
@@ -76,6 +77,7 @@ const Profile = () => {
   const [userRoutes, setUserRoutes] = useState<UserRoute[]>([]);
   const [routesLoading, setRoutesLoading] = useState(false);
   const [commonClubs, setCommonClubs] = useState<any[]>([]);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -522,7 +524,7 @@ const Profile = () => {
             )}
             
             {/* Badge Strava vérifié */}
-            {profile?.strava_connected && profile?.strava_verified_at && (
+            {profile?.strava_connected && profile?.strava_verified_at ? (
               <div className="mt-2 mb-2">
                 <button
                   onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
@@ -530,6 +532,16 @@ const Profile = () => {
                 >
                   <span className="text-orange-600">🏃</span>
                   ✓ Utilisateur vérifié Strava
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 mb-2">
+                <button
+                  onClick={() => setShowSettingsDialog(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                >
+                  <span className="text-gray-500">⚠️</span>
+                  Utilisateur non vérifié
                 </button>
               </div>
             )}
@@ -943,6 +955,12 @@ const Profile = () => {
           followerCount={followerCount}
           followingCount={followingCount}
           targetUserId={viewingUserId || undefined}
+        />
+
+        {/* Settings Dialog */}
+        <SettingsDialog
+          open={showSettingsDialog}
+          onOpenChange={setShowSettingsDialog}
         />
 
         {/* Image Crop Editor */}

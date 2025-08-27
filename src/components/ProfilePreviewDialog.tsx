@@ -307,7 +307,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 )}
 
                 {/* Badge Strava vérifié */}
-                {profile.strava_connected && profile.strava_verified_at && (
+                {profile.strava_connected && profile.strava_verified_at ? (
                   <div className="mb-4">
                     <button
                       onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
@@ -316,6 +316,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       <span className="text-orange-600">🏃</span>
                       ✓ Utilisateur vérifié Strava
                     </button>
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                      <span className="text-gray-500">⚠️</span>
+                      Utilisateur non vérifié
+                    </div>
                   </div>
                 )}
 
