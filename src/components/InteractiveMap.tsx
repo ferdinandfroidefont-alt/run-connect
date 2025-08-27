@@ -1309,7 +1309,7 @@ export const InteractiveMap = ({
       )}
 
       {/* Nearby Sessions Button - ENCORE PLUS HAUT */}
-      {user && (
+      {user && subscriptionInfo?.subscribed && (
         <div className="absolute right-4 bottom-6 z-10">
           <Button 
             variant="outline"
@@ -1317,7 +1317,7 @@ export const InteractiveMap = ({
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
-            title="Séances à proximité"
+            title="Séances à proximité (Premium)"
           >
             <div className="text-sm">📍🏃</div>
             <div className="text-xs leading-tight">Séances à proximité</div>
