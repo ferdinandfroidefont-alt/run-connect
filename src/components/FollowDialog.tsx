@@ -10,6 +10,8 @@ import { Users, UserCheck, Heart, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 
 interface FollowUser {
   user_id: string;
@@ -38,6 +40,7 @@ export const FollowDialog = ({
 }: FollowDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,7 +225,10 @@ export const FollowDialog = ({
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <Avatar className="h-12 w-12">
+                  <Avatar 
+                    className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigateToProfile(userItem.user_id)}
+                  >
                     <AvatarImage src={userItem.avatar_url} />
                     <AvatarFallback>
                       {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
@@ -325,6 +331,11 @@ export const FollowDialog = ({
           </TabsContent>
         </Tabs>
       </DialogContent>
+      
+      <ProfilePreviewDialog 
+        userId={selectedUserId} 
+        onClose={closeProfilePreview}
+      />
     </Dialog>
   );
 };
