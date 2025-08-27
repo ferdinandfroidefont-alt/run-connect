@@ -30,6 +30,7 @@ export const useContacts = () => {
       const hasCapacitorAPI = !!(window as any).Capacitor;
       const isLovableDev = window.location.hostname.includes('lovableproject.com') || 
                           window.location.hostname.includes('lovable.app') ||
+                          window.location.hostname.includes('sandbox.lovable.dev') ||
                           window.location.hostname.includes('localhost') ||
                           window.location.hostname.includes('127.0.0.1');
       
