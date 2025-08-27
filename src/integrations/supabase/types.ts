@@ -253,6 +253,11 @@ export type Database = {
           cycling_records: Json | null
           display_name: string | null
           id: string
+          instagram_access_token: string | null
+          instagram_connected: boolean | null
+          instagram_user_id: string | null
+          instagram_username: string | null
+          instagram_verified_at: string | null
           is_online: boolean | null
           is_premium: boolean | null
           is_private: boolean | null
@@ -269,6 +274,11 @@ export type Database = {
           running_records: Json | null
           security_rules_accepted: boolean | null
           show_online_status: boolean | null
+          strava_access_token: string | null
+          strava_connected: boolean | null
+          strava_refresh_token: string | null
+          strava_user_id: string | null
+          strava_verified_at: string | null
           swimming_records: Json | null
           triathlon_records: Json | null
           updated_at: string
@@ -285,6 +295,11 @@ export type Database = {
           cycling_records?: Json | null
           display_name?: string | null
           id?: string
+          instagram_access_token?: string | null
+          instagram_connected?: boolean | null
+          instagram_user_id?: string | null
+          instagram_username?: string | null
+          instagram_verified_at?: string | null
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
@@ -301,6 +316,11 @@ export type Database = {
           running_records?: Json | null
           security_rules_accepted?: boolean | null
           show_online_status?: boolean | null
+          strava_access_token?: string | null
+          strava_connected?: boolean | null
+          strava_refresh_token?: string | null
+          strava_user_id?: string | null
+          strava_verified_at?: string | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
           updated_at?: string
@@ -317,6 +337,11 @@ export type Database = {
           cycling_records?: Json | null
           display_name?: string | null
           id?: string
+          instagram_access_token?: string | null
+          instagram_connected?: boolean | null
+          instagram_user_id?: string | null
+          instagram_username?: string | null
+          instagram_verified_at?: string | null
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
@@ -333,6 +358,11 @@ export type Database = {
           running_records?: Json | null
           security_rules_accepted?: boolean | null
           show_online_status?: boolean | null
+          strava_access_token?: string | null
+          strava_connected?: boolean | null
+          strava_refresh_token?: string | null
+          strava_user_id?: string | null
+          strava_verified_at?: string | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
           updated_at?: string
