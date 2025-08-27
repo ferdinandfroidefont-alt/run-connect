@@ -44,10 +44,8 @@ export const useContacts = () => {
       console.log('🔍 Has Capacitor API:', hasCapacitorAPI);
       console.log('🔍 Is Lovable dev environment:', isLovableDev);
       
-      // Forcer l'activation en environnement de développement si Capacitor est disponible
-      const native = isCapacitorNative || 
-                    (hasCapacitorAPI && isLikelyMobile && (platform === 'ios' || platform === 'android')) ||
-                    (hasCapacitorAPI && isLovableDev);
+      // Activation simplifiée : si Capacitor est disponible, on active les contacts
+      const native = hasCapacitorAPI; // Simple : si Capacitor est là, on peut utiliser les contacts
       
       console.log('🔍 Final native detection:', native);
       
