@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,13 +17,7 @@ interface StravaConnectProps {
 
 export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }: StravaConnectProps) => {
   const [loading, setLoading] = useState(false);
-  const [localProfile, setLocalProfile] = useState(profile);
   const { user } = useAuth();
-
-  // Synchroniser l'état local avec le profil parent
-  useEffect(() => {
-    setLocalProfile(profile);
-  }, [profile]);
 
   const handleStravaConnect = async () => {
     if (!user) return;
@@ -65,13 +59,14 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
 
       toast.success('Compte Strava déconnecté');
       
-      // Mettre à jour l'état local immédiatement
-      setLocalProfile({ ...localProfile, strava_connected: false, strava_verified_at: undefined });
-      
-      // Mettre à jour le profil parent si possible
-      if (onProfileUpdate) {
-        onProfileUpdate();
-      }
+      // Attendre un peu pour que la DB se mette à jour puis forcer le rafraîchissement
+      setTimeout(() => {
+        if (onProfileUpdate) {
+          onProfileUpdate();
+        } else {
+          window.location.reload();
+        }
+      }, 500);
     } catch (error) {
       console.error('Error disconnecting Strava:', error);
       toast.error('Erreur lors de la déconnexion');
@@ -94,15 +89,15 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {localProfile?.strava_connected ? (
+        {profile?.strava_connected ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                 ✓ Connecté à Strava
               </Badge>
-              {localProfile.strava_verified_at && (
+              {profile.strava_verified_at && (
                 <span className="text-sm text-muted-foreground">
-                  Vérifié le {new Date(localProfile.strava_verified_at).toLocaleDateString()}
+                  Vérifié le {new Date(profile.strava_verified_at).toLocaleDateString()}
                 </span>
               )}
             </div>
