@@ -502,40 +502,22 @@ export default function MySessions() {
                         className="mt-1"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium">Type d'activité</label>
-                        <Select
-                          value={editForm.activity_type || ''}
-                          onValueChange={(value) => setEditForm({ ...editForm, activity_type: value })}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="course">Course 🏃‍♂️</SelectItem>
-                            <SelectItem value="velo">Vélo 🚴‍♂️</SelectItem>
-                            <SelectItem value="marche">Marche 🚶‍♂️</SelectItem>
-                            <SelectItem value="natation">Natation 🏊‍♂️</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Intensité</label>
-                        <Select
-                          value={editForm.intensity || ''}
-                          onValueChange={(value) => setEditForm({ ...editForm, intensity: value })}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="facile">Facile</SelectItem>
-                            <SelectItem value="modere">Modéré</SelectItem>
-                            <SelectItem value="intense">Intense</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div>
+                      <label className="text-sm font-medium">Type d'activité</label>
+                      <Select
+                        value={editForm.activity_type || ''}
+                        onValueChange={(value) => setEditForm({ ...editForm, activity_type: value })}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="course">Course 🏃‍♂️</SelectItem>
+                          <SelectItem value="velo">Vélo 🚴‍♂️</SelectItem>
+                          <SelectItem value="marche">Marche 🚶‍♂️</SelectItem>
+                          <SelectItem value="natation">Natation 🏊‍♂️</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Lieu</label>
