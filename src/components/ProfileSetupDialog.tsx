@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
+import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2 } from "lucide-react";
@@ -336,6 +337,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
               rows={3}
             />
           </div>
+
+          {/* Code de parrainage */}
+          <ReferralCodeInput />
 
           <div className="flex gap-2 pt-4">
             <Button
