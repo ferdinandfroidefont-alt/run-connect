@@ -269,11 +269,6 @@ export type Database = {
           running_records: Json | null
           security_rules_accepted: boolean | null
           show_online_status: boolean | null
-          strava_access_token: string | null
-          strava_connected: boolean | null
-          strava_refresh_token: string | null
-          strava_user_id: string | null
-          strava_verified_at: string | null
           swimming_records: Json | null
           triathlon_records: Json | null
           updated_at: string
@@ -306,11 +301,6 @@ export type Database = {
           running_records?: Json | null
           security_rules_accepted?: boolean | null
           show_online_status?: boolean | null
-          strava_access_token?: string | null
-          strava_connected?: boolean | null
-          strava_refresh_token?: string | null
-          strava_user_id?: string | null
-          strava_verified_at?: string | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
           updated_at?: string
@@ -343,11 +333,6 @@ export type Database = {
           running_records?: Json | null
           security_rules_accepted?: boolean | null
           show_online_status?: boolean | null
-          strava_access_token?: string | null
-          strava_connected?: boolean | null
-          strava_refresh_token?: string | null
-          strava_user_id?: string | null
-          strava_verified_at?: string | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
           updated_at?: string
