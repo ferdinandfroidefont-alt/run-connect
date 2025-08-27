@@ -1308,9 +1308,9 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Nearby Sessions Button - positioned symmetrically to left controls */}
+      {/* Nearby Sessions Button - mirror structure of left controls */}
       {user && (
-        <div className="absolute right-4 top-3/4 -translate-y-1/2 z-10">
+        <div className="absolute right-4 top-3/4 -translate-y-1/2 flex flex-col gap-3 z-10">
           <Button 
             variant="outline"
             className="bg-white text-black hover:bg-gray-50 shadow-md border-gray-200 px-2 py-1 text-xs flex flex-col items-center h-auto"
