@@ -28,7 +28,13 @@ export const useContacts = () => {
       const platform = Capacitor.getPlatform();
       const isLikelyMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const hasCapacitorAPI = !!(window as any).Capacitor;
-      const isLovableDev = window.location.hostname.includes('lovableproject.com') || window.location.hostname.includes('lovable.app');
+      const isLovableDev = window.location.hostname.includes('lovableproject.com') || 
+                          window.location.hostname.includes('lovable.app') ||
+                          window.location.hostname.includes('localhost') ||
+                          window.location.hostname.includes('127.0.0.1');
+      
+      console.log('🔍 Window hostname:', window.location.hostname);
+      console.log('🔍 Window href:', window.location.href);
       
       // Dans l'environnement Lovable, on simule un environnement natif si Capacitor est disponible
       const native = isCapacitorNative || 
