@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
+import { SettingsDialog } from "./SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -50,6 +51,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followingCount, setFollowingCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [areFriends, setAreFriends] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -367,13 +369,20 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   } else {
                     return (
                       <div className="mb-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                          <span className="text-gray-500">⚠️</span>
-                          {isOwnProfile ? 
-                            "Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)" :
-                            "Utilisateur non vérifié"
-                          }
-                        </div>
+                        {isOwnProfile ? (
+                          <button
+                            onClick={() => setShowSettingsDialog(true)}
+                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                          >
+                            <span className="text-gray-500">⚠️</span>
+                            Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)
+                          </button>
+                        ) : (
+                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                            <span className="text-gray-500">⚠️</span>
+                            Utilisateur non vérifié
+                          </div>
+                        )}
                       </div>
                     );
                   }
@@ -551,6 +560,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </div>
         )}
       </DialogContent>
+
+      {/* Settings Dialog */}
+      {isOwnProfile && (
+        <SettingsDialog 
+          open={showSettingsDialog} 
+          onOpenChange={(open) => setShowSettingsDialog(open)} 
+        />
+      )}
     </Dialog>
   );
 };
