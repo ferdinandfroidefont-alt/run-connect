@@ -63,8 +63,25 @@ const Leaderboard = () => {
         profile_user_ids: userIds
       });
 
+      // Get current user's profile separately
+      let currentUserProfile = null;
+      if (user) {
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .eq('user_id', user.id)
+          .single();
+        currentUserProfile = currentProfile;
+      }
+
       const globalLeaderboard = globalData?.map((item, index) => {
-        const profile = profilesData?.find(p => p.user_id === item.user_id);
+        let profile = profilesData?.find(p => p.user_id === item.user_id);
+        
+        // If this is the current user and no profile was found, use their own profile
+        if (!profile && item.user_id === user?.id && currentUserProfile) {
+          profile = currentUserProfile;
+        }
+        
         return {
           ...item,
           profile: profile || {
