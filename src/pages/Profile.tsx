@@ -18,6 +18,7 @@ import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { useAppContext } from "@/contexts/AppContext";
+import { StravaConnect } from "@/components/StravaConnect";
 
 interface Profile {
   username: string;
@@ -35,6 +36,8 @@ interface Profile {
   swimming_records?: any;
   triathlon_records?: any;
   walking_records?: any;
+  strava_connected?: boolean;
+  strava_verified_at?: string;
 }
 
 interface UserRoute {
@@ -909,6 +912,12 @@ const Profile = () => {
           </CardContent>
         </Card>
         )}
+
+        {/* Strava Connect Section */}
+        <StravaConnect 
+          profile={profile} 
+          isOwnProfile={!isViewingOtherUser} 
+        />
 
         {/* Follow Dialog */}
         <FollowDialog

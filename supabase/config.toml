@@ -1,1 +1,49 @@
 project_id = "dbptgehpknjsoisirviz"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[functions.check-subscription]
+verify_jwt = true
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.create-donation]
+verify_jwt = true
+
+[functions.customer-portal]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.google-maps-proxy]
+verify_jwt = true
+
+[functions.season-reset]
+verify_jwt = false
+
+[functions.strava-connect]
+verify_jwt = true
+
+[functions.strava-callback]
+verify_jwt = false
+
+[functions.strava-disconnect]
+verify_jwt = true
