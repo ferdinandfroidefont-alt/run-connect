@@ -38,6 +38,7 @@ interface Profile {
   walking_records?: any;
   strava_connected?: boolean;
   strava_verified_at?: string;
+  strava_user_id?: string;
 }
 
 interface UserRoute {
@@ -519,6 +520,20 @@ const Profile = () => {
                 )}
               </div>
             )}
+            
+            {/* Badge Strava vérifié - pour les autres utilisateurs uniquement */}
+            {isViewingOtherUser && profile?.strava_connected && (
+              <div className="mt-2 mb-2">
+                <button
+                  onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                >
+                  <span className="text-orange-600">🏃</span>
+                  ✓ Utilisateur vérifié Strava
+                </button>
+              </div>
+            )}
+            
             <div className="flex gap-4 mt-2">
               <button
                 onClick={() => {

@@ -26,6 +26,8 @@ interface Profile {
   cycling_records: any;
   swimming_records: any;
   triathlon_records: any;
+  strava_connected?: boolean;
+  strava_user_id?: string;
 }
 
 interface ProfilePreviewDialogProps {
@@ -69,24 +71,23 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         // For own profile, can access all fields
         const { data, error } = await supabase
           .from('profiles')
-          .select('user_id, username, display_name, avatar_url, age, bio, is_premium, created_at, walking_records, running_records, cycling_records, swimming_records, triathlon_records')
+          .select('*')
           .eq('user_id', userId)
           .single();
 
         if (error) throw error;
         setProfile(data);
       } else {
-        // For other users, use secure function that respects privacy settings
-        const { data, error } = await supabase.rpc('get_public_profile_safe', {
-          profile_user_id: userId
-        });
+        // For other users, get public profile with all fields except private ones
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_private', false)
+          .single();
 
         if (error) throw error;
-        if (data && data.length > 0) {
-          setProfile(data[0]);
-        } else {
-          throw new Error('Profil non trouvé');
-        }
+        setProfile(data);
       }
     } catch (error: any) {
       toast({
@@ -302,6 +303,19 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   <Badge variant="secondary" className="mb-4">
                     Votre profil
                   </Badge>
+                )}
+
+                {/* Badge Strava vérifié */}
+                {profile.strava_connected && !isOwnProfile && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                    >
+                      <span className="text-orange-600">🏃</span>
+                      ✓ Utilisateur vérifié Strava
+                    </button>
+                  </div>
                 )}
 
                 <div className="flex gap-4 mb-4">
