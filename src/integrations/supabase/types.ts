@@ -258,6 +258,7 @@ export type Database = {
           instagram_user_id: string | null
           instagram_username: string | null
           instagram_verified_at: string | null
+          is_admin: boolean | null
           is_online: boolean | null
           is_premium: boolean | null
           is_private: boolean | null
@@ -300,6 +301,7 @@ export type Database = {
           instagram_user_id?: string | null
           instagram_username?: string | null
           instagram_verified_at?: string | null
+          is_admin?: boolean | null
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
@@ -342,6 +344,7 @@ export type Database = {
           instagram_user_id?: string | null
           instagram_username?: string | null
           instagram_verified_at?: string | null
+          is_admin?: boolean | null
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null

@@ -29,6 +29,7 @@ interface Profile {
   bio: string | null;
   phone: string | null;
   is_premium: boolean;
+  is_admin?: boolean;
   notifications_enabled?: boolean;
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
@@ -499,12 +500,17 @@ const Profile = () => {
                 </p>
               </>
             )}
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
-              {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                <Crown className="h-5 w-5 text-yellow-500" />
-              )}
-            </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
+                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                  )}
+                  {profile?.is_admin && (
+                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                      Admin
+                    </Badge>
+                  )}
+                </div>
             {!isViewingOtherUser && (
               <div className="flex gap-2 items-center mb-4">
                 {(profile?.is_premium || subscriptionInfo?.subscribed) && (

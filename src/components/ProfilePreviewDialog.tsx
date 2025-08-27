@@ -21,6 +21,7 @@ interface Profile {
   age: number | null;
   bio: string | null;
   is_premium: boolean;
+  is_admin?: boolean;
   created_at: string;
   walking_records: any;
   running_records: any;
@@ -296,6 +297,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </h2>
                   {profile.is_premium && (
                     <Crown className="h-5 w-5 text-yellow-500" />
+                  )}
+                  {profile.is_admin && (
+                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                      Admin
+                    </Badge>
                   )}
                 </div>
 

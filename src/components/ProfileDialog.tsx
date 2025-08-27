@@ -24,6 +24,7 @@ interface Profile {
   bio: string | null;
   phone: string | null;
   is_premium: boolean;
+  is_admin?: boolean;
   walking_records?: any;
   running_records?: any;
   cycling_records?: any;
@@ -315,6 +316,11 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                     <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
                     {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                       <Crown className="h-5 w-5 text-yellow-500" />
+                    )}
+                    {profile?.is_admin && (
+                      <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                        Admin
+                      </Badge>
                     )}
                   </div>
                   <div className="flex gap-2 items-center mb-4">
