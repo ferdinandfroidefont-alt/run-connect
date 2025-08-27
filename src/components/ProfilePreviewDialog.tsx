@@ -306,7 +306,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 )}
 
                 {/* Badge Strava vérifié */}
-                {profile.strava_connected && !isOwnProfile && (
+                {profile.strava_connected && (
                   <div className="mb-4">
                     <button
                       onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}

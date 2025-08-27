@@ -521,8 +521,8 @@ const Profile = () => {
               </div>
             )}
             
-            {/* Badge Strava vérifié - pour les autres utilisateurs uniquement */}
-            {isViewingOtherUser && profile?.strava_connected && (
+            {/* Badge Strava vérifié */}
+            {profile?.strava_connected && (
               <div className="mt-2 mb-2">
                 <button
                   onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
