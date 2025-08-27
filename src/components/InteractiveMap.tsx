@@ -1325,8 +1325,8 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Filters - descendu largement plus bas */}
-      <div className="absolute top-80 right-4 z-10">
+      {/* Filters - repositionné plus haut */}
+      <div className="absolute top-28 right-4 z-10">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
