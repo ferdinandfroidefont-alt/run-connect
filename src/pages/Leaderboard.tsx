@@ -649,7 +649,7 @@ const Leaderboard = () => {
                 </div>
                 <div className="text-center mt-2">
                   <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 px-3 py-1">
-                    🎁 Code promo à gagner pour les 3 premiers
+                    🎁 Codes promo à gagner sur sites sportifs pour les 3 premiers
                   </Badge>
                 </div>
               </div>
