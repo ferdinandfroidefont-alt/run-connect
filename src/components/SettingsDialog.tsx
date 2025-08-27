@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "./ContactsPermissionButton";
 import { SoundSettingsDialog } from "./SoundSettingsDialog";
+import { StravaConnect } from "./StravaConnect";
 
 interface Profile {
   username: string;
@@ -24,6 +25,8 @@ interface Profile {
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
   allow_friend_suggestions?: boolean;
+  strava_connected?: boolean;
+  strava_verified_at?: string;
 }
 
 interface SettingsDialogProps {
@@ -387,6 +390,9 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   <ContactsPermissionButton />
                 </CardContent>
               </Card>
+
+              {/* Strava Connection */}
+              <StravaConnect profile={profile} isOwnProfile={true} />
 
               {/* Privacy & Legal Settings */}
               <Card>
