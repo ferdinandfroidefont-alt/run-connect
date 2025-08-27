@@ -66,20 +66,7 @@ export const StravaConnect = ({ profile, isOwnProfile = false }: StravaConnectPr
     }
   };
 
-  if (!isOwnProfile && profile?.strava_connected) {
-    return (
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-              ✓ Utilisateur vérifié Strava
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  // Ne pas montrer l'information Strava pour les autres utilisateurs
   if (!isOwnProfile) {
     return null;
   }
@@ -106,8 +93,7 @@ export const StravaConnect = ({ profile, isOwnProfile = false }: StravaConnectPr
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              Votre compte est vérifié. Les autres utilisateurs verront "Utilisateur vérifié Strava" 
-              même s'ils ne sont pas vos amis.
+              Votre compte Strava est connecté et vérifié.
             </p>
             <Button 
               variant="outline" 
