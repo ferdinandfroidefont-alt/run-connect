@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useContacts } from "@/hooks/useContacts";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 
 interface FriendSuggestion {
   user_id: string;
@@ -29,6 +31,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   const { user } = useAuth();
   const { toast } = useToast();
   const { isNative, hasPermission, requestPermissions, loadContacts } = useContacts();
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
   const [suggestions, setSuggestions] = useState<FriendSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
@@ -269,7 +272,10 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
     <Card key={suggestion.user_id} className="relative">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Avatar className="h-12 w-12">
+          <Avatar 
+            className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigateToProfile(suggestion.user_id)}
+          >
             <AvatarImage src={suggestion.avatar_url} />
             <AvatarFallback>
               {suggestion.username?.[0] || suggestion.display_name?.[0] || '?'}
@@ -343,6 +349,10 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         {visibleSuggestions.slice(0, 5).map(suggestion => (
           <SuggestionCard key={suggestion.user_id} suggestion={suggestion} />
         ))}
+        <ProfilePreviewDialog 
+          userId={selectedUserId} 
+          onClose={closeProfilePreview}
+        />
       </div>
     );
   }
@@ -362,6 +372,11 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
           <SuggestionCard key={suggestion.user_id} suggestion={suggestion} />
         ))}
       </CardContent>
+
+      <ProfilePreviewDialog 
+        userId={selectedUserId} 
+        onClose={closeProfilePreview}
+      />
     </Card>
   );
 };
