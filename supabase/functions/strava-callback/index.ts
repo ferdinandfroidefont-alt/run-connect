@@ -91,17 +91,26 @@ Deno.serve(async (req) => {
 
     console.log('Profile updated successfully for user:', state);
 
-    // Return success page
+    // Return success page with redirect
+    const baseUrl = req.headers.get('origin') || 'https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.sandbox.lovable.dev';
+    
     return new Response(
       `
       <html>
-        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-          <h1>✅ Connexion Strava réussie !</h1>
-          <p>Votre compte Strava a été connecté avec succès.</p>
-          <p>Vous pouvez maintenant fermer cette fenêtre et retourner à l'application.</p>
+        <head>
+          <meta http-equiv="refresh" content="2;url=${baseUrl}/profile">
+        </head>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+          <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
+            <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
+            <h1 style="margin: 0 0 20px 0;">Connexion Strava réussie !</h1>
+            <p style="margin: 0 0 20px 0; opacity: 0.9;">Votre compte Strava a été connecté et vérifié avec succès.</p>
+            <p style="margin: 0; opacity: 0.8; font-size: 14px;">Redirection automatique vers votre profil...</p>
+          </div>
           <script>
+            // Redirect after 2 seconds
             setTimeout(() => {
-              window.close();
+              window.location.href = '${baseUrl}/profile';
             }, 2000);
           </script>
         </body>
