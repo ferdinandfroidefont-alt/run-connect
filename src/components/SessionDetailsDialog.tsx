@@ -33,8 +33,10 @@ interface Session {
   image_url?: string;
   distance_km?: number;
   pace_general?: string; // Allure générale
+  pace_unit?: string; // Unité : "speed" ou "power"
   interval_distance?: number; // Distance par fraction
   interval_pace?: string; // Allure des fractions
+  interval_pace_unit?: string; // Unité pour les fractions
   interval_count?: number; // Nombre de fractions
   profiles: {
     username: string;
@@ -361,25 +363,36 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             </Card>
           )}
 
-          {/* Allure - Footing ou Sortie longue */}
-          {session.pace_general && (session.session_type === 'footing' || session.session_type === 'sortie_longue') && (
-            <Card>
-              <CardContent className="p-4">
-                 <div className="flex items-center gap-2 mb-2">
-                   <Clock className="h-4 w-4 text-primary" />
-                   <span className="font-medium">
-                     {session.activity_type === 'course' ? 'Allure prévue' : 'Vitesse prévue'}
-                   </span>
-                 </div>
-                 <p className="text-sm text-muted-foreground">
-                   {session.activity_type === 'course' 
-                     ? `${session.pace_general}/km`
-                     : `${session.pace_general} km/h`
-                   }
-                 </p>
-              </CardContent>
-            </Card>
-          )}
+           {/* Allure - Footing ou Sortie longue */}
+           {session.pace_general && (session.session_type === 'footing' || session.session_type === 'sortie_longue') && (
+             <Card>
+               <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="font-medium">
+                      {session.activity_type === 'course' 
+                        ? 'Allure prévue'
+                        : session.activity_type === 'natation'
+                          ? 'Allure prévue'
+                          : session.activity_type === 'velo' && session.pace_unit === 'power'
+                            ? 'Puissance prévue'
+                            : 'Vitesse prévue'
+                      }
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {session.activity_type === 'course' 
+                      ? `${session.pace_general}/km`
+                      : session.activity_type === 'natation'
+                        ? `${session.pace_general}/100m`
+                        : session.activity_type === 'velo' && session.pace_unit === 'power'
+                          ? `${session.pace_general} watts`
+                          : `${session.pace_general} km/h`
+                    }
+                  </p>
+               </CardContent>
+             </Card>
+           )}
 
           {/* Informations fractionné */}
           {session.session_type === 'fractionne' && (session.interval_distance || session.interval_pace || session.interval_count) && (
@@ -393,14 +406,26 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   {session.interval_count && session.interval_distance && (
                     <p>{session.interval_count} × {session.interval_distance} km</p>
                   )}
-                   {session.interval_pace && (
-                     <p>
-                       {session.activity_type === 'course' ? 'Allure:' : 'Vitesse:'} {session.activity_type === 'course' 
-                         ? `${session.interval_pace}/km`
-                         : `${session.interval_pace} km/h`
-                       }
-                     </p>
-                   )}
+                    {session.interval_pace && (
+                      <p>
+                        {session.activity_type === 'course' 
+                          ? 'Allure:'
+                          : session.activity_type === 'natation'
+                            ? 'Allure:'
+                            : session.activity_type === 'velo' && session.interval_pace_unit === 'power'
+                              ? 'Puissance:'
+                              : 'Vitesse:'
+                        } {
+                          session.activity_type === 'course'
+                            ? `${session.interval_pace}/km`
+                            : session.activity_type === 'natation'
+                              ? `${session.interval_pace}/100m`
+                              : session.activity_type === 'velo' && session.interval_pace_unit === 'power'
+                                ? `${session.interval_pace} watts`
+                                : `${session.interval_pace} km/h`
+                        }
+                      </p>
+                    )}
                 </div>
               </CardContent>
             </Card>

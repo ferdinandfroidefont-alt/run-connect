@@ -511,6 +511,7 @@ export type Database = {
           interval_count: number | null
           interval_distance: number | null
           interval_pace: string | null
+          interval_pace_unit: string | null
           is_private: boolean | null
           location_lat: number
           location_lng: number
@@ -518,6 +519,7 @@ export type Database = {
           max_participants: number | null
           organizer_id: string
           pace_general: string | null
+          pace_unit: string | null
           route_id: string | null
           scheduled_at: string
           session_type: string
@@ -538,6 +540,7 @@ export type Database = {
           interval_count?: number | null
           interval_distance?: number | null
           interval_pace?: string | null
+          interval_pace_unit?: string | null
           is_private?: boolean | null
           location_lat: number
           location_lng: number
@@ -545,6 +548,7 @@ export type Database = {
           max_participants?: number | null
           organizer_id: string
           pace_general?: string | null
+          pace_unit?: string | null
           route_id?: string | null
           scheduled_at: string
           session_type: string
@@ -565,6 +569,7 @@ export type Database = {
           interval_count?: number | null
           interval_distance?: number | null
           interval_pace?: string | null
+          interval_pace_unit?: string | null
           is_private?: boolean | null
           location_lat?: number
           location_lng?: number
@@ -572,6 +577,7 @@ export type Database = {
           max_participants?: number | null
           organizer_id?: string
           pace_general?: string | null
+          pace_unit?: string | null
           route_id?: string | null
           scheduled_at?: string
           session_type?: string
