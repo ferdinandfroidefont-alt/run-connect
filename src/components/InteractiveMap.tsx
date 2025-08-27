@@ -1317,6 +1317,7 @@ export const InteractiveMap = ({
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
+            title="Séances à proximité"
           >
             📍🏃
           </Button>
