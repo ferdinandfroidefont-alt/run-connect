@@ -1158,9 +1158,9 @@ export const InteractiveMap = ({
               <div className="absolute left-1/2 transform -translate-x-1/2">
                 <div 
                   onClick={() => setShowProfileDialog(true)}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover-scale hover-glow transition-all duration-200"
                 >
-                  <Avatar className="w-12 h-12">
+                  <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                     <AvatarFallback>
                       {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
@@ -1173,13 +1173,13 @@ export const InteractiveMap = ({
             <div className="flex items-center gap-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
               <div 
-                className="cursor-pointer hover:opacity-70 transition-opacity"
+                className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
                 onClick={() => setShowHelpDialog(true)}
               >
                 ❓
               </div>
               <div 
-                className="text-lg cursor-pointer hover:opacity-70 transition-opacity"
+                className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
                 onClick={() => setShowSettingsDialog(true)}
               >
                 ⚙️

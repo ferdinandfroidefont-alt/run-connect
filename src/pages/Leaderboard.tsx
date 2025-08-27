@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { Skeleton, LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
 
 interface LeaderboardUser {
   user_id: string;
@@ -329,10 +330,14 @@ const Leaderboard = () => {
 
   const LeaderboardList = ({ data, showSeasonal = false }: { data: LeaderboardUser[], showSeasonal?: boolean }) => (
     <div className="space-y-2">
-      {data.map((item) => (
+      {data.map((item, index) => (
         <Card 
           key={item.user_id} 
-          className={`${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}`}
+          className={`
+            ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
+            hover-lift hover-glow btn-interactive animate-fade-in
+          `}
+          style={{ animationDelay: `${index * 0.1}s` }}
         >
           <CardContent className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
@@ -396,6 +401,7 @@ const Leaderboard = () => {
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
+          className="btn-interactive"
         >
           <ChevronLeft className="h-4 w-4" />
           Précédent
@@ -419,7 +425,7 @@ const Leaderboard = () => {
                 key={pageNum}
                 variant={currentPage === pageNum ? "default" : "outline"}
                 size="sm"
-                className="w-8 h-8 p-0"
+                className="w-8 h-8 p-0 btn-interactive"
                 onClick={() => onPageChange(pageNum)}
               >
                 {pageNum}
@@ -433,6 +439,7 @@ const Leaderboard = () => {
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
+          className="btn-interactive"
         >
           Suivant
           <ChevronRight className="h-4 w-4" />
@@ -444,10 +451,44 @@ const Leaderboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4">
-        <div className="max-w-md mx-auto flex items-center justify-center h-96">
-          <div className="text-center">
-            <Trophy className="h-12 w-12 text-primary mx-auto mb-4 animate-bounce" />
-            <p>Chargement du classement...</p>
+        <div className="max-w-md mx-auto">
+          <div className="text-center py-4">
+            <h1 className="text-2xl font-bold text-foreground">Classement</h1>
+          </div>
+          
+          {/* Animated skeleton placeholders */}
+          <div className="space-y-4 animate-fade-in">
+            {/* Rank System Card Skeleton */}
+            <Card className="animate-pulse">
+              <CardHeader>
+                <Skeleton className="h-6 w-[140px] mx-auto" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Skeleton className="h-4 w-4 mr-2" />
+                        <Skeleton className="h-4 w-[60px]" />
+                      </div>
+                      <Skeleton className="h-3 w-[40px]" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabs Skeleton */}
+            <div className="flex h-10 items-center justify-center rounded-md bg-muted p-1">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex-1 h-8 mx-1">
+                  <Skeleton className="h-full w-full rounded-sm" />
+                </div>
+              ))}
+            </div>
+
+            {/* Leaderboard Items Skeleton */}
+            <LeaderboardSkeleton />
           </div>
         </div>
       </div>
