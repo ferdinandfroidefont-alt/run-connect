@@ -58,6 +58,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     max_participants: "",
     distance_km: "",
     pace_general: "", // Allure générale pour footing/sortie longue
+    pace_unit: "speed", // "speed" (km/h) ou "power" (watts) pour vélo
     interval_distance: "", // Distance de chaque fraction
     interval_pace: "", // Allure de chaque fraction
     interval_count: "", // Nombre de fractions
@@ -496,11 +497,12 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         max_participants: "",
         distance_km: "",
         pace_general: "",
+        pace_unit: "speed",
         interval_distance: "",
         interval_pace: "",
         interval_count: "",
         location_name: "",
-    friends_only: true, // Activé par défaut
+        friends_only: true, // Activé par défaut
         image_url: "",
         club_id: null
       });
@@ -705,29 +707,96 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
           {/* Champs d'allure selon le type de séance */}
           {(formData.session_type === 'footing' || formData.session_type === 'sortie_longue') && (
-            <div>
-              <Label htmlFor="pace_general">
-                {formData.activity_type === 'course' ? 'Allure prévue (min:sec/km)' : 'Vitesse prévue (km/h)'}
-              </Label>
-              <Input
-                id="pace_general"
-                type="text"
-                value={formData.pace_general}
-                onChange={(e) => setFormData(prev => ({ ...prev, pace_general: e.target.value }))}
-                placeholder={formData.activity_type === 'course' ? 'ex: 5:30' : 'ex: 25'}
-                pattern={formData.activity_type === 'course' ? '[0-9]{1,2}:[0-9]{2}' : '[0-9]{1,2}'}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {formData.activity_type === 'course' 
-                  ? 'Format: mm:ss (ex: 5:30 pour 5min30s/km)'
-                  : 'Vitesse en kilomètres par heure (ex: 25)'
-                }
-              </p>
+            <div className="space-y-3">
+              {/* Sélecteur d'unité pour le vélo */}
+              {formData.activity_type === 'velo' && (
+                <div>
+                  <Label>Unité de mesure</Label>
+                  <Select 
+                    value={formData.pace_unit} 
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, pace_unit: value, pace_general: "" }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="speed">Vitesse (km/h)</SelectItem>
+                      <SelectItem value="power">Puissance (watts)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              <div>
+                <Label htmlFor="pace_general">
+                  {formData.activity_type === 'course' 
+                    ? 'Allure prévue (min:sec/km)' 
+                    : formData.activity_type === 'natation'
+                      ? 'Allure prévue (min:sec/100m)'
+                      : formData.activity_type === 'velo' 
+                        ? (formData.pace_unit === 'power' ? 'Puissance prévue (watts)' : 'Vitesse prévue (km/h)')
+                        : 'Vitesse prévue (km/h)'
+                  }
+                </Label>
+                <Input
+                  id="pace_general"
+                  type="text"
+                  value={formData.pace_general}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pace_general: e.target.value }))}
+                  placeholder={
+                    formData.activity_type === 'course' 
+                      ? 'ex: 5:30' 
+                      : formData.activity_type === 'natation'
+                        ? 'ex: 1:45'
+                        : formData.activity_type === 'velo' 
+                          ? (formData.pace_unit === 'power' ? 'ex: 250' : 'ex: 25')
+                          : 'ex: 6'
+                  }
+                  pattern={
+                    (formData.activity_type === 'course' || formData.activity_type === 'natation') 
+                      ? '[0-9]{1,2}:[0-9]{2}' 
+                      : '[0-9]{1,3}'
+                  }
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formData.activity_type === 'course' 
+                    ? 'Format: mm:ss (ex: 5:30 pour 5min30s/km)'
+                    : formData.activity_type === 'natation'
+                      ? 'Format: mm:ss (ex: 1:45 pour 1min45s/100m)'
+                      : formData.activity_type === 'velo' 
+                        ? (formData.pace_unit === 'power' ? 'Puissance en watts (ex: 250)' : 'Vitesse en kilomètres par heure (ex: 25)')
+                        : 'Vitesse en kilomètres par heure (ex: 6)'
+                  }
+                </p>
+              </div>
             </div>
           )}
 
           {formData.session_type === 'fractionne' && (
             <div className="space-y-3">
+              {/* Sélecteur d'unité pour le vélo (fractionné) */}
+              {formData.activity_type === 'velo' && (
+                <div>
+                  <Label>Unité de mesure</Label>
+                  <Select 
+                    value={formData.pace_unit} 
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, pace_unit: value, interval_pace: "" }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="speed">Vitesse (km/h)</SelectItem>
+                      <SelectItem value="power">Puissance (watts)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="interval_distance">Distance par fraction (km)</Label>
@@ -755,20 +824,43 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
               </div>
               <div>
                 <Label htmlFor="interval_pace">
-                  {formData.activity_type === 'course' ? 'Allure des fractions (min:sec/km)' : 'Vitesse des fractions (km/h)'}
+                  {formData.activity_type === 'course' 
+                    ? 'Allure des fractions (min:sec/km)' 
+                    : formData.activity_type === 'natation'
+                      ? 'Allure des fractions (min:sec/100m)'
+                      : formData.activity_type === 'velo'
+                        ? (formData.pace_unit === 'power' ? 'Puissance des fractions (watts)' : 'Vitesse des fractions (km/h)')
+                        : 'Vitesse des fractions (km/h)'
+                  }
                 </Label>
                 <Input
                   id="interval_pace"
                   type="text"
                   value={formData.interval_pace}
                   onChange={(e) => setFormData(prev => ({ ...prev, interval_pace: e.target.value }))}
-                  placeholder={formData.activity_type === 'course' ? 'ex: 4:00' : 'ex: 30'}
-                  pattern={formData.activity_type === 'course' ? '[0-9]{1,2}:[0-9]{2}' : '[0-9]{1,2}'}
+                  placeholder={
+                    formData.activity_type === 'course' 
+                      ? 'ex: 4:00' 
+                      : formData.activity_type === 'natation'
+                        ? 'ex: 1:30'
+                        : formData.activity_type === 'velo'
+                          ? (formData.pace_unit === 'power' ? 'ex: 300' : 'ex: 30')
+                          : 'ex: 8'
+                  }
+                  pattern={
+                    (formData.activity_type === 'course' || formData.activity_type === 'natation') 
+                      ? '[0-9]{1,2}:[0-9]{2}' 
+                      : '[0-9]{1,3}'
+                  }
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   {formData.activity_type === 'course' 
                     ? 'Format: mm:ss (ex: 4:00 pour 4min/km)'
-                    : 'Vitesse en kilomètres par heure (ex: 30)'
+                    : formData.activity_type === 'natation'
+                      ? 'Format: mm:ss (ex: 1:30 pour 1min30s/100m)'
+                      : formData.activity_type === 'velo'
+                        ? (formData.pace_unit === 'power' ? 'Puissance en watts (ex: 300)' : 'Vitesse en kilomètres par heure (ex: 30)')
+                        : 'Vitesse en kilomètres par heure (ex: 8)'
                   }
                 </p>
               </div>
