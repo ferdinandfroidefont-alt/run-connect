@@ -20,6 +20,7 @@ export const InstagramConnect = ({ profile, onProfileUpdate, isOwnProfile }: Ins
     
     setLoading(true);
     try {
+      console.log('Attempting Instagram connection...');
       const { data, error } = await supabase.functions.invoke('instagram-connect');
       
       if (error) {
@@ -28,28 +29,38 @@ export const InstagramConnect = ({ profile, onProfileUpdate, isOwnProfile }: Ins
         return;
       }
 
+      console.log('Instagram connect response:', data);
+
       if (data?.authUrl) {
+        console.log('Opening Instagram auth URL:', data.authUrl);
         // Open Instagram auth in new window
-        window.open(data.authUrl, 'instagram-auth', 'width=600,height=600');
+        const authWindow = window.open(data.authUrl, 'instagram-auth', 'width=600,height=600,scrollbars=yes,resizable=yes');
+        
+        if (!authWindow) {
+          toast.error('Impossible d\'ouvrir la fenêtre d\'authentification. Vérifiez que les popups ne sont pas bloquées.');
+          return;
+        }
         
         // Listen for when the window closes (user completed auth)
         const checkClosed = setInterval(() => {
-          try {
-            if (window.closed) {
-              clearInterval(checkClosed);
-              // Refresh profile data after a short delay
-              setTimeout(() => {
-                onProfileUpdate?.();
-              }, 1000);
-            }
-          } catch (e) {
-            // Window access error, likely means it closed
+          if (authWindow.closed) {
             clearInterval(checkClosed);
+            console.log('Auth window closed, refreshing profile...');
+            // Refresh profile data after a short delay
             setTimeout(() => {
               onProfileUpdate?.();
+              toast.success('Vérifiez si votre connexion Instagram a réussi');
             }, 1000);
           }
         }, 1000);
+        
+        // Also set a timeout to clean up the interval after 5 minutes
+        setTimeout(() => {
+          clearInterval(checkClosed);
+        }, 300000);
+      } else {
+        console.error('No auth URL received from Instagram connect function');
+        toast.error('URL d\'authentification non reçue');
       }
     } catch (error) {
       console.error('Error:', error);
