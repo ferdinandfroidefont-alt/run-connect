@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
+import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
 
@@ -409,6 +410,11 @@ const Auth = () => {
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Continuer
               </Button>
+
+              {/* Code de parrainage pour les nouveaux utilisateurs */}
+              <div className="mt-4 pt-4 border-t border-border">
+                <ReferralCodeInput />
+              </div>
             </form>
           ) : (
             // Signin Options

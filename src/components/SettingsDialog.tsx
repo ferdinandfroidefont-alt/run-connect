@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -18,6 +18,7 @@ import { StravaConnect } from "./StravaConnect";
 import { InstagramConnect } from "./InstagramConnect";
 import { ConversationThemeSelector } from "./ConversationThemeSelector";
 import { useConversationTheme } from "@/hooks/useConversationTheme";
+import { ReferralDialog } from "./ReferralDialog";
 
 interface Profile {
   username: string;
@@ -51,6 +52,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [showConversationThemes, setShowConversationThemes] = useState(false);
+  const [showReferralDialog, setShowReferralDialog] = useState(false);
   
   const { toast } = useToast();
 
@@ -398,7 +400,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                    {/* Contacts Access - Only show on mobile */}
                    <ContactsPermissionButton />
 
-                   {/* Conversation Themes */}
+                  {/* Conversation Themes */}
                    <div className="flex items-center justify-between">
                      <div className="flex items-center space-x-2">
                        <Palette className="h-4 w-4" />
@@ -417,6 +419,28 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                        onClick={() => setShowConversationThemes(true)}
                      >
                        Choisir
+                     </Button>
+                   </div>
+
+                   {/* Parrainage */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <Gift className="h-4 w-4" />
+                       <div className="grid gap-1.5">
+                         <label className="text-sm font-medium leading-none">
+                           Parrainage
+                         </label>
+                         <p className="text-xs text-muted-foreground">
+                           Invitez vos amis et gagnez du premium !
+                         </p>
+                       </div>
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowReferralDialog(true)}
+                     >
+                       Voir mon code
                      </Button>
                    </div>
                 </CardContent>
@@ -564,6 +588,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Referral Dialog */}
+      <ReferralDialog 
+        isOpen={showReferralDialog}
+        onClose={() => setShowReferralDialog(false)}
+      />
 
       {/* Conversation Themes Dialog */}
       <Dialog open={showConversationThemes} onOpenChange={setShowConversationThemes}>

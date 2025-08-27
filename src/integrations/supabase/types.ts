@@ -271,6 +271,7 @@ export type Database = {
           onboarding_completed: boolean | null
           phone: string | null
           push_token: string | null
+          referral_code: string | null
           rgpd_accepted: boolean | null
           running_records: Json | null
           security_rules_accepted: boolean | null
@@ -315,6 +316,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           push_token?: string | null
+          referral_code?: string | null
           rgpd_accepted?: boolean | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
@@ -359,6 +361,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           push_token?: string | null
+          referral_code?: string | null
           rgpd_accepted?: boolean | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
@@ -375,6 +378,33 @@ export type Database = {
           username?: string | null
           walking_records?: Json | null
           welcome_video_seen?: boolean | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          reward_given: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          reward_given?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_id?: string
+          referrer_id?: string
+          reward_given?: boolean | null
         }
         Relationships: []
       }
@@ -734,6 +764,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_referral_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_common_clubs: {
         Args: { user_1_id: string; user_2_id: string }
         Returns: {
@@ -806,6 +840,14 @@ export type Database = {
           walking_records: Json
         }[]
       }
+      get_referral_stats: {
+        Args: { user_id_param: string }
+        Returns: {
+          referral_code: string
+          total_referrals: number
+          total_rewards: number
+        }[]
+      }
       get_safe_public_profile: {
         Args: { profile_user_id: string }
         Returns: {
@@ -847,6 +889,10 @@ export type Database = {
       increment_daily_message_count: {
         Args: { user_id_param: string }
         Returns: number
+      }
+      process_referral: {
+        Args: { new_user_id: string; referral_code_param: string }
+        Returns: boolean
       }
       remove_user_points: {
         Args: { points_to_remove: number; user_id_param: string }
