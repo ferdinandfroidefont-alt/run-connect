@@ -23,42 +23,44 @@ export const useContacts = () => {
 
   useEffect(() => {
     const checkNativeStatus = async () => {
-      // Détection améliorée pour le développement Lovable
+      // Détection renforcée pour l'environnement Lovable
       const isCapacitorNative = Capacitor.isNativePlatform();
       const platform = Capacitor.getPlatform();
       const isLikelyMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const hasCapacitorAPI = !!(window as any).Capacitor;
-      const isLovableDev = window.location.hostname.includes('lovableproject.com') || 
-                          window.location.hostname.includes('lovable.app') ||
-                          window.location.hostname.includes('sandbox.lovable.dev') ||
-                          window.location.hostname.includes('localhost') ||
-                          window.location.hostname.includes('127.0.0.1');
       
-      console.log('🔍 Window hostname:', window.location.hostname);
-      console.log('🔍 Window href:', window.location.href);
+      // Détection complète de l'environnement Lovable
+      const hostname = window.location.hostname;
+      const isLovableDev = hostname.includes('sandbox.lovable.dev') || 
+                          hostname.includes('lovableproject.com') || 
+                          hostname.includes('lovable.app') ||
+                          hostname.includes('localhost') ||
+                          hostname.includes('127.0.0.1');
       
-      // Dans l'environnement Lovable, on simule un environnement natif si Capacitor est disponible
-      const native = isCapacitorNative || 
-                    (hasCapacitorAPI && isLikelyMobile && (platform === 'ios' || platform === 'android')) ||
-                    (hasCapacitorAPI && isLovableDev); // Permettre dans l'environnement Lovable pour les tests
-      
+      console.log('🔍 Full hostname:', hostname);
       console.log('🔍 Capacitor native check:', isCapacitorNative);
       console.log('🔍 Platform:', platform);
       console.log('🔍 User agent suggests mobile:', isLikelyMobile);
       console.log('🔍 Has Capacitor API:', hasCapacitorAPI);
       console.log('🔍 Is Lovable dev environment:', isLovableDev);
+      
+      // Forcer l'activation en environnement de développement si Capacitor est disponible
+      const native = isCapacitorNative || 
+                    (hasCapacitorAPI && isLikelyMobile && (platform === 'ios' || platform === 'android')) ||
+                    (hasCapacitorAPI && isLovableDev);
+      
       console.log('🔍 Final native detection:', native);
       
       setIsNative(native);
       
-      // Vérifier les permissions au démarrage si on est sur mobile
+      // Vérifier les permissions au démarrage si on est considéré comme natif
       if (native) {
         try {
           const result = await Contacts.checkPermissions();
           console.log('🔍 Initial contacts permission check:', result);
           setHasPermission(result.contacts === 'granted');
         } catch (error) {
-          console.error('Error checking initial contacts permissions:', error);
+          console.error('❌ Error checking initial contacts permissions:', error);
         }
       }
     };
@@ -75,7 +77,7 @@ export const useContacts = () => {
       setHasPermission(granted);
       return granted;
     } catch (error) {
-      console.error('Error checking contacts permissions:', error);
+      console.error('❌ Error checking contacts permissions:', error);
       return false;
     }
   };
@@ -145,7 +147,7 @@ export const useContacts = () => {
       setLoading(false);
       return processedContacts;
     } catch (error) {
-      console.error('Error loading contacts:', error);
+      console.error('❌ Error loading contacts:', error);
       setLoading(false);
       return [];
     }
