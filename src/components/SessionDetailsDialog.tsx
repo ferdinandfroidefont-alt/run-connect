@@ -365,13 +365,18 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           {session.pace_general && (session.session_type === 'footing' || session.session_type === 'sortie_longue') && (
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Allure prévue</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {session.pace_general}/km
-                </p>
+                 <div className="flex items-center gap-2 mb-2">
+                   <Clock className="h-4 w-4 text-primary" />
+                   <span className="font-medium">
+                     {session.activity_type === 'course' ? 'Allure prévue' : 'Vitesse prévue'}
+                   </span>
+                 </div>
+                 <p className="text-sm text-muted-foreground">
+                   {session.activity_type === 'course' 
+                     ? `${session.pace_general}/km`
+                     : `${session.pace_general} km/h`
+                   }
+                 </p>
               </CardContent>
             </Card>
           )}
@@ -388,9 +393,14 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   {session.interval_count && session.interval_distance && (
                     <p>{session.interval_count} × {session.interval_distance} km</p>
                   )}
-                  {session.interval_pace && (
-                    <p>Allure: {session.interval_pace}/km</p>
-                  )}
+                   {session.interval_pace && (
+                     <p>
+                       {session.activity_type === 'course' ? 'Allure:' : 'Vitesse:'} {session.activity_type === 'course' 
+                         ? `${session.interval_pace}/km`
+                         : `${session.interval_pace} km/h`
+                       }
+                     </p>
+                   )}
                 </div>
               </CardContent>
             </Card>

@@ -706,16 +706,23 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           {/* Champs d'allure selon le type de séance */}
           {(formData.session_type === 'footing' || formData.session_type === 'sortie_longue') && (
             <div>
-              <Label htmlFor="pace_general">Allure prévue (min:sec/km)</Label>
+              <Label htmlFor="pace_general">
+                {formData.activity_type === 'course' ? 'Allure prévue (min:sec/km)' : 'Vitesse prévue (km/h)'}
+              </Label>
               <Input
                 id="pace_general"
                 type="text"
                 value={formData.pace_general}
                 onChange={(e) => setFormData(prev => ({ ...prev, pace_general: e.target.value }))}
-                placeholder="ex: 5:30"
-                pattern="[0-9]{1,2}:[0-9]{2}"
+                placeholder={formData.activity_type === 'course' ? 'ex: 5:30' : 'ex: 25'}
+                pattern={formData.activity_type === 'course' ? '[0-9]{1,2}:[0-9]{2}' : '[0-9]{1,2}'}
               />
-              <p className="text-xs text-muted-foreground mt-1">Format: mm:ss (ex: 5:30 pour 5min30s/km)</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formData.activity_type === 'course' 
+                  ? 'Format: mm:ss (ex: 5:30 pour 5min30s/km)'
+                  : 'Vitesse en kilomètres par heure (ex: 25)'
+                }
+              </p>
             </div>
           )}
 
@@ -747,16 +754,23 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 </div>
               </div>
               <div>
-                <Label htmlFor="interval_pace">Allure des fractions (min:sec/km)</Label>
+                <Label htmlFor="interval_pace">
+                  {formData.activity_type === 'course' ? 'Allure des fractions (min:sec/km)' : 'Vitesse des fractions (km/h)'}
+                </Label>
                 <Input
                   id="interval_pace"
                   type="text"
                   value={formData.interval_pace}
                   onChange={(e) => setFormData(prev => ({ ...prev, interval_pace: e.target.value }))}
-                  placeholder="ex: 4:00"
-                  pattern="[0-9]{1,2}:[0-9]{2}"
+                  placeholder={formData.activity_type === 'course' ? 'ex: 4:00' : 'ex: 30'}
+                  pattern={formData.activity_type === 'course' ? '[0-9]{1,2}:[0-9]{2}' : '[0-9]{1,2}'}
                 />
-                <p className="text-xs text-muted-foreground mt-1">Format: mm:ss (ex: 4:00 pour 4min/km)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formData.activity_type === 'course' 
+                    ? 'Format: mm:ss (ex: 4:00 pour 4min/km)'
+                    : 'Vitesse en kilomètres par heure (ex: 30)'
+                  }
+                </p>
               </div>
             </div>
           )}
