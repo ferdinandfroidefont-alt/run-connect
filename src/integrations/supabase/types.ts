@@ -286,6 +286,7 @@ export type Database = {
           user_id: string | null
           username: string | null
           walking_records: Json | null
+          welcome_video_seen: boolean | null
         }
         Insert: {
           age?: number | null
@@ -329,6 +330,7 @@ export type Database = {
           user_id?: string | null
           username?: string | null
           walking_records?: Json | null
+          welcome_video_seen?: boolean | null
         }
         Update: {
           age?: number | null
@@ -372,6 +374,7 @@ export type Database = {
           user_id?: string | null
           username?: string | null
           walking_records?: Json | null
+          welcome_video_seen?: boolean | null
         }
         Relationships: []
       }

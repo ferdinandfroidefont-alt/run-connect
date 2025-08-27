@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useShareProfile } from "@/hooks/useShareProfile";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { ContactsPermissionButton } from "./ContactsPermissionButton";
-
 import { StravaConnect } from "./StravaConnect";
 import { InstagramConnect } from "./InstagramConnect";
 
@@ -42,6 +42,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { user, session, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { shareProfile } = useShareProfile();
+  const { showWelcomeVideo } = useOnboarding();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -288,6 +289,27 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     </Button>
                   </div>
 
+                  {/* Vidéo de bienvenue */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Play className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Vidéo de présentation
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Revoir la vidéo des fonctionnalités
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={showWelcomeVideo}
+                    >
+                      Regarder
+                    </Button>
+                  </div>
 
                   {/* Notifications */}
                   <div className="flex items-center justify-between">
