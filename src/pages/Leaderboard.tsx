@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock } from "lucide-react";
+import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -32,18 +32,38 @@ const Leaderboard = () => {
   const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
+  
+  // Pagination states
+  const [globalPage, setGlobalPage] = useState(1);
+  const [seasonalPage, setSeasonalPage] = useState(1);
+  const [friendsPage, setFriendsPage] = useState(1);
+  const [totalGlobalUsers, setTotalGlobalUsers] = useState(0);
+  const [totalSeasonalUsers, setTotalSeasonalUsers] = useState(0);
+  const [totalFriendsUsers, setTotalFriendsUsers] = useState(0);
+  
   const navigate = useNavigate();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+
+  const USERS_PER_PAGE = 50;
 
   useEffect(() => {
     if (user) {
       fetchLeaderboards();
     }
-  }, [user]);
+  }, [user, globalPage, seasonalPage, friendsPage]);
 
   const fetchLeaderboards = async () => {
     try {
-      // Fetch global leaderboard with profile data
+      // Get total count first
+      const { count: totalCount } = await supabase
+        .from('user_scores')
+        .select('*', { count: 'exact', head: true });
+
+      setTotalGlobalUsers(totalCount || 0);
+      setTotalSeasonalUsers(totalCount || 0);
+
+      // Fetch global leaderboard with pagination
+      const globalOffset = (globalPage - 1) * USERS_PER_PAGE;
       const { data: globalData, error: globalError } = await supabase
         .from('user_scores')
         .select(`
@@ -53,7 +73,7 @@ const Leaderboard = () => {
           seasonal_points
         `)
         .order('total_points', { ascending: false })
-        .limit(50);
+        .range(globalOffset, globalOffset + USERS_PER_PAGE - 1);
 
       if (globalError) throw globalError;
 
@@ -89,23 +109,62 @@ const Leaderboard = () => {
             display_name: 'Unknown User',
             avatar_url: ''
           },
-          rank: index + 1,
+          rank: globalOffset + index + 1, // Adjust rank for pagination
           user_rank: getUserRank(item.total_points)
         };
       }) || [];
 
       setLeaderboard(globalLeaderboard);
 
-      // Create seasonal leaderboard
-      const seasonalLeaderboard = [...globalLeaderboard]
-        .sort((a, b) => b.seasonal_points - a.seasonal_points)
-        .map((item, index) => ({ ...item, rank: index + 1 }));
+      // Create seasonal leaderboard with pagination
+      const seasonalOffset = (seasonalPage - 1) * USERS_PER_PAGE;
+      const { data: seasonalData } = await supabase
+        .from('user_scores')
+        .select(`
+          user_id,
+          total_points,
+          weekly_points,
+          seasonal_points
+        `)
+        .order('seasonal_points', { ascending: false })
+        .range(seasonalOffset, seasonalOffset + USERS_PER_PAGE - 1);
+
+      const seasonalUserIds = seasonalData?.map(item => item.user_id) || [];
+      const { data: seasonalProfilesData } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: seasonalUserIds
+      });
+
+      const seasonalLeaderboard = seasonalData?.map((item, index) => {
+        let profile = seasonalProfilesData?.find(p => p.user_id === item.user_id);
+        
+        if (!profile && item.user_id === user?.id && currentUserProfile) {
+          profile = currentUserProfile;
+        }
+        
+        return {
+          ...item,
+          profile: profile || {
+            username: 'Unknown',
+            display_name: 'Unknown User',
+            avatar_url: ''
+          },
+          rank: seasonalOffset + index + 1, // Adjust rank for pagination
+          user_rank: getUserRank(item.total_points)
+        };
+      }) || [];
 
       setSeasonalLeaderboard(seasonalLeaderboard);
 
-      // Find user's rank
-      const currentUserRank = globalLeaderboard.find(u => u.user_id === user?.id)?.rank;
-      setUserRank(currentUserRank || null);
+      // Find user's rank in global leaderboard (need to query all users up to user's position)
+      if (user) {
+        const { data: userRankData } = await supabase
+          .from('user_scores')
+          .select('user_id')
+          .order('total_points', { ascending: false });
+        
+        const currentUserRank = userRankData?.findIndex(u => u.user_id === user.id);
+        setUserRank(currentUserRank !== undefined && currentUserRank >= 0 ? currentUserRank + 1 : null);
+      }
 
       // Fetch friends leaderboard
       if (user) {
@@ -116,12 +175,16 @@ const Leaderboard = () => {
           .eq('status', 'accepted');
 
         const friendIds = friendsFollowData?.map(f => f.following_id) || [];
+        setTotalFriendsUsers(friendIds.length);
         
         if (friendIds.length > 0) {
+          const friendsOffset = (friendsPage - 1) * USERS_PER_PAGE;
           const { data: friendsScores } = await supabase
             .from('user_scores')
             .select('user_id, total_points, weekly_points, seasonal_points')
-            .in('user_id', friendIds);
+            .in('user_id', friendIds)
+            .order('total_points', { ascending: false })
+            .range(friendsOffset, friendsOffset + USERS_PER_PAGE - 1);
 
           const { data: friendsProfiles } = await supabase
             .from('profiles')
@@ -137,11 +200,10 @@ const Leaderboard = () => {
                 display_name: 'Unknown User',
                 avatar_url: ''
               },
-              rank: index + 1,
+              rank: friendsOffset + index + 1,
               user_rank: getUserRank(item.total_points)
             };
-          }).sort((a, b) => b.total_points - a.total_points)
-          .map((item, index) => ({ ...item, rank: index + 1 })) || [];
+          }) || [];
 
           setFriendsLeaderboard(friendsLeaderboard);
         }
@@ -313,6 +375,71 @@ const Leaderboard = () => {
       ))}
     </div>
   );
+
+  const PaginationControls = ({ 
+    currentPage, 
+    totalItems, 
+    onPageChange 
+  }: { 
+    currentPage: number; 
+    totalItems: number; 
+    onPageChange: (page: number) => void;
+  }) => {
+    const totalPages = Math.ceil(totalItems / USERS_PER_PAGE);
+    
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Précédent
+        </Button>
+        
+        <div className="flex items-center gap-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+            
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                className="w-8 h-8 p-0"
+                onClick={() => onPageChange(pageNum)}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Suivant
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -486,6 +613,11 @@ const Leaderboard = () => {
                 </div>
               </div>
               <LeaderboardList data={seasonalLeaderboard} showSeasonal />
+              <PaginationControls
+                currentPage={seasonalPage}
+                totalItems={totalSeasonalUsers}
+                onPageChange={setSeasonalPage}
+              />
             </div>
           </TabsContent>
 
@@ -496,6 +628,11 @@ const Leaderboard = () => {
                 Classement global
               </h2>
               <LeaderboardList data={leaderboard} />
+              <PaginationControls
+                currentPage={globalPage}
+                totalItems={totalGlobalUsers}
+                onPageChange={setGlobalPage}
+              />
             </div>
           </TabsContent>
 
@@ -507,7 +644,14 @@ const Leaderboard = () => {
                 Vos amis
               </h2>
               {friendsLeaderboard.length > 0 ? (
-                <LeaderboardList data={friendsLeaderboard} />
+                <>
+                  <LeaderboardList data={friendsLeaderboard} />
+                  <PaginationControls
+                    currentPage={friendsPage}
+                    totalItems={totalFriendsUsers}
+                    onPageChange={setFriendsPage}
+                  />
+                </>
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
