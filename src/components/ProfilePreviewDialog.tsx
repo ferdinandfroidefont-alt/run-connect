@@ -317,13 +317,21 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     strava_connected: profile.strava_connected,
                     strava_verified_at: profile.strava_verified_at,
                     instagram_connected: profile.instagram_connected,
-                    instagram_verified_at: profile.instagram_verified_at
+                    instagram_verified_at: profile.instagram_verified_at,
+                    isOwnProfile
                   });
                   
                   const isStravaVerified = profile.strava_connected && profile.strava_verified_at;
                   const isInstagramVerified = profile.instagram_connected && profile.instagram_verified_at;
                   
+                  console.log('ProfilePreviewDialog - Verification status:', {
+                    isStravaVerified,
+                    isInstagramVerified,
+                    isOwnProfile
+                  });
+                  
                   if (isStravaVerified && isInstagramVerified) {
+                    console.log('ProfilePreviewDialog - Showing both verified badges');
                     return (
                       <div className="mb-4 space-y-1">
                         <button
@@ -343,6 +351,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       </div>
                     );
                   } else if (isStravaVerified) {
+                    console.log('ProfilePreviewDialog - Showing Strava verified badge');
                     return (
                       <div className="mb-4">
                         <button
@@ -355,6 +364,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       </div>
                     );
                   } else if (isInstagramVerified) {
+                    console.log('ProfilePreviewDialog - Showing Instagram verified badge');
                     return (
                       <div className="mb-4">
                         <button
@@ -367,11 +377,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       </div>
                     );
                   } else {
+                    console.log('ProfilePreviewDialog - Showing non-verified badge, isOwnProfile:', isOwnProfile);
                     return (
                       <div className="mb-4">
                         {isOwnProfile ? (
                           <button
-                            onClick={() => setShowSettingsDialog(true)}
+                            onClick={() => {
+                              console.log('ProfilePreviewDialog - Non-verified badge clicked, opening settings');
+                              setShowSettingsDialog(true);
+                            }}
                             className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                           >
                             <span className="text-gray-500">⚠️</span>
