@@ -1308,9 +1308,9 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Nearby Sessions Button - FORCÉ EN BAS POUR ALIGNEMENT */}
+      {/* Nearby Sessions Button - TOUT EN BAS MAINTENANT */}
       {user && (
-        <div className="absolute right-4 bottom-16 z-10">
+        <div className="absolute right-4 bottom-1 z-10">
           <Button 
             variant="outline"
             className="bg-red-500 text-white hover:bg-red-600 shadow-md border-gray-200 px-2 py-1 text-xs flex flex-col items-center h-auto"
