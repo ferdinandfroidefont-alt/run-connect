@@ -564,6 +564,28 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Conversation Themes Dialog */}
+      <Dialog open={showConversationThemes} onOpenChange={setShowConversationThemes}>
+        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
+          <DialogHeader className="p-6 pb-0 shrink-0">
+            <DialogTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
+              <MessageCircle className="h-6 w-6" />
+              Thèmes de conversation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
+            <ConversationThemeSelector 
+              currentTheme={conversationTheme}
+              onThemeSelect={(themeId) => {
+                setConversationTheme(themeId);
+                setShowConversationThemes(false);
+              }}
+            />
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
