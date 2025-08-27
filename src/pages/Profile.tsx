@@ -522,7 +522,7 @@ const Profile = () => {
             )}
             
             {/* Badge Strava vérifié */}
-            {profile?.strava_connected && (
+            {profile?.strava_connected && profile?.strava_verified_at && (
               <div className="mt-2 mb-2">
                 <button
                   onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}

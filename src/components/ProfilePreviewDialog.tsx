@@ -27,6 +27,7 @@ interface Profile {
   swimming_records: any;
   triathlon_records: any;
   strava_connected?: boolean;
+  strava_verified_at?: string;
   strava_user_id?: string;
 }
 
@@ -306,7 +307,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 )}
 
                 {/* Badge Strava vérifié */}
-                {profile.strava_connected && (
+                {profile.strava_connected && profile.strava_verified_at && (
                   <div className="mb-4">
                     <button
                       onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
