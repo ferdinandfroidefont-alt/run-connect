@@ -524,30 +524,43 @@ const Profile = () => {
             )}
             
             {/* Badge Strava vérifié */}
-            {profile?.strava_connected && profile?.strava_verified_at ? (
-              <div className="mt-2 mb-2">
-                <button
-                  onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                >
-                  <span className="text-orange-600">🏃</span>
-                  ✓ Utilisateur vérifié Strava
-                </button>
-              </div>
-            ) : (
-              <div className="mt-2 mb-2">
-                <button
-                  onClick={() => {
-                    console.log('Badge non vérifié cliqué');
-                    setShowSettingsDialog(true);
-                  }}
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                >
-                  <span className="text-gray-500">⚠️</span>
-                  Utilisateur non vérifié
-                </button>
-              </div>
-            )}
+            {(() => {
+              console.log('Profile state:', {
+                strava_connected: profile?.strava_connected,
+                strava_verified_at: profile?.strava_verified_at,
+                profile: profile
+              });
+              
+              if (profile?.strava_connected && profile?.strava_verified_at) {
+                return (
+                  <div className="mt-2 mb-2">
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                    >
+                      <span className="text-orange-600">🏃</span>
+                      ✓ Utilisateur vérifié Strava
+                    </button>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="mt-2 mb-2">
+                    <button
+                      onClick={() => {
+                        console.log('Badge non vérifié cliqué, showSettingsDialog état:', showSettingsDialog);
+                        setShowSettingsDialog(true);
+                        console.log('Après setShowSettingsDialog(true), nouvel état:', showSettingsDialog);
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                    >
+                      <span className="text-gray-500">⚠️</span>
+                      Utilisateur non vérifié
+                    </button>
+                  </div>
+                );
+              }
+            })()}
             
             <div className="flex gap-4 mt-2">
               <button
