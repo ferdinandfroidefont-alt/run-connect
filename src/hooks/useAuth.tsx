@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: directCheck, error: directError } = await supabase
           .from('subscribers')
           .select('*')
-          .eq('email', session.user.email)
+          .eq('user_id', session.user.id)
           .maybeSingle();
           
         console.log('🔍 SUBSCRIPTION CHECK: Direct database result', { directCheck, directError });
