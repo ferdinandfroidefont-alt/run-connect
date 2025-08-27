@@ -43,6 +43,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageSectionHeader, shouldShowSectionHeader } from "../components/MessageTimestamp";
+import { useConversationTheme } from "@/hooks/useConversationTheme";
 
 interface Profile {
   user_id: string;
@@ -99,6 +100,7 @@ const Messages = () => {
   const { user, subscriptionInfo } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { getThemeClasses } = useConversationTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -977,7 +979,7 @@ const Messages = () => {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className={`flex-1 p-4 ${getThemeClasses().background}`}>
             <div className="space-y-2">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -1049,8 +1051,8 @@ const Messages = () => {
                         <div
                           className={`rounded-lg p-3 transition-all duration-200 ${
                             isOwnMessage
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
+                              ? getThemeClasses().ownMessage
+                              : getThemeClasses().otherMessage
                           } ${showIndividualTime ? 'shadow-lg' : ''}`}
                         >
                            {/* Session sharing */}
