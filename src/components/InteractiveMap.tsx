@@ -1249,7 +1249,7 @@ export const InteractiveMap = ({
                   "flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7",
                   filters.friends_only
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    : "bg-card text-foreground border-border hover:bg-muted"
                 )}
               >
                 <div className="flex items-center gap-0.5">
@@ -1313,7 +1313,7 @@ export const InteractiveMap = ({
         <div className="absolute right-4 bottom-6 z-10">
           <Button 
             variant="outline"
-            className="bg-red-500 text-white hover:bg-red-600 shadow-md border-gray-200 px-2 py-1 text-xs flex flex-col items-center h-auto"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md border-primary px-2 py-1 text-xs flex flex-col items-center h-auto"
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
