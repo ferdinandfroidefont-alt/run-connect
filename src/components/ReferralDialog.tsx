@@ -37,17 +37,38 @@ export const ReferralDialog = ({ isOpen, onClose }: ReferralDialogProps) => {
 
     try {
       setLoading(true);
+      console.log('🔍 Loading referral stats for user:', user.id);
+      
       const { data, error } = await supabase.rpc('get_referral_stats', {
         user_id_param: user.id
       });
+
+      console.log('📊 Referral stats response:', { data, error });
 
       if (error) throw error;
       
       if (data && data.length > 0) {
         setStats(data[0]);
+        console.log('✅ Stats loaded:', data[0]);
+      } else {
+        // Si pas de stats, récupérer juste le code de parrainage du profil
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('referral_code')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (profileError) throw profileError;
+        
+        setStats({
+          referral_code: profileData.referral_code || '',
+          total_referrals: 0,
+          total_rewards: 0
+        });
+        console.log('✅ Profile code loaded:', profileData.referral_code);
       }
     } catch (error: any) {
-      console.error('Error loading referral stats:', error);
+      console.error('❌ Error loading referral stats:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger les statistiques de parrainage",
