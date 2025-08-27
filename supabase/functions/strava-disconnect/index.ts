@@ -28,6 +28,39 @@ serve(async (req) => {
       throw new Error('Not authenticated')
     }
 
+    // First, get the current profile to retrieve Strava tokens
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('strava_access_token')
+      .eq('user_id', user.user.id)
+      .single()
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError)
+      throw profileError
+    }
+
+    // If we have a Strava access token, revoke it with Strava API
+    if (profile?.strava_access_token) {
+      try {
+        const revokeResponse = await fetch('https://www.strava.com/oauth/deauthorize', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${profile.strava_access_token}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        })
+        
+        if (!revokeResponse.ok) {
+          console.warn('Failed to revoke Strava token, but continuing with local disconnect')
+        } else {
+          console.log('Successfully revoked Strava authorization')
+        }
+      } catch (revokeError) {
+        console.warn('Error revoking Strava token:', revokeError, 'but continuing with local disconnect')
+      }
+    }
+
     // Update user profile to disconnect Strava
     const { error } = await supabaseClient
       .from('profiles')
