@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Users, Filter, Edit, Edit2, Save, X, Route, TrendingUp, Mountain, Trash2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Filter, Edit, Edit2, Save, X, Route, TrendingUp, Mountain, Trash2, Upload } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,6 +78,7 @@ export default function MySessions() {
   const [routeEditLoading, setRouteEditLoading] = useState(false);
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isAdvancedEditOpen, setIsAdvancedEditOpen] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Load user's sessions
   const loadUserSessions = async () => {
@@ -290,7 +291,8 @@ export default function MySessions() {
           session_type: editForm.session_type,
           intensity: editForm.intensity,
           location_name: editForm.location_name,
-          max_participants: editForm.max_participants
+          max_participants: editForm.max_participants,
+          image_url: editForm.image_url
         })
         .eq('id', selectedSession.id);
 
@@ -313,6 +315,72 @@ export default function MySessions() {
         variant: "destructive",
       });
     }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user?.id}_${Date.now()}.${fileExt}`;
+    const filePath = `session-images/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('session-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('session-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erreur",
+        description: "L'image doit faire moins de 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const imageUrl = await uploadImage(file);
+      setEditForm({ ...editForm, image_url: imageUrl });
+      toast({
+        title: "Succès",
+        description: "Image téléchargée avec succès",
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du téléchargement de l'image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setEditForm({ ...editForm, image_url: undefined });
   };
 
   const handleDeleteSession = async () => {
@@ -547,14 +615,61 @@ export default function MySessions() {
                 {selectedSession.description}
               </p>
             ) : (
-              <div className="mb-4">
-                <label className="text-sm font-medium">Description</label>
-                <Textarea
-                  value={editForm.description || ''}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  className="mt-1"
-                  rows={3}
-                />
+              <div className="space-y-4 mb-4">
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    value={editForm.description || ''}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Image de la séance</label>
+                  <div className="mt-1 space-y-2">
+                    {editForm.image_url && (
+                      <div className="relative inline-block">
+                        <img 
+                          src={editForm.image_url} 
+                          alt="Aperçu"
+                          className="w-32 h-24 object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={removeImage}
+                          className="absolute top-1 right-1 h-6 w-6 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                        disabled={uploadingImage}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {uploadingImage ? 'Téléchargement...' : editForm.image_url ? 'Changer l\'image' : 'Ajouter une image'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             
