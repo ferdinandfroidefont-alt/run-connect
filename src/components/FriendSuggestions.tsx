@@ -51,10 +51,10 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
     if (!user) return;
 
     try {
-      // Get friend suggestions with proper priority (max 5)
+      // Get friend suggestions with proper priority (max 10)
       const { data, error } = await supabase.rpc('get_friend_suggestions', {
         current_user_id: user.id,
-        suggestion_limit: 5
+        suggestion_limit: 10
       });
 
       if (error) throw error;
@@ -78,18 +78,18 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
             !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
           );
           
-          // Combine in priority order and limit to 5
+          // Combine in priority order and limit to 10
           allSuggestions = [
             ...contactSuggestions,
             ...mutualFriendSuggestions,
             ...activeUserSuggestions
-          ].slice(0, 5);
+          ].slice(0, 10);
         } catch (contactError) {
           console.error('Error loading contact suggestions:', contactError);
         }
       } else {
-        // Limit to 5 when no contacts
-        allSuggestions = allSuggestions.slice(0, 5);
+        // Limit to 10 when no contacts
+        allSuggestions = allSuggestions.slice(0, 10);
       }
 
       setSuggestions(allSuggestions);
@@ -346,7 +346,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   if (compact) {
     return (
       <div className="space-y-2">
-        {visibleSuggestions.slice(0, 5).map(suggestion => (
+        {visibleSuggestions.slice(0, 10).map(suggestion => (
           <SuggestionCard key={suggestion.user_id} suggestion={suggestion} />
         ))}
         <ProfilePreviewDialog 
