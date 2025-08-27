@@ -317,13 +317,13 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                     {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                       <Crown className="h-5 w-5 text-yellow-500" />
                     )}
+                  </div>
+                  <div className="flex gap-2 items-center mb-4 flex-wrap justify-center">
                     {profile?.is_admin && (
-                      <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                      <Badge className="bg-red-100 text-red-800 border-red-200">
                         Admin
                       </Badge>
                     )}
-                  </div>
-                  <div className="flex gap-2 items-center mb-4">
                     {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                       <Badge className="bg-orange-100 text-orange-800 border-orange-200">
                         {subscriptionInfo?.subscription_tier || 'Premium'}

@@ -505,31 +505,31 @@ const Profile = () => {
                   {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                     <Crown className="h-5 w-5 text-yellow-500" />
                   )}
+                </div>
+            {!isViewingOtherUser && (
+                <div className="flex flex-col items-center gap-2 mb-4">
                   {profile?.is_admin && (
-                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                    <Badge className="bg-red-100 text-red-800 border-red-200">
                       Admin
                     </Badge>
                   )}
+                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                    <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                      {subscriptionInfo?.subscription_tier || 'Premium'}
+                    </Badge>
+                  )}
+                  {!subscriptionInfo?.subscribed && (
+                    <Button 
+                      onClick={() => navigate('/subscription')}
+                      variant="outline" 
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Crown className="h-4 w-4" />
+                      Devenir Premium
+                    </Button>
+                  )}
                 </div>
-            {!isViewingOtherUser && (
-              <div className="flex gap-2 items-center mb-4">
-                {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                  <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-                    {subscriptionInfo?.subscription_tier || 'Premium'}
-                  </Badge>
-                )}
-                {!subscriptionInfo?.subscribed && (
-                  <Button 
-                    onClick={() => navigate('/subscription')}
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Crown className="h-4 w-4" />
-                    Devenir Premium
-                  </Button>
-                )}
-              </div>
             )}
             
             {/* Badge de vérification */}

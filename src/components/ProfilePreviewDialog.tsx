@@ -298,12 +298,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   {profile.is_premium && (
                     <Crown className="h-5 w-5 text-yellow-500" />
                   )}
-                  {profile.is_admin && (
-                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
-                      Admin
-                    </Badge>
-                  )}
                 </div>
+
+                {profile.is_admin && (
+                  <Badge className="bg-red-100 text-red-800 border-red-200 mb-4">
+                    Admin
+                  </Badge>
+                )}
 
                 {profile.is_premium && (
                   <Badge className="bg-orange-100 text-orange-800 border-orange-200 mb-4">
