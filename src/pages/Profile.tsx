@@ -63,7 +63,7 @@ const Profile = () => {
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
   const { theme, setTheme } = useTheme();
   const { shareProfile } = useShareProfile();
-  const { soundEnabled, setSoundEnabled } = useAppContext();
+  
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);

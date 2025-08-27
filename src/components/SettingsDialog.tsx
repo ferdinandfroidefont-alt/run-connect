@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "./ContactsPermissionButton";
-import { SoundSettingsDialog } from "./SoundSettingsDialog";
+
 import { StravaConnect } from "./StravaConnect";
 import { InstagramConnect } from "./InstagramConnect";
 
@@ -46,7 +46,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
-  const [showSoundSettings, setShowSoundSettings] = useState(false);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -288,27 +288,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     </Button>
                   </div>
 
-                  {/* Sound Settings */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Smartphone className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Sons et vibrations
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Paramètres audio de l'application
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowSoundSettings(true)}
-                    >
-                      Configurer
-                    </Button>
-                  </div>
 
                   {/* Notifications */}
                   <div className="flex items-center justify-between">
@@ -537,12 +516,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-
-      {/* Sound Settings Dialog */}
-      <SoundSettingsDialog
-        open={showSoundSettings}
-        onClose={() => setShowSoundSettings(false)}
-      />
     </>
   );
 };

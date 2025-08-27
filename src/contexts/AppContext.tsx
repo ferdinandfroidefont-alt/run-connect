@@ -7,8 +7,6 @@ interface AppContextType {
   setOpenCreateSession: (openFunction: () => void) => void;
   openCreateRoute: () => void;
   setOpenCreateRoute: (openFunction: () => void) => void;
-  soundEnabled: boolean;
-  setSoundEnabled: (enabled: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -29,18 +27,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [refreshSessions, setRefreshSessionsState] = useState<() => void>(() => () => {});
   const [openCreateSession, setOpenCreateSessionState] = useState<() => void>(() => () => {});
   const [openCreateRoute, setOpenCreateRouteState] = useState<() => void>(() => () => {});
-  const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => {
-    const saved = localStorage.getItem('soundEnabled');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('soundEnabled', JSON.stringify(soundEnabled));
-  }, [soundEnabled]);
-
-  const setSoundEnabled = useCallback((enabled: boolean) => {
-    setSoundEnabledState(enabled);
-  }, []);
 
   const setRefreshSessions = useCallback((refresh: () => void) => {
     setRefreshSessionsState(() => refresh);
@@ -61,9 +47,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       openCreateSession,
       setOpenCreateSession,
       openCreateRoute,
-      setOpenCreateRoute,
-      soundEnabled,
-      setSoundEnabled
+      setOpenCreateRoute
     }}>
       {children}
     </AppContext.Provider>
