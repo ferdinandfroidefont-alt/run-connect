@@ -1308,12 +1308,12 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Nearby Sessions Button - aligned with left control buttons */}
+      {/* Nearby Sessions Button - FORCÉ EN BAS POUR ALIGNEMENT */}
       {user && (
-        <div className="absolute right-4 top-3/4 -translate-y-1/2 z-10">
+        <div className="absolute right-4 bottom-16 z-10">
           <Button 
             variant="outline"
-            className="bg-white text-black hover:bg-gray-50 shadow-md border-gray-200 px-2 py-1 text-xs flex flex-col items-center h-auto"
+            className="bg-red-500 text-white hover:bg-red-600 shadow-md border-gray-200 px-2 py-1 text-xs flex flex-col items-center h-auto"
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
