@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -16,6 +16,8 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { ContactsPermissionButton } from "./ContactsPermissionButton";
 import { StravaConnect } from "./StravaConnect";
 import { InstagramConnect } from "./InstagramConnect";
+import { ConversationThemeSelector } from "./ConversationThemeSelector";
+import { useConversationTheme } from "@/hooks/useConversationTheme";
 
 interface Profile {
   username: string;
@@ -43,10 +45,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { theme, setTheme } = useTheme();
   const { shareProfile } = useShareProfile();
   const { showWelcomeVideo } = useOnboarding();
+  const { conversationTheme, setConversationTheme } = useConversationTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [showConversationThemes, setShowConversationThemes] = useState(false);
   
   const { toast } = useToast();
 
@@ -391,8 +395,30 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     </Button>
                   </div>
 
-                  {/* Contacts Access - Only show on mobile */}
-                  <ContactsPermissionButton />
+                   {/* Contacts Access - Only show on mobile */}
+                   <ContactsPermissionButton />
+
+                   {/* Conversation Themes */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <Palette className="h-4 w-4" />
+                       <div className="grid gap-1.5">
+                         <label className="text-sm font-medium leading-none">
+                           Thèmes de conversation
+                         </label>
+                         <p className="text-xs text-muted-foreground">
+                           Personnaliser l'apparence des messages
+                         </p>
+                       </div>
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowConversationThemes(true)}
+                     >
+                       Choisir
+                     </Button>
+                   </div>
                 </CardContent>
               </Card>
 
