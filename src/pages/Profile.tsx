@@ -931,7 +931,8 @@ const Profile = () => {
         {/* Strava Connect Section */}
         <StravaConnect 
           profile={profile} 
-          isOwnProfile={!isViewingOtherUser} 
+          isOwnProfile={!isViewingOtherUser}
+          onProfileUpdate={fetchProfile}
         />
 
         {/* Follow Dialog */}

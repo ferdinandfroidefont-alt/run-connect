@@ -12,9 +12,10 @@ interface StravaConnectProps {
     strava_verified_at?: string;
   };
   isOwnProfile?: boolean;
+  onProfileUpdate?: () => void; // Callback pour mettre à jour le profil parent
 }
 
-export const StravaConnect = ({ profile, isOwnProfile = false }: StravaConnectProps) => {
+export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }: StravaConnectProps) => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
@@ -57,7 +58,14 @@ export const StravaConnect = ({ profile, isOwnProfile = false }: StravaConnectPr
       if (error) throw error;
 
       toast.success('Compte Strava déconnecté');
-      window.location.reload();
+      
+      // Mettre à jour le profil parent si possible
+      if (onProfileUpdate) {
+        onProfileUpdate();
+      } else {
+        // Fallback: recharger la page si pas de callback
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error disconnecting Strava:', error);
       toast.error('Erreur lors de la déconnexion');

@@ -392,7 +392,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               </Card>
 
               {/* Strava Connection */}
-              <StravaConnect profile={profile} isOwnProfile={true} />
+              <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
 
               {/* Privacy & Legal Settings */}
               <Card>
