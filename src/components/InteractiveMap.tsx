@@ -1313,13 +1313,14 @@ export const InteractiveMap = ({
         <div className="absolute top-32 right-4 z-10">
           <Button 
             variant="outline"
-            className="bg-white text-black hover:bg-gray-50 shadow-md border-gray-200 px-3 py-1 text-xs"
+            className="bg-white text-black hover:bg-gray-50 shadow-md border-gray-200 px-2 py-1 text-xs flex flex-col items-center h-auto"
             onClick={() => {
               setShowNearbySessionsDialog(true);
             }}
             title="Séances à proximité"
           >
-            Séances à proximité
+            <div className="text-sm">📍🏃</div>
+            <div className="text-xs leading-tight">Séances à proximité</div>
           </Button>
         </div>
       )}
