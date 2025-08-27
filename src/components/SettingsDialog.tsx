@@ -15,6 +15,7 @@ import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "./ContactsPermissionButton";
 import { SoundSettingsDialog } from "./SoundSettingsDialog";
 import { StravaConnect } from "./StravaConnect";
+import { InstagramConnect } from "./InstagramConnect";
 
 interface Profile {
   username: string;
@@ -27,6 +28,9 @@ interface Profile {
   allow_friend_suggestions?: boolean;
   strava_connected?: boolean;
   strava_verified_at?: string;
+  instagram_connected?: boolean;
+  instagram_verified_at?: string;
+  instagram_username?: string;
 }
 
 interface SettingsDialogProps {
@@ -391,8 +395,19 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 </CardContent>
               </Card>
 
-              {/* Strava Connection */}
-              <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
+              {/* Strava & Instagram Connection */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center">
+                    <Shield className="h-5 w-5 text-primary mr-2" />
+                    <CardTitle className="text-lg">Connexions externes</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
+                  <InstagramConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
+                </CardContent>
+              </Card>
 
               {/* Privacy & Legal Settings */}
               <Card>

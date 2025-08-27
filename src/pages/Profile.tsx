@@ -40,6 +40,9 @@ interface Profile {
   strava_connected?: boolean;
   strava_verified_at?: string;
   strava_user_id?: string;
+  instagram_connected?: boolean;
+  instagram_verified_at?: string;
+  instagram_username?: string;
 }
 
 interface UserRoute {
@@ -523,15 +526,39 @@ const Profile = () => {
               </div>
             )}
             
-            {/* Badge Strava vérifié */}
+            {/* Badge de vérification */}
             {(() => {
               console.log('Profile state:', {
                 strava_connected: profile?.strava_connected,
                 strava_verified_at: profile?.strava_verified_at,
+                instagram_connected: profile?.instagram_connected,
+                instagram_verified_at: profile?.instagram_verified_at,
                 profile: profile
               });
               
-              if (profile?.strava_connected && profile?.strava_verified_at) {
+              const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
+              const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
+              
+              if (isStravaVerified && isInstagramVerified) {
+                return (
+                  <div className="mt-2 mb-2 space-y-1">
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors mr-2"
+                    >
+                      <span className="text-orange-600">🏃</span>
+                      ✓ Strava
+                    </button>
+                    <button
+                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
+                    >
+                      <span className="text-pink-600">📷</span>
+                      ✓ Instagram
+                    </button>
+                  </div>
+                );
+              } else if (isStravaVerified) {
                 return (
                   <div className="mt-2 mb-2">
                     <button
@@ -540,6 +567,18 @@ const Profile = () => {
                     >
                       <span className="text-orange-600">🏃</span>
                       ✓ Utilisateur vérifié Strava
+                    </button>
+                  </div>
+                );
+              } else if (isInstagramVerified) {
+                return (
+                  <div className="mt-2 mb-2">
+                    <button
+                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
+                    >
+                      <span className="text-pink-600">📷</span>
+                      ✓ Utilisateur vérifié Instagram
                     </button>
                   </div>
                 );
