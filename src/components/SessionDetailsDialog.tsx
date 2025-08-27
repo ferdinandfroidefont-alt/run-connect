@@ -331,12 +331,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             <Badge variant="outline">
               {session.session_type ? session.session_type.replace('_', ' ') : 'Type de séance'}
             </Badge>
-            <Badge className={getIntensityColor(session.intensity)}>
-              {session.intensity ? 
-                session.intensity.charAt(0).toUpperCase() + session.intensity.slice(1) : 
-                'Intensité'
-              }
-            </Badge>
           </div>
 
           {/* Date and Time */}
