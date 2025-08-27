@@ -122,56 +122,18 @@ export const InstagramConnect = ({ profile, onProfileUpdate, isOwnProfile }: Ins
           </p>
         </div>
         
-        {profile?.instagram_connected ? (
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              <span className="text-pink-500">📷</span>
-              @{profile.instagram_username}
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Déconnecter
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Déconnecter Instagram</DialogTitle>
-                  <DialogDescription>
-                    Êtes-vous sûr de vouloir déconnecter votre compte Instagram ? 
-                    Votre profil ne sera plus vérifié via Instagram.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => {}}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleInstagramDisconnect}
-                    disabled={loading}
-                  >
-                    {loading ? 'Déconnexion...' : 'Déconnecter'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        ) : (
+        <div className="flex flex-col items-end gap-2">
           <Button
-            onClick={() => {
-              console.log('🚀 Instagram connect button clicked!');
-              handleInstagramConnect();
-            }}
-            disabled={loading}
-            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+            disabled
+            variant="outline"
+            className="bg-gradient-to-r from-pink-500/20 to-purple-600/20 text-muted-foreground cursor-not-allowed"
           >
-            {loading ? 'Connexion...' : 'Connecter Instagram'}
+            Connecter Instagram
           </Button>
-        )}
+          <p className="text-xs text-muted-foreground italic">
+            Fonctionnalité à venir
+          </p>
+        </div>
       </div>
     </div>
   );
