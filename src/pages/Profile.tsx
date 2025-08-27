@@ -585,17 +585,24 @@ const Profile = () => {
               } else {
                 return (
                   <div className="mt-2 mb-2">
-                    <button
-                      onClick={() => {
-                        console.log('Badge non vérifié cliqué, showSettingsDialog état:', showSettingsDialog);
-                        setShowSettingsDialog(true);
-                        console.log('Après setShowSettingsDialog(true), nouvel état:', showSettingsDialog);
-                      }}
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                    >
-                      <span className="text-gray-500">⚠️</span>
-                      Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)
-                    </button>
+                    {isViewingOtherUser ? (
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                        <span className="text-gray-500">⚠️</span>
+                        Utilisateur non vérifié
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          console.log('Badge non vérifié cliqué, showSettingsDialog état:', showSettingsDialog);
+                          setShowSettingsDialog(true);
+                          console.log('Après setShowSettingsDialog(true), nouvel état:', showSettingsDialog);
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-gray-500">⚠️</span>
+                        Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)
+                      </button>
+                    )}
                   </div>
                 );
               }
