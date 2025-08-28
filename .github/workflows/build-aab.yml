@@ -1,7 +1,7 @@
 name: Build Android App Bundle
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
   build:
@@ -9,26 +9,26 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: 18
 
       - name: Setup Java (JDK 17)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 17
 
-      - name: Setup Android SDK
+      - name: Configure Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK components
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
@@ -41,19 +41,15 @@ jobs:
             --skipSigning \
             --skipJava
 
-
       - name: Build AAB with Bubblewrap
         working-directory: twa-project
-        run: |
-          bubblewrap build
-          echo "Listing possible output paths..."
-          ls -R
+        run: bubblewrap build
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: runconnect-aab
+          name: runconnect-release
           path: |
             twa-project/app-release-bundle.aab
             twa-project/app/build/outputs/bundle/release/app-release.aab
-          if-no-files-found: warn
+
