@@ -82,17 +82,9 @@ jobs:
           
       - name: Initialize Bubblewrap project
         run: |
-          # Méthode alternative : init avec URL directement
           bubblewrap init \
-            --manifest https://run-connect.lovable.app \
-            --directory twa-project || \
-          bubblewrap init \
-            --directory twa-project \
-            --name "RunConnect" \
-            --packageId "com.runconnect.app" \
-            --startUrl "https://run-connect.lovable.app" \
-            --themeColor "#4CAF50" \
-            --backgroundColor "#ffffff" \
+            --manifest=https://run-connect.lovable.app/manifest.webmanifest \
+            --directory=twa-project \
             --skipSigning
             
       - name: Update TWA project configuration
