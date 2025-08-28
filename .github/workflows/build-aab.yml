@@ -38,7 +38,9 @@ jobs:
           bubblewrap init \
             --manifest=https://run-connect.lovable.app/manifest.webmanifest \
             --directory twa-project \
-            --skipSigning
+            --skipSigning \
+            --skipJava
+
 
       - name: Build AAB with Bubblewrap
         working-directory: twa-project
