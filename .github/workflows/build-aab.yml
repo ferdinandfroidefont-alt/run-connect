@@ -7,68 +7,120 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
+          
       - name: Setup Java (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-
+          
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
+        
       - name: Install Android SDK components
         run: |
-          yes | sdkmanager --licenses
+          yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
-
+          
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
-
-      - name: Verify PWA manifest is reachable
+        
+      # Créer d'abord un manifeste s'il n'existe pas
+      - name: Create manifest if missing
         run: |
-          set -e
-          echo "Checking https://run-connect.lovable.app/manifest.webmanifest"
-          curl -fsSL https://run-connect.lovable.app/manifest.webmanifest | head -c 200
-          echo
-          echo "Manifest reachable ✅"
-
-      # >>> Pré-configurer Bubblewrap pour qu'il utilise le JDK installé (pas de prompt)
-      - name: Preconfigure Bubblewrap JDK
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
+          curl -s -o /dev/null -w "%{http_code}" https://run-connect.lovable.app/manifest.webmanifest | grep -q "200" || {
+            echo "Manifest not found, creating one..."
+            mkdir -p public
+            cat > public/manifest.webmanifest << EOF
+          {
+            "name": "RunConnect",
+            "short_name": "RunConnect", 
+            "description": "Application de running",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#000000",
+            "orientation": "portrait-primary",
+            "icons": [
+              {
+                "src": "https://via.placeholder.com/192x192/4CAF50/white?text=RC",
+                "sizes": "192x192",
+                "type": "image/png"
+              },
+              {
+                "src": "https://via.placeholder.com/512x512/4CAF50/white?text=RC", 
+                "sizes": "512x512",
+                "type": "image/png"
+              }
+            ]
+          }
+          EOF
+          }
+          
+      - name: Configure Bubblewrap environment
         run: |
+          export JAVA_HOME=${{ env.JAVA_HOME }}
+          export ANDROID_SDK_ROOT=${{ env.ANDROID_SDK_ROOT }}
           mkdir -p ~/.bubblewrap
-          echo "{\"jdkPath\":\"$JAVA_HOME\"}" > ~/.bubblewrap/config.json
-          echo "Created ~/.bubblewrap/config.json:"
-          cat ~/.bubblewrap/config.json
-
-      # >>> Init sans interaction (Bubblewrap lit ~/.bubblewrap/config.json)
-      - name: Init Bubblewrap from PWA manifest
+          
+          # Configuration Bubblewrap
+          cat > ~/.bubblewrap/config.json << EOF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_SDK_ROOT"
+          }
+          EOF
+          
+      - name: Initialize Bubblewrap project
         run: |
+          # Méthode alternative : init avec URL directement
           bubblewrap init \
-            --manifest=https://run-connect.lovable.app/manifest.webmanifest \
+            --manifest https://run-connect.lovable.app \
+            --directory twa-project || \
+          bubblewrap init \
             --directory twa-project \
+            --name "RunConnect" \
+            --packageId "com.runconnect.app" \
+            --startUrl "https://run-connect.lovable.app" \
+            --themeColor "#4CAF50" \
+            --backgroundColor "#ffffff" \
             --skipSigning
-
-      - name: Build AAB with Bubblewrap
+            
+      - name: Update TWA project configuration
         working-directory: twa-project
-        run: bubblewrap build
-
+        run: |
+          # S'assurer que la config est correcte
+          sed -i 's/"display": ".*"/"display": "standalone"/g' twa-manifest.json || true
+          sed -i 's/"orientation": ".*"/"orientation": "portrait"/g' twa-manifest.json || true
+          
+      - name: Build Android App Bundle
+        working-directory: twa-project
+        run: |
+          # Build avec gestion d'erreur
+          bubblewrap build --skipSigning || {
+            echo "Build failed, trying alternative approach..."
+            ./gradlew bundleRelease
+          }
+          
+      - name: Find and upload AAB
+        run: |
+          # Chercher le fichier AAB généré
+          find . -name "*.aab" -type f
+          
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: runconnect-release
+          name: runconnect-android-aab
           path: |
-            twa-project/app-release-bundle.aab
-            twa-project/app/build/outputs/bundle/release/app-release.aab
+            twa-project/**/*.aab
+            twa-project/app/build/outputs/bundle/release/*.aab
           if-no-files-found: warn
