@@ -42,12 +42,12 @@ jobs:
             "name": "RunConnect",
             "short_name": "RunConnect", 
             "description": "Application de running",
-            "start_url": "https://run-connect.lovable.app/",
+            "start_url": "/",
             "display": "standalone",
             "background_color": "#ffffff",
             "theme_color": "#4CAF50",
             "orientation": "portrait-primary",
-            "scope": "https://run-connect.lovable.app/",
+            "scope": "/",
             "icons": [
               {
                 "src": "https://via.placeholder.com/192x192/4CAF50/white?text=RC",
@@ -80,9 +80,10 @@ jobs:
           
       - name: Initialize Bubblewrap project with local manifest
         run: |
-          # Utiliser le manifeste local créé avec réponse automatique
-          echo "Y" | bubblewrap init \
+          # Créer le projet avec URL et manifeste local
+          printf "Y\nY\nY\n" | bubblewrap init \
             --manifest=$(pwd)/public/manifest.webmanifest \
+            --startUrl="https://run-connect.lovable.app" \
             --directory=twa-project \
             --skipSigning
             
