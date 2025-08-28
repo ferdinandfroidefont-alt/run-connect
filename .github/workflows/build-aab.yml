@@ -34,16 +34,17 @@ jobs:
         run: npm install -g @bubblewrap/cli
 
       - name: Init Bubblewrap project from your PWA manifest
-        run: |
-          bubblewrap init \
-            --manifest=https://run-connect.lovable.app/manifest.webmanifest \
-            --directory twa-project \
-            --skipSigning \
-            --skipJava
+  run: |
+    bubblewrap init \
+      --manifest=https://run-connect.lovable.app/manifest.webmanifest \
+      --directory twa-project \
+      --skipSigning \
+      --skipJava \
+      --jdkPath="$JAVA_HOME"
 
-      - name: Build AAB with Bubblewrap
-        working-directory: twa-project
-        run: bubblewrap build
+- name: Build AAB with Bubblewrap
+  working-directory: twa-project
+  run: bubblewrap build --jdkPath="$JAVA_HOME"
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
