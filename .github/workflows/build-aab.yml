@@ -42,12 +42,20 @@ jobs:
           echo
           echo "Manifest reachable ✅"
 
-      # ---- Init non-interactif : on envoie "n" puis $JAVA_HOME à Bubblewrap ----
-      - name: Init Bubblewrap project from PWA manifest
+      # >>> Pré-configurer Bubblewrap pour qu'il utilise le JDK installé (pas de prompt)
+      - name: Preconfigure Bubblewrap JDK
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
-          printf "n\n$JAVA_HOME\n" | bubblewrap init \
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\"}" > ~/.bubblewrap/config.json
+          echo "Created ~/.bubblewrap/config.json:"
+          cat ~/.bubblewrap/config.json
+
+      # >>> Init sans interaction (Bubblewrap lit ~/.bubblewrap/config.json)
+      - name: Init Bubblewrap from PWA manifest
+        run: |
+          bubblewrap init \
             --manifest=https://run-connect.lovable.app/manifest.webmanifest \
             --directory twa-project \
             --skipSigning
