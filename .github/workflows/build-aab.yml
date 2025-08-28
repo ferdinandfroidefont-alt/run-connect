@@ -34,12 +34,13 @@ jobs:
         run: npm install -g @bubblewrap/cli
 
       - name: Init Bubblewrap project from PWA manifest
-        run: |
-          # Répond "n" à la question du JDK pour éviter l'interactif
-          printf "n\n" | bubblewrap init \
-            --manifest=https://run-connect.lovable.app/manifest.webmanifest \
-            --directory twa-project \
-            --skipSigning
+  env:
+    JAVA_HOME: ${{ env.JAVA_HOME }}
+  run: |
+    printf "n\n$JAVA_HOME\n" | bubblewrap init \
+      --manifest=https://run-connect.lovable.app/manifest.webmanifest \
+      --directory twa-project \
+      --skipSigning
 
       - name: Build AAB with Bubblewrap
         working-directory: twa-project
