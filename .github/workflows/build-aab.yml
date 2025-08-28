@@ -80,12 +80,19 @@ jobs:
           
       - name: Initialize Bubblewrap project with local manifest
         run: |
-          # Créer le projet avec URL et manifeste local
-          printf "Y\nY\nY\n" | bubblewrap init \
-            --manifest=$(pwd)/public/manifest.webmanifest \
-            --startUrl="https://run-connect.lovable.app" \
+          # Approche alternative : créer le projet sans manifeste d'abord
+          bubblewrap init \
             --directory=twa-project \
-            --skipSigning
+            --name="RunConnect" \
+            --packageId="com.runconnect.app" \
+            --startUrl="https://run-connect.lovable.app" \
+            --themeColor="#4CAF50" \
+            --backgroundColor="#ffffff" \
+            --enableNotifications=false \
+            --skipSigning << EOF
+          Y
+          Y
+          EOF
             
       - name: Build Android App Bundle
         working-directory: twa-project
