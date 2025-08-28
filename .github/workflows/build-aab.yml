@@ -80,8 +80,8 @@ jobs:
           
       - name: Initialize Bubblewrap project with local manifest
         run: |
-          # Utiliser le manifeste local créé
-          bubblewrap init \
+          # Utiliser le manifeste local créé avec réponse automatique
+          echo "Y" | bubblewrap init \
             --manifest=$(pwd)/public/manifest.webmanifest \
             --directory=twa-project \
             --skipSigning
