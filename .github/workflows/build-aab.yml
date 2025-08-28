@@ -1,0 +1,35 @@
+name: Build Android App Bundle
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Init Bubblewrap
+        run: |
+          bubblewrap init --manifest=https://run-connect.lovable.app/manifest.webmanifest --directory twa-project --skipSigning
+
+      - name: Build AAB
+        run: |
+          cd twa-project
+          bubblewrap build
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: runconnect-release
+          path: twa-project/app-release-bundle.aab
