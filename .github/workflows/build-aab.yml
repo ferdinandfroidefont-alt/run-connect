@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -21,11 +22,20 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK components
+      - name: Cache Android SDK packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android
+            $ANDROID_SDK_ROOT
+          key: android-${{ runner.os }}-r34
+
+      - name: Accept licenses & install SDK components
         run: |
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
@@ -33,35 +43,42 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      # --- PRÉCHECK : manifest accessible ?
-      - name: Verify PWA manifest is reachable
+      - name: Check PWA manifest reachability
         run: |
           set -e
-          echo "Checking https://run-connect.lovable.app/manifest.webmanifest"
-          curl -fsSL https://run-connect.lovable.app/manifest.webmanifest | head -c 200
-          echo
-          echo "Manifest reachable ✅"
+          echo "GET https://run-connect.lovable.app/manifest.webmanifest"
+          curl -I https://run-connect.lovable.app/manifest.webmanifest
+          curl -fsSL https://run-connect.lovable.app/manifest.webmanifest | head -c 400 && echo
 
-      # --- TRUC QUI DÉBLOQUE : on répond "n" à la question JDK
-      - name: Init Bubblewrap (non-interactive)
+      # >>> Remplacement: init non-interactif via config JSON qui fixe le JDK <<<
+      - name: Init Bubblewrap (use provided JDK, non-interactive)
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
-          # Feed "n" to avoid JDK prompt (exit 130 venait de là)
-          yes n | bubblewrap init \
+          echo "{\"jdkPath\":\"$JAVA_HOME\"}" > bw-config.json
+          cat bw-config.json
+          bubblewrap init \
             --manifest=https://run-connect.lovable.app/manifest.webmanifest \
             --directory twa-project \
-            --skipSigning
+            --skipSigning \
+            --config bw-config.json
 
-      - name: Build AAB with Bubblewrap
+      - name: Build AAB with Bubblewrap (verbose)
         working-directory: twa-project
-        run: bubblewrap build
+        run: |
+          set -x
+          bubblewrap build --verbose
+          echo "Listing outputs..."
+          ls -R app/build/outputs || true
+          ls -l | sed -n '1,200p'
 
-      - name: Upload AAB artifact
+      - name: Upload artifacts (AAB or whole project on failure)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: runconnect-release
           path: |
             twa-project/app-release-bundle.aab
             twa-project/app/build/outputs/bundle/release/app-release.aab
+            twa-project/**/*
           if-no-files-found: warn
