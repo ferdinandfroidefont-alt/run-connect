@@ -35,16 +35,16 @@ jobs:
 
       - name: Init Bubblewrap project from your PWA manifest
   run: |
-    bubblewrap init \
+    # Répond "n" à la question du JDK pour éviter l'interactif
+    printf "n\n" | bubblewrap init \
       --manifest=https://run-connect.lovable.app/manifest.webmanifest \
       --directory twa-project \
-      --skipSigning \
-      --skipJava \
-      --jdkPath="$JAVA_HOME"
+      --skipSigning
 
 - name: Build AAB with Bubblewrap
   working-directory: twa-project
-  run: bubblewrap build --jdkPath="$JAVA_HOME"
+  run: bubblewrap build
+
 
 - name: Upload AAB artifact
   uses: actions/upload-artifact@v4
