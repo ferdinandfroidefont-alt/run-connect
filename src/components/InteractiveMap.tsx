@@ -1143,14 +1143,14 @@ export const InteractiveMap = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-6rem)] bg-background">
+    <div className="relative w-full h-[calc(100vh-8rem)] bg-background">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
       
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="relative flex items-center justify-between px-4 py-6">
+          <div className="relative flex items-center justify-between px-4 py-8">
             <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
               RunConnect
             </h1>
@@ -1191,7 +1191,7 @@ export const InteractiveMap = ({
         </div>
         
         {/* Search Bar and Date Filter - Floating over map */}
-        <div className="absolute top-24 left-0 right-0 z-10 px-4 pb-4">
+        <div className="absolute top-28 left-0 right-0 z-10 px-4 pb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
