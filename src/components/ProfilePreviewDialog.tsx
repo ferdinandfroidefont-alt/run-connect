@@ -175,6 +175,39 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
+  const handleBlockUser = async () => {
+    if (!user || !userId) return;
+
+    try {
+      setActionLoading(true);
+      
+      const { error } = await supabase.rpc('block_user', {
+        user_to_block_id: userId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Utilisateur bloqué",
+        description: "Cette personne ne peut plus vous contacter ni voir vos séances",
+      });
+
+      // Reset all states and close dialog
+      setIsFollowing(false);
+      setFollowRequestSent(false);
+      setAreFriends(false);
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de bloquer cet utilisateur",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleFollowToggle = async () => {
     if (!user || !userId) return;
 
@@ -303,15 +336,22 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                           <MoreVertical className="h-4 w-4" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-background border shadow-lg">
-                        <DropdownMenuItem 
-                          onClick={() => setShowReportDialog(true)}
-                          className="text-destructive hover:bg-destructive/10 cursor-pointer"
-                        >
-                          <Flag className="h-4 w-4 mr-2" />
-                          Signaler cet utilisateur
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
+                       <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
+                         <DropdownMenuItem 
+                           onClick={handleBlockUser}
+                           className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                         >
+                           <UserMinus className="h-4 w-4 mr-2" />
+                           Bloquer cet utilisateur
+                         </DropdownMenuItem>
+                         <DropdownMenuItem 
+                           onClick={() => setShowReportDialog(true)}
+                           className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                         >
+                           <Flag className="h-4 w-4 mr-2" />
+                           Signaler cet utilisateur
+                         </DropdownMenuItem>
+                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
                 </div>
