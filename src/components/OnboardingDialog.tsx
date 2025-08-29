@@ -61,6 +61,8 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
           security_rules_accepted: acceptedSecurity,
           onboarding_completed: true,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) throw error;
