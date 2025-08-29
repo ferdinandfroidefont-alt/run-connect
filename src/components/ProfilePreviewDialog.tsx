@@ -10,7 +10,8 @@ import { OnlineStatus } from "./OnlineStatus";
 import { SettingsDialog } from "./SettingsDialog";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2, Flag } from "lucide-react";
+import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2, Flag, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -283,14 +284,36 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             {/* Profile Header */}
             <Card>
               <CardContent className="flex flex-col items-center py-6">
-                <div className="relative mb-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={profile.avatar_url || ""} />
-                    <AvatarFallback className="text-lg">
-                      {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!isOwnProfile && areFriends && <OnlineStatus userId={profile.user_id} />}
+                <div className="relative mb-4 flex items-start justify-center w-full">
+                  <div className="flex flex-col items-center">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={profile.avatar_url || ""} />
+                      <AvatarFallback className="text-lg">
+                        {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    {!isOwnProfile && areFriends && <OnlineStatus userId={profile.user_id} />}
+                  </div>
+                  
+                  {/* Menu à trois points pour les autres utilisateurs */}
+                  {!isOwnProfile && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="absolute top-0 right-0 p-2 rounded-full hover:bg-accent transition-colors">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-background border shadow-lg">
+                        <DropdownMenuItem 
+                          onClick={() => setShowReportDialog(true)}
+                          className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                        >
+                          <Flag className="h-4 w-4 mr-2" />
+                          Signaler cet utilisateur
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-2 mb-2">
@@ -423,40 +446,28 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 </div>
 
                 {!isOwnProfile && user && (
-                  <div className="space-y-2 w-full">
-                    <Button
-                      onClick={handleFollowToggle}
-                      disabled={actionLoading}
-                      variant={isFollowing ? "outline" : followRequestSent ? "secondary" : "default"}
-                      className="w-full"
-                    >
-                      {actionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : isFollowing ? (
-                        <UserMinus className="h-4 w-4 mr-2" />
-                      ) : (
-                        <UserPlus className="h-4 w-4 mr-2" />
-                      )}
-                       {actionLoading 
-                         ? "Chargement..." 
-                         : isFollowing 
-                         ? "Ne plus suivre" 
-                         : followRequestSent
-                         ? "Demande envoyée"
-                         : "Demander à suivre"
-                       }
-                    </Button>
-                    
-                    <Button
-                      onClick={() => setShowReportDialog(true)}
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <Flag className="h-4 w-4 mr-2" />
-                      Signaler cet utilisateur
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={handleFollowToggle}
+                    disabled={actionLoading}
+                    variant={isFollowing ? "outline" : followRequestSent ? "secondary" : "default"}
+                    className="w-full"
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : isFollowing ? (
+                      <UserMinus className="h-4 w-4 mr-2" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                     {actionLoading 
+                       ? "Chargement..." 
+                       : isFollowing 
+                       ? "Ne plus suivre" 
+                       : followRequestSent
+                       ? "Demande envoyée"
+                       : "Demander à suivre"
+                     }
+                  </Button>
                 )}
               </CardContent>
             </Card>
