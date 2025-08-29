@@ -1151,13 +1151,13 @@ export const InteractiveMap = ({
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
           <div className="relative flex items-center justify-between px-4 py-8">
-            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
+            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent mt-2">
               RunConnect
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
             {userProfile && (
-              <div className="absolute left-1/2 transform -translate-x-1/2">
+              <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
                 <div 
                   onClick={() => setShowProfileDialog(true)}
                   className="cursor-pointer hover-scale hover-glow transition-all duration-200"
@@ -1172,7 +1172,7 @@ export const InteractiveMap = ({
               </div>
             )}
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
               <div 
                 className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
