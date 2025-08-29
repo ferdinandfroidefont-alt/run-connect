@@ -96,7 +96,7 @@ export const BottomNavigation = () => {
     };
   }, [user]);
   return <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-      <div className="flex items-center justify-around py-4">
+      <div className="flex items-center justify-around py-6">
         {navItems.slice(0, 2).map(({
         path,
         emoji,

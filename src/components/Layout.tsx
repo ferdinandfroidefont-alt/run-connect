@@ -24,7 +24,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="pb-16">{children}</main>
+      <main className="pb-20">{children}</main>
       <BottomNavigation />
     </div>
   );
