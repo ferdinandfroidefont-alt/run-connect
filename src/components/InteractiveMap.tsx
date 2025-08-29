@@ -1311,18 +1311,25 @@ export const InteractiveMap = ({
       )}
 
       {/* Nearby Sessions Button - ENCORE PLUS HAUT */}
-      {user && subscriptionInfo?.subscribed && (
+      {user && (
         <div className="absolute right-4 bottom-6 z-10">
           <Button 
             variant="outline"
             className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md border-primary px-2 py-1 text-xs flex flex-col items-center h-auto"
             onClick={() => {
-              setShowNearbySessionsDialog(true);
+              if (subscriptionInfo?.subscribed) {
+                setShowNearbySessionsDialog(true);
+              } else {
+                window.location.href = '/subscription';
+              }
             }}
-            title="Séances à proximité (Premium)"
+            title={subscriptionInfo?.subscribed ? "Séances à proximité" : "Séances à proximité (Premium requis)"}
           >
             <div className="text-sm">📍🏃</div>
             <div className="text-xs leading-tight">Séances à proximité</div>
+            {!subscriptionInfo?.subscribed && (
+              <div className="text-xs text-yellow-300">👑</div>
+            )}
           </Button>
         </div>
       )}
