@@ -98,6 +98,7 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.7.0'
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+            implementation 'androidx.browser:browser:1.8.0'   // <-- Custom Tabs pour Google OAuth
           }
           EOF
 
@@ -107,15 +108,23 @@ jobs:
           android.enableJetifier=true
           EOF
 
+          # Manifest avec permissions de localisation + thème
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
             <application
               android:label="RunConnect"
               android:usesCleartextTraffic="false"
-              android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-              <activity android:name=".MainActivity" android:exported="true"
-                        android:configChanges="orientation|screenSize|keyboardHidden">
+              android:theme="@style/Theme.RunConnect">
+              <activity
+                android:name=".MainActivity"
+                android:exported="true"
+                android:configChanges="orientation|screenSize|keyboardHidden"
+                android:hardwareAccelerated="true">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
                   <category android:name="android.intent.category.LAUNCHER" />
@@ -125,20 +134,46 @@ jobs:
           </manifest>
           EOF
 
+          # Activity avec géoloc + Custom Tabs pour Google OAuth + plein écran
           cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
           package app.runconnect;
 
+          import android.Manifest;
+          import android.content.pm.PackageManager;
+          import android.graphics.Color;
+          import android.net.Uri;
+          import android.os.Build;
           import android.os.Bundle;
+
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
+
           import androidx.appcompat.app.AppCompatActivity;
+          import androidx.browser.customtabs.CustomTabsIntent;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
+          import androidx.core.view.WindowCompat;
 
           public class MainActivity extends AppCompatActivity {
+              private static final int REQ_LOCATION = 1001;
               private WebView webView;
+              private final String START_URL = "https://run-connect.lovable.app";
+
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
+                  // Edge-to-edge
+                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                  if (Build.VERSION.SDK_INT >= 21) {
+                      getWindow().setStatusBarColor(Color.TRANSPARENT);
+                      getWindow().setNavigationBarColor(Color.TRANSPARENT);
+                  }
+
                   webView = new WebView(this);
                   WebSettings s = webView.getSettings();
                   s.setJavaScriptEnabled(true);
@@ -147,10 +182,44 @@ jobs:
                   s.setUseWideViewPort(true);
                   s.setAllowFileAccess(true);
                   s.setMediaPlaybackRequiresUserGesture(false);
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.loadUrl("https://run-connect.lovable.app");
+                  s.setGeolocationEnabled(true);
+
+                  // Autoriser la géoloc sans popup bloquante
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                          callback.invoke(origin, true, false);
+                      }
+                  });
+
+                  // Ouvrir Google OAuth hors WebView (disallowed_useragent)
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          Uri uri = request.getUrl();
+                          String host = uri.getHost() != null ? uri.getHost() : "";
+                          String url = uri.toString();
+                          if (host.contains("accounts.google.com") || url.contains("oauth")) {
+                              CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
+                              tabs.launchUrl(MainActivity.this, uri);
+                              return true;
+                          }
+                          return false; // continuer dans le WebView
+                      }
+                  });
+
+                  // Permission runtime localisation
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      ActivityCompat.requestPermissions(this,
+                              new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                              REQ_LOCATION);
+                  }
+
+                  webView.loadUrl(START_URL);
                   setContentView(webView);
               }
+
               @Override
               public void onBackPressed() {
                   if (webView != null && webView.canGoBack()) webView.goBack();
@@ -159,6 +228,18 @@ jobs:
           }
           EOF
 
+          # Thème plein écran (barres transparentes)
+          cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+            <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
+              <item name="android:statusBarColor">@android:color/transparent</item>
+              <item name="android:navigationBarColor">@android:color/transparent</item>
+              <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+            </style>
+          </resources>
+          EOF
+
+          # strings minimal
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
