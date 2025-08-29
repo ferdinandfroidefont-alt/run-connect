@@ -47,12 +47,23 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
   };
 
   const handleComplete = async () => {
-    if (!user) return;
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    console.log('Attempting to complete onboarding with:', {
+      user_id: user.id,
+      notifications_enabled: notificationPermission === 'granted',
+      rgpd_accepted: acceptedRGPD,
+      security_rules_accepted: acceptedSecurity,
+      onboarding_completed: true
+    });
 
     setLoading(true);
     try {
       // Utiliser upsert pour créer ou mettre à jour le profil
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('profiles')
         .upsert({
           user_id: user.id,
@@ -64,6 +75,8 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
         }, {
           onConflict: 'user_id'
         });
+
+      console.log('Upsert result:', { data, error });
 
       if (error) throw error;
 
@@ -77,7 +90,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
       console.error('Error completing onboarding:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de terminer la configuration",
+        description: `Impossible de terminer la configuration: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -87,6 +100,13 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
 
   const canProceedToStep2 = notificationPermission !== null;
   const canComplete = acceptedRGPD && acceptedSecurity;
+
+  console.log('OnboardingDialog state:', {
+    acceptedRGPD,
+    acceptedSecurity,
+    canComplete,
+    user: user?.id
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
@@ -248,7 +268,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
               <Button
                 onClick={handleComplete}
                 disabled={!canComplete || loading}
-                className="flex-1"
+                className={`flex-1 ${!canComplete ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {loading ? "Configuration..." : "Terminer"}
               </Button>
