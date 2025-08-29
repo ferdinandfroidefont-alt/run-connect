@@ -146,13 +146,20 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   };
 
   const updatePrivacySettings = async (field: string, value: boolean) => {
-    if (!user) return;
+    if (!user) {
+      console.error('updatePrivacySettings: No user found');
+      return;
+    }
+
+    console.log('updatePrivacySettings called with:', { field, value, userId: user.id });
 
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('profiles')
         .update({ [field]: value })
         .eq('user_id', user.id);
+
+      console.log('Update result:', { data, error });
 
       if (error) throw error;
 
@@ -163,9 +170,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
         description: "Vos préférences ont été sauvegardées."
       });
     } catch (error: any) {
+      console.error('Error updating privacy settings:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour les paramètres",
+        description: `Impossible de mettre à jour les paramètres: ${error.message}`,
         variant: "destructive"
       });
     }
