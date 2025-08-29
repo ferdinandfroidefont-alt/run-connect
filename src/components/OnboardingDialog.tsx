@@ -171,15 +171,23 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                       uniquement dans le cadre de l'utilisation de l'application. Vous disposez d'un droit 
                       d'accès, de rectification et de suppression de vos données.
                     </p>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+                         onClick={() => {
+                           console.log('RGPD checkbox clicked, current state:', acceptedRGPD);
+                           setAcceptedRGPD(!acceptedRGPD);
+                         }}>
                       <Checkbox 
                         id="rgpd" 
                         checked={acceptedRGPD}
-                        onCheckedChange={(checked) => setAcceptedRGPD(checked as boolean)}
+                        onCheckedChange={(checked) => {
+                          console.log('RGPD onCheckedChange:', checked);
+                          setAcceptedRGPD(checked as boolean);
+                        }}
+                        className="mt-0.5"
                       />
                       <label 
                         htmlFor="rgpd" 
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm font-medium leading-relaxed cursor-pointer flex-1"
                       >
                         J'accepte le traitement de mes données personnelles
                       </label>
@@ -203,15 +211,23 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                       ne pas partager vos identifiants, signaler tout comportement inapproprié, 
                       et respecter les autres membres de la communauté.
                     </p>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+                         onClick={() => {
+                           console.log('Security checkbox clicked, current state:', acceptedSecurity);
+                           setAcceptedSecurity(!acceptedSecurity);
+                         }}>
                       <Checkbox 
                         id="security" 
                         checked={acceptedSecurity}
-                        onCheckedChange={(checked) => setAcceptedSecurity(checked as boolean)}
+                        onCheckedChange={(checked) => {
+                          console.log('Security onCheckedChange:', checked);
+                          setAcceptedSecurity(checked as boolean);
+                        }}
+                        className="mt-0.5"
                       />
                       <label 
                         htmlFor="security" 
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm font-medium leading-relaxed cursor-pointer flex-1"
                       >
                         J'accepte les règles de sécurité et d'utilisation
                       </label>
