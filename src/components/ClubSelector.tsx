@@ -105,10 +105,25 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
 
   if (clubs.length === 0) {
     return (
-      <div className="flex items-center gap-2 p-2 bg-card rounded-lg border opacity-50">
-        <Users className="h-4 w-4" />
-        <span className="text-sm">Aucun club</span>
-      </div>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
+          >
+            <Users className="h-3 w-3" />
+          </Button>
+        </PopoverTrigger>
+        
+        <PopoverContent className="w-80 p-2" align="start">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 p-3 text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span className="text-sm">Aucun club</span>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   }
 
