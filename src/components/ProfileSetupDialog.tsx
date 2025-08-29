@@ -114,10 +114,28 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
       return;
     }
 
+    if (!displayName.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le nom d'affichage est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!avatarFile) {
       toast({
         title: "Erreur",
         description: "La photo de profil est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!age || parseInt(age) < 13) {
+      toast({
+        title: "Erreur",
+        description: "Vous devez avoir au moins 13 ans pour utiliser cette application.",
         variant: "destructive",
       });
       return;
@@ -225,7 +243,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Finaliser votre profil</DialogTitle>
           <DialogDescription>
-            Ajoutez quelques informations pour compléter votre inscription
+            Complétez ces informations obligatoires pour finaliser votre inscription
           </DialogDescription>
         </DialogHeader>
 
@@ -276,12 +294,13 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
 
           {/* Nom d'affichage */}
           <div className="space-y-2">
-            <Label htmlFor="displayName">Nom complet</Label>
+            <Label htmlFor="displayName">Nom complet *</Label>
             <Input
               id="displayName"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Votre nom complet"
+              required
             />
           </div>
 
@@ -301,7 +320,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
 
           {/* Âge */}
           <div className="space-y-2">
-            <Label htmlFor="age">Âge</Label>
+            <Label htmlFor="age">Âge *</Label>
             <Input
               id="age"
               type="number"
@@ -310,7 +329,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
               placeholder="25"
               min="13"
               max="120"
+              required
             />
+            <p className="text-xs text-muted-foreground">
+              Vous devez avoir au moins 13 ans
+            </p>
           </div>
 
           {/* Téléphone */}
@@ -345,11 +368,15 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={isLoading || !username.trim() || !displayName.trim() || !avatarFile || !age || parseInt(age) < 13 || !password || password.length < 6}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer et créer mon compte
             </Button>
+            
+            <p className="text-xs text-muted-foreground text-center">
+              * Champs obligatoires
+            </p>
           </div>
           </form>
         </div>
