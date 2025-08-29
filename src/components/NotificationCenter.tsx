@@ -300,6 +300,58 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
     }
   };
 
+  // Handle follow back - follow the person who followed us
+  const handleFollowBack = async (notification: Notification) => {
+    if (!user || notification.type !== 'follow_request') return;
+
+    setLoading(true);
+    try {
+      const { follower_id, follower_name } = notification.data;
+
+      // Check if already following
+      const { data: existingFollow } = await supabase
+        .from('user_follows')
+        .select('id')
+        .eq('follower_id', user.id)
+        .eq('following_id', follower_id)
+        .single();
+
+      if (existingFollow) {
+        toast({ title: "Déjà suivi", description: "Vous suivez déjà cette personne" });
+        return;
+      }
+
+      // Create follow relationship
+      const { error } = await supabase
+        .from('user_follows')
+        .insert([{
+          follower_id: user.id,
+          following_id: follower_id,
+          status: 'accepted'
+        }]);
+
+      if (error) throw error;
+
+      // Create notification for the person we're following back
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: follower_id,
+          title: 'Nouveau suivi !',
+          message: 'Quelqu\'un vous suit en retour',
+          type: 'follow_back'
+        }]);
+
+      if (notificationError) console.error('Error creating notification:', notificationError);
+
+      toast({ title: "Suivi ajouté", description: `Vous suivez maintenant ${follower_name}` });
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle follow request rejection
   const handleRejectFollow = async (notification: Notification) => {
     if (!user || notification.type !== 'follow_request') return;
@@ -521,25 +573,37 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                         {notification.type === 'follow_request' && !notification.read && (
                          <>
                            <Separator className="my-3" />
-                           <div className="flex gap-2">
+                           <div className="flex flex-col gap-2">
+                             <div className="flex gap-2">
+                               <Button
+                                 size="sm"
+                                 onClick={() => handleAcceptFollow(notification)}
+                                 disabled={loading}
+                                 className="flex-1"
+                               >
+                                 <Check className="h-4 w-4 mr-1" />
+                                 Accepter
+                               </Button>
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => handleRejectFollow(notification)}
+                                 disabled={loading}
+                                 className="flex-1"
+                               >
+                                 <X className="h-4 w-4 mr-1" />
+                                 Refuser
+                               </Button>
+                             </div>
                              <Button
                                size="sm"
-                               onClick={() => handleAcceptFollow(notification)}
+                               variant="secondary"
+                               onClick={() => handleFollowBack(notification)}
                                disabled={loading}
-                               className="flex-1"
+                               className="w-full"
                              >
-                               <Check className="h-4 w-4 mr-1" />
-                               Accepter
-                             </Button>
-                             <Button
-                               size="sm"
-                               variant="outline"
-                               onClick={() => handleRejectFollow(notification)}
-                               disabled={loading}
-                               className="flex-1"
-                             >
-                               <X className="h-4 w-4 mr-1" />
-                               Refuser
+                               <UserPlus className="h-4 w-4 mr-2" />
+                               Ajouter en retour
                              </Button>
                            </div>
                          </>
