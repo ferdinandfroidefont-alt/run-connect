@@ -26,18 +26,11 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
 
-      # ──────────────────────────────────────────────────────────────
-      # Génère le projet Android WebView minimal
-      # ──────────────────────────────────────────────────────────────
+      # ── Projet Android WebView minimal
       - name: Create minimal Android WebView project
         run: |
           set -e
-          APP_ID="app.runconnect"
-          APP_NAME="RunConnect"
-          URL="https://run-connect.lovable.app"
-
           mkdir -p android-webview/app/src/main/java/app/runconnect
-          mkdir -p android-webview/app/src/main/res/layout
           mkdir -p android-webview/app/src/main/res/values
 
           cat > android-webview/settings.gradle <<'EOF'
@@ -63,19 +56,18 @@ jobs:
             namespace "app.runconnect"
             compileSdk 34
 
-            // Keystore attendu par Google Play (restauré depuis les secrets)
             signingConfigs {
-              debug {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword "password"
-                keyAlias "upload"
-                keyPassword "password"
-              }
               release {
                 storeFile file("${rootDir}/keystore.jks")
-                storePassword "password"
-                keyAlias "upload"
-                keyPassword "password"
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+              }
+              debug {
+                storeFile file("${rootDir}/keystore.jks")
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
               }
             }
 
@@ -117,19 +109,17 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          cat > android-webview/app/proguard-rules.pro <<'EOF'
-          # keep empty (no minify)
-          EOF
-
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="app.runconnect">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
             <application
               android:label="RunConnect"
               android:usesCleartextTraffic="false"
               android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-              <activity android:name=".MainActivity" android:exported="true"
-                        android:configChanges="orientation|screenSize|keyboardHidden">
+              <activity
+                android:name=".MainActivity"
+                android:exported="true"
+                android:configChanges="orientation|screenSize|keyboardHidden">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
                   <category android:name="android.intent.category.LAUNCHER" />
@@ -177,19 +167,19 @@ jobs:
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-      # ──────────────────────────────────────────────────────────────
-      # Restore le keystore d'UPLOAD depuis le secret base64
-      # (NE PLUS générer un nouveau keystore côté CI)
-      # ──────────────────────────────────────────────────────────────
+      # ── Restaurer le keystore d'UPLOAD depuis les SECRETS et valider
       - name: Restore upload keystore from secrets
         working-directory: android-webview
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-          ls -l keystore.jks
+          echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
+          set -e
+          keytool -list -v -keystore keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" || (echo "ERREUR: Le keystore ou le mot de passe est invalide !" && exit 1)
 
-      # ──────────────────────────────────────────────────────────────
-      # Build du bundle AAB (Gradle)
-      # ──────────────────────────────────────────────────────────────
+      # ── Build AAB
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         with:
@@ -197,7 +187,7 @@ jobs:
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
-      # Artefacts (AAB + cert/keystore pour backup)
+      # ── Artefacts
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
@@ -205,5 +195,4 @@ jobs:
           path: |
             android-webview/app/build/outputs/bundle/release/app-release.aab
             android-webview/keystore.jks
-            android-webview/upload_certificate.pem
           if-no-files-found: warn
