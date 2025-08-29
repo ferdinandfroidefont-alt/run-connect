@@ -4,13 +4,12 @@ import { AdMob, InterstitialAdPluginEvents, AdLoadInfo } from '@capacitor-commun
 
 // Configuration AdMob
 const ADMOB_CONFIG = {
-  // ID de test pour le développement
-  APP_ID: 'ca-app-pub-3940256099942544~3347511713',
-  INTERSTITIAL_AD_UNIT_ID: 'ca-app-pub-3940256099942544/1033173712',
+  // REMPLACE CES IDs PAR TES VRAIS IDs ADMOB
+  APP_ID: 'ca-app-pub-XXXXXXXXXXXXXXX~XXXXXXXXXX', // Ton App ID AdMob
+  INTERSTITIAL_AD_UNIT_ID: 'ca-app-pub-XXXXXXXXXXXXXXX/XXXXXXXXXX', // Ton Interstitial Unit ID
   
-  // IDs de production (à activer plus tard)
-  // APP_ID: 'ca-app-pub-XXXXXXXXXXXXXXX~XXXXXXXXXX',
-  // INTERSTITIAL_AD_UNIT_ID: 'ca-app-pub-XXXXXXXXXXXXXXX/XXXXXXXXXX',
+  // Mode production (mettre IS_TESTING à false)
+  IS_TESTING: false, // ⚠️ IMPORTANT: false pour la production
 };
 
 interface AdMobState {
@@ -40,8 +39,8 @@ export const useAdMob = (userIsPremium: boolean = false) => {
 
     try {
       await AdMob.initialize({
-        testingDevices: ['YOUR_TEST_DEVICE_ID'],
-        initializeForTesting: true,
+        testingDevices: ADMOB_CONFIG.IS_TESTING ? ['YOUR_TEST_DEVICE_ID'] : [],
+        initializeForTesting: ADMOB_CONFIG.IS_TESTING,
       });
 
       stateRef.current.isInitialized = true;
@@ -63,7 +62,7 @@ export const useAdMob = (userIsPremium: boolean = false) => {
     try {
       await AdMob.prepareInterstitial({
         adId: ADMOB_CONFIG.INTERSTITIAL_AD_UNIT_ID,
-        isTesting: true, // Mettre à false en production
+        isTesting: ADMOB_CONFIG.IS_TESTING,
       });
 
       stateRef.current.isAdLoaded = true;
