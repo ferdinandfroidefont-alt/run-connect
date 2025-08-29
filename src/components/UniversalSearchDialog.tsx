@@ -9,8 +9,10 @@ import { OnlineStatus } from "./OnlineStatus";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy } from "lucide-react";
+import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -59,6 +61,8 @@ export const UniversalSearchDialog = ({
   const [followStatus, setFollowStatus] = useState<string | null>(null);
   const [areFriends, setAreFriends] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   // Search for users
   const searchProfiles = async () => {
@@ -253,6 +257,102 @@ export const UniversalSearchDialog = ({
     }
   };
 
+  // Check blocked status
+  const checkBlockedStatus = async (userId: string) => {
+    if (!user) return;
+
+    try {
+      const { data: blockedData } = await supabase
+        .from('blocked_users')
+        .select('id')
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', userId)
+        .maybeSingle();
+      
+      setIsBlocked(!!blockedData);
+    } catch (error) {
+      console.error('Error checking blocked status:', error);
+      setIsBlocked(false);
+    }
+  };
+
+  // Block user
+  const handleBlockUser = async () => {
+    if (!user || !selectedProfile) return;
+
+    try {
+      setLoading(true);
+      
+      const { error: blockError } = await supabase
+        .from('blocked_users')
+        .insert({
+          blocker_id: user.id,
+          blocked_id: selectedProfile.user_id
+        });
+
+      if (blockError) throw blockError;
+
+      // Remove follow relationships
+      await supabase
+        .from('user_follows')
+        .delete()
+        .or(`and(follower_id.eq.${user.id},following_id.eq.${selectedProfile.user_id}),and(follower_id.eq.${selectedProfile.user_id},following_id.eq.${user.id})`);
+
+      setIsBlocked(true);
+      setIsFollowing(false);
+      setFollowStatus(null);
+      setAreFriends(false);
+      
+      toast({
+        title: "Utilisateur bloqué",
+        description: "Cette personne ne peut plus vous contacter ni voir vos séances",
+      });
+
+    } catch (error: any) {
+      console.error('Block user error:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de bloquer cet utilisateur",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Unblock user
+  const handleUnblockUser = async () => {
+    if (!user || !selectedProfile) return;
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('blocked_users')
+        .delete()
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', selectedProfile.user_id);
+
+      if (error) throw error;
+
+      setIsBlocked(false);
+      toast({
+        title: "Utilisateur débloqué",
+        description: "Cette personne peut maintenant vous contacter à nouveau",
+      });
+
+    } catch (error: any) {
+      console.error('Unblock user error:', error);
+      toast({
+        title: "Erreur", 
+        description: "Impossible de débloquer cet utilisateur",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Follow/unfollow user
   const toggleFollow = async () => {
     if (!user || !selectedProfile) return;
@@ -377,6 +477,7 @@ export const UniversalSearchDialog = ({
   useEffect(() => {
     if (selectedProfile) {
       checkFollowStatus(selectedProfile.user_id);
+      checkBlockedStatus(selectedProfile.user_id);
     }
   }, [selectedProfile, user]);
 
@@ -395,15 +496,52 @@ export const UniversalSearchDialog = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedProfile(null)}
-              >
-                ←
-              </Button>
-              Profil utilisateur
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedProfile(null)}
+                >
+                  ←
+                </Button>
+                Profil utilisateur
+              </div>
+              
+              {/* Menu à trois points */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-2">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
+                  {isBlocked ? (
+                    <DropdownMenuItem 
+                      onClick={handleUnblockUser}
+                      className="text-green-600 hover:bg-green-50 cursor-pointer"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Débloquer cet utilisateur
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem 
+                      onClick={handleBlockUser}
+                      className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                    >
+                      <UserMinus className="h-4 w-4 mr-2" />
+                      Bloquer cet utilisateur
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem 
+                    onClick={() => setShowReportDialog(true)}
+                    className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                  >
+                    <Flag className="h-4 w-4 mr-2" />
+                    Signaler cet utilisateur
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </DialogTitle>
           </DialogHeader>
 
@@ -515,11 +653,19 @@ export const UniversalSearchDialog = ({
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Message
                 </Button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+               )}
+             </div>
+           </div>
+
+           {/* Report Dialog */}
+           <ReportUserDialog
+             isOpen={showReportDialog}
+             onClose={() => setShowReportDialog(false)}
+             reportedUserId={selectedProfile.user_id}
+             reportedUsername={selectedProfile.username}
+           />
+         </DialogContent>
+       </Dialog>
     );
   }
 
