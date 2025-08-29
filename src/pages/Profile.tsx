@@ -84,6 +84,22 @@ const Profile = () => {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const { toast } = useToast();
 
+  // Vérifier si on arrive avec un message d'erreur
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'not_friends') {
+      toast({
+        title: "Non autorisé",
+        description: "Vous n'êtes pas amis donc vous n'êtes pas autorisé à envoyer un message",
+        variant: "destructive"
+      });
+      // Nettoyer l'URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('error');
+      navigate({ search: newParams.toString() }, { replace: true });
+    }
+  }, [searchParams, toast, navigate]);
+
   useEffect(() => {
     if (user) {
       fetchProfile();

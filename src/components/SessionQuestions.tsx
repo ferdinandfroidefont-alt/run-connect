@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface SessionQuestionsProps {
   sessionId: string;
@@ -23,15 +26,57 @@ export const SessionQuestions = ({
   scheduledAt 
 }: SessionQuestionsProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSendQuestion = () => {
-    if (!question.trim()) return;
+  const handleSendQuestion = async () => {
+    if (!question.trim() || !user) return;
 
-    // Navigate to messages page and start conversation with organizer
-    navigate(`/messages?startConversation=${organizerId}&message=${encodeURIComponent(
-      `Bonjour ! J'ai une question concernant votre séance "${sessionTitle}" du ${new Date(scheduledAt).toLocaleDateString('fr-FR')} :\n\n${question.trim()}`
-    )}`);
+    setLoading(true);
+    
+    try {
+      // Vérifier si les utilisateurs sont amis
+      const { data: areFriends, error } = await supabase.rpc('are_users_friends', {
+        user1_id: user.id,
+        user2_id: organizerId
+      });
+
+      if (error) {
+        console.error('Error checking friendship:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de vérifier le statut d'amitié",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (areFriends) {
+        // Si ils sont amis, rediriger vers la messagerie
+        navigate(`/messages?startConversation=${organizerId}&message=${encodeURIComponent(
+          `Bonjour ! J'ai une question concernant votre séance "${sessionTitle}" du ${new Date(scheduledAt).toLocaleDateString('fr-FR')} :\n\n${question.trim()}`
+        )}`);
+      } else {
+        // Si ils ne sont pas amis, rediriger vers le profil avec un message d'erreur
+        toast({
+          title: "Non autorisé",
+          description: "Vous devez être amis pour envoyer un message",
+          variant: "destructive"
+        });
+        navigate(`/profile/${organizerId}?error=not_friends`);
+      }
+    } catch (error: any) {
+      console.error('Error sending question:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -62,10 +107,14 @@ export const SessionQuestions = ({
           />
           <Button 
             onClick={handleSendQuestion}
-            disabled={!question.trim()}
+            disabled={!question.trim() || loading}
             size="sm"
           >
-            <Send className="h-4 w-4" />
+            {loading ? (
+              "Vérification..."
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </CardContent>
