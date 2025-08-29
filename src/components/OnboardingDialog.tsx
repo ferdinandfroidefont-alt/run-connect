@@ -51,17 +51,17 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
 
     setLoading(true);
     try {
-      // Mettre à jour le profil avec les acceptations
+      // Utiliser upsert pour créer ou mettre à jour le profil
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          user_id: user.id,
           notifications_enabled: notificationPermission === 'granted',
           rgpd_accepted: acceptedRGPD,
           security_rules_accepted: acceptedSecurity,
           onboarding_completed: true,
           updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
+        });
 
       if (error) throw error;
 
