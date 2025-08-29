@@ -814,6 +814,19 @@ export type Database = {
         Args: { user_id_param: string }
         Returns: boolean
       }
+      check_account_lockout: {
+        Args: { user_id_param: string }
+        Returns: boolean
+      }
+      check_rate_limit: {
+        Args: {
+          action_type: string
+          max_attempts: number
+          time_window_minutes: number
+          user_id_param: string
+        }
+        Returns: boolean
+      }
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -821,6 +834,10 @@ export type Database = {
       decline_club_invitation: {
         Args: { invitation_id: string }
         Returns: boolean
+      }
+      encrypt_critical_data: {
+        Args: { data_text: string }
+        Returns: string
       }
       generate_club_code: {
         Args: Record<PropertyKey, never>
@@ -964,6 +981,10 @@ export type Database = {
         Args: { points_to_remove: number; user_id_param: string }
         Returns: undefined
       }
+      sanitize_input: {
+        Args: { input_text: string }
+        Returns: string
+      }
       trigger_season_reset: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -971,6 +992,10 @@ export type Database = {
       update_push_token: {
         Args: { push_token_param: string; user_id_param: string }
         Returns: undefined
+      }
+      validate_sensitive_data_access: {
+        Args: { table_name_param: string; user_id_param: string }
+        Returns: boolean
       }
     }
     Enums: {
