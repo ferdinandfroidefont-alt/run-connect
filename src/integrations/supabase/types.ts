@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       club_invitations: {
         Row: {
           club_id: string
@@ -748,6 +769,10 @@ export type Database = {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
       }
+      block_user: {
+        Args: { user_to_block_id: string }
+        Returns: boolean
+      }
       can_user_send_message: {
         Args: { user_id_param: string }
         Returns: boolean
@@ -889,6 +914,10 @@ export type Database = {
       increment_daily_message_count: {
         Args: { user_id_param: string }
         Returns: number
+      }
+      is_user_blocked: {
+        Args: { blocked_user_id: string; blocker_user_id: string }
+        Returns: boolean
       }
       process_referral: {
         Args: { new_user_id: string; referral_code_param: string }

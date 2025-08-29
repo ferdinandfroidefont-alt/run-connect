@@ -181,11 +181,21 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     try {
       setActionLoading(true);
       
-      const { error } = await supabase.rpc('block_user', {
-        user_to_block_id: userId
-      });
+      // Insert directly into blocked_users table
+      const { error: blockError } = await supabase
+        .from('blocked_users')
+        .insert({
+          blocker_id: user.id,
+          blocked_id: userId
+        });
 
-      if (error) throw error;
+      if (blockError) throw blockError;
+
+      // Remove follow relationships
+      await supabase
+        .from('user_follows')
+        .delete()
+        .or(`and(follower_id.eq.${user.id},following_id.eq.${userId}),and(follower_id.eq.${userId},following_id.eq.${user.id})`);
 
       toast({
         title: "Utilisateur bloqué",
