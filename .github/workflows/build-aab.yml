@@ -26,9 +26,9 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
 
-      # ─────────────────────────────────────────────────────────────
-      # 1) Génère le projet Android WebView minimal (comme avant)
-      # ─────────────────────────────────────────────────────────────
+      # ──────────────────────────────────────────────────────────────
+      # Génère le projet Android WebView minimal
+      # ──────────────────────────────────────────────────────────────
       - name: Create minimal Android WebView project
         run: |
           set -e
@@ -56,7 +56,6 @@ jobs:
           plugins { id 'com.android.application' version '8.4.2' apply false }
           EOF
 
-          # IMPORTANT : build.gradle de l'app lit les mots de passe depuis les variables d'env
           cat > android-webview/app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
 
@@ -64,18 +63,19 @@ jobs:
             namespace "app.runconnect"
             compileSdk 34
 
+            // Keystore attendu par Google Play (restauré depuis les secrets)
             signingConfigs {
               debug {
                 storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("STORE_PASSWORD") ?: "password"
-                keyAlias      System.getenv("KEY_ALIAS")      ?: "upload"
-                keyPassword   System.getenv("KEY_PASSWORD")   ?: "password"
+                storePassword "password"
+                keyAlias "upload"
+                keyPassword "password"
               }
               release {
                 storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("STORE_PASSWORD") ?: "password"
-                keyAlias      System.getenv("KEY_ALIAS")      ?: "upload"
-                keyPassword   System.getenv("KEY_PASSWORD")   ?: "password"
+                storePassword "password"
+                keyAlias "upload"
+                keyPassword "password"
               }
             }
 
@@ -177,44 +177,33 @@ jobs:
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-      # ─────────────────────────────────────────────────────────────
-      # 2) Recrée TON keystore (secret) et expose les variables d'env
-      # ─────────────────────────────────────────────────────────────
-      - name: Recreate keystore from secret
+      # ──────────────────────────────────────────────────────────────
+      # Restore le keystore d'UPLOAD depuis le secret base64
+      # (NE PLUS générer un nouveau keystore côté CI)
+      # ──────────────────────────────────────────────────────────────
+      - name: Restore upload keystore from secrets
+        working-directory: android-webview
         run: |
-          # le dossier existe déjà, on écrit juste le keystore
-          echo "$KEYSTORE_BASE64" | base64 -d > android-webview/keystore.jks
-          ls -lh android-webview/keystore.jks
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+          ls -l keystore.jks
 
-      # (Optionnel) Affiche la SHA1 pour sanity-check dans les logs
-      - name: Print keystore SHA1
-        run: |
-          keytool -list -v -keystore android-webview/keystore.jks \
-            -alias "${{ secrets.KEY_ALIAS }}" \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_ALIAS_PASSWORD }}" | grep "SHA1" || true
-
-      # ─────────────────────────────────────────────────────────────
-      # 3) Build du bundle AAB avec la signature qui vient des secrets
-      # ─────────────────────────────────────────────────────────────
+      # ──────────────────────────────────────────────────────────────
+      # Build du bundle AAB (Gradle)
+      # ──────────────────────────────────────────────────────────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         with:
           gradle-version: 8.6
           build-root-directory: android-webview
           arguments: :app:bundleRelease
-        env:
-          # Ces variables sont lues par build.gradle via System.getenv(...)
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
 
+      # Artefacts (AAB + cert/keystore pour backup)
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: runconnect-release
           path: |
             android-webview/app/build/outputs/bundle/release/app-release.aab
+            android-webview/keystore.jks
+            android-webview/upload_certificate.pem
           if-no-files-found: warn
