@@ -95,17 +95,19 @@ export const BottomNavigation = () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
-  return <nav className="fixed bottom-0 left-0 right-0 bg-[#121417] h-16 min-h-16 z-50">
-      <div className="h-full flex items-start justify-around pt-1">
+  return <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+      <div className="h-16 min-h-16 flex items-stretch">
         {navItems.slice(0, 2).map(({
         path,
         emoji,
         label
       }) => {
         const isActive = location.pathname === path;
-        return <button key={path} onClick={() => navigate(path)} className={cn("flex flex-col items-center transition-colors", isActive ? "text-primary" : "text-white")}>
-              <span className="text-lg">{emoji}</span>
-              <span className="text-xs">{label}</span>
+        return <button key={path} onClick={() => navigate(path)} className={cn("flex-1 flex flex-col items-center justify-start h-full pt-1 rounded-lg transition-colors", isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
+              <div className="h-6 flex items-start">
+                <span className="text-xl">{emoji}</span>
+              </div>
+              <span className="mt-1 text-xs leading-none">{label}</span>
             </button>;
       })}
         
@@ -117,11 +119,11 @@ export const BottomNavigation = () => {
           navigate('/');
           setTimeout(() => openCreateSession(), 100);
         }
-      }} className="flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
-            <Plus size={24} className="text-white" />
+      }} className="flex-1 flex flex-col items-center justify-start h-full pt-1 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-lg">
+          <div className="h-6 flex items-start">
+            <Plus size={24} />
           </div>
-          <span className="text-xs text-white mt-1">CRÉER</span>
+          <span className="mt-1 text-xs leading-none">CRÉER</span>
         </button>
 
         {navItems.slice(2).map(({
@@ -132,9 +134,9 @@ export const BottomNavigation = () => {
         const isActive = location.pathname === path;
         const isMessages = path === '/messages';
         
-        return <button key={path} onClick={() => navigate(path)} className={cn("flex flex-col items-center transition-colors relative", isActive ? "text-primary" : "text-white")}>
-              <div className="relative">
-                <span className="text-lg">{emoji}</span>
+        return <button key={path} onClick={() => navigate(path)} className={cn("flex-1 flex flex-col items-center justify-start h-full pt-1 rounded-lg transition-colors relative", isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
+              <div className="h-6 flex items-start relative">
+                <span className="text-xl">{emoji}</span>
                 {isMessages && totalUnreadCount > 0 && (
                   <Badge 
                     variant="destructive" 
@@ -144,7 +146,7 @@ export const BottomNavigation = () => {
                   </Badge>
                 )}
               </div>
-              <span className="text-xs">{label}</span>
+              <span className="mt-1 text-xs leading-none">{label}</span>
             </button>;
       })}
       </div>
