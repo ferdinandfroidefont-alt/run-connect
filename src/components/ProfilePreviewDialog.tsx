@@ -8,8 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
 import { SettingsDialog } from "./SettingsDialog";
+import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2 } from "lucide-react";
+import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2, Flag } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -53,6 +54,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [actionLoading, setActionLoading] = useState(false);
   const [areFriends, setAreFriends] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -421,28 +423,40 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 </div>
 
                 {!isOwnProfile && user && (
-                  <Button
-                    onClick={handleFollowToggle}
-                    disabled={actionLoading}
-                    variant={isFollowing ? "outline" : followRequestSent ? "secondary" : "default"}
-                    className="w-full"
-                  >
-                    {actionLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : isFollowing ? (
-                      <UserMinus className="h-4 w-4 mr-2" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 mr-2" />
-                    )}
-                     {actionLoading 
-                       ? "Chargement..." 
-                       : isFollowing 
-                       ? "Ne plus suivre" 
-                       : followRequestSent
-                       ? "Demande envoyée"
-                       : "Demander à suivre"
-                     }
-                  </Button>
+                  <div className="space-y-2 w-full">
+                    <Button
+                      onClick={handleFollowToggle}
+                      disabled={actionLoading}
+                      variant={isFollowing ? "outline" : followRequestSent ? "secondary" : "default"}
+                      className="w-full"
+                    >
+                      {actionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : isFollowing ? (
+                        <UserMinus className="h-4 w-4 mr-2" />
+                      ) : (
+                        <UserPlus className="h-4 w-4 mr-2" />
+                      )}
+                       {actionLoading 
+                         ? "Chargement..." 
+                         : isFollowing 
+                         ? "Ne plus suivre" 
+                         : followRequestSent
+                         ? "Demande envoyée"
+                         : "Demander à suivre"
+                       }
+                    </Button>
+                    
+                    <Button
+                      onClick={() => setShowReportDialog(true)}
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Flag className="h-4 w-4 mr-2" />
+                      Signaler cet utilisateur
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -587,6 +601,16 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         <SettingsDialog 
           open={showSettingsDialog} 
           onOpenChange={(open) => setShowSettingsDialog(open)} 
+        />
+      )}
+
+      {/* Report User Dialog */}
+      {!isOwnProfile && profile && (
+        <ReportUserDialog
+          isOpen={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          reportedUserId={profile.user_id}
+          reportedUsername={profile.username}
         />
       )}
     </Dialog>
