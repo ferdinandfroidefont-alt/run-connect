@@ -123,7 +123,19 @@ const Auth = () => {
         token: otp,
         type: 'email',
       });
-      if (error) throw error;
+      if (error) {
+        // Gestion spécifique des erreurs d'OTP
+        if (error.message.includes('expired') || error.message.includes('invalid')) {
+          toast({
+            title: "Code expiré",
+            description: "Le code a expiré. Cliquez sur 'Renvoyer le code' pour en recevoir un nouveau.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
       
       // Vérifier si c'est un nouvel utilisateur
       if (data.user) {
@@ -154,9 +166,15 @@ const Auth = () => {
         }, 1000);
       }
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      if (error.message.includes('429') || error.message.includes('rate limit')) {
+        errorMessage = "Trop de tentatives. Veuillez attendre quelques minutes avant de réessayer.";
+      }
+      
       toast({
         title: "Erreur",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -336,8 +354,11 @@ const Auth = () => {
             <form onSubmit={handleOtpSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">
                     Code envoyé à : <span className="font-medium text-foreground">{email}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Le code expire dans 5 minutes
                   </p>
                 </div>
                 <div className="flex justify-center">
@@ -367,14 +388,57 @@ const Auth = () => {
                 Vérifier le code
               </Button>
 
-              <div className="text-center">
+              <div className="text-center space-y-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsLoading(true);
+                    try {
+                      const { error } = await supabase.auth.signInWithOtp({
+                        email,
+                        options: {
+                          emailRedirectTo: `${window.location.origin}/`,
+                          shouldCreateUser: true
+                        },
+                      });
+                      if (error) {
+                        if (error.message.includes('429') || error.message.includes('rate limit')) {
+                          toast({
+                            title: "Trop de tentatives",
+                            description: "Veuillez attendre quelques minutes avant de demander un nouveau code.",
+                            variant: "destructive",
+                          });
+                        } else {
+                          throw error;
+                        }
+                      } else {
+                        setOtp('');
+                        toast({
+                          title: "Nouveau code envoyé !",
+                          description: "Vérifiez votre email pour le nouveau code.",
+                        });
+                      }
+                    } catch (error: any) {
+                      toast({
+                        title: "Erreur",
+                        description: error.message,
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  className="text-sm text-primary hover:underline block mx-auto"
+                >
+                  Renvoyer le code
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setAuthStep('email');
                     setOtp('');
                   }}
-                  className="text-sm text-primary hover:underline"
+                  className="text-sm text-muted-foreground hover:underline block mx-auto"
                 >
                   ← Retour
                 </button>
