@@ -1,9 +1,22 @@
+- name: Create minimal Android WebView project
+  run: |
+    ...
+name: Build Android App Bundle
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
       - name: Create minimal Android WebView project
         run: |
           set -e
           APP_ID="app.runconnect"
           APP_NAME="RunConnect"
           URL="https://run-connect.lovable.app"
+          ...
 
           mkdir -p android-webview/app/src/main/java/app/runconnect
           mkdir -p android-webview/app/src/main/res/layout
