@@ -52,16 +52,20 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
       return;
     }
 
-    console.log('Attempting to complete onboarding with:', {
+    console.log('🚀 Starting onboarding completion for user:', user.id);
+    console.log('📋 Current state:', {
       user_id: user.id,
       notifications_enabled: notificationPermission === 'granted',
       rgpd_accepted: acceptedRGPD,
       security_rules_accepted: acceptedSecurity,
-      onboarding_completed: true
+      onboarding_completed: true,
+      notificationPermission
     });
 
     setLoading(true);
     try {
+      console.log('📤 Sending upsert request to profiles table...');
+      
       // Utiliser upsert pour créer ou mettre à jour le profil
       const { error, data } = await supabase
         .from('profiles')
@@ -76,10 +80,20 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
           onConflict: 'user_id'
         });
 
-      console.log('Upsert result:', { data, error });
+      console.log('📥 Upsert response received:', { data, error });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
 
+      console.log('✅ Onboarding completed successfully!');
+      
       toast({
         title: "Configuration terminée",
         description: "Votre compte est maintenant configuré et prêt à l'emploi!"
@@ -87,10 +101,14 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
 
       onComplete();
     } catch (error: any) {
-      console.error('Error completing onboarding:', error);
+      console.error('💥 Onboarding error caught:', error);
+      console.error('💥 Error type:', typeof error);
+      console.error('💥 Error constructor:', error.constructor.name);
+      console.error('💥 Full error object:', JSON.stringify(error, null, 2));
+      
       toast({
         title: "Erreur",
-        description: `Impossible de terminer la configuration: ${error.message}`,
+        description: `Impossible de terminer la configuration: ${error.message || 'Erreur inconnue'}`,
         variant: "destructive"
       });
     } finally {
