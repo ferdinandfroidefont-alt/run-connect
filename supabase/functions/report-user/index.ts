@@ -53,7 +53,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: "RunConnect Support <onboarding@resend.dev>",
-      to: ["ferdinand.froideofont@gmail.com"], // Remplacez par l'email de support réel
+      to: ["ferdinand.froidefont@gmail.com"], // Votre email vérifié
       subject: `🚨 Signalement utilisateur - @${reportedUsername}`,
       html: `
         <h1>Nouveau signalement d'utilisateur</h1>
