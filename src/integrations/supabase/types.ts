@@ -783,7 +783,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      security_dashboard: {
+        Row: {
+          access_count: number | null
+          action: string | null
+          date: string | null
+          table_name: string | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_club_invitation: {
@@ -827,6 +836,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -838,6 +851,10 @@ export type Database = {
       encrypt_critical_data: {
         Args: { data_text: string }
         Returns: string
+      }
+      force_user_logout: {
+        Args: { target_user_id: string }
+        Returns: boolean
       }
       generate_club_code: {
         Args: Record<PropertyKey, never>
@@ -953,6 +970,16 @@ export type Database = {
           show_online_status: boolean
           user_id: string
           username: string
+        }[]
+      }
+      get_security_alerts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          alert_type: string
+          count: number
+          last_occurrence: string
+          message: string
+          severity: string
         }[]
       }
       get_user_group_conversations: {
