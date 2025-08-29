@@ -104,7 +104,7 @@ export const BottomNavigation = () => {
       }) => {
         const isActive = location.pathname === path;
         return <button key={path} onClick={() => navigate(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
-              <span className="text-xl">{emoji}</span>
+              <span className="text-xl -mt-1">{emoji}</span>
               <span className="text-xs font-medium mt-1">{label}</span>
             </button>;
       })}
@@ -118,7 +118,7 @@ export const BottomNavigation = () => {
           setTimeout(() => openCreateSession(), 100);
         }
       }} className="flex flex-col justify-start items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-lg">
-          <Plus size={24} />
+          <Plus size={24} className="-mt-1" />
           <span className="text-xs font-medium mt-1">CRÉER</span>
         </button>
 
@@ -131,7 +131,7 @@ export const BottomNavigation = () => {
         const isMessages = path === '/messages';
         
         return <button key={path} onClick={() => navigate(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors relative h-full", isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
-              <div className="relative">
+              <div className="relative -mt-1">
                 <span className="text-xl">{emoji}</span>
                 {isMessages && totalUnreadCount > 0 && (
                   <Badge 
