@@ -1327,9 +1327,6 @@ export const InteractiveMap = ({
           >
             <div className="text-sm">📍🏃</div>
             <div className="text-xs leading-tight">Séances à proximité</div>
-            {!subscriptionInfo?.subscribed && (
-              <div className="text-xs text-yellow-300">👑</div>
-            )}
           </Button>
         </div>
       )}
