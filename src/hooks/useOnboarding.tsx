@@ -31,11 +31,8 @@ export const useOnboarding = () => {
         return;
       }
 
-      // Si le profil n'a pas complété l'onboarding ou a été créé récemment
-      const createdRecently = profile?.created_at && 
-        Date.now() - new Date(profile.created_at).getTime() < 5 * 60 * 1000; // 5 minutes
-
-      setNeedsOnboarding(!profile?.onboarding_completed || !!createdRecently);
+      // L'utilisateur a besoin d'onboarding uniquement si le profil n'existe pas ou si l'onboarding n'est pas terminé
+      setNeedsOnboarding(!profile || !profile.onboarding_completed);
       
       // Vérifier si l'utilisateur a besoin de voir la vidéo de bienvenue
       // Pour les nouveaux utilisateurs (créés dans les dernières 24h)
