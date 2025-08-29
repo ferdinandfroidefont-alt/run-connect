@@ -26,7 +26,7 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
 
-      # ── Projet Android WebView minimal
+      # ───────── Génère un mini projet Android WebView ─────────
       - name: Create minimal Android WebView project
         run: |
           set -e
@@ -34,9 +34,7 @@ jobs:
           mkdir -p android-webview/app/src/main/res/values
 
           cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement {
-            repositories { google(); mavenCentral(); gradlePluginPortal() }
-          }
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
             repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
             repositories { google(); mavenCentral() }
@@ -60,13 +58,13 @@ jobs:
               release {
                 storeFile file("${rootDir}/keystore.jks")
                 storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
                 keyPassword System.getenv("ANDROID_KEY_PASSWORD")
               }
               debug {
                 storeFile file("${rootDir}/keystore.jks")
                 storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
                 keyPassword System.getenv("ANDROID_KEY_PASSWORD")
               }
             }
@@ -75,8 +73,8 @@ jobs:
               applicationId "app.runconnect"
               minSdk 24
               targetSdk 34
-              versionCode 2
-              versionName "1.1"
+              versionCode 3
+              versionName "1.2"
             }
 
             buildTypes {
@@ -116,10 +114,8 @@ jobs:
               android:label="RunConnect"
               android:usesCleartextTraffic="false"
               android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-              <activity
-                android:name=".MainActivity"
-                android:exported="true"
-                android:configChanges="orientation|screenSize|keyboardHidden">
+              <activity android:name=".MainActivity" android:exported="true"
+                        android:configChanges="orientation|screenSize|keyboardHidden">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
                   <category android:name="android.intent.category.LAUNCHER" />
@@ -167,27 +163,29 @@ jobs:
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-      # ── Restaurer le keystore d'UPLOAD depuis les SECRETS et valider
-      - name: Restore upload keystore from secrets
+      # ───────── Restaure le keystore depuis les SECRETS ─────────
+      - name: Restore upload keystore
         working-directory: android-webview
         env:
           ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
-          set -e
-          keytool -list -v -keystore keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" || (echo "ERREUR: Le keystore ou le mot de passe est invalide !" && exit 1)
+          set -euo pipefail
+          echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
+          ls -l keystore.jks
 
-      # ── Build AAB
+      # ───────── Build du AAB ─────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD:     ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_ALIAS:   ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         with:
           gradle-version: 8.6
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
-      # ── Artefacts
+      # ───────── Artefacts ─────────
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
