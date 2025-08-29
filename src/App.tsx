@@ -38,6 +38,7 @@ const App = () => (
             <Route path="/messages" element={<Layout><Messages /></Layout>} />
             <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
             <Route path="/profile" element={<Layout><Profile /></Layout>} />
+            <Route path="/profile/:userId" element={<Layout><Profile /></Layout>} />
             <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
             <Route path="/donation-success" element={<DonationSuccess />} />
             <Route path="/donation-canceled" element={<DonationCanceled />} />

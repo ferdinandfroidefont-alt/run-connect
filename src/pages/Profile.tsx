@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -59,7 +59,8 @@ const Profile = () => {
   const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const viewingUserId = searchParams.get('user'); // ID de l'utilisateur à voir
+  const { userId: urlUserId } = useParams();
+  const viewingUserId = urlUserId || searchParams.get('user'); // ID de l'utilisateur à voir via URL ou query param
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
   const { theme, setTheme } = useTheme();
   const { shareProfile } = useShareProfile();
