@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, MapPin, Clock, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MessageCircle, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 interface SessionQuestionsProps {
   sessionId: string;
@@ -21,45 +23,21 @@ export const SessionQuestions = ({
   scheduledAt 
 }: SessionQuestionsProps) => {
   const navigate = useNavigate();
+  const [question, setQuestion] = useState("");
 
-  const questions = [
-    {
-      id: 1,
-      text: "Quelle est l'allure prévue ?",
-      icon: Clock,
-    },
-    {
-      id: 2,
-      text: "Y a-t-il un point de rendez-vous spécifique ?",
-      icon: MapPin,
-    },
-    {
-      id: 3,
-      text: "Combien de participants sont attendus ?",
-      icon: Users,
-    },
-    {
-      id: 4,
-      text: "Qu'est-ce qu'il faut apporter ?",
-      icon: MessageCircle,
-    },
-    {
-      id: 5,
-      text: "Le parcours est-il adapté aux débutants ?",
-      icon: MessageCircle,
-    },
-    {
-      id: 6,
-      text: "Y a-t-il des vestiaires disponibles ?",
-      icon: MessageCircle,
-    }
-  ];
+  const handleSendQuestion = () => {
+    if (!question.trim()) return;
 
-  const handleQuestionClick = (questionText: string) => {
     // Navigate to messages page and start conversation with organizer
     navigate(`/messages?startConversation=${organizerId}&message=${encodeURIComponent(
-      `Bonjour ! J'ai une question concernant votre séance "${sessionTitle}" du ${new Date(scheduledAt).toLocaleDateString('fr-FR')} :\n\n${questionText}`
+      `Bonjour ! J'ai une question concernant votre séance "${sessionTitle}" du ${new Date(scheduledAt).toLocaleDateString('fr-FR')} :\n\n${question.trim()}`
     )}`);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSendQuestion();
+    }
   };
 
   return (
@@ -67,24 +45,29 @@ export const SessionQuestions = ({
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-primary" />
-          Questions fréquentes
+          Poser une question
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Cliquez sur une question pour contacter l'organisateur
+          Écrivez votre question à l'organisateur
         </p>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {questions.map((question) => (
-          <Button
-            key={question.id}
-            variant="ghost"
-            className="w-full justify-start h-auto p-3 text-left"
-            onClick={() => handleQuestionClick(question.text)}
+      <CardContent>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Tapez votre question..."
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyPress={handleKeyPress}
+            className="flex-1"
+          />
+          <Button 
+            onClick={handleSendQuestion}
+            disabled={!question.trim()}
+            size="sm"
           >
-            <question.icon className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
-            <span className="text-sm">{question.text}</span>
+            <Send className="h-4 w-4" />
           </Button>
-        ))}
+        </div>
       </CardContent>
     </Card>
   );
