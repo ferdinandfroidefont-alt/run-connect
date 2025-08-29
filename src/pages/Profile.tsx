@@ -917,7 +917,7 @@ const Profile = () => {
             <CardContent>
               {commonClubs.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
-                  <Users className="h-8 w-8 mx-auto mb-2" />
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Aucun club en commun</p>
                 </div>
               ) : (
