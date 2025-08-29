@@ -80,10 +80,11 @@ const Auth = () => {
         });
         if (error) throw error;
         
-        // Pour l'inscription, montrer directement le setup de profil
+        // Passer à l'étape OTP pour que l'utilisateur puisse saisir le code
+        setAuthStep('otp');
         toast({
           title: "Vérifiez votre email",
-          description: "Un email de confirmation vous a été envoyé.",
+          description: "Un code de confirmation vous a été envoyé. Entrez-le ci-dessous.",
         });
       } else {
         // For signin, send OTP avec shouldCreateUser: true pour créer le compte si nécessaire
