@@ -783,16 +783,7 @@ export type Database = {
       }
     }
     Views: {
-      security_dashboard: {
-        Row: {
-          access_count: number | null
-          action: string | null
-          date: string | null
-          table_name: string | null
-          unique_users: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       accept_club_invitation: {
@@ -863,6 +854,10 @@ export type Database = {
       generate_referral_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      generate_security_report: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_common_clubs: {
         Args: { user_1_id: string; user_2_id: string }
@@ -982,6 +977,16 @@ export type Database = {
           severity: string
         }[]
       }
+      get_security_dashboard: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          access_count: number
+          action: string
+          date: string
+          table_name: string
+          unique_users: number
+        }[]
+      }
       get_user_group_conversations: {
         Args: { user_id_param: string }
         Returns: {
@@ -1011,6 +1016,10 @@ export type Database = {
       sanitize_input: {
         Args: { input_text: string }
         Returns: string
+      }
+      security_maintenance: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       trigger_season_reset: {
         Args: Record<PropertyKey, never>
