@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2 } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
@@ -20,6 +20,7 @@ import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { useAppContext } from "@/contexts/AppContext";
 import { StravaConnect } from "@/components/StravaConnect";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { ReportUserDialog } from "@/components/ReportUserDialog";
 
 interface Profile {
   username: string;
@@ -83,6 +84,7 @@ const Profile = () => {
   const [routesLoading, setRoutesLoading] = useState(false);
   const [commonClubs, setCommonClubs] = useState<any[]>([]);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const { toast } = useToast();
 
   // Vérifier si on arrive avec un message d'erreur
@@ -653,6 +655,21 @@ const Profile = () => {
                 <p className="text-sm text-muted-foreground">Abonnements</p>
               </button>
             </div>
+
+            {/* Bouton de signalement - Seulement pour les autres utilisateurs */}
+            {isViewingOtherUser && (
+              <div className="mt-4">
+                <Button
+                  onClick={() => setShowReportDialog(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                >
+                  <Flag className="h-4 w-4" />
+                  Signaler cet utilisateur
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1046,6 +1063,14 @@ const Profile = () => {
         <SettingsDialog
           open={showSettingsDialog}
           onOpenChange={setShowSettingsDialog}
+        />
+
+        {/* Report User Dialog */}
+        <ReportUserDialog
+          isOpen={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          reportedUserId={viewingUserId || ""}
+          reportedUsername={profile?.username || ""}
         />
 
         {/* Image Crop Editor */}
