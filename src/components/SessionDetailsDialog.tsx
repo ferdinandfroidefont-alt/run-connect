@@ -14,6 +14,7 @@ import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
+import { SessionQuestions } from "./SessionQuestions";
 import { useAdMob } from '@/hooks/useAdMob';
 
 interface Session {
@@ -589,6 +590,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               </Badge>
             )}
           </div>
+
+          {/* Questions sur la séance */}
+          <SessionQuestions 
+            sessionId={session.id}
+            sessionTitle={session.title}
+            organizerId={session.organizer_id}
+            activityType={session.activity_type}
+            locationName={session.location_name}
+            scheduledAt={session.scheduled_at}
+          />
         </div>
       </DialogContent>
 

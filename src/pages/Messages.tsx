@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { UniversalSearchDialog } from "@/components/UniversalSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
@@ -101,6 +101,7 @@ const Messages = () => {
   const { user, subscriptionInfo } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { getThemeClasses } = useConversationTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -864,6 +865,25 @@ const Messages = () => {
       supabase.removeChannel(typingChannel);
     };
   }, [selectedConversation, user]);
+
+  // Handle URL parameters for starting conversations
+  useEffect(() => {
+    const startConversationId = searchParams.get('startConversation');
+    const messageText = searchParams.get('message');
+    
+    if (startConversationId && user && !selectedConversation) {
+      // Start conversation with specific user
+      startConversation(startConversationId);
+      
+      // Set the message if provided
+      if (messageText) {
+        setNewMessage(decodeURIComponent(messageText));
+      }
+      
+      // Clear URL parameters
+      setSearchParams({});
+    }
+  }, [searchParams, user, selectedConversation]);
 
   if (showNewConversation) {
     return (
