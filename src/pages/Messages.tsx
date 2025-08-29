@@ -44,6 +44,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageSectionHeader, shouldShowSectionHeader } from "../components/MessageTimestamp";
 import { useConversationTheme } from "@/hooks/useConversationTheme";
+import { TypingIndicator } from "@/components/TypingIndicator";
 
 interface Profile {
   user_id: string;
@@ -120,8 +121,11 @@ const Messages = () => {
   const [messagesLeft, setMessagesLeft] = useState<number>(3);
   const [showMessageLimitDialog, setShowMessageLimitDialog] = useState(false);
   const [visibleTimestamps, setVisibleTimestamps] = useState<Set<string>>(new Set());
+  const [typingUsers, setTypingUsers] = useState<{[userId: string]: {username: string, lastSeen: number}}>({});
+  const [isUserTyping, setIsUserTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -635,6 +639,57 @@ const Messages = () => {
     }
   };
 
+  // Handle typing indicator
+  const handleTyping = () => {
+    if (!selectedConversation || !user) return;
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Send typing event via Supabase realtime
+    const channel = supabase.channel(`typing-${selectedConversation.id}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: {
+        user_id: user.id,
+        username: user.user_metadata?.username || user.email?.split('@')[0] || 'Utilisateur',
+        timestamp: Date.now()
+      }
+    });
+
+    // Set timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      channel.send({
+        type: 'broadcast',
+        event: 'stop_typing',
+        payload: {
+          user_id: user.id
+        }
+      });
+    }, 3000);
+  };
+
+  // Clean up typing users periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setTypingUsers(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(userId => {
+          if (now - updated[userId].lastSeen > 5000) {
+            delete updated[userId];
+          }
+        });
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Search for users to start new conversation (friends only)
   const searchForUsers = async () => {
     if (!searchUsers.trim()) {
@@ -755,11 +810,11 @@ const Messages = () => {
     return () => clearTimeout(timeoutId);
   }, [searchUsers]);
 
-  // Real-time updates for messages
+  // Real-time updates for messages and typing indicators
   useEffect(() => {
     if (!selectedConversation) return;
 
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('messages')
       .on(
         'postgres_changes',
@@ -782,10 +837,33 @@ const Messages = () => {
       )
       .subscribe();
 
+    // Typing indicators channel
+    const typingChannel = supabase
+      .channel(`typing-${selectedConversation.id}`)
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        const { user_id, username, timestamp } = payload.payload;
+        if (user_id !== user?.id) {
+          setTypingUsers(prev => ({
+            ...prev,
+            [user_id]: { username, lastSeen: timestamp }
+          }));
+        }
+      })
+      .on('broadcast', { event: 'stop_typing' }, (payload) => {
+        const { user_id } = payload.payload;
+        setTypingUsers(prev => {
+          const updated = { ...prev };
+          delete updated[user_id];
+          return updated;
+        });
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(typingChannel);
     };
-  }, [selectedConversation]);
+  }, [selectedConversation, user]);
 
   if (showNewConversation) {
     return (
@@ -1129,6 +1207,16 @@ const Messages = () => {
                   </div>
                 );
               })}
+              
+              {/* Typing indicators */}
+              {Object.entries(typingUsers).map(([userId, data]) => (
+                <TypingIndicator 
+                  key={userId}
+                  isTyping={true}
+                  username={data.username}
+                />
+              ))}
+              
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
@@ -1201,7 +1289,10 @@ const Messages = () => {
               <Input
                 placeholder="Tapez votre message..."
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  handleTyping();
+                }}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                 className="flex-1"
               />
