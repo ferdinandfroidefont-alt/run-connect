@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          table_name: string
+          timestamp: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          table_name: string
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          table_name?: string
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       blocked_users: {
         Row: {
           blocked_id: string
@@ -763,6 +796,10 @@ export type Database = {
       }
       add_user_points: {
         Args: { points_to_add: number; user_id_param: string }
+        Returns: undefined
+      }
+      anonymize_user_data: {
+        Args: { target_user_id: string }
         Returns: undefined
       }
       are_users_friends: {
