@@ -68,7 +68,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   return (
     <>
       {/* Filter Toggle Button */}
-      <div>
+      <div className="mt-1">
         <Button
           onClick={() => setIsOpen(!isOpen)}
           variant="outline"
