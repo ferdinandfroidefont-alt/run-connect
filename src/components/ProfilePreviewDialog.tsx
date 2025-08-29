@@ -56,6 +56,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [areFriends, setAreFriends] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -66,6 +67,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       if (!isOwnProfile) {
         checkFollowStatus();
         checkFriendStatus();
+        checkBlockedStatus();
       }
       fetchFollowCounts();
     }
@@ -147,6 +149,56 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     } catch (error) {
       console.error('Error checking friend status:', error);
       setAreFriends(false);
+    }
+  };
+
+  const checkBlockedStatus = async () => {
+    if (!user || !userId || isOwnProfile) return;
+
+    try {
+      const { data: blockedData } = await supabase
+        .from('blocked_users')
+        .select('id')
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', userId)
+        .maybeSingle();
+      
+      setIsBlocked(!!blockedData);
+    } catch (error) {
+      console.error('Error checking blocked status:', error);
+      setIsBlocked(false);
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!user || !userId) return;
+
+    try {
+      setActionLoading(true);
+      
+      const { error } = await supabase
+        .from('blocked_users')
+        .delete()
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', userId);
+
+      if (error) throw error;
+
+      setIsBlocked(false);
+      toast({
+        title: "Utilisateur débloqué",
+        description: "Cette personne peut maintenant vous contacter à nouveau",
+      });
+
+    } catch (error: any) {
+      console.error('Unblock user error:', error);
+      toast({
+        title: "Erreur", 
+        description: "Impossible de débloquer cet utilisateur",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -346,22 +398,32 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                           <MoreVertical className="h-4 w-4" />
                         </button>
                       </DropdownMenuTrigger>
-                       <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
-                         <DropdownMenuItem 
-                           onClick={handleBlockUser}
-                           className="text-destructive hover:bg-destructive/10 cursor-pointer"
-                         >
-                           <UserMinus className="h-4 w-4 mr-2" />
-                           Bloquer cet utilisateur
-                         </DropdownMenuItem>
-                         <DropdownMenuItem 
-                           onClick={() => setShowReportDialog(true)}
-                           className="text-destructive hover:bg-destructive/10 cursor-pointer"
-                         >
-                           <Flag className="h-4 w-4 mr-2" />
-                           Signaler cet utilisateur
-                         </DropdownMenuItem>
-                       </DropdownMenuContent>
+                        <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
+                          {isBlocked ? (
+                            <DropdownMenuItem 
+                              onClick={handleUnblockUser}
+                              className="text-green-600 hover:bg-green-50 cursor-pointer"
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Débloquer cet utilisateur
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem 
+                              onClick={handleBlockUser}
+                              className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                            >
+                              <UserMinus className="h-4 w-4 mr-2" />
+                              Bloquer cet utilisateur
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem 
+                            onClick={() => setShowReportDialog(true)}
+                            className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                          >
+                            <Flag className="h-4 w-4 mr-2" />
+                            Signaler cet utilisateur
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
                     </DropdownMenu>
                   )}
                 </div>
