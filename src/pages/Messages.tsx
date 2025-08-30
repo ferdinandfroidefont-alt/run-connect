@@ -966,7 +966,7 @@ const Messages = () => {
         <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full relative h-screen">
           {/* Header - Fixed */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm z-50">
+          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
