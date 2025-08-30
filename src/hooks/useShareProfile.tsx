@@ -27,8 +27,11 @@ export const useShareProfile = () => {
         url: profileUrl
       };
 
-      // Check if we're on a native mobile platform (Capacitor)
-      if (Capacitor.isNativePlatform()) {
+      // Force native browser sharing on web, even if Capacitor is present
+      // Only use Capacitor Share when actually on a native mobile app
+      const isActuallyNative = Capacitor.isNativePlatform() && !window.location.hostname.includes('lovable');
+      
+      if (isActuallyNative) {
         await Share.share({
           title: shareTitle,
           text: shareText,
