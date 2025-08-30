@@ -1077,8 +1077,9 @@ const Messages = () => {
           </div>
 
           {/* Messages */}
-          <ScrollArea className={`flex-1 ${getThemeClasses().background}`} style={{height: 'calc(100vh - 140px)'}}>
-            <div className="space-y-2 p-4" style={{paddingBottom: '80px'}}>
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+            <div className={`space-y-2 p-4 pb-24 ${getThemeClasses().background}`}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1237,9 +1238,10 @@ const Messages = () => {
                 />
               ))}
               
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+          </div>
 
           {/* Delete Confirmation Dialog */}
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1276,7 +1278,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input */}
-          <div className="p-4 border-t border-border bg-background fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto">
+          <div className="p-4 border-t border-border bg-background max-w-md mx-auto">
             <div className="flex gap-2">
               <Button
                 variant="outline"
