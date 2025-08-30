@@ -25,26 +25,31 @@ export const QRShareDialog = ({
   const [qrGenerated, setQrGenerated] = useState(false);
 
   useEffect(() => {
-    if (open && canvasRef.current) {
+    if (open && profileUrl && canvasRef.current) {
       generateQR();
     }
   }, [open, profileUrl]);
 
   const generateQR = async () => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !profileUrl) return;
     
     try {
+      console.log('🔍 Generating QR for URL:', profileUrl);
+      
       await QRCode.toCanvas(canvasRef.current, profileUrl, {
         width: 256,
         margin: 2,
         color: {
           dark: '#000000',
           light: '#FFFFFF'
-        }
+        },
+        errorCorrectionLevel: 'M'
       });
+      
+      console.log('✅ QR code generated successfully');
       setQrGenerated(true);
     } catch (error) {
-      console.error('Error generating QR code:', error);
+      console.error('❌ Error generating QR code:', error);
       toast({
         title: "Erreur",
         description: "Impossible de générer le QR code",
