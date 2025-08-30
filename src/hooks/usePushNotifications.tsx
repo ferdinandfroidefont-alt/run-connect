@@ -21,12 +21,36 @@ export const usePushNotifications = () => {
         hostname: window.location.hostname,
         hasCapacitorPush: !!(window as any).Capacitor?.Plugins?.PushNotifications,
         hasNotificationAPI: 'Notification' in window,
+        hasAndroidBridge: !!(window as any).AndroidNotifications,
         userAgent: navigator.userAgent
       };
       
       console.log('🔍 Push permissions debug:', debugInfo);
 
-      // Try Capacitor first if available
+      // Priority 1: Android native bridge (our custom WebView)
+      if ((window as any).AndroidNotifications) {
+        console.log('🔍 Using Android native notification bridge...');
+        
+        try {
+          const isSupported = (window as any).AndroidNotifications.areNotificationsSupported();
+          const hasPermission = (window as any).AndroidNotifications.requestPermissions();
+          
+          console.log('🔍 Android bridge result:', { isSupported, hasPermission });
+          
+          if (isSupported) {
+            setIsRegistered(true);
+            toast({
+              title: "Notifications activées !",
+              description: "Vous recevrez maintenant les notifications push"
+            });
+            return true;
+          }
+        } catch (androidError) {
+          console.error('❌ Android bridge error:', androidError);
+        }
+      }
+
+      // Priority 2: Capacitor if available
       const hasCapacitorPush = !!(window as any).Capacitor?.Plugins?.PushNotifications || typeof PushNotifications !== 'undefined';
       
       if (hasCapacitorPush) {
