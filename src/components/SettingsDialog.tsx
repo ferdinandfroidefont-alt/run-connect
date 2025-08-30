@@ -29,6 +29,11 @@ interface Profile {
   rgpd_accepted?: boolean;
   security_rules_accepted?: boolean;
   allow_friend_suggestions?: boolean;
+  notif_follow_request?: boolean;
+  notif_message?: boolean;
+  notif_session_request?: boolean;
+  notif_friend_session?: boolean;
+  is_premium?: boolean;
   strava_connected?: boolean;
   strava_verified_at?: string;
   instagram_connected?: boolean;
@@ -325,16 +330,28 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     </Button>
                   </div>
 
-                  {/* Notifications */}
+                </CardContent>
+              </Card>
+
+              {/* Notifications Settings */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center">
+                    <Bell className="h-5 w-5 text-primary mr-2" />
+                    <CardTitle className="text-lg">Préférences de notifications</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Notifications générales */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Bell className="h-4 w-4" />
+                      <Smartphone className="h-4 w-4" />
                       <div className="grid gap-1.5">
                         <label className="text-sm font-medium leading-none">
-                          Notifications
+                          Notifications push
                         </label>
                         <p className="text-xs text-muted-foreground">
-                          Recevoir des notifications push
+                          Autoriser les notifications sur votre appareil
                         </p>
                       </div>
                     </div>
@@ -354,6 +371,87 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                         {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
                       </Button>
                     </div>
+                  </div>
+
+                  {/* Demandes de suivi */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Demandes de suivi
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Quelqu'un vous suit ou accepte votre demande
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.notif_follow_request !== false}
+                      onCheckedChange={(checked) => updatePrivacySettings('notif_follow_request', checked)}
+                      disabled={notificationPermission !== 'granted'}
+                    />
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <MessageCircle className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Messages
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Quelqu'un vous envoie un message
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.notif_message !== false}
+                      onCheckedChange={(checked) => updatePrivacySettings('notif_message', checked)}
+                      disabled={notificationPermission !== 'granted'}
+                    />
+                  </div>
+
+                  {/* Demandes de session */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Play className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Demandes de session
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Quelqu'un veut rejoindre votre session
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.notif_session_request !== false}
+                      onCheckedChange={(checked) => updatePrivacySettings('notif_session_request', checked)}
+                      disabled={notificationPermission !== 'granted'}
+                    />
+                  </div>
+
+                  {/* Sessions d'amis (Premium) */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Sessions d'amis
+                          {profile?.is_premium && <span className="ml-1 text-xs bg-primary text-primary-foreground px-1 rounded">PREMIUM</span>}
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Vos amis créent une nouvelle session
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.notif_friend_session === true}
+                      onCheckedChange={(checked) => updatePrivacySettings('notif_friend_session', checked)}
+                      disabled={notificationPermission !== 'granted' || !profile?.is_premium}
+                    />
                   </div>
 
                   {/* Friend Suggestions */}
