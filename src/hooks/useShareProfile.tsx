@@ -21,7 +21,13 @@ export const useShareProfile = () => {
         ? `Découvrez le profil de ${options.displayName || options.username}: ${options.bio}`
         : `Découvrez le profil de ${options.displayName || options.username} sur notre app de sport !`;
 
-      // Check if we're on a native mobile platform
+      const shareData = {
+        title: shareTitle,
+        text: shareText,
+        url: profileUrl
+      };
+
+      // Check if we're on a native mobile platform (Capacitor)
       if (Capacitor.isNativePlatform()) {
         await Share.share({
           title: shareTitle,
@@ -29,71 +35,45 @@ export const useShareProfile = () => {
           url: profileUrl,
           dialogTitle: 'Partager mon profil'
         });
-        
-        toast({
-          title: "Profil partagé !",
-          description: "Votre profil a été partagé avec succès"
-        });
       } else {
-        // For web, always use clipboard as primary method
-        try {
-          // Try Web Share API first (only works in secure contexts and with user interaction)
-          if (navigator.share && navigator.canShare && navigator.canShare({
-            title: shareTitle,
-            text: shareText,
-            url: profileUrl
-          })) {
-            await navigator.share({
-              title: shareTitle,
-              text: shareText,
-              url: profileUrl
-            });
-            
-            toast({
-              title: "Profil partagé !",
-              description: "Votre profil a été partagé avec succès"
-            });
-          } else {
-            throw new Error('Web Share API not available');
-          }
-        } catch (shareError) {
-          // Fallback to clipboard
-          try {
-            await navigator.clipboard.writeText(`${shareText}\n${profileUrl}`);
-            toast({
-              title: "Lien copié !",
-              description: "Le lien de votre profil a été copié dans le presse-papiers"
-            });
-          } catch (clipboardError) {
-            // Final fallback: create a temporary text area
-            const textArea = document.createElement('textarea');
-            textArea.value = `${shareText}\n${profileUrl}`;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            
-            try {
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-              toast({
-                title: "Lien copié !",
-                description: "Le lien de votre profil a été copié dans le presse-papiers"
-              });
-            } catch (execError) {
-              document.body.removeChild(textArea);
-              throw new Error('Impossible de copier le lien');
-            }
-          }
+        // For web/PWA, use Web Share API (opens native share menu on mobile browsers)
+        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+        } else {
+          // Fallback to clipboard for desktop browsers
+          const shareContent = `${shareText}\n${profileUrl}`;
+          await navigator.clipboard.writeText(shareContent);
+          toast({
+            title: "Lien copié !",
+            description: "Le lien de votre profil a été copié dans le presse-papiers"
+          });
+          return; // Exit early for clipboard case
         }
       }
+
+      toast({
+        title: "Profil partagé !",
+        description: "Votre profil a été partagé avec succès"
+      });
       
     } catch (error: any) {
       console.error('Error sharing profile:', error);
       
-      if (error.message !== 'Share canceled' && error.message !== 'AbortError') {
+      // Handle user cancellation gracefully
+      if (error.name === 'AbortError' || error.message === 'Share canceled') {
+        return; // User cancelled, don't show error
+      }
+      
+      // For any other error, try clipboard as fallback
+      try {
+        const profileUrl = `https://peak-stat.com/profile/${options.username}`;
+        const shareContent = `${options.displayName || options.username} - ${profileUrl}`;
+        await navigator.clipboard.writeText(shareContent);
+        toast({
+          title: "Lien copié !",
+          description: "Le partage a échoué, mais le lien a été copié dans le presse-papiers"
+        });
+      } catch (clipboardError) {
         toast({
           title: "Erreur",
           description: "Impossible de partager le profil. Veuillez réessayer.",
