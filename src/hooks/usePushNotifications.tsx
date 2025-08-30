@@ -13,8 +13,18 @@ export const usePushNotifications = () => {
 
   const requestPermissions = async () => {
     try {
-      // For native platforms, use Capacitor
-      if (Capacitor.isNativePlatform() && !window.location.hostname.includes('lovable')) {
+      console.log('🔍 Push permissions debug:', {
+        isNativePlatform: Capacitor.isNativePlatform(),
+        platform: Capacitor.getPlatform(),
+        hostname: window.location.hostname,
+        hasCapacitorPush: !!(window as any).Capacitor?.Plugins?.PushNotifications,
+        hasNotificationAPI: 'Notification' in window
+      });
+
+      // Priority 1: Real native app (deployed to stores)
+      if (Capacitor.isNativePlatform()) {
+        console.log('🔍 Using Capacitor native push notifications');
+        
         const permission = await PushNotifications.requestPermissions();
         
         if (permission.receive === 'granted') {
@@ -29,8 +39,10 @@ export const usePushNotifications = () => {
           return false;
         }
       } 
-      // For web browsers (including mobile browsers)
+      // Priority 2: Web browsers (including mobile browsers and Lovable dev)
       else if ('Notification' in window) {
+        console.log('🔍 Using web push notifications');
+        
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
@@ -42,7 +54,6 @@ export const usePushNotifications = () => {
               const registration = await navigator.serviceWorker.register('/sw.js');
               console.log('Service Worker registered:', registration);
               
-              // You would implement web push subscription here
               toast({
                 title: "Notifications activées !",
                 description: "Vous recevrez maintenant les notifications"
@@ -51,7 +62,6 @@ export const usePushNotifications = () => {
               return true;
             } catch (swError) {
               console.error('Service Worker registration failed:', swError);
-              // Still consider permissions granted even if SW fails
               setIsRegistered(true);
               toast({
                 title: "Notifications activées !",
@@ -75,10 +85,13 @@ export const usePushNotifications = () => {
           });
           return false;
         }
-      } else {
+      } 
+      // Fallback: No notification support
+      else {
+        console.log('❌ No notification support detected');
         toast({
           title: "Non supporté",
-          description: "Les notifications ne sont pas supportées sur ce navigateur",
+          description: "Les notifications ne sont pas supportées sur cet appareil",
           variant: "destructive"
         });
         return false;
@@ -120,8 +133,8 @@ export const usePushNotifications = () => {
       setIsRegistered(true);
     }
 
-    // Only setup Capacitor listeners on actual native platforms
-    if (Capacitor.isNativePlatform() && !window.location.hostname.includes('lovable')) {
+    // Setup Capacitor listeners on native platforms
+    if (Capacitor.isNativePlatform()) {
       // Register for push notifications
       PushNotifications.addListener('registration', (token) => {
         console.log('Push registration success, token: ' + token.value);
