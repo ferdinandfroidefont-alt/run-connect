@@ -712,7 +712,10 @@ export default function MySessions() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
+    <>
+      {/* Petite barre noire en haut uniquement pour MySessions */}
+      <div className="w-full h-2 bg-black"></div>
+      <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
       <div className="space-y-4 mb-4">
         <div className="flex items-center justify-center">
           <Button
@@ -885,5 +888,6 @@ export default function MySessions() {
         onRouteUpdated={loadUserRoutes}
       />
     </div>
+    </>
   );
 }
