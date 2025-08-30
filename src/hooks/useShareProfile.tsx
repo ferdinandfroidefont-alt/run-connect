@@ -1,4 +1,5 @@
 import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 import { useToast } from '@/hooks/use-toast';
 
 interface ShareProfileOptions {
@@ -20,8 +21,8 @@ export const useShareProfile = () => {
         ? `Découvrez le profil de ${options.displayName || options.username}: ${options.bio}`
         : `Découvrez le profil de ${options.displayName || options.username} sur notre app de sport !`;
 
-      // Check if we're on mobile (Capacitor)
-      if ((window as any).Capacitor) {
+      // Check if we're on a native mobile platform
+      if (Capacitor.isNativePlatform()) {
         await Share.share({
           title: shareTitle,
           text: shareText,
