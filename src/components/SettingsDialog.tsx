@@ -17,6 +17,7 @@ import { ContactsPermissionButton } from "./ContactsPermissionButton";
 import { StravaConnect } from "./StravaConnect";
 import { InstagramConnect } from "./InstagramConnect";
 import { ConversationThemeSelector } from "./ConversationThemeSelector";
+import { QRShareDialog } from "./QRShareDialog";
 import { useConversationTheme } from "@/hooks/useConversationTheme";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { ReferralDialog } from "./ReferralDialog";
@@ -50,7 +51,7 @@ interface SettingsDialogProps {
 export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { user, session, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { shareProfile } = useShareProfile();
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const { showWelcomeVideo } = useOnboarding();
   const { conversationTheme, setConversationTheme } = useConversationTheme();
   const { isRegistered, requestPermissions, isNative } = usePushNotifications();
@@ -731,6 +732,17 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* QR Share Dialog */}
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+        />
+      )}
     </>
   );
 };
