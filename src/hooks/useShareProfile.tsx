@@ -27,7 +27,17 @@ export const useShareProfile = () => {
         url: profileUrl
       };
 
-      // Force native browser sharing on web, even if Capacitor is present
+      // Prioritize native browser Web Share API over Capacitor
+      // This opens the system share menu on mobile browsers
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({
+          title: "Profil partagé !",
+          description: "Votre profil a été partagé avec succès"
+        });
+        return;
+      }
+
       // Only use Capacitor Share when actually on a native mobile app
       const isActuallyNative = Capacitor.isNativePlatform() && !window.location.hostname.includes('lovable');
       
@@ -38,26 +48,18 @@ export const useShareProfile = () => {
           url: profileUrl,
           dialogTitle: 'Partager mon profil'
         });
+        toast({
+          title: "Profil partagé !",
+          description: "Votre profil a été partagé avec succès"
+        });
       } else {
-        // For web/PWA, use Web Share API (opens native share menu on mobile browsers)
-        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-        } else {
-          // Fallback to clipboard for desktop browsers
-          const shareContent = `${shareText}\n${profileUrl}`;
-          await navigator.clipboard.writeText(shareContent);
-          toast({
-            title: "Lien copié !",
-            description: "Le lien de votre profil a été copié dans le presse-papiers"
-          });
-          return; // Exit early for clipboard case
-        }
+        // Fallback to clipboard for desktop browsers without Web Share API
+        await navigator.clipboard.writeText(`${shareText}\n${profileUrl}`);
+        toast({
+          title: "Lien copié !",
+          description: "Le lien de votre profil a été copié dans le presse-papiers"
+        });
       }
-
-      toast({
-        title: "Profil partagé !",
-        description: "Votre profil a été partagé avec succès"
-      });
       
     } catch (error: any) {
       console.error('Error sharing profile:', error);
