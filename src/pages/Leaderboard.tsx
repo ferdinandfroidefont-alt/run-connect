@@ -55,36 +55,24 @@ const Leaderboard = () => {
 
   const fetchLeaderboards = async () => {
     try {
-      // Get total count first
-      const { count: totalCount } = await supabase
-        .from('user_scores')
-        .select('*', { count: 'exact', head: true });
+      // Get total count of all users first
+      const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
+      const totalCount = totalCountData || 0;
 
-      setTotalGlobalUsers(totalCount || 0);
-      setTotalSeasonalUsers(totalCount || 0);
+      setTotalGlobalUsers(totalCount);
+      setTotalSeasonalUsers(totalCount);
 
-      // Fetch global leaderboard with pagination
+      // Fetch global leaderboard with pagination using new function
       const globalOffset = (globalPage - 1) * USERS_PER_PAGE;
-      const { data: globalData, error: globalError } = await supabase
-        .from('user_scores')
-        .select(`
-          user_id,
-          total_points,
-          weekly_points,
-          seasonal_points
-        `)
-        .order('total_points', { ascending: false })
-        .range(globalOffset, globalOffset + USERS_PER_PAGE - 1);
+      const { data: globalData, error: globalError } = await supabase.rpc('get_complete_leaderboard', {
+        limit_count: USERS_PER_PAGE,
+        offset_count: globalOffset,
+        order_by_column: 'total_points'
+      });
 
       if (globalError) throw globalError;
 
-      // Get profiles for users in leaderboard using secure function
-      const userIds = globalData?.map(item => item.user_id) || [];
-      const { data: profilesData } = await supabase.rpc('get_safe_public_profiles', {
-        profile_user_ids: userIds
-      });
-
-      // Get current user's profile separately
+      // Get current user's profile separately if needed
       let currentUserProfile = null;
       if (user) {
         const { data: currentProfile } = await supabase
@@ -96,15 +84,23 @@ const Leaderboard = () => {
       }
 
       const globalLeaderboard = globalData?.map((item, index) => {
-        let profile = profilesData?.find(p => p.user_id === item.user_id);
+        // Use the data directly from the function since it includes profile info
+        let profile = {
+          username: item.username,
+          display_name: item.display_name,
+          avatar_url: item.avatar_url
+        };
         
         // If this is the current user and no profile was found, use their own profile
-        if (!profile && item.user_id === user?.id && currentUserProfile) {
+        if (!profile.username && item.user_id === user?.id && currentUserProfile) {
           profile = currentUserProfile;
         }
         
         return {
-          ...item,
+          user_id: item.user_id,
+          total_points: item.total_points,
+          weekly_points: item.weekly_points,
+          seasonal_points: item.seasonal_points,
           profile: profile || {
             username: 'Unknown',
             display_name: 'Unknown User',
@@ -117,33 +113,31 @@ const Leaderboard = () => {
 
       setLeaderboard(globalLeaderboard);
 
-      // Create seasonal leaderboard with pagination
+      // Create seasonal leaderboard with pagination using new function
       const seasonalOffset = (seasonalPage - 1) * USERS_PER_PAGE;
-      const { data: seasonalData } = await supabase
-        .from('user_scores')
-        .select(`
-          user_id,
-          total_points,
-          weekly_points,
-          seasonal_points
-        `)
-        .order('seasonal_points', { ascending: false })
-        .range(seasonalOffset, seasonalOffset + USERS_PER_PAGE - 1);
-
-      const seasonalUserIds = seasonalData?.map(item => item.user_id) || [];
-      const { data: seasonalProfilesData } = await supabase.rpc('get_safe_public_profiles', {
-        profile_user_ids: seasonalUserIds
+      const { data: seasonalData } = await supabase.rpc('get_complete_leaderboard', {
+        limit_count: USERS_PER_PAGE,
+        offset_count: seasonalOffset,
+        order_by_column: 'seasonal_points'
       });
 
       const seasonalLeaderboard = seasonalData?.map((item, index) => {
-        let profile = seasonalProfilesData?.find(p => p.user_id === item.user_id);
+        // Use the data directly from the function since it includes profile info
+        let profile = {
+          username: item.username,
+          display_name: item.display_name,
+          avatar_url: item.avatar_url
+        };
         
-        if (!profile && item.user_id === user?.id && currentUserProfile) {
+        if (!profile.username && item.user_id === user?.id && currentUserProfile) {
           profile = currentUserProfile;
         }
         
         return {
-          ...item,
+          user_id: item.user_id,
+          total_points: item.total_points,
+          weekly_points: item.weekly_points,
+          seasonal_points: item.seasonal_points,
           profile: profile || {
             username: 'Unknown',
             display_name: 'Unknown User',
@@ -156,14 +150,15 @@ const Leaderboard = () => {
 
       setSeasonalLeaderboard(seasonalLeaderboard);
 
-      // Find user's rank in global leaderboard (need to query all users up to user's position)
+      // Find user's rank in global leaderboard using complete leaderboard
       if (user) {
-        const { data: userRankData } = await supabase
-          .from('user_scores')
-          .select('user_id')
-          .order('total_points', { ascending: false });
+        const { data: allUsersData } = await supabase.rpc('get_complete_leaderboard', {
+          limit_count: 10000, // Get a large number to find user's position
+          offset_count: 0,
+          order_by_column: 'total_points'
+        });
         
-        const currentUserRank = userRankData?.findIndex(u => u.user_id === user.id);
+        const currentUserRank = allUsersData?.findIndex(u => u.user_id === user.id);
         setUserRank(currentUserRank !== undefined && currentUserRank >= 0 ? currentUserRank + 1 : null);
       }
 

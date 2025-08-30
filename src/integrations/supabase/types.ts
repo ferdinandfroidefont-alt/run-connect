@@ -870,6 +870,23 @@ export type Database = {
           created_by: string
         }[]
       }
+      get_complete_leaderboard: {
+        Args: {
+          limit_count?: number
+          offset_count?: number
+          order_by_column?: string
+        }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          is_premium: boolean
+          seasonal_points: number
+          total_points: number
+          user_id: string
+          username: string
+          weekly_points: number
+        }[]
+      }
       get_daily_message_count: {
         Args: { user_id_param: string }
         Returns: number
@@ -897,6 +914,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      get_leaderboard_total_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_public_profile: {
         Args: { profile_user_id: string }
