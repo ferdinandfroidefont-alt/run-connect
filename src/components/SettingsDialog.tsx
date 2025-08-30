@@ -330,6 +330,101 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     </Button>
                   </div>
 
+                  {/* Friend Suggestions */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Suggestions d'amis
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Autoriser les suggestions et être suggéré
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.allow_friend_suggestions !== false}
+                      onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
+                    />
+                  </div>
+
+                  {/* Share Profile */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Share2 className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Partager mon profil
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Partagez votre profil sur Instagram, WhatsApp...
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (profile) {
+                          shareProfile({
+                            username: profile.username,
+                            displayName: profile.display_name,
+                            bio: profile.bio
+                          });
+                        }
+                      }}
+                    >
+                      Partager
+                    </Button>
+                  </div>
+
+                   {/* Contacts Access - Only show on mobile */}
+                   <ContactsPermissionButton />
+
+                  {/* Conversation Themes */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <Palette className="h-4 w-4" />
+                       <div className="grid gap-1.5">
+                         <label className="text-sm font-medium leading-none">
+                           Thèmes de conversation
+                         </label>
+                         <p className="text-xs text-muted-foreground">
+                           Personnaliser l'apparence des messages
+                         </p>
+                       </div>
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowConversationThemes(true)}
+                     >
+                       Choisir
+                     </Button>
+                   </div>
+
+                   {/* Parrainage */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <Gift className="h-4 w-4" />
+                       <div className="grid gap-1.5">
+                         <label className="text-sm font-medium leading-none">
+                           Parrainage
+                         </label>
+                         <p className="text-xs text-muted-foreground">
+                           Invitez vos amis et gagnez du premium !
+                         </p>
+                       </div>
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowReferralDialog(true)}
+                     >
+                       Voir mon code
+                     </Button>
+                   </div>
                 </CardContent>
               </Card>
 
@@ -453,102 +548,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       disabled={notificationPermission !== 'granted' || !profile?.is_premium}
                     />
                   </div>
-
-                  {/* Friend Suggestions */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Suggestions d'amis
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Autoriser les suggestions et être suggéré
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={profile?.allow_friend_suggestions !== false}
-                      onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
-                    />
-                  </div>
-
-                  {/* Share Profile */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Share2 className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Partager mon profil
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Partagez votre profil sur Instagram, WhatsApp...
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (profile) {
-                          shareProfile({
-                            username: profile.username,
-                            displayName: profile.display_name,
-                            bio: profile.bio
-                          });
-                        }
-                      }}
-                    >
-                      Partager
-                    </Button>
-                  </div>
-
-                   {/* Contacts Access - Only show on mobile */}
-                   <ContactsPermissionButton />
-
-                  {/* Conversation Themes */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-2">
-                       <Palette className="h-4 w-4" />
-                       <div className="grid gap-1.5">
-                         <label className="text-sm font-medium leading-none">
-                           Thèmes de conversation
-                         </label>
-                         <p className="text-xs text-muted-foreground">
-                           Personnaliser l'apparence des messages
-                         </p>
-                       </div>
-                     </div>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowConversationThemes(true)}
-                     >
-                       Choisir
-                     </Button>
-                   </div>
-
-                   {/* Parrainage */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-2">
-                       <Gift className="h-4 w-4" />
-                       <div className="grid gap-1.5">
-                         <label className="text-sm font-medium leading-none">
-                           Parrainage
-                         </label>
-                         <p className="text-xs text-muted-foreground">
-                           Invitez vos amis et gagnez du premium !
-                         </p>
-                       </div>
-                     </div>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowReferralDialog(true)}
-                     >
-                       Voir mon code
-                     </Button>
-                   </div>
                 </CardContent>
               </Card>
 
