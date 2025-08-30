@@ -410,6 +410,31 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                        Voir mon code
                      </Button>
                    </div>
+
+                   {/* Don / Premium */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <Gift className="h-4 w-4" />
+                       <div className="grid gap-1.5">
+                         <label className="text-sm font-medium leading-none">
+                           Soutenir l'application
+                         </label>
+                         <p className="text-xs text-muted-foreground">
+                           Faire un don ou gérer votre abonnement premium
+                         </p>
+                       </div>
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => {
+                         onOpenChange(false);
+                         window.location.href = '/subscription';
+                       }}
+                     >
+                       Soutenir
+                     </Button>
+                   </div>
                 </CardContent>
               </Card>
 
