@@ -450,7 +450,7 @@ const Leaderboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4">
+      <div className="min-h-screen bg-background p-4 overflow-hidden">
         <div className="max-w-md mx-auto">
           <div className="text-center py-4">
             <h1 className="text-2xl font-bold text-foreground">Classement</h1>
@@ -546,7 +546,7 @@ const Leaderboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-20">
+    <div className="min-h-screen bg-background p-4 pb-20 overflow-hidden">
       <div className="max-w-md mx-auto space-y-4">
         <div className="text-center py-4">
           <h1 className="text-2xl font-bold text-foreground">Classement</h1>
