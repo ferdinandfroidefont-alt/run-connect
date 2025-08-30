@@ -27,10 +27,29 @@ export const useShareProfile = () => {
         url: profileUrl
       };
 
+      console.log('🔍 Share debug info:', {
+        hasNavigatorShare: !!navigator.share,
+        hasCanShare: !!navigator.canShare,
+        canShareData: navigator.canShare ? navigator.canShare(shareData) : 'N/A',
+        isHttps: window.location.protocol === 'https:',
+        userAgent: navigator.userAgent,
+        shareData
+      });
+
       // Prioritize native browser Web Share API over Capacitor
       // This opens the system share menu on mobile browsers
       if (navigator.share) {
+        console.log('🔍 Attempting navigator.share...');
+        
+        // Check if we can share this data
+        if (navigator.canShare && !navigator.canShare(shareData)) {
+          console.log('❌ canShare returned false, falling back to clipboard');
+          throw new Error('Cannot share this data');
+        }
+        
         await navigator.share(shareData);
+        console.log('✅ navigator.share succeeded');
+        
         toast({
           title: "Profil partagé !",
           description: "Votre profil a été partagé avec succès"
@@ -38,10 +57,19 @@ export const useShareProfile = () => {
         return;
       }
 
+      console.log('🔍 navigator.share not available, checking Capacitor...');
+
       // Only use Capacitor Share when actually on a native mobile app
       const isActuallyNative = Capacitor.isNativePlatform() && !window.location.hostname.includes('lovable');
       
+      console.log('🔍 Capacitor check:', {
+        isNativePlatform: Capacitor.isNativePlatform(),
+        hostname: window.location.hostname,
+        isActuallyNative
+      });
+      
       if (isActuallyNative) {
+        console.log('🔍 Using Capacitor Share...');
         await Share.share({
           title: shareTitle,
           text: shareText,
@@ -53,6 +81,7 @@ export const useShareProfile = () => {
           description: "Votre profil a été partagé avec succès"
         });
       } else {
+        console.log('🔍 Falling back to clipboard...');
         // Fallback to clipboard for desktop browsers without Web Share API
         await navigator.clipboard.writeText(`${shareText}\n${profileUrl}`);
         toast({
