@@ -78,12 +78,11 @@ const Leaderboard = () => {
 
       if (globalError) throw globalError;
 
-      // Get profiles for users in leaderboard - include all users, not just public ones
+      // Get profiles for users in leaderboard using secure function
       const userIds = globalData?.map(item => item.user_id) || [];
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url')
-        .in('user_id', userIds);
+      const { data: profilesData } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: userIds
+      });
 
       // Get current user's profile separately
       let currentUserProfile = null;
@@ -132,10 +131,9 @@ const Leaderboard = () => {
         .range(seasonalOffset, seasonalOffset + USERS_PER_PAGE - 1);
 
       const seasonalUserIds = seasonalData?.map(item => item.user_id) || [];
-      const { data: seasonalProfilesData } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url')
-        .in('user_id', seasonalUserIds);
+      const { data: seasonalProfilesData } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: seasonalUserIds
+      });
 
       const seasonalLeaderboard = seasonalData?.map((item, index) => {
         let profile = seasonalProfilesData?.find(p => p.user_id === item.user_id);
@@ -360,13 +358,11 @@ const Leaderboard = () => {
                   <p className="font-medium">
                     {item.profile?.username || item.profile?.display_name}
                   </p>
+                  {getRankBadge(item.user_rank)}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   @{item.profile?.username}
                 </p>
-                <div className="mt-1">
-                  {getRankBadge(item.user_rank)}
-                </div>
                 <div className="mt-1">
                   <p className="font-bold text-primary">
                     {showSeasonal ? item.seasonal_points : item.total_points} pts

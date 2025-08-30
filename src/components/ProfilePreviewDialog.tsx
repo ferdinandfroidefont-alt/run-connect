@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,11 +57,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [userPoints, setUserPoints] = useState({
-    total_points: 0,
-    seasonal_points: 0,
-    weekly_points: 0
-  });
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -76,7 +70,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkBlockedStatus();
       }
       fetchFollowCounts();
-      fetchUserPoints();
     }
   }, [userId, user, isOwnProfile]);
 
@@ -234,24 +227,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
-  const fetchUserPoints = async () => {
-    if (!userId) return;
-
-    try {
-      const { data: pointsData } = await supabase
-        .from('user_scores')
-        .select('total_points, seasonal_points, weekly_points')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (pointsData) {
-        setUserPoints(pointsData);
-      }
-    } catch (error) {
-      console.error('Error fetching user points:', error);
-    }
-  };
-
   const handleBlockUser = async () => {
     if (!user || !userId) return;
 
@@ -387,7 +362,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
   return (
     <Dialog open={!!userId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-md max-h-[80vh]">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -395,13 +370,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] px-6 pb-6">
-          {loading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : profile ? (
-            <div className="space-y-4">
+        {loading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : profile ? (
+          <div className="space-y-4">
             {/* Profile Header */}
             <Card>
               <CardContent className="flex flex-col items-center py-6">
@@ -581,10 +555,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     <p className="font-bold text-lg">{followingCount}</p>
                     <p className="text-sm text-muted-foreground">Abonnements</p>
                   </div>
-                  <div className="text-center">
-                    <p className="font-bold text-lg text-primary">{userPoints.total_points}</p>
-                    <p className="text-sm text-muted-foreground">Points</p>
-                  </div>
                 </div>
 
                 {!isOwnProfile && user && (
@@ -747,7 +717,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             <p className="text-muted-foreground">Profil non trouvé</p>
           </div>
         )}
-        </ScrollArea>
       </DialogContent>
 
       {/* Settings Dialog */}
