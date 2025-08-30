@@ -97,9 +97,9 @@ export const BottomNavigation = () => {
   }, [user]);
   return (
     <>
-      {/* Nouvelle barre du bas */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card z-40">
-        <div className="flex items-center justify-center py-2">
+      {/* Nouvelle barre du bas - couvre tout l'espace */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
+        <div className="flex items-center justify-center py-2 min-h-[40px]">
           {/* Barre vide pour l'instant */}
         </div>
       </nav>
