@@ -1077,7 +1077,7 @@ const Messages = () => {
           </div>
 
           {/* Messages */}
-          <ScrollArea className={`flex-1 h-[calc(100vh-200px)] p-4 pb-24 ${getThemeClasses().background}`}>
+          <div className={`flex-1 overflow-y-auto p-4 pb-24 ${getThemeClasses().background}`}>
             <div className="space-y-2">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -1239,7 +1239,7 @@ const Messages = () => {
               
               <div ref={messagesEndRef} />
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Delete Confirmation Dialog */}
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
