@@ -98,16 +98,14 @@ export const BottomNavigation = () => {
   return (
     <>
       {/* Nouvelle barre du bas */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-muted/50 border-t border-border z-40">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card z-40">
         <div className="flex items-center justify-center py-2">
-          <div className="flex items-center gap-4 text-muted-foreground text-sm">
-            <span>Barre supplémentaire</span>
-          </div>
+          {/* Barre vide pour l'instant */}
         </div>
       </nav>
       
-      {/* Barre de navigation principale remontée */}
-      <nav className="fixed bottom-12 left-0 right-0 bg-card border-t border-border z-50">
+      {/* Barre de navigation principale collée au-dessus */}
+      <nav className="fixed bottom-10 left-0 right-0 bg-card border-t border-border z-50">
         <div className="flex items-center justify-around py-2">
           {navItems.slice(0, 2).map(({
           path,
