@@ -1341,7 +1341,10 @@ const Messages = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      {/* Petite barre en haut comme dans MySessions */}
+      <div className="w-full h-6 bg-background"></div>
+      <div className="min-h-screen bg-background">
       <div className="max-w-md mx-auto space-y-4 p-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -1609,6 +1612,7 @@ const Messages = () => {
         />
       </div>
     </div>
+    </>
   );
 };
 
