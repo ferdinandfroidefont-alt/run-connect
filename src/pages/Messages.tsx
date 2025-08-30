@@ -962,7 +962,7 @@ const Messages = () => {
     return (
       <>
         {/* Petite barre noire en haut uniquement pour les conversations */}
-        <div className="w-full h-6 bg-background"></div>
+        <div className="w-full h-6 bg-black"></div>
         <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full relative h-screen">
           {/* Header - Fixed */}
