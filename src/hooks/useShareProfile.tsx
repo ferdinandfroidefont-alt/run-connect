@@ -13,7 +13,7 @@ export const useShareProfile = () => {
   const shareProfile = async (options: ShareProfileOptions) => {
     try {
       // Create a profile URL (this could be a deep link to your app)
-      const profileUrl = `https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com/profile/${options.username}`;
+      const profileUrl = `https://peak-stat.com/profile/${options.username}`;
       
       const shareTitle = `Profil de ${options.displayName || options.username}`;
       const shareText = options.bio 
