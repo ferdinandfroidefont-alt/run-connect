@@ -142,6 +142,21 @@ All colors MUST be HSL.
   body::-webkit-scrollbar {
     display: none;
   }
+
+  /* Masquer complètement les barres de défilement sur toute la page */
+  html, body {
+    overflow-x: hidden;
+  }
+
+  /* Styles spécifiques pour cacher les barres de défilement partout */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer utilities {
