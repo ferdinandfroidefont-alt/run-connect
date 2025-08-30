@@ -363,6 +363,9 @@ const Leaderboard = () => {
                 <p className="text-sm text-muted-foreground">
                   @{item.profile?.username}
                 </p>
+                <p className="text-xs text-muted-foreground font-medium">
+                  #{item.rank}
+                </p>
                 <div className="mt-1">
                   <p className="font-bold text-primary">
                     {showSeasonal ? item.seasonal_points : item.total_points} pts
