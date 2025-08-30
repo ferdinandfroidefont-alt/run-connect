@@ -1336,7 +1336,7 @@ export const InteractiveMap = ({
       )}
 
       {/* Filters - repositionné plus haut */}
-      <div className="absolute top-40 right-4 z-10">
+      <div className="absolute top-36 right-4 z-10">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
