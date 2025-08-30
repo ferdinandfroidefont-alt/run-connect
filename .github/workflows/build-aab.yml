@@ -114,6 +114,7 @@ jobs:
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            <uses-permission android:name="android.permission.READ_CONTACTS" />
             <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
             <uses-permission android:name="android.permission.WAKE_LOCK" />
             <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
@@ -197,6 +198,10 @@ jobs:
                   // Ajouter le bridge JavaScript pour les notifications
                   NotificationBridge notificationBridge = new NotificationBridge(this);
                   webView.addJavascriptInterface(notificationBridge, "AndroidNotifications");
+                  
+                  // Ajouter le bridge JavaScript pour les contacts
+                  ContactsBridge contactsBridge = new ContactsBridge(this);
+                  webView.addJavascriptInterface(contactsBridge, "AndroidContacts");
 
                   // Autoriser la géoloc sans popup bloquante
                   webView.setWebChromeClient(new WebChromeClient() {
@@ -230,12 +235,17 @@ jobs:
                                   new String[]{
                                       Manifest.permission.ACCESS_FINE_LOCATION, 
                                       Manifest.permission.ACCESS_COARSE_LOCATION,
-                                      Manifest.permission.POST_NOTIFICATIONS
+                                      Manifest.permission.POST_NOTIFICATIONS,
+                                      Manifest.permission.READ_CONTACTS
                                   },
                                   REQ_LOCATION);
                       } else {
                           ActivityCompat.requestPermissions(this,
-                                  new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                                  new String[]{
+                                      Manifest.permission.ACCESS_FINE_LOCATION, 
+                                      Manifest.permission.ACCESS_COARSE_LOCATION,
+                                      Manifest.permission.READ_CONTACTS
+                                  },
                                   REQ_LOCATION);
                       }
                   }
@@ -304,6 +314,83 @@ jobs:
 
                   notificationManager.notify(1, builder.build());
                   Log.d(TAG, "Notification shown: " + title);
+              }
+          }
+          EOF
+
+          # Bridge pour les contacts
+          cat > android-webview/app/src/main/java/app/runconnect/ContactsBridge.java <<'EOF'
+          package app.runconnect;
+
+          import android.content.Context;
+          import android.webkit.JavascriptInterface;
+          import android.util.Log;
+          import android.database.Cursor;
+          import android.provider.ContactsContract;
+          import android.content.pm.PackageManager;
+          import androidx.core.content.ContextCompat;
+          import android.Manifest;
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+
+          public class ContactsBridge {
+              private static final String TAG = "ContactsBridge";
+              private Context context;
+
+              public ContactsBridge(Context context) {
+                  this.context = context;
+              }
+
+              @JavascriptInterface
+              public boolean hasContactsPermission() {
+                  return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS)
+                          == PackageManager.PERMISSION_GRANTED;
+              }
+
+              @JavascriptInterface
+              public boolean areContactsSupported() {
+                  return true;
+              }
+
+              @JavascriptInterface
+              public String getContacts() {
+                  Log.d(TAG, "JavaScript called getContacts");
+                  
+                  if (!hasContactsPermission()) {
+                      Log.d(TAG, "No contacts permission");
+                      return "[]";
+                  }
+
+                  JSONArray contactsArray = new JSONArray();
+                  
+                  try {
+                      Cursor cursor = context.getContentResolver().query(
+                          ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                          new String[]{
+                              ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+                              ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                              ContactsContract.CommonDataKinds.Phone.NUMBER
+                          },
+                          null, null,
+                          ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+                      );
+
+                      if (cursor != null) {
+                          while (cursor.moveToNext()) {
+                              JSONObject contact = new JSONObject();
+                              contact.put("contactId", cursor.getString(0));
+                              contact.put("displayName", cursor.getString(1));
+                              contact.put("phoneNumber", cursor.getString(2));
+                              contactsArray.put(contact);
+                          }
+                          cursor.close();
+                      }
+                  } catch (Exception e) {
+                      Log.e(TAG, "Error reading contacts", e);
+                  }
+
+                  Log.d(TAG, "Returning " + contactsArray.length() + " contacts");
+                  return contactsArray.toString();
               }
           }
           EOF
