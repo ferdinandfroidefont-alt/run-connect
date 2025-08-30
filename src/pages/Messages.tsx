@@ -1276,7 +1276,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input */}
-          <div className="p-4 border-t border-border bg-background fixed bottom-24 left-0 right-0 max-w-md mx-auto z-40">
+          <div className="p-4 border-t border-border bg-background fixed bottom-32 left-0 right-0 max-w-md mx-auto z-40">
             <div className="flex gap-2">
               <Button
                 variant="outline"
