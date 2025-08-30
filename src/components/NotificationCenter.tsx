@@ -439,7 +439,7 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
           )}
         </div>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent className="w-80 sm:w-96">
         <SheetHeader>
           <SheetTitle>Notifications</SheetTitle>
           <SheetDescription>
