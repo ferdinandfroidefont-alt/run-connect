@@ -960,10 +960,10 @@ const Messages = () => {
 
   if (selectedConversation) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <div className="max-w-md mx-auto w-full flex flex-col h-screen">
+      <div className="min-h-screen bg-background">
+        <div className="max-w-md mx-auto w-full relative h-screen">
           {/* Header - Fixed */}
-          <div className="flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-10">
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -1076,9 +1076,9 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Messages - Scrollable area between header and input */}
-          <div className="flex-1 overflow-hidden">
-            <div className={`h-full overflow-y-auto p-4 space-y-2 pb-4 ${getThemeClasses().background}`}>
+          {/* Messages - Scrollable area with top margin for fixed header */}
+          <div className="pt-20 pb-20 h-full overflow-hidden">
+            <div className={`h-full overflow-y-auto p-4 space-y-2 ${getThemeClasses().background}`}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1276,7 +1276,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input - Fixed at bottom */}
-          <div className="p-4 border-t border-border bg-background/95 backdrop-blur-sm">
+          <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 max-w-md w-full p-4 border-t border-border bg-background/95 backdrop-blur-sm z-50">
             <div className="flex gap-2">
               <Button
                 variant="outline"
