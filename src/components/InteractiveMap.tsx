@@ -712,6 +712,9 @@ export const InteractiveMap = ({
         });
 
         map.current.addListener('mouseup', () => {
+          // Don't handle mouseup if in route creation mode
+          if (isRouteCreationMode) return;
+          
           if (touchTimer) {
             clearTimeout(touchTimer);
             touchTimer = null;
@@ -719,6 +722,9 @@ export const InteractiveMap = ({
         });
 
         map.current.addListener('mousemove', () => {
+          // Don't handle mousemove if in route creation mode
+          if (isRouteCreationMode) return;
+          
           if (touchTimer) {
             clearTimeout(touchTimer);
             touchTimer = null;
@@ -1157,6 +1163,12 @@ export const InteractiveMap = ({
   };
 
   const handleCreateSessionAtLocation = (latLng: google.maps.LatLng | null) => {
+    // Don't create session if in route creation mode
+    if (isRouteCreationMode) {
+      console.log('🚫 Session creation blocked - route creation mode active');
+      return;
+    }
+    
     if (!latLng || !user) {
       toast.error("Connectez-vous pour créer une séance");
       return;
