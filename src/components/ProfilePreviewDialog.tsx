@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -386,7 +387,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
   return (
     <Dialog open={!!userId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -394,12 +395,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : profile ? (
-          <div className="space-y-4">
+        <ScrollArea className="max-h-[60vh] px-6 pb-6">
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : profile ? (
+            <div className="space-y-4">
             {/* Profile Header */}
             <Card>
               <CardContent className="flex flex-col items-center py-6">
@@ -745,6 +747,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             <p className="text-muted-foreground">Profil non trouvé</p>
           </div>
         )}
+        </ScrollArea>
       </DialogContent>
 
       {/* Settings Dialog */}
