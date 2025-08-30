@@ -131,6 +131,7 @@ export const InteractiveMap = ({
   const routeCoordinates = useRef<google.maps.LatLng[]>([]);
   const waypoints = useRef<google.maps.LatLng[]>([]);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
+  const [showElevationProfile, setShowElevationProfile] = useState(true);
   const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
   const [routeSaving, setRouteSaving] = useState(false);
   const elevationService = useRef<google.maps.ElevationService | null>(null);
@@ -1338,12 +1339,27 @@ export const InteractiveMap = ({
       )}
 
       {/* Elevation Profile - Show during route creation */}
-      {isRouteCreationMode && (
+      {isRouteCreationMode && showElevationProfile && (
         <div className="absolute bottom-6 right-6 z-20">
           <ElevationProfile 
             elevations={routeElevations}
             routeStats={calculateRouteStats()}
           />
+        </div>
+      )}
+
+      {/* Toggle Elevation Profile Button */}
+      {isRouteCreationMode && (
+        <div className="absolute bottom-32 left-6 z-20">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowElevationProfile(!showElevationProfile)}
+            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 hover:bg-white"
+            title={showElevationProfile ? "Masquer le profil d'élévation" : "Afficher le profil d'élévation"}
+          >
+            {showElevationProfile ? "📈 Masquer profil" : "📈 Profil"}
+          </Button>
         </div>
       )}
 
