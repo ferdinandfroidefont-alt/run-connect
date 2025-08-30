@@ -1342,8 +1342,6 @@ const Messages = () => {
 
   return (
     <>
-      {/* Petite barre en haut comme dans MySessions */}
-      <div className="w-full h-6 bg-background"></div>
       <div className="min-h-screen bg-background">
       <div className="max-w-md mx-auto space-y-4 p-4">
         {/* Header */}
