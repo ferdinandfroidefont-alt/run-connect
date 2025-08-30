@@ -124,26 +124,15 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   };
 
   const handleNotificationToggle = async () => {
-    if (!isNative) {
-      toast({
-        title: "Notifications non disponibles",
-        description: "Les notifications push ne sont disponibles que sur mobile",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!isRegistered) {
-      const success = await requestPermissions();
-      if (success && user) {
-        // Mettre à jour le profil pour marquer les notifications comme activées
-        await supabase
-          .from('profiles')
-          .update({ notifications_enabled: true })
-          .eq('user_id', user.id);
-        
-        setProfile(prev => prev ? { ...prev, notifications_enabled: true } : null);
-      }
+    const success = await requestPermissions();
+    if (success && user) {
+      // Mettre à jour le profil pour marquer les notifications comme activées
+      await supabase
+        .from('profiles')
+        .update({ notifications_enabled: true })
+        .eq('user_id', user.id);
+      
+      setProfile(prev => prev ? { ...prev, notifications_enabled: true } : null);
     }
   };
 
@@ -447,20 +436,17 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {!isNative && (
-                        <span className="text-xs text-muted-foreground">Web uniquement</span>
-                      )}
-                      {isNative && !isRegistered && (
+                      {!isRegistered && (
                         <span className="text-xs text-red-600">Non activées</span>
                       )}
-                      {isNative && isRegistered && (
+                      {isRegistered && (
                         <span className="text-xs text-green-600">Activées</span>
                       )}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleNotificationToggle}
-                        disabled={!isNative || isRegistered}
+                        disabled={isRegistered}
                       >
                         {isRegistered ? 'Activées' : 'Activer'}
                       </Button>
@@ -483,7 +469,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_follow_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_follow_request', checked)}
-                      disabled={!isNative || !isRegistered}
+                      disabled={!isRegistered}
                     />
                   </div>
 
@@ -503,7 +489,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_message === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_message', checked)}
-                      disabled={!isNative || !isRegistered}
+                      disabled={!isRegistered}
                     />
                   </div>
 
@@ -523,7 +509,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_session_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_session_request', checked)}
-                      disabled={!isNative || !isRegistered}
+                      disabled={!isRegistered}
                     />
                   </div>
 
@@ -544,7 +530,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_friend_session === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_friend_session', checked)}
-                      disabled={!isNative || !isRegistered || !profile?.is_premium}
+                      disabled={!isRegistered || !profile?.is_premium}
                     />
                   </div>
                 </CardContent>
