@@ -962,8 +962,8 @@ const Messages = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full flex flex-col h-screen">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm">
+          {/* Header - Fixed */}
+          <div className="flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -1076,9 +1076,9 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Messages */}
-          <ScrollArea className={`flex-1 p-4 pb-24 ${getThemeClasses().background}`}>
-            <div className="space-y-2">
+          {/* Messages - Scrollable area between header and input */}
+          <div className="flex-1 overflow-hidden">
+            <div className={`h-full overflow-y-auto p-4 space-y-2 pb-4 ${getThemeClasses().background}`}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1239,7 +1239,7 @@ const Messages = () => {
               
               <div ref={messagesEndRef} />
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Delete Confirmation Dialog */}
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1275,8 +1275,8 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Message input */}
-          <div className="p-4 border-t border-border bg-background absolute bottom-0 left-0 right-0 z-50">
+          {/* Message input - Fixed at bottom */}
+          <div className="p-4 border-t border-border bg-background/95 backdrop-blur-sm">
             <div className="flex gap-2">
               <Button
                 variant="outline"
