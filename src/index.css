@@ -133,6 +133,14 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans;
+    /* Masquer les barres de défilement */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+
+  /* Masquer les barres de défilement sur les navigateurs Webkit */
+  body::-webkit-scrollbar {
+    display: none;
   }
 }
 
