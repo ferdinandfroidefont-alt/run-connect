@@ -1077,7 +1077,7 @@ const Messages = () => {
           </div>
 
           {/* Messages */}
-          <ScrollArea className={`flex-1 p-4 pb-20 ${getThemeClasses().background}`}>
+          <ScrollArea className={`flex-1 p-4 pb-40 ${getThemeClasses().background}`}>
             <div className="space-y-2">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
