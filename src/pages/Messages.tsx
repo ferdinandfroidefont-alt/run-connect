@@ -1077,7 +1077,7 @@ const Messages = () => {
           </div>
 
           {/* Messages */}
-          <ScrollArea className={`flex-1 p-4 pb-40 ${getThemeClasses().background}`}>
+          <ScrollArea className={`flex-1 p-4 pb-24 ${getThemeClasses().background}`}>
             <div className="space-y-2">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -1276,7 +1276,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input */}
-          <div className="p-4 border-t border-border bg-background fixed bottom-32 left-0 right-0 max-w-md mx-auto z-40">
+          <div className="p-4 border-t border-border bg-background absolute bottom-0 left-0 right-0 z-50">
             <div className="flex gap-2">
               <Button
                 variant="outline"
