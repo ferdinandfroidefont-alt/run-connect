@@ -1078,7 +1078,7 @@ const Messages = () => {
 
           {/* Messages - Scrollable area with top margin for fixed header */}
           <div className="pt-20 h-full overflow-hidden">
-            <div className={`h-full overflow-y-auto px-4 pt-4 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none'}}>
+            <div className={`h-full overflow-y-auto px-4 pt-4 pb-6 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
