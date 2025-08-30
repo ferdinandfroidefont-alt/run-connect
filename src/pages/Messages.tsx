@@ -1276,7 +1276,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input - Fixed at bottom */}
-          <div className="fixed bottom-28 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 z-50">
+          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 z-50">
             <div className="flex gap-2">
               <Button
                 variant="outline"
