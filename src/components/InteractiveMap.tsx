@@ -702,6 +702,9 @@ export const InteractiveMap = ({
 
         // Long press handler for creating sessions (mobile-friendly)
         map.current.addListener('mousedown', (event: google.maps.MapMouseEvent) => {
+          // Don't create session if in route creation mode
+          if (isRouteCreationMode) return;
+          
           touchTimer = setTimeout(() => {
             handleCreateSessionAtLocation(event.latLng);
             touchTimer = null;
