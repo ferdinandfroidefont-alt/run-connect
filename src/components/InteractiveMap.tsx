@@ -1341,7 +1341,7 @@ export const InteractiveMap = ({
       </div>
       
       {/* All Map Controls - repositioned to left side */}
-      <div className="absolute left-4 bottom-4 flex flex-col gap-3 z-10">
+      <div className="absolute left-4 bottom-0 pb-24 flex flex-col gap-3 z-10">
         {/* Route Creation Button - Pencil Button */}
         {user && (
           <Button
