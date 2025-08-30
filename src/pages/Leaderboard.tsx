@@ -363,17 +363,17 @@ const Leaderboard = () => {
                 <p className="text-sm text-muted-foreground">
                   @{item.profile?.username}
                 </p>
+                <div className="mt-1">
+                  <p className="font-bold text-primary">
+                    {showSeasonal ? item.seasonal_points : item.total_points} pts
+                  </p>
+                  {!showSeasonal && (
+                    <p className="text-xs text-muted-foreground">
+                      +{item.seasonal_points} cette saison
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-primary">
-                {showSeasonal ? item.seasonal_points : item.total_points} pts
-              </p>
-              {!showSeasonal && (
-                <p className="text-xs text-muted-foreground">
-                  +{item.seasonal_points} cette saison
-                </p>
-              )}
             </div>
           </CardContent>
         </Card>
