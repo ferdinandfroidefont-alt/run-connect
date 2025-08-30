@@ -57,6 +57,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [userPoints, setUserPoints] = useState({
+    total_points: 0,
+    seasonal_points: 0,
+    weekly_points: 0
+  });
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -70,6 +75,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkBlockedStatus();
       }
       fetchFollowCounts();
+      fetchUserPoints();
     }
   }, [userId, user, isOwnProfile]);
 
@@ -224,6 +230,24 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       setFollowingCount(followingData?.length || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  const fetchUserPoints = async () => {
+    if (!userId) return;
+
+    try {
+      const { data: pointsData } = await supabase
+        .from('user_scores')
+        .select('total_points, seasonal_points, weekly_points')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (pointsData) {
+        setUserPoints(pointsData);
+      }
+    } catch (error) {
+      console.error('Error fetching user points:', error);
     }
   };
 
@@ -554,6 +578,10 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   <div className="text-center">
                     <p className="font-bold text-lg">{followingCount}</p>
                     <p className="text-sm text-muted-foreground">Abonnements</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-lg text-primary">{userPoints.total_points}</p>
+                    <p className="text-sm text-muted-foreground">Points</p>
                   </div>
                 </div>
 
