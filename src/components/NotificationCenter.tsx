@@ -488,10 +488,10 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                         </div>
                       )}
                      
-                     <div className="flex-1 min-w-0">
+                     <div className="flex-1 min-w-0 pr-2">
                         <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-medium">{notification.title}</h4>
-                          <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-medium truncate">{notification.title}</h4>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                             {!notification.read && (
                               <Badge variant="secondary" className="text-xs">Nouveau</Badge>
                             )}
@@ -509,7 +509,7 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                             </Button>
                           </div>
                         </div>
-                       <p className="text-sm text-muted-foreground mb-2 break-words">
+                       <p className="text-sm text-muted-foreground mb-2 break-words pr-8">
                          {notification.message}
                        </p>
                        <p className="text-xs text-muted-foreground">
