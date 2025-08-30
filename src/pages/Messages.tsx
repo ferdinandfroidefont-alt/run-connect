@@ -1077,7 +1077,7 @@ const Messages = () => {
           </div>
 
           {/* Messages - Scrollable area with top margin for fixed header */}
-          <div className="pt-20 pb-32 h-full overflow-hidden">
+          <div className="pt-20 pb-36 h-full overflow-hidden">
             <div className={`h-full overflow-y-auto p-4 space-y-2 ${getThemeClasses().background}`}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -1276,7 +1276,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input - Fixed at bottom */}
-          <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 max-w-md w-full p-4 border-t border-border bg-background/95 backdrop-blur-sm z-50">
+          <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 max-w-md w-full p-4 border-t border-border bg-background/95 backdrop-blur-sm z-50">
             <div className="flex gap-2">
               <Button
                 variant="outline"
