@@ -18,6 +18,7 @@ import { StravaConnect } from "./StravaConnect";
 import { InstagramConnect } from "./InstagramConnect";
 import { ConversationThemeSelector } from "./ConversationThemeSelector";
 import { useConversationTheme } from "@/hooks/useConversationTheme";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { ReferralDialog } from "./ReferralDialog";
 
 interface Profile {
@@ -52,10 +53,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { shareProfile } = useShareProfile();
   const { showWelcomeVideo } = useOnboarding();
   const { conversationTheme, setConversationTheme } = useConversationTheme();
+  const { isRegistered, requestPermissions, isNative } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [showConversationThemes, setShowConversationThemes] = useState(false);
   const [showReferralDialog, setShowReferralDialog] = useState(false);
   
@@ -64,10 +65,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   useEffect(() => {
     if (user && open) {
       fetchProfile();
-    }
-    // Check notification permission
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
     }
   }, [user, open]);
 
@@ -126,27 +123,26 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     }
   };
 
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window) {
-      try {
-        const permission = await Notification.requestPermission();
-        setNotificationPermission(permission);
+  const handleNotificationToggle = async () => {
+    if (!isNative) {
+      toast({
+        title: "Notifications non disponibles",
+        description: "Les notifications push ne sont disponibles que sur mobile",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isRegistered) {
+      const success = await requestPermissions();
+      if (success && user) {
+        // Mettre à jour le profil pour marquer les notifications comme activées
+        await supabase
+          .from('profiles')
+          .update({ notifications_enabled: true })
+          .eq('user_id', user.id);
         
-        if (user) {
-          await supabase
-            .from('profiles')
-            .update({ notifications_enabled: permission === 'granted' })
-            .eq('user_id', user.id);
-        }
-        
-        toast({
-          title: permission === 'granted' ? "Notifications activées" : "Notifications refusées",
-          description: permission === 'granted' ? 
-            "Vous recevrez désormais des notifications." : 
-            "Vous ne recevrez pas de notifications."
-        });
-      } catch (error) {
-        console.error('Error requesting notification permission:', error);
+        setProfile(prev => prev ? { ...prev, notifications_enabled: true } : null);
       }
     }
   };
@@ -451,19 +447,22 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {notificationPermission === 'denied' && (
-                        <span className="text-xs text-red-600">Refusées</span>
+                      {!isNative && (
+                        <span className="text-xs text-muted-foreground">Web uniquement</span>
                       )}
-                      {notificationPermission === 'granted' && (
-                        <span className="text-xs text-green-600">Autorisées</span>
+                      {isNative && !isRegistered && (
+                        <span className="text-xs text-red-600">Non activées</span>
+                      )}
+                      {isNative && isRegistered && (
+                        <span className="text-xs text-green-600">Activées</span>
                       )}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={requestNotificationPermission}
-                        disabled={notificationPermission === 'granted'}
+                        onClick={handleNotificationToggle}
+                        disabled={!isNative || isRegistered}
                       >
-                        {notificationPermission === 'granted' ? 'Activées' : 'Activer'}
+                        {isRegistered ? 'Activées' : 'Activer'}
                       </Button>
                     </div>
                   </div>
@@ -484,7 +483,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_follow_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_follow_request', checked)}
-                      disabled={notificationPermission !== 'granted'}
+                      disabled={!isNative || !isRegistered}
                     />
                   </div>
 
@@ -504,7 +503,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_message === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_message', checked)}
-                      disabled={notificationPermission !== 'granted'}
+                      disabled={!isNative || !isRegistered}
                     />
                   </div>
 
@@ -524,7 +523,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_session_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_session_request', checked)}
-                      disabled={notificationPermission !== 'granted'}
+                      disabled={!isNative || !isRegistered}
                     />
                   </div>
 
@@ -545,7 +544,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     <Switch
                       checked={profile?.notif_friend_session === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_friend_session', checked)}
-                      disabled={notificationPermission !== 'granted' || !profile?.is_premium}
+                      disabled={!isNative || !isRegistered || !profile?.is_premium}
                     />
                   </div>
                 </CardContent>
