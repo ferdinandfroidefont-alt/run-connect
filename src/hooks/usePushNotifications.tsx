@@ -18,11 +18,14 @@ export const usePushNotifications = () => {
         platform: Capacitor.getPlatform(),
         hostname: window.location.hostname,
         hasCapacitorPush: !!(window as any).Capacitor?.Plugins?.PushNotifications,
-        hasNotificationAPI: 'Notification' in window
+        hasNotificationAPI: 'Notification' in window,
+        userAgent: navigator.userAgent
       });
 
-      // Priority 1: Real native app (deployed to stores)
-      if (Capacitor.isNativePlatform()) {
+      // Priority 1: Check if Capacitor Push API is available (regardless of isNativePlatform)
+      const hasCapacitorPush = !!(window as any).Capacitor?.Plugins?.PushNotifications || typeof PushNotifications !== 'undefined';
+      
+      if (hasCapacitorPush) {
         console.log('🔍 Using Capacitor native push notifications');
         
         const permission = await PushNotifications.requestPermissions();
@@ -133,8 +136,12 @@ export const usePushNotifications = () => {
       setIsRegistered(true);
     }
 
-    // Setup Capacitor listeners on native platforms
-    if (Capacitor.isNativePlatform()) {
+    // Setup Capacitor listeners if Capacitor Push is available
+    const hasCapacitorPush = !!(window as any).Capacitor?.Plugins?.PushNotifications || typeof PushNotifications !== 'undefined';
+    
+    if (hasCapacitorPush) {
+      console.log('🔍 Setting up Capacitor push listeners');
+      
       // Register for push notifications
       PushNotifications.addListener('registration', (token) => {
         console.log('Push registration success, token: ' + token.value);
@@ -172,7 +179,7 @@ export const usePushNotifications = () => {
     }
 
     return () => {
-      if (Capacitor.isNativePlatform()) {
+      if (hasCapacitorPush) {
         PushNotifications.removeAllListeners();
       }
     };
