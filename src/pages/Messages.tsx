@@ -961,7 +961,7 @@ const Messages = () => {
   if (selectedConversation) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <div className="max-w-md mx-auto w-full flex flex-col h-screen">
+        <div className="max-w-md mx-auto w-full flex flex-col h-screen relative">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm">
             <div className="flex items-center gap-3">
@@ -1077,7 +1077,7 @@ const Messages = () => {
           </div>
 
           {/* Messages */}
-          <div className={`flex-1 overflow-y-auto p-4 pb-24 ${getThemeClasses().background}`}>
+          <div className={`flex-1 overflow-y-auto p-4 ${getThemeClasses().background}`} style={{height: 'calc(100vh - 140px)', paddingBottom: '80px'}}>
             <div className="space-y-2">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -1276,7 +1276,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input */}
-          <div className="p-4 border-t border-border bg-background absolute bottom-0 left-0 right-0 z-50">
+          <div className="p-4 border-t border-border bg-background fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto">
             <div className="flex gap-2">
               <Button
                 variant="outline"
