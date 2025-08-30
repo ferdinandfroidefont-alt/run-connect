@@ -1012,7 +1012,7 @@ export const InteractiveMap = ({
     setIsRouteDialogOpen(true);
   };
 
-  const handleSaveRoute = async (routeName: string, routeDescription: string) => {
+  const handleSaveRoute = async (routeName: string, routeDescription: string, createSession?: boolean) => {
     setRouteSaving(true);
     const success = await saveRoute(routeName, routeDescription);
     setRouteSaving(false);
@@ -1029,19 +1029,41 @@ export const InteractiveMap = ({
         }
       }
       
-      // Clear route data
-      if (directionsRenderer.current) {
-        directionsRenderer.current.setMap(null);
-      }
-      routeCoordinates.current = [];
-      waypoints.current = [];
-      setRouteElevations([]);
-      
       // Show markers again
       loadSessions();
       
-      // Rediriger vers la page "Mes itinéraires"
-      navigate('/my-sessions?tab=routes');
+      if (createSession) {
+        // Sauvegarder les coordonnées du début AVANT de les effacer
+        const startLat = waypoints.current.length > 0 
+          ? waypoints.current[0].lat() 
+          : 48.8566;
+        const startLng = waypoints.current.length > 0 
+          ? waypoints.current[0].lng() 
+          : 2.3522;
+        
+        // Clear route data first
+        if (directionsRenderer.current) {
+          directionsRenderer.current.setMap(null);
+        }
+        routeCoordinates.current = [];
+        waypoints.current = [];
+        setRouteElevations([]);
+        
+        // Now open create session dialog with saved coordinates
+        setPresetLocation({ lat: startLat, lng: startLng });
+        setIsCreateDialogOpen(true);
+      } else {
+        // Clear route data
+        if (directionsRenderer.current) {
+          directionsRenderer.current.setMap(null);
+        }
+        routeCoordinates.current = [];
+        waypoints.current = [];
+        setRouteElevations([]);
+        
+        // Rediriger vers la page "Mes itinéraires"
+        navigate('/my-sessions?tab=routes');
+      }
     }
   };
 
@@ -1442,6 +1464,7 @@ export const InteractiveMap = ({
         onSave={handleSaveRoute}
         title="Créer un itinéraire"
         loading={routeSaving}
+        showCreateSessionOption={true}
       />
     </div>
   );

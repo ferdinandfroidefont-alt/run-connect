@@ -9,11 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 interface RouteDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, description: string) => void;
+  onSave: (name: string, description: string, createSession?: boolean) => void;
   title: string;
   initialName?: string;
   initialDescription?: string;
   loading?: boolean;
+  showCreateSessionOption?: boolean;
 }
 
 export const RouteDialog = ({ 
@@ -23,13 +24,15 @@ export const RouteDialog = ({
   title, 
   initialName = "", 
   initialDescription = "",
-  loading = false 
+  loading = false,
+  showCreateSessionOption = false
 }: RouteDialogProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: initialName,
     description: initialDescription
   });
+  const [createSession, setCreateSession] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -52,11 +55,12 @@ export const RouteDialog = ({
       return;
     }
 
-    onSave(formData.name.trim(), formData.description.trim());
+    onSave(formData.name.trim(), formData.description.trim(), createSession);
   };
 
   const handleClose = () => {
     setFormData({ name: "", description: "" });
+    setCreateSession(false);
     onClose();
   };
 
@@ -96,13 +100,28 @@ export const RouteDialog = ({
             />
           </div>
 
+          {showCreateSessionOption && (
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+              <input
+                type="checkbox"
+                id="create-session"
+                checked={createSession}
+                onChange={(e) => setCreateSession(e.target.checked)}
+                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <Label htmlFor="create-session" className="text-sm text-blue-700 dark:text-blue-300">
+                Créer une séance avec cet itinéraire
+              </Label>
+            </div>
+          )}
+
           <div className="flex gap-2 pt-4">
             <Button
               type="submit"
               disabled={loading || !formData.name.trim()}
               className="flex-1"
             >
-              {loading ? "Enregistrement..." : "Enregistrer"}
+              {loading ? "Enregistrement..." : createSession ? "Enregistrer et créer une séance" : "Enregistrer"}
             </Button>
             <Button type="button" variant="outline" onClick={handleClose}>
               Annuler
