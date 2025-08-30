@@ -77,11 +77,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
         .from('profiles')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setProfile(data);
     } catch (error: any) {
+      console.error('Error fetching profile:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger votre profil",
@@ -159,20 +160,19 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     console.log('updatePrivacySettings called with:', { field, value, userId: user.id });
 
     try {
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ [field]: value })
         .eq('user_id', user.id);
 
-      console.log('Update result:', { data, error });
-
       if (error) throw error;
 
+      // Mettre à jour l'état local immédiatement
       setProfile(prev => prev ? { ...prev, [field]: value } : null);
       
       toast({
         title: "Paramètres mis à jour",
-        description: "Vos préférences ont été sauvegardées."
+        description: "Vos préférences de notifications ont été sauvegardées."
       });
     } catch (error: any) {
       console.error('Error updating privacy settings:', error);
@@ -482,7 +482,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </div>
                     </div>
                     <Switch
-                      checked={profile?.notif_follow_request !== false}
+                      checked={profile?.notif_follow_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_follow_request', checked)}
                       disabled={notificationPermission !== 'granted'}
                     />
@@ -502,7 +502,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </div>
                     </div>
                     <Switch
-                      checked={profile?.notif_message !== false}
+                      checked={profile?.notif_message === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_message', checked)}
                       disabled={notificationPermission !== 'granted'}
                     />
@@ -522,7 +522,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </div>
                     </div>
                     <Switch
-                      checked={profile?.notif_session_request !== false}
+                      checked={profile?.notif_session_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_session_request', checked)}
                       disabled={notificationPermission !== 'granted'}
                     />
