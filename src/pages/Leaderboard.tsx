@@ -78,11 +78,12 @@ const Leaderboard = () => {
 
       if (globalError) throw globalError;
 
-      // Get profiles for users in leaderboard using secure function
+      // Get profiles for users in leaderboard - include all users, not just public ones
       const userIds = globalData?.map(item => item.user_id) || [];
-      const { data: profilesData } = await supabase.rpc('get_safe_public_profiles', {
-        profile_user_ids: userIds
-      });
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .in('user_id', userIds);
 
       // Get current user's profile separately
       let currentUserProfile = null;
@@ -131,9 +132,10 @@ const Leaderboard = () => {
         .range(seasonalOffset, seasonalOffset + USERS_PER_PAGE - 1);
 
       const seasonalUserIds = seasonalData?.map(item => item.user_id) || [];
-      const { data: seasonalProfilesData } = await supabase.rpc('get_safe_public_profiles', {
-        profile_user_ids: seasonalUserIds
-      });
+      const { data: seasonalProfilesData } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .in('user_id', seasonalUserIds);
 
       const seasonalLeaderboard = seasonalData?.map((item, index) => {
         let profile = seasonalProfilesData?.find(p => p.user_id === item.user_id);
