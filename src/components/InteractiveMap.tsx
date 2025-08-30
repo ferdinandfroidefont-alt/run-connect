@@ -1312,7 +1312,7 @@ export const InteractiveMap = ({
 
       {/* Nearby Sessions Button - ENCORE PLUS HAUT */}
       {user && (
-        <div className="absolute right-4 bottom-6 z-10">
+        <div className="absolute right-4 bottom-4 z-10">
           <Button 
             variant="outline"
             className={`shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto ${
