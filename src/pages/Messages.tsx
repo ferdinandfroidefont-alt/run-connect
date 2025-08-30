@@ -1342,6 +1342,8 @@ const Messages = () => {
 
   return (
     <>
+      {/* Petite barre noire en haut uniquement pour Messages */}
+      <div className="w-full h-6 bg-background"></div>
       <div className="min-h-screen bg-background">
       <div className="max-w-md mx-auto space-y-4 p-4">
         {/* Header */}
