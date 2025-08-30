@@ -324,7 +324,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         Admin
                       </Badge>
                     )}
-                    {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                    {(profile?.is_premium || subscriptionInfo?.subscribed) && !profile?.is_admin && (
                       <Badge className="bg-orange-100 text-orange-800 border-orange-200">
                         {subscriptionInfo?.subscription_tier || 'Premium'}
                       </Badge>
