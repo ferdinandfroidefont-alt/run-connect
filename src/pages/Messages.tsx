@@ -960,7 +960,10 @@ const Messages = () => {
 
   if (selectedConversation) {
     return (
-      <div className="min-h-screen bg-background">
+      <>
+        {/* Petite barre noire en haut uniquement pour les conversations */}
+        <div className="w-full h-6 bg-background"></div>
+        <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full relative h-screen">
           {/* Header - Fixed */}
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm z-50">
@@ -1337,6 +1340,7 @@ const Messages = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
