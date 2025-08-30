@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Copy, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 
 interface QRShareDialogProps {
@@ -21,22 +21,23 @@ export const QRShareDialog = ({
   displayName
 }: QRShareDialogProps) => {
   const { toast } = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [qrGenerated, setQrGenerated] = useState(false);
+  const [qrImageUrl, setQrImageUrl] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (open && profileUrl && canvasRef.current) {
+    if (open && profileUrl) {
       generateQR();
     }
   }, [open, profileUrl]);
 
   const generateQR = async () => {
-    if (!canvasRef.current || !profileUrl) return;
+    if (!profileUrl) return;
     
+    setIsLoading(true);
     try {
       console.log('🔍 Generating QR for URL:', profileUrl);
       
-      await QRCode.toCanvas(canvasRef.current, profileUrl, {
+      const qrDataURL = await QRCode.toDataURL(profileUrl, {
         width: 256,
         margin: 2,
         color: {
@@ -47,7 +48,7 @@ export const QRShareDialog = ({
       });
       
       console.log('✅ QR code generated successfully');
-      setQrGenerated(true);
+      setQrImageUrl(qrDataURL);
     } catch (error) {
       console.error('❌ Error generating QR code:', error);
       toast({
@@ -55,6 +56,8 @@ export const QRShareDialog = ({
         description: "Impossible de générer le QR code",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -75,11 +78,11 @@ export const QRShareDialog = ({
   };
 
   const downloadQR = () => {
-    if (!canvasRef.current || !qrGenerated) return;
+    if (!qrImageUrl) return;
     
     const link = document.createElement('a');
     link.download = `profil-${username}-qr.png`;
-    link.href = canvasRef.current.toDataURL();
+    link.href = qrImageUrl;
     link.click();
     
     toast({
@@ -105,11 +108,19 @@ export const QRShareDialog = ({
             </p>
           </div>
           
-          <div className="bg-white p-4 rounded-lg border">
-            <canvas 
-              ref={canvasRef}
-              className="max-w-full h-auto"
-            />
+          <div className="bg-white p-4 rounded-lg border min-h-[280px] flex items-center justify-center">
+            {isLoading ? (
+              <div className="text-muted-foreground">Génération du QR code...</div>
+            ) : qrImageUrl ? (
+              <img 
+                src={qrImageUrl} 
+                alt="QR Code du profil"
+                className="max-w-full h-auto"
+                style={{ width: 256, height: 256 }}
+              />
+            ) : (
+              <div className="text-muted-foreground">Erreur lors de la génération</div>
+            )}
           </div>
           
           <div className="text-xs text-center text-muted-foreground px-4 break-all">
@@ -131,7 +142,7 @@ export const QRShareDialog = ({
               variant="outline"
               size="sm"
               onClick={downloadQR}
-              disabled={!qrGenerated}
+              disabled={!qrImageUrl}
               className="flex-1"
             >
               <Download className="h-4 w-4 mr-2" />
