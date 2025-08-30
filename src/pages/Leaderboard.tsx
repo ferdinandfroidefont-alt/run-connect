@@ -175,31 +175,40 @@ const Leaderboard = () => {
         
         if (friendIds.length > 0) {
           const friendsOffset = (friendsPage - 1) * USERS_PER_PAGE;
-          const { data: friendsScores } = await supabase
-            .from('user_scores')
-            .select('user_id, total_points, weekly_points, seasonal_points')
-            .in('user_id', friendIds)
-            .order('total_points', { ascending: false })
-            .range(friendsOffset, friendsOffset + USERS_PER_PAGE - 1);
-
+          
+          // Get all friends profiles first
           const { data: friendsProfiles } = await supabase
             .from('profiles')
             .select('user_id, username, display_name, avatar_url')
             .in('user_id', friendIds);
 
-          const friendsLeaderboard = friendsScores?.map((item, index) => {
-            const profile = friendsProfiles?.find(p => p.user_id === item.user_id);
+          // Get scores for friends (LEFT JOIN will include friends with no scores)
+          const { data: friendsScores } = await supabase
+            .from('user_scores')
+            .select('user_id, total_points, weekly_points, seasonal_points')
+            .in('user_id', friendIds);
+
+          // Combine profiles and scores, including friends with no scores (0 points)
+          const friendsData = friendsProfiles?.map(profile => {
+            const scores = friendsScores?.find(s => s.user_id === profile.user_id);
             return {
-              ...item,
-              profile: profile || {
-                username: 'Unknown',
-                display_name: 'Unknown User',
-                avatar_url: ''
-              },
-              rank: friendsOffset + index + 1,
-              user_rank: getUserRank(item.total_points)
+              user_id: profile.user_id,
+              total_points: scores?.total_points || 0,
+              weekly_points: scores?.weekly_points || 0,
+              seasonal_points: scores?.seasonal_points || 0,
+              profile: profile,
+              user_rank: getUserRank(scores?.total_points || 0)
             };
           }) || [];
+
+          // Sort by total points and apply pagination
+          const sortedFriendsData = friendsData.sort((a, b) => b.total_points - a.total_points);
+          const paginatedFriendsData = sortedFriendsData.slice(friendsOffset, friendsOffset + USERS_PER_PAGE);
+
+          const friendsLeaderboard = paginatedFriendsData.map((item, index) => ({
+            ...item,
+            rank: friendsOffset + index + 1
+          }));
 
           setFriendsLeaderboard(friendsLeaderboard);
         }
