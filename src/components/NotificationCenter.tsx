@@ -509,7 +509,7 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                             </Button>
                           </div>
                         </div>
-                       <p className="text-sm text-muted-foreground mb-2">
+                       <p className="text-sm text-muted-foreground mb-2 break-words">
                          {notification.message}
                        </p>
                        <p className="text-xs text-muted-foreground">
