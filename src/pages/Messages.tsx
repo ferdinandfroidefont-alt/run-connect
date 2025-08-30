@@ -1139,8 +1139,8 @@ const Messages = () => {
                         
                         {/* Individual timestamp - appears on hover/click */}
                         {showIndividualTime && (
-                          <div className={`absolute -top-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
-                            <div className="bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+                          <div className={`absolute -bottom-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
+                            <div className="bg-background/90 border text-foreground text-xs px-2 py-1 rounded backdrop-blur-sm shadow-sm">
                               {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
                             </div>
                           </div>
