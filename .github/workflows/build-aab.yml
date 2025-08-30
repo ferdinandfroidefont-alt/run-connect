@@ -73,8 +73,8 @@ jobs:
               applicationId "app.runconnect"
               minSdk 24
               targetSdk 34
-              versionCode 5
-              versionName "1.4"
+              versionCode 4
+              versionName "1.3"
             }
 
             buildTypes {
@@ -98,8 +98,7 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.7.0'
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.core:core-splashscreen:1.0.1'   // <-- Splash
+            implementation 'androidx.browser:browser:1.8.0'   // Custom Tabs pour Google OAuth
           }
           EOF
 
@@ -109,7 +108,7 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # Manifest avec splash theme appliqué
+          # Manifest (ajout de android:icon)
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -123,24 +122,32 @@ jobs:
 
             <application
               android:label="RunConnect"
+              android:icon="@mipmap/ic_launcher"
+              android:roundIcon="@mipmap/ic_launcher_round"
               android:usesCleartextTraffic="false"
               android:theme="@style/Theme.RunConnect">
+
               <activity
                 android:name=".MainActivity"
                 android:exported="true"
                 android:configChanges="orientation|screenSize|keyboardHidden"
-                android:hardwareAccelerated="true"
-                android:theme="@style/Theme.RunConnect.Splash">
+                android:hardwareAccelerated="true">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
                   <category android:name="android.intent.category.LAUNCHER" />
                 </intent-filter>
               </activity>
+
+              <service android:name=".NotificationService" android:exported="false">
+                <intent-filter>
+                  <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                </intent-filter>
+              </service>
             </application>
           </manifest>
           EOF
 
-          # Activity avec SplashScreen
+          # Activity + bridges (identique à ta version fonctionnelle)
           cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
           package app.runconnect;
 
@@ -163,7 +170,6 @@ jobs:
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
           import androidx.core.view.WindowCompat;
-          import androidx.core.splashscreen.SplashScreen; // <-- import Splash
 
           public class MainActivity extends AppCompatActivity {
               private static final int REQ_LOCATION = 1001;
@@ -172,11 +178,8 @@ jobs:
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
-                  // Splash d'abord
-                  SplashScreen.installSplashScreen(this);
                   super.onCreate(savedInstanceState);
 
-                  // Edge-to-edge
                   WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
                   if (Build.VERSION.SDK_INT >= 21) {
                       getWindow().setStatusBarColor(Color.TRANSPARENT);
@@ -192,6 +195,12 @@ jobs:
                   s.setAllowFileAccess(true);
                   s.setMediaPlaybackRequiresUserGesture(false);
                   s.setGeolocationEnabled(true);
+
+                  NotificationBridge notificationBridge = new NotificationBridge(this);
+                  webView.addJavascriptInterface(notificationBridge, "AndroidNotifications");
+
+                  ContactsBridge contactsBridge = new ContactsBridge(this);
+                  webView.addJavascriptInterface(contactsBridge, "AndroidContacts");
 
                   webView.setWebChromeClient(new WebChromeClient() {
                       @Override
@@ -249,19 +258,145 @@ jobs:
           }
           EOF
 
-          # Thèmes (normal + splash)
+          cat > android-webview/app/src/main/java/app/runconnect/NotificationService.java <<'EOF'
+          package app.runconnect;
+
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.content.Context;
+          import android.os.Build;
+          import androidx.core.app.NotificationCompat;
+
+          public class NotificationService {
+              private static final String CHANNEL_ID = "runconnect_notifications";
+              private final NotificationManager notificationManager;
+
+              public NotificationService(Context context) {
+                  this.notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      NotificationChannel channel = new NotificationChannel(
+                          CHANNEL_ID, "RunConnect Notifications", NotificationManager.IMPORTANCE_DEFAULT);
+                      channel.setDescription("Notifications pour les sessions et messages");
+                      notificationManager.createNotificationChannel(channel);
+                  }
+              }
+
+              public boolean areNotificationsEnabled() {
+                  return Build.VERSION.SDK_INT < Build.VERSION_CODES.N || notificationManager.areNotificationsEnabled();
+              }
+
+              public void showNotification(String title, String message) {
+                  NotificationCompat.Builder builder = new NotificationCompat.Builder(
+                      notificationManager.getContext(), CHANNEL_ID)
+                      .setSmallIcon(android.R.drawable.ic_dialog_info)
+                      .setContentTitle(title)
+                      .setContentText(message)
+                      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                      .setAutoCancel(true);
+                  notificationManager.notify(1, builder.build());
+              }
+          }
+          EOF
+
+          cat > android-webview/app/src/main/java/app/runconnect/ContactsBridge.java <<'EOF'
+          package app.runconnect;
+
+          import android.content.Context;
+          import android.webkit.JavascriptInterface;
+          import android.database.Cursor;
+          import android.provider.ContactsContract;
+          import android.content.pm.PackageManager;
+          import androidx.core.content.ContextCompat;
+          import android.Manifest;
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+
+          public class ContactsBridge {
+              private final Context context;
+
+              public ContactsBridge(Context context) {
+                  this.context = context;
+              }
+
+              @JavascriptInterface
+              public boolean hasContactsPermission() {
+                  return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS)
+                          == PackageManager.PERMISSION_GRANTED;
+              }
+
+              @JavascriptInterface
+              public boolean areContactsSupported() {
+                  return true;
+              }
+
+              @JavascriptInterface
+              public String getContacts() {
+                  if (!hasContactsPermission()) return "[]";
+                  JSONArray out = new JSONArray();
+                  Cursor c = context.getContentResolver().query(
+                      ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                      new String[]{
+                        ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                      },
+                      null, null,
+                      ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+                  );
+                  if (c != null) {
+                      while (c.moveToNext()) {
+                          JSONObject o = new JSONObject();
+                          try {
+                            o.put("contactId", c.getString(0));
+                            o.put("displayName", c.getString(1));
+                            o.put("phoneNumber", c.getString(2));
+                            out.put(o);
+                          } catch (Exception ignored) {}
+                      }
+                      c.close();
+                  }
+                  return out.toString();
+              }
+          }
+          EOF
+
+          cat > android-webview/app/src/main/java/app/runconnect/NotificationBridge.java <<'EOF'
+          package app.runconnect;
+
+          import android.content.Context;
+          import android.webkit.JavascriptInterface;
+
+          public class NotificationBridge {
+              private final NotificationService service;
+
+              public NotificationBridge(Context context) {
+                  this.service = new NotificationService(context);
+              }
+
+              @JavascriptInterface
+              public boolean requestPermissions() {
+                  return service.areNotificationsEnabled();
+              }
+
+              @JavascriptInterface
+              public boolean areNotificationsSupported() {
+                  return true;
+              }
+
+              @JavascriptInterface
+              public void showNotification(String title, String message) {
+                  service.showNotification(title, message);
+              }
+          }
+          EOF
+
+          # Thème plein écran
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
             <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
               <item name="android:statusBarColor">@android:color/transparent</item>
               <item name="android:navigationBarColor">@android:color/transparent</item>
               <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-            </style>
-
-            <style name="Theme.RunConnect.Splash" parent="Theme.SplashScreen">
-              <item name="windowSplashScreenBackground">#121417</item>
-              <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-              <item name="postSplashScreenTheme">@style/Theme.RunConnect</item>
             </style>
           </resources>
           EOF
@@ -271,6 +406,39 @@ jobs:
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
+      # ───────── Icône d'application (ic_launcher/ic_launcher_round) via secret APP_ICON_B64 ─────────
+      - name: Add launcher icons from APP_ICON_B64
+        working-directory: android-webview
+        env:
+          APP_ICON_B64: ${{ secrets.APP_ICON_B64 }}
+        run: |
+          set -euo pipefail
+          # Décode l'image (PNG) depuis le secret
+          echo "$APP_ICON_B64" | tr -d '\r' | base64 -d > appicon.png
+
+          # Dossiers mipmap
+          for d in mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+            mkdir -p app/src/main/res/$d
+            cp appicon.png app/src/main/res/$d/ic_launcher.png
+            cp appicon.png app/src/main/res/$d/ic_launcher_round.png
+          done
+
+          # Adaptive icons (anydpi-v26)
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@android:color/white"/>
+            <foreground android:drawable="@mipmap/ic_launcher"/>
+          </adaptive-icon>
+          XML
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@android:color/white"/>
+            <foreground android:drawable="@mipmap/ic_launcher_round"/>
+          </adaptive-icon>
+          XML
+
+      # ───────── Keystore (depuis les SECRETS existants) ─────────
       - name: Restore upload keystore
         working-directory: android-webview
         env:
@@ -280,6 +448,7 @@ jobs:
           echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
           ls -l keystore.jks
 
+      # ───────── Build du AAB ─────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         env:
@@ -291,6 +460,7 @@ jobs:
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
+      # ───────── Artefacts ─────────
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
