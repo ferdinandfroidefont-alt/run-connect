@@ -190,3 +190,28 @@ All colors MUST be HSL.
     @apply font-display font-semibold text-sm uppercase tracking-wide;
   }
 }
+
+/* Force scrollbars to be visible for message areas */
+.message-scroll-area {
+  scrollbar-width: auto !important;
+  -ms-overflow-style: auto !important;
+}
+
+.message-scroll-area::-webkit-scrollbar {
+  width: 8px !important;
+  display: block !important;
+}
+
+.message-scroll-area::-webkit-scrollbar-track {
+  background: hsl(var(--muted)) !important;
+  border-radius: 4px !important;
+}
+
+.message-scroll-area::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.6) !important;
+  border-radius: 4px !important;
+}
+
+.message-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.8) !important;
+}
