@@ -35,6 +35,7 @@ export const AndroidTestPage = () => {
     // Notifications
     if (hasAndroidNotifs()) {
       try {
+        // Note: requestPermissions() returns true if already granted, false if denied
         const ok = !!(window as any).AndroidNotifications.requestPermissions();
         setNotifsState(ok ? 'autorisé ✅' : 'non autorisé ❌');
       } catch (e) {
