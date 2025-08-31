@@ -49,18 +49,27 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
 
   const fetchSuggestions = async () => {
     if (!user) return;
+    
+    console.log('🔍 fetchSuggestions - START');
+    console.log('- isNative:', isNative);
+    console.log('- hasPermission:', hasPermission);
 
     try {
       let contactSuggestions: FriendSuggestion[] = [];
       
       // Priorité 1: Contacts (si permissions accordées)
       if (isNative && hasPermission) {
+        console.log('🔍 Loading contacts...');
         try {
           const contacts = await loadContacts();
+          console.log('🔍 Contacts loaded:', contacts?.length || 0);
           contactSuggestions = await findContactSuggestions(contacts);
+          console.log('🔍 Contact suggestions processed:', contactSuggestions.length);
         } catch (contactError) {
-          console.error('Error loading contact suggestions:', contactError);
+          console.error('❌ Error loading contact suggestions:', contactError);
         }
+      } else {
+        console.log('🔍 Skipping contacts - isNative:', isNative, 'hasPermission:', hasPermission);
       }
 
       // Utiliser la nouvelle fonction avec ordre de priorité
@@ -102,7 +111,11 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   };
 
   const findContactSuggestions = async (contacts: any[]) => {
-    if (!contacts || contacts.length === 0) return [];
+    console.log('🔍 findContactSuggestions - START with contacts:', contacts?.length || 0);
+    if (!contacts || contacts.length === 0) {
+      console.log('🔍 No contacts provided');
+      return [];
+    }
 
     try {
       // Extract phone numbers and emails from contacts
@@ -110,7 +123,9 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
       const emails: string[] = [];
       const contactNames: string[] = [];
 
-      contacts.forEach(contact => {
+      contacts.forEach((contact, index) => {
+        console.log(`🔍 Processing contact ${index + 1}:`, contact.displayName || 'No name');
+        
         // Ajouter les noms pour un matching plus large
         if (contact.displayName) {
           contactNames.push(contact.displayName.toLowerCase());
@@ -118,28 +133,42 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         
         contact.phoneNumbers?.forEach((phone: any) => {
           if (phone.number) {
+            console.log('  📱 Phone found:', phone.number);
             // Clean phone number (remove spaces, dashes, etc.) and try multiple formats
-            const cleanNumber = phone.number.replace(/[\s\-\(\)]/g, '');
+            const cleanNumber = phone.number.replace(/[\s\-\(\)\+]/g, '');
             phoneNumbers.push(cleanNumber);
             
             // Add variations (with/without country code)
-            if (cleanNumber.startsWith('33') && cleanNumber.length === 11) {
-              phoneNumbers.push('0' + cleanNumber.substring(2)); // Remove +33, add 0
+            if (cleanNumber.startsWith('33') && cleanNumber.length >= 11) {
+              const national = '0' + cleanNumber.substring(2);
+              phoneNumbers.push(national);
+              console.log('  📱 Added national format:', national);
             }
             if (cleanNumber.startsWith('0') && cleanNumber.length === 10) {
-              phoneNumbers.push('33' + cleanNumber.substring(1)); // Remove 0, add 33
+              const international = '33' + cleanNumber.substring(1);
+              phoneNumbers.push(international);
+              console.log('  📱 Added international format:', international);
             }
           }
         });
         
         contact.emails?.forEach((email: any) => {
           if (email.address) {
+            console.log('  📧 Email found:', email.address);
             emails.push(email.address.toLowerCase());
           }
         });
       });
 
-      if (phoneNumbers.length === 0 && emails.length === 0 && contactNames.length === 0) return [];
+      console.log('🔍 Extracted data:');
+      console.log('  📱 Phone numbers:', phoneNumbers.length, phoneNumbers);
+      console.log('  📧 Emails:', emails.length, emails);
+      console.log('  👤 Names:', contactNames.length, contactNames);
+
+      if (phoneNumbers.length === 0 && emails.length === 0 && contactNames.length === 0) {
+        console.log('🔍 No contact data to search with');
+        return [];
+      }
 
       // Find users with matching phone numbers, emails, or similar names
       let matchingUsers: any[] = [];
