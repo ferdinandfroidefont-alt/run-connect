@@ -108,13 +108,27 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
       // Extract phone numbers and emails from contacts
       const phoneNumbers: string[] = [];
       const emails: string[] = [];
+      const contactNames: string[] = [];
 
       contacts.forEach(contact => {
+        // Ajouter les noms pour un matching plus large
+        if (contact.displayName) {
+          contactNames.push(contact.displayName.toLowerCase());
+        }
+        
         contact.phoneNumbers?.forEach((phone: any) => {
           if (phone.number) {
-            // Clean phone number (remove spaces, dashes, etc.)
+            // Clean phone number (remove spaces, dashes, etc.) and try multiple formats
             const cleanNumber = phone.number.replace(/[\s\-\(\)]/g, '');
             phoneNumbers.push(cleanNumber);
+            
+            // Add variations (with/without country code)
+            if (cleanNumber.startsWith('33') && cleanNumber.length === 11) {
+              phoneNumbers.push('0' + cleanNumber.substring(2)); // Remove +33, add 0
+            }
+            if (cleanNumber.startsWith('0') && cleanNumber.length === 10) {
+              phoneNumbers.push('33' + cleanNumber.substring(1)); // Remove 0, add 33
+            }
           }
         });
         
@@ -125,19 +139,57 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         });
       });
 
-      if (phoneNumbers.length === 0 && emails.length === 0) return [];
+      if (phoneNumbers.length === 0 && emails.length === 0 && contactNames.length === 0) return [];
 
-      // Find users with matching phone numbers or emails
-      const { data: matchingUsers, error } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url, phone')
-        .neq('user_id', user!.id)
-        .or(`phone.in.(${phoneNumbers.map(p => `"${p}"`).join(',')})`);
+      // Find users with matching phone numbers, emails, or similar names
+      let matchingUsers: any[] = [];
+      
+      // Recherche par téléphone
+      if (phoneNumbers.length > 0) {
+        const { data: phoneMatches } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url, phone')
+          .neq('user_id', user!.id)
+          .or(`phone.in.(${phoneNumbers.map(p => `"${p}"`).join(',')})`);
+        
+        if (phoneMatches) matchingUsers.push(...phoneMatches);
+      }
 
-      if (error) throw error;
+      // Recherche par nom similaire (matching approximatif)
+      if (contactNames.length > 0) {
+        const { data: nameMatches } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url, phone')
+          .neq('user_id', user!.id)
+          .or(
+            contactNames.map(name => 
+              `display_name.ilike.%${name}%,username.ilike.%${name}%`
+            ).join(',')
+          );
+        
+        if (nameMatches) {
+          // Filtrer pour éviter des correspondances trop larges
+          const filteredNameMatches = nameMatches.filter(profile => {
+            const profileName = (profile.display_name || profile.username || '').toLowerCase();
+            return contactNames.some(contactName => 
+              profileName.includes(contactName) || contactName.includes(profileName)
+            );
+          });
+          matchingUsers.push(...filteredNameMatches);
+        }
+      }
+
+      // Supprimer les doublons
+      const uniqueUsers = matchingUsers.reduce((acc, current) => {
+        const exists = acc.find((item: any) => item.user_id === current.user_id);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
 
       // Convert to friend suggestions format
-      const contactSuggestions = (matchingUsers || []).map(profile => ({
+      const contactSuggestions = uniqueUsers.map(profile => ({
         user_id: profile.user_id,
         username: profile.username || profile.display_name || 'Utilisateur',
         display_name: profile.display_name || profile.username || 'Utilisateur',
@@ -148,6 +200,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         is_contact: true
       }));
 
+      console.log('🔍 Contact suggestions found:', contactSuggestions.length, contactSuggestions);
       return contactSuggestions;
     } catch (error) {
       console.error('Error finding contact suggestions:', error);
