@@ -74,7 +74,7 @@ jobs:
               minSdk 24
               targetSdk 34
               versionCode 5
-              versionName "1.3"
+              versionName "1.4"
             }
 
             buildTypes {
@@ -98,7 +98,7 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.7.0'
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'
+            implementation 'androidx.browser:browser:1.8.0'   // Custom Tabs (Google OAuth)
           }
           EOF
 
@@ -108,7 +108,7 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # Manifest (avec icône)
+          # Manifest (icône + permissions)
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -147,7 +147,7 @@ jobs:
           </manifest>
           EOF
 
-          # Activity + bridges (ta version)
+          # Activity + bridges
           cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
           package app.runconnect;
 
@@ -157,12 +157,14 @@ jobs:
           import android.net.Uri;
           import android.os.Build;
           import android.os.Bundle;
+
           import android.webkit.GeolocationPermissions;
           import android.webkit.WebChromeClient;
           import android.webkit.WebResourceRequest;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
+
           import androidx.appcompat.app.AppCompatActivity;
           import androidx.browser.customtabs.CustomTabsIntent;
           import androidx.core.app.ActivityCompat;
@@ -177,11 +179,13 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
                   WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
                   if (Build.VERSION.SDK_INT >= 21) {
                       getWindow().setStatusBarColor(Color.TRANSPARENT);
                       getWindow().setNavigationBarColor(Color.TRANSPARENT);
                   }
+
                   webView = new WebView(this);
                   WebSettings s = webView.getSettings();
                   s.setJavaScriptEnabled(true);
@@ -194,6 +198,7 @@ jobs:
 
                   NotificationBridge notificationBridge = new NotificationBridge(this);
                   webView.addJavascriptInterface(notificationBridge, "AndroidNotifications");
+
                   ContactsBridge contactsBridge = new ContactsBridge(this);
                   webView.addJavascriptInterface(contactsBridge, "AndroidContacts");
 
@@ -223,19 +228,24 @@ jobs:
                           != PackageManager.PERMISSION_GRANTED) {
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                           ActivityCompat.requestPermissions(this,
-                                  new String[]{ Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                                Manifest.permission.POST_NOTIFICATIONS,
-                                                Manifest.permission.READ_CONTACTS },
+                                  new String[]{
+                                      Manifest.permission.ACCESS_FINE_LOCATION,
+                                      Manifest.permission.ACCESS_COARSE_LOCATION,
+                                      Manifest.permission.POST_NOTIFICATIONS,
+                                      Manifest.permission.READ_CONTACTS
+                                  },
                                   REQ_LOCATION);
                       } else {
                           ActivityCompat.requestPermissions(this,
-                                  new String[]{ Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                                Manifest.permission.READ_CONTACTS },
+                                  new String[]{
+                                      Manifest.permission.ACCESS_FINE_LOCATION,
+                                      Manifest.permission.ACCESS_COARSE_LOCATION,
+                                      Manifest.permission.READ_CONTACTS
+                                  },
                                   REQ_LOCATION);
                       }
                   }
+
                   webView.loadUrl(START_URL);
                   setContentView(webView);
               }
@@ -259,31 +269,32 @@ jobs:
 
           public class NotificationService {
               private static final String CHANNEL_ID = "runconnect_notifications";
-              private final NotificationManager nm;
+              private final Context context;
+              private final NotificationManager notificationManager;
 
-              public NotificationService(Context ctx) {
-                  nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+              public NotificationService(Context context) {
+                  this.context = context;
+                  this.notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      NotificationChannel ch = new NotificationChannel(
+                      NotificationChannel channel = new NotificationChannel(
                           CHANNEL_ID, "RunConnect Notifications", NotificationManager.IMPORTANCE_DEFAULT);
-                      ch.setDescription("Notifications pour les sessions et messages");
-                      nm.createNotificationChannel(ch);
+                      channel.setDescription("Notifications pour les sessions et messages");
+                      notificationManager.createNotificationChannel(channel);
                   }
               }
 
               public boolean areNotificationsEnabled() {
-                  return Build.VERSION.SDK_INT < Build.VERSION_CODES.N || nm.areNotificationsEnabled();
+                  return Build.VERSION.SDK_INT < Build.VERSION_CODES.N || notificationManager.areNotificationsEnabled();
               }
 
               public void showNotification(String title, String message) {
-                  NotificationCompat.Builder b = new NotificationCompat.Builder(
-                      nm.getContext(), CHANNEL_ID)
+                  NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                       .setSmallIcon(android.R.drawable.ic_dialog_info)
                       .setContentTitle(title)
                       .setContentText(message)
                       .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                       .setAutoCancel(true);
-                  nm.notify(1, b.build());
+                  notificationManager.notify(1, builder.build());
               }
           }
           EOF
@@ -302,36 +313,45 @@ jobs:
           import org.json.JSONObject;
 
           public class ContactsBridge {
-              private final Context ctx;
-              public ContactsBridge(Context c) { ctx = c; }
+              private final Context context;
+
+              public ContactsBridge(Context context) {
+                  this.context = context;
+              }
 
               @JavascriptInterface
               public boolean hasContactsPermission() {
-                  return ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CONTACTS)
+                  return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS)
                           == PackageManager.PERMISSION_GRANTED;
               }
-              @JavascriptInterface public boolean areContactsSupported() { return true; }
+
+              @JavascriptInterface
+              public boolean areContactsSupported() {
+                  return true;
+              }
 
               @JavascriptInterface
               public String getContacts() {
                   if (!hasContactsPermission()) return "[]";
                   JSONArray out = new JSONArray();
-                  Cursor c = ctx.getContentResolver().query(
+                  Cursor c = context.getContentResolver().query(
                       ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                      new String[]{ ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-                                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                                    ContactsContract.CommonDataKinds.Phone.NUMBER },
+                      new String[]{
+                        ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                      },
                       null, null,
                       ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
                   );
                   if (c != null) {
                       while (c.moveToNext()) {
+                          JSONObject o = new JSONObject();
                           try {
-                              JSONObject o = new JSONObject();
-                              o.put("contactId", c.getString(0));
-                              o.put("displayName", c.getString(1));
-                              o.put("phoneNumber", c.getString(2));
-                              out.put(o);
+                            o.put("contactId", c.getString(0));
+                            o.put("displayName", c.getString(1));
+                            o.put("phoneNumber", c.getString(2));
+                            out.put(o);
                           } catch (Exception ignored) {}
                       }
                       c.close();
@@ -348,11 +368,26 @@ jobs:
           import android.webkit.JavascriptInterface;
 
           public class NotificationBridge {
-              private final NotificationService svc;
-              public NotificationBridge(Context c) { svc = new NotificationService(c); }
-              @JavascriptInterface public boolean requestPermissions() { return svc.areNotificationsEnabled(); }
-              @JavascriptInterface public boolean areNotificationsSupported() { return true; }
-              @JavascriptInterface public void showNotification(String t, String m) { svc.showNotification(t, m); }
+              private final NotificationService service;
+
+              public NotificationBridge(Context context) {
+                  this.service = new NotificationService(context);
+              }
+
+              @JavascriptInterface
+              public boolean requestPermissions() {
+                  return service.areNotificationsEnabled();
+              }
+
+              @JavascriptInterface
+              public boolean areNotificationsSupported() {
+                  return true;
+              }
+
+              @JavascriptInterface
+              public void showNotification(String title, String message) {
+                  service.showNotification(title, message);
+              }
           }
           EOF
 
@@ -367,26 +402,24 @@ jobs:
           </resources>
           EOF
 
+          # strings minimal
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-      # ───────── Icônes depuis le dépôt (assets/appicon.png) ─────────
-      - name: Add launcher icons from repo asset
+      # ───────── Icône depuis le repo (assets/appicon.png) ─────────
+      - name: Add launcher icons from repo
         working-directory: android-webview
         run: |
           set -euo pipefail
-          SRC="$GITHUB_WORKSPACE/assets/appicon.png"
-          if [ ! -f "$SRC" ]; then
-            echo "Icon not found at $SRC"
-            ls -R "$GITHUB_WORKSPACE"
-            exit 1
-          fi
+          test -f ../assets/appicon.png || (echo "assets/appicon.png introuvable" && exit 1)
+
           for d in mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
             mkdir -p app/src/main/res/$d
-            cp "$SRC" app/src/main/res/$d/ic_launcher.png
-            cp "$SRC" app/src/main/res/$d/ic_launcher_round.png
+            cp ../assets/appicon.png app/src/main/res/$d/ic_launcher.png
+            cp ../assets/appicon.png app/src/main/res/$d/ic_launcher_round.png
           done
+
           mkdir -p app/src/main/res/mipmap-anydpi-v26
           cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -401,7 +434,7 @@ jobs:
           </adaptive-icon>
           XML
 
-      # ───────── Keystore ─────────
+      # ───────── Keystore (secrets existants) ─────────
       - name: Restore upload keystore
         working-directory: android-webview
         env:
