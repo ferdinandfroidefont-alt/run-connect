@@ -51,8 +51,20 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
     if (!user) return;
 
     try {
-      // Get friend suggestions with proper priority (max 10)
-      const { data, error } = await supabase.rpc('get_friend_suggestions', {
+      let contactSuggestions: FriendSuggestion[] = [];
+      
+      // Priorité 1: Contacts (si permissions accordées)
+      if (isNative && hasPermission) {
+        try {
+          const contacts = await loadContacts();
+          contactSuggestions = await findContactSuggestions(contacts);
+        } catch (contactError) {
+          console.error('Error loading contact suggestions:', contactError);
+        }
+      }
+
+      // Utiliser la nouvelle fonction avec ordre de priorité
+      const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
         current_user_id: user.id,
         suggestion_limit: 10
       });
@@ -61,35 +73,24 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
       
       let allSuggestions = data || [];
 
-      // If we have contacts permission, enhance suggestions with contact info
-      if (isNative && hasPermission) {
-        try {
-          const contacts = await loadContacts();
-          const contactSuggestions = await findContactSuggestions(contacts);
-          
-          // Prioritize contact suggestions: contacts > mutual friends > active users
-          const mutualFriendSuggestions = allSuggestions.filter(
-            (s: FriendSuggestion) => s.source === 'mutual_friends' && 
-            !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
-          );
-          
-          const activeUserSuggestions = allSuggestions.filter(
-            (s: FriendSuggestion) => s.source === 'active_users' && 
-            !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
-          );
-          
-          // Combine in priority order and limit to 10
-          allSuggestions = [
-            ...contactSuggestions,
-            ...mutualFriendSuggestions,
-            ...activeUserSuggestions
-          ].slice(0, 10);
-        } catch (contactError) {
-          console.error('Error loading contact suggestions:', contactError);
-        }
-      } else {
-        // Limit to 10 when no contacts
-        allSuggestions = allSuggestions.slice(0, 10);
+      // Intégrer les suggestions de contacts en priorité 1
+      if (contactSuggestions.length > 0) {
+        // Marquer les contacts avec priority_order = 1
+        const contactsWithPriority = contactSuggestions.map(contact => ({
+          ...contact,
+          priority_order: 1
+        }));
+        
+        // Filtrer les suggestions DB pour éviter les doublons avec les contacts
+        const filteredDbSuggestions = allSuggestions.filter(
+          (s: any) => !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
+        );
+        
+        // Combiner avec ordre de priorité: contacts (1), puis DB suggestions (2-5)
+        allSuggestions = [
+          ...contactsWithPriority,
+          ...filteredDbSuggestions
+        ].slice(0, 10);
       }
 
       setSuggestions(allSuggestions);
@@ -314,6 +315,16 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
                 <Badge variant="secondary" className="text-xs">
                   <Users className="h-3 w-3 mr-1" />
                   {suggestion.mutual_friends_count} ami{suggestion.mutual_friends_count > 1 ? 's' : ''} en commun
+                </Badge>
+              ) : suggestion.source === 'common_clubs' ? (
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  <Users className="h-3 w-3 mr-1" />
+                  Club en commun
+                </Badge>
+              ) : suggestion.source === 'friends_of_friends' ? (
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                  <Users className="h-3 w-3 mr-1" />
+                  Ami d'ami d'ami
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-xs">
