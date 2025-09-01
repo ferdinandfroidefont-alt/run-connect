@@ -26,17 +26,15 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
 
-      # ─────────────────────────────────────────────────────────────
-      # Génère le mini-projet Android (WebView + Splash + Icône)
-      # ─────────────────────────────────────────────────────────────
-      - name: Create minimal Android WebView project (with Splash)
+      # ───────── Génère projet Android WebView + Splash ─────────
+      - name: Create minimal Android WebView project
         run: |
           set -e
           mkdir -p android-webview/app/src/main/java/app/runconnect
           mkdir -p android-webview/app/src/main/res/values
           mkdir -p android-webview/app/src/main/res/drawable
-          mkdir -p android-webview/app/src/main/res/mipmap-anydpi-v26
 
+          # settings.gradle
           cat > android-webview/settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
@@ -47,10 +45,12 @@ jobs:
           include(":app")
           EOF
 
+          # build.gradle (racine)
           cat > android-webview/build.gradle <<'EOF'
           plugins { id 'com.android.application' version '8.4.2' apply false }
           EOF
 
+          # app/build.gradle
           cat > android-webview/app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
 
@@ -78,7 +78,7 @@ jobs:
               minSdk 24
               targetSdk 34
               versionCode 10
-              versionName "1.7.1"
+              versionName "1.4.5"
             }
 
             buildTypes {
@@ -87,7 +87,9 @@ jobs:
                 proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
                 signingConfig signingConfigs.release
               }
-              debug { signingConfig signingConfigs.debug }
+              debug {
+                signingConfig signingConfigs.debug
+              }
             }
 
             compileOptions {
@@ -101,10 +103,18 @@ jobs:
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
             implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.core:core-splashscreen:1.0.1'   // Splash natif (Android 12+)
+            implementation 'androidx.core:core-splashscreen:1.0.1'
           }
           EOF
 
+          # gradle.properties (AndroidX activé)
+          cat > android-webview/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+
+          # Manifest avec splash + icône
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -112,17 +122,16 @@ jobs:
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
             <uses-permission android:name="android.permission.READ_CONTACTS" />
             <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-            <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
             <application
               android:label="RunConnect"
               android:icon="@mipmap/ic_launcher"
               android:roundIcon="@mipmap/ic_launcher_round"
-              android:usesCleartextTraffic="false"
               android:theme="@style/Theme.RunConnect">
               <activity
                 android:name=".MainActivity"
                 android:exported="true"
+                android:theme="@style/Theme.Splash"
                 android:configChanges="orientation|screenSize|keyboardHidden"
                 android:hardwareAccelerated="true">
                 <intent-filter>
@@ -134,165 +143,60 @@ jobs:
           </manifest>
           EOF
 
-          # Thème avec Splash (Android 12+) + fallback pré-12
+          # Splash drawable
+          cat > android-webview/app/src/main/res/drawable/splash_screen.xml <<'EOF'
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@android:color/white"/>
+              <item>
+                  <bitmap
+                      android:gravity="center"
+                      android:src="@mipmap/ic_launcher"/>
+              </item>
+          </layer-list>
+          EOF
+
+          # styles.xml (thèmes)
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
             <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
-              <!-- Splash Android 12+ -->
-              <item name="android:windowSplashScreenBackground">#000000</item>
-              <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-              <!-- Fallback pour < Android 12 -->
-              <item name="android:windowBackground">@drawable/splash_screen</item>
-
-              <!-- Plein écran -->
               <item name="android:statusBarColor">@android:color/transparent</item>
               <item name="android:navigationBarColor">@android:color/transparent</item>
-              <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+            </style>
+            <style name="Theme.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+              <item name="android:windowBackground">@drawable/splash_screen</item>
             </style>
           </resources>
           EOF
 
-          # Drawable du Splash (fallback Android < 12)
-          cat > android-webview/app/src/main/res/drawable/splash_screen.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:drawable="@android:color/black"/>
-            <item>
-              <bitmap
-                android:gravity="center"
-                android:src="@mipmap/ic_launcher"/>
-            </item>
-          </layer-list>
-          EOF
-
-          # Activity : Splash avant super.onCreate + "premier frame" pour retirer le Splash proprement
+          # MainActivity
           cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
           package app.runconnect;
 
-          import android.Manifest;
-          import android.graphics.Color;
-          import android.net.Uri;
-          import android.os.Build;
           import android.os.Bundle;
-          import android.webkit.GeolocationPermissions;
-          import android.webkit.WebChromeClient;
-          import android.webkit.WebResourceRequest;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
-
-          import androidx.annotation.NonNull;
           import androidx.appcompat.app.AppCompatActivity;
-          import androidx.browser.customtabs.CustomTabsIntent;
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.content.ContextCompat;
           import androidx.core.splashscreen.SplashScreen;
-          import androidx.core.view.WindowCompat;
-
-          import java.util.ArrayList;
-          import java.util.List;
 
           public class MainActivity extends AppCompatActivity {
-              private static final int REQ_PERMS = 2001;
               private WebView webView;
-              private volatile boolean firstFrameReady = false;
               private final String START_URL = "https://run-connect.lovable.app";
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
-                  // Installe le Splash Android 12+ et garde-le jusqu'au 1er frame
-                  SplashScreen splash = SplashScreen.installSplashScreen(this);
-                  splash.setKeepOnScreenCondition(() -> !firstFrameReady);
-
+                  SplashScreen.installSplashScreen(this);
                   super.onCreate(savedInstanceState);
 
-                  // Plein écran
-                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-                  if (Build.VERSION.SDK_INT >= 21) {
-                      getWindow().setStatusBarColor(Color.TRANSPARENT);
-                      getWindow().setNavigationBarColor(Color.TRANSPARENT);
-                  }
-
-                  // WebView
                   webView = new WebView(this);
-                  webView.setBackgroundColor(Color.BLACK); // évite flash blanc
                   WebSettings s = webView.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
                   s.setLoadWithOverviewMode(true);
                   s.setUseWideViewPort(true);
-                  s.setAllowFileAccess(true);
-                  s.setMediaPlaybackRequiresUserGesture(false);
-                  if (Build.VERSION.SDK_INT >= 21) {
-                      s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-                  }
-                  s.setGeolocationEnabled(true);
-
-                  // Géoloc auto-accept (évite blocage)
-                  webView.setWebChromeClient(new WebChromeClient() {
-                      @Override
-                      public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                          callback.invoke(origin, true, false);
-                      }
-                  });
-
-                  // Considère le 1er "commit" comme frame prêt => on peut retirer le Splash
-                  webView.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public void onPageCommitVisible(WebView view, String url) {
-                          firstFrameReady = true;
-                          // On peut repasser le fond en transparent si besoin
-                          view.setBackgroundColor(Color.TRANSPARENT);
-                      }
-
-                      @Override
-                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                          Uri uri = request.getUrl();
-                          String host = uri.getHost() != null ? uri.getHost() : "";
-                          String url = uri.toString();
-                          if (host.contains("accounts.google.com") || url.contains("oauth")) {
-                              CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
-                              tabs.launchUrl(MainActivity.this, uri);
-                              return true;
-                          }
-                          return false;
-                      }
-                  });
-
-                  // Demande de permissions au premier lancement
-                  ensureRuntimePermissions();
-
-                  setContentView(webView);
+                  webView.setWebViewClient(new WebViewClient());
                   webView.loadUrl(START_URL);
-              }
-
-              private void ensureRuntimePermissions() {
-                  List<String> toAsk = new ArrayList<>();
-
-                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                          != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                      toAsk.add(Manifest.permission.ACCESS_FINE_LOCATION);
-                      toAsk.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-                  }
-                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
-                          != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                      toAsk.add(Manifest.permission.READ_CONTACTS);
-                  }
-                  if (Build.VERSION.SDK_INT >= 33 &&
-                          ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                                  != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                      toAsk.add(Manifest.permission.POST_NOTIFICATIONS);
-                  }
-
-                  if (!toAsk.isEmpty()) {
-                      ActivityCompat.requestPermissions(this, toAsk.toArray(new String[0]), REQ_PERMS);
-                  }
-              }
-
-              @Override
-              public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-                  // Option: tu peux émettre une notif de test ici si notifs autorisées
+                  setContentView(webView);
               }
 
               @Override
@@ -303,55 +207,34 @@ jobs:
           }
           EOF
 
-          # strings minimal
+          # strings.xml
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-      # ─────────────────────────────────────────────────────────────
-      # Icônes : on prend ton image du repo  assets/appicon.png
-      # (assure-toi d’avoir ajouté assets/appicon.png dans ton repo)
-      # ─────────────────────────────────────────────────────────────
-      - name: Add launcher icons from repository asset
+      # ───────── Icônes via secret APP_ICON_B64 ─────────
+      - name: Add launcher icons
         working-directory: android-webview
+        env:
+          APP_ICON_B64: ${{ secrets.APP_ICON_B64 }}
         run: |
-          set -euo pipefail
-          test -f "$GITHUB_WORKSPACE/assets/appicon.png"
+          echo "$APP_ICON_B64" | base64 -d > appicon.png
           for d in mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
             mkdir -p app/src/main/res/$d
-            cp "$GITHUB_WORKSPACE/assets/appicon.png" app/src/main/res/$d/ic_launcher.png
-            cp "$GITHUB_WORKSPACE/assets/appicon.png" app/src/main/res/$d/ic_launcher_round.png
+            cp appicon.png app/src/main/res/$d/ic_launcher.png
+            cp appicon.png app/src/main/res/$d/ic_launcher_round.png
           done
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@android:color/white"/>
-            <foreground android:drawable="@mipmap/ic_launcher"/>
-          </adaptive-icon>
-          XML
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@android:color/white"/>
-            <foreground android:drawable="@mipmap/ic_launcher_round"/>
-          </adaptive-icon>
-          XML
 
-      # ─────────────────────────────────────────────────────────────
-      # Keystore : restauré depuis SECRETS
-      # (ajoute ces secrets dans ton repo : ANDROID_KEYSTORE_B64 / ANDROID_KEYSTORE_PASSWORD /
-      #  ANDROID_KEY_PASSWORD / ANDROID_KEYSTORE_ALIAS)
-      # ─────────────────────────────────────────────────────────────
+      # ───────── Keystore ─────────
       - name: Restore upload keystore
         working-directory: android-webview
         env:
           ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
-          set -euo pipefail
-          echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
+          echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
           ls -l keystore.jks
 
-      # ─────────────────────────────────────────────────────────────
-      # Build du AAB
-      # ─────────────────────────────────────────────────────────────
+      # ───────── Build ─────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         env:
@@ -363,14 +246,10 @@ jobs:
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
-      # ─────────────────────────────────────────────────────────────
-      # Artefacts
-      # ─────────────────────────────────────────────────────────────
+      # ───────── Artefacts ─────────
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: runconnect-release
-          path: |
-            android-webview/app/build/outputs/bundle/release/app-release.aab
-            android-webview/keystore.jks
+          path: android-webview/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: warn
