@@ -43,6 +43,8 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
   const [isOpen, setIsOpen] = useState(false);
   const [profilePreviewUserId, setProfilePreviewUserId] = useState<string | null>(null);
   const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
+  const [acceptedFollows, setAcceptedFollows] = useState<Set<string>>(new Set());
+  const [followedBack, setFollowedBack] = useState<Set<string>>(new Set());
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -276,8 +278,8 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
 
       if (error) throw error;
 
-      // Mark notification as read
-      await markAsRead(notification.id);
+      // Ajouter à la liste des demandes acceptées pour garder les boutons visibles
+      setAcceptedFollows(prev => new Set([...prev, notification.id]));
 
       // Create notification for follower
       const { error: notificationError } = await supabase
@@ -331,6 +333,9 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
         }]);
 
       if (error) throw error;
+
+      // Marquer comme suivi en retour
+      setFollowedBack(prev => new Set([...prev, notification.id]));
 
       // Create notification for the person we're following back
       const { error: notificationError } = await supabase
@@ -572,41 +577,53 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                           </>
                         )}
 
-                        {notification.type === 'follow_request' && !notification.read && (
+                        {notification.type === 'follow_request' && (
                          <>
                            <Separator className="my-3" />
                            <div className="flex flex-col gap-2">
-                             <div className="flex gap-2">
+                             {/* Montrer accepter/refuser seulement si pas encore accepté */}
+                             {!acceptedFollows.has(notification.id) && !notification.read && (
+                               <div className="flex gap-2">
+                                 <Button
+                                   size="sm"
+                                   onClick={() => handleAcceptFollow(notification)}
+                                   disabled={loading}
+                                   className="flex-1"
+                                 >
+                                   <Check className="h-4 w-4 mr-1" />
+                                   Accepter
+                                 </Button>
+                                 <Button
+                                   size="sm"
+                                   variant="outline"
+                                   onClick={() => handleRejectFollow(notification)}
+                                   disabled={loading}
+                                   className="flex-1"
+                                 >
+                                   <X className="h-4 w-4 mr-1" />
+                                   Refuser
+                                 </Button>
+                               </div>
+                             )}
+                             {/* Montrer "ajouter en retour" si accepté ou si déjà lu, mais pas si déjà suivi en retour */}
+                             {(acceptedFollows.has(notification.id) || notification.read) && !followedBack.has(notification.id) && (
                                <Button
                                  size="sm"
-                                 onClick={() => handleAcceptFollow(notification)}
+                                 variant="secondary"
+                                 onClick={() => handleFollowBack(notification)}
                                  disabled={loading}
-                                 className="flex-1"
+                                 className="w-full"
                                >
-                                 <Check className="h-4 w-4 mr-1" />
-                                 Accepter
+                                 <UserPlus className="h-4 w-4 mr-2" />
+                                 Ajouter en retour
                                </Button>
-                               <Button
-                                 size="sm"
-                                 variant="outline"
-                                 onClick={() => handleRejectFollow(notification)}
-                                 disabled={loading}
-                                 className="flex-1"
-                               >
-                                 <X className="h-4 w-4 mr-1" />
-                                 Refuser
-                               </Button>
-                             </div>
-                             <Button
-                               size="sm"
-                               variant="secondary"
-                               onClick={() => handleFollowBack(notification)}
-                               disabled={loading}
-                               className="w-full"
-                             >
-                               <UserPlus className="h-4 w-4 mr-2" />
-                               Ajouter en retour
-                             </Button>
+                             )}
+                             {/* Montrer confirmation si déjà suivi en retour */}
+                             {followedBack.has(notification.id) && (
+                               <div className="w-full text-center text-sm text-muted-foreground py-2">
+                                 ✓ Vous suivez maintenant cette personne en retour
+                               </div>
+                             )}
                            </div>
                          </>
                        )}
