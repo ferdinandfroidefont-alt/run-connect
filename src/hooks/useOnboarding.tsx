@@ -21,7 +21,7 @@ export const useOnboarding = () => {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('onboarding_completed, created_at')
+        .select('onboarding_completed, created_at, username, display_name, avatar_url, age, phone, bio')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -31,8 +31,18 @@ export const useOnboarding = () => {
         return;
       }
 
-      // L'utilisateur a besoin d'onboarding uniquement si le profil n'existe pas ou si l'onboarding n'est pas terminé
-      setNeedsOnboarding(!profile || !profile.onboarding_completed);
+      // Vérifier que tous les champs obligatoires sont remplis
+      const hasRequiredFields = profile && 
+        profile.username?.trim() && 
+        profile.display_name?.trim() && 
+        profile.avatar_url?.trim() && 
+        profile.age && 
+        profile.phone?.trim() && 
+        profile.bio?.trim() &&
+        profile.onboarding_completed;
+
+      // L'utilisateur a besoin d'onboarding si le profil n'existe pas ou si des champs obligatoires manquent
+      setNeedsOnboarding(!hasRequiredFields);
       
       // Vérifier si l'utilisateur a besoin de voir la vidéo de bienvenue
       // Pour les nouveaux utilisateurs (créés dans les dernières 24h)

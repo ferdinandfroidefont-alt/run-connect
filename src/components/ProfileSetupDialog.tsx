@@ -141,6 +141,24 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
       return;
     }
 
+    if (!phone.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le numéro de téléphone est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!bio.trim()) {
+      toast({
+        title: "Erreur",
+        description: "La présentation est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!password || password.length < 6) {
       toast({
         title: "Erreur",
@@ -338,19 +356,20 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
 
           {/* Téléphone */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Téléphone</Label>
+            <Label htmlFor="phone">Téléphone *</Label>
             <Input
               id="phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="06 12 34 56 78"
+              required
             />
           </div>
 
           {/* Bio */}
           <div className="space-y-2">
-            <Label htmlFor="bio">Présentation</Label>
+            <Label htmlFor="bio">Présentation *</Label>
             <Textarea
               id="bio"
               value={bio}
@@ -358,6 +377,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
               placeholder="Parlez-nous de vous, vos sports favoris..."
               className="resize-none"
               rows={3}
+              required
             />
           </div>
 
@@ -368,7 +388,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !username.trim() || !displayName.trim() || !avatarFile || !age || parseInt(age) < 13 || !password || password.length < 6}
+              disabled={isLoading || !username.trim() || !displayName.trim() || !avatarFile || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer et créer mon compte
