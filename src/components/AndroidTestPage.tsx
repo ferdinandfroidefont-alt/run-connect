@@ -18,11 +18,29 @@ export const AndroidTestPage = () => {
   const hasAndroidSettings = () => typeof (window as any).AndroidSettings === 'object';
 
   const refreshStates = async () => {
-    // Contacts
+    // Contacts - Vérifier à la fois Android bridge ET Capacitor
     if (hasAndroidContacts()) {
       try {
-        const ok = !!(window as any).AndroidContacts.hasContactsPermission();
-        setContactsState(ok ? 'autorisé ✅' : 'non autorisé ❌');
+        const androidOk = !!(window as any).AndroidContacts.hasContactsPermission();
+        addLog(`Android bridge permission: ${androidOk}`);
+        
+        // Aussi vérifier Capacitor si disponible
+        try {
+          const { Contacts } = await import('@capacitor-community/contacts');
+          const capacitorResult = await Contacts.checkPermissions();
+          const capacitorOk = capacitorResult.contacts === 'granted';
+          addLog(`Capacitor permission: ${capacitorOk}`);
+          
+          // Synchroniser si différent
+          if (androidOk !== capacitorOk) {
+            addLog('⚠️ Désynchronisation détectée entre Android et Capacitor');
+          }
+          
+          setContactsState(androidOk ? 'autorisé ✅' : 'non autorisé ❌');
+        } catch (capError) {
+          addLog('Capacitor contacts non disponible');
+          setContactsState(androidOk ? 'autorisé ✅' : 'non autorisé ❌');
+        }
       } catch (e) {
         setContactsState('inconnu —');
       }
@@ -54,14 +72,35 @@ export const AndroidTestPage = () => {
   const syncContacts = async () => {
     try {
       if (hasAndroidContacts()) {
-        const hasPerm = !!(window as any).AndroidContacts.hasContactsPermission();
-        if (!hasPerm) {
-          addLog('Contacts : permission manquante. Ouvre les réglages pour l\'activer.');
-          return openAppSettings();
+        // D'abord vérifier les permissions système
+        const hasAndroidPerm = !!(window as any).AndroidContacts.hasContactsPermission();
+        addLog(`Permission Android système: ${hasAndroidPerm}`);
+        
+        // Si pas de permission, demander via Capacitor pour sync
+        if (!hasAndroidPerm) {
+          addLog('Tentative de synchronisation des permissions...');
+          try {
+            const { Contacts } = await import('@capacitor-community/contacts');
+            const result = await Contacts.requestPermissions();
+            addLog(`Résultat demande Capacitor: ${result.contacts}`);
+            
+            // Re-vérifier après demande
+            const hasAndroidPermAfter = !!(window as any).AndroidContacts.hasContactsPermission();
+            addLog(`Permission Android après sync: ${hasAndroidPermAfter}`);
+            
+            if (!hasAndroidPermAfter) {
+              addLog('❌ Permissions toujours refusées. Ouvre les réglages.');
+              return openAppSettings();
+            }
+          } catch (syncError) {
+            addLog('❌ Erreur sync permissions: ' + syncError);
+            return openAppSettings();
+          }
         }
+        
         const raw = (window as any).AndroidContacts.getContacts();
         const contacts = JSON.parse(raw || '[]');
-        addLog(`Contacts synchronisés : ${contacts.length}`);
+        addLog(`✅ Contacts synchronisés : ${contacts.length}`);
       } else if ((navigator as any).contacts && (navigator as any).contacts.select) {
         const picked = await (navigator as any).contacts.select(['name', 'tel'], {multiple: true});
         addLog(`Contacts (web) : ${picked.length}`);
