@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const useOnboarding = () => {
   const { user } = useAuth();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [needsWelcomeVideo, setNeedsWelcomeVideo] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -31,18 +32,30 @@ export const useOnboarding = () => {
         return;
       }
 
-      // Vérifier que tous les champs obligatoires sont remplis
-      const hasRequiredFields = profile && 
-        profile.username?.trim() && 
-        profile.display_name?.trim() && 
-        profile.avatar_url?.trim() && 
-        profile.age && 
-        profile.phone?.trim() && 
-        profile.bio?.trim() &&
-        profile.onboarding_completed;
+      // Distinguer entre nouveau utilisateur et utilisateur existant avec profil incomplet
+      if (!profile) {
+        // Pas de profil = nouveau utilisateur complet
+        setNeedsOnboarding(true);
+        setNeedsProfileSetup(false);
+      } else {
+        // Profil existe mais champs manquants
+        const hasRequiredFields = profile.username?.trim() && 
+          profile.display_name?.trim() && 
+          profile.avatar_url?.trim() && 
+          profile.age && 
+          profile.phone?.trim() && 
+          profile.bio?.trim();
 
-      // L'utilisateur a besoin d'onboarding si le profil n'existe pas ou si des champs obligatoires manquent
-      setNeedsOnboarding(!hasRequiredFields);
+        if (!hasRequiredFields) {
+          // Utilisateur existant avec profil incomplet
+          setNeedsOnboarding(false);
+          setNeedsProfileSetup(true);
+        } else {
+          // Profil complet
+          setNeedsOnboarding(false);
+          setNeedsProfileSetup(false);
+        }
+      }
       
       // Vérifier si l'utilisateur a besoin de voir la vidéo de bienvenue
       // Pour les nouveaux utilisateurs (créés dans les dernières 24h)
@@ -61,6 +74,10 @@ export const useOnboarding = () => {
 
   const completeOnboarding = () => {
     setNeedsOnboarding(false);
+  };
+
+  const completeProfileSetup = () => {
+    setNeedsProfileSetup(false);
   };
 
   const markVideoAsSeen = async () => {
@@ -92,9 +109,11 @@ export const useOnboarding = () => {
 
   return {
     needsOnboarding,
+    needsProfileSetup,
     needsWelcomeVideo,
     loading,
     completeOnboarding,
+    completeProfileSetup,
     markVideoAsSeen,
     showWelcomeVideo
   };

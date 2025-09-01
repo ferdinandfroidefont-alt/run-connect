@@ -16,9 +16,10 @@ interface ProfileSetupDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   email: string;
+  onComplete?: () => void; // Optionnel pour les utilisateurs existants
 }
 
-export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: ProfileSetupDialogProps) => {
+export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -238,12 +239,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: Profil
       }
 
       toast({
-        title: "Compte créé avec succès !",
-        description: "Bienvenue dans RunConnect !",
+        title: "Profil mis à jour avec succès !",
+        description: onComplete ? "Votre profil a été complété." : "Bienvenue dans RunConnect !",
       });
 
       onOpenChange(false);
-      window.location.href = '/';
+      
+      if (onComplete) {
+        // Pour les utilisateurs existants, appeler onComplete
+        onComplete();
+      } else {
+        // Pour les nouveaux utilisateurs, rediriger
+        window.location.href = '/';
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
