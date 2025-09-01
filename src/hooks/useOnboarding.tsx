@@ -32,9 +32,12 @@ export const useOnboarding = () => {
         return;
       }
 
+      console.log('Profile data:', profile);
+
       // Distinguer entre nouveau utilisateur et utilisateur existant avec profil incomplet
       if (!profile) {
         // Pas de profil = nouveau utilisateur complet
+        console.log('No profile found - new user needs onboarding');
         setNeedsOnboarding(true);
         setNeedsProfileSetup(false);
       } else {
@@ -46,12 +49,24 @@ export const useOnboarding = () => {
           profile.phone?.trim() && 
           profile.bio?.trim();
 
+        console.log('Profile fields check:', {
+          username: !!profile.username?.trim(),
+          display_name: !!profile.display_name?.trim(),
+          avatar_url: !!profile.avatar_url?.trim(),
+          age: !!profile.age,
+          phone: !!profile.phone?.trim(),
+          bio: !!profile.bio?.trim(),
+          hasRequiredFields
+        });
+
         if (!hasRequiredFields) {
           // Utilisateur existant avec profil incomplet
+          console.log('Existing user with incomplete profile - needs profile setup');
           setNeedsOnboarding(false);
           setNeedsProfileSetup(true);
         } else {
           // Profil complet
+          console.log('Profile is complete');
           setNeedsOnboarding(false);
           setNeedsProfileSetup(false);
         }
