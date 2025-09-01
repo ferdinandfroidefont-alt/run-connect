@@ -18,31 +18,15 @@ export const AndroidTestPage = () => {
   const hasAndroidSettings = () => typeof (window as any).AndroidSettings === 'object';
 
   const refreshStates = async () => {
-    // Contacts - Vérifier à la fois Android bridge ET Capacitor
+    // Contacts - Utiliser UNIQUEMENT le bridge Android
     if (hasAndroidContacts()) {
       try {
-        const androidOk = !!(window as any).AndroidContacts.hasContactsPermission();
-        addLog(`Android bridge permission: ${androidOk}`);
-        
-        // Aussi vérifier Capacitor si disponible
-        try {
-          const { Contacts } = await import('@capacitor-community/contacts');
-          const capacitorResult = await Contacts.checkPermissions();
-          const capacitorOk = capacitorResult.contacts === 'granted';
-          addLog(`Capacitor permission: ${capacitorOk}`);
-          
-          // Synchroniser si différent
-          if (androidOk !== capacitorOk) {
-            addLog('⚠️ Désynchronisation détectée entre Android et Capacitor');
-          }
-          
-          setContactsState(androidOk ? 'autorisé ✅' : 'non autorisé ❌');
-        } catch (capError) {
-          addLog('Capacitor contacts non disponible');
-          setContactsState(androidOk ? 'autorisé ✅' : 'non autorisé ❌');
-        }
+        const ok = !!(window as any).AndroidContacts.hasContactsPermission();
+        setContactsState(ok ? 'autorisé ✅' : 'non autorisé ❌');
+        addLog(`État contacts Android: ${ok ? 'autorisé' : 'refusé'}`);
       } catch (e) {
-        setContactsState('inconnu —');
+        setContactsState('erreur ❌');
+        addLog('Erreur vérification contacts: ' + e);
       }
     } else if ((navigator as any).contacts) {
       setContactsState('web (beta) ⚠️');
@@ -50,14 +34,17 @@ export const AndroidTestPage = () => {
       setContactsState('non disponible');
     }
 
-    // Notifications
+    // Notifications - Utiliser UNIQUEMENT le bridge Android
     if (hasAndroidNotifs()) {
       try {
-        // Note: requestPermissions() returns true if already granted, false if denied
-        const ok = !!(window as any).AndroidNotifications.requestPermissions();
+        // Attention: cette méthode ne doit PAS demander, juste vérifier
+        const ok = !!(window as any).AndroidNotifications.hasPermission();
         setNotifsState(ok ? 'autorisé ✅' : 'non autorisé ❌');
+        addLog(`État notifications Android: ${ok ? 'autorisé' : 'refusé'}`);
       } catch (e) {
+        // Fallback si hasPermission() n'existe pas
         setNotifsState('inconnu —');
+        addLog('Impossible de vérifier les notifications Android');
       }
     } else if ("Notification" in window) {
       setNotifsState(
@@ -72,44 +59,34 @@ export const AndroidTestPage = () => {
   const syncContacts = async () => {
     try {
       if (hasAndroidContacts()) {
-        // D'abord vérifier les permissions système
-        const hasAndroidPerm = !!(window as any).AndroidContacts.hasContactsPermission();
-        addLog(`Permission Android système: ${hasAndroidPerm}`);
+        addLog('📇 Vérification des permissions contacts...');
+        const hasPermissionNow = !!(window as any).AndroidContacts.hasContactsPermission();
+        addLog(`Permission actuelle: ${hasPermissionNow}`);
         
-        // Si pas de permission, demander via Capacitor pour sync
-        if (!hasAndroidPerm) {
-          addLog('Tentative de synchronisation des permissions...');
-          try {
-            const { Contacts } = await import('@capacitor-community/contacts');
-            const result = await Contacts.requestPermissions();
-            addLog(`Résultat demande Capacitor: ${result.contacts}`);
-            
-            // Re-vérifier après demande
-            const hasAndroidPermAfter = !!(window as any).AndroidContacts.hasContactsPermission();
-            addLog(`Permission Android après sync: ${hasAndroidPermAfter}`);
-            
-            if (!hasAndroidPermAfter) {
-              addLog('❌ Permissions toujours refusées. Ouvre les réglages.');
-              return openAppSettings();
-            }
-          } catch (syncError) {
-            addLog('❌ Erreur sync permissions: ' + syncError);
-            return openAppSettings();
-          }
+        if (!hasPermissionNow) {
+          addLog('❌ Pas de permission contacts - va dans les réglages Android');
+          addLog('Réglages > Applications > RunConnect > Autorisations > Contacts');
+          return openAppSettings();
         }
         
+        addLog('📱 Récupération des contacts...');
         const raw = (window as any).AndroidContacts.getContacts();
         const contacts = JSON.parse(raw || '[]');
-        addLog(`✅ Contacts synchronisés : ${contacts.length}`);
+        addLog(`✅ ${contacts.length} contacts récupérés avec succès`);
+        
+        // Log quelques exemples (sans données sensibles)
+        if (contacts.length > 0) {
+          addLog(`Premier contact: ${contacts[0].displayName ? 'avec nom' : 'sans nom'}`);
+        }
       } else if ((navigator as any).contacts && (navigator as any).contacts.select) {
         const picked = await (navigator as any).contacts.select(['name', 'tel'], {multiple: true});
         addLog(`Contacts (web) : ${picked.length}`);
       } else {
-        addLog('Contacts non disponibles dans ce navigateur.');
+        addLog('❌ Bridge Android contacts non disponible');
       }
     } catch (e: any) {
       console.error(e);
-      addLog('Erreur synchro contacts : ' + e.message);
+      addLog('❌ Erreur contacts : ' + e.message);
     } finally {
       refreshStates();
     }
@@ -118,22 +95,24 @@ export const AndroidTestPage = () => {
   const requestAndroidNotifications = async () => {
     try {
       if (hasAndroidNotifs()) {
+        addLog('🔔 Demande de permission notifications via Android...');
         const ok = !!(window as any).AndroidNotifications.requestPermissions();
         if (ok) {
-          addLog('Notifications autorisées ✅');
+          addLog('✅ Notifications autorisées');
         } else {
-          addLog('Notifications refusées ou désactivées ❌ — ouvre les réglages.');
+          addLog('❌ Notifications refusées - ouvre les réglages manuellement');
           openAppSettings();
         }
       } else if ("Notification" in window) {
+        addLog('🔔 Demande de permission notifications web...');
         const res = await Notification.requestPermission();
         addLog('Permission notifications (web) : ' + res);
       } else {
-        addLog('Notifications non disponibles.');
+        addLog('❌ Notifications non disponibles.');
       }
     } catch (e: any) {
       console.error(e);
-      addLog('Erreur notifications : ' + e.message);
+      addLog('❌ Erreur notifications : ' + e.message);
     } finally {
       refreshStates();
     }
