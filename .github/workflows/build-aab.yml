@@ -26,15 +26,13 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
 
-      # ───────── Génère projet Android WebView + Splash ─────────
+      # ───────── Génère un mini projet Android WebView ─────────
       - name: Create minimal Android WebView project
         run: |
           set -e
           mkdir -p android-webview/app/src/main/java/app/runconnect
           mkdir -p android-webview/app/src/main/res/values
-          mkdir -p android-webview/app/src/main/res/drawable
 
-          # settings.gradle
           cat > android-webview/settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
@@ -45,12 +43,10 @@ jobs:
           include(":app")
           EOF
 
-          # build.gradle (racine)
           cat > android-webview/build.gradle <<'EOF'
           plugins { id 'com.android.application' version '8.4.2' apply false }
           EOF
 
-          # app/build.gradle
           cat > android-webview/app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
 
@@ -78,7 +74,7 @@ jobs:
               minSdk 24
               targetSdk 34
               versionCode 10
-              versionName "1.4.5"
+              versionName "1.9"
             }
 
             buildTypes {
@@ -103,18 +99,15 @@ jobs:
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
             implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.core:core-splashscreen:1.0.1'
           }
           EOF
 
-          # gradle.properties (AndroidX activé)
           cat > android-webview/gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
           android.useAndroidX=true
           android.enableJetifier=true
           EOF
 
-          # Manifest avec splash + icône
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -122,18 +115,14 @@ jobs:
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
             <uses-permission android:name="android.permission.READ_CONTACTS" />
             <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
             <application
               android:label="RunConnect"
               android:icon="@mipmap/ic_launcher"
               android:roundIcon="@mipmap/ic_launcher_round"
-              android:theme="@style/Theme.RunConnect">
-              <activity
-                android:name=".MainActivity"
-                android:exported="true"
-                android:theme="@style/Theme.Splash"
-                android:configChanges="orientation|screenSize|keyboardHidden"
-                android:hardwareAccelerated="true">
+              android:usesCleartextTraffic="false"
+              android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+              <activity android:name=".MainActivity" android:exported="true"
+                        android:configChanges="orientation|screenSize|keyboardHidden">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
                   <category android:name="android.intent.category.LAUNCHER" />
@@ -143,32 +132,6 @@ jobs:
           </manifest>
           EOF
 
-          # Splash drawable
-          cat > android-webview/app/src/main/res/drawable/splash_screen.xml <<'EOF'
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:drawable="@android:color/white"/>
-              <item>
-                  <bitmap
-                      android:gravity="center"
-                      android:src="@mipmap/ic_launcher"/>
-              </item>
-          </layer-list>
-          EOF
-
-          # styles.xml (thèmes)
-          cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-            <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
-              <item name="android:statusBarColor">@android:color/transparent</item>
-              <item name="android:navigationBarColor">@android:color/transparent</item>
-            </style>
-            <style name="Theme.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-              <item name="android:windowBackground">@drawable/splash_screen</item>
-            </style>
-          </resources>
-          EOF
-
-          # MainActivity
           cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
           package app.runconnect;
 
@@ -177,28 +140,24 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import androidx.appcompat.app.AppCompatActivity;
-          import androidx.core.splashscreen.SplashScreen;
 
           public class MainActivity extends AppCompatActivity {
               private WebView webView;
-              private final String START_URL = "https://run-connect.lovable.app";
-
               @Override
               protected void onCreate(Bundle savedInstanceState) {
-                  SplashScreen.installSplashScreen(this);
                   super.onCreate(savedInstanceState);
-
                   webView = new WebView(this);
                   WebSettings s = webView.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
                   s.setLoadWithOverviewMode(true);
                   s.setUseWideViewPort(true);
+                  s.setAllowFileAccess(true);
+                  s.setMediaPlaybackRequiresUserGesture(false);
                   webView.setWebViewClient(new WebViewClient());
-                  webView.loadUrl(START_URL);
+                  webView.loadUrl("https://run-connect.lovable.app");
                   setContentView(webView);
               }
-
               @Override
               public void onBackPressed() {
                   if (webView != null && webView.canGoBack()) webView.goBack();
@@ -207,34 +166,57 @@ jobs:
           }
           EOF
 
-          # strings.xml
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-      # ───────── Icônes via secret APP_ICON_B64 ─────────
-      - name: Add launcher icons
+      # ───────── Install ImageMagick ─────────
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      # ───────── Génération icônes depuis secret APP_ICON_B64 ─────────
+      - name: Add launcher icons (re-encode & resize)
         working-directory: android-webview
         env:
           APP_ICON_B64: ${{ secrets.APP_ICON_B64 }}
         run: |
-          echo "$APP_ICON_B64" | base64 -d > appicon.png
-          for d in mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+          set -euo pipefail
+          echo "$APP_ICON_B64" | tr -d '\r' | base64 -d > icon_src.png
+          magick icon_src.png -resize 1024x1024 -background none -gravity center -extent 1024x1024 \
+                 -strip -define png:color-type=6 icon_clean.png
+          declare -A SIZES=([mipmap-mdpi]=48 [mipmap-hdpi]=72 [mipmap-xhdpi]=96 [mipmap-xxhdpi]=144 [mipmap-xxxhdpi]=192)
+          for d in "${!SIZES[@]}"; do
             mkdir -p app/src/main/res/$d
-            cp appicon.png app/src/main/res/$d/ic_launcher.png
-            cp appicon.png app/src/main/res/$d/ic_launcher_round.png
+            sz=${SIZES[$d]}
+            magick icon_clean.png -resize ${sz}x${sz} -strip -define png:color-type=6 app/src/main/res/$d/ic_launcher.png
+            magick icon_clean.png -resize ${sz}x${sz} -strip -define png:color-type=6 app/src/main/res/$d/ic_launcher_round.png
           done
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@android:color/white"/>
+            <foreground android:drawable="@mipmap/ic_launcher"/>
+          </adaptive-icon>
+          XML
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@android:color/white"/>
+            <foreground android:drawable="@mipmap/ic_launcher_round"/>
+          </adaptive-icon>
+          XML
 
-      # ───────── Keystore ─────────
+      # ───────── Restore keystore ─────────
       - name: Restore upload keystore
         working-directory: android-webview
         env:
           ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
-          echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
+          echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
           ls -l keystore.jks
 
-      # ───────── Build ─────────
+      # ───────── Build du AAB ─────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         env:
@@ -251,5 +233,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: runconnect-release
-          path: android-webview/app/build/outputs/bundle/release/app-release.aab
+          path: |
+            android-webview/app/build/outputs/bundle/release/app-release.aab
+            android-webview/keystore.jks
           if-no-files-found: warn
