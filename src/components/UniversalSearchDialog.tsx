@@ -51,7 +51,7 @@ export const UniversalSearchDialog = ({
 }: UniversalSearchDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs'>('profiles');
+  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava'>('profiles');
   const [searchQuery, setSearchQuery] = useState("");
   const [profileResults, setProfileResults] = useState<Profile[]>([]);
   const [clubResults, setClubResults] = useState<Club[]>([]);
@@ -64,6 +64,78 @@ export const UniversalSearchDialog = ({
   const [isBlocked, setIsBlocked] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
 
+  // Load Strava friends
+  const loadStravaFriends = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      // First check if current user has Strava connected
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('strava_connected')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!userProfile?.strava_connected) {
+        setProfileResults([]);
+        return;
+      }
+
+      // Find all users with Strava connected
+      const { data: stravaUsers, error: stravaError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .neq('user_id', user?.id)
+        .eq('strava_connected', true)
+        .eq('is_private', false)
+        .limit(20);
+
+      if (stravaError) throw stravaError;
+      
+      const userIds = stravaUsers?.map(item => item.user_id) || [];
+      
+      if (userIds.length === 0) {
+        setProfileResults([]);
+        return;
+      }
+
+      // Get full profiles using the safe function
+      const { data: profiles, error: profilesError } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: userIds
+      });
+
+      if (profilesError) throw profilesError;
+
+      // Load follower counts for each profile
+      const profilesWithStats = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: followerData } = await supabase.rpc('get_follower_count', { 
+            profile_user_id: profile.user_id 
+          });
+          const { data: followingData } = await supabase.rpc('get_following_count', { 
+            profile_user_id: profile.user_id 
+          });
+          
+          return {
+            ...profile,
+            is_private: false, // These are already filtered as public
+            follower_count: followerData || 0,
+            following_count: followingData || 0
+          };
+        })
+      );
+
+      setProfileResults(profilesWithStats);
+    } catch (error: any) {
+      console.error('Error loading Strava friends:', error);
+      setProfileResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Search for users
   const searchProfiles = async () => {
     if (!searchQuery.trim()) {
@@ -72,46 +144,16 @@ export const UniversalSearchDialog = ({
     }
 
     try {
-      let userIds: string[] = [];
+      const { data: searchData, error: searchError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .neq('user_id', user?.id)
+        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+        .eq('is_private', false)
+        .limit(20);
 
-      // Check if user is searching for Strava friends
-      if (searchQuery.toLowerCase().includes('strava')) {
-        // First check if current user has Strava connected
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('strava_connected')
-          .eq('user_id', user?.id)
-          .single();
-
-        if (userProfile?.strava_connected) {
-          // Find all users with Strava connected
-          const { data: stravaUsers, error: stravaError } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .neq('user_id', user?.id)
-            .eq('strava_connected', true)
-            .eq('is_private', false)
-            .limit(20);
-
-          if (stravaError) throw stravaError;
-          userIds = stravaUsers?.map(item => item.user_id) || [];
-        } else {
-          setProfileResults([]);
-          return;
-        }
-      } else {
-        // Regular search by username/display_name
-        const { data: searchData, error: searchError } = await supabase
-          .from('profiles')
-          .select('user_id')
-          .neq('user_id', user?.id)
-          .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-          .eq('is_private', false)
-          .limit(20);
-
-        if (searchError) throw searchError;
-        userIds = searchData?.map(item => item.user_id) || [];
-      }
+      if (searchError) throw searchError;
+      const userIds = searchData?.map(item => item.user_id) || [];
       
       if (userIds.length === 0) {
         setProfileResults([]);
@@ -507,13 +549,15 @@ export const UniversalSearchDialog = ({
     }
   };
 
-  // Search when query changes
+  // Search when query changes or load Strava friends
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (activeTab === 'profiles') {
         searchProfiles();
-      } else {
+      } else if (activeTab === 'clubs') {
         searchClubs();
+      } else if (activeTab === 'strava') {
+        loadStravaFriends();
       }
     }, 300);
     return () => clearTimeout(timeoutId);
@@ -820,8 +864,8 @@ export const UniversalSearchDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs')}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs' | 'strava')}>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profiles" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profils
@@ -830,6 +874,12 @@ export const UniversalSearchDialog = ({
               <Users className="h-4 w-4" />
               Clubs
             </TabsTrigger>
+            <TabsTrigger value="strava" className="flex items-center gap-2">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+              </svg>
+              Strava
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="profiles" className="space-y-4">
@@ -837,7 +887,7 @@ export const UniversalSearchDialog = ({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Nom d'utilisateur, nom... ou tapez 'strava' pour voir vos amis Strava"
+                placeholder="Nom d'utilisateur ou nom..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -940,6 +990,61 @@ export const UniversalSearchDialog = ({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="strava" className="space-y-4">
+            {/* Strava friends - pas de barre de recherche */}
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {loading && (
+                <p className="text-center text-muted-foreground text-sm py-4">
+                  Chargement des amis Strava...
+                </p>
+              )}
+              
+              {!loading && profileResults.length === 0 && (
+                <Card className="border-dashed">
+                  <CardContent className="p-4 text-center">
+                    <svg className="h-8 w-8 text-muted-foreground mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+                    </svg>
+                    <p className="text-sm text-muted-foreground">
+                      Connectez votre compte Strava pour voir vos amis qui utilisent l'app
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {profileResults.map((profile) => (
+                <div
+                  key={profile.user_id}
+                  onClick={() => setSelectedProfile(profile)}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
+                >
+                  <div className="relative">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={profile.avatar_url || ""} />
+                      <AvatarFallback>
+                        {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <OnlineStatus userId={profile.user_id} className="w-3 h-3" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">
+                        {profile.username || profile.display_name}
+                      </p>
+                      <svg className="h-4 w-4 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+                      </svg>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">
+                      @{profile.username} • Connecté via Strava
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
