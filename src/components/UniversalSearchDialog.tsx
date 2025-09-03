@@ -72,18 +72,62 @@ export const UniversalSearchDialog = ({
     }
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url, bio, is_private')
-        .neq('user_id', user?.id)
-        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-        .limit(20);
+      let userIds: string[] = [];
 
-      if (error) throw error;
+      // Check if user is searching for Strava friends
+      if (searchQuery.toLowerCase().includes('strava')) {
+        // First check if current user has Strava connected
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('strava_connected')
+          .eq('user_id', user?.id)
+          .single();
+
+        if (userProfile?.strava_connected) {
+          // Find all users with Strava connected
+          const { data: stravaUsers, error: stravaError } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .neq('user_id', user?.id)
+            .eq('strava_connected', true)
+            .eq('is_private', false)
+            .limit(20);
+
+          if (stravaError) throw stravaError;
+          userIds = stravaUsers?.map(item => item.user_id) || [];
+        } else {
+          setProfileResults([]);
+          return;
+        }
+      } else {
+        // Regular search by username/display_name
+        const { data: searchData, error: searchError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .neq('user_id', user?.id)
+          .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+          .eq('is_private', false)
+          .limit(20);
+
+        if (searchError) throw searchError;
+        userIds = searchData?.map(item => item.user_id) || [];
+      }
+      
+      if (userIds.length === 0) {
+        setProfileResults([]);
+        return;
+      }
+
+      // Get full profiles using the safe function
+      const { data: profiles, error: profilesError } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: userIds
+      });
+
+      if (profilesError) throw profilesError;
 
       // Load follower counts for each profile
       const profilesWithStats = await Promise.all(
-        (data || []).map(async (profile) => {
+        (profiles || []).map(async (profile) => {
           const { data: followerData } = await supabase.rpc('get_follower_count', { 
             profile_user_id: profile.user_id 
           });
@@ -93,6 +137,7 @@ export const UniversalSearchDialog = ({
           
           return {
             ...profile,
+            is_private: false, // These are already filtered as public
             follower_count: followerData || 0,
             following_count: followingData || 0
           };
@@ -102,6 +147,7 @@ export const UniversalSearchDialog = ({
       setProfileResults(profilesWithStats);
     } catch (error: any) {
       console.error('Error searching users:', error);
+      setProfileResults([]);
     }
   };
 
@@ -791,7 +837,7 @@ export const UniversalSearchDialog = ({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Nom d'utilisateur ou nom..."
+                placeholder="Nom d'utilisateur, nom... ou tapez 'strava' pour voir vos amis Strava"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
