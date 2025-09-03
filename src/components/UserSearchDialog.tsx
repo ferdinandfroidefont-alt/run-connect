@@ -51,26 +51,49 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
     }
 
     try {
-      const { data, error } = await supabase.rpc('get_safe_public_profiles', {
-        profile_user_ids: [] // Will be populated by search
-      });
+      let userIds: string[] = [];
 
-      // If we need to search, do a limited search first to get IDs
-      const { data: searchData, error: searchError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .neq('user_id', user?.id)
-        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-        .eq('is_private', false) // Only search public profiles
-        .limit(20);
+      // Check if user is searching for Strava friends
+      if (searchQuery.toLowerCase().includes('strava')) {
+        // First check if current user has Strava connected
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('strava_connected')
+          .eq('user_id', user?.id)
+          .single();
 
-      if (searchError) throw searchError;
+        if (userProfile?.strava_connected) {
+          // Find all users with Strava connected
+          const { data: stravaUsers, error: stravaError } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .neq('user_id', user?.id)
+            .eq('strava_connected', true)
+            .eq('is_private', false)
+            .limit(20);
 
-      const userIds = searchData?.map(item => item.user_id) || [];
+          if (stravaError) throw stravaError;
+          userIds = stravaUsers?.map(item => item.user_id) || [];
+        } else {
+          setSearchResults([]);
+          return;
+        }
+      } else {
+        // Regular search by username/display_name
+        const { data: searchData, error: searchError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .neq('user_id', user?.id)
+          .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+          .eq('is_private', false)
+          .limit(20);
+
+        if (searchError) throw searchError;
+        userIds = searchData?.map(item => item.user_id) || [];
+      }
       
       if (userIds.length === 0) {
         setSearchResults([]);
-        setLoading(false);
         return;
       }
 
@@ -542,7 +565,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Nom d'utilisateur ou nom..."
+              placeholder="Nom d'utilisateur, nom... ou tapez 'strava' pour voir vos amis Strava"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
