@@ -85,8 +85,8 @@ defaultConfig {
 applicationId "app.runconnect"
 minSdk 24
 targetSdk 34
-versionCode 9 // ← augmente si Play Console refuse
-versionName "1.8"
+versionCode 9
+versionName "1.8.1"
 }
 
 buildTypes {
