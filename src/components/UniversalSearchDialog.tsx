@@ -63,6 +63,7 @@ export const UniversalSearchDialog = ({
   const [loading, setLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [isStravaConnected, setIsStravaConnected] = useState<boolean | null>(null);
 
   // Load Strava friends
   const loadStravaFriends = async () => {
@@ -72,13 +73,23 @@ export const UniversalSearchDialog = ({
       setLoading(true);
       
       // First check if current user has Strava connected
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('strava_connected')
-        .eq('user_id', user?.id)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (!userProfile?.strava_connected) {
+      if (profileError) {
+        console.error('Error checking Strava connection:', profileError);
+        setIsStravaConnected(false);
+        setProfileResults([]);
+        return;
+      }
+
+      const isConnected = userProfile?.strava_connected === true;
+      setIsStravaConnected(isConnected);
+
+      if (!isConnected) {
         setProfileResults([]);
         return;
       }
@@ -87,7 +98,7 @@ export const UniversalSearchDialog = ({
       const { data: stravaUsers, error: stravaError } = await supabase
         .from('profiles')
         .select('user_id')
-        .neq('user_id', user?.id)
+        .neq('user_id', user.id)
         .eq('strava_connected', true)
         .eq('is_private', false)
         .limit(20);
@@ -130,6 +141,7 @@ export const UniversalSearchDialog = ({
       setProfileResults(profilesWithStats);
     } catch (error: any) {
       console.error('Error loading Strava friends:', error);
+      setIsStravaConnected(false);
       setProfileResults([]);
     } finally {
       setLoading(false);
@@ -562,6 +574,13 @@ export const UniversalSearchDialog = ({
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [searchQuery, activeTab]);
+
+  // Load Strava friends immediately when switching to Strava tab
+  useEffect(() => {
+    if (activeTab === 'strava' && open) {
+      loadStravaFriends();
+    }
+  }, [activeTab, open]);
 
   // Check follow status when profile is selected
   useEffect(() => {
@@ -1001,7 +1020,7 @@ export const UniversalSearchDialog = ({
                 </p>
               )}
               
-              {!loading && profileResults.length === 0 && (
+              {!loading && isStravaConnected === false && (
                 <Card className="border-dashed">
                   <CardContent className="p-4 text-center">
                     <svg className="h-8 w-8 text-muted-foreground mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
@@ -1009,6 +1028,19 @@ export const UniversalSearchDialog = ({
                     </svg>
                     <p className="text-sm text-muted-foreground">
                       Connectez votre compte Strava pour voir vos amis qui utilisent l'app
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {!loading && isStravaConnected === true && profileResults.length === 0 && (
+                <Card className="border-dashed">
+                  <CardContent className="p-4 text-center">
+                    <svg className="h-8 w-8 text-muted-foreground mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+                    </svg>
+                    <p className="text-sm text-muted-foreground">
+                      Aucun ami Strava trouvé sur l'app pour le moment
                     </p>
                   </CardContent>
                 </Card>
