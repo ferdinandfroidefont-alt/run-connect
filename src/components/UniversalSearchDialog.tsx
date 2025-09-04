@@ -72,25 +72,73 @@ export const UniversalSearchDialog = ({
     try {
       setLoading(true);
       
-      // Use the new edge function to get real Strava friends
-      const { data, error } = await supabase.functions.invoke('get-strava-friends');
+      // First check if current user has Strava connected
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('strava_connected')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error calling get-strava-friends:', error);
+      if (profileError) {
+        console.error('Error checking Strava connection:', profileError);
         setIsStravaConnected(false);
         setProfileResults([]);
         return;
       }
 
-      if (data?.error === 'Strava not connected') {
-        setIsStravaConnected(false);
+      const isConnected = userProfile?.strava_connected === true;
+      setIsStravaConnected(isConnected);
+
+      if (!isConnected) {
         setProfileResults([]);
         return;
       }
 
-      setIsStravaConnected(true);
-      setProfileResults(data?.friends || []);
+      // Find all users with Strava connected (temporary approach)
+      const { data: stravaUsers, error: stravaError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .neq('user_id', user.id)
+        .eq('strava_connected', true)
+        .eq('is_private', false)
+        .limit(20);
 
+      if (stravaError) throw stravaError;
+      
+      const userIds = stravaUsers?.map(item => item.user_id) || [];
+      
+      if (userIds.length === 0) {
+        setProfileResults([]);
+        return;
+      }
+
+      // Get full profiles using the safe function
+      const { data: profiles, error: profilesError } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: userIds
+      });
+
+      if (profilesError) throw profilesError;
+
+      // Load follower counts for each profile
+      const profilesWithStats = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: followerData } = await supabase.rpc('get_follower_count', { 
+            profile_user_id: profile.user_id 
+          });
+          const { data: followingData } = await supabase.rpc('get_following_count', { 
+            profile_user_id: profile.user_id 
+          });
+          
+          return {
+            ...profile,
+            is_private: false, // These are already filtered as public
+            follower_count: followerData || 0,
+            following_count: followingData || 0
+          };
+        })
+      );
+
+      setProfileResults(profilesWithStats);
     } catch (error: any) {
       console.error('Error loading Strava friends:', error);
       setIsStravaConnected(false);
