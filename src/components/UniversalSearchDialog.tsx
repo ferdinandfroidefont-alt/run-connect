@@ -65,6 +65,24 @@ export const UniversalSearchDialog = ({
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isStravaConnected, setIsStravaConnected] = useState<boolean | null>(null);
 
+  // Check Strava connection status
+  const checkStravaConnection = async () => {
+    if (!user) return;
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('strava_connected')
+        .eq('user_id', user.id)
+        .single();
+
+      setIsStravaConnected(profile?.strava_connected || false);
+    } catch (error) {
+      console.error('Error checking Strava connection:', error);
+      setIsStravaConnected(false);
+    }
+  };
+
   // Load Strava friends
   const loadStravaFriends = async () => {
     if (!user) return;
@@ -72,12 +90,14 @@ export const UniversalSearchDialog = ({
     try {
       setLoading(true);
       
+      // First check if Strava is connected
+      await checkStravaConnection();
+      
       // Use the edge function to get real Strava friends
       const { data, error } = await supabase.functions.invoke('get-strava-friends');
 
       if (error) {
         console.error('Error calling get-strava-friends:', error);
-        setIsStravaConnected(false);
         setProfileResults([]);
         return;
       }
@@ -88,12 +108,16 @@ export const UniversalSearchDialog = ({
         return;
       }
 
-      setIsStravaConnected(true);
+      if (data?.error === 'Profile not found') {
+        setIsStravaConnected(false);
+        setProfileResults([]);
+        return;
+      }
+
       setProfileResults(data?.friends || []);
 
     } catch (error: any) {
       console.error('Error loading Strava friends:', error);
-      setIsStravaConnected(false);
       setProfileResults([]);
     } finally {
       setLoading(false);
