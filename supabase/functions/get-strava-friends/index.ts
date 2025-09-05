@@ -51,6 +51,14 @@ serve(async (req) => {
     if (profileError) {
       console.error('Profile error:', profileError)
       return new Response(
+        JSON.stringify({ error: 'Database error', friends: [] }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!profile) {
+      console.log('No profile found for user:', user.id)
+      return new Response(
         JSON.stringify({ error: 'Profile not found', friends: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
