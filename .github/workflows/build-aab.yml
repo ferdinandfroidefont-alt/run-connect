@@ -59,7 +59,7 @@ jobs:
 
           android {
             namespace "app.runconnect"
-            compileSdk 34
+            compileSdk 35
 
             signingConfigs {
               release {
@@ -79,7 +79,7 @@ jobs:
             defaultConfig {
               applicationId "app.runconnect"
               minSdk 24
-              targetSdk 34
+              targetSdk 35
               versionCode 11
               versionName "1.7"
             }
