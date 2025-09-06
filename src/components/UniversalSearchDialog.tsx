@@ -577,6 +577,13 @@ export const UniversalSearchDialog = ({
     setSelectedClub(null);
   }, [activeTab]);
 
+  // Update activeTab when initialTab changes
+  useEffect(() => {
+    if (initialTab !== '') {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, open]);
+
   // Profile detail view
   if (selectedProfile) {
     return (
