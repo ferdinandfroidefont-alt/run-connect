@@ -861,7 +861,7 @@ export const UniversalSearchDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        {!activeTab ? (
+        {activeTab === '' ? (
           <div className="space-y-3">
             <Button
               variant="outline"

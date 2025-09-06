@@ -1405,34 +1405,34 @@ const Messages = () => {
         {/* Search Buttons */}
         <Card>
           <CardContent className="p-4">
-            <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
               <Button
                 variant="outline"
-                className="w-full justify-start gap-3 h-12"
+                className="flex flex-col items-center gap-2 h-16"
                 onClick={() => {
                   setSearchActiveTab('profiles');
                   setShowUserSearch(true);
                 }}
               >
                 <User className="h-5 w-5" />
-                <span>Utilisateurs</span>
+                <span className="text-xs">Utilisateurs</span>
               </Button>
               
               <Button
                 variant="outline"
-                className="w-full justify-start gap-3 h-12"
+                className="flex flex-col items-center gap-2 h-16"
                 onClick={() => {
                   setSearchActiveTab('clubs');
                   setShowUserSearch(true);
                 }}
               >
                 <Users className="h-5 w-5" />
-                <span>Clubs</span>
+                <span className="text-xs">Clubs</span>
               </Button>
               
               <Button
                 variant="outline"
-                className="w-full justify-start gap-3 h-12"
+                className="flex flex-col items-center gap-2 h-16"
                 onClick={() => {
                   setSearchActiveTab('strava');
                   setShowUserSearch(true);
@@ -1441,7 +1441,7 @@ const Messages = () => {
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
                 </svg>
-                <span>Strava</span>
+                <span className="text-xs">Strava</span>
               </Button>
             </div>
           </CardContent>
