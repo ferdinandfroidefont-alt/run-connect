@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical } from "lucide-react";
+import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical, ArrowLeft } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -51,7 +51,7 @@ export const UniversalSearchDialog = ({
 }: UniversalSearchDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava'>('profiles');
+  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava' | ''>('');
   const [searchQuery, setSearchQuery] = useState("");
   const [profileResults, setProfileResults] = useState<Profile[]>([]);
   const [clubResults, setClubResults] = useState<Club[]>([]);
@@ -859,23 +859,65 @@ export const UniversalSearchDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs' | 'strava')}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="profiles" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Profils
-            </TabsTrigger>
-            <TabsTrigger value="clubs" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Clubs
-            </TabsTrigger>
-            <TabsTrigger value="strava" className="flex items-center gap-2">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        {!activeTab ? (
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab('profiles')}
+            >
+              <User className="h-5 w-5" />
+              <span>Utilisateurs</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab('clubs')}
+            >
+              <Users className="h-5 w-5" />
+              <span>Clubs</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab('strava')}
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
               </svg>
-              Strava
-            </TabsTrigger>
-          </TabsList>
+              <span>Strava</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2"
+              onClick={() => setActiveTab('')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Retour
+            </Button>
+
+            <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs' | 'strava')}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="profiles" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Profils
+                </TabsTrigger>
+                <TabsTrigger value="clubs" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Clubs
+                </TabsTrigger>
+                <TabsTrigger value="strava" className="flex items-center gap-2">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+                  </svg>
+                  Strava
+                </TabsTrigger>
+              </TabsList>
 
           <TabsContent value="profiles" className="space-y-4">
             {/* Profile search */}
@@ -1053,8 +1095,10 @@ export const UniversalSearchDialog = ({
                 </div>
               ))}
             </div>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
