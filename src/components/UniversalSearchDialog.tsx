@@ -41,17 +41,19 @@ interface UniversalSearchDialogProps {
   onOpenChange: (open: boolean) => void;
   onStartConversation?: (userId: string) => void;
   onJoinClub?: (clubId: string) => void;
+  initialTab?: 'profiles' | 'clubs' | 'strava' | '';
 }
 
 export const UniversalSearchDialog = ({ 
   open, 
   onOpenChange, 
   onStartConversation,
-  onJoinClub 
+  onJoinClub,
+  initialTab = ''
 }: UniversalSearchDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava' | ''>('');
+  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava' | ''>(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [profileResults, setProfileResults] = useState<Profile[]>([]);
   const [clubResults, setClubResults] = useState<Club[]>([]);
