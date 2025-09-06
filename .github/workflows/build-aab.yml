@@ -27,14 +27,13 @@ jobs:
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
 
       # ─────────────────────────────────────────────────────────────
-      # Crée le projet Android WebView (SDK 35, AGP 8.5.2)
+      # Crée le projet WebView (SDK 35, AGP 8.5.2)
       # ─────────────────────────────────────────────────────────────
       - name: Create minimal Android WebView project
         run: |
           set -e
           mkdir -p android-webview/app/src/main/java/app/runconnect
-          mkdir -p android-webview/app/src/main/res/values
-          mkdir -p android-webview/app/src/main/res/drawable
+          mkdir -p android-webview/app/src/main/res/{values,drawable}
 
           cat > android-webview/settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -99,8 +98,8 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.7.0'
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'         // OAuth via Custom Tabs
-            implementation 'androidx.core:core-splashscreen:1.0.1'  // Splash screen
+            implementation 'androidx.browser:browser:1.8.0'
+            implementation 'androidx.core:core-splashscreen:1.0.1'
           }
           EOF
 
@@ -151,9 +150,7 @@ jobs:
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:drawable="@color/splash_background" />
             <item>
-              <bitmap
-                android:gravity="center"
-                android:src="@mipmap/ic_launcher"/>
+              <bitmap android:gravity="center" android:src="@mipmap/ic_launcher"/>
             </item>
           </layer-list>
           EOF
@@ -165,8 +162,6 @@ jobs:
               <item name="android:navigationBarColor">@android:color/transparent</item>
               <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
             </style>
-
-            <!-- Splash au démarrage -->
             <style name="Theme.RunConnect.Splash" parent="Theme.SplashScreen">
               <item name="windowSplashScreenBackground">@color/splash_background</item>
               <item name="windowSplashScreenAnimatedIcon">@drawable/splash</item>
@@ -175,7 +170,6 @@ jobs:
           </resources>
           EOF
 
-          # strings
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
@@ -201,8 +195,8 @@ jobs:
           import androidx.browser.customtabs.CustomTabsIntent;
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
-          import androidx.core.view.WindowCompat;
           import androidx.core.splashscreen.SplashScreen;
+          import androidx.core.view.WindowCompat;
 
           public class MainActivity extends AppCompatActivity {
               private static final int REQ_PERMS = 1001;
@@ -254,26 +248,22 @@ jobs:
                       }
                   });
 
-                  // Demande runtime : localisation + contacts + notifications (API 33+)
+                  // Demande runtime (API 33+ inclut POST_NOTIFICATIONS)
                   if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                           || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
                           || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                               ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                          ActivityCompat.requestPermissions(this,
-                                  new String[]{
-                                          Manifest.permission.ACCESS_FINE_LOCATION,
-                                          Manifest.permission.ACCESS_COARSE_LOCATION,
-                                          Manifest.permission.READ_CONTACTS,
-                                          Manifest.permission.POST_NOTIFICATIONS
-                                  }, REQ_PERMS);
+                          ActivityCompat.requestPermissions(this, new String[] {
+                              Manifest.permission.ACCESS_FINE_LOCATION,
+                              Manifest.permission.ACCESS_COARSE_LOCATION,
+                              Manifest.permission.READ_CONTACTS,
+                              Manifest.permission.POST_NOTIFICATIONS }, REQ_PERMS);
                       } else {
-                          ActivityCompat.requestPermissions(this,
-                                  new String[]{
-                                          Manifest.permission.ACCESS_FINE_LOCATION,
-                                          Manifest.permission.ACCESS_COARSE_LOCATION,
-                                          Manifest.permission.READ_CONTACTS
-                                  }, REQ_PERMS);
+                          ActivityCompat.requestPermissions(this, new String[] {
+                              Manifest.permission.ACCESS_FINE_LOCATION,
+                              Manifest.permission.ACCESS_COARSE_LOCATION,
+                              Manifest.permission.READ_CONTACTS }, REQ_PERMS);
                       }
                   }
 
@@ -339,7 +329,6 @@ jobs:
           public class NotificationBridge {
               private final NotificationService service;
               public NotificationBridge(Context ctx) { this.service = new NotificationService(ctx); }
-
               @JavascriptInterface public boolean requestPermissions() { return service.areNotificationsEnabled(); }
               @JavascriptInterface public boolean areNotificationsSupported() { return true; }
               @JavascriptInterface public void showNotification(String title, String message) { service.showNotification(title, message); }
@@ -397,7 +386,7 @@ jobs:
           EOF
 
       # ─────────────────────────────────────────────────────────────
-      # Icônes : on redimensionne assets/appicon.png → mipmaps
+      # Génère les icônes depuis assets/appicon.png
       # ─────────────────────────────────────────────────────────────
       - name: Install ImageMagick (icon resizing)
         run: |
@@ -417,11 +406,9 @@ jobs:
           convert "$SRC" -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
           convert "$SRC" -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           convert "$SRC" -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png    app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-hdpi/ic_launcher.png    app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xhdpi/ic_launcher.png   app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png  app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp app/src/main/res/mipmap-$d/ic_launcher.png app/src/main/res/mipmap-$d/ic_launcher_round.png
+          done
           cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
             <background android:drawable="@color/splash_background"/>
@@ -436,7 +423,7 @@ jobs:
           XML
 
       # ─────────────────────────────────────────────────────────────
-      # Keystore depuis les secrets
+      # Keystore (depuis secrets)
       # ─────────────────────────────────────────────────────────────
       - name: Restore upload keystore
         working-directory: android-webview
@@ -448,7 +435,7 @@ jobs:
           ls -l keystore.jks
 
       # ─────────────────────────────────────────────────────────────
-      # Build AAB
+      # Build AAB (Gradle 8.7)
       # ─────────────────────────────────────────────────────────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
@@ -457,7 +444,7 @@ jobs:
           ANDROID_KEY_PASSWORD:     ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_ALIAS:   ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         with:
-          gradle-version: 8.6
+          gradle-version: 8.7
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
