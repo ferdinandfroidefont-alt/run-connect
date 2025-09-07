@@ -12,7 +12,7 @@ jobs:
       APP_ID: app.runconnect
       APP_NAME: RunConnect
       START_URL: https://run-connect.lovable.app
-      VERSION_CODE: 11
+      VERSION_CODE: 17
       VERSION_NAME: "1.8"
 
     steps:
@@ -38,7 +38,7 @@ jobs:
         run: |
           set -e
 
-          mkdir -p android-webview/app/src/main/java/${APP_ID//.//}   # app/runconnect
+          mkdir -p android-webview/app/src/main/java/${APP_ID//.//}
           mkdir -p android-webview/app/src/main/res/values
           mkdir -p android-webview/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android-webview/app/src/main/res/mipmap-hdpi
@@ -59,7 +59,6 @@ jobs:
           include(":app")
           EOF
 
-          # AGP 8.5.2 (supporte compileSdk 35) et wrapper 8.7
           cat > android-webview/build.gradle <<'EOF'
           plugins {
             id 'com.android.application' version '8.5.2' apply false
@@ -128,7 +127,6 @@ jobs:
           }
           EOF
 
-          # Manifest (Splash + icône + permissions)
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -159,10 +157,9 @@ jobs:
           </manifest>
           EOF
 
-          # Thème Splash + thème principal
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
-            <!-- Thème Splash (affiché immédiatement, pas d'écran blanc) -->
+            <!-- Splash immédiat -->
             <style name="Theme.RunConnect.Splash" parent="Theme.SplashScreen">
               <item name="windowSplashScreenBackground">@android:color/white</item>
               <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
@@ -178,14 +175,12 @@ jobs:
           </resources>
           EOF
 
-          # strings
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <resources>
             <string name="app_name">${APP_NAME}</string>
           </resources>
           EOF
 
-          # MainActivity (WebView simple + SplashScreen API)
           cat > android-webview/app/src/main/java/${APP_ID//.//}/MainActivity.java <<'EOF'
           package ${APP_ID};
 
@@ -236,7 +231,6 @@ jobs:
                   webView.setWebViewClient(new WebViewClient() {
                       @Override
                       public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                          // Ouvre Google OAuth en Custom Tabs si nécessaire
                           Uri uri = Uri.parse(url);
                           String host = uri.getHost() != null ? uri.getHost() : "";
                           if (host.contains("accounts.google.com") || url.contains("oauth")) {
@@ -248,29 +242,23 @@ jobs:
                       }
                   });
 
-                  // Demandes de permissions (sans forcer = pas bloquant au lancement)
-                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                          != PackageManager.PERMISSION_GRANTED
-                      || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
-                          != PackageManager.PERMISSION_GRANTED
-                      || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
-                          != PackageManager.PERMISSION_GRANTED
-                      || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                          ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                          != PackageManager.PERMISSION_GRANTED)) {
-
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                      || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                      || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
+                      || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                          && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                           ActivityCompat.requestPermissions(this, new String[]{
-                              Manifest.permission.ACCESS_FINE_LOCATION,
-                              Manifest.permission.ACCESS_COARSE_LOCATION,
-                              Manifest.permission.READ_CONTACTS,
-                              Manifest.permission.POST_NOTIFICATIONS
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.READ_CONTACTS,
+                            Manifest.permission.POST_NOTIFICATIONS
                           }, REQ_PERMS);
                       } else {
                           ActivityCompat.requestPermissions(this, new String[]{
-                              Manifest.permission.ACCESS_FINE_LOCATION,
-                              Manifest.permission.ACCESS_COARSE_LOCATION,
-                              Manifest.permission.READ_CONTACTS
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.READ_CONTACTS
                           }, REQ_PERMS);
                       }
                   }
@@ -287,8 +275,7 @@ jobs:
           }
           EOF
 
-          # Copie directe de l’icône existante du repo (pas de conversion)
-          # On suppose que le fichier existe à assets/appicon.png dans le repo
+          # Icônes depuis le repo (assets/appicon.png)
           cp assets/appicon.png android-webview/app/src/main/res/mipmap-hdpi/ic_launcher.png
           cp assets/appicon.png android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
@@ -311,8 +298,7 @@ jobs:
             <foreground android:drawable="@mipmap/ic_launcher_round"/>
           </adaptive-icon>
           XML
-          
-      # ───────── Keystore depuis les SECRETS ─────────
+
       - name: Restore upload keystore
         working-directory: android-webview
         env:
@@ -322,7 +308,6 @@ jobs:
           echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
           ls -l keystore.jks
 
-      # ───────── Build du AAB (Gradle 8.7 pour AGP 8.5.2) ─────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         env:
@@ -334,7 +319,6 @@ jobs:
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
-      # ───────── Artefact AAB (sécurisé) ─────────
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
