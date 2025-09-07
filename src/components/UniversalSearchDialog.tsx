@@ -71,12 +71,21 @@ export const UniversalSearchDialog = ({
   const checkStravaConnection = async () => {
     if (!user) return;
 
+    console.log('🔍 Checking Strava connection for user:', user.id);
+
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('strava_connected, strava_access_token')
+        .select('strava_connected, strava_access_token, strava_user_id')
         .eq('user_id', user.id)
         .single();
+
+      console.log('🔍 Profile data:', {
+        strava_connected: profile?.strava_connected,
+        has_access_token: !!profile?.strava_access_token,
+        strava_user_id: profile?.strava_user_id,
+        error
+      });
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -84,7 +93,9 @@ export const UniversalSearchDialog = ({
         return;
       }
 
-      setIsStravaConnected(profile?.strava_connected && profile?.strava_access_token ? true : false);
+      const connected = profile?.strava_connected && profile?.strava_access_token ? true : false;
+      console.log('🔍 Final connection status:', connected);
+      setIsStravaConnected(connected);
     } catch (error) {
       console.error('Error checking Strava connection:', error);
       setIsStravaConnected(false);
@@ -95,14 +106,20 @@ export const UniversalSearchDialog = ({
   const loadStravaFriends = async () => {
     if (!user) return;
 
+    console.log('🔍 Loading Strava friends for user:', user.id);
+
     try {
       setLoading(true);
       
       // First check if Strava is connected
       await checkStravaConnection();
       
+      console.log('🔍 Strava connection status:', isStravaConnected);
+      
       // Use the edge function to get real Strava friends
       const { data, error } = await supabase.functions.invoke('get-strava-friends');
+
+      console.log('🔍 Edge function response:', { data, error });
 
       if (error) {
         console.error('Error calling get-strava-friends:', error);
@@ -111,18 +128,27 @@ export const UniversalSearchDialog = ({
       }
 
       if (data?.error === 'Strava not connected') {
+        console.log('🔍 Edge function says Strava not connected');
         setIsStravaConnected(false);
         setProfileResults([]);
         return;
       }
 
       if (data?.error === 'Profile not found') {
+        console.log('🔍 Edge function says profile not found');
         setIsStravaConnected(false);
         setProfileResults([]);
         return;
       }
 
-      setProfileResults(data?.friends || []);
+      if (data?.friends) {
+        console.log('🔍 Found Strava friends:', data.friends.length);
+        setProfileResults(data.friends);
+        setIsStravaConnected(true);
+      } else {
+        console.log('🔍 No friends in response');
+        setProfileResults([]);
+      }
 
     } catch (error: any) {
       console.error('Error loading Strava friends:', error);

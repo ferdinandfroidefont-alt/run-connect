@@ -48,6 +48,14 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single()
 
+    console.log('Profile query result:', {
+      profileFound: !!profile,
+      strava_connected: profile?.strava_connected,
+      has_access_token: !!profile?.strava_access_token,
+      strava_user_id: profile?.strava_user_id,
+      error: profileError
+    })
+
     if (profileError) {
       console.error('Profile error:', profileError)
       return new Response(
@@ -65,7 +73,10 @@ serve(async (req) => {
     }
 
     if (!profile?.strava_connected || !profile?.strava_access_token) {
-      console.log('Strava not connected for user:', user.id)
+      console.log('Strava not connected for user:', user.id, {
+        strava_connected: profile?.strava_connected,
+        has_access_token: !!profile?.strava_access_token
+      })
       return new Response(
         JSON.stringify({ error: 'Strava not connected', friends: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
