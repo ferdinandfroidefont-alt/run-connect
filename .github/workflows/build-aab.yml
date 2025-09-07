@@ -8,6 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
+    env:
+      APP_ID: app.runconnect
+      APP_NAME: RunConnect
+      START_URL: https://run-connect.lovable.app
+      VERSION_CODE: 11
+      VERSION_NAME: "1.8"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,17 +33,24 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
 
-      # ─────────────────────────────────────────────────────────────
-      # Crée le projet WebView (SDK 35, AGP 8.5.2)
-      # ─────────────────────────────────────────────────────────────
+      # ───────── Génère un mini projet Android WebView (AGP 8.5.2, compileSdk 35) ─────────
       - name: Create minimal Android WebView project
         run: |
           set -e
-          mkdir -p android-webview/app/src/main/java/app/runconnect
-          mkdir -p android-webview/app/src/main/res/{values,drawable}
+
+          mkdir -p android-webview/app/src/main/java/${APP_ID//.//}   # app/runconnect
+          mkdir -p android-webview/app/src/main/res/values
+          mkdir -p android-webview/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android-webview/app/src/main/res/mipmap-hdpi
+          mkdir -p android-webview/app/src/main/res/mipmap-xhdpi
+          mkdir -p android-webview/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android-webview/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p android-webview/assets
 
           cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          pluginManagement {
+            repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
           dependencyResolutionManagement {
             repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
             repositories { google(); mavenCentral() }
@@ -45,16 +59,34 @@ jobs:
           include(":app")
           EOF
 
+          # AGP 8.5.2 (supporte compileSdk 35) et wrapper 8.7
           cat > android-webview/build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.5.2' apply false }
+          plugins {
+            id 'com.android.application' version '8.5.2' apply false
+          }
+          EOF
+
+          cat > android-webview/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          android.suppressUnsupportedCompileSdk=35
           EOF
 
           cat > android-webview/app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
 
           android {
-            namespace "app.runconnect"
+            namespace "${APP_ID}"
             compileSdk 35
+
+            defaultConfig {
+              applicationId "${APP_ID}"
+              minSdk 24
+              targetSdk 35
+              versionCode ${VERSION_CODE}
+              versionName "${VERSION_NAME}"
+            }
 
             signingConfigs {
               release {
@@ -71,21 +103,14 @@ jobs:
               }
             }
 
-            defaultConfig {
-              applicationId "app.runconnect"
-              minSdk 24
-              targetSdk 35
-              versionCode 16
-              versionName "1.8"
-            }
-
             buildTypes {
               release {
                 minifyEnabled false
-                proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
                 signingConfig signingConfigs.release
               }
-              debug { signingConfig signingConfigs.debug }
+              debug {
+                signingConfig signingConfigs.debug
+              }
             }
 
             compileOptions {
@@ -103,12 +128,7 @@ jobs:
           }
           EOF
 
-          cat > android-webview/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          EOF
-
-          # Manifest (icône + splash + permissions)
+          # Manifest (Splash + icône + permissions)
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -119,16 +139,16 @@ jobs:
             <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
             <application
-              android:label="RunConnect"
+              android:label="${APP_NAME}"
               android:icon="@mipmap/ic_launcher"
               android:roundIcon="@mipmap/ic_launcher_round"
               android:usesCleartextTraffic="false"
               android:theme="@style/Theme.RunConnect.Splash">
-
               <activity
                 android:name=".MainActivity"
                 android:exported="true"
                 android:configChanges="orientation|screenSize|keyboardHidden"
+                android:launchMode="singleTask"
                 android:hardwareAccelerated="true">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
@@ -139,44 +159,35 @@ jobs:
           </manifest>
           EOF
 
-          # Couleurs + styles (splash)
-          cat > android-webview/app/src/main/res/values/colors.xml <<'EOF'
-          <resources>
-            <color name="splash_background">#FFFFFF</color>
-          </resources>
-          EOF
-
-          cat > android-webview/app/src/main/res/drawable/splash.xml <<'EOF'
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:drawable="@color/splash_background" />
-            <item>
-              <bitmap android:gravity="center" android:src="@mipmap/ic_launcher"/>
-            </item>
-          </layer-list>
-          EOF
-
+          # Thème Splash + thème principal
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
+            <!-- Thème Splash (affiché immédiatement, pas d'écran blanc) -->
+            <style name="Theme.RunConnect.Splash" parent="Theme.SplashScreen">
+              <item name="windowSplashScreenBackground">@android:color/white</item>
+              <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+              <item name="postSplashScreenTheme">@style/Theme.RunConnect</item>
+            </style>
+
+            <!-- Thème de l'app -->
             <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
               <item name="android:statusBarColor">@android:color/transparent</item>
               <item name="android:navigationBarColor">@android:color/transparent</item>
               <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
             </style>
-            <style name="Theme.RunConnect.Splash" parent="Theme.SplashScreen">
-              <item name="windowSplashScreenBackground">@color/splash_background</item>
-              <item name="windowSplashScreenAnimatedIcon">@drawable/splash</item>
-              <item name="postSplashScreenTheme">@style/Theme.RunConnect</item>
-            </style>
           </resources>
           EOF
 
+          # strings
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
-          <resources><string name="app_name">RunConnect</string></resources>
+          <resources>
+            <string name="app_name">${APP_NAME}</string>
+          </resources>
           EOF
 
-          # Java
-          cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
-          package app.runconnect;
+          # MainActivity (WebView simple + SplashScreen API)
+          cat > android-webview/app/src/main/java/${APP_ID//.//}/MainActivity.java <<'EOF'
+          package ${APP_ID};
 
           import android.Manifest;
           import android.content.pm.PackageManager;
@@ -184,37 +195,36 @@ jobs:
           import android.net.Uri;
           import android.os.Build;
           import android.os.Bundle;
-          import android.webkit.GeolocationPermissions;
-          import android.webkit.WebChromeClient;
-          import android.webkit.WebResourceRequest;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
 
+          import androidx.activity.EdgeToEdge;
           import androidx.appcompat.app.AppCompatActivity;
           import androidx.browser.customtabs.CustomTabsIntent;
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
           import androidx.core.splashscreen.SplashScreen;
-          import androidx.core.view.WindowCompat;
 
           public class MainActivity extends AppCompatActivity {
               private static final int REQ_PERMS = 1001;
               private WebView webView;
-              private final String START_URL = "https://run-connect.lovable.app";
+              private final String START_URL = "${START_URL}";
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   SplashScreen.installSplashScreen(this);
                   super.onCreate(savedInstanceState);
+                  EdgeToEdge.enable(this);
 
-                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
                   if (Build.VERSION.SDK_INT >= 21) {
                       getWindow().setStatusBarColor(Color.TRANSPARENT);
                       getWindow().setNavigationBarColor(Color.TRANSPARENT);
                   }
 
                   webView = new WebView(this);
+                  WebView.setWebContentsDebuggingEnabled(true);
+
                   WebSettings s = webView.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
@@ -222,48 +232,46 @@ jobs:
                   s.setUseWideViewPort(true);
                   s.setAllowFileAccess(true);
                   s.setMediaPlaybackRequiresUserGesture(false);
-                  s.setGeolocationEnabled(true);
-
-                  webView.addJavascriptInterface(new NotificationBridge(this), "AndroidNotifications");
-                  webView.addJavascriptInterface(new ContactsBridge(this), "AndroidContacts");
-
-                  webView.setWebChromeClient(new WebChromeClient() {
-                      @Override
-                      public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                          callback.invoke(origin, true, false);
-                      }
-                  });
 
                   webView.setWebViewClient(new WebViewClient() {
                       @Override
-                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                          Uri uri = request.getUrl();
+                      public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                          // Ouvre Google OAuth en Custom Tabs si nécessaire
+                          Uri uri = Uri.parse(url);
                           String host = uri.getHost() != null ? uri.getHost() : "";
-                          String url = uri.toString();
                           if (host.contains("accounts.google.com") || url.contains("oauth")) {
-                              new CustomTabsIntent.Builder().build().launchUrl(MainActivity.this, uri);
+                              CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
+                              tabs.launchUrl(MainActivity.this, uri);
                               return true;
                           }
                           return false;
                       }
                   });
 
-                  // Demande runtime (API 33+ inclut POST_NOTIFICATIONS)
-                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                          || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
-                          || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                              ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
+                  // Demandes de permissions (sans forcer = pas bloquant au lancement)
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                          != PackageManager.PERMISSION_GRANTED
+                      || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                          != PackageManager.PERMISSION_GRANTED
+                      || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
+                          != PackageManager.PERMISSION_GRANTED
+                      || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                          ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                          != PackageManager.PERMISSION_GRANTED)) {
+
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                          ActivityCompat.requestPermissions(this, new String[] {
+                          ActivityCompat.requestPermissions(this, new String[]{
                               Manifest.permission.ACCESS_FINE_LOCATION,
                               Manifest.permission.ACCESS_COARSE_LOCATION,
                               Manifest.permission.READ_CONTACTS,
-                              Manifest.permission.POST_NOTIFICATIONS }, REQ_PERMS);
+                              Manifest.permission.POST_NOTIFICATIONS
+                          }, REQ_PERMS);
                       } else {
-                          ActivityCompat.requestPermissions(this, new String[] {
+                          ActivityCompat.requestPermissions(this, new String[]{
                               Manifest.permission.ACCESS_FINE_LOCATION,
                               Manifest.permission.ACCESS_COARSE_LOCATION,
-                              Manifest.permission.READ_CONTACTS }, REQ_PERMS);
+                              Manifest.permission.READ_CONTACTS
+                          }, REQ_PERMS);
                       }
                   }
 
@@ -279,152 +287,32 @@ jobs:
           }
           EOF
 
-          cat > android-webview/app/src/main/java/app/runconnect/NotificationService.java <<'EOF'
-          package app.runconnect;
+          # Copie directe de l’icône existante du repo (pas de conversion)
+          # On suppose que le fichier existe à assets/appicon.png dans le repo
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
-          import android.app.NotificationChannel;
-          import android.app.NotificationManager;
-          import android.content.Context;
-          import android.os.Build;
-          import androidx.core.app.NotificationCompat;
-
-          public class NotificationService {
-              private static final String CHANNEL_ID = "runconnect_notifications";
-              private final Context context;
-              private final NotificationManager nm;
-
-              public NotificationService(Context context) {
-                  this.context = context.getApplicationContext();
-                  this.nm = (NotificationManager) this.context.getSystemService(Context.NOTIFICATION_SERVICE);
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "RunConnect Notifications",
-                              NotificationManager.IMPORTANCE_DEFAULT);
-                      ch.setDescription("Notifications pour les sessions et messages");
-                      nm.createNotificationChannel(ch);
-                  }
-              }
-
-              public boolean areNotificationsEnabled() {
-                  return Build.VERSION.SDK_INT < Build.VERSION_CODES.N || nm.areNotificationsEnabled();
-              }
-
-              public void showNotification(String title, String message) {
-                  NotificationCompat.Builder b = new NotificationCompat.Builder(context, CHANNEL_ID)
-                          .setSmallIcon(android.R.drawable.ic_dialog_info)
-                          .setContentTitle(title)
-                          .setContentText(message)
-                          .setAutoCancel(true)
-                          .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-                  nm.notify(1, b.build());
-              }
-          }
-          EOF
-
-          cat > android-webview/app/src/main/java/app/runconnect/NotificationBridge.java <<'EOF'
-          package app.runconnect;
-
-          import android.content.Context;
-          import android.webkit.JavascriptInterface;
-
-          public class NotificationBridge {
-              private final NotificationService service;
-              public NotificationBridge(Context ctx) { this.service = new NotificationService(ctx); }
-              @JavascriptInterface public boolean requestPermissions() { return service.areNotificationsEnabled(); }
-              @JavascriptInterface public boolean areNotificationsSupported() { return true; }
-              @JavascriptInterface public void showNotification(String title, String message) { service.showNotification(title, message); }
-          }
-          EOF
-
-          cat > android-webview/app/src/main/java/app/runconnect/ContactsBridge.java <<'EOF'
-          package app.runconnect;
-
-          import android.content.Context;
-          import android.database.Cursor;
-          import android.provider.ContactsContract;
-          import android.webkit.JavascriptInterface;
-          import android.Manifest;
-          import android.content.pm.PackageManager;
-          import androidx.core.content.ContextCompat;
-          import org.json.JSONArray;
-          import org.json.JSONObject;
-
-          public class ContactsBridge {
-              private final Context ctx;
-              public ContactsBridge(Context ctx) { this.ctx = ctx.getApplicationContext(); }
-
-              @JavascriptInterface public boolean hasContactsPermission() {
-                  return ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
-              }
-              @JavascriptInterface public boolean areContactsSupported() { return true; }
-
-              @JavascriptInterface public String getContacts() {
-                  if (!hasContactsPermission()) return "[]";
-                  JSONArray out = new JSONArray();
-                  Cursor c = ctx.getContentResolver().query(
-                      ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                      new String[]{ ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-                                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                                    ContactsContract.CommonDataKinds.Phone.NUMBER },
-                      null, null,
-                      ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
-                  );
-                  if (c != null) {
-                      while (c.moveToNext()) {
-                          try {
-                              JSONObject o = new JSONObject();
-                              o.put("contactId", c.getString(0));
-                              o.put("displayName", c.getString(1));
-                              o.put("phoneNumber", c.getString(2));
-                              out.put(o);
-                          } catch (Exception ignored) {}
-                      }
-                      c.close();
-                  }
-                  return out.toString();
-              }
-          }
-          EOF
-
-      # ─────────────────────────────────────────────────────────────
-      # Génère les icônes depuis assets/appicon.png
-      # ─────────────────────────────────────────────────────────────
-      - name: Install ImageMagick (icon resizing)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-
-      - name: Generate launcher icons from repo asset
-        working-directory: android-webview
-        run: |
-          set -euo pipefail
-          SRC="${GITHUB_WORKSPACE}/assets/appicon.png"
-          if [ ! -f "$SRC" ]; then echo "assets/appicon.png manquant"; exit 1; fi
-          mk() { mkdir -p "app/src/main/res/$1"; }
-          mk mipmap-mdpi; mk mipmap-hdpi; mk mipmap-xhdpi; mk mipmap-xxhdpi; mk mipmap-xxxhdpi; mk mipmap-anydpi-v26
-          convert "$SRC" -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert "$SRC" -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert "$SRC" -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert "$SRC" -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert "$SRC" -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            cp app/src/main/res/mipmap-$d/ic_launcher.png app/src/main/res/mipmap-$d/ic_launcher_round.png
-          done
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
+          cat > android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@color/splash_background"/>
+            <background android:drawable="@android:color/white"/>
             <foreground android:drawable="@mipmap/ic_launcher"/>
           </adaptive-icon>
           XML
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
+
+          cat > android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@color/splash_background"/>
+            <background android:drawable="@android:color/white"/>
             <foreground android:drawable="@mipmap/ic_launcher_round"/>
           </adaptive-icon>
           XML
-
-      # ─────────────────────────────────────────────────────────────
-      # Keystore (depuis secrets)
-      # ─────────────────────────────────────────────────────────────
+          
+      # ───────── Keystore depuis les SECRETS ─────────
       - name: Restore upload keystore
         working-directory: android-webview
         env:
@@ -434,9 +322,7 @@ jobs:
           echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
           ls -l keystore.jks
 
-      # ─────────────────────────────────────────────────────────────
-      # Build AAB (Gradle 8.7)
-      # ─────────────────────────────────────────────────────────────
+      # ───────── Build du AAB (Gradle 8.7 pour AGP 8.5.2) ─────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         env:
@@ -448,6 +334,7 @@ jobs:
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
+      # ───────── Artefact AAB (sécurisé) ─────────
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
