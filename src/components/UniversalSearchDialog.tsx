@@ -72,13 +72,19 @@ export const UniversalSearchDialog = ({
     if (!user) return;
 
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .select('strava_connected')
+        .select('strava_connected, strava_access_token')
         .eq('user_id', user.id)
         .single();
 
-      setIsStravaConnected(profile?.strava_connected || false);
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setIsStravaConnected(false);
+        return;
+      }
+
+      setIsStravaConnected(profile?.strava_connected && profile?.strava_access_token ? true : false);
     } catch (error) {
       console.error('Error checking Strava connection:', error);
       setIsStravaConnected(false);

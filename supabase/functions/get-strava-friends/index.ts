@@ -46,7 +46,7 @@ serve(async (req) => {
       .from('profiles')
       .select('strava_access_token, strava_user_id, strava_connected')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .single()
 
     if (profileError) {
       console.error('Profile error:', profileError)
