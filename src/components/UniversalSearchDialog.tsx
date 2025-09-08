@@ -1085,9 +1085,22 @@ export const UniversalSearchDialog = ({
                     <svg className="h-8 w-8 text-muted-foreground mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
                     </svg>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-3">
                       Connectez votre compte Strava pour voir vos amis qui utilisent l'app
                     </p>
+                    <Button 
+                      onClick={() => {
+                        onOpenChange(false);
+                        // Ouvrir les paramètres pour la connexion Strava
+                        if (window.location.pathname !== '/profile') {
+                          window.location.href = '/profile';
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Aller aux paramètres
+                    </Button>
                   </CardContent>
                 </Card>
               )}
