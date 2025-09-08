@@ -1025,7 +1025,7 @@ export const UniversalSearchDialog = ({
               />
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-2">
+            <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-background pr-2">
               {clubResults.length === 0 && searchQuery && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   Aucun club trouvé avec ce code
@@ -1072,7 +1072,7 @@ export const UniversalSearchDialog = ({
 
           <TabsContent value="strava" className="space-y-4">
             {/* Strava friends - pas de barre de recherche */}
-            <div className="max-h-60 overflow-y-auto space-y-2">
+            <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-background pr-2">
               {loading && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   Chargement des amis Strava...
