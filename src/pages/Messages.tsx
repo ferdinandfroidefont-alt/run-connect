@@ -1405,6 +1405,9 @@ const Messages = () => {
         {/* Search Buttons */}
         <Card>
           <CardContent className="p-4">
+            <div className="mb-3 text-sm font-medium text-muted-foreground">
+              barre de recherche
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <Button
                 variant="outline"
