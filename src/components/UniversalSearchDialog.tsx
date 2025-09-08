@@ -972,7 +972,7 @@ export const UniversalSearchDialog = ({
               />
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-2">
+            <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-background pr-2">
               {profileResults.length === 0 && searchQuery && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   Aucun utilisateur trouvé
