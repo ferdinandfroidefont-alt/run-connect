@@ -209,31 +209,43 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         return;
       }
 
-      // Mettre à jour le profil
-      const { error } = await supabase
+      // Vérifier si le profil existe déjà
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: userId,
-          username: username.trim(),
-          display_name: displayName.trim() || username.trim(),
-          age: age ? parseInt(age) : null,
-          phone: phone.trim() || null,
-          bio: bio.trim() || null,
-          avatar_url: uploadedUrl,
-        });
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (error) {
-        if (error.code === '23505' && error.message.includes('profiles_username_unique')) {
-          toast({
-            title: "Nom d'utilisateur déjà pris",
-            description: "Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.",
-            variant: "destructive",
+      if (existingProfile) {
+        // Mettre à jour le profil existant
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            username: username.trim(),
+            display_name: displayName.trim() || username.trim(),
+            age: age ? parseInt(age) : null,
+            phone: phone.trim() || null,
+            bio: bio.trim() || null,
+            avatar_url: uploadedUrl,
+          })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      } else {
+        // Créer un nouveau profil
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: userId,
+            username: username.trim(),
+            display_name: displayName.trim() || username.trim(),
+            age: age ? parseInt(age) : null,
+            phone: phone.trim() || null,
+            bio: bio.trim() || null,
+            avatar_url: uploadedUrl,
           });
-        } else {
-          throw error;
-        }
-        setIsLoading(false);
-        return;
+
+        if (error) throw error;
       }
 
       toast({
