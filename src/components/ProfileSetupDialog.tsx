@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,14 +292,14 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               </Avatar>
               <button 
                 type="button"
-                onClick={() => document.getElementById('avatar-upload')?.click()}
-                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90 border-0"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90 border-0 touch-manipulation"
               >
                 <Camera className="h-3 w-3" />
               </button>
             </div>
             <input
-              id="avatar-upload"
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               capture="environment"
