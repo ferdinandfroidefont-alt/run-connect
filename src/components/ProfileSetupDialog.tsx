@@ -34,37 +34,34 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Vérifier le type de fichier
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez sélectionner un fichier image.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Vérifier la taille du fichier (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Erreur",
-          description: "La taille du fichier ne doit pas dépasser 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageSrc = e.target?.result as string;
-        setOriginalImageSrc(imageSrc);
-        setShowCropEditor(true);
-      };
-      reader.readAsDataURL(file);
+  const handleFileSelection = (file: File) => {
+    // Vérifier le type de fichier
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier image.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    // Vérifier la taille du fichier (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erreur",
+        description: "La taille du fichier ne doit pas dépasser 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageSrc = e.target?.result as string;
+      setOriginalImageSrc(imageSrc);
+      setShowCropEditor(true);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleCropComplete = (croppedImageBlob: Blob) => {
@@ -290,20 +287,46 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   }
                 </AvatarFallback>
               </Avatar>
-              <label 
-                htmlFor="avatar-upload-input"
-                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 border-0 active:scale-95 transition-transform flex items-center justify-center"
-              >
-                <Camera className="h-3 w-3" />
-              </label>
             </div>
+            
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.addEventListener('change', (e) => {
+                    const target = e.target as HTMLInputElement;
+                    const file = target.files?.[0];
+                    if (file) {
+                      handleFileSelection(file);
+                    }
+                  });
+                  input.click();
+                }}
+                className="text-xs"
+              >
+                <Camera className="h-3 w-3 mr-1" />
+                Choisir une photo
+              </Button>
+            </div>
+            
             <input
               id="avatar-upload-input"
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleFileSelection(file);
+                }
+              }}
+              className="sr-only"
+              style={{ display: 'none' }}
             />
             {!avatarFile && !avatarPreview && (
               <p className="text-xs text-destructive font-medium">Photo de profil obligatoire *</p>
