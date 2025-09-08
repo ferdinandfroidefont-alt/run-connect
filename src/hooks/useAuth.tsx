@@ -80,49 +80,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       async (event, session) => {
         console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
         
-        // Si l'événement indique une erreur de token ou de session
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          console.log('🚨 TOKEN REFRESH FAILED - clearing session');
-          await supabase.auth.signOut({ scope: 'global' });
-          setSession(null);
-          setUser(null);
-          setSubscriptionInfo(null);
-          setLoading(false);
-          return;
-        }
-        
-        // Vérifier si le profil existe seulement pour les comptes existants (pas les nouveaux)
-        if (session?.user && event !== 'SIGNED_IN') {
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('user_id')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-              
-            console.log('🔍 PROFILE CHECK:', { profile, profileError, event });
-            
-            // Seulement déconnecter si c'est explicitement un compte supprimé (erreur 403/404)
-            if (profileError && (profileError.code === '42501' || profileError.message.includes('permission'))) {
-              console.log('🚨 ACCOUNT DELETED OR INACCESSIBLE - signing out');
-              await supabase.auth.signOut({ scope: 'global' });
-              setSession(null);
-              setUser(null);
-              setSubscriptionInfo(null);
-              setLoading(false);
-              
-              // Rediriger vers l'authentification avec un message
-              setTimeout(() => {
-                window.location.href = '/auth';
-              }, 100);
-              return;
-            }
-          } catch (error) {
-            console.error('Error checking profile:', error);
-            // En cas d'erreur réseau, on continue normalement
-          }
-        }
-        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -149,35 +106,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
-      
-      // Vérifier si le profil existe seulement si c'est une session ancienne
-      if (session?.user) {
-        try {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-            
-          console.log('🔍 INITIAL PROFILE CHECK:', { profile, profileError });
-          
-          // Seulement déconnecter si c'est explicitement un compte supprimé (erreur de permission)
-          if (profileError && (profileError.code === '42501' || profileError.message.includes('permission'))) {
-            console.log('🚨 ACCOUNT DELETED OR INACCESSIBLE - clearing session');
-            await supabase.auth.signOut({ scope: 'global' });
-            setSession(null);
-            setUser(null);
-            setSubscriptionInfo(null);
-            setLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking initial profile:', error);
-          // En cas d'erreur réseau, on continue normalement
-        }
-      }
       
       setSession(session);
       setUser(session?.user ?? null);
