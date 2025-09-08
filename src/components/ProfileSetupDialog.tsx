@@ -290,28 +290,13 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </div>
             
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'image/*';
-                  input.addEventListener('change', (e) => {
-                    const target = e.target as HTMLInputElement;
-                    const file = target.files?.[0];
-                    if (file) {
-                      handleFileSelection(file);
-                    }
-                  });
-                  input.click();
-                }}
-                className="text-xs"
+              <label
+                htmlFor="avatar-upload-input"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 text-xs cursor-pointer"
               >
                 <Camera className="h-3 w-3 mr-1" />
                 Choisir une photo
-              </Button>
+              </label>
             </div>
             
             <input
