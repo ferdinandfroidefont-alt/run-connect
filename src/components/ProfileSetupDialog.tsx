@@ -289,14 +289,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   }
                 </AvatarFallback>
               </Avatar>
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90">
+              <button 
+                type="button"
+                onClick={() => document.getElementById('avatar-upload')?.click()}
+                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90 border-0"
+              >
                 <Camera className="h-3 w-3" />
-              </label>
+              </button>
             </div>
             <input
               id="avatar-upload"
               type="file"
               accept="image/*"
+              capture="environment"
               onChange={handleAvatarChange}
               className="hidden"
             />
