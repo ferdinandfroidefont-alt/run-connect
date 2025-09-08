@@ -290,17 +290,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </div>
             
             <div className="flex gap-2">
-              <label
-                htmlFor="avatar-upload-input"
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 text-xs cursor-pointer"
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs"
               >
                 <Camera className="h-3 w-3 mr-1" />
                 Choisir une photo
-              </label>
+              </Button>
             </div>
             
             <input
-              id="avatar-upload-input"
               ref={fileInputRef}
               type="file"
               accept="image/*"
@@ -310,8 +312,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   handleFileSelection(file);
                 }
               }}
-              className="sr-only"
-              style={{ display: 'none' }}
+              className="hidden"
             />
             {!avatarFile && !avatarPreview && (
               <p className="text-xs text-destructive font-medium">Photo de profil obligatoire *</p>
