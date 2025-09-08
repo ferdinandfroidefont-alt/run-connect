@@ -77,52 +77,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
-        
-        // Si l'événement indique une erreur de token ou de session
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          console.log('🚨 TOKEN REFRESH FAILED - clearing session');
-          await supabase.auth.signOut({ scope: 'global' });
-          setSession(null);
-          setUser(null);
-          setSubscriptionInfo(null);
-          setLoading(false);
-          return;
-        }
-        
-        // Vérifier si le profil existe toujours pour les sessions existantes
-        if (session?.user) {
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('user_id')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-              
-            console.log('🔍 PROFILE CHECK:', { profile, profileError });
-            
-            // Si le profil n'existe pas ou erreur d'accès, c'est que le compte a été supprimé
-            if (profileError || !profile) {
-              console.log('🚨 ACCOUNT DELETED OR INACCESSIBLE - signing out');
-              await supabase.auth.signOut({ scope: 'global' });
-              setSession(null);
-              setUser(null);
-              setSubscriptionInfo(null);
-              setLoading(false);
-              
-              // Rediriger vers l'authentification avec un message
-              setTimeout(() => {
-                window.location.href = '/auth';
-              }, 100);
-              return;
-            }
-          } catch (error) {
-            console.error('Error checking profile:', error);
-            // En cas d'erreur réseau, on laisse passer mais on surveille
-          }
-        }
-        
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -149,36 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
-      
-      // Vérifier si le profil existe toujours pour les sessions existantes
-      if (session?.user) {
-        try {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-            
-          console.log('🔍 INITIAL PROFILE CHECK:', { profile, profileError });
-          
-          // Si le profil n'existe pas ou erreur d'accès, c'est que le compte a été supprimé
-          if (profileError || !profile) {
-            console.log('🚨 ACCOUNT DELETED OR INACCESSIBLE - clearing session');
-            await supabase.auth.signOut({ scope: 'global' });
-            setSession(null);
-            setUser(null);
-            setSubscriptionInfo(null);
-            setLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking initial profile:', error);
-          // En cas d'erreur réseau, on continue normalement
-        }
-      }
-      
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -206,17 +132,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // Nettoyer complètement le stockage local
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('sb-dbptgehpknjsoisirviz-auth-token');
-      sessionStorage.clear();
-      
       await supabase.auth.signOut({ scope: 'global' });
       window.location.href = '/auth';
     } catch (error) {
       console.error('Error signing out:', error);
-      // Forcer la redirection même en cas d'erreur
-      window.location.href = '/auth';
     }
   };
 
