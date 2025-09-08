@@ -1,48 +1,38 @@
 name: Build Android WebView AAB
-
-on:
-  workflow_dispatch:
+on: { workflow_dispatch: {} }
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java (JDK 17)
+      - name: JDK 17
         uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+        with: { distribution: temurin, java-version: 17 }
 
-      - name: Setup Android SDK
+      - name: Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept licenses & install SDK components
+      - name: Licences & SDK
         run: |
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
 
-      # ─────────────────────────────
-      # Projet Android minimal (AGP 8.5.2 / compileSdk 35) + Splash + WebView
-      # ─────────────────────────────
-      - name: Create Android WebView project
+      # ---------- Projet Android "safe" (sans Splash) ----------
+      - name: Generate project
         run: |
           set -e
 
-          # Dossiers
           mkdir -p android-webview/app/src/main/java/app/runconnect
           mkdir -p android-webview/app/src/main/res/values
           mkdir -p android-webview/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p android-webview/app/src/main/res/mipmap-hdpi
-          mkdir -p android-webview/app/src/main/res/mipmap-xhdpi
-          mkdir -p android-webview/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android-webview/app/src/main/res/mipmap-xxxhdpi
+          for d in mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+            mkdir -p android-webview/app/src/main/res/$d
+          done
 
-          # Gradle settings & root build
           cat > android-webview/settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
@@ -57,7 +47,6 @@ jobs:
           plugins { id 'com.android.application' version '8.5.2' apply false }
           EOF
 
-          # gradle.properties obligatoires (AndroidX + compileSdk35 warning)
           cat > android-webview/gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
           android.useAndroidX=true
@@ -65,7 +54,6 @@ jobs:
           android.suppressUnsupportedCompileSdk=35
           EOF
 
-          # Module app
           cat > android-webview/app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
 
@@ -77,8 +65,8 @@ jobs:
               applicationId "app.runconnect"
               minSdk 24
               targetSdk 35
-              versionCode 17
-              versionName "1.9"
+              versionCode 18
+              versionName "2.0"
             }
 
             signingConfigs {
@@ -97,13 +85,8 @@ jobs:
             }
 
             buildTypes {
-              release {
-                minifyEnabled false
-                signingConfig signingConfigs.release
-              }
-              debug {
-                signingConfig signingConfigs.debug
-              }
+              release { minifyEnabled false; signingConfig signingConfigs.release }
+              debug   { signingConfig signingConfigs.debug }
             }
 
             compileOptions {
@@ -117,11 +100,10 @@ jobs:
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
             implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.core:core-splashscreen:1.0.1'
           }
           EOF
 
-          # Manifest avec permissions + Splash
+          # Manifest simple (pas de Splash)
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -136,8 +118,7 @@ jobs:
               android:icon="@mipmap/ic_launcher"
               android:roundIcon="@mipmap/ic_launcher_round"
               android:usesCleartextTraffic="false"
-              android:theme="@style/Theme.RunConnect.Splash">
-
+              android:theme="@style/Theme.RunConnect">
               <activity
                 android:name=".MainActivity"
                 android:exported="true"
@@ -153,15 +134,9 @@ jobs:
           </manifest>
           EOF
 
-          # Styles (Splash + thème)
+          # Thème basique
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
-            <style name="Theme.RunConnect.Splash" parent="Theme.SplashScreen">
-              <item name="windowSplashScreenBackground">@android:color/white</item>
-              <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-              <item name="postSplashScreenTheme">@style/Theme.RunConnect</item>
-            </style>
-
             <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
               <item name="android:statusBarColor">@android:color/transparent</item>
               <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -174,7 +149,7 @@ jobs:
           <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-          # Activity WebView (OAuth via CustomTabs + permissions runtime)
+          # Activity ultra-stable
           cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
           package app.runconnect;
 
@@ -192,7 +167,6 @@ jobs:
           import androidx.browser.customtabs.CustomTabsIntent;
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
-          import androidx.core.splashscreen.SplashScreen;
           import androidx.core.view.WindowCompat;
 
           public class MainActivity extends AppCompatActivity {
@@ -202,9 +176,9 @@ jobs:
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
-                  SplashScreen.installSplashScreen(this);
                   super.onCreate(savedInstanceState);
 
+                  // plein écran soft
                   WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
                   if (Build.VERSION.SDK_INT >= 21) {
                       getWindow().setStatusBarColor(Color.TRANSPARENT);
@@ -212,8 +186,6 @@ jobs:
                   }
 
                   webView = new WebView(this);
-                  WebView.setWebContentsDebuggingEnabled(true);
-
                   WebSettings s = webView.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
@@ -238,13 +210,13 @@ jobs:
                       }
                   });
 
-                  // Demande des permissions dès le premier lancement
+                  // Permissions au 1er lancement
                   boolean needPerms =
-                      ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                      || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                      || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
-                      || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                          && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED);
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
+                    || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED);
 
                   if (needPerms) {
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -263,8 +235,8 @@ jobs:
                       }
                   }
 
-                  webView.loadUrl(START_URL);
                   setContentView(webView);
+                  webView.loadUrl(START_URL);
               }
 
               @Override
@@ -299,8 +271,7 @@ jobs:
           </adaptive-icon>
           XML
 
-      # Keystore depuis les secrets
-      - name: Restore upload keystore
+      - name: Restore keystore
         working-directory: android-webview
         env:
           ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -309,8 +280,7 @@ jobs:
           echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
           ls -l keystore.jks
 
-      # Build AAB (Gradle 8.7 requis par AGP 8.5.x)
-      - name: Build AAB (Gradle)
+      - name: Build AAB
         uses: gradle/gradle-build-action@v2
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -321,7 +291,7 @@ jobs:
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
-      - name: Upload AAB artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: runconnect-release
