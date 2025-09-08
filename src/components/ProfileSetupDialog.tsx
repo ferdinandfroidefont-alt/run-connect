@@ -277,10 +277,26 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Finaliser votre profil</DialogTitle>
-          <DialogDescription>
-            Complétez ces informations obligatoires pour finaliser votre inscription
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Finaliser votre profil</DialogTitle>
+              <DialogDescription>
+                Complétez ces informations obligatoires pour finaliser votre inscription
+              </DialogDescription>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onOpenChange(false);
+                window.location.href = '/auth';
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Déjà connecté ?
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-2">
