@@ -278,6 +278,9 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
 
       if (error) throw error;
 
+      // Marquer la notification comme lue
+      await markAsRead(notification.id);
+      
       // Ajouter à la liste des demandes acceptées pour garder les boutons visibles
       setAcceptedFollows(prev => new Set([...prev, notification.id]));
 
