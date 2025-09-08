@@ -305,7 +305,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               onChange={handleAvatarChange}
               className="hidden"
             />
-            <p className="text-xs text-destructive font-medium">Photo de profil obligatoire *</p>
+            {!avatarFile && !avatarPreview && (
+              <p className="text-xs text-destructive font-medium">Photo de profil obligatoire *</p>
+            )}
           </div>
 
           {/* Nom d'utilisateur */}
