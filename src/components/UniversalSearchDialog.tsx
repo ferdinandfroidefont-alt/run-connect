@@ -1115,7 +1115,7 @@ export const UniversalSearchDialog = ({
                       Aucun ami Strava trouvé sur l'app
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Vos amis Strava doivent aussi utiliser RunConnect pour apparaître ici
+                      Vos amis Strava doivent aussi utiliser RunConnect et avoir synchronisé leur compte Strava sur l'appli pour apparaître ici
                     </p>
                   </CardContent>
                 </Card>
