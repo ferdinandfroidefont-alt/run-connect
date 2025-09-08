@@ -34,13 +34,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleCameraClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.click();
-    }
-  };
-
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -297,22 +290,20 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   }
                 </AvatarFallback>
               </Avatar>
-              <button 
-                type="button"
-                onClick={handleCameraClick}
-                onTouchStart={handleCameraClick}
-                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 border-0 touch-manipulation active:scale-95 transition-transform"
+              <label 
+                htmlFor="avatar-upload-input"
+                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 border-0 active:scale-95 transition-transform flex items-center justify-center"
               >
                 <Camera className="h-3 w-3" />
-              </button>
+              </label>
             </div>
             <input
+              id="avatar-upload-input"
               ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={handleAvatarChange}
               className="hidden"
-              tabIndex={-1}
             />
             {!avatarFile && !avatarPreview && (
               <p className="text-xs text-destructive font-medium">Photo de profil obligatoire *</p>
