@@ -294,7 +294,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.addEventListener('change', (e) => {
+                    const target = e.target as HTMLInputElement;
+                    const file = target.files?.[0];
+                    if (file) {
+                      handleFileSelection(file);
+                    }
+                  });
+                  input.click();
+                }}
                 className="text-xs"
               >
                 <Camera className="h-3 w-3 mr-1" />
@@ -303,6 +315,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </div>
             
             <input
+              id="avatar-upload-input"
               ref={fileInputRef}
               type="file"
               accept="image/*"
@@ -312,7 +325,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   handleFileSelection(file);
                 }
               }}
-              className="hidden"
+              className="sr-only"
+              style={{ display: 'none' }}
             />
             {!avatarFile && !avatarPreview && (
               <p className="text-xs text-destructive font-medium">Photo de profil obligatoire *</p>
