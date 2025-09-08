@@ -91,8 +91,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
-        // Vérifier si le profil existe toujours pour les sessions existantes
-        if (session?.user) {
+        // Vérifier si le profil existe seulement pour les comptes existants (pas les nouveaux)
+        if (session?.user && event !== 'SIGNED_IN') {
           try {
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
@@ -100,10 +100,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .eq('user_id', session.user.id)
               .maybeSingle();
               
-            console.log('🔍 PROFILE CHECK:', { profile, profileError });
+            console.log('🔍 PROFILE CHECK:', { profile, profileError, event });
             
-            // Si le profil n'existe pas ou erreur d'accès, c'est que le compte a été supprimé
-            if (profileError || !profile) {
+            // Seulement déconnecter si c'est explicitement un compte supprimé (erreur 403/404)
+            if (profileError && (profileError.code === '42501' || profileError.message.includes('permission'))) {
               console.log('🚨 ACCOUNT DELETED OR INACCESSIBLE - signing out');
               await supabase.auth.signOut({ scope: 'global' });
               setSession(null);
@@ -119,7 +119,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           } catch (error) {
             console.error('Error checking profile:', error);
-            // En cas d'erreur réseau, on laisse passer mais on surveille
+            // En cas d'erreur réseau, on continue normalement
           }
         }
         
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
       
-      // Vérifier si le profil existe toujours pour les sessions existantes
+      // Vérifier si le profil existe seulement si c'est une session ancienne
       if (session?.user) {
         try {
           const { data: profile, error: profileError } = await supabase
@@ -163,8 +163,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
           console.log('🔍 INITIAL PROFILE CHECK:', { profile, profileError });
           
-          // Si le profil n'existe pas ou erreur d'accès, c'est que le compte a été supprimé
-          if (profileError || !profile) {
+          // Seulement déconnecter si c'est explicitement un compte supprimé (erreur de permission)
+          if (profileError && (profileError.code === '42501' || profileError.message.includes('permission'))) {
             console.log('🚨 ACCOUNT DELETED OR INACCESSIBLE - clearing session');
             await supabase.auth.signOut({ scope: 'global' });
             setSession(null);
