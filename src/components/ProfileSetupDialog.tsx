@@ -291,7 +291,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               variant="ghost"
               size="sm"
               onClick={() => {
-                navigate('/auth');
+                onOpenChange(false);
+                setTimeout(() => {
+                  navigate('/auth');
+                }, 100);
               }}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
