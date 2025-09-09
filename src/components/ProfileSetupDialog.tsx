@@ -303,7 +303,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-background pr-2" style={{ scrollbarWidth: 'thin' }}>
           <form onSubmit={handleSubmit} className="space-y-4">
           {/* Photo de profil */}
           <div className="flex flex-col items-center space-y-2">
