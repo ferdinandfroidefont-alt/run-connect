@@ -124,14 +124,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       return;
     }
 
-    if (!avatarFile) {
-      toast({
-        title: "Erreur",
-        description: "La photo de profil est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (!age || parseInt(age) < 13) {
       toast({
@@ -172,16 +164,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     setIsLoading(true);
 
     try {
-      // Upload avatar (obligatoire maintenant)
-      const uploadedUrl = await uploadAvatar(avatarFile);
-      if (!uploadedUrl) {
-        toast({
-          title: "Erreur",
-          description: "Impossible d'uploader la photo de profil.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
+      // Upload avatar si fourni
+      let uploadedUrl = null;
+      if (avatarFile) {
+        uploadedUrl = await uploadAvatar(avatarFile);
+        if (!uploadedUrl) {
+          toast({
+            title: "Erreur",
+            description: "Impossible d'uploader la photo de profil.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Mettre à jour le mot de passe de l'utilisateur
@@ -283,7 +278,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             <div>
               <DialogTitle>Finaliser votre profil</DialogTitle>
               <DialogDescription>
-                Complétez ces informations obligatoires pour finaliser votre inscription
+                Complétez ces informations pour finaliser votre inscription
               </DialogDescription>
             </div>
             <Button
@@ -342,7 +337,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 className="text-xs"
               >
                 <Camera className="h-3 w-3 mr-1" />
-                Choisir une photo
+                Choisir une photo (optionnel)
               </Button>
             </div>
             
@@ -360,9 +355,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               className="sr-only"
               style={{ display: 'none' }}
             />
-            {!avatarFile && !avatarPreview && (
-              <p className="text-xs text-destructive font-medium">Photo de profil obligatoire *</p>
-            )}
+            <p className="text-xs text-muted-foreground">Photo de profil (optionnelle)</p>
           </div>
 
           {/* Nom d'utilisateur */}
@@ -458,7 +451,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !username.trim() || !displayName.trim() || !avatarFile || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
+              disabled={isLoading || !username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer et créer mon compte
