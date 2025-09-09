@@ -50,13 +50,20 @@ Deno.serve(async (req) => {
     console.log('Deleting account for user:', user.id)
 
     try {
-      // First, anonymize user data to preserve referential integrity
-      const { error: anonymizeError } = await supabaseAdmin.rpc('anonymize_user_data', {
+      // First, delete all user data using the new function
+      const { error: deleteDataError } = await supabaseAdmin.rpc('delete_user_data', {
         target_user_id: user.id
       })
 
-      if (anonymizeError) {
-        console.error('Error anonymizing user data:', anonymizeError)
+      if (deleteDataError) {
+        console.error('Error deleting user data:', deleteDataError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to delete user data' }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
       }
 
       // Then delete the auth user
