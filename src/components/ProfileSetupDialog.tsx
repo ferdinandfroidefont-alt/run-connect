@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ interface ProfileSetupDialogProps {
 }
 
 export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -289,8 +291,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               variant="ghost"
               size="sm"
               onClick={() => {
-                onOpenChange(false);
-                window.location.href = '/auth';
+                navigate('/auth');
               }}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
