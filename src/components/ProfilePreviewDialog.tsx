@@ -25,6 +25,7 @@ interface Profile {
   is_premium: boolean;
   is_admin?: boolean;
   created_at: string;
+  last_seen?: string;
   walking_records: any;
   running_records: any;
   cycling_records: any;
@@ -728,12 +729,27 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               </>
             )}
 
+            {/* Last Connection - Only for creator */}
+            {user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile && profile.last_seen && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Dernière connexion</span>
+                  </div>
+                  <p className="text-sm font-mono text-muted-foreground">
+                    {format(new Date(profile.last_seen), "dd/MM/yyyy 'à' HH:mm", { locale: fr })}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Connection History - Only for creator */}
             {user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile && connectionHistory.length > 0 && (
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-4 w-4 text-primary" />
+                    <Calendar className="h-4 w-4 text-primary" />
                     <span className="font-medium">Historique des connexions</span>
                   </div>
                   <div className="space-y-2 max-h-32 overflow-y-auto">
