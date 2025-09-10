@@ -351,7 +351,7 @@ jobs:
           ANDROID_KEY_PASSWORD:     ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_ALIAS:   ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         with:
-          gradle-version: 8.7
+          gradle-version: 8.9
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
