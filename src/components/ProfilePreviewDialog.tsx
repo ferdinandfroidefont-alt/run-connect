@@ -26,6 +26,7 @@ interface Profile {
   is_admin?: boolean;
   created_at: string;
   last_seen?: string;
+  is_online?: boolean;
   walking_records: any;
   running_records: any;
   cycling_records: any;
@@ -72,9 +73,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkBlockedStatus();
       }
       fetchFollowCounts();
-      // Fetch connection history only for creator
+      // Fetch connection history only for creator after profile is loaded
       if (user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile) {
-        fetchConnectionHistory();
+        setTimeout(() => fetchConnectionHistory(), 100);
       }
     }
   }, [userId, user, isOwnProfile]);
@@ -99,7 +100,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         // For other users, get public profile with all fields except private ones
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('*, last_seen, is_online')
           .eq('user_id', userId)
           .eq('is_private', false)
           .single();
@@ -366,21 +367,16 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (!userId || !user || user.email !== 'ferdinand.froidefont@gmail.com') return;
 
     try {
-      // Fetch audit logs for login activities for this user
-      const { data, error } = await supabase
-        .from('audit_log')
-        .select('timestamp, details, action')
-        .eq('user_id', userId)
-        .in('action', ['LOGIN', 'LOGOUT', 'SESSION_START', 'SESSION_END'])
-        .order('timestamp', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        console.error('Error fetching connection history:', error);
-        return;
+      // Pour l'instant, utiliser last_seen et is_online du profil
+      // Les vrais logs de connexion nécessiteraient une implémentation supplémentaire
+      const connectionData = [];
+      if (profile?.last_seen) {
+        connectionData.push({
+          action: profile.is_online ? 'EN LIGNE' : 'DERNIÈRE CONNEXION',
+          timestamp: profile.last_seen
+        });
       }
-
-      setConnectionHistory(data || []);
+      setConnectionHistory(connectionData);
     } catch (error) {
       console.error('Error fetching connection history:', error);
     }
