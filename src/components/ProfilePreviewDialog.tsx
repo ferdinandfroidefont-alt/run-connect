@@ -57,6 +57,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -70,6 +71,10 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkBlockedStatus();
       }
       fetchFollowCounts();
+      // Fetch connection history only for creator
+      if (user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile) {
+        fetchConnectionHistory();
+      }
     }
   }, [userId, user, isOwnProfile]);
 
@@ -353,6 +358,30 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const fetchConnectionHistory = async () => {
+    if (!userId || !user || user.email !== 'ferdinand.froidefont@gmail.com') return;
+
+    try {
+      // Fetch audit logs for login activities for this user
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('timestamp, details, action')
+        .eq('user_id', userId)
+        .in('action', ['LOGIN', 'LOGOUT', 'SESSION_START', 'SESSION_END'])
+        .order('timestamp', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching connection history:', error);
+        return;
+      }
+
+      setConnectionHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching connection history:', error);
     }
   };
 
@@ -697,6 +726,28 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </Card>
                 )}
               </>
+            )}
+
+            {/* Connection History - Only for creator */}
+            {user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile && connectionHistory.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Historique des connexions</span>
+                  </div>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {connectionHistory.map((log, index) => (
+                      <div key={index} className="flex justify-between text-xs border-b pb-1">
+                        <span className="text-muted-foreground">{log.action}</span>
+                        <span className="font-mono">
+                          {format(new Date(log.timestamp), "dd/MM/yyyy HH:mm", { locale: fr })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {/* Member since */}
