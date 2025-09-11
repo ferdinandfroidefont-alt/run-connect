@@ -353,26 +353,45 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     userAgent: navigator.userAgent
                   });
                   
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'image/*';
-                  // Ajouter capture pour mobile
-                  input.setAttribute('capture', 'environment');
-                  input.addEventListener('change', (e) => {
-                    const target = e.target as HTMLInputElement;
-                    const file = target.files?.[0];
-                    console.log('📸 File selected via camera button:', file?.name);
-                    if (file) {
-                      handleFileSelection(file);
+                  // Fallback: utiliser l'input existant au lieu de créer un nouveau
+                  if (fileInputRef.current) {
+                    console.log('📱 Using existing file input');
+                    fileInputRef.current.click();
+                  } else {
+                    console.log('📱 Creating dynamic input');
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    // Pas de capture sur tous les appareils pour éviter les bugs
+                    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                      console.log('📱 iOS detected, no capture attribute');
+                    } else {
+                      input.setAttribute('capture', 'environment');
                     }
-                  });
-                  input.click();
+                    input.addEventListener('change', (e) => {
+                      const target = e.target as HTMLInputElement;
+                      const file = target.files?.[0];
+                      console.log('📸 File selected via camera button:', file?.name);
+                      if (file) {
+                        handleFileSelection(file);
+                      }
+                    });
+                    input.click();
+                  }
                 }}
                 className="text-xs"
               >
                 <Camera className="h-3 w-3 mr-1" />
                 Choisir une photo (optionnel)
               </Button>
+              
+              {/* Bouton alternatif pour iOS/téléphones problématiques */}
+              <label 
+                htmlFor="avatar-upload-input"
+                className="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 py-2 cursor-pointer"
+              >
+                📱 Alternative
+              </label>
             </div>
             
             <input
@@ -380,8 +399,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
+              capture={/iPhone|iPad|iPod/i.test(navigator.userAgent) ? undefined : "environment"}
               onChange={(e) => {
+                console.log('📱 Direct input change triggered');
                 const file = e.target.files?.[0];
                 if (file) {
                   handleFileSelection(file);
