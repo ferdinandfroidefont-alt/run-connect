@@ -37,8 +37,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const { toast } = useToast();
 
   const handleFileSelection = (file: File) => {
+    console.log('📸 File selection attempt:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      userAgent: navigator.userAgent
+    });
+    
     // Vérifier le type de fichier
     if (!file.type.startsWith('image/')) {
+      console.error('❌ Invalid file type:', file.type);
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un fichier image.",
@@ -80,25 +88,42 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
+      console.log('🚀 Starting avatar upload:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Math.random()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`; // Mettre dans un dossier avec l'ID utilisateur
+
+      console.log('📁 Upload path:', filePath);
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
 
       if (uploadError) {
+        console.error('❌ Upload error:', uploadError);
+        toast({
+          title: "Erreur d'upload",
+          description: `Impossible d'uploader l'image: ${uploadError.message}`,
+          variant: "destructive",
+        });
         throw uploadError;
       }
+
+      console.log('✅ Upload successful');
 
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
+      console.log('🔗 Public URL generated:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
-      console.error('Erreur upload avatar:', error);
+      console.error('❌ Erreur upload avatar:', error);
       return null;
     }
   };
@@ -322,6 +347,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  console.log('📱 Camera button clicked, device info:', {
+                    isMobile: /Mobi|Android/i.test(navigator.userAgent),
+                    platform: navigator.platform,
+                    userAgent: navigator.userAgent
+                  });
+                  
                   const input = document.createElement('input');
                   input.type = 'file';
                   input.accept = 'image/*';
@@ -330,6 +361,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   input.addEventListener('change', (e) => {
                     const target = e.target as HTMLInputElement;
                     const file = target.files?.[0];
+                    console.log('📸 File selected via camera button:', file?.name);
                     if (file) {
                       handleFileSelection(file);
                     }
