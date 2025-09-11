@@ -325,6 +325,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   const input = document.createElement('input');
                   input.type = 'file';
                   input.accept = 'image/*';
+                  // Ajouter capture pour mobile
+                  input.setAttribute('capture', 'environment');
                   input.addEventListener('change', (e) => {
                     const target = e.target as HTMLInputElement;
                     const file = target.files?.[0];
@@ -346,6 +348,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              capture="environment"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) {

@@ -91,6 +91,13 @@ export const InteractiveMap = ({
   const { user, subscriptionInfo } = useAuth();
   const { setRefreshSessions, setOpenCreateSession, setOpenCreateRoute } = useAppContext();
   const navigate = useNavigate();
+  
+  // Vérifier que l'utilisateur est connecté
+  React.useEffect(() => {
+    if (!user) {
+      console.log('⚠️ InteractiveMap: No user detected, user should be redirected by Layout');
+    }
+  }, [user]);
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);

@@ -304,6 +304,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                         id="avatar-upload"
                         type="file"
                         accept="image/*"
+                        capture="environment"
                         onChange={handleAvatarChange}
                         className="hidden"
                       />
