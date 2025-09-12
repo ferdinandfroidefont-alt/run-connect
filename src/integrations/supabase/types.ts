@@ -915,19 +915,6 @@ export type Database = {
           username: string
         }[]
       }
-      get_friend_suggestions_prioritized: {
-        Args: { current_user_id: string; suggestion_limit?: number }
-        Returns: {
-          avatar_url: string
-          display_name: string
-          mutual_friend_names: string[]
-          mutual_friends_count: number
-          priority_order: number
-          source: string
-          user_id: string
-          username: string
-        }[]
-      }
       get_leaderboard_total_count: {
         Args: Record<PropertyKey, never>
         Returns: number

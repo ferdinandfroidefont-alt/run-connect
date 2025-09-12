@@ -84,24 +84,7 @@ export const useContacts = () => {
     console.log('🔍 Requesting contacts permissions...');
     console.log('🔍 isNative:', isNative);
     console.log('🔍 Platform:', Capacitor.getPlatform());
-    console.log('🔍 hasAndroidBridge:', !!(window as any).AndroidContacts);
     
-    // Priority 1: Android native bridge
-    if ((window as any).AndroidContacts) {
-      console.log('🔍 Using Android contacts bridge...');
-      
-      try {
-        const hasPermission = (window as any).AndroidContacts.hasContactsPermission();
-        console.log('🔍 Android contacts permission:', hasPermission);
-        
-        setHasPermission(hasPermission);
-        return hasPermission;
-      } catch (error) {
-        console.error('❌ Android contacts bridge error:', error);
-      }
-    }
-    
-    // Priority 2: Capacitor if available
     if (!isNative) {
       console.log('❌ Not on native platform');
       return false;
@@ -123,46 +106,10 @@ export const useContacts = () => {
   };
 
   const loadContacts = async () => {
-    setLoading(true);
+    if (!isNative) return [];
     
+    setLoading(true);
     try {
-      // Priority 1: Android native bridge
-      if ((window as any).AndroidContacts) {
-        console.log('🔍 Loading contacts via Android bridge...');
-        
-        const hasPermissionNow = (window as any).AndroidContacts.hasContactsPermission();
-        
-        if (!hasPermissionNow) {
-          console.log('❌ No contacts permission via Android bridge');
-          setLoading(false);
-          return [];
-        }
-        
-        const contactsJson = (window as any).AndroidContacts.getContacts();
-        const androidContacts = JSON.parse(contactsJson);
-        
-        const processedContacts = androidContacts.map((contact: any) => ({
-          contactId: contact.contactId,
-          displayName: contact.displayName,
-          phoneNumbers: contact.phoneNumber ? [{
-            label: 'mobile',
-            number: contact.phoneNumber
-          }] : [],
-          emails: []
-        }));
-        
-        console.log('🔍 Loaded', processedContacts.length, 'contacts via Android bridge');
-        setContacts(processedContacts);
-        setLoading(false);
-        return processedContacts;
-      }
-      
-      // Priority 2: Capacitor fallback
-      if (!isNative) {
-        setLoading(false);
-        return [];
-      }
-      
       const hasPermissionNow = hasPermission || await checkPermissions();
       
       if (!hasPermissionNow) {

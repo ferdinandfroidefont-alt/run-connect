@@ -49,31 +49,10 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
 
   const fetchSuggestions = async () => {
     if (!user) return;
-    
-    console.log('🔍 fetchSuggestions - START');
-    console.log('- isNative:', isNative);
-    console.log('- hasPermission:', hasPermission);
 
     try {
-      let contactSuggestions: FriendSuggestion[] = [];
-      
-      // Priorité 1: Contacts (si permissions accordées)
-      if (isNative && hasPermission) {
-        console.log('🔍 Loading contacts...');
-        try {
-          const contacts = await loadContacts();
-          console.log('🔍 Contacts loaded:', contacts?.length || 0);
-          contactSuggestions = await findContactSuggestions(contacts);
-          console.log('🔍 Contact suggestions processed:', contactSuggestions.length);
-        } catch (contactError) {
-          console.error('❌ Error loading contact suggestions:', contactError);
-        }
-      } else {
-        console.log('🔍 Skipping contacts - isNative:', isNative, 'hasPermission:', hasPermission);
-      }
-
-      // Utiliser la nouvelle fonction avec ordre de priorité
-      const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
+      // Get friend suggestions with proper priority (max 10)
+      const { data, error } = await supabase.rpc('get_friend_suggestions', {
         current_user_id: user.id,
         suggestion_limit: 10
       });
@@ -82,24 +61,35 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
       
       let allSuggestions = data || [];
 
-      // Intégrer les suggestions de contacts en priorité 1
-      if (contactSuggestions.length > 0) {
-        // Marquer les contacts avec priority_order = 1
-        const contactsWithPriority = contactSuggestions.map(contact => ({
-          ...contact,
-          priority_order: 1
-        }));
-        
-        // Filtrer les suggestions DB pour éviter les doublons avec les contacts
-        const filteredDbSuggestions = allSuggestions.filter(
-          (s: any) => !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
-        );
-        
-        // Combiner avec ordre de priorité: contacts (1), puis DB suggestions (2-5)
-        allSuggestions = [
-          ...contactsWithPriority,
-          ...filteredDbSuggestions
-        ].slice(0, 10);
+      // If we have contacts permission, enhance suggestions with contact info
+      if (isNative && hasPermission) {
+        try {
+          const contacts = await loadContacts();
+          const contactSuggestions = await findContactSuggestions(contacts);
+          
+          // Prioritize contact suggestions: contacts > mutual friends > active users
+          const mutualFriendSuggestions = allSuggestions.filter(
+            (s: FriendSuggestion) => s.source === 'mutual_friends' && 
+            !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
+          );
+          
+          const activeUserSuggestions = allSuggestions.filter(
+            (s: FriendSuggestion) => s.source === 'active_users' && 
+            !contactSuggestions.some((c: FriendSuggestion) => c.user_id === s.user_id)
+          );
+          
+          // Combine in priority order and limit to 10
+          allSuggestions = [
+            ...contactSuggestions,
+            ...mutualFriendSuggestions,
+            ...activeUserSuggestions
+          ].slice(0, 10);
+        } catch (contactError) {
+          console.error('Error loading contact suggestions:', contactError);
+        }
+      } else {
+        // Limit to 10 when no contacts
+        allSuggestions = allSuggestions.slice(0, 10);
       }
 
       setSuggestions(allSuggestions);
@@ -111,114 +101,42 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   };
 
   const findContactSuggestions = async (contacts: any[]) => {
-    console.log('🔍 findContactSuggestions - START with contacts:', contacts?.length || 0);
-    if (!contacts || contacts.length === 0) {
-      console.log('🔍 No contacts provided');
-      return [];
-    }
+    if (!contacts || contacts.length === 0) return [];
 
     try {
       // Extract phone numbers and emails from contacts
       const phoneNumbers: string[] = [];
       const emails: string[] = [];
-      const contactNames: string[] = [];
 
-      contacts.forEach((contact, index) => {
-        console.log(`🔍 Processing contact ${index + 1}:`, contact.displayName || 'No name');
-        
-        // Ajouter les noms pour un matching plus large
-        if (contact.displayName) {
-          contactNames.push(contact.displayName.toLowerCase());
-        }
-        
+      contacts.forEach(contact => {
         contact.phoneNumbers?.forEach((phone: any) => {
           if (phone.number) {
-            console.log('  📱 Phone found:', phone.number);
-            // Clean phone number (remove spaces, dashes, etc.) and try multiple formats
-            const cleanNumber = phone.number.replace(/[\s\-\(\)\+]/g, '');
+            // Clean phone number (remove spaces, dashes, etc.)
+            const cleanNumber = phone.number.replace(/[\s\-\(\)]/g, '');
             phoneNumbers.push(cleanNumber);
-            
-            // Add variations (with/without country code)
-            if (cleanNumber.startsWith('33') && cleanNumber.length >= 11) {
-              const national = '0' + cleanNumber.substring(2);
-              phoneNumbers.push(national);
-              console.log('  📱 Added national format:', national);
-            }
-            if (cleanNumber.startsWith('0') && cleanNumber.length === 10) {
-              const international = '33' + cleanNumber.substring(1);
-              phoneNumbers.push(international);
-              console.log('  📱 Added international format:', international);
-            }
           }
         });
         
         contact.emails?.forEach((email: any) => {
           if (email.address) {
-            console.log('  📧 Email found:', email.address);
             emails.push(email.address.toLowerCase());
           }
         });
       });
 
-      console.log('🔍 Extracted data:');
-      console.log('  📱 Phone numbers:', phoneNumbers.length, phoneNumbers);
-      console.log('  📧 Emails:', emails.length, emails);
-      console.log('  👤 Names:', contactNames.length, contactNames);
+      if (phoneNumbers.length === 0 && emails.length === 0) return [];
 
-      if (phoneNumbers.length === 0 && emails.length === 0 && contactNames.length === 0) {
-        console.log('🔍 No contact data to search with');
-        return [];
-      }
+      // Find users with matching phone numbers or emails
+      const { data: matchingUsers, error } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url, phone')
+        .neq('user_id', user!.id)
+        .or(`phone.in.(${phoneNumbers.map(p => `"${p}"`).join(',')})`);
 
-      // Find users with matching phone numbers, emails, or similar names
-      let matchingUsers: any[] = [];
-      
-      // Recherche par téléphone
-      if (phoneNumbers.length > 0) {
-        const { data: phoneMatches } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url, phone')
-          .neq('user_id', user!.id)
-          .or(`phone.in.(${phoneNumbers.map(p => `"${p}"`).join(',')})`);
-        
-        if (phoneMatches) matchingUsers.push(...phoneMatches);
-      }
-
-      // Recherche par nom similaire (matching approximatif)
-      if (contactNames.length > 0) {
-        const { data: nameMatches } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url, phone')
-          .neq('user_id', user!.id)
-          .or(
-            contactNames.map(name => 
-              `display_name.ilike.%${name}%,username.ilike.%${name}%`
-            ).join(',')
-          );
-        
-        if (nameMatches) {
-          // Filtrer pour éviter des correspondances trop larges
-          const filteredNameMatches = nameMatches.filter(profile => {
-            const profileName = (profile.display_name || profile.username || '').toLowerCase();
-            return contactNames.some(contactName => 
-              profileName.includes(contactName) || contactName.includes(profileName)
-            );
-          });
-          matchingUsers.push(...filteredNameMatches);
-        }
-      }
-
-      // Supprimer les doublons
-      const uniqueUsers = matchingUsers.reduce((acc, current) => {
-        const exists = acc.find((item: any) => item.user_id === current.user_id);
-        if (!exists) {
-          acc.push(current);
-        }
-        return acc;
-      }, []);
+      if (error) throw error;
 
       // Convert to friend suggestions format
-      const contactSuggestions = uniqueUsers.map(profile => ({
+      const contactSuggestions = (matchingUsers || []).map(profile => ({
         user_id: profile.user_id,
         username: profile.username || profile.display_name || 'Utilisateur',
         display_name: profile.display_name || profile.username || 'Utilisateur',
@@ -229,7 +147,6 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         is_contact: true
       }));
 
-      console.log('🔍 Contact suggestions found:', contactSuggestions.length, contactSuggestions);
       return contactSuggestions;
     } catch (error) {
       console.error('Error finding contact suggestions:', error);
@@ -397,16 +314,6 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
                 <Badge variant="secondary" className="text-xs">
                   <Users className="h-3 w-3 mr-1" />
                   {suggestion.mutual_friends_count} ami{suggestion.mutual_friends_count > 1 ? 's' : ''} en commun
-                </Badge>
-              ) : suggestion.source === 'common_clubs' ? (
-                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                  <Users className="h-3 w-3 mr-1" />
-                  Club en commun
-                </Badge>
-              ) : suggestion.source === 'friends_of_friends' ? (
-                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                  <Users className="h-3 w-3 mr-1" />
-                  Ami d'ami d'ami
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-xs">
