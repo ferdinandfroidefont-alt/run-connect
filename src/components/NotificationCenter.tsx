@@ -505,7 +505,18 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                           </Avatar>
                         </div>
                       ) : (
-                        <div className="flex-shrink-0">
+                        <div 
+                          className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            const userId = notification.data?.follower_id || 
+                                          notification.data?.request_user_id || 
+                                          notification.data?.inviter_id || 
+                                          notification.data?.acceptor_id;
+                            if (userId) {
+                              handleOpenProfilePreview(userId);
+                            }
+                          }}
+                        >
                           {notification.type === 'follow_request' ? (
                             <UserPlus className="h-5 w-5 text-primary" />
                           ) : notification.type === 'follow_accepted' ? (
