@@ -51,49 +51,26 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
     }
 
     try {
-      let userIds: string[] = [];
+      const { data, error } = await supabase.rpc('get_safe_public_profiles', {
+        profile_user_ids: [] // Will be populated by search
+      });
 
-      // Check if user is searching for Strava friends
-      if (searchQuery.toLowerCase().includes('strava')) {
-        // First check if current user has Strava connected
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('strava_connected')
-          .eq('user_id', user?.id)
-          .single();
+      // If we need to search, do a limited search first to get IDs
+      const { data: searchData, error: searchError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .neq('user_id', user?.id)
+        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+        .eq('is_private', false) // Only search public profiles
+        .limit(20);
 
-        if (userProfile?.strava_connected) {
-          // Find all users with Strava connected
-          const { data: stravaUsers, error: stravaError } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .neq('user_id', user?.id)
-            .eq('strava_connected', true)
-            .eq('is_private', false)
-            .limit(20);
+      if (searchError) throw searchError;
 
-          if (stravaError) throw stravaError;
-          userIds = stravaUsers?.map(item => item.user_id) || [];
-        } else {
-          setSearchResults([]);
-          return;
-        }
-      } else {
-        // Regular search by username/display_name
-        const { data: searchData, error: searchError } = await supabase
-          .from('profiles')
-          .select('user_id')
-          .neq('user_id', user?.id)
-          .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-          .eq('is_private', false)
-          .limit(20);
-
-        if (searchError) throw searchError;
-        userIds = searchData?.map(item => item.user_id) || [];
-      }
+      const userIds = searchData?.map(item => item.user_id) || [];
       
       if (userIds.length === 0) {
         setSearchResults([]);
+        setLoading(false);
         return;
       }
 
@@ -565,7 +542,7 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Nom d'utilisateur, nom... ou tapez 'strava' pour voir vos amis Strava"
+              placeholder="Nom d'utilisateur ou nom..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -573,59 +550,39 @@ export const UserSearchDialog = ({ open, onOpenChange, onStartConversation }: Us
           </div>
 
           {/* Search Results */}
-          <div className="max-h-80 overflow-y-auto space-y-2 scrollbar-thin scrollbar-track-muted scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground pr-2">
+          <div className="max-h-60 overflow-y-auto space-y-2">
             {searchResults.length === 0 && searchQuery && (
-              <div className="text-center py-8">
-                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-sm">
-                  Aucun utilisateur trouvé
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Essayez avec un autre terme de recherche
-                </p>
-              </div>
+              <p className="text-center text-muted-foreground text-sm py-4">
+                Aucun utilisateur trouvé
+              </p>
             )}
             
-            {searchResults.map((profile, index) => (
+            {searchResults.map((profile) => (
               <div
                 key={profile.user_id}
                 onClick={() => setSelectedProfile(profile)}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border"
-                style={{
-                  animationDelay: `${index * 50}ms`,
-                  animation: 'fadeInUp 0.3s ease-out forwards'
-                }}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
               >
                 <div className="relative">
-                  <Avatar className="h-12 w-12 ring-2 ring-transparent hover:ring-border transition-all">
+                  <Avatar className="h-10 w-10">
                     <AvatarImage src={profile.avatar_url || ""} />
-                    <AvatarFallback className="text-sm font-semibold">
+                    <AvatarFallback>
                       {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <OnlineStatus userId={profile.user_id} className="w-3 h-3" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">
-                    {profile.display_name || profile.username}
+                  <p className="font-medium truncate">
+                    {profile.username || profile.display_name}
                   </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-xs text-muted-foreground truncate">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground truncate">
                       @{profile.username}
                     </p>
                     {profile.is_private && (
                       <Lock className="h-3 w-3 text-muted-foreground" />
                     )}
-                  </div>
-                  {profile.bio && (
-                    <p className="text-xs text-muted-foreground truncate mt-1 max-w-48">
-                      {profile.bio}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground text-right">
-                    <p>{profile.follower_count || 0} abonnés</p>
                   </div>
                 </div>
               </div>

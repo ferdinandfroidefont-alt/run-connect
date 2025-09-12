@@ -16,10 +16,9 @@ interface ProfileSetupDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   email: string;
-  onComplete?: () => void; // Optionnel pour les utilisateurs existants
 }
 
-export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
+export const ProfileSetupDialog = ({ open, onOpenChange, userId, email }: ProfileSetupDialogProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -142,24 +141,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       return;
     }
 
-    if (!phone.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le numéro de téléphone est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!bio.trim()) {
-      toast({
-        title: "Erreur",
-        description: "La présentation est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!password || password.length < 6) {
       toast({
         title: "Erreur",
@@ -239,19 +220,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       }
 
       toast({
-        title: "Profil mis à jour avec succès !",
-        description: onComplete ? "Votre profil a été complété." : "Bienvenue dans RunConnect !",
+        title: "Compte créé avec succès !",
+        description: "Bienvenue dans RunConnect !",
       });
 
       onOpenChange(false);
-      
-      if (onComplete) {
-        // Pour les utilisateurs existants, appeler onComplete
-        onComplete();
-      } else {
-        // Pour les nouveaux utilisateurs, rediriger
-        window.location.href = '/';
-      }
+      window.location.href = '/';
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -364,20 +338,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
           {/* Téléphone */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Téléphone *</Label>
+            <Label htmlFor="phone">Téléphone</Label>
             <Input
               id="phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="06 12 34 56 78"
-              required
             />
           </div>
 
           {/* Bio */}
           <div className="space-y-2">
-            <Label htmlFor="bio">Présentation *</Label>
+            <Label htmlFor="bio">Présentation</Label>
             <Textarea
               id="bio"
               value={bio}
@@ -385,7 +358,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               placeholder="Parlez-nous de vous, vos sports favoris..."
               className="resize-none"
               rows={3}
-              required
             />
           </div>
 
@@ -396,7 +368,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !username.trim() || !displayName.trim() || !avatarFile || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
+              disabled={isLoading || !username.trim() || !displayName.trim() || !avatarFile || !age || parseInt(age) < 13 || !password || password.length < 6}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer et créer mon compte

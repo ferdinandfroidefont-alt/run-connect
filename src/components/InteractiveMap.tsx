@@ -701,14 +701,10 @@ export const InteractiveMap = ({
         // Add event listeners for map interactions
         let touchTimer: NodeJS.Timeout | null = null;
 
-        // Long press handler for creating sessions (mobile-friendly) - controlled by user settings
+        // Long press handler for creating sessions (mobile-friendly)
         map.current.addListener('mousedown', (event: google.maps.MapMouseEvent) => {
           // Don't create session if in route creation mode
           if (isRouteCreationMode) return;
-          
-          // Check user preference for long press to create session
-          const enableLongPressCreate = localStorage.getItem('enableLongPressCreate') === 'true';
-          if (!enableLongPressCreate) return;
           
           touchTimer = setTimeout(() => {
             handleCreateSessionAtLocation(event.latLng);
