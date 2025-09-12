@@ -745,6 +745,12 @@ export const InteractiveMap = ({
 
         // Try to get user's location
         if (navigator.geolocation) {
+          const geolocationOptions = {
+            enableHighAccuracy: false, // Moins précis mais plus compatible
+            timeout: 10000, // 10 secondes timeout
+            maximumAge: 300000 // 5 minutes cache
+          };
+
           navigator.geolocation.getCurrentPosition(
             (position) => {
               const pos = {
@@ -756,11 +762,13 @@ export const InteractiveMap = ({
               map.current?.setZoom(14);
               toast.success("Position détectée !");
             },
-            () => {
+            (error) => {
+              console.log("Geolocation error:", error);
               toast.info("Localisation non disponible, centré sur Paris");
               // Set default location (Paris) for nearby sessions
               setUserLocation({ lat: 48.8566, lng: 2.3522 });
-            }
+            },
+            geolocationOptions
           );
         } else {
           // Set default location if geolocation is not supported
@@ -1143,6 +1151,12 @@ export const InteractiveMap = ({
 
   const handleLocateMe = () => {
     if (navigator.geolocation && map.current) {
+      const geolocationOptions = {
+        enableHighAccuracy: false, // Moins précis mais plus compatible
+        timeout: 10000, // 10 secondes timeout
+        maximumAge: 300000 // 5 minutes cache
+      };
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const pos = {
@@ -1153,9 +1167,26 @@ export const InteractiveMap = ({
           map.current?.setZoom(16);
           toast.success("Vous êtes ici !");
         },
-        () => {
-          toast.error("Impossible de vous localiser");
-        }
+        (error) => {
+          console.log("Geolocation error:", error);
+          // Essayer avec des options moins strictes
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              };
+              map.current?.setCenter(pos);
+              map.current?.setZoom(16);
+              toast.success("Vous êtes ici !");
+            },
+            () => {
+              toast.error("Impossible de vous localiser");
+            },
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 }
+          );
+        },
+        geolocationOptions
       );
     }
   };
