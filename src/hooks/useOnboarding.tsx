@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const useOnboarding = () => {
   const { user } = useAuth();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [needsWelcomeVideo, setNeedsWelcomeVideo] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +22,7 @@ export const useOnboarding = () => {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('onboarding_completed, created_at')
+        .select('onboarding_completed, created_at, username, display_name, avatar_url, age, phone, bio')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -31,8 +32,45 @@ export const useOnboarding = () => {
         return;
       }
 
-      // L'utilisateur a besoin d'onboarding uniquement si le profil n'existe pas ou si l'onboarding n'est pas terminé
-      setNeedsOnboarding(!profile || !profile.onboarding_completed);
+      console.log('Profile data:', profile);
+
+      // Distinguer entre nouveau utilisateur et utilisateur existant avec profil incomplet
+      if (!profile) {
+        // Pas de profil = nouveau utilisateur complet
+        console.log('No profile found - new user needs onboarding');
+        setNeedsOnboarding(true);
+        setNeedsProfileSetup(false);
+      } else {
+        // Profil existe mais champs manquants
+        const hasRequiredFields = profile.username?.trim() && 
+          profile.display_name?.trim() && 
+          // Avatar n'est plus obligatoire
+          profile.age && 
+          profile.phone?.trim() && 
+          profile.bio?.trim();
+
+        console.log('Profile fields check:', {
+          username: !!profile.username?.trim(),
+          display_name: !!profile.display_name?.trim(),
+          avatar_url: !!profile.avatar_url?.trim(),
+          age: !!profile.age,
+          phone: !!profile.phone?.trim(),
+          bio: !!profile.bio?.trim(),
+          hasRequiredFields: hasRequiredFields
+        });
+
+        if (!hasRequiredFields) {
+          // Utilisateur existant avec profil incomplet
+          console.log('Existing user with incomplete profile - needs profile setup');
+          setNeedsOnboarding(false);
+          setNeedsProfileSetup(true);
+        } else {
+          // Profil complet
+          console.log('Profile is complete');
+          setNeedsOnboarding(false);
+          setNeedsProfileSetup(false);
+        }
+      }
       
       // Vérifier si l'utilisateur a besoin de voir la vidéo de bienvenue
       // Pour les nouveaux utilisateurs (créés dans les dernières 24h)
@@ -51,6 +89,10 @@ export const useOnboarding = () => {
 
   const completeOnboarding = () => {
     setNeedsOnboarding(false);
+  };
+
+  const completeProfileSetup = () => {
+    setNeedsProfileSetup(false);
   };
 
   const markVideoAsSeen = async () => {
@@ -82,9 +124,11 @@ export const useOnboarding = () => {
 
   return {
     needsOnboarding,
+    needsProfileSetup,
     needsWelcomeVideo,
     loading,
     completeOnboarding,
+    completeProfileSetup,
     markVideoAsSeen,
     showWelcomeVideo
   };

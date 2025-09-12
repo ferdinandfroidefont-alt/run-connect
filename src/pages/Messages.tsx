@@ -38,7 +38,8 @@ import {
   Settings,
   MoreVertical,
   Crown,
-  Trash2
+  Trash2,
+  User
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -112,6 +113,7 @@ const Messages = () => {
   const [availableUsers, setAvailableUsers] = useState<Profile[]>([]);
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
+  const [searchActiveTab, setSearchActiveTab] = useState<'profiles' | 'clubs' | 'strava' | ''>('');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
@@ -1400,17 +1402,51 @@ const Messages = () => {
           </div>
         </div>
 
-        {/* User Search Bar */}
+        {/* Search Buttons */}
         <Card>
           <CardContent className="p-4">
-            <Button
-              onClick={() => setShowUserSearch(true)}
-              variant="outline"
-              className="w-full justify-start text-muted-foreground"
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Rechercher des utilisateurs...
-            </Button>
+            <div className="mb-3 text-center text-sm font-medium text-muted-foreground animate-fade-in">
+              🔍 Barre de recherche
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-16"
+                onClick={() => {
+                  setSearchActiveTab('profiles');
+                  setShowUserSearch(true);
+                }}
+              >
+                <User className="h-5 w-5" />
+                <span className="text-xs">Utilisateurs</span>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-16"
+                onClick={() => {
+                  setSearchActiveTab('clubs');
+                  setShowUserSearch(true);
+                }}
+              >
+                <Users className="h-5 w-5" />
+                <span className="text-xs">Clubs</span>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-16"
+                onClick={() => {
+                  setSearchActiveTab('strava');
+                  setShowUserSearch(true);
+                }}
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+                </svg>
+                <span className="text-xs">Strava</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -1525,8 +1561,12 @@ const Messages = () => {
         {/* User Search Dialog */}
         <UniversalSearchDialog
           open={showUserSearch}
-          onOpenChange={setShowUserSearch}
+          onOpenChange={(open) => {
+            setShowUserSearch(open);
+            if (!open) setSearchActiveTab('');
+          }}
           onStartConversation={startConversation}
+          initialTab={searchActiveTab}
           onJoinClub={(clubId) => {
             // Find the club conversation and set it as selected
             const clubConv = conversations.find(c => c.id === clubId);

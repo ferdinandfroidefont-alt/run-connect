@@ -184,4 +184,66 @@ All colors MUST be HSL.
   .text-button {
     @apply font-display font-semibold text-sm uppercase tracking-wide;
   }
+  
+  /* Custom Scrollbars - Override global hide when needed */
+  .scrollbar-thin {
+    scrollbar-width: thin !important;
+    -ms-overflow-style: auto !important;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    display: block !important;
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+  }
+  
+  .scrollbar-track-muted::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  .scrollbar-track-muted\/20::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.2);
+  }
+  
+  .scrollbar-thumb-border {
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  
+  .scrollbar-thumb-muted-foreground {
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

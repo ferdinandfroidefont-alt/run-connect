@@ -839,6 +839,10 @@ export type Database = {
         Args: { invitation_id: string }
         Returns: boolean
       }
+      delete_user_data: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       encrypt_critical_data: {
         Args: { data_text: string }
         Returns: string
@@ -910,6 +914,19 @@ export type Database = {
           display_name: string
           mutual_friend_names: string[]
           mutual_friends_count: number
+          source: string
+          user_id: string
+          username: string
+        }[]
+      }
+      get_friend_suggestions_prioritized: {
+        Args: { current_user_id: string; suggestion_limit?: number }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          mutual_friend_names: string[]
+          mutual_friends_count: number
+          priority_order: number
           source: string
           user_id: string
           username: string

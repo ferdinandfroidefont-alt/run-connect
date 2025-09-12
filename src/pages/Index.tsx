@@ -1,15 +1,20 @@
 import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { WelcomeVideoDialog } from "@/components/WelcomeVideoDialog";
+import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
 
 const Index = () => {
+  const { user } = useAuth();
   const { 
     needsOnboarding, 
+    needsProfileSetup,
     needsWelcomeVideo, 
     loading, 
-    completeOnboarding, 
+    completeOnboarding,
+    completeProfileSetup,
     markVideoAsSeen 
   } = useOnboarding();
   const [searchParams] = useSearchParams();
@@ -53,9 +58,20 @@ const Index = () => {
         onComplete={completeOnboarding} 
       />
       
+      {/* Setup de profil pour les utilisateurs existants avec profil incomplet */}
+      {needsProfileSetup && user && (
+        <ProfileSetupDialog
+          open={needsProfileSetup}
+          onOpenChange={() => {}} // Empêche la fermeture manuelle
+          userId={user.id}
+          email={user.email || ''}
+          onComplete={completeProfileSetup}
+        />
+      )}
+      
       {/* Vidéo de bienvenue pour les nouveaux utilisateurs */}
       <WelcomeVideoDialog
-        open={needsWelcomeVideo && !needsOnboarding}
+        open={needsWelcomeVideo && !needsOnboarding && !needsProfileSetup}
         onClose={handleVideoSkip}
         onComplete={handleVideoComplete}
       />

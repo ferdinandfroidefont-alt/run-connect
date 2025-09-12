@@ -17,6 +17,7 @@ import { ContactsPermissionButton } from "./ContactsPermissionButton";
 import { StravaConnect } from "./StravaConnect";
 import { InstagramConnect } from "./InstagramConnect";
 import { ConversationThemeSelector } from "./ConversationThemeSelector";
+import { QRShareDialog } from "./QRShareDialog";
 import { useConversationTheme } from "@/hooks/useConversationTheme";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { ReferralDialog } from "./ReferralDialog";
@@ -50,7 +51,7 @@ interface SettingsDialogProps {
 export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { user, session, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { shareProfile } = useShareProfile();
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const { showWelcomeVideo } = useOnboarding();
   const { conversationTheme, setConversationTheme } = useConversationTheme();
   const { isRegistered, requestPermissions, isNative } = usePushNotifications();
@@ -315,24 +316,49 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     </Button>
                   </div>
 
-                  {/* Friend Suggestions */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Suggestions d'amis
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Autoriser les suggestions et être suggéré
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={profile?.allow_friend_suggestions !== false}
-                      onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
-                    />
-                  </div>
+                   {/* Long Press to Create Session */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <Settings className="h-4 w-4" />
+                       <div className="grid gap-1.5">
+                         <label className="text-sm font-medium leading-none">
+                           Appui long sur la carte
+                         </label>
+                         <p className="text-xs text-muted-foreground">
+                           Créer une session en appuyant longuement sur la carte
+                         </p>
+                       </div>
+                     </div>
+                     <Switch
+                       checked={localStorage.getItem('enableLongPressCreate') === 'true'}
+                       onCheckedChange={(checked) => {
+                         localStorage.setItem('enableLongPressCreate', checked.toString());
+                         toast({
+                           title: "Paramètre mis à jour",
+                           description: checked ? "Appui long activé sur la carte" : "Appui long désactivé sur la carte"
+                         });
+                       }}
+                     />
+                   </div>
+
+                   {/* Friend Suggestions */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <Users className="h-4 w-4" />
+                       <div className="grid gap-1.5">
+                         <label className="text-sm font-medium leading-none">
+                           Suggestions d'amis
+                         </label>
+                         <p className="text-xs text-muted-foreground">
+                           Autoriser les suggestions et être suggéré
+                         </p>
+                       </div>
+                     </div>
+                     <Switch
+                       checked={profile?.allow_friend_suggestions !== false}
+                       onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
+                     />
+                   </div>
 
                   {/* Share Profile */}
                   <div className="flex items-center justify-between">
@@ -663,6 +689,17 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     Se déconnecter
                   </Button>
                   
+                  {/* Creator Button - Only for specific email */}
+                  {user?.email === 'ferdinand.froidefont@gmail.com' && (
+                    <Button
+                      variant="outline"
+                      className="w-full bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border-primary/20"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Créateur
+                    </Button>
+                  )}
+                  
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
@@ -731,6 +768,17 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* QR Share Dialog */}
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+        />
+      )}
     </>
   );
 };

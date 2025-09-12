@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
-import { Bell, Check, X, User, UserPlus, Trash2 } from "lucide-react";
+import { Bell, Check, X, User, UserPlus, UserCheck, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,6 +43,8 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
   const [isOpen, setIsOpen] = useState(false);
   const [profilePreviewUserId, setProfilePreviewUserId] = useState<string | null>(null);
   const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
+  const [acceptedFollows, setAcceptedFollows] = useState<Set<string>>(new Set());
+  const [followedBack, setFollowedBack] = useState<Set<string>>(new Set());
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -276,8 +278,24 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
 
       if (error) throw error;
 
-      // Mark notification as read
+      // Marquer la notification comme lue
       await markAsRead(notification.id);
+      
+      // Ajouter à la liste des demandes acceptées pour garder les boutons visibles
+      setAcceptedFollows(prev => new Set([...prev, notification.id]));
+
+      // Get current user profile data for the notification
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url, user_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      console.log('Current user profile for notification:', currentUserProfile);
+      console.log('Profile error:', profileError);
+
+      const acceptorName = currentUserProfile?.display_name || 'Un utilisateur';
+      console.log('Acceptor name:', acceptorName);
 
       // Create notification for follower
       const { error: notificationError } = await supabase
@@ -285,8 +303,13 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
         .insert([{
           user_id: follower_id,
           title: 'Demande acceptée !',
-          message: 'Votre demande de suivi a été acceptée',
-          type: 'follow_accepted'
+          message: `${acceptorName} a accepté votre demande de suivi`,
+          type: 'follow_accepted',
+          data: {
+            acceptor_id: user?.id,
+            acceptor_name: acceptorName,
+            acceptor_avatar: currentUserProfile?.avatar_url
+          }
         }]);
 
       if (notificationError) console.error('Error creating notification:', notificationError);
@@ -331,6 +354,9 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
         }]);
 
       if (error) throw error;
+
+      // Marquer comme suivi en retour
+      setFollowedBack(prev => new Set([...prev, notification.id]));
 
       // Create notification for the person we're following back
       const { error: notificationError } = await supabase
@@ -459,29 +485,42 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
               <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''}`}>
                 <CardContent className="p-4">
                    <div className="flex items-start gap-3">
-                    {/* Avatar for session_request, follow_request, and club_invitation with user data */}
-                      {((notification.type === 'session_request' || notification.type === 'follow_request' || notification.type === 'club_invitation') && 
-                       notification.data && (notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar)) ? (
+                    {/* Avatar for session_request, follow_request, follow_accepted, and club_invitation with user data */}
+                      {((notification.type === 'session_request' || notification.type === 'follow_request' || notification.type === 'follow_accepted' || notification.type === 'club_invitation') && 
+                       notification.data && (notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar || notification.data.acceptor_avatar)) ? (
                         <div 
                           className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => handleOpenProfilePreview(
-                            notification.data.follower_id || notification.data.request_user_id || notification.data.inviter_id
+                            notification.data.follower_id || notification.data.request_user_id || notification.data.inviter_id || notification.data.acceptor_id
                           )}
                         >
                           <Avatar className="w-10 h-10">
                             <AvatarImage 
-                              src={notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar} 
-                              alt={notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || 'Utilisateur'} 
+                              src={notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar || notification.data.acceptor_avatar} 
+                              alt={notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || notification.data.acceptor_name || 'Utilisateur'} 
                             />
                             <AvatarFallback>
-                              {(notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || 'U').charAt(0).toUpperCase()}
+                              {(notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || notification.data.acceptor_name || 'U').charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                         </div>
                       ) : (
-                        <div className="flex-shrink-0">
+                        <div 
+                          className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            const userId = notification.data?.follower_id || 
+                                          notification.data?.request_user_id || 
+                                          notification.data?.inviter_id || 
+                                          notification.data?.acceptor_id;
+                            if (userId) {
+                              handleOpenProfilePreview(userId);
+                            }
+                          }}
+                        >
                           {notification.type === 'follow_request' ? (
                             <UserPlus className="h-5 w-5 text-primary" />
+                          ) : notification.type === 'follow_accepted' ? (
+                            <UserCheck className="h-5 w-5 text-green-600" />
                           ) : notification.type === 'club_invitation' ? (
                             <UserPlus className="h-5 w-5 text-blue-600" />
                           ) : (
@@ -572,41 +611,53 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                           </>
                         )}
 
-                        {notification.type === 'follow_request' && !notification.read && (
+                        {notification.type === 'follow_request' && (
                          <>
                            <Separator className="my-3" />
                            <div className="flex flex-col gap-2">
-                             <div className="flex gap-2">
+                             {/* Montrer accepter/refuser seulement si pas encore accepté */}
+                             {!acceptedFollows.has(notification.id) && !notification.read && (
+                               <div className="flex gap-2">
+                                 <Button
+                                   size="sm"
+                                   onClick={() => handleAcceptFollow(notification)}
+                                   disabled={loading}
+                                   className="flex-1"
+                                 >
+                                   <Check className="h-4 w-4 mr-1" />
+                                   Accepter
+                                 </Button>
+                                 <Button
+                                   size="sm"
+                                   variant="outline"
+                                   onClick={() => handleRejectFollow(notification)}
+                                   disabled={loading}
+                                   className="flex-1"
+                                 >
+                                   <X className="h-4 w-4 mr-1" />
+                                   Refuser
+                                 </Button>
+                               </div>
+                             )}
+                             {/* Montrer "ajouter en retour" si accepté ou si déjà lu, mais pas si déjà suivi en retour */}
+                             {(acceptedFollows.has(notification.id) || notification.read) && !followedBack.has(notification.id) && (
                                <Button
                                  size="sm"
-                                 onClick={() => handleAcceptFollow(notification)}
+                                 variant="secondary"
+                                 onClick={() => handleFollowBack(notification)}
                                  disabled={loading}
-                                 className="flex-1"
+                                 className="w-full"
                                >
-                                 <Check className="h-4 w-4 mr-1" />
-                                 Accepter
+                                 <UserPlus className="h-4 w-4 mr-2" />
+                                 Ajouter en retour
                                </Button>
-                               <Button
-                                 size="sm"
-                                 variant="outline"
-                                 onClick={() => handleRejectFollow(notification)}
-                                 disabled={loading}
-                                 className="flex-1"
-                               >
-                                 <X className="h-4 w-4 mr-1" />
-                                 Refuser
-                               </Button>
-                             </div>
-                             <Button
-                               size="sm"
-                               variant="secondary"
-                               onClick={() => handleFollowBack(notification)}
-                               disabled={loading}
-                               className="w-full"
-                             >
-                               <UserPlus className="h-4 w-4 mr-2" />
-                               Ajouter en retour
-                             </Button>
+                             )}
+                             {/* Montrer confirmation si déjà suivi en retour */}
+                             {followedBack.has(notification.id) && (
+                               <div className="w-full text-center text-sm text-muted-foreground py-2">
+                                 ✓ Vous suivez maintenant cette personne en retour
+                               </div>
+                             )}
                            </div>
                          </>
                        )}

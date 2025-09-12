@@ -85,6 +85,7 @@ const Profile = () => {
   const [commonClubs, setCommonClubs] = useState<any[]>([]);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Vérifier si on arrive avec un message d'erreur
@@ -111,6 +112,10 @@ const Profile = () => {
         fetchUserRoutes();
       } else {
         fetchCommonClubs();
+        // Fetch connection history only for creator
+        if (user?.email === 'ferdinand.froidefont@gmail.com') {
+          fetchConnectionHistory();
+        }
       }
     }
     // Check notification permission
@@ -154,6 +159,30 @@ const Profile = () => {
       setCommonClubs(data || []);
     } catch (error) {
       console.error('Error fetching common clubs:', error);
+    }
+  };
+
+  const fetchConnectionHistory = async () => {
+    if (!viewingUserId || !user || user.email !== 'ferdinand.froidefont@gmail.com') return;
+
+    try {
+      // Fetch audit logs for login activities for this user
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('timestamp, details, action')
+        .eq('user_id', viewingUserId)
+        .in('action', ['LOGIN', 'LOGOUT', 'SESSION_START', 'SESSION_END'])
+        .order('timestamp', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching connection history:', error);
+        return;
+      }
+
+      setConnectionHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching connection history:', error);
     }
   };
 
@@ -511,6 +540,7 @@ const Profile = () => {
                   id="avatar-upload"
                   type="file"
                   accept="image/*"
+                  capture="environment"
                   onChange={handleAvatarChange}
                   className="hidden"
                 />
@@ -937,6 +967,36 @@ const Profile = () => {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Connection History Section - Only for creator viewing other users */}
+        {isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && connectionHistory.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center">
+                <MapPin className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Historique des connexions</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {connectionHistory.map((log, index) => (
+                  <div key={index} className="flex justify-between items-center p-2 border rounded text-sm">
+                    <span className="text-muted-foreground">{log.action}</span>
+                    <span className="font-mono">
+                      {new Date(log.timestamp).toLocaleString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
