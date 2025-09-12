@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
-import { Bell, Check, X, User, UserPlus, Trash2 } from "lucide-react";
+import { Bell, Check, X, User, UserPlus, UserCheck, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -284,14 +284,26 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
       // Ajouter à la liste des demandes acceptées pour garder les boutons visibles
       setAcceptedFollows(prev => new Set([...prev, notification.id]));
 
+      // Get current user profile data for the notification
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url, user_id')
+        .eq('user_id', user?.id)
+        .single();
+
       // Create notification for follower
       const { error: notificationError } = await supabase
         .from('notifications')
         .insert([{
           user_id: follower_id,
           title: 'Demande acceptée !',
-          message: 'Votre demande de suivi a été acceptée',
-          type: 'follow_accepted'
+          message: `${currentUserProfile?.display_name || 'Un utilisateur'} a accepté votre demande de suivi`,
+          type: 'follow_accepted',
+          data: {
+            acceptor_id: user?.id,
+            acceptor_name: currentUserProfile?.display_name,
+            acceptor_avatar: currentUserProfile?.avatar_url
+          }
         }]);
 
       if (notificationError) console.error('Error creating notification:', notificationError);
@@ -467,22 +479,22 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
               <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''}`}>
                 <CardContent className="p-4">
                    <div className="flex items-start gap-3">
-                    {/* Avatar for session_request, follow_request, and club_invitation with user data */}
-                      {((notification.type === 'session_request' || notification.type === 'follow_request' || notification.type === 'club_invitation') && 
-                       notification.data && (notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar)) ? (
+                    {/* Avatar for session_request, follow_request, follow_accepted, and club_invitation with user data */}
+                      {((notification.type === 'session_request' || notification.type === 'follow_request' || notification.type === 'follow_accepted' || notification.type === 'club_invitation') && 
+                       notification.data && (notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar || notification.data.acceptor_avatar)) ? (
                         <div 
                           className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => handleOpenProfilePreview(
-                            notification.data.follower_id || notification.data.request_user_id || notification.data.inviter_id
+                            notification.data.follower_id || notification.data.request_user_id || notification.data.inviter_id || notification.data.acceptor_id
                           )}
                         >
                           <Avatar className="w-10 h-10">
                             <AvatarImage 
-                              src={notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar} 
-                              alt={notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || 'Utilisateur'} 
+                              src={notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar || notification.data.acceptor_avatar} 
+                              alt={notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || notification.data.acceptor_name || 'Utilisateur'} 
                             />
                             <AvatarFallback>
-                              {(notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || 'U').charAt(0).toUpperCase()}
+                              {(notification.data.follower_name || notification.data.requester_name || notification.data.inviter_name || notification.data.acceptor_name || 'U').charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                         </div>
@@ -490,6 +502,8 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
                         <div className="flex-shrink-0">
                           {notification.type === 'follow_request' ? (
                             <UserPlus className="h-5 w-5 text-primary" />
+                          ) : notification.type === 'follow_accepted' ? (
+                            <UserCheck className="h-5 w-5 text-green-600" />
                           ) : notification.type === 'club_invitation' ? (
                             <UserPlus className="h-5 w-5 text-blue-600" />
                           ) : (
