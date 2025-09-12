@@ -285,11 +285,17 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
       setAcceptedFollows(prev => new Set([...prev, notification.id]));
 
       // Get current user profile data for the notification
-      const { data: currentUserProfile } = await supabase
+      const { data: currentUserProfile, error: profileError } = await supabase
         .from('profiles')
         .select('display_name, avatar_url, user_id')
         .eq('user_id', user?.id)
         .single();
+
+      console.log('Current user profile for notification:', currentUserProfile);
+      console.log('Profile error:', profileError);
+
+      const acceptorName = currentUserProfile?.display_name || 'Un utilisateur';
+      console.log('Acceptor name:', acceptorName);
 
       // Create notification for follower
       const { error: notificationError } = await supabase
@@ -297,11 +303,11 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
         .insert([{
           user_id: follower_id,
           title: 'Demande acceptée !',
-          message: `${currentUserProfile?.display_name || 'Un utilisateur'} a accepté votre demande de suivi`,
+          message: `${acceptorName} a accepté votre demande de suivi`,
           type: 'follow_accepted',
           data: {
             acceptor_id: user?.id,
-            acceptor_name: currentUserProfile?.display_name,
+            acceptor_name: acceptorName,
             acceptor_avatar: currentUserProfile?.avatar_url
           }
         }]);
