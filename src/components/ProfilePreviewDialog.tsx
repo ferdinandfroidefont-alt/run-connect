@@ -25,8 +25,6 @@ interface Profile {
   is_premium: boolean;
   is_admin?: boolean;
   created_at: string;
-  last_seen?: string;
-  is_online?: boolean;
   walking_records: any;
   running_records: any;
   cycling_records: any;
@@ -59,7 +57,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -73,10 +70,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkBlockedStatus();
       }
       fetchFollowCounts();
-      // Fetch connection history only for creator after profile is loaded
-      if (user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile) {
-        setTimeout(() => fetchConnectionHistory(), 100);
-      }
     }
   }, [userId, user, isOwnProfile]);
 
@@ -100,7 +93,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         // For other users, get public profile with all fields except private ones
         const { data, error } = await supabase
           .from('profiles')
-          .select('*, last_seen, is_online')
+          .select('*')
           .eq('user_id', userId)
           .eq('is_private', false)
           .single();
@@ -360,25 +353,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       });
     } finally {
       setActionLoading(false);
-    }
-  };
-
-  const fetchConnectionHistory = async () => {
-    if (!userId || !user || user.email !== 'ferdinand.froidefont@gmail.com') return;
-
-    try {
-      // Pour l'instant, utiliser last_seen et is_online du profil
-      // Les vrais logs de connexion nécessiteraient une implémentation supplémentaire
-      const connectionData = [];
-      if (profile?.last_seen) {
-        connectionData.push({
-          action: profile.is_online ? 'EN LIGNE' : 'DERNIÈRE CONNEXION',
-          timestamp: profile.last_seen
-        });
-      }
-      setConnectionHistory(connectionData);
-    } catch (error) {
-      console.error('Error fetching connection history:', error);
     }
   };
 
@@ -723,43 +697,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </Card>
                 )}
               </>
-            )}
-
-            {/* Last Connection - Only for creator */}
-            {user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile && profile.last_seen && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Dernière connexion</span>
-                  </div>
-                  <p className="text-sm font-mono text-muted-foreground">
-                    {format(new Date(profile.last_seen), "dd/MM/yyyy 'à' HH:mm", { locale: fr })}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Connection History - Only for creator */}
-            {user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile && connectionHistory.length > 0 && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Historique des connexions</span>
-                  </div>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {connectionHistory.map((log, index) => (
-                      <div key={index} className="flex justify-between text-xs border-b pb-1">
-                        <span className="text-muted-foreground">{log.action}</span>
-                        <span className="font-mono">
-                          {format(new Date(log.timestamp), "dd/MM/yyyy HH:mm", { locale: fr })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
             )}
 
             {/* Member since */}

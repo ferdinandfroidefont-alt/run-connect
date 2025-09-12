@@ -46,15 +46,7 @@ serve(async (req) => {
       .from('profiles')
       .select('strava_access_token, strava_user_id, strava_connected')
       .eq('user_id', user.id)
-      .single()
-
-    console.log('Profile query result:', {
-      profileFound: !!profile,
-      strava_connected: profile?.strava_connected,
-      has_access_token: !!profile?.strava_access_token,
-      strava_user_id: profile?.strava_user_id,
-      error: profileError
-    })
+      .maybeSingle()
 
     if (profileError) {
       console.error('Profile error:', profileError)
@@ -73,10 +65,7 @@ serve(async (req) => {
     }
 
     if (!profile?.strava_connected || !profile?.strava_access_token) {
-      console.log('Strava not connected for user:', user.id, {
-        strava_connected: profile?.strava_connected,
-        has_access_token: !!profile?.strava_access_token
-      })
+      console.log('Strava not connected for user:', user.id)
       return new Response(
         JSON.stringify({ error: 'Strava not connected', friends: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -85,27 +74,20 @@ serve(async (req) => {
 
     console.log('User has Strava connected, fetching friends...')
 
-    // Get Strava friends using the access token - try both following and followers
-    const [followingResponse, followersResponse] = await Promise.all([
-      fetch(`https://www.strava.com/api/v3/athlete/following?per_page=200`, {
-        headers: {
-          'Authorization': `Bearer ${profile.strava_access_token}`,
-          'Accept': 'application/json',
-        }
-      }),
-      fetch(`https://www.strava.com/api/v3/athlete/followers?per_page=200`, {
-        headers: {
-          'Authorization': `Bearer ${profile.strava_access_token}`,
-          'Accept': 'application/json',
-        }
-      })
-    ])
+    // Get Strava friends using the access token
+    const stravaResponse = await fetch(`https://www.strava.com/api/v3/athlete/following?per_page=200`, {
+      headers: {
+        'Authorization': `Bearer ${profile.strava_access_token}`,
+        'Accept': 'application/json',
+      }
+    })
 
-    // Check responses
-    if (!followingResponse.ok && !followersResponse.ok) {
-      console.error('Both Strava API calls failed:', followingResponse.status, followersResponse.status)
+    if (!stravaResponse.ok) {
+      const errorText = await stravaResponse.text()
+      console.error('Strava API error:', stravaResponse.status, errorText)
       
-      if (followingResponse.status === 401 || followersResponse.status === 401) {
+      // If token is invalid, still return success but empty friends
+      if (stravaResponse.status === 401) {
         return new Response(
           JSON.stringify({ friends: [], message: 'Strava token expired' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -118,35 +100,16 @@ serve(async (req) => {
       )
     }
 
-    // Combine following and followers
-    let allStravaFriends = []
-    
-    if (followingResponse.ok) {
-      const following = await followingResponse.json()
-      console.log('Strava following count:', following.length)
-      allStravaFriends = [...allStravaFriends, ...following]
-    }
-    
-    if (followersResponse.ok) {
-      const followers = await followersResponse.json()
-      console.log('Strava followers count:', followers.length)
-      allStravaFriends = [...allStravaFriends, ...followers]
-    }
-
-    // Remove duplicates based on ID
-    const uniqueFriends = allStravaFriends.filter((friend, index, self) => 
-      index === self.findIndex(f => f.id === friend.id)
-    )
-    
-    console.log('Total unique Strava friends count:', uniqueFriends.length)
+    const stravaFriends = await stravaResponse.json()
+    console.log('Strava friends count:', stravaFriends.length)
 
     // Extract Strava user IDs
-    const stravaUserIds = uniqueFriends.map((friend: any) => friend.id.toString())
+    const stravaUserIds = stravaFriends.map((friend: any) => friend.id.toString())
 
     if (stravaUserIds.length === 0) {
       console.log('No Strava friends found')
       return new Response(
-        JSON.stringify({ friends: [], message: 'No friends found on Strava' }),
+        JSON.stringify({ friends: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

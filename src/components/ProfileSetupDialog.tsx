@@ -1,5 +1,4 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,6 @@ interface ProfileSetupDialogProps {
 }
 
 export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -33,45 +31,39 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileSelection = (file: File) => {
-    console.log('📸 File selection attempt:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      userAgent: navigator.userAgent
-    });
-    
-    // Vérifier le type de fichier
-    if (!file.type.startsWith('image/')) {
-      console.error('❌ Invalid file type:', file.type);
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un fichier image.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez sélectionner un fichier image.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Vérifier la taille du fichier (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Erreur",
-        description: "La taille du fichier ne doit pas dépasser 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
+      // Vérifier la taille du fichier (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Erreur",
+          description: "La taille du fichier ne doit pas dépasser 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageSrc = e.target?.result as string;
-      setOriginalImageSrc(imageSrc);
-      setShowCropEditor(true);
-    };
-    reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageSrc = e.target?.result as string;
+        setOriginalImageSrc(imageSrc);
+        setShowCropEditor(true);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleCropComplete = (croppedImageBlob: Blob) => {
@@ -88,42 +80,25 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
-      console.log('🚀 Starting avatar upload:', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type
-      });
-      
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Math.random()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`; // Mettre dans un dossier avec l'ID utilisateur
-
-      console.log('📁 Upload path:', filePath);
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
 
       if (uploadError) {
-        console.error('❌ Upload error:', uploadError);
-        toast({
-          title: "Erreur d'upload",
-          description: `Impossible d'uploader l'image: ${uploadError.message}`,
-          variant: "destructive",
-        });
         throw uploadError;
       }
-
-      console.log('✅ Upload successful');
 
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      console.log('🔗 Public URL generated:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
-      console.error('❌ Erreur upload avatar:', error);
+      console.error('Erreur upload avatar:', error);
       return null;
     }
   };
@@ -149,6 +124,14 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       return;
     }
 
+    if (!avatarFile) {
+      toast({
+        title: "Erreur",
+        description: "La photo de profil est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!age || parseInt(age) < 13) {
       toast({
@@ -189,19 +172,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     setIsLoading(true);
 
     try {
-      // Upload avatar si fourni
-      let uploadedUrl = null;
-      if (avatarFile) {
-        uploadedUrl = await uploadAvatar(avatarFile);
-        if (!uploadedUrl) {
-          toast({
-            title: "Erreur",
-            description: "Impossible d'uploader la photo de profil.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
+      // Upload avatar (obligatoire maintenant)
+      const uploadedUrl = await uploadAvatar(avatarFile);
+      if (!uploadedUrl) {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'uploader la photo de profil.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
       // Mettre à jour le mot de passe de l'utilisateur
@@ -231,43 +211,31 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         return;
       }
 
-      // Vérifier si le profil existe déjà
-      const { data: existingProfile } = await supabase
+      // Mettre à jour le profil
+      const { error } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .upsert({
+          user_id: userId,
+          username: username.trim(),
+          display_name: displayName.trim() || username.trim(),
+          age: age ? parseInt(age) : null,
+          phone: phone.trim() || null,
+          bio: bio.trim() || null,
+          avatar_url: uploadedUrl,
+        });
 
-      if (existingProfile) {
-        // Mettre à jour le profil existant
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            username: username.trim(),
-            display_name: displayName.trim() || username.trim(),
-            age: age ? parseInt(age) : null,
-            phone: phone.trim() || null,
-            bio: bio.trim() || null,
-            avatar_url: uploadedUrl,
-          })
-          .eq('user_id', userId);
-
-        if (error) throw error;
-      } else {
-        // Créer un nouveau profil
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: userId,
-            username: username.trim(),
-            display_name: displayName.trim() || username.trim(),
-            age: age ? parseInt(age) : null,
-            phone: phone.trim() || null,
-            bio: bio.trim() || null,
-            avatar_url: uploadedUrl,
+      if (error) {
+        if (error.code === '23505' && error.message.includes('profiles_username_unique')) {
+          toast({
+            title: "Nom d'utilisateur déjà pris",
+            description: "Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.",
+            variant: "destructive",
           });
-
-        if (error) throw error;
+        } else {
+          throw error;
+        }
+        setIsLoading(false);
+        return;
       }
 
       toast({
@@ -299,31 +267,13 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>Finaliser votre profil</DialogTitle>
-              <DialogDescription>
-                Complétez ces informations pour finaliser votre inscription
-              </DialogDescription>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                onOpenChange(false);
-                setTimeout(() => {
-                  navigate('/auth');
-                }, 100);
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Déjà connecté ?
-            </Button>
-          </div>
+          <DialogTitle>Finaliser votre profil</DialogTitle>
+          <DialogDescription>
+            Complétez ces informations obligatoires pour finaliser votre inscription
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-background pr-2" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex-1 overflow-y-auto pr-2">
           <form onSubmit={handleSubmit} className="space-y-4">
           {/* Photo de profil */}
           <div className="flex flex-col items-center space-y-2">
@@ -339,78 +289,18 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   }
                 </AvatarFallback>
               </Avatar>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log('📱 Camera button clicked, device info:', {
-                    isMobile: /Mobi|Android/i.test(navigator.userAgent),
-                    platform: navigator.platform,
-                    userAgent: navigator.userAgent
-                  });
-                  
-                  // Fallback: utiliser l'input existant au lieu de créer un nouveau
-                  if (fileInputRef.current) {
-                    console.log('📱 Using existing file input');
-                    fileInputRef.current.click();
-                  } else {
-                    console.log('📱 Creating dynamic input');
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    // Pas de capture sur tous les appareils pour éviter les bugs
-                    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                      console.log('📱 iOS detected, no capture attribute');
-                    } else {
-                      input.setAttribute('capture', 'environment');
-                    }
-                    input.addEventListener('change', (e) => {
-                      const target = e.target as HTMLInputElement;
-                      const file = target.files?.[0];
-                      console.log('📸 File selected via camera button:', file?.name);
-                      if (file) {
-                        handleFileSelection(file);
-                      }
-                    });
-                    input.click();
-                  }
-                }}
-                className="text-xs"
-              >
-                <Camera className="h-3 w-3 mr-1" />
-                Choisir une photo (optionnel)
-              </Button>
-              
-              {/* Bouton alternatif pour iOS/téléphones problématiques */}
-              <label 
-                htmlFor="avatar-upload-input"
-                className="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 py-2 cursor-pointer"
-              >
-                📱 Alternative
+              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90">
+                <Camera className="h-3 w-3" />
               </label>
             </div>
-            
             <input
-              id="avatar-upload-input"
-              ref={fileInputRef}
+              id="avatar-upload"
               type="file"
               accept="image/*"
-              capture={/iPhone|iPad|iPod/i.test(navigator.userAgent) ? undefined : "environment"}
-              onChange={(e) => {
-                console.log('📱 Direct input change triggered');
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleFileSelection(file);
-                }
-              }}
-              className="sr-only"
-              style={{ display: 'none' }}
+              onChange={handleAvatarChange}
+              className="hidden"
             />
-            <p className="text-xs text-muted-foreground">Photo de profil (optionnelle)</p>
+            <p className="text-xs text-muted-foreground text-red-500">Photo de profil obligatoire *</p>
           </div>
 
           {/* Nom d'utilisateur */}
@@ -506,7 +396,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
+              disabled={isLoading || !username.trim() || !displayName.trim() || !avatarFile || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer et créer mon compte

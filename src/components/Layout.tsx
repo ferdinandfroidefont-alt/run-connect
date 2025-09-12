@@ -19,7 +19,6 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   if (!user) {
-    console.log('🚨 Layout: No user found, redirecting to auth');
     return <Navigate to="/auth" replace />;
   }
 

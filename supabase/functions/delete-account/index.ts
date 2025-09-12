@@ -49,40 +49,11 @@ Deno.serve(async (req) => {
 
     console.log('Deleting account for user:', user.id)
 
-    try {
-      // First, delete all user data using the new function
-      const { error: deleteDataError } = await supabaseAdmin.rpc('delete_user_data', {
-        target_user_id: user.id
-      })
+    // Delete the user using admin API
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
 
-      if (deleteDataError) {
-        console.error('Error deleting user data:', deleteDataError)
-        return new Response(
-          JSON.stringify({ error: 'Failed to delete user data' }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      // Then delete the auth user
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-
-      if (deleteError) {
-        console.error('Delete user error:', deleteError)
-        return new Response(
-          JSON.stringify({ error: 'Failed to delete account' }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      console.log('Account successfully deleted for user:', user.id)
-    } catch (error) {
-      console.error('Unexpected error during account deletion:', error)
+    if (deleteError) {
+      console.error('Delete user error:', deleteError)
       return new Response(
         JSON.stringify({ error: 'Failed to delete account' }),
         { 
@@ -91,6 +62,8 @@ Deno.serve(async (req) => {
         }
       )
     }
+
+    console.log('Account successfully deleted for user:', user.id)
 
     return new Response(
       JSON.stringify({ success: true, message: 'Account deleted successfully' }),

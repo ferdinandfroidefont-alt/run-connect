@@ -689,17 +689,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     Se déconnecter
                   </Button>
                   
-                  {/* Creator Button - Only for specific email */}
-                  {user?.email === 'ferdinand.froidefont@gmail.com' && (
-                    <Button
-                      variant="outline"
-                      className="w-full bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border-primary/20"
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Créateur
-                    </Button>
-                  )}
-                  
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 

@@ -35,38 +35,12 @@ const Auth = () => {
     }
 
     // Vérifier si l'utilisateur est déjà connecté
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        try {
-          // Vérifier si le profil existe toujours
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-            
-          if (profileError || !profile) {
-            // Compte supprimé, forcer la déconnexion
-            console.log('🚨 DELETED ACCOUNT DETECTED - clearing session');
-            await supabase.auth.signOut({ scope: 'global' });
-            localStorage.clear();
-            sessionStorage.clear();
-            
-            toast({
-              title: "Compte supprimé",
-              description: "Ce compte n'existe plus. Vous avez été déconnecté.",
-              variant: "destructive",
-            });
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking profile on auth page:', error);
-        }
-        
         window.location.href = '/';
       }
     });
-  }, [toast]);
+  }, []);
 
   const handleGoogleAuth = async () => {
     try {
@@ -293,43 +267,6 @@ const Auth = () => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const forceCleanSession = async () => {
-    try {
-      // Nettoyer complètement toutes les données
-      await supabase.auth.signOut({ scope: 'global' });
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Supprimer spécifiquement les clés Supabase
-      const keysToRemove = [
-        'supabase.auth.token',
-        'sb-dbptgehpknjsoisirviz-auth-token',
-        'supabase-auth-token'
-      ];
-      
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-        sessionStorage.removeItem(key);
-      });
-      
-      toast({
-        title: "Session nettoyée",
-        description: "Toutes les données de session ont été supprimées.",
-      });
-      
-      // Recharger la page
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error: any) {
-      toast({
-        title: "Erreur lors du nettoyage",
-        description: error.message,
-        variant: "destructive",
-      });
     }
   };
 
@@ -637,26 +574,16 @@ const Auth = () => {
             </div>
           )}
 
-          <div className="text-center space-y-2">
+          <div className="text-center">
             {authStep !== 'reset' && (
               <button
                 type="button"
                 onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
-                className="text-sm text-primary hover:underline block mx-auto"
+                className="text-sm text-primary hover:underline"
               >
                 {authMode === 'signup' ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
               </button>
             )}
-            
-            {/* Bouton de nettoyage d'urgence */}
-            <button
-              type="button"
-              onClick={forceCleanSession}
-              className="text-xs text-muted-foreground hover:text-destructive hover:underline block mx-auto mt-4"
-              title="En cas de problème de connexion, cliquez ici pour nettoyer complètement votre session"
-            >
-              Problème de connexion ? Nettoyer la session
-            </button>
           </div>
         </CardContent>
       </Card>

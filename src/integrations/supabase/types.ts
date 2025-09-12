@@ -839,10 +839,6 @@ export type Database = {
         Args: { invitation_id: string }
         Returns: boolean
       }
-      delete_user_data: {
-        Args: { target_user_id: string }
-        Returns: undefined
-      }
       encrypt_critical_data: {
         Args: { data_text: string }
         Returns: string

@@ -10,7 +10,6 @@ export const usePushNotifications = () => {
   const [token, setToken] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  const isNative = Capacitor.isNativePlatform();
 
   const requestPermissions = async () => {
     console.log('🔍 Starting push permission request...');
@@ -51,10 +50,10 @@ export const usePushNotifications = () => {
         }
       }
 
-      // Priority 2: Capacitor seulement sur les plateformes natives
+      // Priority 2: Capacitor if available
       const hasCapacitorPush = !!(window as any).Capacitor?.Plugins?.PushNotifications || typeof PushNotifications !== 'undefined';
       
-      if (hasCapacitorPush && isNative) {
+      if (hasCapacitorPush) {
         console.log('🔍 Attempting Capacitor push notifications...');
         
         try {
@@ -229,7 +228,7 @@ export const usePushNotifications = () => {
     }
 
     return () => {
-      if (hasCapacitorPush && isNative) {
+      if (hasCapacitorPush) {
         PushNotifications.removeAllListeners();
       }
     };
@@ -256,6 +255,6 @@ export const usePushNotifications = () => {
     isRegistered,
     token,
     requestPermissions,
-    isNative
+    isNative: Capacitor.isNativePlatform()
   };
 };

@@ -77,9 +77,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
-        
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -107,8 +105,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
-      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -136,17 +132,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // Nettoyer complètement le stockage local
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('sb-dbptgehpknjsoisirviz-auth-token');
-      sessionStorage.clear();
-      
       await supabase.auth.signOut({ scope: 'global' });
       window.location.href = '/auth';
     } catch (error) {
       console.error('Error signing out:', error);
-      // Forcer la redirection même en cas d'erreur
-      window.location.href = '/auth';
     }
   };
 

@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical, ArrowLeft } from "lucide-react";
+import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -41,19 +41,17 @@ interface UniversalSearchDialogProps {
   onOpenChange: (open: boolean) => void;
   onStartConversation?: (userId: string) => void;
   onJoinClub?: (clubId: string) => void;
-  initialTab?: 'profiles' | 'clubs' | 'strava' | '';
 }
 
 export const UniversalSearchDialog = ({ 
   open, 
   onOpenChange, 
   onStartConversation,
-  onJoinClub,
-  initialTab = ''
+  onJoinClub 
 }: UniversalSearchDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava' | ''>(initialTab);
+  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava'>('profiles');
   const [searchQuery, setSearchQuery] = useState("");
   const [profileResults, setProfileResults] = useState<Profile[]>([]);
   const [clubResults, setClubResults] = useState<Club[]>([]);
@@ -71,31 +69,14 @@ export const UniversalSearchDialog = ({
   const checkStravaConnection = async () => {
     if (!user) return;
 
-    console.log('🔍 Checking Strava connection for user:', user.id);
-
     try {
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
-        .select('strava_connected, strava_access_token, strava_user_id')
+        .select('strava_connected')
         .eq('user_id', user.id)
         .single();
 
-      console.log('🔍 Profile data:', {
-        strava_connected: profile?.strava_connected,
-        has_access_token: !!profile?.strava_access_token,
-        strava_user_id: profile?.strava_user_id,
-        error
-      });
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        setIsStravaConnected(false);
-        return;
-      }
-
-      const connected = profile?.strava_connected && profile?.strava_access_token ? true : false;
-      console.log('🔍 Final connection status:', connected);
-      setIsStravaConnected(connected);
+      setIsStravaConnected(profile?.strava_connected || false);
     } catch (error) {
       console.error('Error checking Strava connection:', error);
       setIsStravaConnected(false);
@@ -106,20 +87,14 @@ export const UniversalSearchDialog = ({
   const loadStravaFriends = async () => {
     if (!user) return;
 
-    console.log('🔍 Loading Strava friends for user:', user.id);
-
     try {
       setLoading(true);
       
       // First check if Strava is connected
       await checkStravaConnection();
       
-      console.log('🔍 Strava connection status:', isStravaConnected);
-      
       // Use the edge function to get real Strava friends
       const { data, error } = await supabase.functions.invoke('get-strava-friends');
-
-      console.log('🔍 Edge function response:', { data, error });
 
       if (error) {
         console.error('Error calling get-strava-friends:', error);
@@ -128,27 +103,18 @@ export const UniversalSearchDialog = ({
       }
 
       if (data?.error === 'Strava not connected') {
-        console.log('🔍 Edge function says Strava not connected');
         setIsStravaConnected(false);
         setProfileResults([]);
         return;
       }
 
       if (data?.error === 'Profile not found') {
-        console.log('🔍 Edge function says profile not found');
         setIsStravaConnected(false);
         setProfileResults([]);
         return;
       }
 
-      if (data?.friends) {
-        console.log('🔍 Found Strava friends:', data.friends.length);
-        setProfileResults(data.friends);
-        setIsStravaConnected(true);
-      } else {
-        console.log('🔍 No friends in response');
-        setProfileResults([]);
-      }
+      setProfileResults(data?.friends || []);
 
     } catch (error: any) {
       console.error('Error loading Strava friends:', error);
@@ -609,13 +575,6 @@ export const UniversalSearchDialog = ({
     setSelectedClub(null);
   }, [activeTab]);
 
-  // Update activeTab when initialTab changes
-  useEffect(() => {
-    if (initialTab !== '') {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab, open]);
-
   // Profile detail view
   if (selectedProfile) {
     return (
@@ -900,65 +859,23 @@ export const UniversalSearchDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        {activeTab === '' ? (
-          <div className="space-y-3">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab('profiles')}
-            >
-              <User className="h-5 w-5" />
-              <span>Utilisateurs</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab('clubs')}
-            >
-              <Users className="h-5 w-5" />
-              <span>Clubs</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab('strava')}
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+        <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs' | 'strava')}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="profiles" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Profils
+            </TabsTrigger>
+            <TabsTrigger value="clubs" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Clubs
+            </TabsTrigger>
+            <TabsTrigger value="strava" className="flex items-center gap-2">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
               </svg>
-              <span>Strava</span>
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2"
-              onClick={() => setActiveTab('')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
-            </Button>
-
-            <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs' | 'strava')}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="profiles" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Profils
-                </TabsTrigger>
-                <TabsTrigger value="clubs" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Clubs
-                </TabsTrigger>
-                <TabsTrigger value="strava" className="flex items-center gap-2">
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                  </svg>
-                  Strava
-                </TabsTrigger>
-              </TabsList>
+              Strava
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="profiles" className="space-y-4">
             {/* Profile search */}
@@ -972,7 +889,7 @@ export const UniversalSearchDialog = ({
               />
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-background pr-2">
+            <div className="max-h-60 overflow-y-auto space-y-2">
               {profileResults.length === 0 && searchQuery && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   Aucun utilisateur trouvé
@@ -1025,7 +942,7 @@ export const UniversalSearchDialog = ({
               />
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-background pr-2">
+            <div className="max-h-60 overflow-y-auto space-y-2">
               {clubResults.length === 0 && searchQuery && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   Aucun club trouvé avec ce code
@@ -1072,7 +989,7 @@ export const UniversalSearchDialog = ({
 
           <TabsContent value="strava" className="space-y-4">
             {/* Strava friends - pas de barre de recherche */}
-            <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-background pr-2">
+            <div className="max-h-60 overflow-y-auto space-y-2">
               {loading && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   Chargement des amis Strava...
@@ -1085,22 +1002,9 @@ export const UniversalSearchDialog = ({
                     <svg className="h-8 w-8 text-muted-foreground mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
                     </svg>
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-sm text-muted-foreground">
                       Connectez votre compte Strava pour voir vos amis qui utilisent l'app
                     </p>
-                    <Button 
-                      onClick={() => {
-                        onOpenChange(false);
-                        // Ouvrir les paramètres pour la connexion Strava
-                        if (window.location.pathname !== '/profile') {
-                          window.location.href = '/profile';
-                        }
-                      }}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Aller aux paramètres
-                    </Button>
                   </CardContent>
                 </Card>
               )}
@@ -1111,11 +1015,8 @@ export const UniversalSearchDialog = ({
                     <svg className="h-8 w-8 text-muted-foreground mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
                     </svg>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Aucun ami Strava trouvé sur l'app
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Vos amis Strava doivent aussi utiliser RunConnect et avoir synchronisé leur compte Strava sur l'appli pour apparaître ici
+                    <p className="text-sm text-muted-foreground">
+                      Aucun ami Strava trouvé sur l'app pour le moment
                     </p>
                   </CardContent>
                 </Card>
@@ -1152,10 +1053,8 @@ export const UniversalSearchDialog = ({
                 </div>
               ))}
             </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

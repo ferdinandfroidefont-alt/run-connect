@@ -44,7 +44,7 @@ export const useOnboarding = () => {
         // Profil existe mais champs manquants
         const hasRequiredFields = profile.username?.trim() && 
           profile.display_name?.trim() && 
-          // Avatar n'est plus obligatoire
+          profile.avatar_url?.trim() && 
           profile.age && 
           profile.phone?.trim() && 
           profile.bio?.trim();
@@ -56,7 +56,7 @@ export const useOnboarding = () => {
           age: !!profile.age,
           phone: !!profile.phone?.trim(),
           bio: !!profile.bio?.trim(),
-          hasRequiredFields: hasRequiredFields
+          hasRequiredFields
         });
 
         if (!hasRequiredFields) {
