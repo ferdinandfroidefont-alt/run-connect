@@ -11,6 +11,7 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2 } from "lucide-react";
+import { useCamera } from "@/hooks/useCamera";
 
 interface ProfileSetupDialogProps {
   open: boolean;
@@ -35,6 +36,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { selectFromGallery, loading: cameraLoading } = useCamera();
 
   const handleFileSelection = (file: File) => {
     console.log('📸 File selection attempt:', {
@@ -346,40 +348,25 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  console.log('📱 Camera button clicked, device info:', {
-                    isMobile: /Mobi|Android/i.test(navigator.userAgent),
-                    platform: navigator.platform,
-                    userAgent: navigator.userAgent
-                  });
-                  
-                  // Fallback: utiliser l'input existant au lieu de créer un nouveau
-                  if (fileInputRef.current) {
-                    console.log('📱 Using existing file input');
-                    fileInputRef.current.click();
-                  } else {
-                    console.log('📱 Creating dynamic input');
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    // Pas de capture sur tous les appareils pour éviter les bugs
-                    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                      console.log('📱 iOS detected, no capture attribute');
-                    } else {
-                      input.setAttribute('capture', 'environment');
+                onClick={async () => {
+                  console.log('📱 Camera button clicked, using Capacitor');
+                  try {
+                    const file = await selectFromGallery();
+                    if (file) {
+                      console.log('📸 File selected via Capacitor:', file.name);
+                      handleFileSelection(file);
                     }
-                    input.addEventListener('change', (e) => {
-                      const target = e.target as HTMLInputElement;
-                      const file = target.files?.[0];
-                      console.log('📸 File selected via camera button:', file?.name);
-                      if (file) {
-                        handleFileSelection(file);
-                      }
+                  } catch (error) {
+                    console.error('❌ Error selecting from gallery:', error);
+                    toast({
+                      title: "Erreur",
+                      description: "Impossible d'accéder à la galerie",
+                      variant: "destructive"
                     });
-                    input.click();
                   }
                 }}
                 className="text-xs"
+                disabled={cameraLoading}
               >
                 <Camera className="h-3 w-3 mr-1" />
                 Choisir une photo (optionnel)

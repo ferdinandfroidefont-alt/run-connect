@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
@@ -87,6 +88,7 @@ const Profile = () => {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const { toast } = useToast();
+  const { selectFromGallery, loading: cameraLoading } = useCamera();
 
   // Vérifier si on arrive avec un message d'erreur
   useEffect(() => {
@@ -526,12 +528,28 @@ const Profile = () => {
                 </AvatarFallback>
               </Avatar>
               {isEditing && !isViewingOtherUser && (
-                <label 
-                  htmlFor="avatar-upload" 
-                  className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90"
+                <button 
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const file = await selectFromGallery();
+                      if (file) {
+                        handleAvatarChange({ target: { files: [file] } } as any);
+                      }
+                    } catch (error) {
+                      console.error('Error selecting from gallery:', error);
+                      toast({
+                        title: "Erreur",
+                        description: "Impossible d'accéder à la galerie",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                  disabled={cameraLoading}
+                  className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 disabled:opacity-50"
                 >
                   <Camera className="h-4 w-4" />
-                </label>
+                </button>
               )}
             </div>
             {isEditing && !isViewingOtherUser && (

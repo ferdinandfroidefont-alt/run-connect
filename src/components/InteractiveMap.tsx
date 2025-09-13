@@ -13,6 +13,7 @@ import { UserSessionsDialog } from './UserSessionsDialog';
 import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -98,6 +99,8 @@ export const InteractiveMap = ({
       console.log('⚠️ InteractiveMap: No user detected, user should be redirected by Layout');
     }
   }, [user]);
+  
+  const { getCurrentPosition } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
@@ -743,37 +746,24 @@ export const InteractiveMap = ({
           }
         });
 
-        // Try to get user's location
-        if (navigator.geolocation) {
-          const geolocationOptions = {
-            enableHighAccuracy: false, // Moins précis mais plus compatible
-            timeout: 10000, // 10 secondes timeout
-            maximumAge: 300000 // 5 minutes cache
-          };
-
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const pos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-              };
-              setUserLocation(pos); // Store user location for nearby sessions
-              map.current?.setCenter(pos);
+        // Try to get user's location using Capacitor
+        getCurrentPosition()
+          .then((position) => {
+            if (position) {
+              setUserLocation(position);
+              map.current?.setCenter(position);
               map.current?.setZoom(14);
               toast.success("Position détectée !");
-            },
-            (error) => {
-              console.log("Geolocation error:", error);
-              toast.info("Localisation non disponible, centré sur Paris");
-              // Set default location (Paris) for nearby sessions
-              setUserLocation({ lat: 48.8566, lng: 2.3522 });
-            },
-            geolocationOptions
-          );
-        } else {
-          // Set default location if geolocation is not supported
-          setUserLocation({ lat: 48.8566, lng: 2.3522 });
-        }
+            } else {
+              throw new Error("No position returned");
+            }
+          })
+          .catch((error) => {
+            console.log("Geolocation error:", error);
+            toast.info("Localisation non disponible, centré sur Paris");
+            // Set default location (Paris) for nearby sessions
+            setUserLocation({ lat: 48.8566, lng: 2.3522 });
+          });
 
         toast.success("Carte Google Maps prête !");
       } catch (error) {
@@ -1149,45 +1139,21 @@ export const InteractiveMap = ({
     }
   };
 
-  const handleLocateMe = () => {
-    if (navigator.geolocation && map.current) {
-      const geolocationOptions = {
-        enableHighAccuracy: false, // Moins précis mais plus compatible
-        timeout: 10000, // 10 secondes timeout
-        maximumAge: 300000 // 5 minutes cache
-      };
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const pos = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          map.current?.setCenter(pos);
-          map.current?.setZoom(16);
-          toast.success("Vous êtes ici !");
-        },
-        (error) => {
-          console.log("Geolocation error:", error);
-          // Essayer avec des options moins strictes
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const pos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-              };
-              map.current?.setCenter(pos);
-              map.current?.setZoom(16);
-              toast.success("Vous êtes ici !");
-            },
-            () => {
-              toast.error("Impossible de vous localiser");
-            },
-            { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 }
-          );
-        },
-        geolocationOptions
-      );
+  const handleLocateMe = async () => {
+    if (!map.current) return;
+    
+    try {
+      const position = await getCurrentPosition();
+      if (position) {
+        map.current.setCenter(position);
+        map.current.setZoom(16);
+        toast.success("Vous êtes ici !");
+      } else {
+        toast.error("Impossible de vous localiser");
+      }
+    } catch (error) {
+      console.log("Geolocation error:", error);
+      toast.error("Impossible de vous localiser");
     }
   };
 

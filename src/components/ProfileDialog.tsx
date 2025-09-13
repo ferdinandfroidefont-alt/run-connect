@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { User, Crown, Camera, ArrowLeft } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -70,6 +71,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
     swimming: { '100m': '', '500m': '', '1000m': '', '1500m': '' }
   });
   const { toast } = useToast();
+  const { selectFromGallery, loading: cameraLoading } = useCamera();
 
   useEffect(() => {
     if (user && open) {
@@ -289,14 +291,30 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                          user?.email?.[0]?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    {isEditing && (
-                      <label 
-                        htmlFor="avatar-upload" 
-                        className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </label>
-                    )}
+                     {isEditing && (
+                       <button 
+                         type="button"
+                         onClick={async () => {
+                           try {
+                             const file = await selectFromGallery();
+                             if (file) {
+                               handleAvatarChange({ target: { files: [file] } } as any);
+                             }
+                           } catch (error) {
+                             console.error('Error selecting from gallery:', error);
+                             toast({
+                               title: "Erreur",
+                               description: "Impossible d'accéder à la galerie",
+                               variant: "destructive"
+                             });
+                           }
+                         }}
+                         disabled={cameraLoading}
+                         className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 disabled:opacity-50"
+                       >
+                         <Camera className="h-4 w-4" />
+                       </button>
+                     )}
                   </div>
                   {isEditing && (
                     <>

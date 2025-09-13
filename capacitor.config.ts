@@ -14,6 +14,12 @@ const config: CapacitorConfig = {
     },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
+    },
+    Camera: {
+      permissions: ['camera', 'photos']
+    },
+    Geolocation: {
+      permissions: ['location']
     }
   }
 };
