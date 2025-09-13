@@ -1,21 +1,65 @@
 import { useState, useCallback } from 'react';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { PermissionState } from '@capacitor/core';
+import { Camera, CameraResultType, CameraSource, CameraDirection, CameraPermissionState } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
+import { CameraPermissions } from '@/types/permissions';
 
 export const useCamera = () => {
   const [loading, setLoading] = useState(false);
+
+  const checkPermissions = async (): Promise<CameraPermissions> => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const permissions = await Camera.checkPermissions();
+        console.log('🔍 Camera permissions:', permissions);
+        return permissions;
+      } catch (error) {
+        console.error('❌ Error checking camera permissions:', error);
+        return { camera: 'denied' as CameraPermissionState, photos: 'denied' as CameraPermissionState };
+      }
+    }
+    return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
+  };
+
+  const requestPermissions = async (): Promise<CameraPermissions> => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const permissions = await Camera.requestPermissions({
+          permissions: ['camera', 'photos']
+        });
+        console.log('🔍 Requested camera permissions:', permissions);
+        return permissions;
+      } catch (error) {
+        console.error('❌ Error requesting camera permissions:', error);
+        return { camera: 'denied' as CameraPermissionState, photos: 'denied' as CameraPermissionState };
+      }
+    }
+    return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
+  };
 
   const takePicture = useCallback(async (): Promise<File | null> => {
     setLoading(true);
     
     try {
       if (Capacitor.isNativePlatform()) {
+        // Check and request permissions first
+        let permissions = await checkPermissions();
+        if (permissions.camera !== 'granted' || permissions.photos !== 'granted') {
+          permissions = await requestPermissions();
+          if (permissions.camera !== 'granted' || permissions.photos !== 'granted') {
+            throw new Error('Permissions refusées');
+          }
+        }
+
         // Use Capacitor Camera on native platforms
         const image = await Camera.getPhoto({
           quality: 90,
           allowEditing: false,
           resultType: CameraResultType.Uri,
-          source: CameraSource.Photos
+          source: CameraSource.Camera,
+          direction: CameraDirection.Rear,
+          correctOrientation: true,
+          saveToGallery: false
         });
 
         if (image.webPath) {
@@ -54,18 +98,35 @@ export const useCamera = () => {
     
     try {
       if (Capacitor.isNativePlatform()) {
+        // Check and request permissions first
+        let permissions = await checkPermissions();
+        if (permissions.photos !== 'granted') {
+          permissions = await requestPermissions();
+          if (permissions.photos !== 'granted') {
+            throw new Error('Permission galerie refusée');
+          }
+        }
+
+        console.log('🎯 Sélection depuis la galerie via Capacitor');
+        
         // Use Capacitor Camera for gallery access on native platforms
         const image = await Camera.getPhoto({
           quality: 90,
           allowEditing: false,
           resultType: CameraResultType.Uri,
-          source: CameraSource.Photos
+          source: CameraSource.Photos,
+          correctOrientation: true
         });
+
+        console.log('📸 Image sélectionnée:', image);
 
         if (image.webPath) {
           const response = await fetch(image.webPath);
           const blob = await response.blob();
-          const file = new File([blob], 'gallery-photo.jpg', { type: 'image/jpeg' });
+          // Get original filename if available
+          const filename = image.path?.split('/').pop() || 'gallery-photo.jpg';
+          const file = new File([blob], filename, { type: 'image/jpeg' });
+          console.log('✅ Fichier créé:', file.name, file.size);
           return file;
         }
         return null;
@@ -85,7 +146,7 @@ export const useCamera = () => {
         });
       }
     } catch (error) {
-      console.error('Gallery error:', error);
+      console.error('❌ Gallery error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -95,6 +156,8 @@ export const useCamera = () => {
   return {
     loading,
     takePicture,
-    selectFromGallery
+    selectFromGallery,
+    checkPermissions,
+    requestPermissions
   };
 };

@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { HelpDialog } from './HelpDialog';
+import { PermissionTestDialog } from './PermissionTestDialog';
 
 // Declare global google maps types
 declare global {
@@ -1505,6 +1506,9 @@ export const InteractiveMap = ({
         loading={routeSaving}
         showCreateSessionOption={true}
       />
+      
+      {/* Permission Test Dialog - Only in dev mode */}
+      {process.env.NODE_ENV === 'development' && <PermissionTestDialog />}
     </div>
   );
 };

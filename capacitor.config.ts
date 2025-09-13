@@ -21,6 +21,11 @@ const config: CapacitorConfig = {
     Geolocation: {
       permissions: ['location']
     }
+  },
+  android: {
+    allowMixedContent: true,
+    captureInput: true,
+    webContentsDebuggingEnabled: true
   }
 };
 
