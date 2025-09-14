@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { HelpDialog } from './HelpDialog';
-import { PermissionTestDialog } from './PermissionTestDialog';
+import GeolocationTestButton from './GeolocationTestButton';
 
 // Declare global google maps types
 declare global {
@@ -747,23 +747,39 @@ export const InteractiveMap = ({
           }
         });
 
-        // Try to get user's location using Capacitor
+        // Try to get user's location using Capacitor with detailed logging
+        console.log("🗺️ Début tentative géolocalisation pour la carte...");
         getCurrentPosition()
           .then((position) => {
+            console.log("🗺️ Position reçue dans InteractiveMap:", position);
             if (position) {
               setUserLocation(position);
               map.current?.setCenter(position);
               map.current?.setZoom(14);
               toast.success("Position détectée !");
+              console.log("✅ Carte centrée sur position utilisateur:", position);
             } else {
+              console.log("❌ Position null reçue");
               throw new Error("No position returned");
             }
           })
           .catch((error) => {
-            console.log("Geolocation error:", error);
-            toast.info("Localisation non disponible, centré sur Paris");
+            console.error("❌ Erreur géolocalisation dans InteractiveMap:", error);
+            
+            // Message d'erreur plus informatif
+            let errorMessage = "Localisation non disponible";
+            if (error.message?.includes('Permission')) {
+              errorMessage = "Autorisations de localisation requises";
+            } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
+              errorMessage = "Délai de localisation dépassé";
+            } else if (error.message?.includes('unavailable')) {
+              errorMessage = "Service de localisation indisponible";
+            }
+            
+            toast.info(`${errorMessage}, centré sur Paris`);
             // Set default location (Paris) for nearby sessions
             setUserLocation({ lat: 48.8566, lng: 2.3522 });
+            console.log("🗺️ Position par défaut (Paris) utilisée");
           });
 
         toast.success("Carte Google Maps prête !");
@@ -1507,8 +1523,11 @@ export const InteractiveMap = ({
         showCreateSessionOption={true}
       />
       
-      {/* Permission Test Dialog - Only in dev mode */}
-      {process.env.NODE_ENV === 'development' && <PermissionTestDialog />}
+      {/* Test Géolocalisation */}
+      <GeolocationTestButton />
+      
+      {/* Test Géolocalisation */}
+      <GeolocationTestButton />
     </div>
   );
 };
