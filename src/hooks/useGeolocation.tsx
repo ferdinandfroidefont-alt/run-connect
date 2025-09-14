@@ -40,21 +40,43 @@ export const useGeolocation = () => {
     
     try {
       if (Capacitor.isNativePlatform()) {
-        // Check and request permissions first
+        // Vérification et demande de permissions multiples fois si nécessaire
         let permissions = await checkPermissions();
+        console.log('🔍 Permissions initiales:', permissions);
+        
+        // Si aucune permission n'est accordée, on demande
         if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
+          console.log('📱 Demande de permissions...');
           permissions = await requestPermissions();
+          console.log('🔍 Permissions après demande:', permissions);
+          
+          // Attendre un peu et re-vérifier
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          permissions = await checkPermissions();
+          console.log('🔍 Permissions re-vérifiées:', permissions);
+          
           if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
-            throw new Error('Permission géolocalisation refusée');
+            throw new Error('Permission géolocalisation refusée. Veuillez activer la géolocalisation dans les paramètres de l\'app.');
           }
         }
 
-        // Use Capacitor Geolocation on native platforms
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: false, // Plus compatible sur tous les appareils
-          timeout: 15000, // Timeout plus long
-          maximumAge: 300000 // Cache de 5 minutes
-        });
+        // Essayer d'abord avec haute précision, puis fallback
+        let coordinates;
+        try {
+          console.log('🎯 Tentative géolocalisation haute précision...');
+          coordinates = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+          });
+        } catch (highAccuracyError) {
+          console.log('⚠️ Haute précision échouée, tentative précision normale...', highAccuracyError);
+          coordinates = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: false,
+            timeout: 20000,
+            maximumAge: 300000
+          });
+        }
         
         const pos = {
           lat: coordinates.coords.latitude,
@@ -62,7 +84,7 @@ export const useGeolocation = () => {
         };
         
         setPosition(pos);
-        console.log('🎯 Position obtenue via Capacitor:', pos);
+        console.log('🎯 Position obtenue via Capacitor:', pos, 'Précision:', coordinates.coords.accuracy + 'm');
         return pos;
       } else {
         // Fallback to web API for browsers
@@ -72,23 +94,43 @@ export const useGeolocation = () => {
             return;
           }
 
-          navigator.geolocation.getCurrentPosition(
+            navigator.geolocation.getCurrentPosition(
             (position) => {
               const pos = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
               };
               setPosition(pos);
+              console.log('🌐 Position obtenue via Web API:', pos);
               resolve(pos);
             },
             (error) => {
-              console.log("Geolocation error:", error);
-              reject(error);
+              console.log("🌐 Erreur géolocalisation Web:", error);
+              // Tentative avec paramètres plus permissifs
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  const pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                  };
+                  setPosition(pos);
+                  resolve(pos);
+                },
+                (fallbackError) => {
+                  console.log("🌐 Erreur géolocalisation fallback:", fallbackError);
+                  reject(fallbackError);
+                },
+                {
+                  enableHighAccuracy: false,
+                  timeout: 30000,
+                  maximumAge: 600000
+                }
+              );
             },
             {
-              enableHighAccuracy: false,
-              timeout: 15000, // Timeout plus long pour les appareils lents
-              maximumAge: 300000
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 60000
             }
           );
         });
