@@ -1,17 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permissions pour la géolocalisation - nouvelles règles Android 12+ -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    
-    <!-- Permission pour géolocalisation approximative sur Android 12+ -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" 
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" 
-        android:maxSdkVersion="30" />
-    
-    <!-- Pour Android 12+ (API 31+), demander les deux ensemble -->
+    <!-- Permissions géolocalisation pour toutes les versions Android -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     
