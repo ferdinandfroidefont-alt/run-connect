@@ -45,4 +45,22 @@ export async function getCurrentPositionSafe() {
     lng: pos.coords.longitude,
     accuracy: pos.coords.accuracy ?? null
   };
+  import { useEffect } from 'react';
+import { requestNativePermissionsOnce, pickPhotoFromGallery, getCurrentPositionSafe } from '@/lib/native';
+
+useEffect(() => {
+  requestNativePermissionsOnce(); // une fois au démarrage
+}, []);
+
+async function onPickPhoto() {
+  const uri = await pickPhotoFromGallery();
+  if (!uri) return;
+  // … upload vers ton backend ou affiche dans <img src={uri} />
+}
+
+async function onLocate() {
+  const p = await getCurrentPositionSafe();
+  // … utilise p.lat / p.lng
+}
+
 }
