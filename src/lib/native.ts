@@ -1,66 +1,86 @@
-// src/lib/native.ts
-import { Platform } from '@ionic/react'; // si tu n'as pas Ionic, tu peux enlever
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 
-/** À lancer une fois au démarrage (ex: App.tsx useEffect) */
+/** Initialiser les permissions natives au démarrage */
 export async function requestNativePermissionsOnce() {
+  if (!Capacitor.isNativePlatform()) return;
+  
   try {
-    // Demandes runtime (les entrées dans capacitor.config.ts ne suffisent pas)
-    await Promise.allSettled([
-      Camera.requestPermissions(),
-      Geolocation.requestPermissions()
-    ]);
-  } catch (_) {
-    // no-op
+    console.log('🔧 Demande permissions natives...');
+    
+    // Demander les permissions de manière séquentielle pour éviter les conflits
+    const cameraPerms = await Camera.requestPermissions();
+    console.log('📷 Permissions caméra:', cameraPerms);
+    
+    const geoPerms = await Geolocation.requestPermissions();
+    console.log('📍 Permissions géolocalisation:', geoPerms);
+    
+    return { camera: cameraPerms, geolocation: geoPerms };
+  } catch (error) {
+    console.error('❌ Erreur permissions:', error);
+    return null;
   }
 }
 
-/** Ouvrir la galerie de manière la plus compatible */
+/** Ouvrir la galerie avec gestion d'erreur robuste */
 export async function pickPhotoFromGallery() {
-  // Certains OEM buguent avec Prompt → on force Photos
-  const photo = await Camera.getPhoto({
-    source: CameraSource.Photos,
-    resultType: CameraResultType.Uri, // plus fiable cross-devices
-    quality: 85,
-    correctOrientation: true,
-    saveToGallery: false
-  });
-  // Retourne une URL exploitable (webPath) pour <img src=...> ou upload
-  return photo.webPath ?? photo.path ?? null;
+  try {
+    // Forcer l'utilisation de la galerie pour éviter les bugs OEM
+    const photo = await Camera.getPhoto({
+      source: CameraSource.Photos,
+      resultType: CameraResultType.Uri,
+      quality: 90,
+      correctOrientation: true,
+      saveToGallery: false,
+      allowEditing: false
+    });
+    
+    console.log('📷 Photo sélectionnée:', photo);
+    return photo.webPath || photo.path;
+  } catch (error) {
+    console.error('❌ Erreur galerie:', error);
+    throw error;
+  }
 }
 
-/** Récupérer la position avec timeouts/fallbacks propres */
+/** Récupérer la position avec stratégie multi-tentatives */
 export async function getCurrentPositionSafe() {
-  // Demande (au cas où l’utilisateur a refusé au 1er lancement)
-  await Geolocation.requestPermissions().catch(() => {});
-  // Timeout long car certains GPS sont lents
-  const pos = await Geolocation.getCurrentPosition({
-    enableHighAccuracy: true,
-    timeout: 15000,
-    maximumAge: 0
-  });
-  return {
-    lat: pos.coords.latitude,
-    lng: pos.coords.longitude,
-    accuracy: pos.coords.accuracy ?? null
-  };
-  import { useEffect } from 'react';
-import { requestNativePermissionsOnce, pickPhotoFromGallery, getCurrentPositionSafe } from '@/lib/native';
-
-useEffect(() => {
-  requestNativePermissionsOnce(); // une fois au démarrage
-}, []);
-
-async function onPickPhoto() {
-  const uri = await pickPhotoFromGallery();
-  if (!uri) return;
-  // … upload vers ton backend ou affiche dans <img src={uri} />
-}
-
-async function onLocate() {
-  const p = await getCurrentPositionSafe();
-  // … utilise p.lat / p.lng
-}
-
+  try {
+    console.log('📍 Tentative géolocalisation...');
+    
+    // Stratégie 1: Position rapide peu précise (compatible vieux téléphones)
+    try {
+      const quickPos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 300000 // 5 minutes
+      });
+      console.log('📍 Position rapide obtenue:', quickPos);
+      return {
+        lat: quickPos.coords.latitude,
+        lng: quickPos.coords.longitude,
+        accuracy: quickPos.coords.accuracy
+      };
+    } catch (quickError) {
+      console.log('⚠️ Position rapide échouée, tentative précise...');
+    }
+    
+    // Stratégie 2: Position précise avec timeout plus long
+    const precisePos = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0
+    });
+    
+    console.log('📍 Position précise obtenue:', precisePos);
+    return {
+      lat: precisePos.coords.latitude,
+      lng: precisePos.coords.longitude,
+      accuracy: precisePos.coords.accuracy
+    };
+  } catch (error) {
+    console.error('❌ Toutes les tentatives géolocalisation échouées:', error);
+    throw error;
+  }
 }
