@@ -14,6 +14,7 @@ import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -768,15 +769,29 @@ export const InteractiveMap = ({
             
             // Message d'erreur plus informatif
             let errorMessage = "Localisation non disponible";
-            if (error.message?.includes('Permission')) {
-              errorMessage = "Autorisations de localisation requises";
+            let shouldShowSettings = false;
+            
+            if (error.message?.includes('Permission') || error.message?.includes('denied')) {
+              errorMessage = "Autorisations de localisation requises - Cliquez pour ouvrir les paramètres";
+              shouldShowSettings = true;
             } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
-              errorMessage = "Délai de localisation dépassé";
+              errorMessage = "Délai de localisation dépassé - Réessayez";
             } else if (error.message?.includes('unavailable')) {
-              errorMessage = "Service de localisation indisponible";
+              errorMessage = "Service de localisation indisponible - Vérifiez vos paramètres";
+              shouldShowSettings = true;
             }
             
-            toast.info(`${errorMessage}, centré sur Paris`);
+            if (shouldShowSettings) {
+              toast.error(errorMessage, {
+                action: {
+                  label: "Paramètres",
+                  onClick: openLocationSettings
+                }
+              });
+            } else {
+              toast.info(`${errorMessage}, centré sur Paris`);
+            }
+            
             // Set default location (Paris) for nearby sessions
             setUserLocation({ lat: 48.8566, lng: 2.3522 });
             console.log("🗺️ Position par défaut (Paris) utilisée");

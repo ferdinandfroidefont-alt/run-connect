@@ -1,6 +1,7 @@
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 /** Initialiser les permissions natives au démarrage */
 export async function requestNativePermissionsOnce() {
@@ -41,6 +42,30 @@ export async function pickPhotoFromGallery() {
   } catch (error) {
     console.error('❌ Erreur galerie:', error);
     throw error;
+  }
+}
+
+/** Ouvrir les paramètres système pour autoriser la localisation */
+export async function openLocationSettings() {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      // Sur Android/iOS, ouvrir les paramètres de l'app
+      await Browser.open({ url: 'app-settings:' });
+      console.log('⚙️ Ouverture des paramètres système');
+    } else {
+      // Sur web, afficher un message d'aide
+      alert('Sur web, activez la géolocalisation dans les paramètres de votre navigateur (icône de localisation dans la barre d\'adresse)');
+    }
+  } catch (error) {
+    console.error('❌ Impossible d\'ouvrir les paramètres:', error);
+    // Fallback pour Android
+    if (Capacitor.getPlatform() === 'android') {
+      alert('Allez dans : Paramètres > Applications > RunConnect > Autorisations > Position > Autoriser');
+    } else if (Capacitor.getPlatform() === 'ios') {
+      alert('Allez dans : Réglages > Confidentialité et sécurité > Service de localisation > RunConnect > Autoriser');
+    } else {
+      alert('Veuillez autoriser la géolocalisation dans les paramètres de votre appareil');
+    }
   }
 }
 

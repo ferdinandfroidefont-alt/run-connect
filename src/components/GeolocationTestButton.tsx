@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MapPin, AlertCircle, CheckCircle } from 'lucide-react';
+import { MapPin, AlertCircle, CheckCircle, Settings } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useEnhancedToast } from '@/hooks/useEnhancedToast';
+import { openLocationSettings } from '@/lib/native';
 
 const GeolocationTestButton = () => {
   const [isTestingLoc, setIsTestingLoc] = useState(false);
@@ -66,6 +67,16 @@ const GeolocationTestButton = () => {
         size="sm"
       >
         {isTestingLoc || loading ? 'Test en cours...' : 'Tester Position'}
+      </Button>
+      
+      <Button
+        onClick={openLocationSettings}
+        variant="outline"
+        className="w-full mb-2"
+        size="sm"
+      >
+        <Settings className="h-3 w-3 mr-1" />
+        Ouvrir Paramètres
       </Button>
       
       {lastResult && (
