@@ -30,7 +30,6 @@ import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { HelpDialog } from './HelpDialog';
-import GeolocationTestButton from './GeolocationTestButton';
 
 // Declare global google maps types
 declare global {
@@ -1537,12 +1536,6 @@ export const InteractiveMap = ({
         loading={routeSaving}
         showCreateSessionOption={true}
       />
-      
-      {/* Test Géolocalisation */}
-      <GeolocationTestButton />
-      
-      {/* Test Géolocalisation */}
-      <GeolocationTestButton />
     </div>
   );
 };

@@ -40,66 +40,103 @@ export const useGeolocation = () => {
     
     try {
       if (Capacitor.isNativePlatform()) {
-        // Solution pour tous les téléphones Android
-        console.log('🎯 Début géolocalisation native...');
+        console.log('🎯 SUPER MODE géolocalisation pour anciens téléphones...');
         
-        // 1. Vérifier les permissions existantes
+        // 1. Forcer la demande de permissions de manière plus agressive  
         let permissions = await checkPermissions();
-        console.log('🔍 Permissions actuelles:', permissions);
+        console.log('🔍 Permissions initiales:', permissions);
         
-        // 2. Si pas de permissions, les demander
         if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
-          console.log('📱 Demande de permissions géolocalisation...');
-          permissions = await requestPermissions();
-          console.log('🔍 Permissions après demande:', permissions);
+          console.log('📱 FORCE permissions géolocalisation...');
           
-          // Petit délai pour laisser le système traiter
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Re-vérifier les permissions
-          permissions = await checkPermissions();
-          console.log('🔍 Permissions finales:', permissions);
+          // Demander 3 fois si nécessaire (certains téléphones buggent)
+          for (let i = 0; i < 3; i++) {
+            try {
+              permissions = await requestPermissions();
+              console.log(`🔍 Tentative ${i+1} permissions:`, permissions);
+              
+              if (permissions.location === 'granted' || permissions.coarseLocation === 'granted') {
+                break;
+              }
+              
+              // Délai progressif entre tentatives
+              await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            } catch (permError) {
+              console.log(`❌ Erreur tentative ${i+1}:`, permError);
+            }
+          }
         }
         
-        // 3. Si toujours pas de permission, erreur explicite
-        if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
-          throw new Error('Permissions géolocalisation refusées. Veuillez les activer dans les paramètres de votre téléphone : Paramètres > Applications > RunConnect > Autorisations > Position');
-        }
-
-        // 4. Essayer la géolocalisation avec plusieurs stratégies
-        let coordinates;
-        
-        // Stratégie 1: Position rapide et imprécise d'abord (fonctionne sur anciens téléphones)
-        try {
-          console.log('🎯 Tentative géolocalisation rapide...');
-          coordinates = await Geolocation.getCurrentPosition({
+        // 2. TOUTES les stratégies possibles, des plus permissives aux plus précises
+        const strategies = [
+          // Ultra-permissive: cache de 2h, pas de précision, timeout très long
+          {
+            enableHighAccuracy: false,
+            timeout: 60000,
+            maximumAge: 7200000, // 2h de cache
+            name: 'Ultra-permissive (2h cache)'
+          },
+          // Permissive: cache de 30min
+          {
+            enableHighAccuracy: false,
+            timeout: 45000,
+            maximumAge: 1800000, // 30min
+            name: 'Permissive (30min cache)'
+          },
+          // Normale: cache de 10min
+          {
+            enableHighAccuracy: false,
+            timeout: 30000,
+            maximumAge: 600000, // 10min
+            name: 'Normale (10min cache)'
+          },
+          // Rapide: cache de 5min
+          {
             enableHighAccuracy: false,
             timeout: 15000,
-            maximumAge: 300000
-          });
-          console.log('✅ Position rapide obtenue:', coordinates.coords.latitude, coordinates.coords.longitude);
-        } catch (quickError) {
-          console.log('⚠️ Position rapide échouée, tentative précise...', quickError);
-          
-          // Stratégie 2: Position précise avec timeout plus long
-          try {
-            coordinates = await Geolocation.getCurrentPosition({
-              enableHighAccuracy: true,
-              timeout: 30000,
-              maximumAge: 60000
-            });
-            console.log('✅ Position précise obtenue:', coordinates.coords.latitude, coordinates.coords.longitude);
-          } catch (preciseError) {
-            console.log('⚠️ Position précise échouée, dernière tentative...', preciseError);
-            
-            // Stratégie 3: Dernière tentative avec paramètres très permissifs
-            coordinates = await Geolocation.getCurrentPosition({
-              enableHighAccuracy: false,
-              timeout: 60000,
-              maximumAge: 600000
-            });
-            console.log('✅ Position permissive obtenue:', coordinates.coords.latitude, coordinates.coords.longitude);
+            maximumAge: 300000, // 5min
+            name: 'Rapide (5min cache)'
+          },
+          // Précise mais avec cache
+          {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 120000, // 2min
+            name: 'Précise avec cache'
+          },
+          // Très précise
+          {
+            enableHighAccuracy: true,
+            timeout: 30000,
+            maximumAge: 0,
+            name: 'Très précise'
           }
+        ];
+        
+        let coordinates;
+        let successStrategy;
+        
+        for (const [index, strategy] of strategies.entries()) {
+          try {
+            console.log(`🎯 Stratégie ${index + 1}/6: ${strategy.name}...`);
+            coordinates = await Geolocation.getCurrentPosition({
+              enableHighAccuracy: strategy.enableHighAccuracy,
+              timeout: strategy.timeout,
+              maximumAge: strategy.maximumAge
+            });
+            successStrategy = strategy.name;
+            console.log(`✅ SUCCÈS avec ${strategy.name}:`, coordinates.coords.latitude, coordinates.coords.longitude, `(précision: ${coordinates.coords.accuracy}m)`);
+            break;
+          } catch (strategyError) {
+            console.log(`❌ Échec stratégie ${strategy.name}:`, strategyError);
+            if (index === strategies.length - 1) {
+              throw strategyError; // Dernière stratégie échouée
+            }
+          }
+        }
+        
+        if (!coordinates) {
+          throw new Error('Toutes les stratégies de géolocalisation ont échoué');
         }
         
         const pos = {
@@ -108,61 +145,75 @@ export const useGeolocation = () => {
         };
         
         setPosition(pos);
-        console.log('🎯 Position finale obtenue via Capacitor:', pos, 'Précision:', coordinates.coords.accuracy + 'm');
+        console.log(`🎯 Position FINALE obtenue via ${successStrategy}:`, pos, `Précision: ${coordinates.coords.accuracy}m`);
         return pos;
       } else {
-        // Fallback Web API pour navigateurs
+        // WEB: Version ultra-permissive aussi
+        console.log('🌐 SUPER MODE Web géolocalisation...');
+        
         return new Promise((resolve, reject) => {
           if (!navigator.geolocation) {
             reject(new Error('Geolocation not supported'));
             return;
           }
 
-          // Première tentative avec haute précision
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const pos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              };
-              setPosition(pos);
-              console.log('🌐 Position obtenue via Web API:', pos);
-              resolve(pos);
-            },
-            (error) => {
-              console.log("🌐 Erreur géolocalisation Web:", error);
-              // Fallback avec paramètres permissifs
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  const pos = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                  };
-                  setPosition(pos);
-                  resolve(pos);
-                },
-                (fallbackError) => {
-                  console.log("🌐 Erreur géolocalisation fallback:", fallbackError);
-                  reject(fallbackError);
-                },
-                {
-                  enableHighAccuracy: false,
-                  timeout: 30000,
-                  maximumAge: 600000
+          const webStrategies = [
+            { enableHighAccuracy: false, timeout: 60000, maximumAge: 7200000, name: 'Web Ultra-permissive' },
+            { enableHighAccuracy: false, timeout: 30000, maximumAge: 1800000, name: 'Web Permissive' },
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000, name: 'Web Rapide' },
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000, name: 'Web Précise' }
+          ];
+          
+          let attemptIndex = 0;
+          
+          const tryStrategy = () => {
+            const strategy = webStrategies[attemptIndex];
+            console.log(`🌐 Tentative Web ${attemptIndex + 1}/4: ${strategy.name}...`);
+            
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                const pos = {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                };
+                setPosition(pos);
+                console.log(`🌐 SUCCÈS ${strategy.name}:`, pos, `Précision: ${position.coords.accuracy}m`);
+                resolve(pos);
+              },
+              (error) => {
+                console.log(`❌ Échec ${strategy.name}:`, error);
+                attemptIndex++;
+                if (attemptIndex < webStrategies.length) {
+                  tryStrategy(); // Essayer la stratégie suivante
+                } else {
+                  console.log('❌ TOUTES les stratégies Web ont échoué');
+                  reject(error);
                 }
-              );
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 60000
-            }
-          );
+              },
+              strategy
+            );
+          };
+          
+          tryStrategy();
         });
       }
     } catch (error) {
-      console.error('❌ Erreur géolocalisation finale:', error);
-      throw error;
+      console.error('❌ ERREUR FINALE géolocalisation:', error);
+      
+      // Messages d'erreur plus détaillés pour le debug
+      let errorMessage = 'Géolocalisation impossible sur cet appareil';
+      if (error && typeof error === 'object' && 'message' in error) {
+        const msg = String(error.message).toLowerCase();
+        if (msg.includes('denied') || msg.includes('permission')) {
+          errorMessage = 'Autorisations de géolocalisation refusées - Activez-les dans Paramètres > Apps > RunConnect > Autorisations';
+        } else if (msg.includes('unavailable') || msg.includes('network')) {
+          errorMessage = 'Service de géolocalisation indisponible - Vérifiez GPS et réseau';
+        } else if (msg.includes('timeout')) {
+          errorMessage = 'Délai de géolocalisation dépassé - GPS trop lent';
+        }
+      }
+      
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
