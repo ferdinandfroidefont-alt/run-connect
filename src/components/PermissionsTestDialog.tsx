@@ -25,21 +25,24 @@ export const PermissionsTestDialog = () => {
     setGeoTest({ status: 'testing' });
     
     try {
-      // 1. Détection plateforme
-      const isAndroidAAB = navigator.userAgent.includes('wv') || 
-                          navigator.userAgent.includes('Android') ||
-                          Capacitor.getPlatform() === 'android';
-      const isIOSNative = Capacitor.getPlatform() === 'ios' ||
-                         navigator.userAgent.includes('iPhone') ||
-                         navigator.userAgent.includes('iPad');
-      const isRealNative = Capacitor.isNativePlatform() || isAndroidAAB || isIOSNative;
+      // 1. Détection plateforme robuste pour AAB Play Store
+      const userAgent = navigator.userAgent;
+      const isAndroidApp = userAgent.includes('Android') && !userAgent.includes('Chrome/');
+      const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
+      const isCapacitorNative = Capacitor.isNativePlatform();
+      const isInWebView = userAgent.includes('wv') || 
+                         userAgent.includes('Version/') && userAgent.includes('Mobile');
+      
+      // Force native si on détecte une app mobile (même si Capacitor dit "web")
+      const isRealNative = isCapacitorNative || isAndroidApp || isIOSApp || isInWebView;
 
       console.log('🔍 Test géolocalisation - Plateforme:', {
         isNativePlatform: Capacitor.isNativePlatform(),
         platform: Capacitor.getPlatform(),
         userAgent: navigator.userAgent,
-        isAndroidAAB,
-        isIOSNative,
+        isAndroidApp,
+        isIOSApp,
+        isInWebView,
         isRealNative
       });
 
@@ -236,7 +239,11 @@ export const PermissionsTestDialog = () => {
               {Capacitor.getPlatform()} - Native: {Capacitor.isNativePlatform() ? 'Oui' : 'Non'}
             </p>
             <p className="text-xs text-muted-foreground">
-              UserAgent: {navigator.userAgent.includes('Android') ? 'Android' : 'Autre'}
+              UserAgent: {navigator.userAgent.includes('Android') ? 'Android' : 
+                         navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') ? 'iOS' : 'Autre'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              WebView: {navigator.userAgent.includes('wv') || navigator.userAgent.includes('Version/') ? 'Oui' : 'Non'}
             </p>
           </div>
 

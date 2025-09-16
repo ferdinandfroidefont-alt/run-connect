@@ -5,14 +5,13 @@ import { Browser } from '@capacitor/browser';
 
 /** Initialiser les permissions natives au démarrage */
 export async function requestNativePermissionsOnce() {
-  // DETECTION AAB Play Store - Force native pour Android/iOS
-  const isAndroidAAB = navigator.userAgent.includes('wv') || 
-                      navigator.userAgent.includes('Android') ||
-                      Capacitor.getPlatform() === 'android';
-  const isIOSNative = Capacitor.getPlatform() === 'ios' ||
-                     navigator.userAgent.includes('iPhone') ||
-                     navigator.userAgent.includes('iPad');
-  const isRealNative = Capacitor.isNativePlatform() || isAndroidAAB || isIOSNative;
+  // DETECTION AAB Play Store robuste
+  const userAgent = navigator.userAgent;
+  const isAndroidApp = userAgent.includes('Android') && !userAgent.includes('Chrome/');
+  const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
+  const isInWebView = userAgent.includes('wv') || 
+                     (userAgent.includes('Version/') && userAgent.includes('Mobile'));
+  const isRealNative = Capacitor.isNativePlatform() || isAndroidApp || isIOSApp || isInWebView;
   
   if (!isRealNative) return;
   

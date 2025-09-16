@@ -39,21 +39,21 @@ export const useGeolocation = () => {
     setLoading(true);
     
     try {
-      // MODE NATIF pour AAB Play Store - Toujours activer sur mobile
-      const isAndroidAAB = navigator.userAgent.includes('wv') || // Android WebView
-                          navigator.userAgent.includes('Android') ||
-                          Capacitor.getPlatform() === 'android';
-      const isIOSNative = Capacitor.getPlatform() === 'ios' ||
-                         navigator.userAgent.includes('iPhone') ||
-                         navigator.userAgent.includes('iPad');
-      const isRealNative = Capacitor.isNativePlatform() || isAndroidAAB || isIOSNative;
+      // MODE NATIF robuste pour AAB Play Store
+      const userAgent = navigator.userAgent;
+      const isAndroidApp = userAgent.includes('Android') && !userAgent.includes('Chrome/');
+      const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
+      const isInWebView = userAgent.includes('wv') || 
+                         (userAgent.includes('Version/') && userAgent.includes('Mobile'));
+      const isRealNative = Capacitor.isNativePlatform() || isAndroidApp || isIOSApp || isInWebView;
       
       console.log('🔍 Détection AAB/Native:', {
         isNativePlatform: Capacitor.isNativePlatform(),
         platform: Capacitor.getPlatform(),
         userAgent: navigator.userAgent,
-        isAndroidAAB,
-        isIOSNative,
+        isAndroidApp,
+        isIOSApp,
+        isInWebView,
         isRealNative
       });
       
