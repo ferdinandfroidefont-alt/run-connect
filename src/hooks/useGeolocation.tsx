@@ -39,12 +39,20 @@ export const useGeolocation = () => {
     setLoading(true);
     
     try {
-      if (Capacitor.isNativePlatform()) {
+      // FORCE le mode natif même sur preview pour tester
+      console.log('🔍 Platform info:', {
+        isNativePlatform: Capacitor.isNativePlatform(),
+        platform: Capacitor.getPlatform(),
+        userAgent: navigator.userAgent
+      });
+      
+      if (Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios') {
         console.log('🎯 SUPER MODE géolocalisation pour anciens téléphones...');
         
-        // 1. Forcer la demande de permissions de manière plus agressive  
+        // 1. FORCE native permissions même si pas détecté
+        console.log('📱 Mode NATIF forcé - Demande permissions...');
         let permissions = await checkPermissions();
-        console.log('🔍 Permissions initiales:', permissions);
+        console.log('🔍 Permissions initiales natives:', permissions);
         
         if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
           console.log('📱 FORCE permissions géolocalisation...');

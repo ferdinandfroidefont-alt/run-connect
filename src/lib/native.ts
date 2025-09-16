@@ -5,10 +5,11 @@ import { Browser } from '@capacitor/browser';
 
 /** Initialiser les permissions natives au démarrage */
 export async function requestNativePermissionsOnce() {
-  if (!Capacitor.isNativePlatform()) return;
+  // FORCE le mode natif pour les permissions critiques
+  if (!Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'web') return;
   
   try {
-    console.log('🔧 Demande permissions natives...');
+    console.log('🔧 FORCE demande permissions natives sur plateforme:', Capacitor.getPlatform());
     
     // Demander les permissions de manière séquentielle pour éviter les conflits
     const cameraPerms = await Camera.requestPermissions();
