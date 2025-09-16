@@ -39,14 +39,25 @@ export const useGeolocation = () => {
     setLoading(true);
     
     try {
-      // FORCE le mode natif même sur preview pour tester
-      console.log('🔍 Platform info:', {
+      // MODE NATIF pour AAB Play Store - Toujours activer sur mobile
+      const isAndroidAAB = navigator.userAgent.includes('wv') || // Android WebView
+                          navigator.userAgent.includes('Android') ||
+                          Capacitor.getPlatform() === 'android';
+      const isIOSNative = Capacitor.getPlatform() === 'ios' ||
+                         navigator.userAgent.includes('iPhone') ||
+                         navigator.userAgent.includes('iPad');
+      const isRealNative = Capacitor.isNativePlatform() || isAndroidAAB || isIOSNative;
+      
+      console.log('🔍 Détection AAB/Native:', {
         isNativePlatform: Capacitor.isNativePlatform(),
         platform: Capacitor.getPlatform(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        isAndroidAAB,
+        isIOSNative,
+        isRealNative
       });
       
-      if (Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios') {
+      if (isRealNative) {
         console.log('🎯 SUPER MODE géolocalisation pour anciens téléphones...');
         
         // 1. FORCE native permissions même si pas détecté
