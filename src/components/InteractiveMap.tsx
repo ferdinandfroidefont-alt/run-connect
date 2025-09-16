@@ -1,4 +1,5 @@
 import { RouteDialog } from './RouteDialog';
+import { PermissionsTestDialog } from './PermissionsTestDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { MapControls } from './MapControls';
@@ -1476,6 +1477,9 @@ export const InteractiveMap = ({
           onResetView={handleResetView}
           onToggle3D={handleToggle3D}
         />
+        
+        {/* Test Permissions */}
+        <PermissionsTestDialog />
       </div>
       
 
