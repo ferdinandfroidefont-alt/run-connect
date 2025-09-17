@@ -10,7 +10,20 @@ export const usePushNotifications = () => {
   const [token, setToken] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  const isNative = Capacitor.isNativePlatform();
+  
+  // DÉTECTION PLATEFORME NATIVE ROBUSTE pour AAB Play Store
+  const userAgent = navigator.userAgent;
+  const isAndroidApp = userAgent.includes('Android') && !userAgent.includes('Chrome/');
+  const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
+  const isInWebView = userAgent.includes('wv') || 
+                     (userAgent.includes('Version/') && userAgent.includes('Mobile'));
+  
+  // FORCE ANDROID si UserAgent contient Android, même si Capacitor dit "web"
+  const isNative = Capacitor.isNativePlatform() || 
+                   isAndroidApp || 
+                   isIOSApp || 
+                   isInWebView ||
+                   userAgent.includes('Android');
 
   const requestPermissions = async () => {
     console.log('🔍 Starting push permission request...');
@@ -186,10 +199,10 @@ export const usePushNotifications = () => {
       setIsRegistered(true);
     }
 
-    // Setup Capacitor listeners if Capacitor Push is available
+    // Setup Capacitor listeners SEULEMENT si on est vraiment sur native
     const hasCapacitorPush = !!(window as any).Capacitor?.Plugins?.PushNotifications || typeof PushNotifications !== 'undefined';
     
-    if (hasCapacitorPush) {
+    if (hasCapacitorPush && isNative) {
       console.log('🔍 Setting up Capacitor push listeners');
       
       // Register for push notifications
