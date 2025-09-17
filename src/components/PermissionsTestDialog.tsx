@@ -8,6 +8,13 @@ import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
 import { Settings, MapPin, Camera as CameraIcon, Smartphone } from 'lucide-react';
 import { openLocationSettings } from '@/lib/native';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  forceGeolocationPermissions, 
+  forceGetPosition, 
+  forceCameraPermissions, 
+  forceOpenGallery,
+  isRealAndroidDevice
+} from '@/lib/forceNativePermissions';
 
 interface TestResult {
   status: 'idle' | 'testing' | 'success' | 'error';
@@ -25,111 +32,57 @@ export const PermissionsTestDialog = () => {
     setGeoTest({ status: 'testing' });
     
     try {
-      // 1. Détection plateforme robuste pour AAB Play Store
-      const userAgent = navigator.userAgent;
-      const isAndroidApp = userAgent.includes('Android') && !userAgent.includes('Chrome/');
-      const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
-      const isCapacitorNative = Capacitor.isNativePlatform();
-      const isInWebView = userAgent.includes('wv') || 
-                         userAgent.includes('Version/') && userAgent.includes('Mobile');
-      
-      // FORCE ANDROID si UserAgent contient Android, même si Capacitor dit "web"
-      const isRealNative = isCapacitorNative || 
-                           isAndroidApp || 
-                           isIOSApp || 
-                           isInWebView ||
-                           userAgent.includes('Android');
+      console.log('🔥 NOUVEAU TEST FORCE - Détection Android:', isRealAndroidDevice());
 
-      console.log('🔍 Test géolocalisation - Plateforme:', {
-        isNativePlatform: Capacitor.isNativePlatform(),
-        platform: Capacitor.getPlatform(),
-        userAgent: navigator.userAgent,
-        isAndroidApp,
-        isIOSApp,
-        isInWebView,
-        isRealNative
-      });
-
-      if (!isRealNative) {
+      if (!isRealAndroidDevice()) {
         setGeoTest({
           status: 'error',
-          message: 'Mode web détecté - Testez sur un vrai téléphone via l\'AAB Play Store',
-          details: { platform: Capacitor.getPlatform() }
+          message: 'Appareil non-Android détecté - Testez sur un vrai téléphone via l\'AAB Play Store',
+          details: { platform: Capacitor.getPlatform(), isAndroid: false }
         });
         return;
       }
 
-      // 2. Vérifier permissions
-      const permissions = await Geolocation.checkPermissions();
-      console.log('🔍 Permissions actuelles:', permissions);
-
-      // 3. Demander permissions si nécessaire
-      if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
-        console.log('📱 Demande permissions...');
-        const requestResult = await Geolocation.requestPermissions();
-        console.log('📱 Résultat demande:', requestResult);
-        
-        if (requestResult.location !== 'granted' && requestResult.coarseLocation !== 'granted') {
-          setGeoTest({
-            status: 'error',
-            message: 'Permissions refusées - Ouvrez les paramètres pour autoriser',
-            details: { permissions: requestResult }
-          });
-          return;
-        }
-      }
-
-      // 4. Tester géolocalisation avec stratégies multiples
-      const strategies = [
-        { name: 'Ultra-permissive', enableHighAccuracy: false, timeout: 30000, maximumAge: 3600000 },
-        { name: 'Rapide', enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
-        { name: 'Précise', enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
-      ];
-
-      let position = null;
-      let successStrategy = null;
-
-      for (const strategy of strategies) {
-        try {
-          console.log(`🎯 Test stratégie: ${strategy.name}`);
-          const coords = await Geolocation.getCurrentPosition(strategy);
-          position = coords;
-          successStrategy = strategy.name;
-          console.log(`✅ Succès ${strategy.name}:`, coords.coords);
-          break;
-        } catch (strategyError) {
-          console.log(`❌ Échec ${strategy.name}:`, strategyError);
-        }
-      }
-
-      if (position) {
-        setGeoTest({
-          status: 'success',
-          message: `Position obtenue via ${successStrategy}`,
-          details: {
-            lat: position.coords.latitude.toFixed(6),
-            lng: position.coords.longitude.toFixed(6),
-            accuracy: Math.round(position.coords.accuracy),
-            strategy: successStrategy
-          }
-        });
-        toast({
-          title: "Géolocalisation OK",
-          description: `Position: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`,
-        });
-      } else {
+      // 1. FORCE permissions géolocalisation
+      console.log('🔥 FORCE permissions géolocalisation...');
+      try {
+        await forceGeolocationPermissions();
+        console.log('🔥 Permissions FORCÉES avec succès');
+      } catch (permError) {
+        console.error('🔥 Erreur permissions forcées:', permError);
         setGeoTest({
           status: 'error',
-          message: 'Toutes les stratégies ont échoué',
-          details: { tried: strategies.length }
+          message: 'Permissions géolocalisation refusées - Activez dans Paramètres',
+          details: { permissionError: String(permError) }
         });
+        return;
       }
 
+      // 2. FORCE position avec stratégies multiples
+      console.log('🔥 FORCE position...');
+      const position = await forceGetPosition();
+      
+      setGeoTest({
+        status: 'success',
+        message: `Position FORCÉE obtenue (stratégie ${position.strategy})`,
+        details: {
+          lat: position.lat.toFixed(6),
+          lng: position.lng.toFixed(6),
+          accuracy: Math.round(position.accuracy),
+          strategy: position.strategy
+        }
+      });
+      
+      toast({
+        title: "Géolocalisation FORCÉE OK ✅",
+        description: `Position: ${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`,
+      });
+
     } catch (error) {
-      console.error('❌ Erreur test géolocalisation:', error);
+      console.error('🔥 Erreur FORCE géolocalisation:', error);
       setGeoTest({
         status: 'error',
-        message: error instanceof Error ? error.message : 'Erreur inconnue',
+        message: error instanceof Error ? error.message : 'Erreur FORCE géolocalisation',
         details: { error: String(error) }
       });
     }
@@ -238,16 +191,15 @@ export const PermissionsTestDialog = () => {
         <div className="space-y-4">
           {/* Info plateforme */}
           <div className="bg-muted p-3 rounded-lg">
-            <p className="text-sm font-medium">Plateforme détectée:</p>
+            <p className="text-sm font-medium">🔥 FORCE Native Android:</p>
             <p className="text-xs text-muted-foreground">
-              {Capacitor.getPlatform()} - Native: {Capacitor.isNativePlatform() ? 'Oui' : 'Non'}
+              Capacitor: {Capacitor.getPlatform()} - Native: {Capacitor.isNativePlatform() ? 'Oui' : 'Non'}
             </p>
             <p className="text-xs text-muted-foreground">
-              UserAgent: {navigator.userAgent.includes('Android') ? 'Android' : 
-                         navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') ? 'iOS' : 'Autre'}
+              Android Détecté: {isRealAndroidDevice() ? '✅ OUI' : '❌ NON'}
             </p>
             <p className="text-xs text-muted-foreground">
-              WebView: {navigator.userAgent.includes('wv') || navigator.userAgent.includes('Version/') ? 'Oui' : 'Non'}
+              UserAgent: {navigator.userAgent.slice(0, 50)}...
             </p>
           </div>
 

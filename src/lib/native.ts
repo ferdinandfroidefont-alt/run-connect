@@ -2,59 +2,64 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { 
+  forceGeolocationPermissions, 
+  forceGetPosition, 
+  forceCameraPermissions, 
+  forceOpenGallery,
+  isRealAndroidDevice
+} from './forceNativePermissions';
 
-/** Initialiser les permissions natives au démarrage */
+/** Initialiser les permissions natives avec FORCE Android */
 export async function requestNativePermissionsOnce() {
-  // DETECTION AAB Play Store robuste
-  const userAgent = navigator.userAgent;
-  const isAndroidApp = userAgent.includes('Android') && !userAgent.includes('Chrome/');
-  const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
-  const isInWebView = userAgent.includes('wv') || 
-                     (userAgent.includes('Version/') && userAgent.includes('Mobile'));
+  console.log('🔥 FORCE permissions natives - Détection Android:', isRealAndroidDevice());
   
-  // FORCE ANDROID si UserAgent contient Android, même si Capacitor dit "web"
-  const isRealNative = Capacitor.isNativePlatform() || 
-                       isAndroidApp || 
-                       isIOSApp || 
-                       isInWebView ||
-                       userAgent.includes('Android');
-  
-  if (!isRealNative) return;
+  if (!isRealAndroidDevice()) {
+    console.log('🔥 Pas Android détecté, skip');
+    return;
+  }
   
   try {
-    console.log('🔧 FORCE demande permissions natives sur plateforme:', Capacitor.getPlatform());
+    console.log('🔥 FORCE demande permissions natives sur Android forcé');
     
-    // Demander les permissions de manière séquentielle pour éviter les conflits
-    const cameraPerms = await Camera.requestPermissions();
-    console.log('📷 Permissions caméra:', cameraPerms);
+    // Demander les permissions de manière séquentielle avec notre méthode forcée
+    try {
+      const cameraPerms = await forceCameraPermissions();
+      console.log('📷 Permissions caméra FORCÉES:', cameraPerms);
+    } catch (cameraError) {
+      console.log('📷 Erreur caméra forcée:', cameraError);
+    }
     
-    const geoPerms = await Geolocation.requestPermissions();
-    console.log('📍 Permissions géolocalisation:', geoPerms);
+    try {
+      const geoPerms = await forceGeolocationPermissions();
+      console.log('📍 Permissions géolocalisation FORCÉES:', geoPerms);
+    } catch (geoError) {
+      console.log('📍 Erreur géolocalisation forcée:', geoError);
+    }
     
-    return { camera: cameraPerms, geolocation: geoPerms };
+    return { success: true };
   } catch (error) {
-    console.error('❌ Erreur permissions:', error);
+    console.error('❌ Erreur permissions FORCÉES:', error);
     return null;
   }
 }
 
-/** Ouvrir la galerie avec gestion d'erreur robuste */
+/** Ouvrir la galerie avec méthode FORCÉE */
 export async function pickPhotoFromGallery() {
   try {
-    // Forcer l'utilisation de la galerie pour éviter les bugs OEM
-    const photo = await Camera.getPhoto({
-      source: CameraSource.Photos,
-      resultType: CameraResultType.Uri,
-      quality: 90,
-      correctOrientation: true,
-      saveToGallery: false,
-      allowEditing: false
-    });
+    console.log('🔥 FORCE galerie - Détection Android:', isRealAndroidDevice());
     
-    console.log('📷 Photo sélectionnée:', photo);
-    return photo.webPath || photo.path;
+    if (isRealAndroidDevice()) {
+      // Utiliser notre méthode forcée
+      const photoPath = await forceOpenGallery();
+      console.log('📷 Photo FORCÉE sélectionnée:', photoPath);
+      return photoPath;
+    } else {
+      // Fallback web standard
+      throw new Error('Galerie non disponible sur cette plateforme');
+    }
   } catch (error) {
-    console.error('❌ Erreur galerie:', error);
+    console.error('❌ Erreur galerie FORCÉE:', error);
     throw error;
   }
 }
@@ -83,43 +88,25 @@ export async function openLocationSettings() {
   }
 }
 
-/** Récupérer la position avec stratégie multi-tentatives */
+/** Récupérer la position avec stratégie FORCÉE */
 export async function getCurrentPositionSafe() {
   try {
-    console.log('📍 Tentative géolocalisation...');
+    console.log('🔥 FORCE position - Détection Android:', isRealAndroidDevice());
     
-    // Stratégie 1: Position rapide peu précise (compatible vieux téléphones)
-    try {
-      const quickPos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: false,
-        timeout: 5000,
-        maximumAge: 300000 // 5 minutes
-      });
-      console.log('📍 Position rapide obtenue:', quickPos);
+    if (isRealAndroidDevice()) {
+      // Utiliser notre méthode forcée
+      const result = await forceGetPosition();
+      console.log('📍 Position FORCÉE obtenue:', result);
       return {
-        lat: quickPos.coords.latitude,
-        lng: quickPos.coords.longitude,
-        accuracy: quickPos.coords.accuracy
+        lat: result.lat,
+        lng: result.lng,
+        accuracy: result.accuracy
       };
-    } catch (quickError) {
-      console.log('⚠️ Position rapide échouée, tentative précise...');
+    } else {
+      throw new Error('Géolocalisation non disponible sur cette plateforme');
     }
-    
-    // Stratégie 2: Position précise avec timeout plus long
-    const precisePos = await Geolocation.getCurrentPosition({
-      enableHighAccuracy: true,
-      timeout: 20000,
-      maximumAge: 0
-    });
-    
-    console.log('📍 Position précise obtenue:', precisePos);
-    return {
-      lat: precisePos.coords.latitude,
-      lng: precisePos.coords.longitude,
-      accuracy: precisePos.coords.accuracy
-    };
   } catch (error) {
-    console.error('❌ Toutes les tentatives géolocalisation échouées:', error);
+    console.error('❌ Erreur position FORCÉE:', error);
     throw error;
   }
 }
