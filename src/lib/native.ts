@@ -11,7 +11,13 @@ export async function requestNativePermissionsOnce() {
   const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
   const isInWebView = userAgent.includes('wv') || 
                      (userAgent.includes('Version/') && userAgent.includes('Mobile'));
-  const isRealNative = Capacitor.isNativePlatform() || isAndroidApp || isIOSApp || isInWebView;
+  
+  // FORCE ANDROID si UserAgent contient Android, même si Capacitor dit "web"
+  const isRealNative = Capacitor.isNativePlatform() || 
+                       isAndroidApp || 
+                       isIOSApp || 
+                       isInWebView ||
+                       userAgent.includes('Android');
   
   if (!isRealNative) return;
   

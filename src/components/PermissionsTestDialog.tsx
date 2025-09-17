@@ -33,8 +33,12 @@ export const PermissionsTestDialog = () => {
       const isInWebView = userAgent.includes('wv') || 
                          userAgent.includes('Version/') && userAgent.includes('Mobile');
       
-      // Force native si on détecte une app mobile (même si Capacitor dit "web")
-      const isRealNative = isCapacitorNative || isAndroidApp || isIOSApp || isInWebView;
+      // FORCE ANDROID si UserAgent contient Android, même si Capacitor dit "web"
+      const isRealNative = isCapacitorNative || 
+                           isAndroidApp || 
+                           isIOSApp || 
+                           isInWebView ||
+                           userAgent.includes('Android');
 
       console.log('🔍 Test géolocalisation - Plateforme:', {
         isNativePlatform: Capacitor.isNativePlatform(),
