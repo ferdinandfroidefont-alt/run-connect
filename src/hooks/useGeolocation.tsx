@@ -5,14 +5,28 @@ import {
   forceGetPosition, 
   isRealAndroidDevice 
 } from '@/lib/forceNativePermissions';
+import { androidPermissions } from '@/lib/androidPermissions';
 
 export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
 
+  // DEBUG: Ajouter logs pour diagnostiquer le problème Play Store
+  const debugInfo = () => {
+    console.log('🔥 DEBUG GEOLOCATION HOOK:');
+    console.log('🔥 - Platform Capacitor:', (window as any).Capacitor?.getPlatform());
+    console.log('🔥 - User Agent:', navigator.userAgent);
+    console.log('🔥 - isRealAndroidDevice():', isRealAndroidDevice());
+    console.log('🔥 - androidPermissions.isAndroid():', androidPermissions.isAndroid());
+    console.log('🔥 - PermissionsPlugin disponible:', !!window.PermissionsPlugin);
+  };
+
   const checkPermissions = async (): Promise<GeolocationPermissions> => {
+    debugInfo();
+    console.log('🔥 checkPermissions appelé');
+    
     // Sur AAB Android, utiliser notre détection forcée
-    if (isRealAndroidDevice()) {
+    if (androidPermissions.isAndroid()) {
       console.log('🔥 FORCE check permissions sur Android');
       try {
         await forceGeolocationPermissions();
@@ -22,12 +36,16 @@ export const useGeolocation = () => {
         return { location: 'denied', coarseLocation: 'denied' };
       }
     }
+    console.log('🔥 Mode web - permissions automatiques');
     return { location: 'granted', coarseLocation: 'granted' };
   };
 
   const requestPermissions = async (): Promise<GeolocationPermissions> => {
+    debugInfo();
+    console.log('🔥 requestPermissions appelé');
+    
     // Sur AAB Android, utiliser notre demande forcée
-    if (isRealAndroidDevice()) {
+    if (androidPermissions.isAndroid()) {
       console.log('🔥 FORCE request permissions sur Android');
       try {
         await forceGeolocationPermissions();
@@ -37,17 +55,19 @@ export const useGeolocation = () => {
         return { location: 'denied', coarseLocation: 'denied' };
       }
     }
+    console.log('🔥 Mode web - permissions automatiques');
     return { location: 'granted', coarseLocation: 'granted' };
   };
 
   const getCurrentPosition = useCallback(async (): Promise<Position | null> => {
     setLoading(true);
+    debugInfo();
     
     try {
-      console.log('🔥 FORCE getCurrentPosition - Android:', isRealAndroidDevice());
+      console.log('🔥 getCurrentPosition appelé - Android:', androidPermissions.isAndroid());
       
       // Sur AAB Android, utiliser notre méthode forcée
-      if (isRealAndroidDevice()) {
+      if (androidPermissions.isAndroid()) {
         console.log('🔥 Utilisation FORCE position Android');
         
         // Utiliser notre méthode forcée
