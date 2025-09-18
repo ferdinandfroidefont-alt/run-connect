@@ -1,6 +1,7 @@
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { androidPermissions } from './androidPermissions';
 
 /** 
  * SOLUTION DÉFINITIVE pour AAB Play Store
@@ -18,35 +19,53 @@ export const isRealAndroidDevice = () => {
 /**
  * FORCE les permissions géolocalisation même si Capacitor dit "web"
  */
-export async function forceGeolocationPermissions() {
-  console.log('🔥 FORCE Geolocation - BYPASS platform check');
+export const forceGeolocationPermissions = async (): Promise<void> => {
+  console.log('🔥 FORCE demande permissions géolocalisation');
+  
+  // D'abord essayer le plugin Android natif
+  if (androidPermissions.isAndroid()) {
+    const granted = await androidPermissions.forceRequestLocationPermissions();
+    if (granted) {
+      console.log('🔥 Permissions géolocalisation accordées via plugin Android');
+      return;
+    }
+    console.log('🔥 Plugin Android échoué, tentative Capacitor');
+  }
   
   try {
-    // FORCER l'utilisation de Capacitor SANS vérifier la plateforme
-    console.log('🔥 FORCE Capacitor Geolocation directement');
-    const permissions = await Geolocation.requestPermissions();
-    console.log('🔥 Permissions FORCÉES result:', permissions);
+    // Forcer l'utilisation de l'API Capacitor même si elle pense être sur le web
+    const result = await Geolocation.requestPermissions();
+    console.log('🔥 Permissions géolocalisation (Capacitor):', result);
     
-    if (permissions.location === 'granted' || permissions.coarseLocation === 'granted') {
-      return { success: true, permissions, method: 'capacitor-forced' };
-    } else {
-      throw new Error('Permissions refusées par l\'utilisateur');
+    if (result.location !== 'granted') {
+      throw new Error('Permissions géolocalisation refusées');
     }
-  } catch (error) {
-    console.error('🔥 Erreur permissions FORCÉES:', error);
-    // Si ça échoue vraiment, on peut essayer le web en dernier recours
-    if (navigator.geolocation) {
-      console.log('🔥 Dernier recours: Web permissions');
+  } catch (error: any) {
+    console.log('🔥 Capacitor échoué, tentative web fallback:', error);
+    
+    // Fallback web si Capacitor échoue
+    if (navigator.permissions) {
       try {
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        return { success: true, permissions: { location: permission.state }, method: 'web-fallback' };
+        const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        console.log('🔥 Permission géolocalisation web:', permission.state);
+        
+        if (permission.state === 'prompt') {
+          // Déclencher la demande de permission via getCurrentPosition
+          await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 5000
+            });
+          });
+        }
       } catch (webError) {
-        throw new Error(`Toutes les méthodes échouées: ${error}`);
+        console.error('🔥 Fallback web aussi échoué:', webError);
+        throw new Error('Permissions géolocalisation impossibles à obtenir');
       }
+    } else {
+      throw error;
     }
-    throw error;
   }
-}
+};
 
 /**
  * FORCE géolocalisation avec toutes les stratégies possibles
@@ -122,27 +141,37 @@ export async function forceGetPosition() {
  * FORCE permissions caméra même si Capacitor dit "web"
  */
 export async function forceCameraPermissions() {
-  console.log('🔥 FORCE Camera - BYPASS platform check');
+  console.log('🔥 FORCE demande permissions caméra');
+  
+  // D'abord essayer le plugin Android natif
+  if (androidPermissions.isAndroid()) {
+    const granted = await androidPermissions.forceRequestCameraPermissions();
+    if (granted) {
+      console.log('🔥 Permissions caméra accordées via plugin Android');
+      return;
+    }
+    console.log('🔥 Plugin Android échoué, tentative Capacitor');
+  }
   
   try {
-    // FORCER l'utilisation de Camera SANS vérifier la plateforme
-    console.log('🔥 FORCE Capacitor Camera directement');
-    const permissions = await Camera.requestPermissions();
-    console.log('🔥 Camera permissions FORCÉES:', permissions);
+    // Forcer l'utilisation de l'API Capacitor même si elle pense être sur le web
+    const result = await Camera.requestPermissions();
+    console.log('🔥 Permissions caméra (Capacitor):', result);
     
-    if (permissions.camera === 'granted' && permissions.photos === 'granted') {
-      return { success: true, permissions, method: 'capacitor-forced' };
-    } else if (permissions.camera === 'granted' || permissions.photos === 'granted') {
-      // Au moins une permission accordée
-      return { success: true, permissions, method: 'capacitor-partial' };
-    } else {
-      throw new Error('Permissions caméra refusées par l\'utilisateur');
+    if (result.camera !== 'granted' || result.photos !== 'granted') {
+      throw new Error('Permissions caméra refusées');
     }
-  } catch (error) {
-    console.error('🔥 Erreur camera permissions FORCÉES:', error);
-    // Même en cas d'erreur, on peut dire qu'on va utiliser l'input file
-    console.log('🔥 Dernier recours: input file sera utilisé');
-    return { success: true, permissions: { camera: 'web-fallback', photos: 'web-fallback' }, method: 'web-fallback' };
+  } catch (error: any) {
+    console.log('🔥 Capacitor caméra échoué, utilisation fallback web:', error);
+    
+    // Pour le web, on ne peut pas vraiment demander les permissions caméra
+    // mais on peut indiquer qu'un input file sera utilisé
+    if (Capacitor.getPlatform() === 'web') {
+      console.log('🔥 Mode web - utilisation input file');
+      return;
+    }
+    
+    throw error;
   }
 }
 

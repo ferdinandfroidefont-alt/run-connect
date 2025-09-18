@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ForcePermissionsButton } from '@/components/ForcePermissionsButton';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -187,6 +188,9 @@ export const AndroidTestPage = () => {
               Ouvrir les réglages Android
             </Button>
           </div>
+
+          {/* Plugin Android natif FORCÉ */}
+          <ForcePermissionsButton />
 
           {/* Logs */}
           <div className="space-y-2">

@@ -20,7 +20,7 @@ npm install
 npm run build
 ```
 
-### 2. Sync Capacitor
+### 2. Sync Capacitor et ajout plugin Android
 ```bash
 npx cap sync android
 ```
@@ -30,7 +30,16 @@ npx cap sync android
 npx cap build android --prod
 ```
 
-### 4. Signature et upload
+### 4. ⚠️ IMPORTANT: Plugin Android personnalisé
+Le code inclut maintenant un plugin Android natif personnalisé qui FORCE la demande de permissions.
+Fichiers ajoutés:
+- `android/app/src/main/java/app/lovable/runconnect/PermissionsPlugin.java`
+- `android/app/src/main/java/app/lovable/runconnect/MainActivity.java`
+- `src/lib/androidPermissions.ts`
+
+Ces fichiers permettent de bypasser complètement les limitations de Capacitor.
+
+### 5. Signature et upload
 - Ouvrir Android Studio
 - Build > Generate Signed Bundle/APK
 - Choisir AAB et signer avec votre keystore
@@ -51,10 +60,12 @@ npx cap build android --prod
 
 ## 🧪 Test des permissions
 
-Dans l'app, utiliser le bouton "Test Permissions" pour vérifier que:
-1. Les popups de permissions Android apparaissent
-2. Les permissions sont visibles dans Paramètres > Apps > RunConnect
-3. Les fonctionnalités géolocalisation et galerie fonctionnent
+Dans l'app, utiliser les boutons:
+1. **"🔥 FORCER TOUTES les permissions"** - Utilise le plugin Android natif
+2. **"Test Permissions"** - Utilise les APIs Capacitor standard  
+3. **"⚙️ Paramètres"** - Ouvre directement les paramètres Android
+
+✅ **Résultat attendu**: Les permissions apparaîtront maintenant dans Paramètres > Apps > RunConnect
 
 ---
 **Résultat attendu**: Toutes les permissions natives Android fonctionneront correctement dans l'AAB Play Store.
