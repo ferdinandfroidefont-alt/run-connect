@@ -7,6 +7,7 @@ import { ForcePermissionsButton } from '@/components/ForcePermissionsButton';
 import { LocationTestButton } from '@/components/LocationTestButton';
 import { GalleryTestButton } from '@/components/GalleryTestButton';
 import { NotificationTestButton } from '@/components/NotificationTestButton';
+import { NotificationSystemTest } from '@/components/NotificationSystemTest';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -197,6 +198,9 @@ export const AndroidTestPage = () => {
           <LocationTestButton />
           <GalleryTestButton />
           <NotificationTestButton />
+          
+          {/* Test complet système notifications push */}
+          <NotificationSystemTest />
           {/* Logs */}
           <div className="space-y-2">
             <h4 className="font-medium">Logs :</h4>
