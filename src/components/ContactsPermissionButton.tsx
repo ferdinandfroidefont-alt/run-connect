@@ -34,10 +34,16 @@ export const ContactsPermissionButton = () => {
           description: "Vous verrez maintenant de meilleures suggestions d'amis"
         });
       } else {
+        // Ouvrir les paramètres Android si la permission échoue
+        const { androidPermissions } = await import('@/lib/androidPermissions');
+        const opened = await androidPermissions.openAppSettings();
+        
         toast({
-          title: "Permission refusée",
-          description: "Vous pouvez activer l'accès aux contacts dans les paramètres de votre téléphone",
-          variant: "destructive"
+          title: "Paramètres ouverts",
+          description: opened 
+            ? "Activez l'accès aux contacts dans les paramètres Android puis revenez dans l'app."
+            : "Allez dans Paramètres > Applications > RunConnect > Autorisations > Contacts",
+          variant: opened ? "default" : "destructive"
         });
       }
     } catch (error) {
