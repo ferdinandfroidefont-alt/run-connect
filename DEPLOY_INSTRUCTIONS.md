@@ -91,18 +91,27 @@ Le plugin détecte automatiquement les appareils MIUI et fournit:
 
 ## 🧪 Test des permissions
 
-Dans l'app, utiliser les boutons:
-1. **"🔥 FORCER TOUTES les permissions"** - Utilise le plugin Android natif
-2. **"📸 Test Accès Galerie FORCÉ"** - 3 méthodes de test galerie (natif, Capacitor, standard)
-3. **"Test Permissions"** - Utilise les APIs Capacitor standard  
+Dans l'app, utiliser les boutons de test:
+1. **"🔥 FORCER TOUTES les permissions"** - Demande toutes permissions via plugin natif
+2. **"📍 Test Géolocalisation FORCÉ"** - 3 méthodes géolocalisation (natif, hook, web)
+3. **"📸 Test Accès Galerie FORCÉ"** - 3 méthodes galerie (natif MIUI, Capacitor, standard)
 4. **"⚙️ Paramètres"** - Ouvre directement les paramètres Android
+
+### 🧪 Procédure de test sur téléphone:
+1. **Build + Install AAB** sur votre appareil Android
+2. **Ouvrir RunConnect** → aller sur `/android-test`
+3. **Tester permissions** → "🔥 FORCER TOUTES les permissions"
+4. **Tester géolocalisation** → "📍 Test Géolocalisation" → méthode recommandée selon appareil
+5. **Tester galerie** → "📸 Test Accès Galerie" → méthode recommandée selon appareil
+6. **Vérifier dans Paramètres** → Apps → RunConnect → Autorisations
 
 ✅ **Résultat attendu**: 
 - **Tous Android** (Samsung, Huawei, OnePlus, etc.) ✅
-- **Redmi Note 9 et similaires** ✅ Plugin natif contourne le bug Capacitor 
-- **MIUI/HyperOS** ✅ Intent direct vers `com.miui.gallery`
-- **Galerie MIUI** ✅ Ouverture forcée même si Capacitor échoue
-- Les permissions apparaîtront dans Paramètres > Apps > RunConnect
+- **Redmi Note 9 et similaires** ✅ Détection MIUI + plugin natif optimisé
+- **MIUI/HyperOS** ✅ Intent direct `com.miui.gallery` + instructions spécifiques
+- **Permissions visibles** ✅ Dans Paramètres > Apps > RunConnect > Autorisations
+- **Géolocalisation OK** ✅ Position obtenue même sur MIUI restrictif  
+- **Galerie MIUI OK** ✅ Sélection image fonctionne même avec bug Capacitor #2060
 
 ---
 **Résultat attendu**: Toutes les permissions natives Android fonctionneront correctement dans l'AAB Play Store.

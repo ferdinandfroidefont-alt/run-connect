@@ -4,19 +4,20 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { androidPermissions } from '@/lib/androidPermissions';
-import { forceOpenGallery } from '@/lib/forceNativePermissions';
-import { useCamera } from '@/hooks/useCamera';
+import { forceGetPosition } from '@/lib/forceNativePermissions';
+import { useGeolocation } from '@/hooks/useGeolocation';
 
-export const GalleryTestButton = () => {
+export const LocationTestButton = () => {
   const [testing, setTesting] = useState(false);
   const [deviceInfo, setDeviceInfo] = useState<any>(null);
   const [lastResult, setLastResult] = useState<{
     method?: string;
     success?: boolean;
     error?: string;
+    position?: { lat: number; lng: number; accuracy?: number };
   }>({});
   const { toast } = useToast();
-  const { selectFromGallery } = useCamera();
+  const { getCurrentPosition } = useGeolocation();
 
   useEffect(() => {
     // Récupérer les infos du périphérique au montage
@@ -25,7 +26,7 @@ export const GalleryTestButton = () => {
     }
   }, []);
 
-  const testNativeGallery = async () => {
+  const testNativeLocation = async () => {
     if (!androidPermissions.isAndroid()) {
       toast({
         title: "Android uniquement",
@@ -39,46 +40,49 @@ export const GalleryTestButton = () => {
     setLastResult({});
 
     try {
-      console.log('🔥 Test ouverture galerie native...');
-      const result = await androidPermissions.forceOpenGallery();
+      console.log('🔥 Test géolocalisation native...');
       
-      setLastResult({
-        method: result.method || 'plugin-natif',
-        success: result.success
-      });
-
-      if (result.success) {
-        if (result.imageUri) {
-          toast({
-            title: "✅ Galerie ouverte avec succès!",
-            description: `Image sélectionnée via ${result.method || 'plugin-natif'}${deviceInfo?.isMIUI ? ' (MIUI optimisé)' : ''}`
-          });
-        } else {
-          toast({
-            title: "✅ Galerie ouverte",
-            description: `Méthode: ${result.method || 'plugin-natif'}${deviceInfo?.isMIUI ? ' (MIUI optimisé)' : ''}`
-          });
-        }
-      } else {
-        throw new Error('Échec ouverture galerie native');
+      // D'abord demander les permissions
+      const granted = await androidPermissions.forceRequestLocationPermissions();
+      if (!granted) {
+        throw new Error('Permissions géolocalisation refusées');
       }
 
+      // Puis obtenir la position
+      const position = await forceGetPosition();
+      
+      setLastResult({
+        method: 'plugin-natif',
+        success: true,
+        position: {
+          lat: (position as any).lat,
+          lng: (position as any).lng,
+          accuracy: (position as any).accuracy
+        }
+      });
+
+      toast({
+        title: "✅ Position obtenue!",
+        description: `Lat: ${(position as any).lat.toFixed(4)}, Lng: ${(position as any).lng.toFixed(4)}${deviceInfo?.isMIUI ? ' (MIUI optimisé)' : ''}`
+      });
+
     } catch (error: any) {
-      console.error('🔥 Erreur galerie native:', error);
+      console.error('🔥 Erreur géolocalisation native:', error);
       setLastResult({
         success: false,
-        error: error.message
+        error: error.message,
+        method: 'plugin-natif'
       });
       
       if (deviceInfo?.isMIUI) {
         toast({
-          title: "⚠️ Galerie MIUI échouée",
-          description: "Essayez la méthode Capacitor ou vérifiez les permissions dans Paramètres > Apps > RunConnect",
+          title: "⚠️ Géolocalisation MIUI échouée",
+          description: "Vérifiez les permissions dans Paramètres > Apps > RunConnect > Autorisations",
           variant: "destructive"
         });
       } else {
         toast({
-          title: "❌ Erreur galerie native",
+          title: "❌ Erreur géolocalisation native",
           description: error.message,
           variant: "destructive"
         });
@@ -88,38 +92,42 @@ export const GalleryTestButton = () => {
     }
   };
 
-  const testCapacitorGallery = async () => {
+  const testStandardLocation = async () => {
     setTesting(true);
     setLastResult({});
 
     try {
-      console.log('🔥 Test ouverture galerie Capacitor forcée...');
-      const result = await forceOpenGallery();
+      console.log('🔥 Test géolocalisation standard (hook useGeolocation)...');
+      const position = await getCurrentPosition();
       
-      if (result && result !== 'native-plugin-success') {
+      if (position) {
         setLastResult({
-          method: 'capacitor-force',
-          success: true
+          method: 'standard-hook',
+          success: true,
+          position: {
+            lat: position.lat,
+            lng: position.lng
+          }
         });
         
         toast({
-          title: "✅ Galerie Capacitor ouverte!",
-          description: "Image sélectionnée avec Capacitor"
+          title: "✅ Position standard OK!",
+          description: `Lat: ${position.lat.toFixed(4)}, Lng: ${position.lng.toFixed(4)}`
         });
       } else {
-        throw new Error('Aucune image sélectionnée');
+        throw new Error('Position null (standard)');
       }
 
     } catch (error: any) {
-      console.error('🔥 Erreur galerie Capacitor:', error);
+      console.error('🔥 Erreur géolocalisation standard:', error);
       setLastResult({
         success: false,
         error: error.message,
-        method: 'capacitor-force'
+        method: 'standard-hook'
       });
       
       toast({
-        title: "❌ Erreur galerie Capacitor",
+        title: "❌ Erreur géolocalisation standard",
         description: error.message,
         variant: "destructive"
       });
@@ -128,38 +136,50 @@ export const GalleryTestButton = () => {
     }
   };
 
-  const testStandardGallery = async () => {
+  const testWebLocation = async () => {
     setTesting(true);
     setLastResult({});
 
     try {
-      console.log('🔥 Test galerie standard (hook useCamera)...');
-      const result = await selectFromGallery();
+      console.log('🔥 Test géolocalisation web native...');
       
-      if (result) {
-        setLastResult({
-          method: 'standard-hook',
-          success: true
-        });
-        
-        toast({
-          title: "✅ Galerie standard OK!",
-          description: "Image sélectionnée avec useCamera hook"
-        });
-      } else {
-        throw new Error('Aucune image sélectionnée (standard)');
+      if (!navigator.geolocation) {
+        throw new Error('Géolocalisation non supportée');
       }
 
-    } catch (error: any) {
-      console.error('🔥 Erreur galerie standard:', error);
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 300000
+        });
+      });
+      
       setLastResult({
-        success: false,
-        error: error.message,
-        method: 'standard-hook'
+        method: 'web-native',
+        success: true,
+        position: {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        }
       });
       
       toast({
-        title: "❌ Erreur galerie standard",
+        title: "✅ Position web OK!",
+        description: `Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`
+      });
+
+    } catch (error: any) {
+      console.error('🔥 Erreur géolocalisation web:', error);
+      setLastResult({
+        success: false,
+        error: error.message,
+        method: 'web-native'
+      });
+      
+      toast({
+        title: "❌ Erreur géolocalisation web",
         description: error.message,
         variant: "destructive"
       });
@@ -185,7 +205,7 @@ export const GalleryTestButton = () => {
     <Card className="border rounded-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          📸 Test Accès Galerie FORCÉ
+          📍 Test Géolocalisation FORCÉ
         </CardTitle>
         {deviceInfo && (
           <div className="text-sm text-muted-foreground">
@@ -207,6 +227,18 @@ export const GalleryTestButton = () => {
             <span>Statut:</span>
             {getStatusBadge(lastResult.success)}
           </div>
+          {lastResult.position && (
+            <div className="text-sm bg-green-50 border border-green-200 rounded p-2">
+              <strong>Position:</strong><br />
+              Lat: {lastResult.position.lat.toFixed(4)}<br />
+              Lng: {lastResult.position.lng.toFixed(4)}
+              {lastResult.position.accuracy && (
+                <>
+                  <br />Précision: {lastResult.position.accuracy.toFixed(0)}m
+                </>
+              )}
+            </div>
+          )}
           {lastResult.error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
               <strong>Erreur:</strong> {lastResult.error}
@@ -220,14 +252,14 @@ export const GalleryTestButton = () => {
               🔴 Appareil MIUI/Xiaomi détecté
             </div>
             <div className="text-red-600 mt-1">
-              Bug connu: Capacitor Camera + Galerie MIUI/Redmi. Le plugin natif contourne ce problème.
+              Sur {deviceInfo.manufacturer} {deviceInfo.model}, vérifiez que l&apos;autorisation &quot;Localisation&quot; est activée dans Paramètres &gt; Apps &gt; RunConnect.
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-2">
           <Button 
-            onClick={testNativeGallery}
+            onClick={testNativeLocation}
             disabled={testing || !androidPermissions.isAndroid()}
             className="w-full"
             variant={deviceInfo?.isMIUI ? "default" : "outline"}
@@ -237,21 +269,21 @@ export const GalleryTestButton = () => {
           </Button>
           
           <Button
-            onClick={testCapacitorGallery}
+            onClick={testStandardLocation}
             disabled={testing}
             variant="outline"
             className="w-full"
           >
-            {testing ? "🔥 Test..." : "📱 Capacitor Forcé"}
+            {testing ? "🔥 Test..." : "🎯 Hook useGeolocation"}
           </Button>
 
           <Button
-            onClick={testStandardGallery}
+            onClick={testWebLocation}
             disabled={testing}
             variant="outline"
             className="w-full"
           >
-            {testing ? "🔥 Test..." : "🎯 Hook Standard"}
+            {testing ? "🔥 Test..." : "🌐 Web Native"}
           </Button>
         </div>
 

@@ -6,6 +6,9 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.provider.Settings;
 import android.os.Build;
+import android.app.Activity;
+import android.database.Cursor;
+import android.provider.MediaStore;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -29,6 +32,8 @@ import com.getcapacitor.annotation.Permission;
 public class PermissionsPlugin extends Plugin {
 
     private static final int PERMISSION_REQUEST_CODE = 9999;
+    private static final int GALLERY_REQUEST_CODE = 9998;
+    private PluginCall galleryCall;
 
     @PluginMethod
     public void forceRequestLocationPermissions(PluginCall call) {
@@ -102,20 +107,23 @@ public class PermissionsPlugin extends Plugin {
 
     @PluginMethod
     public void forceOpenGallery(PluginCall call) {
+        // Sauvegarder l'appel pour le résultat
+        this.galleryCall = call;
+        
         try {
             // Sur MIUI/Xiaomi, utiliser Intent direct pour contourner les bugs Capacitor
             if (isMIUI()) {
-                openGalleryWithIntent(call);
+                openGalleryWithIntent();
             } else {
                 // Autres appareils Android - méthode standard
-                openGalleryStandard(call);
+                openGalleryStandard();
             }
         } catch (Exception e) {
             call.reject("Impossible d'ouvrir la galerie", e);
         }
     }
 
-    private void openGalleryWithIntent(PluginCall call) {
+    private void openGalleryWithIntent() {
         try {
             // Méthode MIUI - Intent direct vers la galerie
             Intent intent = new Intent(Intent.ACTION_PICK);
@@ -130,53 +138,96 @@ public class PermissionsPlugin extends Plugin {
                 intent = Intent.createChooser(intent, "Sélectionner une image");
             }
             
-            getActivity().startActivityForResult(intent, 9998);
-            
-            JSObject result = new JSObject();
-            result.put("success", true);
-            result.put("method", "miui-intent");
-            result.put("device", getDeviceInfo());
-            call.resolve(result);
+            getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
             
         } catch (Exception e) {
             // Fallback vers méthode standard si MIUI échoue
-            openGalleryStandard(call);
+            openGalleryStandard();
         }
     }
 
-    private void openGalleryStandard(PluginCall call) {
+    private void openGalleryStandard() {
         try {
             // Méthode standard Android
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
             intent.setType("image/*");
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
             
-            // Multiple stratégies pour différents appareils
-            Intent[] intents = {
-                new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI),
-                new Intent(Intent.ACTION_GET_CONTENT).setType("image/*"),
-                Intent.createChooser(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*"), "Sélectionner une image")
-            };
-            
-            // Essayer dans l'ordre
-            for (Intent testIntent : intents) {
-                if (testIntent.resolveActivity(getActivity().getPackageManager()) != null) {
-                    getActivity().startActivityForResult(testIntent, 9998);
-                    
-                    JSObject result = new JSObject();
-                    result.put("success", true);
-                    result.put("method", "standard-intent");
-                    result.put("device", getDeviceInfo());
-                    call.resolve(result);
-                    return;
+            // Vérifier que l'intent peut être résolu
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+            } else {
+                // Fallback vers GET_CONTENT si PICK échoue
+                Intent fallbackIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                fallbackIntent.setType("image/*");
+                fallbackIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                
+                if (fallbackIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+                    getActivity().startActivityForResult(fallbackIntent, GALLERY_REQUEST_CODE);
+                } else {
+                    throw new Exception("Aucune application galerie trouvée");
                 }
             }
             
-            throw new Exception("Aucune application galerie trouvée");
-            
         } catch (Exception e) {
-            call.reject("Galerie standard échouée: " + e.getMessage(), e);
+            if (galleryCall != null) {
+                galleryCall.reject("Galerie standard échouée: " + e.getMessage(), e);
+                galleryCall = null;
+            }
         }
+    }
+
+    // ESSENTIEL: Traiter les résultats de l'activité galerie
+    public void handleActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == GALLERY_REQUEST_CODE && galleryCall != null) {
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                Uri selectedImage = data.getData();
+                if (selectedImage != null) {
+                    try {
+                        // Obtenir le chemin réel de l'image
+                        String imagePath = getRealImagePath(selectedImage);
+                        
+                        JSObject result = new JSObject();
+                        result.put("success", true);
+                        result.put("imageUri", selectedImage.toString());
+                        result.put("imagePath", imagePath);
+                        result.put("method", isMIUI() ? "miui-intent" : "standard-intent");
+                        result.put("device", getDeviceInfo());
+                        
+                        galleryCall.resolve(result);
+                        
+                    } catch (Exception e) {
+                        galleryCall.reject("Erreur traitement image: " + e.getMessage(), e);
+                    }
+                } else {
+                    galleryCall.reject("URI image null");
+                }
+            } else {
+                galleryCall.reject("Sélection annulée ou échouée");
+            }
+            
+            galleryCall = null;
+        }
+    }
+
+    private String getRealImagePath(Uri uri) {
+        String result = null;
+        String[] projection = { MediaStore.Images.Media.DATA };
+        
+        try {
+            Cursor cursor = getActivity().getContentResolver().query(uri, projection, null, null, null);
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+                    result = cursor.getString(columnIndex);
+                }
+                cursor.close();
+            }
+        } catch (Exception e) {
+            // Si on ne peut pas obtenir le chemin réel, utiliser l'URI
+            result = uri.toString();
+        }
+        
+        return result != null ? result : uri.toString();
     }
 
     private JSObject getDeviceInfo() {

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ForcePermissionsButton } from '@/components/ForcePermissionsButton';
+import { LocationTestButton } from '@/components/LocationTestButton';
 import { GalleryTestButton } from '@/components/GalleryTestButton';
 
 export const AndroidTestPage = () => {
@@ -192,6 +193,8 @@ export const AndroidTestPage = () => {
 
           {/* Plugin Android natif FORCÉ */}
           <ForcePermissionsButton />
+          <LocationTestButton />
+          <GalleryTestButton />
           {/* Logs */}
           <div className="space-y-2">
             <h4 className="font-medium">Logs :</h4>

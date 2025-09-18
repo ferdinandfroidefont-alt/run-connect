@@ -8,7 +8,13 @@ declare global {
       forceRequestContactsPermissions(): Promise<{ granted: boolean; device?: any }>;
       openAppSettings(): Promise<{ success: boolean; device?: any }>;
       getDeviceInfo(): Promise<{ device: any }>;
-      forceOpenGallery(): Promise<{ success: boolean; method?: string; device?: any }>;
+      forceOpenGallery(): Promise<{ 
+        success: boolean; 
+        method?: string; 
+        device?: any;
+        imageUri?: string;
+        imagePath?: string;
+      }>;
     };
   }
 }
@@ -94,7 +100,7 @@ export const androidPermissions = {
     }
   },
 
-  async forceOpenGallery(): Promise<{ success: boolean; method?: string }> {
+  async forceOpenGallery(): Promise<{ success: boolean; method?: string; imageUri?: string; imagePath?: string }> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
       console.log('🔥 Plugin Android non disponible pour galerie');
       return { success: false };
@@ -109,7 +115,16 @@ export const androidPermissions = {
         console.log('🔥 Galerie MIUI ouverte avec méthode:', result.method);
       }
       
-      return { success: result.success, method: result.method };
+      if (result.success && result.imageUri) {
+        console.log('🔥 Image sélectionnée:', result.imageUri);
+      }
+      
+      return { 
+        success: result.success, 
+        method: result.method,
+        imageUri: result.imageUri,
+        imagePath: result.imagePath
+      };
     } catch (error) {
       console.error('🔥 Erreur ouverture galerie:', error);
       return { success: false };
