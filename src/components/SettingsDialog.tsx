@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift } from "lucide-react";
-import { Loader2 } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -126,7 +125,17 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
 
   const handleNotificationToggle = async () => {
     const success = await requestPermissions();
-    if (success && user) {
+    if (!success) {
+      // Si la permission échoue, ouvrir les paramètres Android
+      const { androidPermissions } = await import('@/lib/androidPermissions');
+      const opened = await androidPermissions.openAppSettings();
+      if (opened) {
+        toast({
+          title: "Paramètres ouverts",
+          description: "Activez les notifications dans les paramètres Android puis revenez dans l'app.",
+        });
+      }
+    } else if (user) {
       // Mettre à jour le profil pour marquer les notifications comme activées
       await supabase
         .from('profiles')
