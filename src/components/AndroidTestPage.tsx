@@ -12,6 +12,7 @@ import { CompatibilityTestSuite } from '@/components/CompatibilityTestSuite';
 import { DeviceSpecificGuide } from '@/components/DeviceSpecificGuide';
 import { MobileCompatibilityTest } from '@/components/MobileCompatibilityTest';
 import { PlayStoreDiagnostic } from '@/components/PlayStoreDiagnostic';
+import { ForceAndroidPermissions } from '@/components/ForceAndroidPermissions';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -197,7 +198,13 @@ export const AndroidTestPage = () => {
             </Button>
           </div>
 
-          {/* Plugin Android natif FORCÉ */}
+          {/* Plugin Android natif FORCÉ - NOUVEAU SYSTÈME */}
+          <div className="mt-6 p-4 border-2 border-red-500 rounded-lg bg-red-50">
+            <h3 className="text-lg font-bold text-red-700 mb-4">🔥 NOUVEAU - Force Android Permissions</h3>
+            <ForceAndroidPermissions />
+          </div>
+          
+          {/* Plugin Android natif FORCÉ - ANCIEN SYSTÈME */}
           <PlayStoreDiagnostic />
           <ForcePermissionsButton />
           <LocationTestButton />

@@ -22,20 +22,39 @@ declare global {
 }
 
 export const androidPermissions = {
-  // FIX AAB: Détection Android plus robuste pour Play Store AAB
+  // FIX AAB: Détection Android ULTRA robuste pour Play Store AAB
   isAndroid: () => {
     const platform = Capacitor.getPlatform();
     const userAgent = navigator.userAgent.toLowerCase();
+    const hasCapacitor = !!(window as any).Capacitor;
+    const isDesktop = userAgent.includes('windows') || userAgent.includes('macintosh') || userAgent.includes('linux');
     
-    // Si Capacitor détecte Android, c'est bon
-    if (platform === 'android') return true;
+    console.log('🔥 DÉTECTION Android:');
+    console.log('🔥 - Platform:', platform);
+    console.log('🔥 - UserAgent:', userAgent);
+    console.log('🔥 - HasCapacitor:', hasCapacitor);
+    console.log('🔥 - IsDesktop:', isDesktop);
+    console.log('🔥 - PermissionsPlugin:', !!window.PermissionsPlugin);
     
-    // Si Capacitor dit "web" mais qu'on est sur Android (cas AAB Play Store)
-    if (platform === 'web' && userAgent.includes('android')) {
-      console.log('🔥 FIX AAB: Android détecté malgré platform=web');
+    // 1. Si Capacitor détecte Android, c'est bon
+    if (platform === 'android') {
+      console.log('🔥 ✅ Android détecté par Capacitor');
       return true;
     }
     
+    // 2. FORCE Android si on a Capacitor mais pas sur desktop
+    if (hasCapacitor && !isDesktop) {
+      console.log('🔥 ✅ FORCE Android: Capacitor présent + pas desktop');
+      return true;
+    }
+    
+    // 3. Si Capacitor dit "web" mais UserAgent Android
+    if (platform === 'web' && userAgent.includes('android') && hasCapacitor) {
+      console.log('🔥 ✅ FIX AAB: Android dans UserAgent + Capacitor');
+      return true;
+    }
+    
+    console.log('🔥 ❌ Android non détecté');
     return false;
   },
 
