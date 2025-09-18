@@ -22,7 +22,22 @@ declare global {
 }
 
 export const androidPermissions = {
-  isAndroid: () => Capacitor.getPlatform() === 'android',
+  // FIX AAB: Détection Android plus robuste pour Play Store AAB
+  isAndroid: () => {
+    const platform = Capacitor.getPlatform();
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    // Si Capacitor détecte Android, c'est bon
+    if (platform === 'android') return true;
+    
+    // Si Capacitor dit "web" mais qu'on est sur Android (cas AAB Play Store)
+    if (platform === 'web' && userAgent.includes('android')) {
+      console.log('🔥 FIX AAB: Android détecté malgré platform=web');
+      return true;
+    }
+    
+    return false;
+  },
 
   async getDeviceInfo() {
     if (!this.isAndroid() || !window.PermissionsPlugin) {

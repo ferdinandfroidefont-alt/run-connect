@@ -11,6 +11,7 @@ import { NotificationSystemTest } from '@/components/NotificationSystemTest';
 import { CompatibilityTestSuite } from '@/components/CompatibilityTestSuite';
 import { DeviceSpecificGuide } from '@/components/DeviceSpecificGuide';
 import { MobileCompatibilityTest } from '@/components/MobileCompatibilityTest';
+import { PlayStoreDiagnostic } from '@/components/PlayStoreDiagnostic';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -197,6 +198,7 @@ export const AndroidTestPage = () => {
           </div>
 
           {/* Plugin Android natif FORCÉ */}
+          <PlayStoreDiagnostic />
           <ForcePermissionsButton />
           <LocationTestButton />
           <GalleryTestButton />
