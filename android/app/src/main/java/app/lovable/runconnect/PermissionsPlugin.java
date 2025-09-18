@@ -9,8 +9,13 @@ import android.os.Build;
 import android.app.Activity;
 import android.database.Cursor;
 import android.provider.MediaStore;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -26,7 +31,8 @@ import com.getcapacitor.annotation.Permission;
         @Permission(strings = { Manifest.permission.ACCESS_COARSE_LOCATION }, alias = "coarseLocation"),
         @Permission(strings = { Manifest.permission.CAMERA }, alias = "camera"),
         @Permission(strings = { Manifest.permission.READ_MEDIA_IMAGES }, alias = "photos"),
-        @Permission(strings = { Manifest.permission.READ_CONTACTS }, alias = "contacts")
+        @Permission(strings = { Manifest.permission.READ_CONTACTS }, alias = "contacts"),
+        @Permission(strings = { Manifest.permission.POST_NOTIFICATIONS }, alias = "notifications")
     }
 )
 public class PermissionsPlugin extends Plugin {
@@ -287,6 +293,111 @@ public class PermissionsPlugin extends Plugin {
                 }
                 savedCall.reject("Permissions refusées - vérifiez les paramètres MIUI si Xiaomi/Redmi");
             }
+    }
+
+    @PluginMethod
+    public void requestNotificationPermissions(PluginCall call) {
+        try {
+            // Demander les permissions de notifications Android
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+ nécessite permission EXPLICIT
+                if (ContextCompat.checkSelfPermission(getActivity(), 
+                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    
+                    requestPermissionForAlias("notifications", call, "requestNotificationPermissions");
+                    return;
+                }
+            }
+            
+            // Vérifier si les notifications sont activées
+            boolean areEnabled = areNotificationsEnabled();
+            
+            JSObject result = new JSObject();
+            result.put("granted", areEnabled);
+            result.put("device", getDeviceInfo());
+            result.put("sdkVersion", Build.VERSION.SDK_INT);
+            
+            if (areEnabled) {
+                call.resolve(result);
+            } else {
+                result.put("needsSettings", true);
+                result.put("advice", isMIUI() ? 
+                    "Sur MIUI, allez dans Paramètres > Apps > RunConnect > Notifications" :
+                    "Activez les notifications dans Paramètres > Apps > RunConnect");
+                call.resolve(result);
+            }
+            
+        } catch (Exception e) {
+            call.reject("Erreur demande permissions notifications", e);
         }
     }
+    
+    @PluginMethod
+    public void showLocalNotification(PluginCall call) {
+        try {
+            String title = call.getString("title", "RunConnect");
+            String body = call.getString("body", "Nouvelle notification");
+            String icon = call.getString("icon", "ic_notification");
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                createNotificationChannel();
+            }
+            
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getActivity(), "runconnect_channel")
+                .setSmallIcon(android.R.drawable.ic_dialog_info) // Icône par défaut
+                .setContentTitle(title)
+                .setContentText(body)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true);
+                
+            // Intent pour ouvrir l'app quand on clique sur la notification
+            Intent intent = new Intent(getActivity(), getActivity().getClass());
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            
+            PendingIntent pendingIntent = PendingIntent.getActivity(getActivity(), 0, intent, 
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            builder.setContentIntent(pendingIntent);
+            
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getActivity());
+            
+            // Vérifier les permissions avant d'afficher
+            if (ActivityCompat.checkSelfPermission(getActivity(), 
+                Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED || 
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                
+                notificationManager.notify(1001, builder.build());
+                
+                JSObject result = new JSObject();
+                result.put("success", true);
+                result.put("device", getDeviceInfo());
+                call.resolve(result);
+            } else {
+                call.reject("Permission notifications requise");
+            }
+            
+        } catch (Exception e) {
+            call.reject("Erreur affichage notification", e);
+        }
+    }
+    
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "RunConnect Notifications";
+            String description = "Notifications pour RunConnect";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel("runconnect_channel", name, importance);
+            channel.setDescription(description);
+            channel.enableLights(true);
+            channel.enableVibration(true);
+            
+            NotificationManager notificationManager = getActivity().getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+    
+    private boolean areNotificationsEnabled() {
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getActivity());
+        return notificationManager.areNotificationsEnabled();
+    }
+}
 }

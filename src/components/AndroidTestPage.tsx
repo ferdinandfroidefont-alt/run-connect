@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ForcePermissionsButton } from '@/components/ForcePermissionsButton';
 import { LocationTestButton } from '@/components/LocationTestButton';
 import { GalleryTestButton } from '@/components/GalleryTestButton';
+import { NotificationTestButton } from '@/components/NotificationTestButton';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -195,6 +196,7 @@ export const AndroidTestPage = () => {
           <ForcePermissionsButton />
           <LocationTestButton />
           <GalleryTestButton />
+          <NotificationTestButton />
           {/* Logs */}
           <div className="space-y-2">
             <h4 className="font-medium">Logs :</h4>

@@ -6,6 +6,8 @@ declare global {
       forceRequestLocationPermissions(): Promise<{ granted: boolean; device?: any }>;
       forceRequestCameraPermissions(): Promise<{ granted: boolean; device?: any }>;
       forceRequestContactsPermissions(): Promise<{ granted: boolean; device?: any }>;
+      requestNotificationPermissions(): Promise<{ granted: boolean; device?: any; needsSettings?: boolean; advice?: string }>;
+      showLocalNotification(options: { title: string; body: string; icon?: string }): Promise<{ success: boolean; device?: any }>;
       openAppSettings(): Promise<{ success: boolean; device?: any }>;
       getDeviceInfo(): Promise<{ device: any }>;
       forceOpenGallery(): Promise<{ 
@@ -128,6 +130,53 @@ export const androidPermissions = {
     } catch (error) {
       console.error('🔥 Erreur ouverture galerie:', error);
       return { success: false };
+    }
+  },
+
+  async requestNotificationPermissions(): Promise<{ granted: boolean; needsSettings?: boolean; advice?: string }> {
+    if (!this.isAndroid() || !window.PermissionsPlugin) {
+      console.log('🔥 Plugin Android non disponible pour notifications');
+      return { granted: false };
+    }
+    
+    try {
+      console.log('🔥 Demande FORCÉE permissions notifications Android');
+      const result = await window.PermissionsPlugin.requestNotificationPermissions();
+      console.log('🔥 Résultat permissions notifications:', result);
+      
+      if (result.device?.isMIUI && !result.granted) {
+        console.log('🔥 Appareil MIUI - notifications nécessitent configuration manuelle');
+      }
+      
+      return { 
+        granted: result.granted, 
+        needsSettings: result.needsSettings,
+        advice: result.advice
+      };
+    } catch (error) {
+      console.error('🔥 Erreur permissions notifications:', error);
+      return { granted: false };
+    }
+  },
+
+  async showLocalNotification(title: string, body: string): Promise<boolean> {
+    if (!this.isAndroid() || !window.PermissionsPlugin) {
+      console.log('🔥 Plugin Android non disponible pour notifications');
+      return false;
+    }
+    
+    try {
+      console.log('🔥 Affichage notification locale Android');
+      const result = await window.PermissionsPlugin.showLocalNotification({
+        title,
+        body,
+        icon: 'ic_notification'
+      });
+      console.log('🔥 Résultat notification locale:', result);
+      return result.success;
+    } catch (error) {
+      console.error('🔥 Erreur notification locale:', error);
+      return false;
     }
   },
 

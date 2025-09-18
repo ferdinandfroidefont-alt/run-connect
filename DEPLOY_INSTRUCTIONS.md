@@ -45,7 +45,21 @@ Ces fichiers permettent de bypasser complètement les limitations de Capacitor.
 - Choisir AAB et signer avec votre keystore
 - Upload sur Play Store
 
-### 📸 **ACCÈS GALERIE MIUI/REDMI CORRIGÉ** ✅
+### 🔔 **NOTIFICATIONS PUSH NATIVES AJOUTÉES** ✅
+
+### 📱 Fonctionnalités notifications:
+1. **Plugin Android natif** - Demande permissions POST_NOTIFICATIONS (Android 13+)
+2. **Canal notifications** - Création automatique canal "RunConnect" 
+3. **Notifications locales** - Affichage natif avec titre, contenu, icône
+4. **Détection MIUI** - Instructions spécifiques Xiaomi/Redmi
+5. **Fallback Capacitor** - Support notifications push serveur
+
+### ⚙️ Permissions Android requises:
+- `POST_NOTIFICATIONS` (Android 13+) ✅ Ajoutée
+- Canal notification automatique ✅
+- Intent PendingIntent pour ouverture app ✅
+
+## 📸 **ACCÈS GALERIE MIUI/REDMI CORRIGÉ** ✅
 
 ### 🔴 Bug Capacitor + MIUI identifié:
 - **Issue #2060**: Capacitor Camera ne fonctionne pas avec la galerie Redmi
@@ -95,7 +109,8 @@ Dans l'app, utiliser les boutons de test:
 1. **"🔥 FORCER TOUTES les permissions"** - Demande toutes permissions via plugin natif
 2. **"📍 Test Géolocalisation FORCÉ"** - 3 méthodes géolocalisation (natif, hook, web)
 3. **"📸 Test Accès Galerie FORCÉ"** - 3 méthodes galerie (natif MIUI, Capacitor, standard)
-4. **"⚙️ Paramètres"** - Ouvre directement les paramètres Android
+4. **"🔔 Test Notifications Push FORCÉ"** - 3 méthodes notifications (natif Android, Capacitor, web)
+5. **"⚙️ Paramètres"** - Ouvre directement les paramètres Android
 
 ### 🧪 Procédure de test sur téléphone:
 1. **Build + Install AAB** sur votre appareil Android
@@ -103,15 +118,17 @@ Dans l'app, utiliser les boutons de test:
 3. **Tester permissions** → "🔥 FORCER TOUTES les permissions"
 4. **Tester géolocalisation** → "📍 Test Géolocalisation" → méthode recommandée selon appareil
 5. **Tester galerie** → "📸 Test Accès Galerie" → méthode recommandée selon appareil
-6. **Vérifier dans Paramètres** → Apps → RunConnect → Autorisations
+6. **Tester notifications** → "🔔 Test Notifications Push" → vérifier notification native apparaît
+7. **Vérifier dans Paramètres** → Apps → RunConnect → Autorisations
 
 ✅ **Résultat attendu**: 
 - **Tous Android** (Samsung, Huawei, OnePlus, etc.) ✅
 - **Redmi Note 9 et similaires** ✅ Détection MIUI + plugin natif optimisé
-- **MIUI/HyperOS** ✅ Intent direct `com.miui.gallery` + instructions spécifiques
+- **MIUI/HyperOS** ✅ Intent direct `com.miui.gallery` + instructions notifications spécifiques
 - **Permissions visibles** ✅ Dans Paramètres > Apps > RunConnect > Autorisations
 - **Géolocalisation OK** ✅ Position obtenue même sur MIUI restrictif  
 - **Galerie MIUI OK** ✅ Sélection image fonctionne même avec bug Capacitor #2060
+- **Notifications natives** ✅ Vraies notifications push Android avec icône + son
 
 ---
 **Résultat attendu**: Toutes les permissions natives Android fonctionneront correctement dans l'AAB Play Store.
