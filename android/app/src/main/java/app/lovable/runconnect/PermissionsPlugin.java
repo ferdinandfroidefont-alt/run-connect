@@ -101,10 +101,82 @@ public class PermissionsPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void getDeviceInfo(PluginCall call) {
-        JSObject result = new JSObject();
-        result.put("device", getDeviceInfo());
-        call.resolve(result);
+    public void forceOpenGallery(PluginCall call) {
+        try {
+            // Sur MIUI/Xiaomi, utiliser Intent direct pour contourner les bugs Capacitor
+            if (isMIUI()) {
+                openGalleryWithIntent(call);
+            } else {
+                // Autres appareils Android - méthode standard
+                openGalleryStandard(call);
+            }
+        } catch (Exception e) {
+            call.reject("Impossible d'ouvrir la galerie", e);
+        }
+    }
+
+    private void openGalleryWithIntent(PluginCall call) {
+        try {
+            // Méthode MIUI - Intent direct vers la galerie
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            
+            // Essayer d'abord la galerie MIUI spécifique
+            intent.setPackage("com.miui.gallery");
+            
+            // Si la galerie MIUI n'existe pas, utiliser le sélecteur système
+            if (intent.resolveActivity(getActivity().getPackageManager()) == null) {
+                intent.setPackage(null); // Retirer le package spécifique
+                intent = Intent.createChooser(intent, "Sélectionner une image");
+            }
+            
+            getActivity().startActivityForResult(intent, 9998);
+            
+            JSObject result = new JSObject();
+            result.put("success", true);
+            result.put("method", "miui-intent");
+            result.put("device", getDeviceInfo());
+            call.resolve(result);
+            
+        } catch (Exception e) {
+            // Fallback vers méthode standard si MIUI échoue
+            openGalleryStandard(call);
+        }
+    }
+
+    private void openGalleryStandard(PluginCall call) {
+        try {
+            // Méthode standard Android
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            
+            // Multiple stratégies pour différents appareils
+            Intent[] intents = {
+                new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI),
+                new Intent(Intent.ACTION_GET_CONTENT).setType("image/*"),
+                Intent.createChooser(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*"), "Sélectionner une image")
+            };
+            
+            // Essayer dans l'ordre
+            for (Intent testIntent : intents) {
+                if (testIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+                    getActivity().startActivityForResult(testIntent, 9998);
+                    
+                    JSObject result = new JSObject();
+                    result.put("success", true);
+                    result.put("method", "standard-intent");
+                    result.put("device", getDeviceInfo());
+                    call.resolve(result);
+                    return;
+                }
+            }
+            
+            throw new Exception("Aucune application galerie trouvée");
+            
+        } catch (Exception e) {
+            call.reject("Galerie standard échouée: " + e.getMessage(), e);
+        }
     }
 
     private JSObject getDeviceInfo() {

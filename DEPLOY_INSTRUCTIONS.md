@@ -45,6 +45,18 @@ Ces fichiers permettent de bypasser complètement les limitations de Capacitor.
 - Choisir AAB et signer avec votre keystore
 - Upload sur Play Store
 
+### 📸 **ACCÈS GALERIE MIUI/REDMI CORRIGÉ** ✅
+
+### 🔴 Bug Capacitor + MIUI identifié:
+- **Issue #2060**: Capacitor Camera ne fonctionne pas avec la galerie Redmi
+- **Problème**: MIUI utilise `com.miui.gallery` au lieu de la galerie Android standard
+- **Solution**: Plugin Android natif avec Intent direct vers galerie MIUI
+
+### 🔧 Nouvelles méthodes galerie ajoutées:
+1. **Plugin Android natif** - Intent direct `com.miui.gallery` pour MIUI
+2. **Capacitor forcé** - Multiple stratégies avec fallback
+3. **Hook standard** - Méthode useCamera classique
+
 ## 📱 **COMPATIBILITÉ REDMI NOTE 9 & MIUI VÉRIFIÉE** ✅
 
 ### Spécifications Redmi Note 9:
@@ -81,13 +93,15 @@ Le plugin détecte automatiquement les appareils MIUI et fournit:
 
 Dans l'app, utiliser les boutons:
 1. **"🔥 FORCER TOUTES les permissions"** - Utilise le plugin Android natif
-2. **"Test Permissions"** - Utilise les APIs Capacitor standard  
-3. **"⚙️ Paramètres"** - Ouvre directement les paramètres Android
+2. **"📸 Test Accès Galerie FORCÉ"** - 3 méthodes de test galerie (natif, Capacitor, standard)
+3. **"Test Permissions"** - Utilise les APIs Capacitor standard  
+4. **"⚙️ Paramètres"** - Ouvre directement les paramètres Android
 
 ✅ **Résultat attendu**: 
 - **Tous Android** (Samsung, Huawei, OnePlus, etc.) ✅
-- **Redmi Note 9 et similaires** ✅ 
-- **MIUI/HyperOS** ✅ Avec instructions spécifiques
+- **Redmi Note 9 et similaires** ✅ Plugin natif contourne le bug Capacitor 
+- **MIUI/HyperOS** ✅ Intent direct vers `com.miui.gallery`
+- **Galerie MIUI** ✅ Ouverture forcée même si Capacitor échoue
 - Les permissions apparaîtront dans Paramètres > Apps > RunConnect
 
 ---

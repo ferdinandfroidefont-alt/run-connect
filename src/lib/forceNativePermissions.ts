@@ -178,8 +178,21 @@ export async function forceCameraPermissions() {
 /**
  * FORCE ouverture galerie avec stratégies multiples
  */
-export async function forceOpenGallery() {
-  console.log('🔥 FORCE Gallery - BYPASS platform check');
+export const forceOpenGallery = async (): Promise<string | null> => {
+  console.log('🔥 FORCE Gallery - BYPASS platform check avec support MIUI');
+  
+  // D'abord essayer le plugin Android natif pour MIUI
+  if (androidPermissions.isAndroid()) {
+    try {
+      const result = await androidPermissions.forceOpenGallery();
+      if (result.success) {
+        console.log('🔥 Galerie ouverte via plugin Android natif:', result.method);
+        return 'native-plugin-success';
+      }
+    } catch (error) {
+      console.log('🔥 Plugin Android galerie échoué, tentative Capacitor:', error);
+    }
+  }
   
   try {
     // FORCER Capacitor directement sans vérifier la plateforme
@@ -244,4 +257,4 @@ export async function forceOpenGallery() {
       input.click();
     });
   }
-}
+};

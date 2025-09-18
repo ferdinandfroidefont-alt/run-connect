@@ -8,6 +8,7 @@ declare global {
       forceRequestContactsPermissions(): Promise<{ granted: boolean; device?: any }>;
       openAppSettings(): Promise<{ success: boolean; device?: any }>;
       getDeviceInfo(): Promise<{ device: any }>;
+      forceOpenGallery(): Promise<{ success: boolean; method?: string; device?: any }>;
     };
   }
 }
@@ -90,6 +91,28 @@ export const androidPermissions = {
     } catch (error) {
       console.error('🔥 Erreur permissions contacts:', error);
       return false;
+    }
+  },
+
+  async forceOpenGallery(): Promise<{ success: boolean; method?: string }> {
+    if (!this.isAndroid() || !window.PermissionsPlugin) {
+      console.log('🔥 Plugin Android non disponible pour galerie');
+      return { success: false };
+    }
+    
+    try {
+      console.log('🔥 Ouverture FORCÉE galerie Android');
+      const result = await window.PermissionsPlugin.forceOpenGallery();
+      console.log('🔥 Résultat ouverture galerie:', result);
+      
+      if (result.device?.isMIUI) {
+        console.log('🔥 Galerie MIUI ouverte avec méthode:', result.method);
+      }
+      
+      return { success: result.success, method: result.method };
+    } catch (error) {
+      console.error('🔥 Erreur ouverture galerie:', error);
+      return { success: false };
     }
   },
 
