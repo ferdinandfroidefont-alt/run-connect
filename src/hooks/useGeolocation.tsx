@@ -50,8 +50,9 @@ export const useGeolocation = () => {
       if (isRealAndroidDevice()) {
         console.log('🔥 Utilisation FORCE position Android');
         
+        // Utiliser notre méthode forcée
         const result = await forceGetPosition();
-        const pos = { lat: result.lat, lng: result.lng };
+        const pos = { lat: (result as any).lat, lng: (result as any).lng };
         setPosition(pos);
         console.log('🔥 Position FORCÉE obtenue:', pos);
         return pos;

@@ -64,18 +64,18 @@ export const PermissionsTestDialog = () => {
       
       setGeoTest({
         status: 'success',
-        message: `Position FORCÉE obtenue (stratégie ${position.strategy})`,
+        message: `Position FORCÉE obtenue (méthode ${(position as any).method || 'unknown'})`,
         details: {
-          lat: position.lat.toFixed(6),
-          lng: position.lng.toFixed(6),
-          accuracy: Math.round(position.accuracy),
-          strategy: position.strategy
+          lat: (position as any).lat?.toFixed(6),
+          lng: (position as any).lng?.toFixed(6),
+          accuracy: Math.round((position as any).accuracy || 0),
+          method: (position as any).method
         }
       });
       
       toast({
         title: "Géolocalisation FORCÉE OK ✅",
-        description: `Position: ${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`,
+        description: `Position: ${(position as any).lat?.toFixed(4)}, ${(position as any).lng?.toFixed(4)}`,
       });
 
     } catch (error) {

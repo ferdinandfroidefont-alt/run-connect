@@ -98,9 +98,9 @@ export async function getCurrentPositionSafe() {
       const result = await forceGetPosition();
       console.log('📍 Position FORCÉE obtenue:', result);
       return {
-        lat: result.lat,
-        lng: result.lng,
-        accuracy: result.accuracy
+        lat: (result as any).lat,
+        lng: (result as any).lng,
+        accuracy: (result as any).accuracy
       };
     } else {
       throw new Error('Géolocalisation non disponible sur cette plateforme');
