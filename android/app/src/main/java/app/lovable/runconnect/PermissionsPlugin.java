@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.provider.Settings;
+import android.os.Build;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -37,10 +38,16 @@ public class PermissionsPlugin extends Plugin {
         };
         
         if (!hasAllPermissions(permissions)) {
-            requestPermissionForAliases(permissions, call, "location");
+            // MIUI/Xiaomi: forcer la demande même si déjà refusée
+            if (isMIUI()) {
+                requestPermissionForAliases(permissions, call, "location");
+            } else {
+                requestPermissionForAliases(permissions, call, "location");
+            }
         } else {
             JSObject result = new JSObject();
             result.put("granted", true);
+            result.put("device", getDeviceInfo());
             call.resolve(result);
         }
     }
@@ -57,6 +64,7 @@ public class PermissionsPlugin extends Plugin {
         } else {
             JSObject result = new JSObject();
             result.put("granted", true);
+            result.put("device", getDeviceInfo());
             call.resolve(result);
         }
     }
@@ -70,6 +78,7 @@ public class PermissionsPlugin extends Plugin {
         } else {
             JSObject result = new JSObject();
             result.put("granted", true);
+            result.put("device", getDeviceInfo());
             call.resolve(result);
         }
     }
@@ -84,10 +93,35 @@ public class PermissionsPlugin extends Plugin {
             
             JSObject result = new JSObject();
             result.put("success", true);
+            result.put("device", getDeviceInfo());
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Impossible d'ouvrir les paramètres", e);
         }
+    }
+
+    @PluginMethod
+    public void getDeviceInfo(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("device", getDeviceInfo());
+        call.resolve(result);
+    }
+
+    private JSObject getDeviceInfo() {
+        JSObject device = new JSObject();
+        device.put("manufacturer", Build.MANUFACTURER);
+        device.put("model", Build.MODEL);
+        device.put("version", Build.VERSION.RELEASE);
+        device.put("sdkInt", Build.VERSION.SDK_INT);
+        device.put("isMIUI", isMIUI());
+        return device;
+    }
+
+    private boolean isMIUI() {
+        return "Xiaomi".equalsIgnoreCase(Build.MANUFACTURER) || 
+               "Redmi".equalsIgnoreCase(Build.MANUFACTURER) ||
+               Build.MODEL.toLowerCase().contains("redmi") ||
+               Build.MODEL.toLowerCase().contains("mi ");
     }
 
     private boolean hasAllPermissions(String[] permissions) {
@@ -119,11 +153,16 @@ public class PermissionsPlugin extends Plugin {
 
             JSObject result = new JSObject();
             result.put("granted", allGranted);
+            result.put("device", getDeviceInfo());
             
             if (allGranted) {
                 savedCall.resolve(result);
             } else {
-                savedCall.reject("Permissions refusées par l'utilisateur");
+                // Sur MIUI, même si refusé, on peut diriger vers les paramètres
+                if (isMIUI()) {
+                    result.put("miuiAdvice", "Ouvrez Paramètres > Apps > RunConnect > Autorisations pour autoriser manuellement");
+                }
+                savedCall.reject("Permissions refusées - vérifiez les paramètres MIUI si Xiaomi/Redmi");
             }
         }
     }

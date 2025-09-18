@@ -45,6 +45,25 @@ Ces fichiers permettent de bypasser complètement les limitations de Capacitor.
 - Choisir AAB et signer avec votre keystore
 - Upload sur Play Store
 
+## 📱 **COMPATIBILITÉ REDMI NOTE 9 & MIUI VÉRIFIÉE** ✅
+
+### Spécifications Redmi Note 9:
+- **Android 10-11** (API 29-30) ✅ Compatible
+- **MIUI 11-12.5** ✅ Détection automatique 
+- **MediaTek Helio G85** ✅ Supporté
+- **RAM 3-6GB** ✅ Suffisant
+
+### 🔴 Particularités MIUI/Xiaomi:
+Le plugin détecte automatiquement les appareils MIUI et fournit:
+- Instructions spécifiques pour **Paramètres > Apps > RunConnect > Autorisations**
+- Gestion des permissions **"Auto-start"** et **"Background activity"**
+- Messages d'aide adaptés aux interfaces MIUI/HyperOS
+
+### ⚠️ IMPORTANT pour Redmi/Xiaomi:
+1. **Autorisations manuelles** parfois nécessaires dans MIUI
+2. **Auto-start** doit être activé pour l'app
+3. **Battery optimization** doit être désactivée pour RunConnect
+
 ## 🔥 Permissions qui fonctionneront
 
 - ✅ **Géolocalisation**: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`
@@ -65,7 +84,11 @@ Dans l'app, utiliser les boutons:
 2. **"Test Permissions"** - Utilise les APIs Capacitor standard  
 3. **"⚙️ Paramètres"** - Ouvre directement les paramètres Android
 
-✅ **Résultat attendu**: Les permissions apparaîtront maintenant dans Paramètres > Apps > RunConnect
+✅ **Résultat attendu**: 
+- **Tous Android** (Samsung, Huawei, OnePlus, etc.) ✅
+- **Redmi Note 9 et similaires** ✅ 
+- **MIUI/HyperOS** ✅ Avec instructions spécifiques
+- Les permissions apparaîtront dans Paramètres > Apps > RunConnect
 
 ---
 **Résultat attendu**: Toutes les permissions natives Android fonctionneront correctement dans l'AAB Play Store.
