@@ -2,7 +2,8 @@ package app.lovable.runconnect;
 
 import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import java.util.List;
 import android.net.Uri;
 import android.provider.Settings;
 import android.os.Build;
@@ -97,6 +98,21 @@ public class PermissionsPlugin extends Plugin {
     @PluginMethod
     public void openAppSettings(PluginCall call) {
         try {
+            // Pour les appareils MIUI/Xiaomi, utiliser des intents spéciaux
+            if (isMIUI()) {
+                boolean opened = openMiuiPermissionSettings();
+                if (opened) {
+                    JSObject result = new JSObject();
+                    result.put("success", true);
+                    result.put("device", getDeviceInfo());
+                    result.put("method", "MIUI_SPECIFIC");
+                    call.resolve(result);
+                    return;
+                }
+                // Si ça échoue, continue avec la méthode standard
+            }
+            
+            // Méthode standard pour tous les autres appareils
             Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
             Uri uri = Uri.fromParts("package", getActivity().getPackageName(), null);
             intent.setData(uri);
@@ -105,9 +121,61 @@ public class PermissionsPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("success", true);
             result.put("device", getDeviceInfo());
+            result.put("method", "STANDARD");
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Impossible d'ouvrir les paramètres", e);
+        }
+    }
+
+    private boolean openMiuiPermissionSettings() {
+        try {
+            // Méthode 1: Intent direct vers les permissions MIUI (pour versions récentes)
+            Intent intent = new Intent("miui.intent.action.APP_PERM_EDITOR");
+            intent.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.AppPermissionsEditorActivity");
+            intent.putExtra("extra_pkgname", getActivity().getPackageName());
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            
+            if (isIntentAvailable(intent)) {
+                getActivity().startActivity(intent);
+                return true;
+            }
+            
+            // Méthode 2: Autre structure pour certaines versions MIUI
+            intent = new Intent("miui.intent.action.APP_PERM_EDITOR");
+            intent.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity");
+            intent.putExtra("extra_pkgname", getActivity().getPackageName());
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            
+            if (isIntentAvailable(intent)) {
+                getActivity().startActivity(intent);
+                return true;
+            }
+            
+            // Méthode 3: Pour les très anciennes versions MIUI
+            intent = new Intent();
+            intent.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.AppPermissionsEditorActivity");
+            intent.putExtra("extra_pkgname", getActivity().getPackageName());
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            
+            if (isIntentAvailable(intent)) {
+                getActivity().startActivity(intent);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur ouverture paramètres MIUI: " + e.getMessage());
+        }
+        
+        return false;
+    }
+    
+    private boolean isIntentAvailable(Intent intent) {
+        try {
+            List<ResolveInfo> list = getActivity().getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+            return list.size() > 0;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -250,7 +318,20 @@ public class PermissionsPlugin extends Plugin {
         return "Xiaomi".equalsIgnoreCase(Build.MANUFACTURER) || 
                "Redmi".equalsIgnoreCase(Build.MANUFACTURER) ||
                Build.MODEL.toLowerCase().contains("redmi") ||
-               Build.MODEL.toLowerCase().contains("mi ");
+               Build.MODEL.toLowerCase().contains("mi ") ||
+               Build.MODEL.toLowerCase().contains("poco") ||
+               hasSystemProperty("ro.miui.ui.version.name");
+    }
+    
+    private boolean hasSystemProperty(String property) {
+        try {
+            Class<?> systemProperties = Class.forName("android.os.SystemProperties");
+            java.lang.reflect.Method get = systemProperties.getMethod("get", String.class);
+            String value = (String) get.invoke(null, property);
+            return value != null && !value.isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean hasAllPermissions(String[] permissions) {

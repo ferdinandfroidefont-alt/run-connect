@@ -10,6 +10,7 @@ import { NotificationTestButton } from '@/components/NotificationTestButton';
 import { NotificationSystemTest } from '@/components/NotificationSystemTest';
 import { CompatibilityTestSuite } from '@/components/CompatibilityTestSuite';
 import { DeviceSpecificGuide } from '@/components/DeviceSpecificGuide';
+import { MobileCompatibilityTest } from '@/components/MobileCompatibilityTest';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -206,6 +207,9 @@ export const AndroidTestPage = () => {
           
           {/* Test compatibilité complète avec tous les téléphones */}
           <CompatibilityTestSuite />
+          
+          {/* Test de compatibilité mobile avancé */}
+          <MobileCompatibilityTest />
           
           {/* Guide spécifique par marque de téléphone */}
           <DeviceSpecificGuide />
