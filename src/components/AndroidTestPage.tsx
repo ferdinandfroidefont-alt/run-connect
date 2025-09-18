@@ -8,6 +8,8 @@ import { LocationTestButton } from '@/components/LocationTestButton';
 import { GalleryTestButton } from '@/components/GalleryTestButton';
 import { NotificationTestButton } from '@/components/NotificationTestButton';
 import { NotificationSystemTest } from '@/components/NotificationSystemTest';
+import { CompatibilityTestSuite } from '@/components/CompatibilityTestSuite';
+import { DeviceSpecificGuide } from '@/components/DeviceSpecificGuide';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -201,6 +203,12 @@ export const AndroidTestPage = () => {
           
           {/* Test complet système notifications push */}
           <NotificationSystemTest />
+          
+          {/* Test compatibilité complète avec tous les téléphones */}
+          <CompatibilityTestSuite />
+          
+          {/* Guide spécifique par marque de téléphone */}
+          <DeviceSpecificGuide />
           {/* Logs */}
           <div className="space-y-2">
             <h4 className="font-medium">Logs :</h4>
