@@ -13,6 +13,7 @@ import { DeviceSpecificGuide } from '@/components/DeviceSpecificGuide';
 import { MobileCompatibilityTest } from '@/components/MobileCompatibilityTest';
 import { PlayStoreDiagnostic } from '@/components/PlayStoreDiagnostic';
 import { ForceAndroidPermissions } from '@/components/ForceAndroidPermissions';
+import { UltraSimpleAndroidTest } from '@/components/UltraSimpleAndroidTest';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -198,6 +199,12 @@ export const AndroidTestPage = () => {
             </Button>
           </div>
 
+          {/* DIAGNOSTIC ULTRA SIMPLE */}
+          <div className="mt-6 p-4 border-4 border-yellow-500 rounded-lg bg-yellow-50">
+            <h3 className="text-xl font-bold text-yellow-700 mb-4">🔥 DIAGNOSTIC ULTRA SIMPLE</h3>
+            <UltraSimpleAndroidTest />
+          </div>
+          
           {/* Plugin Android natif FORCÉ - NOUVEAU SYSTÈME */}
           <div className="mt-6 p-4 border-2 border-red-500 rounded-lg bg-red-50">
             <h3 className="text-lg font-bold text-red-700 mb-4">🔥 NOUVEAU - Force Android Permissions</h3>
