@@ -19,43 +19,32 @@ export const isRealAndroidDevice = () => {
  * FORCE les permissions géolocalisation même si Capacitor dit "web"
  */
 export async function forceGeolocationPermissions() {
-  console.log('🔥 FORCE Geolocation - Détection Android:', isRealAndroidDevice());
+  console.log('🔥 FORCE Geolocation - BYPASS platform check');
   
-  if (isRealAndroidDevice()) {
-    console.log('🔥 ANDROID DÉTECTÉ - Tentative Capacitor puis Web API');
+  try {
+    // FORCER l'utilisation de Capacitor SANS vérifier la plateforme
+    console.log('🔥 FORCE Capacitor Geolocation directement');
+    const permissions = await Geolocation.requestPermissions();
+    console.log('🔥 Permissions FORCÉES result:', permissions);
     
-    try {
-      // Vérifier si Geolocation est vraiment disponible
-      if (Geolocation && typeof Geolocation.requestPermissions === 'function') {
-        console.log('🔥 Capacitor Geolocation disponible, tentative...');
-        const permissions = await Geolocation.requestPermissions();
-        console.log('🔥 Permissions Capacitor result:', permissions);
-        
-        if (permissions.location === 'granted' || permissions.coarseLocation === 'granted') {
-          return { success: true, permissions, method: 'capacitor' };
-        }
-      }
-      
-      // Si Capacitor échoue, utiliser Web API directement
-      console.log('🔥 Fallback vers Web Geolocation API');
-      if (navigator.geolocation) {
-        // Sur Android, même en WebView, on peut accéder aux permissions web
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        console.log('🔥 Web permission état:', permission.state);
-        
-        if (permission.state === 'granted' || permission.state === 'prompt') {
-          return { success: true, permissions: { location: 'granted' }, method: 'web' };
-        }
-      }
-      
-      throw new Error('Aucune API géolocalisation disponible');
-    } catch (error) {
-      console.error('🔥 Erreur permissions forcées:', error);
-      throw error;
+    if (permissions.location === 'granted' || permissions.coarseLocation === 'granted') {
+      return { success: true, permissions, method: 'capacitor-forced' };
+    } else {
+      throw new Error('Permissions refusées par l\'utilisateur');
     }
-  } else {
-    // Web fallback
-    return { success: false, reason: 'Not Android device' };
+  } catch (error) {
+    console.error('🔥 Erreur permissions FORCÉES:', error);
+    // Si ça échoue vraiment, on peut essayer le web en dernier recours
+    if (navigator.geolocation) {
+      console.log('🔥 Dernier recours: Web permissions');
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        return { success: true, permissions: { location: permission.state }, method: 'web-fallback' };
+      } catch (webError) {
+        throw new Error(`Toutes les méthodes échouées: ${error}`);
+      }
+    }
+    throw error;
   }
 }
 
@@ -63,40 +52,44 @@ export async function forceGeolocationPermissions() {
  * FORCE géolocalisation avec toutes les stratégies possibles
  */
 export async function forceGetPosition() {
-  console.log('🔥 FORCE Position - Détection Android:', isRealAndroidDevice());
+  console.log('🔥 FORCE Position - BYPASS platform check');
   
-  if (isRealAndroidDevice()) {
-    console.log('🔥 ANDROID DÉTECTÉ - Tentative Capacitor puis Web');
+  try {
+    // FORCER Capacitor directement sans vérifier la plateforme
+    console.log('🔥 FORCE Capacitor Position directement');
     
-    // D'abord essayer Capacitor si disponible
-    if (Geolocation && typeof Geolocation.getCurrentPosition === 'function') {
-      const strategies = [
-        { enableHighAccuracy: false, timeout: 30000, maximumAge: 600000 },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
-      ];
-      
-      for (let i = 0; i < strategies.length; i++) {
-        try {
-          console.log(`🔥 Capacitor tentative ${i + 1}:`, strategies[i]);
-          const position = await Geolocation.getCurrentPosition(strategies[i]);
-          console.log(`🔥 Capacitor SUCCÈS ${i + 1}:`, position.coords);
-          
-          return {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            method: 'capacitor',
-            strategy: i + 1
-          };
-        } catch (error) {
-          console.log(`🔥 Capacitor échec ${i + 1}:`, error);
+    const strategies = [
+      { enableHighAccuracy: false, timeout: 30000, maximumAge: 600000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 },
+      { enableHighAccuracy: false, timeout: 60000, maximumAge: 1800000 }
+    ];
+    
+    for (let i = 0; i < strategies.length; i++) {
+      try {
+        console.log(`🔥 Capacitor FORCÉ tentative ${i + 1}:`, strategies[i]);
+        const position = await Geolocation.getCurrentPosition(strategies[i]);
+        console.log(`🔥 Capacitor FORCÉ SUCCÈS ${i + 1}:`, position.coords);
+        
+        return {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          method: 'capacitor-forced',
+          strategy: i + 1
+        };
+      } catch (error) {
+        console.log(`🔥 Capacitor FORCÉ échec ${i + 1}:`, error);
+        if (i === strategies.length - 1) {
+          throw error;
         }
       }
     }
+  } catch (capacitorError) {
+    console.error('🔥 Capacitor FORCÉ totalement échoué:', capacitorError);
     
-    // Fallback vers Web Geolocation API
-    console.log('🔥 Fallback vers navigator.geolocation');
+    // Dernier recours: Web API
     if (navigator.geolocation) {
+      console.log('🔥 Dernier recours: Web Geolocation');
       return new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -105,12 +98,12 @@ export async function forceGetPosition() {
               lat: position.coords.latitude,
               lng: position.coords.longitude,
               accuracy: position.coords.accuracy,
-              method: 'web'
+              method: 'web-fallback'
             });
           },
           (error) => {
             console.error('🔥 Web API échec:', error);
-            reject(new Error(`Web Geolocation échec: ${error.message}`));
+            reject(new Error(`Toutes les APIs échouées: ${capacitorError.message}`));
           },
           {
             enableHighAccuracy: false,
@@ -121,9 +114,7 @@ export async function forceGetPosition() {
       });
     }
     
-    throw new Error('Aucune API géolocalisation disponible');
-  } else {
-    throw new Error('Appareil non-Android');
+    throw new Error(`Géolocalisation impossible: ${capacitorError.message}`);
   }
 }
 
@@ -131,34 +122,27 @@ export async function forceGetPosition() {
  * FORCE permissions caméra même si Capacitor dit "web"
  */
 export async function forceCameraPermissions() {
-  console.log('🔥 FORCE Camera - Détection Android:', isRealAndroidDevice());
+  console.log('🔥 FORCE Camera - BYPASS platform check');
   
-  if (isRealAndroidDevice()) {
-    console.log('🔥 ANDROID DÉTECTÉ - Tentative Capacitor puis Web');
+  try {
+    // FORCER l'utilisation de Camera SANS vérifier la plateforme
+    console.log('🔥 FORCE Capacitor Camera directement');
+    const permissions = await Camera.requestPermissions();
+    console.log('🔥 Camera permissions FORCÉES:', permissions);
     
-    try {
-      // Vérifier si Camera est disponible
-      if (Camera && typeof Camera.requestPermissions === 'function') {
-        console.log('🔥 Capacitor Camera disponible, tentative...');
-        const permissions = await Camera.requestPermissions();
-        console.log('🔥 Camera permissions Capacitor:', permissions);
-        
-        if (permissions.camera === 'granted' && permissions.photos === 'granted') {
-          return { success: true, permissions, method: 'capacitor' };
-        }
-      }
-      
-      // Fallback: sur Android WebView, on peut souvent utiliser input file
-      console.log('🔥 Fallback vers Web API (input file sera utilisé)');
-      return { success: true, permissions: { camera: 'granted', photos: 'granted' }, method: 'web' };
-      
-    } catch (error) {
-      console.error('🔥 Erreur camera permissions:', error);
-      // Même en cas d'erreur, on peut essayer l'input file
-      return { success: true, permissions: { camera: 'granted', photos: 'granted' }, method: 'web-fallback' };
+    if (permissions.camera === 'granted' && permissions.photos === 'granted') {
+      return { success: true, permissions, method: 'capacitor-forced' };
+    } else if (permissions.camera === 'granted' || permissions.photos === 'granted') {
+      // Au moins une permission accordée
+      return { success: true, permissions, method: 'capacitor-partial' };
+    } else {
+      throw new Error('Permissions caméra refusées par l\'utilisateur');
     }
-  } else {
-    return { success: false, reason: 'Not Android device' };
+  } catch (error) {
+    console.error('🔥 Erreur camera permissions FORCÉES:', error);
+    // Même en cas d'erreur, on peut dire qu'on va utiliser l'input file
+    console.log('🔥 Dernier recours: input file sera utilisé');
+    return { success: true, permissions: { camera: 'web-fallback', photos: 'web-fallback' }, method: 'web-fallback' };
   }
 }
 
@@ -166,44 +150,47 @@ export async function forceCameraPermissions() {
  * FORCE ouverture galerie avec stratégies multiples
  */
 export async function forceOpenGallery() {
-  console.log('🔥 FORCE Gallery - Détection Android:', isRealAndroidDevice());
+  console.log('🔥 FORCE Gallery - BYPASS platform check');
   
-  if (isRealAndroidDevice()) {
-    console.log('🔥 ANDROID DÉTECTÉ - Tentative Capacitor puis Web input');
+  try {
+    // FORCER Capacitor directement sans vérifier la plateforme
+    console.log('🔥 FORCE Capacitor Gallery directement');
     
-    // D'abord essayer Capacitor si disponible
-    if (Camera && typeof Camera.getPhoto === 'function') {
-      const configs = [
-        {
-          source: CameraSource.Photos,
-          resultType: CameraResultType.Uri,
-          quality: 90,
-          saveToGallery: false,
-          allowEditing: false
-        },
-        {
-          source: CameraSource.Photos,
-          resultType: CameraResultType.DataUrl,
-          quality: 80,
-          saveToGallery: false
-        }
-      ];
-      
-      for (let i = 0; i < configs.length; i++) {
-        try {
-          console.log(`🔥 Capacitor config ${i + 1}`);
-          const photo = await Camera.getPhoto(configs[i]);
-          console.log(`🔥 Capacitor SUCCÈS ${i + 1}:`, photo.webPath || photo.path);
-          
-          return photo.webPath || photo.path || photo.dataUrl;
-        } catch (error) {
-          console.log(`🔥 Capacitor échec ${i + 1}:`, error);
+    const configs = [
+      {
+        source: CameraSource.Photos,
+        resultType: CameraResultType.Uri,
+        quality: 90,
+        saveToGallery: false,
+        allowEditing: false
+      },
+      {
+        source: CameraSource.Photos,
+        resultType: CameraResultType.DataUrl,
+        quality: 80,
+        saveToGallery: false
+      }
+    ];
+    
+    for (let i = 0; i < configs.length; i++) {
+      try {
+        console.log(`🔥 Capacitor FORCÉ config ${i + 1}`);
+        const photo = await Camera.getPhoto(configs[i]);
+        console.log(`🔥 Capacitor FORCÉ SUCCÈS ${i + 1}:`, photo.webPath || photo.path);
+        
+        return photo.webPath || photo.path || photo.dataUrl;
+      } catch (error) {
+        console.log(`🔥 Capacitor FORCÉ échec ${i + 1}:`, error);
+        if (i === configs.length - 1) {
+          throw error;
         }
       }
     }
+  } catch (capacitorError) {
+    console.error('🔥 Capacitor FORCÉ Gallery totalement échoué:', capacitorError);
     
-    // Fallback vers input file HTML
-    console.log('🔥 Fallback vers input file HTML');
+    // Dernier recours: input file HTML
+    console.log('🔥 Dernier recours: input file HTML');
     return new Promise((resolve, reject) => {
       const input = document.createElement('input');
       input.type = 'file';
@@ -221,9 +208,11 @@ export async function forceOpenGallery() {
         }
       };
       
+      input.onclick = () => {
+        console.log('🔥 Input file cliqué');
+      };
+      
       input.click();
     });
-  } else {
-    throw new Error('Appareil non-Android');
   }
 }

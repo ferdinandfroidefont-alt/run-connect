@@ -32,19 +32,10 @@ export const PermissionsTestDialog = () => {
     setGeoTest({ status: 'testing' });
     
     try {
-      console.log('🔥 NOUVEAU TEST FORCE - Détection Android:', isRealAndroidDevice());
+      console.log('🔥 TEST FORCE - BYPASS detection, direct Capacitor');
 
-      if (!isRealAndroidDevice()) {
-        setGeoTest({
-          status: 'error',
-          message: 'Appareil non-Android détecté - Testez sur un vrai téléphone via l\'AAB Play Store',
-          details: { platform: Capacitor.getPlatform(), isAndroid: false }
-        });
-        return;
-      }
-
-      // 1. FORCE permissions géolocalisation
-      console.log('🔥 FORCE permissions géolocalisation...');
+      // FORCER permissions directement sans vérifier Android
+      console.log('🔥 FORCE permissions géolocalisation directement...');
       try {
         await forceGeolocationPermissions();
         console.log('🔥 Permissions FORCÉES avec succès');
@@ -58,8 +49,8 @@ export const PermissionsTestDialog = () => {
         return;
       }
 
-      // 2. FORCE position avec stratégies multiples
-      console.log('🔥 FORCE position...');
+      // FORCER position directement
+      console.log('🔥 FORCE position directement...');
       const position = await forceGetPosition();
       
       setGeoTest({
@@ -191,12 +182,12 @@ export const PermissionsTestDialog = () => {
         <div className="space-y-4">
           {/* Info plateforme */}
           <div className="bg-muted p-3 rounded-lg">
-            <p className="text-sm font-medium">🔥 FORCE Native Android:</p>
+            <p className="text-sm font-medium">🔥 FORCE Capacitor Direct:</p>
             <p className="text-xs text-muted-foreground">
-              Capacitor: {Capacitor.getPlatform()} - Native: {Capacitor.isNativePlatform() ? 'Oui' : 'Non'}
+              Platform: {Capacitor.getPlatform()} - Native: {Capacitor.isNativePlatform() ? 'Oui' : 'Non'}
             </p>
             <p className="text-xs text-muted-foreground">
-              Android Détecté: {isRealAndroidDevice() ? '✅ OUI' : '❌ NON'}
+              Mode: FORCE BYPASS - Capacitor direct sans vérification
             </p>
             <p className="text-xs text-muted-foreground">
               UserAgent: {navigator.userAgent.slice(0, 50)}...
