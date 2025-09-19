@@ -215,10 +215,11 @@ export const UniversalSearchDialog = ({
     }
   };
 
-  // Search for clubs by exact code
+  // Search for clubs by exact code or load public clubs as suggestions
   const searchClubs = async () => {
     if (!searchQuery.trim()) {
-      setClubResults([]);
+      // When no search query, show public club suggestions (max 10)
+      await loadPublicClubSuggestions();
       return;
     }
 
@@ -265,6 +266,60 @@ export const UniversalSearchDialog = ({
       }
     } catch (error: any) {
       console.error('Error searching clubs:', error);
+      setClubResults([]);
+    }
+  };
+
+  // Load public club suggestions (max 10)
+  const loadPublicClubSuggestions = async () => {
+    if (!user) {
+      setClubResults([]);
+      return;
+    }
+
+    try {
+      // Get public clubs that user is not already a member of
+      const { data: memberClubIds } = await supabase
+        .from('group_members')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      const excludedClubIds = memberClubIds?.map(item => item.conversation_id) || [];
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('id, group_name, group_description, group_avatar_url, club_code, created_by')
+        .eq('is_group', true)
+        .eq('is_private', false) // Only public clubs
+        .not('id', 'in', `(${excludedClubIds.length > 0 ? excludedClubIds.join(',') : 'null'})`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // Get member count for each club
+        const clubsWithStats = await Promise.all(
+          data.map(async (club) => {
+            const { count: memberCount } = await supabase
+              .from('group_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', club.id);
+
+            return {
+              ...club,
+              member_count: memberCount || 0,
+              is_member: false // Since we excluded clubs user is already in
+            };
+          })
+        );
+
+        setClubResults(clubsWithStats);
+      } else {
+        setClubResults([]);
+      }
+    } catch (error: any) {
+      console.error('Error loading public club suggestions:', error);
       setClubResults([]);
     }
   };
@@ -589,6 +644,13 @@ export const UniversalSearchDialog = ({
   useEffect(() => {
     if (activeTab === 'strava' && open) {
       loadStravaFriends();
+    }
+  }, [activeTab, open]);
+
+  // Load initial club suggestions when tab is opened
+  useEffect(() => {
+    if (activeTab === 'clubs' && open && !searchQuery) {
+      loadPublicClubSuggestions();
     }
   }, [activeTab, open]);
 
@@ -1017,7 +1079,7 @@ export const UniversalSearchDialog = ({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Code exact du club (ex: ABC12345)..."
+                placeholder="Code exact du club ou laissez vide pour les suggestions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
                 className="pl-10 font-mono"
@@ -1025,10 +1087,22 @@ export const UniversalSearchDialog = ({
               />
             </div>
 
+            {!searchQuery && clubResults.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Clubs publics suggérés</h3>
+              </div>
+            )}
+
             <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-background pr-2">
               {clubResults.length === 0 && searchQuery && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   Aucun club trouvé avec ce code
+                </p>
+              )}
+              
+              {!searchQuery && clubResults.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-4">
+                  Aucun club public disponible
                 </p>
               )}
               
@@ -1049,25 +1123,38 @@ export const UniversalSearchDialog = ({
                     <p className="text-sm text-muted-foreground">
                       {club.member_count || 0} membre{(club.member_count || 0) !== 1 ? 's' : ''}
                       {club.is_member && " • Membre"}
+                      {!searchQuery && " • Public"}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
 
-            {!searchQuery && (
+            {!searchQuery && clubResults.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="p-4 text-center">
+                  <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Aucun club public disponible pour le moment
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Entrez un code de club exact pour rejoindre un club privé
+                  </p>
+                </CardContent>
+              </Card>
+            ) : searchQuery && clubResults.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-4 text-center">
                   <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    Entrez le code exact d'un club pour le rejoindre
+                    Aucun club trouvé avec ce code
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Les codes de club sont partagés par les créateurs
+                    Vérifiez le code ou essayez sans recherche pour voir les suggestions
                   </p>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
           </TabsContent>
 
           <TabsContent value="strava" className="space-y-4">
