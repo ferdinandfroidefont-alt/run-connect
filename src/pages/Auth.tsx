@@ -71,14 +71,26 @@ const Auth = () => {
   const handleGoogleAuth = async () => {
     try {
       setIsLoading(true);
+      
+      // Déterminer si on est sur une app native
+      const isNative = (window as any).Capacitor?.isNativePlatform?.();
+      
+      console.log('🔥 Auth Google - Native:', isNative);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          // Pour les apps natives, ne PAS rediriger vers le web
+          ...(isNative ? {} : { redirectTo: `${window.location.origin}/` }),
         },
       });
       
       if (error) throw error;
+      
+      // Si native, gérer la redirection manuellement
+      if (isNative) {
+        console.log('🔥 App native - pas de redirection web');
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
