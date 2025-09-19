@@ -231,27 +231,57 @@ const Auth = () => {
       // Vérifier si c'est un username (ne contient pas @)
       if (!usernameOrEmail.includes('@')) {
         // C'est un username, récupérer l'email associé
+        console.log('🔍 Recherche email pour username:', usernameOrEmail);
         const { data: userEmail, error: emailError } = await supabase
           .rpc('get_email_from_username', { username_param: usernameOrEmail });
           
-        if (emailError || !userEmail) {
-          throw new Error('Nom d\'utilisateur non trouvé');
+        if (emailError) {
+          console.error('🔍 Erreur RPC username:', emailError);
+          throw new Error('Impossible de vérifier le nom d\'utilisateur. Réessayez avec votre email.');
+        }
+        
+        if (!userEmail) {
+          throw new Error('Nom d\'utilisateur non trouvé. Vérifiez l\'orthographe ou utilisez votre email.');
         }
         
         emailToUse = userEmail;
+        console.log('🔍 Email trouvé pour username:', emailToUse);
       }
 
+      console.log('🔐 Tentative de connexion avec email:', emailToUse);
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse,
         password,
       });
-      if (error) throw error;
       
+      if (error) {
+        console.error('🔐 Erreur auth:', error);
+        throw error;
+      }
+      
+      console.log('✅ Connexion réussie');
       window.location.href = '/';
     } catch (error: any) {
+      console.error('❌ Erreur complète:', error);
+      
+      let errorMessage = error.message;
+      
+      // Gestion spécifique des erreurs d'authentification
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Email ou mot de passe incorrect. Vérifiez vos informations.';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Votre email n\'est pas encore confirmé. Vérifiez votre boîte mail.';
+      } else if (error.message.includes('User not found')) {
+        errorMessage = 'Aucun compte trouvé avec cet email. Créez un compte d\'abord.';
+      } else if (error.message.includes('rate limit') || error.message.includes('429')) {
+        errorMessage = 'Trop de tentatives. Attendez quelques minutes avant de réessayer.';
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = 'Problème de connexion. Vérifiez votre internet et réessayez.';
+      }
+      
       toast({
-        title: "Erreur",
-        description: error.message,
+        title: "Connexion échouée",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
