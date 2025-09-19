@@ -64,10 +64,38 @@ export const useGeolocation = () => {
     debugInfo();
     
     try {
-      console.log('🔥 getCurrentPosition appelé - FORCE WEB MODE');
+      console.log('🔥 getCurrentPosition appelé - Mode Android natif prioritaire');
       
-      // FORCE Web API partout - plus fiable que permissions natives
-      console.log('🌐 Mode web FORCÉ pour tous les appareils');
+      // Sur Android, TOUJOURS demander les permissions natives AVANT d'utiliser la géolocalisation
+      if (androidPermissions.isAndroid()) {
+        console.log('🔥 Android détecté - demande permissions natives');
+        
+        try {
+          // Demander les permissions natives Android FIRST
+          const granted = await androidPermissions.forceRequestLocationPermissions();
+          if (!granted) {
+            throw new Error('Permissions géolocalisation refusées par l\'utilisateur');
+          }
+          
+          // Utiliser l'API Capacitor native après permissions accordées
+          console.log('🔥 Permissions accordées, utilisation API Capacitor native');
+          const result = await forceGetPosition() as any;
+          const pos = {
+            lat: result.lat,
+            lng: result.lng
+          };
+          setPosition(pos);
+          return pos;
+          
+        } catch (androidError) {
+          console.error('🔥 Erreur Android native:', androidError);
+          // Fallback vers web API seulement si les permissions natives échouent
+          console.log('🔥 Fallback vers Web API...');
+        }
+      }
+      
+      // Mode web ou fallback
+      console.log('🌐 Utilisation Web API');
       return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
           reject(new Error('Geolocation not supported'));
