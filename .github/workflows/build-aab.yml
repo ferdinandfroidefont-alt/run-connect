@@ -119,12 +119,27 @@ jobs:
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
+            
+            <!-- Géolocalisation - Compatible tous Android -->
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            
+            <!-- Caméra/Photos - Compatible tous Android -->
             <uses-permission android:name="android.permission.CAMERA" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+            
+            <!-- Android 13+ Photos (remplace READ_EXTERNAL_STORAGE) -->
+            <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+            
+            <!-- Contacts -->
             <uses-permission android:name="android.permission.READ_CONTACTS" />
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+            
+            <!-- Notifications Android 13+ -->
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            
+            <!-- Vibration pour notifications -->
+            <uses-permission android:name="android.permission.VIBRATE" />
             
             <application
               android:label="RunConnect"
