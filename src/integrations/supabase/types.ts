@@ -117,6 +117,7 @@ export type Database = {
           id: string
           is_group: boolean | null
           is_private: boolean | null
+          location: string | null
           participant_1: string
           participant_2: string
           updated_at: string
@@ -131,6 +132,7 @@ export type Database = {
           id?: string
           is_group?: boolean | null
           is_private?: boolean | null
+          location?: string | null
           participant_1: string
           participant_2: string
           updated_at?: string
@@ -145,6 +147,7 @@ export type Database = {
           id?: string
           is_group?: boolean | null
           is_private?: boolean | null
+          location?: string | null
           participant_1?: string
           participant_2?: string
           updated_at?: string

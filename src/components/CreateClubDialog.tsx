@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Users, Search, Camera, Trash2, Lock, Globe } from "lucide-react";
+import { X, Plus, Users, Search, Camera, Trash2, Lock, Globe, MapPin } from "lucide-react";
 import { ImageCropEditor } from "./ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
 
@@ -31,6 +31,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
   const { toast } = useToast();
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
+  const [groupLocation, setGroupLocation] = useState("");
   const [groupAvatarUrl, setGroupAvatarUrl] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<Profile[]>([]);
   const [showUserSearch, setShowUserSearch] = useState(false);
@@ -168,6 +169,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
           is_group: true,
           group_name: groupName.trim(),
           group_description: groupDescription.trim() || null,
+          location: groupLocation.trim() || null,
           group_avatar_url: groupAvatarUrl || null,
           is_private: isPrivate,
           created_by: user.id,
@@ -216,6 +218,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
       // Reset form
       setGroupName("");
       setGroupDescription("");
+      setGroupLocation("");
       setGroupAvatarUrl("");
       setSelectedMembers([]);
       setIsPrivate(false);
@@ -312,6 +315,22 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
                 maxLength={200}
                 rows={3}
               />
+            </div>
+
+            {/* Group Location */}
+            <div>
+              <Label htmlFor="groupLocation">Localisation (optionnel)</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="groupLocation"
+                  placeholder="Ex: Paris, Lyon, Marseille..."
+                  value={groupLocation}
+                  onChange={(e) => setGroupLocation(e.target.value)}
+                  maxLength={50}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
             {/* Privacy Setting */}
