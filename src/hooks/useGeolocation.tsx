@@ -64,50 +64,40 @@ export const useGeolocation = () => {
     debugInfo();
     
     try {
-      console.log('🔥 getCurrentPosition appelé - Android:', androidPermissions.isAndroid());
+      console.log('🔥 getCurrentPosition appelé - FORCE WEB MODE');
       
-      // Sur AAB Android, utiliser notre méthode forcée
-      if (androidPermissions.isAndroid()) {
-        console.log('🔥 Utilisation FORCE position Android');
-        
-        // Utiliser notre méthode forcée
-        const result = await forceGetPosition();
-        const pos = { lat: (result as any).lat, lng: (result as any).lng };
-        setPosition(pos);
-        console.log('🔥 Position FORCÉE obtenue:', pos);
-        return pos;
-      } else {
-        // Web fallback standard
-        console.log('🌐 Mode web standard');
-        return new Promise((resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(new Error('Geolocation not supported'));
-            return;
-          }
+      // FORCE Web API partout - plus fiable que permissions natives
+      console.log('🌐 Mode web FORCÉ pour tous les appareils');
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Geolocation not supported'));
+          return;
+        }
 
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const pos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              };
-              setPosition(pos);
-              resolve(pos);
-            },
-            (error) => {
-              reject(error);
-            },
-            {
-              enableHighAccuracy: false,
-              timeout: 30000,
-              maximumAge: 600000
-            }
-          );
-        });
-      }
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const pos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            setPosition(pos);
+            console.log('🌐 Position WEB obtenue:', pos);
+            resolve(pos);
+          },
+          (error) => {
+            console.error('🌐 Erreur géolocalisation web:', error);
+            reject(error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 300000
+          }
+        );
+      });
     } catch (error) {
-      console.error('🔥 Erreur FORCE position:', error);
-      throw new Error('Géolocalisation impossible - Vérifiez les permissions dans Paramètres > Apps > RunConnect');
+      console.error('🔥 Erreur position:', error);
+      return null;
     } finally {
       setLoading(false);
     }
