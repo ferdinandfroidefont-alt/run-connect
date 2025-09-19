@@ -127,7 +127,7 @@ export const BottomNavigation = () => {
             navigate('/');
             setTimeout(() => openCreateSession(), 100);
           }
-        }} className="flex flex-col justify-start items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-lg">
+        }} className="flex flex-col justify-start items-center gap-1 px-6 py-3 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-xl -translate-y-2 scale-110">
             <Plus size={24} className="mt-1" />
             <span className="text-xs font-medium mt-1">CRÉER</span>
           </button>
