@@ -48,28 +48,229 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationSearchValue, setLocationSearchValue] = useState("");
 
-  // Liste des villes/codes postaux français
+  // Liste étendue des villes françaises avec codes postaux
   const locations = [
-    { code: "27450", name: "Saint-Grégoire-du-Vièvre", department: "27" },
-    { code: "75001", name: "Paris 1er", department: "75" },
-    { code: "75002", name: "Paris 2e", department: "75" },
-    { code: "69001", name: "Lyon 1er", department: "69" },
-    { code: "69002", name: "Lyon 2e", department: "69" },
+    // Département 01 - Ain
+    { code: "01000", name: "Bourg-en-Bresse", department: "01" },
+    { code: "01100", name: "Oyonnax", department: "01" },
+    // Département 02 - Aisne  
+    { code: "02000", name: "Laon", department: "02" },
+    { code: "02100", name: "Saint-Quentin", department: "02" },
+    // Département 03 - Allier
+    { code: "03000", name: "Moulins", department: "03" },
+    { code: "03100", name: "Montluçon", department: "03" },
+    // Département 04 - Alpes-de-Haute-Provence
+    { code: "04000", name: "Digne-les-Bains", department: "04" },
+    // Département 05 - Hautes-Alpes
+    { code: "05000", name: "Gap", department: "05" },
+    // Département 06 - Alpes-Maritimes
+    { code: "06000", name: "Nice", department: "06" },
+    { code: "06400", name: "Cannes", department: "06" },
+    { code: "06150", name: "Antibes", department: "06" },
+    // Département 07 - Ardèche
+    { code: "07000", name: "Privas", department: "07" },
+    // Département 08 - Ardennes
+    { code: "08000", name: "Charleville-Mézières", department: "08" },
+    // Département 09 - Ariège
+    { code: "09000", name: "Foix", department: "09" },
+    // Département 10 - Aube
+    { code: "10000", name: "Troyes", department: "10" },
+    // Département 11 - Aude
+    { code: "11000", name: "Carcassonne", department: "11" },
+    // Département 12 - Aveyron
+    { code: "12000", name: "Rodez", department: "12" },
+    // Département 13 - Bouches-du-Rhône
     { code: "13001", name: "Marseille 1er", department: "13" },
     { code: "13002", name: "Marseille 2e", department: "13" },
-    { code: "33000", name: "Bordeaux", department: "33" },
-    { code: "31000", name: "Toulouse", department: "31" },
-    { code: "06000", name: "Nice", department: "06" },
-    { code: "67000", name: "Strasbourg", department: "67" },
-    { code: "44000", name: "Nantes", department: "44" },
-    { code: "59000", name: "Lille", department: "59" },
-    { code: "35000", name: "Rennes", department: "35" },
-    { code: "34000", name: "Montpellier", department: "34" },
+    { code: "13100", name: "Aix-en-Provence", department: "13" },
+    // Département 14 - Calvados
+    { code: "14000", name: "Caen", department: "14" },
+    // Département 15 - Cantal
+    { code: "15000", name: "Aurillac", department: "15" },
+    // Département 16 - Charente
+    { code: "16000", name: "Angoulême", department: "16" },
+    // Département 17 - Charente-Maritime
+    { code: "17000", name: "La Rochelle", department: "17" },
+    // Département 18 - Cher
+    { code: "18000", name: "Bourges", department: "18" },
+    // Département 19 - Corrèze
+    { code: "19000", name: "Tulle", department: "19" },
+    // Département 21 - Côte-d'Or
     { code: "21000", name: "Dijon", department: "21" },
-    { code: "76000", name: "Rouen", department: "76" },
-    { code: "51100", name: "Reims", department: "51" },
+    // Département 22 - Côtes-d'Armor
+    { code: "22000", name: "Saint-Brieuc", department: "22" },
+    // Département 23 - Creuse
+    { code: "23000", name: "Guéret", department: "23" },
+    // Département 24 - Dordogne
+    { code: "24000", name: "Périgueux", department: "24" },
+    // Département 25 - Doubs
+    { code: "25000", name: "Besançon", department: "25" },
+    // Département 26 - Drôme
+    { code: "26000", name: "Valence", department: "26" },
+    // Département 27 - Eure
+    { code: "27000", name: "Évreux", department: "27" },
+    { code: "27450", name: "Saint-Grégoire-du-Vièvre", department: "27" },
+    { code: "27100", name: "Val-de-Reuil", department: "27" },
+    { code: "27200", name: "Vernon", department: "27" },
+    // Département 28 - Eure-et-Loir
+    { code: "28000", name: "Chartres", department: "28" },
+    // Département 29 - Finistère
+    { code: "29000", name: "Quimper", department: "29" },
+    { code: "29200", name: "Brest", department: "29" },
+    // Département 30 - Gard
+    { code: "30000", name: "Nîmes", department: "30" },
+    // Département 31 - Haute-Garonne
+    { code: "31000", name: "Toulouse", department: "31" },
+    // Département 32 - Gers
+    { code: "32000", name: "Auch", department: "32" },
+    // Département 33 - Gironde
+    { code: "33000", name: "Bordeaux", department: "33" },
+    // Département 34 - Hérault
+    { code: "34000", name: "Montpellier", department: "34" },
+    // Département 35 - Ille-et-Vilaine
+    { code: "35000", name: "Rennes", department: "35" },
+    // Département 36 - Indre
+    { code: "36000", name: "Châteauroux", department: "36" },
+    // Département 37 - Indre-et-Loire
     { code: "37000", name: "Tours", department: "37" },
-    { code: "87000", name: "Limoges", department: "87" }
+    // Département 38 - Isère
+    { code: "38000", name: "Grenoble", department: "38" },
+    // Département 39 - Jura
+    { code: "39000", name: "Lons-le-Saunier", department: "39" },
+    // Département 40 - Landes
+    { code: "40000", name: "Mont-de-Marsan", department: "40" },
+    // Département 41 - Loir-et-Cher
+    { code: "41000", name: "Blois", department: "41" },
+    // Département 42 - Loire
+    { code: "42000", name: "Saint-Étienne", department: "42" },
+    // Département 43 - Haute-Loire
+    { code: "43000", name: "Le Puy-en-Velay", department: "43" },
+    // Département 44 - Loire-Atlantique
+    { code: "44000", name: "Nantes", department: "44" },
+    // Département 45 - Loiret
+    { code: "45000", name: "Orléans", department: "45" },
+    // Département 46 - Lot
+    { code: "46000", name: "Cahors", department: "46" },
+    // Département 47 - Lot-et-Garonne
+    { code: "47000", name: "Agen", department: "47" },
+    // Département 48 - Lozère
+    { code: "48000", name: "Mende", department: "48" },
+    // Département 49 - Maine-et-Loire
+    { code: "49000", name: "Angers", department: "49" },
+    // Département 50 - Manche
+    { code: "50000", name: "Saint-Lô", department: "50" },
+    // Département 51 - Marne
+    { code: "51100", name: "Reims", department: "51" },
+    // Département 52 - Haute-Marne
+    { code: "52000", name: "Chaumont", department: "52" },
+    // Département 53 - Mayenne
+    { code: "53000", name: "Laval", department: "53" },
+    // Département 54 - Meurthe-et-Moselle
+    { code: "54000", name: "Nancy", department: "54" },
+    // Département 55 - Meuse
+    { code: "55000", name: "Bar-le-Duc", department: "55" },
+    // Département 56 - Morbihan
+    { code: "56000", name: "Vannes", department: "56" },
+    // Département 57 - Moselle
+    { code: "57000", name: "Metz", department: "57" },
+    // Département 58 - Nièvre
+    { code: "58000", name: "Nevers", department: "58" },
+    // Département 59 - Nord
+    { code: "59000", name: "Lille", department: "59" },
+    // Département 60 - Oise
+    { code: "60000", name: "Beauvais", department: "60" },
+    // Département 61 - Orne
+    { code: "61000", name: "Alençon", department: "61" },
+    // Département 62 - Pas-de-Calais
+    { code: "62000", name: "Arras", department: "62" },
+    // Département 63 - Puy-de-Dôme
+    { code: "63000", name: "Clermont-Ferrand", department: "63" },
+    // Département 64 - Pyrénées-Atlantiques
+    { code: "64000", name: "Pau", department: "64" },
+    // Département 65 - Hautes-Pyrénées
+    { code: "65000", name: "Tarbes", department: "65" },
+    // Département 66 - Pyrénées-Orientales
+    { code: "66000", name: "Perpignan", department: "66" },
+    // Département 67 - Bas-Rhin
+    { code: "67000", name: "Strasbourg", department: "67" },
+    // Département 68 - Haut-Rhin
+    { code: "68000", name: "Colmar", department: "68" },
+    // Département 69 - Rhône
+    { code: "69001", name: "Lyon 1er", department: "69" },
+    { code: "69002", name: "Lyon 2e", department: "69" },
+    { code: "69003", name: "Lyon 3e", department: "69" },
+    // Département 70 - Haute-Saône
+    { code: "70000", name: "Vesoul", department: "70" },
+    // Département 71 - Saône-et-Loire
+    { code: "71000", name: "Mâcon", department: "71" },
+    // Département 72 - Sarthe
+    { code: "72000", name: "Le Mans", department: "72" },
+    // Département 73 - Savoie
+    { code: "73000", name: "Chambéry", department: "73" },
+    // Département 74 - Haute-Savoie
+    { code: "74000", name: "Annecy", department: "74" },
+    // Département 75 - Paris
+    { code: "75001", name: "Paris 1er", department: "75" },
+    { code: "75002", name: "Paris 2e", department: "75" },
+    { code: "75003", name: "Paris 3e", department: "75" },
+    { code: "75004", name: "Paris 4e", department: "75" },
+    { code: "75005", name: "Paris 5e", department: "75" },
+    { code: "75006", name: "Paris 6e", department: "75" },
+    { code: "75007", name: "Paris 7e", department: "75" },
+    { code: "75008", name: "Paris 8e", department: "75" },
+    { code: "75009", name: "Paris 9e", department: "75" },
+    { code: "75010", name: "Paris 10e", department: "75" },
+    { code: "75011", name: "Paris 11e", department: "75" },
+    { code: "75012", name: "Paris 12e", department: "75" },
+    { code: "75013", name: "Paris 13e", department: "75" },
+    { code: "75014", name: "Paris 14e", department: "75" },
+    { code: "75015", name: "Paris 15e", department: "75" },
+    { code: "75016", name: "Paris 16e", department: "75" },
+    { code: "75017", name: "Paris 17e", department: "75" },
+    { code: "75018", name: "Paris 18e", department: "75" },
+    { code: "75019", name: "Paris 19e", department: "75" },
+    { code: "75020", name: "Paris 20e", department: "75" },
+    // Département 76 - Seine-Maritime
+    { code: "76000", name: "Rouen", department: "76" },
+    { code: "76600", name: "Le Havre", department: "76" },
+    // Département 77 - Seine-et-Marne
+    { code: "77000", name: "Melun", department: "77" },
+    // Département 78 - Yvelines
+    { code: "78000", name: "Versailles", department: "78" },
+    // Département 79 - Deux-Sèvres
+    { code: "79000", name: "Niort", department: "79" },
+    // Département 80 - Somme
+    { code: "80000", name: "Amiens", department: "80" },
+    // Département 81 - Tarn
+    { code: "81000", name: "Albi", department: "81" },
+    // Département 82 - Tarn-et-Garonne
+    { code: "82000", name: "Montauban", department: "82" },
+    // Département 83 - Var
+    { code: "83000", name: "Toulon", department: "83" },
+    // Département 84 - Vaucluse
+    { code: "84000", name: "Avignon", department: "84" },
+    // Département 85 - Vendée
+    { code: "85000", name: "La Roche-sur-Yon", department: "85" },
+    // Département 86 - Vienne
+    { code: "86000", name: "Poitiers", department: "86" },
+    // Département 87 - Haute-Vienne
+    { code: "87000", name: "Limoges", department: "87" },
+    // Département 88 - Vosges
+    { code: "88000", name: "Épinal", department: "88" },
+    // Département 89 - Yonne
+    { code: "89000", name: "Auxerre", department: "89" },
+    // Département 90 - Territoire de Belfort
+    { code: "90000", name: "Belfort", department: "90" },
+    // Département 91 - Essonne
+    { code: "91000", name: "Évry-Courcouronnes", department: "91" },
+    // Département 92 - Hauts-de-Seine
+    { code: "92000", name: "Nanterre", department: "92" },
+    // Département 93 - Seine-Saint-Denis
+    { code: "93000", name: "Bobigny", department: "93" },
+    // Département 94 - Val-de-Marne
+    { code: "94000", name: "Créteil", department: "94" },
+    // Département 95 - Val-d'Oise
+    { code: "95000", name: "Cergy", department: "95" }
   ];
 
   const searchUsers = async () => {
