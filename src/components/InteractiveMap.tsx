@@ -1008,7 +1008,7 @@ export const InteractiveMap = ({
     }
     
     return {
-      totalDistance: Math.round(totalDistance),
+      totalDistance: Math.round(totalDistance / 1000), // Convert meters to kilometers
       elevationGain: Math.round(elevationGain),
       elevationLoss: Math.round(elevationLoss),
       minElevation: Math.round(minElevation),
