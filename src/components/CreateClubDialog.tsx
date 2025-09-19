@@ -76,59 +76,98 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
 
     setLocationLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+      const uniqueCities = new Set<string>();
+      
+      // Première recherche avec le code postal + France
+      const { data: data1, error: error1 } = await supabase.functions.invoke('google-maps-proxy', {
         body: {
           address: query + ', France',
           type: 'geocode'
         }
       });
 
-      if (error) throw error;
+      if (!error1 && data1?.results) {
+        data1.results.forEach((result: any) => {
+          extractCitiesFromResult(result, uniqueCities);
+        });
+      }
 
-      if (data?.results && data.results.length > 0) {
-        // Extraire toutes les villes uniques des résultats
-        const uniqueCities = new Set<string>();
-        
-        data.results.forEach((result: any) => {
-          // Chercher la composante "locality" (ville) dans les résultats
-          const cityComponent = result.address_components?.find((component: any) => 
-            component.types.includes('locality')
-          );
-          
-          if (cityComponent) {
-            const cityName = cityComponent.long_name;
-            // Ajouter le code postal s'il est disponible
-            const postalComponent = result.address_components?.find((component: any) => 
-              component.types.includes('postal_code')
-            );
-            
-            if (postalComponent) {
-              uniqueCities.add(`${postalComponent.long_name} ${cityName}`);
-            } else {
-              uniqueCities.add(cityName);
-            }
-          } else {
-            // Fallback: utiliser l'adresse formatée nettoyée
-            const cleanAddress = result.formatted_address
-              .replace(', France', '')
-              .split(',')[0]; // Prendre seulement la première partie
-            uniqueCities.add(cleanAddress);
+      // Si c'est un code postal (5 chiffres), faire une recherche plus large
+      const isPostalCode = /^\d{5}$/.test(query.trim());
+      if (isPostalCode) {
+        // Recherche avec "code postal" + terme
+        const { data: data2, error: error2 } = await supabase.functions.invoke('google-maps-proxy', {
+          body: {
+            address: `postal code ${query} France`,
+            type: 'geocode'
           }
         });
 
-        const suggestions = Array.from(uniqueCities).slice(0, 10); // Augmenter à 10 résultats
-        setLocationSuggestions(suggestions);
-        setShowLocationSuggestions(true);
-      } else {
-        setLocationSuggestions([]);
-        setShowLocationSuggestions(false);
+        if (!error2 && data2?.results) {
+          data2.results.forEach((result: any) => {
+            extractCitiesFromResult(result, uniqueCities);
+          });
+        }
+
+        // Recherche avec département (2 premiers chiffres)
+        const dept = query.substring(0, 2);
+        const { data: data3, error: error3 } = await supabase.functions.invoke('google-maps-proxy', {
+          body: {
+            address: `${query} département ${dept} France`,
+            type: 'geocode'
+          }
+        });
+
+        if (!error3 && data3?.results) {
+          data3.results.forEach((result: any) => {
+            extractCitiesFromResult(result, uniqueCities);
+          });
+        }
       }
+
+      const suggestions = Array.from(uniqueCities).slice(0, 15);
+      setLocationSuggestions(suggestions);
+      setShowLocationSuggestions(suggestions.length > 0);
+      
     } catch (error: any) {
       console.error('Error searching location:', error);
       setLocationSuggestions([]);
       setShowLocationSuggestions(false);
     } finally {
       setLocationLoading(false);
+    }
+  };
+
+  const extractCitiesFromResult = (result: any, uniqueCities: Set<string>) => {
+    const postalComponent = result.address_components?.find((component: any) => 
+      component.types.includes('postal_code')
+    );
+
+    const cityComponent = result.address_components?.find((component: any) => 
+      component.types.includes('locality')
+    );
+
+    const subLocalityComponent = result.address_components?.find((component: any) => 
+      component.types.includes('sublocality') || component.types.includes('sublocality_level_1')
+    );
+
+    // Récupérer le nom de la ville
+    let cityName = '';
+    if (cityComponent) {
+      cityName = cityComponent.long_name;
+    } else if (subLocalityComponent) {
+      cityName = subLocalityComponent.long_name;
+    } else {
+      // Fallback: extraire de l'adresse formatée
+      const parts = result.formatted_address.replace(', France', '').split(',');
+      cityName = parts[0].trim();
+    }
+
+    if (cityName && postalComponent) {
+      const postalCode = postalComponent.long_name;
+      uniqueCities.add(`${postalCode} ${cityName}`);
+    } else if (cityName) {
+      uniqueCities.add(cityName);
     }
   };
 
