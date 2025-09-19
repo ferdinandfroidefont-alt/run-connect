@@ -1,11 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Position, GeolocationPermissions } from '@/types/permissions';
-import { 
-  forceGeolocationPermissions, 
-  forceGetPosition, 
-  isRealAndroidDevice 
-} from '@/lib/forceNativePermissions';
-import { androidPermissions } from '@/lib/androidPermissions';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 
 export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
@@ -14,48 +10,44 @@ export const useGeolocation = () => {
   // DEBUG: Ajouter logs pour diagnostiquer le problème Play Store
   const debugInfo = () => {
     console.log('🔥 DEBUG GEOLOCATION HOOK:');
-    console.log('🔥 - Platform Capacitor:', (window as any).Capacitor?.getPlatform());
+    console.log('🔥 - Platform Capacitor:', Capacitor.getPlatform());
     console.log('🔥 - User Agent:', navigator.userAgent);
-    console.log('🔥 - isRealAndroidDevice():', isRealAndroidDevice());
-    console.log('🔥 - androidPermissions.isAndroid():', androidPermissions.isAndroid());
-    console.log('🔥 - PermissionsPlugin disponible:', !!window.PermissionsPlugin);
+    console.log('🔥 - Geolocation disponible:', !!navigator.geolocation);
   };
 
   const checkPermissions = async (): Promise<GeolocationPermissions> => {
-    debugInfo();
-    console.log('🔥 checkPermissions appelé');
+    console.log('🔥 checkPermissions - API standard');
     
-    // Sur AAB Android, utiliser notre détection forcée
-    if (androidPermissions.isAndroid()) {
-      console.log('🔥 FORCE check permissions sur Android');
-      try {
-        await forceGeolocationPermissions();
-        return { location: 'granted', coarseLocation: 'granted' };
-      } catch (error) {
-        console.log('🔥 Permissions refusées:', error);
-        return { location: 'denied', coarseLocation: 'denied' };
+    try {
+      if (Capacitor.getPlatform() !== 'web') {
+        const result = await Geolocation.checkPermissions();
+        return { 
+          location: result.location, 
+          coarseLocation: result.coarseLocation || result.location 
+        };
       }
+    } catch (error) {
+      console.log('🔥 Check permissions échoué:', error);
     }
-    console.log('🔥 Mode web - permissions automatiques');
+    
     return { location: 'granted', coarseLocation: 'granted' };
   };
 
   const requestPermissions = async (): Promise<GeolocationPermissions> => {
-    debugInfo();
-    console.log('🔥 requestPermissions appelé');
+    console.log('🔥 requestPermissions - API standard');
     
-    // Sur AAB Android, utiliser notre demande forcée
-    if (androidPermissions.isAndroid()) {
-      console.log('🔥 FORCE request permissions sur Android');
-      try {
-        await forceGeolocationPermissions();
-        return { location: 'granted', coarseLocation: 'granted' };
-      } catch (error) {
-        console.log('🔥 Demande permissions échouée:', error);
-        return { location: 'denied', coarseLocation: 'denied' };
+    try {
+      if (Capacitor.getPlatform() !== 'web') {
+        const result = await Geolocation.requestPermissions();
+        return { 
+          location: result.location, 
+          coarseLocation: result.coarseLocation || result.location 
+        };
       }
+    } catch (error) {
+      console.log('🔥 Request permissions échoué:', error);
     }
-    console.log('🔥 Mode web - permissions automatiques');
+    
     return { location: 'granted', coarseLocation: 'granted' };
   };
 
@@ -64,33 +56,32 @@ export const useGeolocation = () => {
     debugInfo();
     
     try {
-      console.log('🔥 getCurrentPosition appelé - Mode Android natif prioritaire');
+      console.log('🔥 getCurrentPosition - API standard uniquement');
       
-      // Sur Android, TOUJOURS demander les permissions natives AVANT d'utiliser la géolocalisation
-      if (androidPermissions.isAndroid()) {
-        console.log('🔥 Android détecté - demande permissions natives');
-        
+      // Sur mobile, utiliser Capacitor Geolocation standard
+      if (Capacitor.getPlatform() !== 'web') {
+        console.log('🔥 Plateforme mobile détectée - Capacitor standard');
         try {
-          // Demander les permissions natives Android FIRST
-          const granted = await androidPermissions.forceRequestLocationPermissions();
-          if (!granted) {
-            throw new Error('Permissions géolocalisation refusées par l\'utilisateur');
+          // Demander les permissions avec l'API standard Capacitor
+          const permissions = await Geolocation.requestPermissions();
+          console.log('🔥 Permissions Capacitor:', permissions);
+          
+          if (permissions.location === 'granted') {
+            const position = await Geolocation.getCurrentPosition({
+              enableHighAccuracy: true,
+              timeout: 15000
+            });
+            
+            const pos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            setPosition(pos);
+            console.log('🔥 Position Capacitor obtenue:', pos);
+            return pos;
           }
-          
-          // Utiliser l'API Capacitor native après permissions accordées
-          console.log('🔥 Permissions accordées, utilisation API Capacitor native');
-          const result = await forceGetPosition() as any;
-          const pos = {
-            lat: result.lat,
-            lng: result.lng
-          };
-          setPosition(pos);
-          return pos;
-          
-        } catch (androidError) {
-          console.error('🔥 Erreur Android native:', androidError);
-          // Fallback vers web API seulement si les permissions natives échouent
-          console.log('🔥 Fallback vers Web API...');
+        } catch (capacitorError) {
+          console.log('🔥 Capacitor échoué, fallback vers web:', capacitorError);
         }
       }
       
