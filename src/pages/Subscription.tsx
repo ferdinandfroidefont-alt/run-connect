@@ -183,7 +183,7 @@ const Subscription = () => {
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
-                <span>Messages illimités</span>
+                <span>Plus de fonctionnalités</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
@@ -233,7 +233,7 @@ const Subscription = () => {
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
-                <span>Messages illimités</span>
+                <span>Plus de fonctionnalités</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
@@ -311,7 +311,7 @@ const Subscription = () => {
         <CardContent>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <h4 className="font-medium">Messages illimités</h4>
+              <h4 className="font-medium">Plus de fonctionnalités</h4>
               <p className="text-sm text-muted-foreground">
                 Échangez sans limite (3 messages/jour pour les utilisateurs gratuits)
               </p>

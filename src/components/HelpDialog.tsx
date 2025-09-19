@@ -167,7 +167,7 @@ export const HelpDialog = ({ isOpen, onClose }: HelpDialogProps) => {
     {
       icon: <Crown className="h-5 w-5 text-primary" />,
       title: "Abonnement Premium",
-      description: "Accédez aux fonctionnalités premium : messages illimités, classements, fonctionnalités avancées."
+      description: "Accédez aux fonctionnalités premium : fonctionnalités avancées, classements exclusifs."
     }
   ];
 

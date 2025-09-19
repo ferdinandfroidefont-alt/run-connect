@@ -531,7 +531,7 @@ const Leaderboard = () => {
                     <p>✨ Classement global et saisonnier</p>
                     <p>🏆 Système de rangs avancé</p>
                     <p>👥 Classement entre amis</p>
-                    <p>💬 Messages illimités (3/jour sinon)</p>
+                    <p>🚀 Badge premium</p>
                   </div>
                 </div>
                 
