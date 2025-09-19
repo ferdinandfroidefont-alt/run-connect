@@ -13,7 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical, ArrowLeft, Filter } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical, ArrowLeft, Filter, Check, ChevronsUpDown } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -69,6 +71,32 @@ export const UniversalSearchDialog = ({
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isStravaConnected, setIsStravaConnected] = useState<boolean | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [departmentSearchOpen, setDepartmentSearchOpen] = useState(false);
+  const [departmentSearchValue, setDepartmentSearchValue] = useState("");
+
+  // Liste des départements français
+  const departments = [
+    "01 - Ain", "02 - Aisne", "03 - Allier", "04 - Alpes-de-Haute-Provence", "05 - Hautes-Alpes",
+    "06 - Alpes-Maritimes", "07 - Ardèche", "08 - Ardennes", "09 - Ariège", "10 - Aube",
+    "11 - Aude", "12 - Aveyron", "13 - Bouches-du-Rhône", "14 - Calvados", "15 - Cantal",
+    "16 - Charente", "17 - Charente-Maritime", "18 - Cher", "19 - Corrèze", "21 - Côte-d'Or",
+    "22 - Côtes-d'Armor", "23 - Creuse", "24 - Dordogne", "25 - Doubs", "26 - Drôme",
+    "27 - Eure", "28 - Eure-et-Loir", "29 - Finistère", "30 - Gard", "31 - Haute-Garonne",
+    "32 - Gers", "33 - Gironde", "34 - Hérault", "35 - Ille-et-Vilaine", "36 - Indre",
+    "37 - Indre-et-Loire", "38 - Isère", "39 - Jura", "40 - Landes", "41 - Loir-et-Cher",
+    "42 - Loire", "43 - Haute-Loire", "44 - Loire-Atlantique", "45 - Loiret", "46 - Lot",
+    "47 - Lot-et-Garonne", "48 - Lozère", "49 - Maine-et-Loire", "50 - Manche", "51 - Marne",
+    "52 - Haute-Marne", "53 - Mayenne", "54 - Meurthe-et-Moselle", "55 - Meuse", "56 - Morbihan",
+    "57 - Moselle", "58 - Nièvre", "59 - Nord", "60 - Oise", "61 - Orne", "62 - Pas-de-Calais",
+    "63 - Puy-de-Dôme", "64 - Pyrénées-Atlantiques", "65 - Hautes-Pyrénées", "66 - Pyrénées-Orientales",
+    "67 - Bas-Rhin", "68 - Haut-Rhin", "69 - Rhône", "70 - Haute-Saône", "71 - Saône-et-Loire",
+    "72 - Sarthe", "73 - Savoie", "74 - Haute-Savoie", "75 - Paris", "76 - Seine-Maritime",
+    "77 - Seine-et-Marne", "78 - Yvelines", "79 - Deux-Sèvres", "80 - Somme", "81 - Tarn",
+    "82 - Tarn-et-Garonne", "83 - Var", "84 - Vaucluse", "85 - Vendée", "86 - Vienne",
+    "87 - Haute-Vienne", "88 - Vosges", "89 - Yonne", "90 - Territoire de Belfort", "91 - Essonne",
+    "92 - Hauts-de-Seine", "93 - Seine-Saint-Denis", "94 - Val-de-Marne", "95 - Val-d'Oise",
+    "971 - Guadeloupe", "972 - Martinique", "973 - Guyane", "974 - La Réunion", "976 - Mayotte"
+  ];
 
 
   // Check Strava connection status
@@ -298,10 +326,12 @@ export const UniversalSearchDialog = ({
         .not('id', 'in', `(${excludedClubIds.length > 0 ? excludedClubIds.join(',') : 'null'})`)
         .order('created_at', { ascending: false });
 
-  // Apply department filter if selected
+      // Apply department filter if selected
       if (selectedDepartment && selectedDepartment.trim() !== "") {
-        // Filter by department number (e.g., "75" for Paris, "13" for Bouches-du-Rhône)
-        query = query.ilike('location', `%${selectedDepartment}%`);
+        // Filter by department number and name
+        const departmentNumber = selectedDepartment.split(" - ")[0];
+        const departmentName = selectedDepartment.split(" - ")[1];
+        query = query.or(`location.ilike.%${departmentNumber}%,location.ilike.%${departmentName}%`);
       }
 
       const { data, error } = await query.limit(10);
@@ -1103,13 +1133,69 @@ export const UniversalSearchDialog = ({
               {!searchQuery && (
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Numéro du département (ex: 75, 13, 69...)"
-                    value={selectedDepartment}
-                    onChange={(e) => setSelectedDepartment(e.target.value)}
-                    className="w-full"
-                    maxLength={3}
-                  />
+                  <Popover open={departmentSearchOpen} onOpenChange={setDepartmentSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={departmentSearchOpen}
+                        className="w-full justify-between"
+                      >
+                        {selectedDepartment
+                          ? departments.find((dept) => dept === selectedDepartment)
+                          : "Sélectionner un département..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0 bg-background border shadow-lg z-50">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Tapez le numéro du département..." 
+                          value={departmentSearchValue}
+                          onValueChange={setDepartmentSearchValue}
+                        />
+                        <CommandList>
+                          <CommandEmpty>Aucun département trouvé.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value=""
+                              onSelect={() => {
+                                setSelectedDepartment("");
+                                setDepartmentSearchOpen(false);
+                                setDepartmentSearchValue("");
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${selectedDepartment === "" ? "opacity-100" : "opacity-0"}`}
+                              />
+                              Tous les départements
+                            </CommandItem>
+                            {departments
+                              .filter((dept) => 
+                                dept.toLowerCase().includes(departmentSearchValue.toLowerCase()) ||
+                                dept.split(" - ")[0].includes(departmentSearchValue)
+                              )
+                              .map((dept) => (
+                                <CommandItem
+                                  key={dept}
+                                  value={dept}
+                                  onSelect={(currentValue) => {
+                                    setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
+                                    setDepartmentSearchOpen(false);
+                                    setDepartmentSearchValue("");
+                                  }}
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${selectedDepartment === dept ? "opacity-100" : "opacity-0"}`}
+                                  />
+                                  {dept}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               )}
             </div>
@@ -1117,7 +1203,7 @@ export const UniversalSearchDialog = ({
             {!searchQuery && clubResults.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Clubs publics suggérés{selectedDepartment && selectedDepartment.trim() !== "" && ` - Département ${selectedDepartment}`}
+                  Clubs publics suggérés{selectedDepartment && selectedDepartment.trim() !== "" && ` - ${selectedDepartment}`}
                 </h3>
               </div>
             )}
@@ -1132,7 +1218,7 @@ export const UniversalSearchDialog = ({
               {!searchQuery && clubResults.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm py-4">
                   {selectedDepartment && selectedDepartment.trim() !== ""
-                    ? `Aucun club public trouvé dans le département ${selectedDepartment}`
+                    ? `Aucun club public trouvé dans ${selectedDepartment}`
                     : "Aucun club public disponible"
                   }
                 </p>
