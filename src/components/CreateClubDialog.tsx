@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Users, Search, Camera, Trash2 } from "lucide-react";
+import { X, Plus, Users, Search, Camera, Trash2, Lock, Globe } from "lucide-react";
 import { ImageCropEditor } from "./ImageCropEditor";
+import { Switch } from "@/components/ui/switch";
 
 interface Profile {
   user_id: string;
@@ -39,6 +40,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
   const [showImageCrop, setShowImageCrop] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const searchUsers = async () => {
     if (!searchQuery.trim()) {
@@ -167,6 +169,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
           group_name: groupName.trim(),
           group_description: groupDescription.trim() || null,
           group_avatar_url: groupAvatarUrl || null,
+          is_private: isPrivate,
           created_by: user.id,
           participant_1: user.id, // Required field, set to creator for groups
           participant_2: user.id  // Required field, set to creator for groups
@@ -215,6 +218,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
       setGroupDescription("");
       setGroupAvatarUrl("");
       setSelectedMembers([]);
+      setIsPrivate(false);
     } catch (error: any) {
       console.error('Error creating group:', error);
       toast({
@@ -308,6 +312,35 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
                 maxLength={200}
                 rows={3}
               />
+            </div>
+
+            {/* Privacy Setting */}
+            <div>
+              <Label>Visibilité du club</Label>
+              <div className="flex items-center justify-between p-3 border rounded-lg mt-2">
+                <div className="flex items-center gap-3">
+                  {isPrivate ? (
+                    <Lock className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <Globe className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">
+                      {isPrivate ? "Club privé" : "Club public"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isPrivate 
+                        ? "Seuls les membres invités peuvent rejoindre" 
+                        : "Tout le monde peut découvrir et rejoindre ce club"
+                      }
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={isPrivate}
+                  onCheckedChange={setIsPrivate}
+                />
+              </div>
             </div>
 
             {/* Members */}
