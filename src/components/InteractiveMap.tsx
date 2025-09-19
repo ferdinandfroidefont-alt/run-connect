@@ -1390,7 +1390,7 @@ export const InteractiveMap = ({
 
       {/* Toggle Elevation Profile Button */}
       {isRouteCreationMode && (
-        <div className="absolute bottom-32 left-4 z-20">
+        <div className="absolute bottom-4 left-4 z-20">
           <Button
             variant="outline"
             size="sm"
