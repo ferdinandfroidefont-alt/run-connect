@@ -86,9 +86,37 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
       if (error) throw error;
 
       if (data?.results && data.results.length > 0) {
-        const suggestions = data.results.slice(0, 5).map((result: any) => 
-          result.formatted_address.replace(', France', '')
-        );
+        // Extraire toutes les villes uniques des résultats
+        const uniqueCities = new Set<string>();
+        
+        data.results.forEach((result: any) => {
+          // Chercher la composante "locality" (ville) dans les résultats
+          const cityComponent = result.address_components?.find((component: any) => 
+            component.types.includes('locality')
+          );
+          
+          if (cityComponent) {
+            const cityName = cityComponent.long_name;
+            // Ajouter le code postal s'il est disponible
+            const postalComponent = result.address_components?.find((component: any) => 
+              component.types.includes('postal_code')
+            );
+            
+            if (postalComponent) {
+              uniqueCities.add(`${postalComponent.long_name} ${cityName}`);
+            } else {
+              uniqueCities.add(cityName);
+            }
+          } else {
+            // Fallback: utiliser l'adresse formatée nettoyée
+            const cleanAddress = result.formatted_address
+              .replace(', France', '')
+              .split(',')[0]; // Prendre seulement la première partie
+            uniqueCities.add(cleanAddress);
+          }
+        });
+
+        const suggestions = Array.from(uniqueCities).slice(0, 10); // Augmenter à 10 résultats
         setLocationSuggestions(suggestions);
         setShowLocationSuggestions(true);
       } else {
