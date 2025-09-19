@@ -11,8 +11,7 @@ export const ContactsPermissionButton = () => {
   console.log('🔍 ContactsPermissionButton render - isNative:', isNative, 'hasPermission:', hasPermission);
 
   const handleRequestPermission = async () => {
-    console.log('🔍 ContactsPermissionButton - handleRequestPermission called');
-    console.log('🔍 isNative:', isNative);
+    console.log('🔍 ContactsPermissionButton - opening settings directly');
     
     if (!isNative) {
       toast({
@@ -24,33 +23,22 @@ export const ContactsPermissionButton = () => {
     }
 
     try {
-      console.log('🔍 Requesting permissions...');
-      const granted = await requestPermissions();
-      console.log('🔍 Permission granted:', granted);
+      // Ouvrir directement les paramètres Android
+      const { androidPermissions } = await import('@/lib/androidPermissions');
+      const opened = await androidPermissions.openAppSettings();
       
-      if (granted) {
-        toast({
-          title: "Contacts autorisés",
-          description: "Vous verrez maintenant de meilleures suggestions d'amis"
-        });
-      } else {
-        // Ouvrir les paramètres Android si la permission échoue
-        const { androidPermissions } = await import('@/lib/androidPermissions');
-        const opened = await androidPermissions.openAppSettings();
-        
-        toast({
-          title: "Paramètres ouverts",
-          description: opened 
-            ? "Activez l'accès aux contacts dans les paramètres Android puis revenez dans l'app."
-            : "Allez dans Paramètres > Applications > RunConnect > Autorisations > Contacts",
-          variant: opened ? "default" : "destructive"
-        });
-      }
+      toast({
+        title: "Paramètres ouverts",
+        description: opened 
+          ? "Activez l'accès aux contacts dans Autorisations puis revenez dans l'app"
+          : "Allez dans Paramètres > Applications > RunConnect > Autorisations > Contacts",
+        variant: opened ? "default" : "destructive"
+      });
     } catch (error) {
-      console.error('❌ Error requesting contacts permission:', error);
+      console.error('❌ Error opening settings:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'accéder aux contacts. Vérifiez que vous êtes sur l'application mobile.",
+        description: "Impossible d'ouvrir les paramètres du téléphone",
         variant: "destructive"
       });
     }
@@ -73,9 +61,9 @@ export const ContactsPermissionButton = () => {
         variant="outline"
         size="sm"
         onClick={handleRequestPermission}
-        disabled={hasPermission && isNative}
+        disabled={!isNative}
       >
-        {isNative ? (hasPermission ? 'Autorisé' : 'Autoriser') : 'Mobile uniquement'}
+        {isNative ? 'Paramètres' : 'Mobile uniquement'}
       </Button>
     </div>
   );

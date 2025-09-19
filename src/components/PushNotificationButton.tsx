@@ -6,8 +6,17 @@ export const PushNotificationButton = () => {
   const { isRegistered, requestPermissions, isNative } = usePushNotifications();
 
   const handleToggleNotifications = async () => {
-    if (!isRegistered) {
-      await requestPermissions();
+    if (!isNative) return;
+    
+    try {
+      // Ouvrir directement les paramètres Android pour les notifications
+      const { androidPermissions } = await import('@/lib/androidPermissions');
+      const opened = await androidPermissions.openAppSettings();
+      
+      // On peut aussi utiliser le hook useToast ici si nécessaire
+      console.log('Paramètres ouverts:', opened);
+    } catch (error) {
+      console.error('Erreur ouverture paramètres:', error);
     }
   };
 
@@ -25,19 +34,12 @@ export const PushNotificationButton = () => {
       variant={isRegistered ? "default" : "outline"} 
       onClick={handleToggleNotifications}
       className="gap-2"
-      disabled={isRegistered}
+      disabled={!isNative}
     >
-      {isRegistered ? (
-        <>
-          <Bell className="h-4 w-4" />
-          Notifications activées
-        </>
-      ) : (
-        <>
-          <BellOff className="h-4 w-4" />
-          Activer les notifications
-        </>
-      )}
+      <>
+        <Bell className="h-4 w-4" />
+        Paramètres notifications
+      </>
     </Button>
   );
 };
