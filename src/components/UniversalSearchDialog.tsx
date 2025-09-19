@@ -70,29 +70,6 @@ export const UniversalSearchDialog = ({
   const [isStravaConnected, setIsStravaConnected] = useState<boolean | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
 
-  // Liste des départements français
-  const departments = [
-    "01 - Ain", "02 - Aisne", "03 - Allier", "04 - Alpes-de-Haute-Provence", "05 - Hautes-Alpes",
-    "06 - Alpes-Maritimes", "07 - Ardèche", "08 - Ardennes", "09 - Ariège", "10 - Aube",
-    "11 - Aude", "12 - Aveyron", "13 - Bouches-du-Rhône", "14 - Calvados", "15 - Cantal",
-    "16 - Charente", "17 - Charente-Maritime", "18 - Cher", "19 - Corrèze", "21 - Côte-d'Or",
-    "22 - Côtes-d'Armor", "23 - Creuse", "24 - Dordogne", "25 - Doubs", "26 - Drôme",
-    "27 - Eure", "28 - Eure-et-Loir", "29 - Finistère", "30 - Gard", "31 - Haute-Garonne",
-    "32 - Gers", "33 - Gironde", "34 - Hérault", "35 - Ille-et-Vilaine", "36 - Indre",
-    "37 - Indre-et-Loire", "38 - Isère", "39 - Jura", "40 - Landes", "41 - Loir-et-Cher",
-    "42 - Loire", "43 - Haute-Loire", "44 - Loire-Atlantique", "45 - Loiret", "46 - Lot",
-    "47 - Lot-et-Garonne", "48 - Lozère", "49 - Maine-et-Loire", "50 - Manche", "51 - Marne",
-    "52 - Haute-Marne", "53 - Mayenne", "54 - Meurthe-et-Moselle", "55 - Meuse", "56 - Morbihan",
-    "57 - Moselle", "58 - Nièvre", "59 - Nord", "60 - Oise", "61 - Orne", "62 - Pas-de-Calais",
-    "63 - Puy-de-Dôme", "64 - Pyrénées-Atlantiques", "65 - Hautes-Pyrénées", "66 - Pyrénées-Orientales",
-    "67 - Bas-Rhin", "68 - Haut-Rhin", "69 - Rhône", "70 - Haute-Saône", "71 - Saône-et-Loire",
-    "72 - Sarthe", "73 - Savoie", "74 - Haute-Savoie", "75 - Paris", "76 - Seine-Maritime",
-    "77 - Seine-et-Marne", "78 - Yvelines", "79 - Deux-Sèvres", "80 - Somme", "81 - Tarn",
-    "82 - Tarn-et-Garonne", "83 - Var", "84 - Vaucluse", "85 - Vendée", "86 - Vienne",
-    "87 - Haute-Vienne", "88 - Vosges", "89 - Yonne", "90 - Territoire de Belfort", "91 - Essonne",
-    "92 - Hauts-de-Seine", "93 - Seine-Saint-Denis", "94 - Val-de-Marne", "95 - Val-d'Oise",
-    "971 - Guadeloupe", "972 - Martinique", "973 - Guyane", "974 - La Réunion", "976 - Mayotte"
-  ];
 
   // Check Strava connection status
   const checkStravaConnection = async () => {
@@ -321,10 +298,10 @@ export const UniversalSearchDialog = ({
         .not('id', 'in', `(${excludedClubIds.length > 0 ? excludedClubIds.join(',') : 'null'})`)
         .order('created_at', { ascending: false });
 
-      // Apply department filter if selected
-      if (selectedDepartment && selectedDepartment !== "all") {
-        const departmentName = selectedDepartment.substring(5); // Remove "XX - " prefix
-        query = query.ilike('location', `%${departmentName}%`);
+  // Apply department filter if selected
+      if (selectedDepartment && selectedDepartment.trim() !== "") {
+        // Filter by department number (e.g., "75" for Paris, "13" for Bouches-du-Rhône)
+        query = query.ilike('location', `%${selectedDepartment}%`);
       }
 
       const { data, error } = await query.limit(10);
@@ -1126,19 +1103,13 @@ export const UniversalSearchDialog = ({
               {!searchQuery && (
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Filtrer par département (optionnel)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous les départements</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    placeholder="Numéro du département (ex: 75, 13, 69...)"
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                    className="w-full"
+                    maxLength={3}
+                  />
                 </div>
               )}
             </div>
@@ -1146,7 +1117,7 @@ export const UniversalSearchDialog = ({
             {!searchQuery && clubResults.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Clubs publics suggérés{selectedDepartment && selectedDepartment !== "all" && ` - ${selectedDepartment}`}
+                  Clubs publics suggérés{selectedDepartment && selectedDepartment.trim() !== "" && ` - Département ${selectedDepartment}`}
                 </h3>
               </div>
             )}
@@ -1160,8 +1131,8 @@ export const UniversalSearchDialog = ({
               
               {!searchQuery && clubResults.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm py-4">
-                  {selectedDepartment && selectedDepartment !== "all"
-                    ? `Aucun club public trouvé dans ${selectedDepartment.substring(5)}`
+                  {selectedDepartment && selectedDepartment.trim() !== ""
+                    ? `Aucun club public trouvé dans le département ${selectedDepartment}`
                     : "Aucun club public disponible"
                   }
                 </p>
