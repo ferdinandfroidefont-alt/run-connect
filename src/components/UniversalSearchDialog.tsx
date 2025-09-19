@@ -322,7 +322,7 @@ export const UniversalSearchDialog = ({
         .order('created_at', { ascending: false });
 
       // Apply department filter if selected
-      if (selectedDepartment) {
+      if (selectedDepartment && selectedDepartment !== "all") {
         const departmentName = selectedDepartment.substring(5); // Remove "XX - " prefix
         query = query.ilike('location', `%${departmentName}%`);
       }
@@ -1131,7 +1131,7 @@ export const UniversalSearchDialog = ({
                       <SelectValue placeholder="Filtrer par département (optionnel)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tous les départements</SelectItem>
+                      <SelectItem value="all">Tous les départements</SelectItem>
                       {departments.map((dept) => (
                         <SelectItem key={dept} value={dept}>
                           {dept}
@@ -1146,7 +1146,7 @@ export const UniversalSearchDialog = ({
             {!searchQuery && clubResults.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Clubs publics suggérés{selectedDepartment && ` - ${selectedDepartment}`}
+                  Clubs publics suggérés{selectedDepartment && selectedDepartment !== "all" && ` - ${selectedDepartment}`}
                 </h3>
               </div>
             )}
@@ -1160,7 +1160,7 @@ export const UniversalSearchDialog = ({
               
               {!searchQuery && clubResults.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm py-4">
-                  {selectedDepartment 
+                  {selectedDepartment && selectedDepartment !== "all"
                     ? `Aucun club public trouvé dans ${selectedDepartment.substring(5)}`
                     : "Aucun club public disponible"
                   }
