@@ -42,6 +42,9 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const searchUsers = async () => {
     if (!searchQuery.trim()) {
@@ -61,6 +64,43 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
       setSearchResults(data || []);
     } catch (error: any) {
       console.error('Error searching users:', error);
+    }
+  };
+
+  const searchLocation = async (query: string) => {
+    if (!query.trim() || query.length < 3) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    setLocationLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+        body: {
+          address: query + ', France',
+          type: 'geocode'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.results && data.results.length > 0) {
+        const suggestions = data.results.slice(0, 5).map((result: any) => 
+          result.formatted_address.replace(', France', '')
+        );
+        setLocationSuggestions(suggestions);
+        setShowLocationSuggestions(true);
+      } else {
+        setLocationSuggestions([]);
+        setShowLocationSuggestions(false);
+      }
+    } catch (error: any) {
+      console.error('Error searching location:', error);
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+    } finally {
+      setLocationLoading(false);
     }
   };
 
@@ -222,6 +262,8 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
       setGroupAvatarUrl("");
       setSelectedMembers([]);
       setIsPrivate(false);
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
     } catch (error: any) {
       console.error('Error creating group:', error);
       toast({
@@ -326,10 +368,35 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
                   id="groupLocation"
                   placeholder="Ex: 27450, Paris, Lyon, Marseille..."
                   value={groupLocation}
-                  onChange={(e) => setGroupLocation(e.target.value)}
+                  onChange={(e) => {
+                    setGroupLocation(e.target.value);
+                    setTimeout(() => searchLocation(e.target.value), 300);
+                  }}
                   maxLength={100}
                   className="pl-10"
                 />
+                {locationLoading && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                  </div>
+                )}
+                {showLocationSuggestions && locationSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 bg-popover border rounded-md shadow-md mt-1 max-h-40 overflow-y-auto">
+                    {locationSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
+                        onClick={() => {
+                          setGroupLocation(suggestion);
+                          setLocationSuggestions([]);
+                          setShowLocationSuggestions(false);
+                        }}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
