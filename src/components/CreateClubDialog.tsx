@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Users, Search, Camera, Trash2, Lock, Globe, MapPin } from "lucide-react";
+import { X, Plus, Users, Search, Camera, Trash2, Lock, Globe, MapPin, Check, ChevronsUpDown } from "lucide-react";
 import { ImageCropEditor } from "./ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Profile {
   user_id: string;
@@ -42,6 +44,33 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [locationSearchOpen, setLocationSearchOpen] = useState(false);
+  const [locationSearchValue, setLocationSearchValue] = useState("");
+
+  // Liste des villes/codes postaux français
+  const locations = [
+    { code: "27450", name: "Saint-Grégoire-du-Vièvre", department: "27" },
+    { code: "75001", name: "Paris 1er", department: "75" },
+    { code: "75002", name: "Paris 2e", department: "75" },
+    { code: "69001", name: "Lyon 1er", department: "69" },
+    { code: "69002", name: "Lyon 2e", department: "69" },
+    { code: "13001", name: "Marseille 1er", department: "13" },
+    { code: "13002", name: "Marseille 2e", department: "13" },
+    { code: "33000", name: "Bordeaux", department: "33" },
+    { code: "31000", name: "Toulouse", department: "31" },
+    { code: "06000", name: "Nice", department: "06" },
+    { code: "67000", name: "Strasbourg", department: "67" },
+    { code: "44000", name: "Nantes", department: "44" },
+    { code: "59000", name: "Lille", department: "59" },
+    { code: "35000", name: "Rennes", department: "35" },
+    { code: "34000", name: "Montpellier", department: "34" },
+    { code: "21000", name: "Dijon", department: "21" },
+    { code: "76000", name: "Rouen", department: "76" },
+    { code: "51100", name: "Reims", department: "51" },
+    { code: "37000", name: "Tours", department: "37" },
+    { code: "87000", name: "Limoges", department: "87" }
+  ];
 
   const searchUsers = async () => {
     if (!searchQuery.trim()) {
@@ -222,6 +251,8 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
       setGroupAvatarUrl("");
       setSelectedMembers([]);
       setIsPrivate(false);
+      setSelectedLocation("");
+      setLocationSearchValue("");
     } catch (error: any) {
       console.error('Error creating group:', error);
       toast({
@@ -321,15 +352,70 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
             <div>
               <Label htmlFor="groupLocation">Localisation (optionnel)</Label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="groupLocation"
-                  placeholder="Ex: Paris, Lyon, Marseille..."
-                  value={groupLocation}
-                  onChange={(e) => setGroupLocation(e.target.value)}
-                  maxLength={50}
-                  className="pl-10"
-                />
+                <Popover open={locationSearchOpen} onOpenChange={setLocationSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={locationSearchOpen}
+                      className="w-full justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="truncate">
+                          {selectedLocation || "Ex: Paris, Lyon, Marseille..."}
+                        </span>
+                      </div>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Rechercher par ville ou code postal..."
+                        value={locationSearchValue}
+                        onValueChange={setLocationSearchValue}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Aucune localisation trouvée</CommandEmpty>
+                        <CommandGroup>
+                          {locations
+                            .filter(location => 
+                              location.code.includes(locationSearchValue) ||
+                              location.name.toLowerCase().includes(locationSearchValue.toLowerCase())
+                            )
+                            .slice(0, 10)
+                            .map((location) => (
+                              <CommandItem
+                                key={location.code}
+                                value={`${location.code}-${location.name}`}
+                                onSelect={() => {
+                                  const selectedValue = `${location.name} (${location.code})`;
+                                  setSelectedLocation(selectedValue);
+                                  setGroupLocation(selectedValue);
+                                  setLocationSearchOpen(false);
+                                  setLocationSearchValue("");
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Check 
+                                  className={`h-4 w-4 ${
+                                    selectedLocation === `${location.name} (${location.code})` 
+                                      ? "opacity-100" 
+                                      : "opacity-0"
+                                  }`} 
+                                />
+                                <div>
+                                  <span className="font-medium">{location.name}</span>
+                                  <span className="text-muted-foreground ml-2">({location.code})</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
