@@ -14,6 +14,7 @@ import { MobileCompatibilityTest } from '@/components/MobileCompatibilityTest';
 import { PlayStoreDiagnostic } from '@/components/PlayStoreDiagnostic';
 import { ForceAndroidPermissions } from '@/components/ForceAndroidPermissions';
 import { UltraSimpleAndroidTest } from '@/components/UltraSimpleAndroidTest';
+import { MIUIPermissionsHelper } from '@/components/MIUIPermissionsHelper';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -197,6 +198,12 @@ export const AndroidTestPage = () => {
             <Button onClick={openAppSettings} variant="outline">
               Ouvrir les réglages Android
             </Button>
+          </div>
+
+          {/* DIAGNOSTIC SPÉCIAL MIUI/XIAOMI */}
+          <div className="mt-6 p-4 border-4 border-red-500 rounded-lg bg-red-50">
+            <h3 className="text-xl font-bold text-red-700 mb-4">🔥 DIAGNOSTIC SPÉCIAL XIAOMI/REDMI</h3>
+            <MIUIPermissionsHelper />
           </div>
 
           {/* DIAGNOSTIC ULTRA SIMPLE */}

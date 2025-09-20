@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Position, GeolocationPermissions } from '@/types/permissions';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { MIUIPermissionsFix } from '@/lib/miuiPermissionsFix';
 
 export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
@@ -34,10 +35,17 @@ export const useGeolocation = () => {
   };
 
   const requestPermissions = async (): Promise<GeolocationPermissions> => {
-    console.log('🔥 requestPermissions - API standard');
+    console.log('🔥 requestPermissions - avec support MIUI');
     
     try {
       if (Capacitor.getPlatform() !== 'web') {
+        // Essayer d'abord la nouvelle méthode MIUI
+        const miuiSuccess = await MIUIPermissionsFix.requestLocationWithMIUIFallback();
+        if (miuiSuccess) {
+          return { location: 'granted', coarseLocation: 'granted' };
+        }
+        
+        // Fallback vers l'API standard Capacitor
         const result = await Geolocation.requestPermissions();
         return { 
           location: result.location, 
@@ -49,6 +57,11 @@ export const useGeolocation = () => {
     }
     
     return { location: 'granted', coarseLocation: 'granted' };
+  };
+
+  const requestPermissionsMIUI = async (): Promise<boolean> => {
+    console.log('🔥 requestPermissionsMIUI - spécial Xiaomi/Redmi');
+    return await MIUIPermissionsFix.requestLocationWithMIUIFallback();
   };
 
   const getCurrentPosition = useCallback(async (): Promise<Position | null> => {
@@ -127,6 +140,7 @@ export const useGeolocation = () => {
     loading,
     getCurrentPosition,
     checkPermissions,
-    requestPermissions
+    requestPermissions,
+    requestPermissionsMIUI
   };
 };
