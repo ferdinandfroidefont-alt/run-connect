@@ -305,7 +305,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </div>
 
           {/* Contenu principal avec marge pour éviter le chevauchement */}
-          <div className="pt-32">
+          <div className="pt-20">
             <Separator className="mb-4" />
 
             {/* Sessions List */}
