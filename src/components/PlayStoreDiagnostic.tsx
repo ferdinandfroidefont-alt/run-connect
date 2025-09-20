@@ -10,14 +10,31 @@ import { useToast } from "@/hooks/use-toast";
 export const PlayStoreDiagnostic = () => {
   const [diagnostics, setDiagnostics] = useState<any>({});
   const [testing, setTesting] = useState(false);
+  const [pluginStatus, setPluginStatus] = useState<'checking' | 'ready' | 'initializing'>('checking');
   const { toast } = useToast();
 
   useEffect(() => {
     runInitialDiagnostic();
+    
+    // Écouter l'événement de plugin prêt
+    const handlePluginReady = () => {
+      setPluginStatus('ready');
+      setTimeout(runInitialDiagnostic, 100);
+    };
+    
+    window.addEventListener('permissionsPluginReady', handlePluginReady);
+    return () => window.removeEventListener('permissionsPluginReady', handlePluginReady);
   }, []);
 
   const runInitialDiagnostic = async () => {
     console.log('🔥 DIAGNOSTIC PLAY STORE - Début');
+    
+    // Vérifier si le plugin est disponible, sinon attendre
+    if (!window.PermissionsPlugin && pluginStatus === 'checking') {
+      setPluginStatus('initializing');
+      console.log('🔥 Plugin non disponible, attendre initialisation...');
+      return;
+    }
     
     const diagnostic: any = {
       // Détection plateforme
@@ -31,6 +48,7 @@ export const PlayStoreDiagnostic = () => {
       
       // Plugin availability
       hasPermissionsPlugin: !!window.PermissionsPlugin,
+      pluginStatus: pluginStatus,
       
       // Capacitor specific
       capacitorNative: Capacitor.isNativePlatform(),
@@ -168,11 +186,18 @@ export const PlayStoreDiagnostic = () => {
           </Alert>
         )}
 
-        {!diagnostics.hasPermissionsPlugin && (
+        {pluginStatus === 'initializing' && (
           <Alert>
             <AlertDescription>
-              🚨 PLUGIN MANQUANT: Le plugin Android PermissionsPlugin n'est pas disponible. 
-              Vous devez rebuilder l'app avec `npx cap sync`.
+              ⏳ INITIALISATION: Le plugin de permissions se charge... Veuillez patienter.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {pluginStatus === 'ready' && !diagnostics.hasPermissionsPlugin && (
+          <Alert>
+            <AlertDescription>
+              🚨 ERREUR PLUGIN: Le plugin de permissions n'a pas pu être initialisé correctement.
             </AlertDescription>
           </Alert>
         )}

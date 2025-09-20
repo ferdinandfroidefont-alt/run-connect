@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 export const UltraSimpleAndroidTest = () => {
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [pluginFound, setPluginFound] = useState(false);
+  const [pluginStatus, setPluginStatus] = useState<'checking' | 'ready' | 'initializing'>('checking');
 
   const addDiagnostic = (message: string) => {
     console.log('🔥', message);
@@ -62,13 +63,31 @@ export const UltraSimpleAndroidTest = () => {
   };
 
   useEffect(() => {
-    // Diagnostic automatique au chargement + délai pour laisser le temps aux plugins
     runDiagnostics();
-    setTimeout(() => {
-      addDiagnostic('--- APRÈS 3 SECONDES ---');
-      runDiagnostics();
+    
+    // Écouter l'événement de plugin prêt
+    const handlePluginReady = () => {
+      setPluginStatus('ready');
+      addDiagnostic('🔥 EVENT: Plugin prêt détecté !');
+      setTimeout(runDiagnostics, 100);
+    };
+    
+    window.addEventListener('permissionsPluginReady', handlePluginReady);
+    
+    // Attendre et re-vérifier si pas encore trouvé
+    const timeout = setTimeout(() => {
+      if (!pluginFound) {
+        setPluginStatus('initializing');
+        addDiagnostic('--- APRÈS 3 SECONDES - Plugin en cours d\'initialisation ---');
+        runDiagnostics();
+      }
     }, 3000);
-  }, []);
+    
+    return () => {
+      window.removeEventListener('permissionsPluginReady', handlePluginReady);
+      clearTimeout(timeout);
+    };
+  }, [pluginFound]);
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -76,18 +95,32 @@ export const UltraSimpleAndroidTest = () => {
         <CardTitle>🔥 DIAGNOSTIC ULTRA SIMPLE ANDROID</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-2">
-          <Button onClick={runDiagnostics} variant="outline">
-            🔄 Relancer Diagnostic
-          </Button>
+        <div className="space-y-2">
+          {pluginStatus === 'initializing' && (
+            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+              ⏳ Plugin en cours d'initialisation... Veuillez patienter.
+            </div>
+          )}
           
-          <Button 
-            onClick={forceTestLocationPermission}
-            disabled={!pluginFound}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            🔥 TESTER PERMISSION GÉOLOC
-          </Button>
+          {pluginStatus === 'ready' && pluginFound && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              ✅ Système de permissions prêt !
+            </div>
+          )}
+          
+          <div className="grid gap-2">
+            <Button onClick={runDiagnostics} variant="outline">
+              🔄 Relancer Diagnostic
+            </Button>
+            
+            <Button 
+              onClick={forceTestLocationPermission}
+              disabled={!pluginFound}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              🔥 TESTER PERMISSION GÉOLOC
+            </Button>
+          </div>
         </div>
 
         <div className="bg-black text-green-400 p-4 rounded font-mono text-xs max-h-96 overflow-y-auto">
