@@ -250,7 +250,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-full max-h-full h-screen w-screen">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
