@@ -106,55 +106,116 @@ export const BottomNavigation = () => {
       
       {/* Barre de navigation principale collée au-dessus */}
       <nav className="fixed bottom-6 left-0 right-0 bg-card border-t border-border z-50">
-        <div className="flex items-center justify-around py-2">
-          {navItems.slice(0, 2).map(({
-          path,
-          emoji,
-          label
-        }) => {
-          const isActive = location.pathname === path;
-          return <button key={path} onClick={() => navigate(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
-                <span className="text-xl mt-1">{emoji}</span>
-                <span className="text-xs font-medium mt-1">{label}</span>
-              </button>;
-        })}
-          
-          {/* Bouton Créer au centre */}
-          <button onClick={() => {
-          if (location.pathname === '/') {
-            openCreateSession();
-          } else {
-            navigate('/');
-            setTimeout(() => openCreateSession(), 100);
-          }
-        }} className="flex flex-col justify-start items-center gap-1 px-8 py-4 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-xl -translate-y-6 scale-110">
-            <Plus size={28} className="mt-1" />
-            <span className="text-sm font-medium mt-1">CRÉER</span>
-          </button>
-
-          {navItems.slice(2).map(({
-          path,
-          emoji,
-          label
-        }) => {
-          const isActive = location.pathname === path;
-          const isMessages = path === '/messages';
-          
-          return <button key={path} onClick={() => navigate(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors relative h-full", isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
-                <div className="relative mt-1">
-                  <span className="text-xl">{emoji}</span>
-                  {isMessages && totalUnreadCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs min-w-4"
-                    >
-                      {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                    </Badge>
+        <div className="grid grid-cols-5 items-center px-4 py-2">
+          {/* Première colonne - Carte */}
+          <div className="flex justify-center">
+            {navItems.slice(0, 1).map(({ path, emoji, label }) => {
+              const isActive = location.pathname === path;
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => navigate(path)} 
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", 
+                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
-                </div>
-                <span className="text-xs font-medium mt-1">{label}</span>
-              </button>;
-        })}
+                >
+                  <span className="text-xl mt-1">{emoji}</span>
+                  <span className="text-xs font-medium mt-1">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Deuxième colonne - Mes Séances */}
+          <div className="flex justify-center">
+            {navItems.slice(1, 2).map(({ path, emoji, label }) => {
+              const isActive = location.pathname === path;
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => navigate(path)} 
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", 
+                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <span className="text-xl mt-1">{emoji}</span>
+                  <span className="text-xs font-medium mt-1">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+          
+          {/* Troisième colonne - Bouton Créer au centre */}
+          <div className="flex justify-center">
+            <button 
+              onClick={() => {
+                if (location.pathname === '/') {
+                  openCreateSession();
+                } else {
+                  navigate('/');
+                  setTimeout(() => openCreateSession(), 100);
+                }
+              }} 
+              className="flex flex-col justify-start items-center gap-1 px-8 py-4 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-xl -translate-y-6 scale-110"
+            >
+              <Plus size={28} className="mt-1" />
+              <span className="text-sm font-medium mt-1">CRÉER</span>
+            </button>
+          </div>
+
+          {/* Quatrième colonne - Messages */}
+          <div className="flex justify-center">
+            {navItems.slice(2, 3).map(({ path, emoji, label }) => {
+              const isActive = location.pathname === path;
+              const isMessages = path === '/messages';
+              
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => navigate(path)} 
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors relative h-full", 
+                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <div className="relative mt-1">
+                    <span className="text-xl">{emoji}</span>
+                    {isMessages && totalUnreadCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs min-w-4"
+                      >
+                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium mt-1">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Cinquième colonne - Classement */}
+          <div className="flex justify-center">
+            {navItems.slice(3, 4).map(({ path, emoji, label }) => {
+              const isActive = location.pathname === path;
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => navigate(path)} 
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", 
+                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <span className="text-xl mt-1">{emoji}</span>
+                  <span className="text-xs font-medium mt-1">{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </nav>
     </>
