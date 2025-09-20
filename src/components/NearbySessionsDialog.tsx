@@ -305,11 +305,11 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </div>
 
           {/* Contenu principal avec marge pour éviter le chevauchement */}
-          <div className="pt-20">
+          <div className="pt-20 h-full flex flex-col">
             <Separator className="mb-4" />
 
             {/* Sessions List */}
-          <ScrollArea className="max-h-96">
+            <ScrollArea className="flex-1">
             <div className="space-y-3">
               {loading ? (
                 <div className="text-center py-8">
