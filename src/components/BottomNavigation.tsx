@@ -105,7 +105,7 @@ export const BottomNavigation = () => {
       </nav>
       
       {/* Barre de navigation principale collée au-dessus */}
-      <nav className="fixed bottom-10 left-0 right-0 bg-card border-t border-border z-50">
+      <nav className="fixed bottom-6 left-0 right-0 bg-card border-t border-border z-50">
         <div className="flex items-center justify-around py-2">
           {navItems.slice(0, 2).map(({
           path,
@@ -127,7 +127,7 @@ export const BottomNavigation = () => {
             navigate('/');
             setTimeout(() => openCreateSession(), 100);
           }
-        }} className="flex flex-col justify-start items-center gap-1 px-6 py-3 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-xl -translate-y-2 scale-110">
+        }} className="flex flex-col justify-start items-center gap-1 px-6 py-3 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-xl -translate-y-6 scale-110">
             <Plus size={24} className="mt-1" />
             <span className="text-xs font-medium mt-1">CRÉER</span>
           </button>
