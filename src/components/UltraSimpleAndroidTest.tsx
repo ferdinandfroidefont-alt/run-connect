@@ -31,6 +31,7 @@ export const UltraSimpleAndroidTest = () => {
     if (window.PermissionsPlugin) {
       setPluginFound(true);
       addDiagnostic(`Plugin methods: ${Object.keys(window.PermissionsPlugin).join(', ')}`);
+      addDiagnostic('✅ Plugin Android Permissions ACTIF (natif ou fallback)');
     } else {
       setPluginFound(false);
       addDiagnostic('❌ Plugin PermissionsPlugin complètement absent du window');
