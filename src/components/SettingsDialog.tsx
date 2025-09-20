@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2 } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2, Bug } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -708,6 +708,16 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       Créateur
                     </Button>
                   )}
+                  
+                  {/* Test Android Button */}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open('/android-test', '_blank')}
+                  >
+                    <Bug className="h-4 w-4 mr-2" />
+                    Test Android
+                  </Button>
                   
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
