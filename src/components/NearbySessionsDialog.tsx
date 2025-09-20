@@ -251,17 +251,18 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-full max-h-full h-screen w-screen">
-          <DialogHeader className="pt-2">
+          {/* Petite barre noire en haut comme dans Messages */}
+          <div className="w-full h-6 bg-background absolute top-0 left-0 z-50"></div>
+          
+          <DialogHeader className="pt-8">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
               Séances à proximité
             </DialogTitle>
           </DialogHeader>
-          {/* Petite barre noire en haut comme dans Messages */}
-          <div className="w-full h-6 bg-background absolute top-0 left-0 z-50"></div>
 
           {/* Filters */}
-          <div className="flex gap-3 items-center mt-2">
+          <div className="flex gap-3 items-center">
             <div className="flex items-center gap-2">
               <Filter className="h-3 w-3" />
               <span className="text-xs font-medium">Filtres:</span>
