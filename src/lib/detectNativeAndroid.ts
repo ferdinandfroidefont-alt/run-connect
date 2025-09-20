@@ -6,7 +6,23 @@ import { Capacitor } from '@capacitor/core';
  */
 export const detectNativeAndroid = (): boolean => {
   try {
-    // Méthode 1: Vérifier si Capacitor existe et dit qu'on est natif
+    console.log('🔍 DÉTECTION NATIVE ANDROID - MÉTHODES MULTIPLES');
+    
+    // Méthode 1: Vérifier si le fix AAB a été appliqué
+    const aabFixed = !!(window as any).CapacitorAABFixed;
+    const capacitorMode = (window as any).CapacitorMode;
+    const capacitorIsNative = !!(window as any).CapacitorIsNative;
+    
+    console.log('- Fix AAB appliqué:', aabFixed);
+    console.log('- CapacitorMode:', capacitorMode);
+    console.log('- CapacitorIsNative:', capacitorIsNative);
+    
+    if (aabFixed && capacitorMode === 'android' && capacitorIsNative) {
+      console.log('✅ Android natif détecté via fix AAB');
+      return true;
+    }
+    
+    // Méthode 2: Vérifier si Capacitor existe et dit qu'on est natif
     const capacitorExists = !!(window as any).Capacitor;
     
     if (capacitorExists) {
@@ -14,7 +30,6 @@ export const detectNativeAndroid = (): boolean => {
       const platform = Capacitor.getPlatform?.();
       const isNative = Capacitor.isNativePlatform?.();
       
-      console.log('🔍 Détection native Android:');
       console.log('- Capacitor exists:', capacitorExists);
       console.log('- getPlatform():', platform);
       console.log('- isNativePlatform():', isNative);
@@ -26,18 +41,20 @@ export const detectNativeAndroid = (): boolean => {
       }
     }
     
-    // Méthode 2: Vérifier le User Agent (fallback AAB)
+    // Méthode 3: Analyse du User Agent (fallback AAB robuste)
     const userAgent = navigator.userAgent || '';
     const isAndroidUA = /Android/i.test(userAgent);
     const isWebView = /wv\)|Version\/[\d.]+.*Chrome/i.test(userAgent);
     const hasAndroidSpecificAPIs = !!(window as any).Android || !!(window as any).webkit;
+    const hasCapacitorPlugins = !!(window as any).CapacitorPlugin || capacitorExists;
     
     console.log('- User Agent Android:', isAndroidUA);
     console.log('- WebView detected:', isWebView);
     console.log('- Android APIs:', hasAndroidSpecificAPIs);
+    console.log('- Capacitor plugins:', hasCapacitorPlugins);
     
-    // Si on a un UA Android et qu'on semble être dans une WebView native
-    const isNativeAndroid = isAndroidUA && (isWebView || hasAndroidSpecificAPIs || capacitorExists);
+    // Critères stricts pour AAB : UA Android + (WebView OU APIs Android OU Capacitor)
+    const isNativeAndroid = isAndroidUA && (isWebView || hasAndroidSpecificAPIs || hasCapacitorPlugins);
     
     console.log('🎯 Résultat final Android natif:', isNativeAndroid);
     return isNativeAndroid;

@@ -34,6 +34,7 @@ export const forceCapacitorAndroidDetection = () => {
     // Force le mode natif dans l'objet global
     (window as any).CapacitorMode = 'android';
     (window as any).CapacitorIsNative = true;
+    (window as any).CapacitorAABFixed = true; // Marque que le fix AAB a été appliqué
     
     console.log('✅ CAPACITOR ANDROID MODE FORCÉ');
     return true;
