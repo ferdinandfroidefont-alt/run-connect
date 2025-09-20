@@ -250,7 +250,9 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-full max-h-full h-screen w-screen">
+        <DialogContent className="max-w-full max-h-full h-screen w-screen relative">
+          {/* Petite barre noire verticale sur le côté droit */}
+          <div className="absolute top-0 right-0 w-6 h-full bg-background"></div>
           {/* Petite barre noire en haut comme dans Messages */}
           <div className="w-full h-6 bg-background"></div>
           <DialogHeader>
