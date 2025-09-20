@@ -15,6 +15,7 @@ import { PlayStoreDiagnostic } from '@/components/PlayStoreDiagnostic';
 import { ForceAndroidPermissions } from '@/components/ForceAndroidPermissions';
 import { UltraSimpleAndroidTest } from '@/components/UltraSimpleAndroidTest';
 import { MIUIPermissionsHelper } from '@/components/MIUIPermissionsHelper';
+import { Android10MIUIFix } from '@/components/Android10MIUIFix';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -198,6 +199,12 @@ export const AndroidTestPage = () => {
             <Button onClick={openAppSettings} variant="outline">
               Ouvrir les réglages Android
             </Button>
+          </div>
+
+          {/* FIX SPÉCIAL ANDROID 10 + MIUI */}
+          <div className="mt-6 p-4 border-4 border-red-600 rounded-lg bg-red-100">
+            <h3 className="text-xl font-bold text-red-800 mb-4">🚨 FIX ANDROID 10 + MIUI</h3>
+            <Android10MIUIFix />
           </div>
 
           {/* DIAGNOSTIC SPÉCIAL MIUI/XIAOMI */}
