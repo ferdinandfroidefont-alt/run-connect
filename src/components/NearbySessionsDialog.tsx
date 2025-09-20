@@ -304,8 +304,8 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             </div>
           </div>
 
-          {/* Contenu principal avec marge pour éviter le chevauchement */}
-          <div className="h-screen flex flex-col p-4">
+          {/* Contenu principal tout en haut */}
+          <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col p-4">
             <Separator className="mb-4" />
 
             {/* Sessions List */}
