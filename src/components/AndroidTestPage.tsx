@@ -16,6 +16,7 @@ import { ForceAndroidPermissions } from '@/components/ForceAndroidPermissions';
 import { UltraSimpleAndroidTest } from '@/components/UltraSimpleAndroidTest';
 import { MIUIPermissionsHelper } from '@/components/MIUIPermissionsHelper';
 import { Android10MIUIFix } from '@/components/Android10MIUIFix';
+import { NativeAppPermissionTest } from '@/components/NativeAppPermissionTest';
 
 export const AndroidTestPage = () => {
   const [contactsState, setContactsState] = useState<string>('—');
@@ -199,6 +200,12 @@ export const AndroidTestPage = () => {
             <Button onClick={openAppSettings} variant="outline">
               Ouvrir les réglages Android
             </Button>
+          </div>
+
+          {/* TEST PERMISSIONS NATIVES (SANS PLUGIN) */}
+          <div className="mt-6 p-4 border-4 border-blue-500 rounded-lg bg-blue-50">
+            <h3 className="text-xl font-bold text-blue-700 mb-4">🔧 TEST PERMISSIONS NATIVES</h3>
+            <NativeAppPermissionTest />
           </div>
 
           {/* FIX SPÉCIAL ANDROID 10 + MIUI */}
