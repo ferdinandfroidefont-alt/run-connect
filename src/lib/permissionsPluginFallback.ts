@@ -166,5 +166,5 @@ export const forcePermissionsPlugin = () => {
 export const initPermissionsPluginFix = () => {
   setTimeout(() => {
     forcePermissionsPlugin();
-  }, 500); // Délai pour laisser Capacitor s'initialiser
+  }, 100); // Délai réduit pour initialisation plus rapide
 };
