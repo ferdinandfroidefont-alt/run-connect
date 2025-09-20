@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -249,67 +249,64 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-none max-h-none h-screen w-screen m-0 p-0 relative border-0 rounded-none bg-background">
-          {/* Titre tout en haut */}
-          <div className="absolute top-0 left-0 right-0 z-10 bg-background p-2">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="top" className="w-full h-full min-h-screen p-6 border-0 max-w-none">
+          {/* Petite barre en haut comme dans NotificationCenter */}
+          <div className="w-full h-6 bg-background"></div>
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
               Séances à proximité
-            </h2>
-          </div>
+            </SheetTitle>
+          </SheetHeader>
 
-          {/* Filters juste en dessous */}
-          <div className="absolute top-12 left-0 right-0 z-10 bg-background p-2">
-            <div className="flex gap-3 items-center">
-              <div className="flex items-center gap-2">
-                <Filter className="h-3 w-3" />
-                <span className="text-xs font-medium">Filtres:</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  placeholder="Distance"
-                  value={selectedDistance}
-                  onChange={(e) => setSelectedDistance(e.target.value)}
-                  className="w-24"
-                  min="1"
-                  max="500"
-                />
-                <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-                  <SelectTrigger className="w-16">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="km">km</SelectItem>
-                    <SelectItem value="m">m</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Select value={selectedActivity} onValueChange={setSelectedActivity}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Sport" />
+          {/* Filters */}
+          <div className="flex gap-3 items-center mt-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-3 w-3" />
+              <span className="text-xs font-medium">Filtres:</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="Distance"
+                value={selectedDistance}
+                onChange={(e) => setSelectedDistance(e.target.value)}
+                className="w-24"
+                min="1"
+                max="500"
+              />
+              <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                <SelectTrigger className="w-16">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les sports</SelectItem>
-                  {ACTIVITY_TYPES.map(activity => (
-                    <SelectItem key={activity.value} value={activity.value}>
-                      {activity.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="km">km</SelectItem>
+                  <SelectItem value="m">m</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            <Select value={selectedActivity} onValueChange={setSelectedActivity}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Sport" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les sports</SelectItem>
+                {ACTIVITY_TYPES.map(activity => (
+                  <SelectItem key={activity.value} value={activity.value}>
+                    {activity.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Contenu principal tout en haut */}
-          <div className="absolute top-12 left-0 right-0 bottom-0 flex flex-col">
-            <Separator className="mb-4" />
+          <Separator className="my-4" />
 
-            {/* Sessions List */}
-            <ScrollArea className="flex-1">
+          {/* Sessions List */}
+          <ScrollArea className="flex-1">
             <div className="space-y-3">
               {loading ? (
                 <div className="text-center py-8">
@@ -437,10 +434,9 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             <Button variant="outline" onClick={onClose} className="w-full">
               Fermer
             </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Profile Preview Dialog */}
       <ProfilePreviewDialog 
