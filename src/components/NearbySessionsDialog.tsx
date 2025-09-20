@@ -252,7 +252,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-none max-h-none h-screen w-screen m-0 p-0 relative border-0 rounded-none bg-background">
           {/* Titre tout en haut */}
-          <div className="absolute top-1 left-4 right-4 z-10">
+          <div className="absolute top-0 left-0 right-0 z-10 bg-background p-2">
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <MapPin className="h-5 w-5" />
               Séances à proximité
@@ -260,7 +260,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </div>
 
           {/* Filters juste en dessous */}
-          <div className="absolute top-10 left-4 right-4 z-10">
+          <div className="absolute top-12 left-0 right-0 z-10 bg-background p-2">
             <div className="flex gap-3 items-center">
               <div className="flex items-center gap-2">
                 <Filter className="h-3 w-3" />
@@ -305,7 +305,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </div>
 
           {/* Contenu principal tout en haut */}
-          <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col pt-16">
+          <div className="absolute top-12 left-0 right-0 bottom-0 flex flex-col">
             <Separator className="mb-4" />
 
             {/* Sessions List */}
