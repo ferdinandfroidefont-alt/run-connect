@@ -3,13 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useEffect } from "react";
+// Plus d'useEffect pour permissions
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
-import { requestNativePermissionsOnce } from "@/lib/native";
+// Permissions supprimées du démarrage automatique
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MySessions from "./pages/MySessions";
@@ -26,16 +26,8 @@ import { AndroidTestPage } from "./components/AndroidTestPage";
 const queryClient = new QueryClient();
 
 const App = () => {
-  useEffect(() => {
-    // Initialiser les permissions natives au démarrage pour AAB/Play Store
-    requestNativePermissionsOnce().then((result) => {
-      if (result) {
-        console.log('🔧 Permissions natives initialisées:', result);
-      }
-    }).catch((error) => {
-      console.error('❌ Erreur initialisation permissions:', error);
-    });
-  }, []);
+  // SUPPRIMÉ: Plus de demande automatique de permissions au démarrage
+  // L'utilisateur en a marre qu'on lui demande sans arrêt !
 
   return (
     <QueryClientProvider client={queryClient}>
