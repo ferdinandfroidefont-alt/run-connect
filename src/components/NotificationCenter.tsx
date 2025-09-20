@@ -510,7 +510,7 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
           )}
         </div>
       </SheetTrigger>
-      <SheetContent className="w-full h-full">
+      <SheetContent className="fixed inset-0 w-screen h-screen max-w-none">
         {/* Petite barre en haut comme dans MySessions */}
         <div className="w-full h-6 bg-background"></div>
         <SheetHeader>
