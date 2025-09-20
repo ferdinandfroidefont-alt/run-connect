@@ -2,7 +2,6 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { WelcomeVideoDialog } from "@/components/WelcomeVideoDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
-import { NativeTestButton } from "@/components/NativeTestButton";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
@@ -52,11 +51,6 @@ const Index = () => {
         initialZoom={zoom ? parseInt(zoom) : undefined}
         highlightSessionId={sessionId || undefined}
       />
-      
-      {/* Tests natifs Android (affiché seulement si pertinent) */}
-      <div className="fixed top-4 left-4 z-50">
-        <NativeTestButton />
-      </div>
       
       {/* Onboarding pour les nouveaux utilisateurs */}
       <OnboardingDialog 
