@@ -1,6 +1,12 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { initCapacitorFix } from './lib/capacitorAABFix'
+import { initPermissionsPluginFix } from './lib/permissionsPluginFallback'
+
+// 🔥 FIX CRITIQUE AAB - Appliquer immédiatement
+initCapacitorFix();
+initPermissionsPluginFix();
 
 // 🔥 FORCE DETECTION NATIVE APK
 console.log('🔥 MAIN.TSX - Détection app native...');
