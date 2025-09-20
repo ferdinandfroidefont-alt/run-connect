@@ -21,39 +21,16 @@ export const useCamera = () => {
     return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
   };
 
-  const isPluginAvailable = (): boolean => {
-    return !!(window as any).PermissionsPlugin;
-  };
 
   const requestPermissions = async (): Promise<CameraPermissions> => {
-    console.log('🔍 requestPermissions - essai immédiat...');
-    
-    // Essayer le plugin custom s'il est disponible
-    if (isPluginAvailable()) {
-      try {
-        console.log('🔍 Utilisation PermissionsPlugin.forceRequestCameraPermissions');
-        const result = await (window as any).PermissionsPlugin.forceRequestCameraPermissions();
-        console.log('🔍 Plugin camera result:', result);
-        
-        if (result && result.granted) {
-          return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
-        }
-      } catch (error) {
-        console.log('🔍 Plugin camera échoué, fallback vers Capacitor:', error);
-      }
-    }
-    
-    // Fallback immédiat vers Capacitor standard
     if (Capacitor.isNativePlatform()) {
       try {
-        console.log('🔍 Fallback vers Capacitor camera standard');
         const permissions = await Camera.requestPermissions({
           permissions: ['camera', 'photos']
         });
-        console.log('🔍 Requested camera permissions:', permissions);
         return permissions;
       } catch (error) {
-        console.error('❌ Error requesting camera permissions:', error);
+        console.error('Error requesting camera permissions:', error);
         return { camera: 'denied' as CameraPermissionState, photos: 'denied' as CameraPermissionState };
       }
     }
@@ -120,28 +97,28 @@ export const useCamera = () => {
     setLoading(true);
     
     try {
-      // Essayer le plugin custom s'il est disponible
-      if (isPluginAvailable()) {
-        console.log('🎯 Utilisation PermissionsPlugin.forceOpenGallery');
+      // Essayer d'abord Capacitor standard si on est sur mobile
+      if (Capacitor.isNativePlatform()) {
         try {
-          const result = await (window as any).PermissionsPlugin.forceOpenGallery();
-          console.log('🎯 Plugin gallery result:', result);
-          
-          if (result && result.success && result.imageUrl) {
-            // Convertir l'URL en File
-            const response = await fetch(result.imageUrl);
+          const image = await Camera.getPhoto({
+            resultType: CameraResultType.DataUrl,
+            source: CameraSource.Photos,
+            quality: 90
+          });
+
+          if (image.dataUrl) {
+            const response = await fetch(image.dataUrl);
             const blob = await response.blob();
-            const file = new File([blob], 'gallery-image.jpg', { type: 'image/jpeg' });
-            console.log('📸 Image obtenue via plugin:', file.name);
-            return file;
+            return new File([blob], `gallery-image.${image.format}`, {
+              type: `image/${image.format}`
+            });
           }
-        } catch (pluginError) {
-          console.log('🎯 Plugin gallery échoué, fallback vers input file:', pluginError);
+        } catch (capacitorError) {
+          console.log('Capacitor Camera échoué, fallback vers web:', capacitorError);
         }
       }
       
-      // Fallback immédiat vers input file web
-      console.log('🎯 Fallback vers input file web (mobile/AAB)');
+      // Fallback web
       return new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -149,14 +126,13 @@ export const useCamera = () => {
         
         input.onchange = (e) => {
           const file = (e.target as HTMLInputElement).files?.[0];
-          console.log('📸 Image sélectionnée via input file:', file?.name);
           resolve(file || null);
         };
         
         input.click();
       });
     } catch (error) {
-      console.error('❌ Gallery error:', error);
+      console.error('Gallery error:', error);
       throw error;
     } finally {
       setLoading(false);

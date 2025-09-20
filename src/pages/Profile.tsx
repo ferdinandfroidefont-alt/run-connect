@@ -22,6 +22,7 @@ import { useAppContext } from "@/contexts/AppContext";
 import { StravaConnect } from "@/components/StravaConnect";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
+import { SimpleAABDiagnostic } from "@/components/SimpleAABDiagnostic";
 
 interface Profile {
   username: string;
@@ -1121,6 +1122,11 @@ const Profile = () => {
             )}
           </CardContent>
         </Card>
+        )}
+
+        {/* Simple AAB Diagnostic - Only for creators */}
+        {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
+          <SimpleAABDiagnostic />
         )}
 
         {/* Strava Connect Section */}
