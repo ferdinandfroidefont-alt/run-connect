@@ -34,7 +34,7 @@ export const useGeolocation = () => {
     return { location: 'granted', coarseLocation: 'granted' };
   };
 
-  const waitForPlugin = async (maxWait = 3000): Promise<boolean> => {
+  const waitForPlugin = async (maxWait = 10000): Promise<boolean> => {
     return new Promise((resolve) => {
       if ((window as any).PermissionsPlugin) {
         resolve(true);

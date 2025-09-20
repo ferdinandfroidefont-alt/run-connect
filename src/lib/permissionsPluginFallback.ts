@@ -166,5 +166,5 @@ export const forcePermissionsPlugin = () => {
 export const initPermissionsPluginFix = () => {
   setTimeout(() => {
     forcePermissionsPlugin();
-  }, 100); // Délai réduit pour initialisation plus rapide
+  }, 50); // Délai encore plus réduit pour AAB
 };

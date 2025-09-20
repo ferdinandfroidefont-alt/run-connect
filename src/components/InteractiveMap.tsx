@@ -15,6 +15,7 @@ import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { usePermissionsReady } from '@/hooks/usePermissionsReady';
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -103,6 +104,7 @@ export const InteractiveMap = ({
   }, [user]);
   
   const { getCurrentPosition } = useGeolocation();
+  const { isReady: permissionsReady, isLoading: permissionsLoading } = usePermissionsReady();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
@@ -749,7 +751,14 @@ export const InteractiveMap = ({
         });
 
         // Try to get user's location using Capacitor with detailed logging
-        console.log("🗺️ Début tentative géolocalisation pour la carte...");
+        console.log("🗺️ Début tentative géolocalisation - permissions ready:", permissionsReady);
+        
+        if (!permissionsReady) {
+          console.log("🗺️ ⚠️ Permissions non prêtes, géolocalisation différée");
+          toast.error("Système en cours d'initialisation, réessayez dans quelques secondes");
+          return;
+        }
+        
         getCurrentPosition()
           .then((position) => {
             console.log("🗺️ Position reçue dans InteractiveMap:", position);
@@ -1173,6 +1182,13 @@ export const InteractiveMap = ({
 
   const handleLocateMe = async () => {
     if (!map.current) return;
+    
+    console.log("🗺️ handleLocateMe - permissions ready:", permissionsReady);
+    
+    if (!permissionsReady) {
+      toast.error("Système en cours d'initialisation, veuillez patienter");
+      return;
+    }
     
     try {
       const position = await getCurrentPosition();

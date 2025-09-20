@@ -21,7 +21,7 @@ export const useCamera = () => {
     return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
   };
 
-  const waitForPlugin = async (maxWait = 3000): Promise<boolean> => {
+  const waitForPlugin = async (maxWait = 10000): Promise<boolean> => {
     return new Promise((resolve) => {
       if ((window as any).PermissionsPlugin) {
         resolve(true);
@@ -166,7 +166,7 @@ export const useCamera = () => {
       }
       
       // Fallback vers input file web
-      console.log('🎯 Fallback vers input file web');
+      console.log('🎯 Fallback vers input file web (mobile/AAB)');
       return new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';

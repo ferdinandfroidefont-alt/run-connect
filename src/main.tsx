@@ -6,6 +6,7 @@ import { initPermissionsPluginFix } from './lib/permissionsPluginFallback'
 
 // 🔥 FIX CRITIQUE AAB - Appliquer immédiatement
 initCapacitorFix();
+// Réduire le délai d'initialisation pour une récupération plus rapide
 initPermissionsPluginFix();
 
 // 🔥 FORCE DETECTION NATIVE APK

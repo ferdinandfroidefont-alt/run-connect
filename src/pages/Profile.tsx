@@ -14,6 +14,7 @@ import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
+import { usePermissionsReady } from "@/hooks/usePermissionsReady";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
@@ -89,6 +90,7 @@ const Profile = () => {
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const { toast } = useToast();
   const { selectFromGallery, loading: cameraLoading } = useCamera();
+  const { isReady: permissionsReady, isLoading: permissionsLoading } = usePermissionsReady();
 
   // Vérifier si on arrive avec un message d'erreur
   useEffect(() => {
@@ -497,6 +499,14 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-md mx-auto space-y-4">
+        {permissionsLoading && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+            <div className="flex items-center">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Initialisation du système de permissions...
+            </div>
+          </div>
+        )}
         <div className="text-center py-8">
           <div className="flex items-center gap-3 justify-center mb-2">
             {isViewingOtherUser && (
@@ -531,13 +541,24 @@ const Profile = () => {
                 <button 
                   type="button"
                   onClick={async () => {
+                    console.log('📸 Début sélection galerie - permissions ready:', permissionsReady);
+                    
+                    if (!permissionsReady) {
+                      toast({
+                        title: "Système en cours d'initialisation",
+                        description: "Veuillez patienter quelques secondes et réessayer",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
                     try {
                       const file = await selectFromGallery();
                       if (file) {
                         handleAvatarChange({ target: { files: [file] } } as any);
                       }
                     } catch (error) {
-                      console.error('Error selecting from gallery:', error);
+                      console.error('❌ Erreur sélection galerie:', error);
                       toast({
                         title: "Erreur",
                         description: "Impossible d'accéder à la galerie",
@@ -545,7 +566,7 @@ const Profile = () => {
                       });
                     }
                   }}
-                  disabled={cameraLoading}
+                  disabled={cameraLoading || permissionsLoading}
                   className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 disabled:opacity-50"
                 >
                   <Camera className="h-4 w-4" />
