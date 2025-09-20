@@ -23,10 +23,20 @@ export const forcePermissionsPlugin = () => {
         try {
           const { Geolocation } = await import('@capacitor/geolocation');
           const result = await Geolocation.requestPermissions();
-          return { 
-            granted: result.location === 'granted',
-            device: { isMIUI: false, manufacturer: 'unknown' }
-          };
+          console.log('🔥 Fallback Location result:', result);
+          
+          if (result.location === 'granted') {
+            const position = await Geolocation.getCurrentPosition({
+              enableHighAccuracy: false,
+              timeout: 15000
+            });
+            console.log('🔥 Fallback Position obtained:', position.coords);
+            return { 
+              granted: true,
+              device: { isMIUI: false, manufacturer: 'unknown' }
+            };
+          }
+          return { granted: false };
         } catch (error) {
           console.error('Fallback location error:', error);
           return { granted: false };
@@ -124,7 +134,23 @@ export const forcePermissionsPlugin = () => {
       
       async forceOpenGallery() {
         console.log('🔥 Plugin Fallback: Open gallery');
-        return { success: false, method: 'fallback' };
+        try {
+          const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+          const result = await Camera.getPhoto({
+            source: CameraSource.Photos,
+            resultType: CameraResultType.Uri,
+            quality: 90
+          });
+          console.log('🔥 Fallback Gallery result:', result);
+          return { 
+            success: true, 
+            method: 'fallback-capacitor',
+            imageUrl: result.webPath || result.path
+          };
+        } catch (error) {
+          console.error('Fallback gallery error:', error);
+          return { success: false, method: 'fallback' };
+        }
       }
     };
     
