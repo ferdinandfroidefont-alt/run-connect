@@ -716,43 +716,43 @@ export default function MySessions() {
       {/* Petite barre noire en haut uniquement pour MySessions */}
       <div className="w-full h-6 bg-background"></div>
       <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
-      <div className="space-y-4 mb-4">
-        <div className="flex items-center justify-center">
-          <Button
-            onClick={() => {
-              console.log('🚀 "Créer un itinéraire" clicked - starting navigation with URL parameter');
-              navigate('/?createRoute=true');
-            }}
-            size="sm"
-            className="gap-2"
-          >
-            <Route className="h-4 w-4" />
-            Créer un itinéraire
-          </Button>
-        </div>
-        <div className="flex items-center justify-center">
-          <div className="flex gap-2">
+        <div className="sticky top-0 bg-background z-10 space-y-4 mb-4 pb-4">
+          <div className="flex items-center justify-center">
             <Button
-              onClick={() => setCurrentView('sessions')}
-              variant={currentView === 'sessions' ? 'default' : 'outline'}
-              size="sm"
-              className="gap-2"
-            >
-              <Users className="h-4 w-4" />
-              Mes Séances
-            </Button>
-            <Button
-              onClick={() => setCurrentView('routes')}
-              variant={currentView === 'routes' ? 'default' : 'outline'}
+              onClick={() => {
+                console.log('🚀 "Créer un itinéraire" clicked - starting navigation with URL parameter');
+                navigate('/?createRoute=true');
+              }}
               size="sm"
               className="gap-2"
             >
               <Route className="h-4 w-4" />
-              Mes Itinéraires
+              Créer un itinéraire
             </Button>
           </div>
+          <div className="flex items-center justify-center">
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setCurrentView('sessions')}
+                variant={currentView === 'sessions' ? 'default' : 'outline'}
+                size="sm"
+                className="gap-2"
+              >
+                <Users className="h-4 w-4" />
+                Mes Séances
+              </Button>
+              <Button
+                onClick={() => setCurrentView('routes')}
+                variant={currentView === 'routes' ? 'default' : 'outline'}
+                size="sm"
+                className="gap-2"
+              >
+                <Route className="h-4 w-4" />
+                Mes Itinéraires
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Content Area */}
       <div className="flex-1">
