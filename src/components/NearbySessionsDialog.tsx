@@ -261,10 +261,10 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           <div className="w-full h-6 bg-background absolute top-0 left-0 z-50"></div>
 
           {/* Filters */}
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-3 items-center mt-2">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">Filtres:</span>
+              <Filter className="h-3 w-3" />
+              <span className="text-xs font-medium">Filtres:</span>
             </div>
             
             <div className="flex items-center gap-2">
