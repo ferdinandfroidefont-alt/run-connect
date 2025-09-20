@@ -1154,7 +1154,7 @@ export const UniversalSearchDialog = ({
                           value={departmentSearchValue}
                           onValueChange={setDepartmentSearchValue}
                         />
-                        <CommandList>
+                        <CommandList className="max-h-[200px] overflow-y-auto">
                           <CommandEmpty>Aucun département trouvé.</CommandEmpty>
                           <CommandGroup>
                             <CommandItem
