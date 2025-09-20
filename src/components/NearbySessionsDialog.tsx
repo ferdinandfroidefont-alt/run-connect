@@ -260,6 +260,9 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             </DialogTitle>
           </DialogHeader>
 
+          {/* Barre noire sous le titre */}
+          <div className="w-full h-1 bg-black"></div>
+
           {/* Filters */}
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2">
