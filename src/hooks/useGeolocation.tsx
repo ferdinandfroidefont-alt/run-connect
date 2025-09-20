@@ -43,10 +43,19 @@ export const useGeolocation = () => {
     setLoading(true);
     
     try {
-      // Essayer d'abord Capacitor standard si on est sur Android natif
-      if (detectNativeAndroid()) {
+      // Vérifier le mode Force Android
+      const forceAndroid = !!(window as any).ForceAndroidMode || new URLSearchParams(window.location.search).has('forceAndroid');
+      const isNativeDetected = detectNativeAndroid();
+      
+      console.log('📍📍📍 GEOLOCATION - Mode de fonctionnement:');
+      console.log('📍 Force Android:', forceAndroid);
+      console.log('📍 Native détecté:', isNativeDetected);
+      console.log('📍 Capacitor disponible:', !!(window as any).Capacitor);
+      
+      // Essayer d'abord Capacitor si Android natif détecté OU forcé
+      if (isNativeDetected || forceAndroid) {
         try {
-          console.log('🔍 Tentative géolocalisation Capacitor...');
+          console.log('📍 ✅ Tentative géolocalisation Capacitor (natif ou forcé)...');
           const permissions = await Geolocation.requestPermissions();
           console.log('📍 Permissions géolocalisation:', permissions);
           
@@ -62,6 +71,7 @@ export const useGeolocation = () => {
               lng: position.coords.longitude
             };
             setPosition(pos);
+            console.log('📍 ✅ Position Capacitor traitée avec succès');
             return pos;
           } else {
             console.log('❌ Permissions refusées:', permissions);
@@ -74,6 +84,7 @@ export const useGeolocation = () => {
       }
       
       // Fallback vers Web API
+      console.log('📍 🔄 Fallback vers navigator.geolocation');
       return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
           reject(new Error('Geolocation not supported'));
@@ -82,6 +93,7 @@ export const useGeolocation = () => {
 
         navigator.geolocation.getCurrentPosition(
           (position) => {
+            console.log('📍 Position navigateur reçue:', position);
             const pos = {
               lat: position.coords.latitude,
               lng: position.coords.longitude
@@ -90,7 +102,7 @@ export const useGeolocation = () => {
             resolve(pos);
           },
           (error) => {
-            console.error('Erreur géolocalisation web:', error);
+            console.error('📍 ❌ Erreur géolocalisation web:', error);
             reject(error);
           },
           {
@@ -101,7 +113,7 @@ export const useGeolocation = () => {
         );
       });
     } catch (error) {
-      console.error('Erreur position:', error);
+      console.error('📍 ❌ Erreur position:', error);
       return null;
     } finally {
       setLoading(false);

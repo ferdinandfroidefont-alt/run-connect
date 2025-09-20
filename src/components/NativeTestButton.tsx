@@ -28,15 +28,26 @@ export const NativeTestButton = () => {
 
   const runNativeTests = async () => {
     setTesting(true);
-    console.log('🧪 DÉBUT DES TESTS NATIFS');
+    console.log('🧪🧪🧪 DÉBUT DES TESTS NATIFS AVEC LOGGING EXTENSIF');
+    
+    // LOGGING COMPLET DE L'ENVIRONNEMENT
+    console.log('🧪 === ÉTAT DE L\'ENVIRONNEMENT ===');
+    console.log('🧪 URL:', window.location.href);
+    console.log('🧪 UserAgent:', navigator.userAgent);
+    console.log('🧪 Capacitor disponible:', !!(window as any).Capacitor);
+    console.log('🧪 ForceAndroidMode:', !!(window as any).ForceAndroidMode);
+    console.log('🧪 CapacitorMode:', (window as any).CapacitorMode);
+    console.log('🧪 CapacitorIsNative:', (window as any).CapacitorIsNative);
+    console.log('🧪 CapacitorAABFixed:', (window as any).CapacitorAABFixed);
 
     try {
-      // Test 1: Détection native
+      // Test 1: Détection native avec logging complet
+      console.log('🧪 === TEST 1: DÉTECTION NATIVE ===');
       const isNative = detectNativeAndroid();
       setResults(prev => ({ ...prev, isNative }));
       
       toast({
-        title: "Test natif",
+        title: "Test détection native",
         description: isNative ? "✅ Android natif détecté" : "❌ Mode web détecté",
       });
 
@@ -121,10 +132,20 @@ export const NativeTestButton = () => {
       <Badge variant="destructive">❌ Échec</Badge>;
   };
 
-  // Afficher seulement si on détecte potentiellement Android ou en mode debug
-  const isNativeOrDebug = detectNativeAndroid() || window.location.search.includes('debug=true');
+  // FORCER l'affichage avec différents modes
+  const urlParams = new URLSearchParams(window.location.search);
+  const forceShow = urlParams.has('test') || urlParams.has('debug') || urlParams.has('forceAndroid');
+  const isNativeDetected = detectNativeAndroid();
   
-  if (!isNativeOrDebug) {
+  console.log('🧪 NATIVE TEST BUTTON - Vérification affichage:');
+  console.log('🧪 - Force show (URL):', forceShow);
+  console.log('🧪 - Native detected:', isNativeDetected);
+  console.log('🧪 - Affichage final:', forceShow || isNativeDetected);
+  
+  // Afficher si détection native OU si forcé via URL OU toujours en mode test
+  const shouldShow = forceShow || isNativeDetected || true; // TOUJOURS afficher pour debug
+  
+  if (!shouldShow) {
     return null;
   }
 
