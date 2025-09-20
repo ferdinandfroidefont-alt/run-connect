@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Position, GeolocationPermissions } from '@/types/permissions';
-import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { detectNativeAndroid } from '@/lib/detectNativeAndroid';
 
 export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
@@ -9,7 +9,7 @@ export const useGeolocation = () => {
 
   const checkPermissions = async (): Promise<GeolocationPermissions> => {
     try {
-      if (Capacitor.getPlatform() !== 'web') {
+      if (detectNativeAndroid()) {
         const result = await Geolocation.checkPermissions();
         return { 
           location: result.location, 
@@ -25,7 +25,7 @@ export const useGeolocation = () => {
 
   const requestPermissions = async (): Promise<GeolocationPermissions> => {
     try {
-      if (Capacitor.getPlatform() !== 'web') {
+      if (detectNativeAndroid()) {
         const result = await Geolocation.requestPermissions();
         return { 
           location: result.location, 
@@ -43,16 +43,19 @@ export const useGeolocation = () => {
     setLoading(true);
     
     try {
-      // Essayer d'abord Capacitor standard si on est sur mobile
-      if (Capacitor.getPlatform() !== 'web') {
+      // Essayer d'abord Capacitor standard si on est sur Android natif
+      if (detectNativeAndroid()) {
         try {
+          console.log('🔍 Tentative géolocalisation Capacitor...');
           const permissions = await Geolocation.requestPermissions();
+          console.log('📍 Permissions géolocalisation:', permissions);
           
           if (permissions.location === 'granted') {
             const position = await Geolocation.getCurrentPosition({
               enableHighAccuracy: true,
               timeout: 15000
             });
+            console.log('📍 Position obtenue via Capacitor:', position);
             
             const pos = {
               lat: position.coords.latitude,
@@ -60,10 +63,14 @@ export const useGeolocation = () => {
             };
             setPosition(pos);
             return pos;
+          } else {
+            console.log('❌ Permissions refusées:', permissions);
           }
         } catch (capacitorError) {
-          console.log('Capacitor échoué, fallback vers web:', capacitorError);
+          console.log('❌ Capacitor échoué, fallback vers web:', capacitorError);
         }
+      } else {
+        console.log('🌐 Web détecté, utilisation directe des APIs web');
       }
       
       // Fallback vers Web API
