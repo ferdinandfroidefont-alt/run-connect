@@ -21,34 +21,15 @@ export const useCamera = () => {
     return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
   };
 
-  const waitForPlugin = async (maxWait = 10000): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if ((window as any).PermissionsPlugin) {
-        resolve(true);
-        return;
-      }
-      
-      let waited = 0;
-      const checkInterval = setInterval(() => {
-        if ((window as any).PermissionsPlugin) {
-          clearInterval(checkInterval);
-          resolve(true);
-        } else if (waited >= maxWait) {
-          clearInterval(checkInterval);
-          resolve(false);
-        }
-        waited += 100;
-      }, 100);
-    });
+  const isPluginAvailable = (): boolean => {
+    return !!(window as any).PermissionsPlugin;
   };
 
   const requestPermissions = async (): Promise<CameraPermissions> => {
-    console.log('🔍 requestPermissions - attente du plugin camera...');
+    console.log('🔍 requestPermissions - essai immédiat...');
     
-    // Attendre que le plugin soit disponible
-    const pluginReady = await waitForPlugin();
-    
-    if (pluginReady && (window as any).PermissionsPlugin) {
+    // Essayer le plugin custom s'il est disponible
+    if (isPluginAvailable()) {
       try {
         console.log('🔍 Utilisation PermissionsPlugin.forceRequestCameraPermissions');
         const result = await (window as any).PermissionsPlugin.forceRequestCameraPermissions();
@@ -60,13 +41,12 @@ export const useCamera = () => {
       } catch (error) {
         console.log('🔍 Plugin camera échoué, fallback vers Capacitor:', error);
       }
-    } else {
-      console.log('🔍 Plugin camera non disponible après attente, fallback Capacitor');
     }
     
-    // Fallback vers Capacitor standard
+    // Fallback immédiat vers Capacitor standard
     if (Capacitor.isNativePlatform()) {
       try {
+        console.log('🔍 Fallback vers Capacitor camera standard');
         const permissions = await Camera.requestPermissions({
           permissions: ['camera', 'photos']
         });
@@ -140,11 +120,8 @@ export const useCamera = () => {
     setLoading(true);
     
     try {
-      // Attendre et utiliser le plugin de fallback pour la galerie
-      console.log('🎯 Attente du plugin pour galerie...');
-      const pluginReady = await waitForPlugin();
-      
-      if (pluginReady && (window as any).PermissionsPlugin) {
+      // Essayer le plugin custom s'il est disponible
+      if (isPluginAvailable()) {
         console.log('🎯 Utilisation PermissionsPlugin.forceOpenGallery');
         try {
           const result = await (window as any).PermissionsPlugin.forceOpenGallery();
@@ -161,11 +138,9 @@ export const useCamera = () => {
         } catch (pluginError) {
           console.log('🎯 Plugin gallery échoué, fallback vers input file:', pluginError);
         }
-      } else {
-        console.log('🎯 Plugin gallery non disponible après attente, fallback input file');
       }
       
-      // Fallback vers input file web
+      // Fallback immédiat vers input file web
       console.log('🎯 Fallback vers input file web (mobile/AAB)');
       return new Promise((resolve) => {
         const input = document.createElement('input');
