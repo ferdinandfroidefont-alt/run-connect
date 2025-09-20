@@ -16,11 +16,22 @@ console.log('🔥 - isNativePlatform:', (window as any).Capacitor?.isNativePlatf
 
 // Attendre et forcer le plugin
 if ((window as any).Capacitor) {
+  let retryCount = 0;
+  const maxRetries = 10;
+  
   const forcePlugin = () => {
     console.log('🔥 VÉRIF PermissionsPlugin:', !!window.PermissionsPlugin);
-    if (!window.PermissionsPlugin) {
-      console.log('🔥 RETRY plugin dans 200ms...');
+    if (!window.PermissionsPlugin && retryCount < maxRetries) {
+      retryCount++;
+      console.log('🔥 RETRY plugin dans 200ms... (', retryCount, '/', maxRetries, ')');
       setTimeout(forcePlugin, 200);
+    } else if (!window.PermissionsPlugin && retryCount >= maxRetries) {
+      console.log('🔥 FORCE CRÉATION FALLBACK après', maxRetries, 'tentatives');
+      // Force la création du fallback après les tentatives
+      import('./lib/permissionsPluginFallback').then(({ forcePermissionsPlugin }) => {
+        forcePermissionsPlugin();
+        console.log('🔥 ✅ FALLBACK FORCÉ !');
+      });
     } else {
       console.log('🔥 ✅ PLUGIN TROUVÉ !');
     }
