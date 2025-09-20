@@ -43,57 +43,102 @@ export const useGeolocation = () => {
     setLoading(true);
     
     try {
+      console.log('🚀🚀🚀 GÉOLOCALISATION DÉMARRÉE - DEBUG COMPLET');
+      console.log('🚀 URL actuelle:', window.location.href);
+      console.log('🚀 User Agent:', navigator.userAgent);
+      console.log('🚀 Navigator geolocation disponible:', !!navigator.geolocation);
+      
       // Vérifier le mode Force Android
       const forceAndroid = !!(window as any).ForceAndroidMode || new URLSearchParams(window.location.search).has('forceAndroid');
       const isNativeDetected = detectNativeAndroid();
       
-      console.log('📍📍📍 GEOLOCATION - Mode de fonctionnement:');
-      console.log('📍 Force Android:', forceAndroid);
-      console.log('📍 Native détecté:', isNativeDetected);
-      console.log('📍 Capacitor disponible:', !!(window as any).Capacitor);
+      console.log('🚀 Force Android:', forceAndroid);
+      console.log('🚀 Native détecté:', isNativeDetected);
+      console.log('🚀 Capacitor disponible:', !!(window as any).Capacitor);
       
-      // Essayer d'abord Capacitor si Android natif détecté OU forcé
-      if (isNativeDetected || forceAndroid) {
-        try {
-          console.log('📍 ✅ Tentative géolocalisation Capacitor (natif ou forcé)...');
-          const permissions = await Geolocation.requestPermissions();
-          console.log('📍 Permissions géolocalisation:', permissions);
-          
-          if (permissions.location === 'granted') {
-            const position = await Geolocation.getCurrentPosition({
-              enableHighAccuracy: true,
-              timeout: 15000
-            });
-            console.log('📍 Position obtenue via Capacitor:', position);
-            
-            const pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            setPosition(pos);
-            console.log('📍 ✅ Position Capacitor traitée avec succès');
-            return pos;
-          } else {
-            console.log('❌ Permissions refusées:', permissions);
-          }
-        } catch (capacitorError) {
-          console.log('❌ Capacitor échoué, fallback vers web:', capacitorError);
-        }
-      } else {
-        console.log('🌐 Web détecté, utilisation directe des APIs web');
-      }
-      
-      // Fallback vers Web API
-      console.log('📍 🔄 Fallback vers navigator.geolocation');
-      return new Promise((resolve, reject) => {
+      // SUR NAVIGATEUR WEB : Utiliser TOUJOURS l'API web en premier
+      if (!isNativeDetected && !forceAndroid) {
+        console.log('🌐 MODE WEB DÉTECTÉ - Utilisation directe navigator.geolocation');
+        
         if (!navigator.geolocation) {
-          reject(new Error('Geolocation not supported'));
-          return;
+          throw new Error('Geolocation API not supported in this browser');
         }
 
+        return new Promise((resolve, reject) => {
+          console.log('🌐 Demande de position via navigator.geolocation...');
+          
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              console.log('🌐 ✅ SUCCÈS - Position reçue:', {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                timestamp: position.timestamp
+              });
+              
+              const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              setPosition(pos);
+              resolve(pos);
+            },
+            (error) => {
+              console.error('🌐 ❌ ERREUR géolocalisation web:', {
+                code: error.code,
+                message: error.message,
+                PERMISSION_DENIED: error.code === 1,
+                POSITION_UNAVAILABLE: error.code === 2,
+                TIMEOUT: error.code === 3
+              });
+              reject(error);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 60000
+            }
+          );
+        });
+      }
+      
+      // MODE ANDROID NATIF : Utiliser Capacitor
+      console.log('📱 MODE ANDROID NATIF - Tentative Capacitor...');
+      try {
+        const permissions = await Geolocation.requestPermissions();
+        console.log('📱 Permissions Capacitor:', permissions);
+        
+        if (permissions.location === 'granted') {
+          const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 15000
+          });
+          console.log('📱 ✅ Position Capacitor obtenue:', position);
+          
+          const pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setPosition(pos);
+          return pos;
+        } else {
+          console.log('📱 ❌ Permissions Capacitor refusées, fallback web');
+        }
+      } catch (capacitorError) {
+        console.log('📱 ❌ Capacitor échoué, fallback web:', capacitorError);
+      }
+      
+      // Fallback final vers Web API
+      console.log('🔄 FALLBACK FINAL vers navigator.geolocation');
+      
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation not supported');
+      }
+
+      return new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            console.log('📍 Position navigateur reçue:', position);
+            console.log('🔄 ✅ Position fallback reçue:', position);
             const pos = {
               lat: position.coords.latitude,
               lng: position.coords.longitude
@@ -102,7 +147,7 @@ export const useGeolocation = () => {
             resolve(pos);
           },
           (error) => {
-            console.error('📍 ❌ Erreur géolocalisation web:', error);
+            console.error('🔄 ❌ Erreur fallback:', error);
             reject(error);
           },
           {
@@ -112,8 +157,9 @@ export const useGeolocation = () => {
           }
         );
       });
+      
     } catch (error) {
-      console.error('📍 ❌ Erreur position:', error);
+      console.error('🚀 ❌ ERREUR GLOBALE géolocalisation:', error);
       return null;
     } finally {
       setLoading(false);
