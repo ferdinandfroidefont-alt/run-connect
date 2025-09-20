@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical, ArrowLeft, Filter, Check, ChevronsUpDown } from "lucide-react";
 
@@ -1154,44 +1155,46 @@ export const UniversalSearchDialog = ({
                           value={departmentSearchValue}
                           onValueChange={setDepartmentSearchValue}
                         />
-                        <CommandList className="max-h-[200px] overflow-y-auto">
+                        <CommandList>
                           <CommandEmpty>Aucun département trouvé.</CommandEmpty>
-                          <CommandGroup>
-                            <CommandItem
-                              value=""
-                              onSelect={() => {
-                                setSelectedDepartment("");
-                                setDepartmentSearchOpen(false);
-                                setDepartmentSearchValue("");
-                              }}
-                            >
-                              <Check
-                                className={`mr-2 h-4 w-4 ${selectedDepartment === "" ? "opacity-100" : "opacity-0"}`}
-                              />
-                              Tous les départements
-                            </CommandItem>
-                            {departments
-                              .filter((dept) => 
-                                dept.toLowerCase().includes(departmentSearchValue.toLowerCase()) ||
-                                dept.split(" - ")[0].includes(departmentSearchValue)
-                              )
-                              .map((dept) => (
-                                <CommandItem
-                                  key={dept}
-                                  value={dept}
-                                  onSelect={(currentValue) => {
-                                    setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
-                                    setDepartmentSearchOpen(false);
-                                    setDepartmentSearchValue("");
-                                  }}
-                                >
-                                  <Check
-                                    className={`mr-2 h-4 w-4 ${selectedDepartment === dept ? "opacity-100" : "opacity-0"}`}
-                                  />
-                                  {dept}
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
+                          <ScrollArea className="h-[200px]">
+                            <CommandGroup>
+                              <CommandItem
+                                value=""
+                                onSelect={() => {
+                                  setSelectedDepartment("");
+                                  setDepartmentSearchOpen(false);
+                                  setDepartmentSearchValue("");
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${selectedDepartment === "" ? "opacity-100" : "opacity-0"}`}
+                                />
+                                Tous les départements
+                              </CommandItem>
+                              {departments
+                                .filter((dept) => 
+                                  dept.toLowerCase().includes(departmentSearchValue.toLowerCase()) ||
+                                  dept.split(" - ")[0].includes(departmentSearchValue)
+                                )
+                                .map((dept) => (
+                                  <CommandItem
+                                    key={dept}
+                                    value={dept}
+                                    onSelect={(currentValue) => {
+                                      setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
+                                      setDepartmentSearchOpen(false);
+                                      setDepartmentSearchValue("");
+                                    }}
+                                  >
+                                    <Check
+                                      className={`mr-2 h-4 w-4 ${selectedDepartment === dept ? "opacity-100" : "opacity-0"}`}
+                                    />
+                                    {dept}
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </ScrollArea>
                         </CommandList>
                       </Command>
                     </PopoverContent>
