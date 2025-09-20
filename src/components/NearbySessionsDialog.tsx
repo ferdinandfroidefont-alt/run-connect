@@ -250,63 +250,65 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-full max-h-full h-screen w-screen">
-          {/* Petite barre noire en haut comme dans Messages */}
-          <div className="w-full h-6 bg-background absolute top-0 left-0 z-50"></div>
-          
-          <DialogHeader className="pt-8">
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-full max-h-full h-screen w-screen relative">
+          {/* Titre tout en haut */}
+          <div className="absolute top-4 left-4 right-4 z-10">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
               <MapPin className="h-5 w-5" />
               Séances à proximité
-            </DialogTitle>
-          </DialogHeader>
+            </h2>
+          </div>
 
-          {/* Filters */}
-          <div className="flex gap-3 items-center">
-            <div className="flex items-center gap-2">
-              <Filter className="h-3 w-3" />
-              <span className="text-xs font-medium">Filtres:</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                placeholder="Distance"
-                value={selectedDistance}
-                onChange={(e) => setSelectedDistance(e.target.value)}
-                className="w-24"
-                min="1"
-                max="500"
-              />
-              <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-                <SelectTrigger className="w-16">
-                  <SelectValue />
+          {/* Filters juste en dessous */}
+          <div className="absolute top-16 left-4 right-4 z-10">
+            <div className="flex gap-3 items-center">
+              <div className="flex items-center gap-2">
+                <Filter className="h-3 w-3" />
+                <span className="text-xs font-medium">Filtres:</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  placeholder="Distance"
+                  value={selectedDistance}
+                  onChange={(e) => setSelectedDistance(e.target.value)}
+                  className="w-24"
+                  min="1"
+                  max="500"
+                />
+                <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                  <SelectTrigger className="w-16">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="km">km</SelectItem>
+                    <SelectItem value="m">m</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Select value={selectedActivity} onValueChange={setSelectedActivity}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Sport" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="km">km</SelectItem>
-                  <SelectItem value="m">m</SelectItem>
+                  <SelectItem value="all">Tous les sports</SelectItem>
+                  {ACTIVITY_TYPES.map(activity => (
+                    <SelectItem key={activity.value} value={activity.value}>
+                      {activity.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-
-            <Select value={selectedActivity} onValueChange={setSelectedActivity}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Sport" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les sports</SelectItem>
-                {ACTIVITY_TYPES.map(activity => (
-                  <SelectItem key={activity.value} value={activity.value}>
-                    {activity.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
-          <Separator />
+          {/* Contenu principal avec marge pour éviter le chevauchement */}
+          <div className="pt-32">
+            <Separator className="mb-4" />
 
-          {/* Sessions List */}
+            {/* Sessions List */}
           <ScrollArea className="max-h-96">
             <div className="space-y-3">
               {loading ? (
@@ -435,6 +437,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             <Button variant="outline" onClick={onClose} className="w-full">
               Fermer
             </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
