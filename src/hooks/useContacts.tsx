@@ -85,8 +85,8 @@ export const useContacts = () => {
     console.log('🔍 isNative:', isNative);
     console.log('🔍 Platform:', Capacitor.getPlatform());
     
-    // Priority 1: PermissionsPlugin fallback
-    if ((window as any).PermissionsPlugin) {
+    // Priority 1: PermissionsPlugin fallback (avec vérification de sécurité)
+    if (typeof window !== 'undefined' && (window as any).PermissionsPlugin) {
       console.log('🔍 Utilisation PermissionsPlugin.forceRequestContactsPermissions');
       try {
         const result = await (window as any).PermissionsPlugin.forceRequestContactsPermissions();

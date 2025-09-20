@@ -22,14 +22,17 @@ export const isRealAndroidDevice = () => {
 export const forceGeolocationPermissions = async (): Promise<void> => {
   console.log('🔥 FORCE demande permissions géolocalisation');
   
-  // D'abord essayer le plugin Android natif
-  if (androidPermissions.isAndroid()) {
-    const granted = await androidPermissions.forceRequestLocationPermissions();
-    if (granted) {
-      console.log('🔥 Permissions géolocalisation accordées via plugin Android');
-      return;
+  // Vérifier si c'est Android et si le plugin existe avant d'essayer
+  if (androidPermissions.isAndroid() && typeof window !== 'undefined' && window.PermissionsPlugin) {
+    try {
+      const granted = await androidPermissions.forceRequestLocationPermissions();
+      if (granted) {
+        console.log('🔥 Permissions géolocalisation accordées via plugin Android');
+        return;
+      }
+    } catch (error) {
+      console.log('🔥 Plugin Android échoué, tentative Capacitor');
     }
-    console.log('🔥 Plugin Android échoué, tentative Capacitor');
   }
   
   try {
@@ -143,14 +146,17 @@ export async function forceGetPosition() {
 export async function forceCameraPermissions() {
   console.log('🔥 FORCE demande permissions caméra');
   
-  // D'abord essayer le plugin Android natif
-  if (androidPermissions.isAndroid()) {
-    const granted = await androidPermissions.forceRequestCameraPermissions();
-    if (granted) {
-      console.log('🔥 Permissions caméra accordées via plugin Android');
-      return;
+  // Vérifier si c'est Android et si le plugin existe avant d'essayer
+  if (androidPermissions.isAndroid() && typeof window !== 'undefined' && window.PermissionsPlugin) {
+    try {
+      const granted = await androidPermissions.forceRequestCameraPermissions();
+      if (granted) {
+        console.log('🔥 Permissions caméra accordées via plugin Android');
+        return;
+      }
+    } catch (error) {
+      console.log('🔥 Plugin Android échoué, tentative Capacitor');
     }
-    console.log('🔥 Plugin Android échoué, tentative Capacitor');
   }
   
   try {
@@ -181,8 +187,8 @@ export async function forceCameraPermissions() {
 export const forceOpenGallery = async (): Promise<string | null> => {
   console.log('🔥 FORCE Gallery - BYPASS platform check avec support MIUI');
   
-  // D'abord essayer le plugin Android natif pour MIUI
-  if (androidPermissions.isAndroid()) {
+  // Vérifier si c'est Android et si le plugin existe avant d'essayer
+  if (androidPermissions.isAndroid() && typeof window !== 'undefined' && window.PermissionsPlugin) {
     try {
       const result = await androidPermissions.forceOpenGallery();
       if (result.success) {

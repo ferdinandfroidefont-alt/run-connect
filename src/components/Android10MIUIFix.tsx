@@ -60,13 +60,17 @@ export const Android10MIUIFix = () => {
   };
 
   const openMIUISettings = () => {
-    // Essayer d'ouvrir les paramètres spécifiques MIUI
+    // Essayer d'ouvrir les paramètres spécifiques MIUI seulement si le plugin existe
     try {
-      if ((window as any).PermissionsPlugin) {
-        (window as any).PermissionsPlugin.openAppSettings();
+      if (typeof window !== 'undefined' && window.PermissionsPlugin) {
+        window.PermissionsPlugin.openAppSettings();
       } else {
         // Fallback
-        window.open('intent://settings/APPLICATION_DETAILS_SETTINGS', '_system');
+        toast({
+          title: "Ouvrez manuellement",
+          description: "Allez dans Paramètres > Apps > RunConnect > Autorisations",
+          duration: 8000
+        });
       }
     } catch (error) {
       toast({

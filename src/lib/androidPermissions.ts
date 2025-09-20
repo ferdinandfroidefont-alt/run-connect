@@ -29,32 +29,21 @@ export const androidPermissions = {
     const hasCapacitor = !!(window as any).Capacitor;
     const isDesktop = userAgent.includes('windows') || userAgent.includes('macintosh') || userAgent.includes('linux');
     
-    console.log('🔥 DÉTECTION Android:');
-    console.log('🔥 - Platform:', platform);
-    console.log('🔥 - UserAgent:', userAgent);
-    console.log('🔥 - HasCapacitor:', hasCapacitor);
-    console.log('🔥 - IsDesktop:', isDesktop);
-    console.log('🔥 - PermissionsPlugin:', !!window.PermissionsPlugin);
-    
     // 1. Si Capacitor détecte Android, c'est bon
     if (platform === 'android') {
-      console.log('🔥 ✅ Android détecté par Capacitor');
       return true;
     }
     
     // 2. FORCE Android si on a Capacitor mais pas sur desktop
     if (hasCapacitor && !isDesktop) {
-      console.log('🔥 ✅ FORCE Android: Capacitor présent + pas desktop');
       return true;
     }
     
     // 3. Si Capacitor dit "web" mais UserAgent Android
     if (platform === 'web' && userAgent.includes('android') && hasCapacitor) {
-      console.log('🔥 ✅ FIX AAB: Android dans UserAgent + Capacitor');
       return true;
     }
     
-    console.log('🔥 ❌ Android non détecté');
     return false;
   },
 
@@ -74,7 +63,6 @@ export const androidPermissions = {
 
   async forceRequestLocationPermissions(): Promise<boolean> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
-      console.log('🔥 Plugin Android non disponible');
       return false;
     }
     
@@ -99,7 +87,6 @@ export const androidPermissions = {
 
   async forceRequestCameraPermissions(): Promise<boolean> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
-      console.log('🔥 Plugin Android non disponible');
       return false;
     }
     
@@ -121,7 +108,6 @@ export const androidPermissions = {
 
   async forceRequestContactsPermissions(): Promise<boolean> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
-      console.log('🔥 Plugin Android non disponible');
       return false;
     }
     
@@ -138,7 +124,6 @@ export const androidPermissions = {
 
   async forceOpenGallery(): Promise<{ success: boolean; method?: string; imageUri?: string; imagePath?: string }> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
-      console.log('🔥 Plugin Android non disponible pour galerie');
       return { success: false };
     }
     
@@ -169,7 +154,6 @@ export const androidPermissions = {
 
   async requestNotificationPermissions(): Promise<{ granted: boolean; needsSettings?: boolean; advice?: string }> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
-      console.log('🔥 Plugin Android non disponible pour notifications');
       return { granted: false };
     }
     
@@ -195,7 +179,6 @@ export const androidPermissions = {
 
   async showLocalNotification(title: string, body: string): Promise<boolean> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
-      console.log('🔥 Plugin Android non disponible pour notifications');
       return false;
     }
     
@@ -216,7 +199,6 @@ export const androidPermissions = {
 
   async openAppSettings(): Promise<boolean> {
     if (!this.isAndroid() || !window.PermissionsPlugin) {
-      console.log('🔥 Plugin Android non disponible');
       return false;
     }
     
