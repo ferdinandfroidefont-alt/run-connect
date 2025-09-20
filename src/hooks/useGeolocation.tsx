@@ -35,17 +35,22 @@ export const useGeolocation = () => {
   };
 
   const requestPermissions = async (): Promise<GeolocationPermissions> => {
-    console.log('🔥 requestPermissions - avec support MIUI');
+    console.log('🔥 requestPermissions - utilisation PermissionsPlugin');
     
     try {
-      if (Capacitor.getPlatform() !== 'web') {
-        // Essayer d'abord la nouvelle méthode MIUI
-        const miuiSuccess = await MIUIPermissionsFix.requestLocationWithMIUIFallback();
-        if (miuiSuccess) {
+      // Prioriser le plugin de fallback
+      if ((window as any).PermissionsPlugin) {
+        console.log('🔥 Utilisation PermissionsPlugin.forceRequestLocationPermissions');
+        const result = await (window as any).PermissionsPlugin.forceRequestLocationPermissions();
+        console.log('🔥 Résultat PermissionsPlugin:', result);
+        
+        if (result && result.granted) {
           return { location: 'granted', coarseLocation: 'granted' };
         }
-        
-        // Fallback vers l'API standard Capacitor
+      }
+      
+      // Fallback vers l'API standard Capacitor
+      if (Capacitor.getPlatform() !== 'web') {
         const result = await Geolocation.requestPermissions();
         return { 
           location: result.location, 
@@ -71,11 +76,36 @@ export const useGeolocation = () => {
     try {
       console.log('🔥 getCurrentPosition - API standard uniquement');
       
-      // Sur mobile, utiliser Capacitor Geolocation standard
+      // Prioriser le plugin de fallback
+      if ((window as any).PermissionsPlugin) {
+        console.log('🔥 Utilisation PermissionsPlugin pour position');
+        try {
+          const result = await (window as any).PermissionsPlugin.forceRequestLocationPermissions();
+          console.log('🔥 Plugin location result:', result);
+          
+          if (result && result.granted) {
+            const position = await Geolocation.getCurrentPosition({
+              enableHighAccuracy: true,
+              timeout: 15000
+            });
+            
+            const pos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            setPosition(pos);
+            console.log('🔥 Position via plugin obtenue:', pos);
+            return pos;
+          }
+        } catch (pluginError) {
+          console.log('🔥 Plugin échoué, fallback vers Capacitor:', pluginError);
+        }
+      }
+      
+      // Fallback vers Capacitor standard
       if (Capacitor.getPlatform() !== 'web') {
         console.log('🔥 Plateforme mobile détectée - Capacitor standard');
         try {
-          // Demander les permissions avec l'API standard Capacitor
           const permissions = await Geolocation.requestPermissions();
           console.log('🔥 Permissions Capacitor:', permissions);
           

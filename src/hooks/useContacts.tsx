@@ -84,9 +84,24 @@ export const useContacts = () => {
     console.log('🔍 Requesting contacts permissions...');
     console.log('🔍 isNative:', isNative);
     console.log('🔍 Platform:', Capacitor.getPlatform());
-    console.log('🔍 hasAndroidBridge:', !!(window as any).AndroidContacts);
     
-    // Priority 1: Android native bridge
+    // Priority 1: PermissionsPlugin fallback
+    if ((window as any).PermissionsPlugin) {
+      console.log('🔍 Utilisation PermissionsPlugin.forceRequestContactsPermissions');
+      try {
+        const result = await (window as any).PermissionsPlugin.forceRequestContactsPermissions();
+        console.log('🔍 Plugin contacts result:', result);
+        
+        if (result && result.granted) {
+          setHasPermission(true);
+          return true;
+        }
+      } catch (error) {
+        console.log('🔍 Plugin contacts échoué, fallback vers Android bridge:', error);
+      }
+    }
+    
+    // Priority 2: Android native bridge
     if ((window as any).AndroidContacts) {
       console.log('🔍 Using Android contacts bridge...');
       
@@ -101,7 +116,7 @@ export const useContacts = () => {
       }
     }
     
-    // Priority 2: Capacitor if available
+    // Priority 3: Capacitor fallback
     if (!isNative) {
       console.log('❌ Not on native platform');
       return false;

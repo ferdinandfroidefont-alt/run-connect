@@ -22,6 +22,22 @@ export const useCamera = () => {
   };
 
   const requestPermissions = async (): Promise<CameraPermissions> => {
+    // Prioriser le plugin de fallback
+    if ((window as any).PermissionsPlugin) {
+      try {
+        console.log('🔍 Utilisation PermissionsPlugin.forceRequestCameraPermissions');
+        const result = await (window as any).PermissionsPlugin.forceRequestCameraPermissions();
+        console.log('🔍 Plugin camera result:', result);
+        
+        if (result && result.granted) {
+          return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
+        }
+      } catch (error) {
+        console.log('🔍 Plugin camera échoué, fallback vers Capacitor:', error);
+      }
+    }
+    
+    // Fallback vers Capacitor standard
     if (Capacitor.isNativePlatform()) {
       try {
         const permissions = await Camera.requestPermissions({
@@ -97,8 +113,28 @@ export const useCamera = () => {
     setLoading(true);
     
     try {
-      // FORCE Web input file partout - plus fiable que Capacitor
-      console.log('🎯 FORCE galerie via input file web');
+      // Prioriser le plugin de fallback pour la galerie
+      if ((window as any).PermissionsPlugin) {
+        console.log('🎯 Utilisation PermissionsPlugin.forceOpenGallery');
+        try {
+          const result = await (window as any).PermissionsPlugin.forceOpenGallery();
+          console.log('🎯 Plugin gallery result:', result);
+          
+          if (result && result.success && result.imageUrl) {
+            // Convertir l'URL en File
+            const response = await fetch(result.imageUrl);
+            const blob = await response.blob();
+            const file = new File([blob], 'gallery-image.jpg', { type: 'image/jpeg' });
+            console.log('📸 Image obtenue via plugin:', file.name);
+            return file;
+          }
+        } catch (pluginError) {
+          console.log('🎯 Plugin gallery échoué, fallback vers input file:', pluginError);
+        }
+      }
+      
+      // Fallback vers input file web
+      console.log('🎯 Fallback vers input file web');
       return new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
