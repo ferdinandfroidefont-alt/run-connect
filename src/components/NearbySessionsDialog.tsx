@@ -250,7 +250,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-full max-h-full h-screen w-screen relative">
+        <DialogContent className="max-w-none max-h-none h-screen w-screen m-0 p-0 relative border-0 rounded-none">
           {/* Titre tout en haut */}
           <div className="absolute top-4 left-4 right-4 z-10">
             <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -305,7 +305,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </div>
 
           {/* Contenu principal avec marge pour éviter le chevauchement */}
-          <div className="pt-20 h-full flex flex-col">
+          <div className="pt-20 h-screen flex flex-col p-4">
             <Separator className="mb-4" />
 
             {/* Sessions List */}
