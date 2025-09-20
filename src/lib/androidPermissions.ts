@@ -4,6 +4,7 @@ declare global {
   interface Window {
     PermissionsPlugin: {
       forceRequestLocationPermissions(): Promise<{ granted: boolean; device?: any }>;
+      forceRequestLocationPermissionsAndroid10(): Promise<{ granted: boolean; device?: any; method?: string }>;
       forceRequestCameraPermissions(): Promise<{ granted: boolean; device?: any }>;
       forceRequestContactsPermissions(): Promise<{ granted: boolean; device?: any }>;
       requestNotificationPermissions(): Promise<{ granted: boolean; device?: any; needsSettings?: boolean; advice?: string }>;
@@ -76,12 +77,54 @@ export const androidPermissions = {
         console.log('🔥 Appareil MIUI détecté - conseils spéciaux');
         console.log('📱 Modèle:', result.device.manufacturer, result.device.model);
         console.log('⚙️ Android:', result.device.version, 'API:', result.device.sdkInt);
+        
+        // Android 10+ nécessite des instructions spéciales
+        if (result.device.sdkInt >= 29) {
+          console.log('🔥 Android 10+ MIUI - permissions arrière-plan requises');
+        }
       }
       
       return result.granted;
     } catch (error) {
       console.error('🔥 Erreur permissions géolocalisation:', error);
       return false;
+    }
+  },
+
+  async forceRequestLocationPermissionsAndroid10(): Promise<boolean> {
+    if (!this.isAndroid() || !window.PermissionsPlugin) {
+      console.log('❌ Android non détecté ou PermissionsPlugin non disponible pour Android 10+');
+      return false;
+    }
+
+    // Détecter Android 10+ depuis User Agent
+    const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
+    const isAndroid10Plus = androidVersion && parseInt(androidVersion) >= 10;
+    
+    console.log('📱 Android version détectée:', androidVersion);
+    console.log('📱 Android 10+ requis:', isAndroid10Plus);
+
+    try {
+      if (isAndroid10Plus && window.PermissionsPlugin.forceRequestLocationPermissionsAndroid10) {
+        console.log('🔄 Utilisation méthode Android 10+ spécialisée...');
+        const result = await window.PermissionsPlugin.forceRequestLocationPermissionsAndroid10();
+        console.log('✅ Permissions Android 10+ obtenues:', result);
+        
+        // Logs spéciaux pour Android 10+
+        if (result.device?.sdkInt >= 29) {
+          console.log('📱 ACCESS_BACKGROUND_LOCATION demandée pour Android', result.device.sdkInt);
+        }
+        
+        return result?.granted || false;
+      } else {
+        // Fallback vers méthode normale
+        console.log('🔄 Fallback vers méthode normale...');
+        return await this.forceRequestLocationPermissions();
+      }
+    } catch (error) {
+      console.error('❌ Erreur permissions Android 10+:', error);
+      // Fallback vers méthode normale en cas d'erreur
+      return await this.forceRequestLocationPermissions();
     }
   },
 

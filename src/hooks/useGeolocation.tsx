@@ -56,8 +56,15 @@ export const useGeolocation = () => {
       console.log('🚀 Native détecté:', isNativeDetected);
       console.log('🚀 Capacitor disponible:', !!(window as any).Capacitor);
       
-      // SUR NAVIGATEUR WEB : Utiliser TOUJOURS l'API web en premier
-      if (!isNativeDetected && !forceAndroid) {
+      // DÉTECTION ANDROID 10+ : Forcer Capacitor même si native pas détecté parfaitement
+      const isAndroid10Plus = navigator.userAgent.includes('Android') && 
+        (navigator.userAgent.match(/Android (\d+)/)?.[1] || '0') >= '10';
+      
+      console.log('🔍 Détection Android 10+:', isAndroid10Plus);
+      console.log('🔍 User Agent:', navigator.userAgent);
+      
+      // SUR NAVIGATEUR WEB (non-Android) : Utiliser l'API web
+      if (!isNativeDetected && !forceAndroid && !isAndroid10Plus) {
         console.log('🌐 MODE WEB DÉTECTÉ - Utilisation directe navigator.geolocation');
         
         if (!navigator.geolocation) {

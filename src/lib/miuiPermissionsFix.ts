@@ -1,4 +1,5 @@
 import { androidPermissions } from './androidPermissions';
+import { Geolocation } from '@capacitor/geolocation';
 
 export class MIUIPermissionsFix {
   private static initialized = false;
@@ -61,38 +62,84 @@ export class MIUIPermissionsFix {
   }
 
   static async requestLocationWithMIUIFallback(): Promise<boolean> {
-    await this.initialize();
-    
     try {
+      console.log('🔄 MIUI Location: Tentative permissions Capacitor...');
+      
+      // Détecter Android 10+ pour MIUI
+      const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
+      const isAndroid10Plus = androidVersion && parseInt(androidVersion) >= 10;
+      const isMIUIAndroid10 = this.isMIUIDevice() && isAndroid10Plus;
+      
+      console.log('📱 MIUI + Android 10+ détecté:', isMIUIAndroid10);
+      
+      // Essayer d'abord Capacitor standard
+      const result = await Geolocation.requestPermissions();
+      
+      if (result.location === 'granted') {
+        console.log('✅ MIUI Location: Permissions Capacitor OK');
+        this.permissionStatus.location = true;
+        return true;
+      }
+      
+      // Si échec et MIUI détecté, utiliser stratégie adaptée à la version Android
       if (this.isMIUIDevice()) {
-        console.log('🔥 MIUI Fix: Demande localisation pour MIUI');
+        console.log('📱 MIUI détecté - Stratégie adaptée...');
         
-        // Pour MIUI, on fait plusieurs tentatives avec des délais
-        for (let i = 0; i < 3; i++) {
+        const maxAttempts = isMIUIAndroid10 ? 2 : 3; // Moins de tentatives sur Android 10+
+        const delayMs = isMIUIAndroid10 ? 5000 : 2000; // Délais plus longs sur Android 10+
+        
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          console.log(`📱 MIUI Location: Tentative ${attempt}/${maxAttempts} (Android ${androidVersion})`);
+          
           try {
-            const result = await androidPermissions.forceRequestLocationPermissions();
-            if (result) {
+            let customResult;
+            
+            // Utiliser méthode Android 10+ si disponible
+            if (isMIUIAndroid10 && (window as any).PermissionsPlugin?.forceRequestLocationPermissionsAndroid10) {
+              console.log('🔄 Utilisation méthode MIUI Android 10+...');
+              customResult = await (window as any).PermissionsPlugin.forceRequestLocationPermissionsAndroid10();
+            } else {
+              customResult = await (window as any).PermissionsPlugin?.forceRequestLocationPermissions();
+            }
+            
+            if (customResult?.granted) {
+              console.log(`✅ MIUI Location: Succès tentative ${attempt}`);
               this.permissionStatus.location = true;
               return true;
             }
-            console.log('🔥 MIUI Fix: Tentative', i + 1, 'échouée, retry...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Attendre entre les tentatives (délai plus long pour Android 10+)
+            if (attempt < maxAttempts) {
+              console.log(`⏳ Attente ${delayMs}ms avant prochaine tentative...`);
+              await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+            
           } catch (error) {
-            console.log('🔥 MIUI Fix: Erreur tentative', i + 1, ':', error);
+            console.log(`❌ MIUI Location: Échec tentative ${attempt}:`, error);
+            if (attempt < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
           }
         }
         
-        // Si toutes les tentatives échouent, guider l'utilisateur
-        this.showMIUILocationInstructions();
+        // Si toutes les tentatives échouent, afficher les instructions MIUI
+        console.log('📱 MIUI Location: Toutes tentatives échouées - Instructions manuelles');
+        this.showMIUILocationInstructions(isMIUIAndroid10);
         return false;
-      } else {
-        // Appareil non-MIUI, méthode standard
-        const result = await androidPermissions.forceRequestLocationPermissions();
-        this.permissionStatus.location = result;
-        return result;
       }
+      
+      console.log('❌ Location: Permissions refusées');
+      return false;
+      
     } catch (error) {
-      console.error('❌ MIUI Fix: Erreur localisation:', error);
+      console.error('❌ MIUI Location: Erreur globale:', error);
+      
+      if (this.isMIUIDevice()) {
+        const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
+        const isAndroid10Plus = androidVersion && parseInt(androidVersion) >= 10;
+        this.showMIUILocationInstructions(isAndroid10Plus);
+      }
+      
       return false;
     }
   }
@@ -196,22 +243,40 @@ export class MIUIPermissionsFix {
     }
   }
 
-  static showMIUILocationInstructions() {
-    alert(`APPAREIL XIAOMI/REDMI DÉTECTÉ
+  static showMIUILocationInstructions(isAndroid10Plus: boolean = false) {
+    const android10Instructions = isAndroid10Plus ? `
 
-La localisation doit être activée manuellement:
+🔴 ANDROID 10+ SPÉCIAL :
+• Localisation > AUTORISER TOUJOURS (pas "Pendant utilisation")
+• Si "Toujours" non disponible, d'abord autoriser "Pendant utilisation"
+• Ensuite retourner et sélectionner "TOUJOURS"
+• Android 10+ est très strict sur les permissions arrière-plan !
+` : '';
 
-1. Ouvrez Paramètres Android
-2. Allez dans Applications
-3. Trouvez RunConnect
-4. Touchez "Autorisations"
-5. Touchez "Localisation"
-6. Sélectionnez "Autoriser"
-7. Redémarrez l'application
+    alert(`
+🔧 INSTRUCTIONS MIUI - GÉOLOCALISATION${isAndroid10Plus ? ' (ANDROID 10+)' : ''}
 
-Si cela ne fonctionne toujours pas:
-- Allez dans Sécurité > Autorisations > Localisation
-- Vérifiez que RunConnect est autorisé`);
+⚠️ Votre appareil MIUI ${isAndroid10Plus ? 'Android 10+' : ''} bloque les permissions automatiques.
+
+📱 ÉTAPES OBLIGATOIRES :
+
+1️⃣ Ouvrez PARAMÈTRES
+2️⃣ Applications > RunConnect  
+3️⃣ Autorisations / Permissions
+4️⃣ Localisation > AUTORISER TOUJOURS${isAndroid10Plus ? ' (OBLIGATOIRE Android 10+)' : ''}
+5️⃣ Précision > PRÉCISION ÉLEVÉE${android10Instructions}
+
+🔋 OPTIMISATION BATTERIE :
+• Paramètres > Batterie
+• Apps > RunConnect 
+• Pas de restrictions
+
+🚀 DÉMARRAGE AUTO :
+• Paramètres > Apps > Autorisations  
+• Démarrage automatique > RunConnect ON
+
+✅ Redémarrez l'app après configuration
+    `);
   }
 
   static showMIUICameraInstructions() {

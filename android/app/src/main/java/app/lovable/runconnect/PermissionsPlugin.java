@@ -44,15 +44,39 @@ public class PermissionsPlugin extends Plugin {
 
     @PluginMethod
     public void forceRequestLocationPermissions(PluginCall call) {
-        String[] permissions = {
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        };
+        String[] permissions;
+        
+        // Android 10+ (API 29+) nécessite ACCESS_BACKGROUND_LOCATION
+        if (Build.VERSION.SDK_INT >= 29) {
+            permissions = new String[] {
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            };
+        } else {
+            permissions = new String[] {
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            };
+        }
         
         if (!hasAllPermissions(permissions)) {
-            // MIUI/Xiaomi: forcer la demande même si déjà refusée
-            if (isMIUI()) {
-                requestPermissionForAliases(permissions, call, "location");
+            // MIUI/Xiaomi: forcer la demande même si déjà refusée avec délais plus longs
+            if (isMIUI() && Build.VERSION.SDK_INT >= 29) {
+                // Android 10+ MIUI - Demander d'abord les permissions de base
+                String[] basePermissions = {
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                };
+                requestPermissionForAliases(basePermissions, call, "location");
+                
+                // Programmer une seconde demande pour ACCESS_BACKGROUND_LOCATION avec délai
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    if (Build.VERSION.SDK_INT >= 29) {
+                        String[] bgPermissions = { Manifest.permission.ACCESS_BACKGROUND_LOCATION };
+                        requestPermissionForAliases(bgPermissions, call, "location");
+                    }
+                }, 2000); // 2 secondes de délai pour MIUI
             } else {
                 requestPermissionForAliases(permissions, call, "location");
             }
@@ -60,7 +84,47 @@ public class PermissionsPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("granted", true);
             result.put("device", getDeviceInfo());
+            result.put("androidVersion", Build.VERSION.SDK_INT);
+            result.put("backgroundLocationRequired", Build.VERSION.SDK_INT >= 29);
             call.resolve(result);
+        }
+    }
+
+    @PluginMethod
+    public void forceRequestLocationPermissionsAndroid10(PluginCall call) {
+        // Méthode spéciale pour Android 10+ avec gestion séquentielle des permissions
+        if (Build.VERSION.SDK_INT >= 29) {
+            // Étape 1: Demander les permissions de base
+            String[] basePermissions = {
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            };
+            
+            if (!hasAllPermissions(basePermissions)) {
+                requestPermissionForAliases(basePermissions, call, "location");
+                return;
+            }
+            
+            // Étape 2: Si permissions de base OK, demander background
+            String[] bgPermissions = { Manifest.permission.ACCESS_BACKGROUND_LOCATION };
+            if (!hasAllPermissions(bgPermissions)) {
+                // Délai plus long pour MIUI Android 10+
+                int delay = isMIUI() ? 3000 : 1000;
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    requestPermissionForAliases(bgPermissions, call, "location");
+                }, delay);
+                return;
+            }
+            
+            // Toutes les permissions OK
+            JSObject result = new JSObject();
+            result.put("granted", true);
+            result.put("device", getDeviceInfo());
+            result.put("method", "android10_sequential");
+            call.resolve(result);
+        } else {
+            // Android < 10, utiliser méthode normale
+            forceRequestLocationPermissions(call);
         }
     }
 

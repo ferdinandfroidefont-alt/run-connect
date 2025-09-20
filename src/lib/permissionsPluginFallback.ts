@@ -42,6 +42,13 @@ export const forcePermissionsPlugin = () => {
           return { granted: false };
         }
       },
+
+      async forceRequestLocationPermissionsAndroid10() {
+        console.log('🔥 Plugin Fallback: Location permissions Android 10+');
+        // Pour le fallback, utiliser la même méthode que normale
+        // car on ne peut pas accéder aux permissions spécifiques Android 10 sans plugin natif
+        return await this.forceRequestLocationPermissions();
+      },
       
       async forceRequestCameraPermissions() {
         console.log('🔥 Plugin Fallback: Camera permissions');
