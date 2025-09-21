@@ -57,10 +57,12 @@ export const useGeolocation = () => {
       console.log('🚀 Capacitor disponible:', !!(window as any).Capacitor);
       
       // DÉTECTION ANDROID 10+ : Forcer Capacitor même si native pas détecté parfaitement
-      const isAndroid10Plus = navigator.userAgent.includes('Android') && 
-        (navigator.userAgent.match(/Android (\d+)/)?.[1] || '0') >= '10';
+      const androidVersionMatch = navigator.userAgent.match(/Android (\d+)/);
+      const androidVersion = androidVersionMatch ? parseInt(androidVersionMatch[1]) : 0;
+      const isAndroid10Plus = navigator.userAgent.includes('Android') && androidVersion >= 10;
       
       console.log('🔍 Détection Android 10+:', isAndroid10Plus);
+      console.log('🔍 Version Android détectée:', androidVersion);
       console.log('🔍 User Agent:', navigator.userAgent);
       
       // SUR NAVIGATEUR WEB (non-Android) : Utiliser l'API web
