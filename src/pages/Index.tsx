@@ -2,11 +2,12 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { WelcomeVideoDialog } from "@/components/WelcomeVideoDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
+import { NativePermissionTester } from "@/components/NativePermissionTester";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
-import { Capacitor } from '@capacitor/core';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { nativeManager } from '@/lib/nativeInit';
 
 const Index = () => {
   const { user } = useAuth();
@@ -20,10 +21,23 @@ const Index = () => {
     markVideoAsSeen 
   } = useOnboarding();
   const [searchParams] = useSearchParams();
+  const [showPermissionTester, setShowPermissionTester] = useState(false);
+  const [nativeStatus, setNativeStatus] = useState<boolean | null>(null);
 
   useEffect(() => {
-    console.log('🏠 Index - Platform:', Capacitor.getPlatform());
-    console.log('🏠 Index - Native:', Capacitor.isNativePlatform());
+    const checkNativeStatus = async () => {
+      const isNative = await nativeManager.ensureNativeStatus();
+      setNativeStatus(isNative);
+      console.log('🏠 Index - Statut natif confirmé:', isNative);
+    };
+    
+    checkNativeStatus();
+    
+    // Démo: montrer le testeur de permissions en dev
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('test') || urlParams.has('debug')) {
+      setShowPermissionTester(true);
+    }
   }, []);
 
   // Extract map parameters from URL
@@ -82,6 +96,13 @@ const Index = () => {
         onClose={handleVideoSkip}
         onComplete={handleVideoComplete}
       />
+      
+      {/* Testeur de permissions (debug) */}
+      {showPermissionTester && (
+        <NativePermissionTester 
+          onClose={() => setShowPermissionTester(false)} 
+        />
+      )}
     </>
   );
 };
