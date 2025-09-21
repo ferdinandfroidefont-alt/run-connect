@@ -56,18 +56,46 @@ export const useGeolocation = () => {
       console.log('🚀 Native détecté:', isNativeDetected);
       console.log('🚀 Capacitor disponible:', !!(window as any).Capacitor);
       
-      // DÉTECTION ANDROID 10+ : Forcer Capacitor même si native pas détecté parfaitement
+      // DÉTECTION ANDROID GLOBALE : Toutes versions
       const androidVersionMatch = navigator.userAgent.match(/Android (\d+)/);
       const androidVersion = androidVersionMatch ? parseInt(androidVersionMatch[1]) : 0;
-      const isAndroid10Plus = navigator.userAgent.includes('Android') && androidVersion >= 10;
+      const isAndroid = navigator.userAgent.includes('Android') && androidVersion > 0;
+      const isAndroid10Plus = isAndroid && androidVersion >= 10;
       
+      console.log('🔍 Détection Android:', isAndroid);
       console.log('🔍 Détection Android 10+:', isAndroid10Plus);
       console.log('🔍 Version Android détectée:', androidVersion);
       console.log('🔍 User Agent:', navigator.userAgent);
       
-      // ANDROID 10+ : Forcer Capacitor obligatoirement
-      if (isAndroid10Plus || isNativeDetected || forceAndroid) {
+      // UTILISER CAPACITOR pour : Android détecté OU natif détecté OU force mode
+      if (isAndroid || isNativeDetected || forceAndroid) {
         console.log('📱 MODE ANDROID NATIF - Tentative Capacitor...');
+        
+        // Utiliser méthode spécialisée Android 10+ si disponible
+        if (isAndroid10Plus && window.PermissionsPlugin?.forceRequestLocationPermissionsAndroid10) {
+          console.log('🔄 Utilisation méthode Android 10+ spécialisée...');
+          try {
+            const result = await window.PermissionsPlugin.forceRequestLocationPermissionsAndroid10();
+            if (result) {
+              const position = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 15000
+              });
+              console.log('📱 ✅ Position Android 10+ obtenue:', position);
+              
+              const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              setPosition(pos);
+              return pos;
+            }
+          } catch (android10Error) {
+            console.log('📱 ⚠️ Méthode Android 10+ échouée, fallback standard:', android10Error);
+          }
+        }
+        
+        // Méthode Capacitor standard pour tous les Android
         try {
           const permissions = await Geolocation.requestPermissions();
           console.log('📱 Permissions Capacitor:', permissions);
