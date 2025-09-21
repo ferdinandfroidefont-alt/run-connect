@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Position, GeolocationPermissions } from '@/types/permissions';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { isReallyNative } from '@/lib/nativeDetection';
 
 export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
@@ -35,12 +36,14 @@ export const useGeolocation = () => {
 
   const getCurrentPosition = useCallback(async (): Promise<Position | null> => {
     setLoading(true);
-    console.log('🚀 Géolocalisation - Platform:', Capacitor.getPlatform());
-    console.log('🚀 Géolocalisation - Native:', Capacitor.isNativePlatform());
+    console.log('🚀 Géolocalisation...');
+    
+    const isNative = isReallyNative();
+    console.log('🚀 Mode natif détecté:', isNative);
     
     try {
-      if (Capacitor.isNativePlatform()) {
-        // Mode natif - utiliser Capacitor directement
+      if (isNative) {
+        // Mode natif - utiliser Capacitor
         console.log('📱 Mode natif - utilisation Capacitor');
         
         const permissions = await Geolocation.requestPermissions();

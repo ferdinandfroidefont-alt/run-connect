@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Contacts } from '@capacitor-community/contacts';
-import { Capacitor } from '@capacitor/core';
+import { isReallyNative } from '@/lib/nativeDetection';
 
 export interface Contact {
   contactId: string;
@@ -22,7 +22,7 @@ export const useContacts = () => {
   const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
-    setIsNative(Capacitor.isNativePlatform());
+    setIsNative(isReallyNative());
     checkPermissions();
   }, []);
 
@@ -56,7 +56,9 @@ export const useContacts = () => {
   };
 
   const loadContacts = async () => {
-    if (!Capacitor.isNativePlatform()) {
+    const isNative = isReallyNative();
+    
+    if (!isNative) {
       console.log('👥 ❌ Contacts disponibles uniquement sur mobile');
       throw new Error('Contacts disponibles uniquement sur mobile');
     }
