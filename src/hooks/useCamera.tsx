@@ -1,7 +1,5 @@
-import { useState, useCallback } from 'react';
-import { PermissionState } from '@capacitor/core';
-import { Camera, CameraResultType, CameraSource, CameraDirection, CameraPermissionState } from '@capacitor/camera';
-import { detectNativeAndroid } from '@/lib/detectNativeAndroid';
+import { useState } from 'react';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { CameraPermissions } from '@/types/permissions';
 
 export const useCamera = () => {
@@ -9,185 +7,160 @@ export const useCamera = () => {
 
   const checkPermissions = async (): Promise<CameraPermissions> => {
     try {
-      if (detectNativeAndroid()) {
-        const permissions = await Camera.checkPermissions();
-        console.log('🔍 Camera permissions:', permissions);
-        return permissions;
-      }
+      const result = await Camera.checkPermissions();
+      return {
+        camera: result.camera,
+        photos: result.photos
+      };
     } catch (error) {
-      console.error('❌ Error checking camera permissions:', error);
+      console.log('Erreur check permissions caméra:', error);
+      return { camera: 'prompt', photos: 'prompt' };
     }
-    return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
   };
 
   const requestPermissions = async (): Promise<CameraPermissions> => {
     try {
-      if (detectNativeAndroid()) {
-        const permissions = await Camera.requestPermissions({
-          permissions: ['camera', 'photos']
-        });
-        return permissions;
-      }
+      const result = await Camera.requestPermissions();
+      return {
+        camera: result.camera,
+        photos: result.photos
+      };
     } catch (error) {
-      console.error('Error requesting camera permissions:', error);
+      console.log('Erreur request permissions caméra:', error);
+      return { camera: 'denied', photos: 'denied' };
     }
-    return { camera: 'granted' as CameraPermissionState, photos: 'granted' as CameraPermissionState };
   };
 
-  const takePicture = useCallback(async (): Promise<File | null> => {
+  const takePicture = async (): Promise<File | null> => {
     setLoading(true);
+    console.log('📸 DÉBUT PRISE PHOTO');
     
     try {
-      // Vérifier le mode Force Android
-      const forceAndroid = !!(window as any).ForceAndroidMode || new URLSearchParams(window.location.search).has('forceAndroid');
-      const isNativeDetected = detectNativeAndroid();
+      // MÉTHODE 1: Essayer Capacitor Camera
+      console.log('📸 Tentative Capacitor Camera...');
       
-      console.log('📷📷📷 CAMERA - Mode de fonctionnement:');
-      console.log('📷 Force Android:', forceAndroid);
-      console.log('📷 Native détecté:', isNativeDetected);
-      console.log('📷 Capacitor disponible:', !!(window as any).Capacitor);
+      const permissions = await Camera.requestPermissions();
+      console.log('📸 Permissions:', permissions);
       
-      // Essayer Capacitor sur Android natif OU forcé
-      if (isNativeDetected || forceAndroid) {
-        console.log('📷 ✅ Tentative prise photo Capacitor (natif ou forcé)...');
-        try {
-          // Vérifier et demander les permissions
-          const permissions = await Camera.requestPermissions();
-          console.log('📷 Permissions camera:', permissions);
-          
-          if (permissions.camera !== 'granted') {
-            console.log('❌ Permissions camera refusées');
-            throw new Error('Permissions camera refusées');
-          }
-
-          const image = await Camera.getPhoto({
-            quality: 90,
-            allowEditing: false,
-            resultType: CameraResultType.Uri,
-            source: CameraSource.Camera,
-            direction: CameraDirection.Rear,
-            correctOrientation: true,
-            saveToGallery: false
-          });
-          console.log('📷 Photo prise via Capacitor:', image);
-
-          if (image.webPath) {
-            const response = await fetch(image.webPath);
-            const blob = await response.blob();
-            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-            console.log('📷 ✅ Photo Capacitor traitée avec succès');
-            return file;
-          }
-        } catch (capacitorError) {
-          console.log('❌ Erreur Capacitor camera:', capacitorError);
+      if (permissions.camera === 'granted') {
+        const result = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera
+        });
+        
+        console.log('📸 ✅ Photo prise:', !!result.dataUrl);
+        
+        if (result.dataUrl) {
+          // Convertir DataURL en File
+          const response = await fetch(result.dataUrl);
+          const blob = await response.blob();
+          const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+          return file;
         }
-      } else {
-        console.log('🌐 Web détecté pour la camera');
       }
       
-      // Fallback to file input for browsers
-      console.log('📷 🔄 Fallback vers input file pour la caméra');
+    } catch (capacitorError) {
+      console.log('📸 ❌ Capacitor échoué:', capacitorError);
+    }
+    
+    try {
+      // MÉTHODE 2: Fallback input file pour web
+      console.log('📸 Fallback input file...');
+      
       return new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-        input.capture = 'environment';
+        input.capture = 'environment'; // Caméra arrière par défaut
         
-        input.onchange = (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          console.log('📷 Fichier sélectionné via fallback:', file);
+        input.onchange = (event) => {
+          const file = (event.target as HTMLInputElement).files?.[0];
+          console.log('📸 ✅ Fichier sélectionné:', !!file);
           resolve(file || null);
         };
         
         input.oncancel = () => {
-          console.log('📷 Sélection annulée');
+          console.log('📸 Annulé par l\'utilisateur');
           resolve(null);
         };
         
         input.click();
       });
+      
     } catch (error) {
-      console.error('📷 ❌ Camera error:', error);
-      throw error;
+      console.error('📸 ❌ ERREUR FINALE:', error);
+      return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const selectFromGallery = useCallback(async (): Promise<File | null> => {
+  const selectFromGallery = async (): Promise<File | null> => {
     setLoading(true);
+    console.log('🖼️ DÉBUT SÉLECTION GALERIE');
     
     try {
-      // Vérifier le mode Force Android
-      const forceAndroid = !!(window as any).ForceAndroidMode || new URLSearchParams(window.location.search).has('forceAndroid');
-      const isNativeDetected = detectNativeAndroid();
+      // MÉTHODE 1: Essayer Capacitor Camera
+      console.log('🖼️ Tentative Capacitor Gallery...');
       
-      console.log('🖼️🖼️🖼️ GALLERY - Mode de fonctionnement:');
-      console.log('🖼️ Force Android:', forceAndroid);
-      console.log('🖼️ Native détecté:', isNativeDetected);
-      console.log('🖼️ Capacitor disponible:', !!(window as any).Capacitor);
+      const permissions = await Camera.requestPermissions();
+      console.log('🖼️ Permissions:', permissions);
       
-      // Essayer Capacitor sur Android natif OU forcé
-      if (isNativeDetected || forceAndroid) {
-        console.log('🖼️ ✅ Tentative sélection galerie Capacitor (natif ou forcé)...');
-        try {
-          // Vérifier et demander les permissions
-          const permissions = await Camera.requestPermissions();
-          console.log('🖼️ Permissions galerie:', permissions);
-          
-          if (permissions.photos !== 'granted') {
-            console.log('❌ Permissions galerie refusées');
-            throw new Error('Permissions galerie refusées');
-          }
-
-          const image = await Camera.getPhoto({
-            resultType: CameraResultType.Uri,
-            source: CameraSource.Photos,
-            quality: 90
-          });
-          console.log('🖼️ Image sélectionnée via Capacitor:', image);
-
-          if (image.webPath) {
-            const response = await fetch(image.webPath);
-            const blob = await response.blob();
-            const file = new File([blob], 'gallery-image.jpg', { type: blob.type || 'image/jpeg' });
-            console.log('🖼️ ✅ Image galerie Capacitor traitée avec succès');
-            return file;
-          }
-        } catch (capacitorError) {
-          console.log('❌ Erreur Capacitor galerie:', capacitorError);
+      if (permissions.photos === 'granted') {
+        const result = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Photos
+        });
+        
+        console.log('🖼️ ✅ Image sélectionnée:', !!result.dataUrl);
+        
+        if (result.dataUrl) {
+          // Convertir DataURL en File
+          const response = await fetch(result.dataUrl);
+          const blob = await response.blob();
+          const file = new File([blob], 'gallery-photo.jpg', { type: 'image/jpeg' });
+          return file;
         }
-      } else {
-        console.log('🌐 Web détecté pour la galerie');
       }
       
-      // Fallback web
-      console.log('🖼️ 🔄 Fallback vers input file pour la galerie');
+    } catch (capacitorError) {
+      console.log('🖼️ ❌ Capacitor échoué:', capacitorError);
+    }
+    
+    try {
+      // MÉTHODE 2: Fallback input file pour web
+      console.log('🖼️ Fallback input file...');
+      
       return new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
         
-        input.onchange = (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          console.log('🖼️ Fichier sélectionné via fallback:', file);
+        input.onchange = (event) => {
+          const file = (event.target as HTMLInputElement).files?.[0];
+          console.log('🖼️ ✅ Fichier sélectionné:', !!file);
           resolve(file || null);
         };
         
         input.oncancel = () => {
-          console.log('🖼️ Sélection annulée');
+          console.log('🖼️ Annulé par l\'utilisateur');
           resolve(null);
         };
         
         input.click();
       });
+      
     } catch (error) {
-      console.error('🖼️ ❌ Gallery error:', error);
-      throw error;
+      console.error('🖼️ ❌ ERREUR FINALE:', error);
+      return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   return {
     loading,
