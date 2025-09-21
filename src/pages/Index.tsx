@@ -2,7 +2,6 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { WelcomeVideoDialog } from "@/components/WelcomeVideoDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
-import { PermissionTestDialog } from "@/components/PermissionTestDialog";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
@@ -76,9 +75,6 @@ const Index = () => {
         onClose={handleVideoSkip}
         onComplete={handleVideoComplete}
       />
-      
-      {/* Test des permissions - Bouton flottant */}
-      <PermissionTestDialog />
     </>
   );
 };

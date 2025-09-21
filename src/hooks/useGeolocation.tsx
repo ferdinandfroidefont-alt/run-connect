@@ -9,108 +9,93 @@ export const useGeolocation = () => {
 
   const checkPermissions = async (): Promise<GeolocationPermissions> => {
     try {
-      if (detectNativeAndroid()) {
-        const result = await Geolocation.checkPermissions();
-        return { 
-          location: result.location, 
-          coarseLocation: result.coarseLocation || result.location 
-        };
-      }
+      const result = await Geolocation.checkPermissions();
+      return { 
+        location: result.location, 
+        coarseLocation: result.coarseLocation || result.location 
+      };
     } catch (error) {
       console.log('Erreur check permissions:', error);
+      return { location: 'prompt', coarseLocation: 'prompt' };
     }
-    
-    return { location: 'granted', coarseLocation: 'granted' };
   };
 
   const requestPermissions = async (): Promise<GeolocationPermissions> => {
     try {
-      if (detectNativeAndroid()) {
-        const result = await Geolocation.requestPermissions();
-        return { 
-          location: result.location, 
-          coarseLocation: result.coarseLocation || result.location 
-        };
-      }
+      const result = await Geolocation.requestPermissions();
+      return { 
+        location: result.location, 
+        coarseLocation: result.coarseLocation || result.location 
+      };
     } catch (error) {
       console.log('Erreur request permissions:', error);
+      return { location: 'denied', coarseLocation: 'denied' };
     }
-    
-    return { location: 'granted', coarseLocation: 'granted' };
   };
 
   const getCurrentPosition = useCallback(async (): Promise<Position | null> => {
     setLoading(true);
     
     try {
-      console.log('🚀 GÉOLOCALISATION DÉMARRÉE - Mode simplifié');
+      console.log('🚀 GÉOLOCALISATION - Demande de position');
       
-      // Vérifier le mode Force Android
-      const forceAndroid = !!(window as any).ForceAndroidMode || new URLSearchParams(window.location.search).has('forceAndroid');
-      const isNativeDetected = detectNativeAndroid();
+      // Toujours demander les permissions d'abord
+      const permissions = await Geolocation.requestPermissions();
+      console.log('📱 Permissions obtenues:', permissions);
       
-      console.log('🚀 Force Android:', forceAndroid);
-      console.log('🚀 Native détecté:', isNativeDetected);
-      
-      // Si Android natif détecté OU mode forcé : utiliser Capacitor
-      if (isNativeDetected || forceAndroid) {
-        console.log('📱 MODE ANDROID NATIF - Utilisation Capacitor');
-        try {
-          const permissions = await Geolocation.requestPermissions();
-          console.log('📱 Permissions:', permissions);
-          
-          if (permissions.location === 'granted') {
-            const position = await Geolocation.getCurrentPosition({
-              enableHighAccuracy: true,
-              timeout: 15000
-            });
-            console.log('📱 ✅ Position Capacitor:', position);
-            
-            const pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            setPosition(pos);
-            return pos;
-          }
-        } catch (capacitorError) {
-          console.log('📱 ❌ Capacitor échoué, fallback web:', capacitorError);
-        }
-      }
-      
-      // FALLBACK : Utiliser l'API Web standard
-      console.log('🌐 MODE WEB - navigator.geolocation');
-      
-      if (!navigator.geolocation) {
-        throw new Error('Geolocation not supported');
+      if (permissions.location !== 'granted') {
+        throw new Error(`Permission géolocalisation refusée: ${permissions.location}`);
       }
 
-      return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            console.log('🌐 ✅ Position web reçue:', position);
-            const pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            setPosition(pos);
-            resolve(pos);
-          },
-          (error) => {
-            console.error('🌐 ❌ Erreur web:', error);
-            reject(error);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 60000
-          }
-        );
+      // Obtenir la position avec un timeout plus court
+      console.log('📱 Demande de position en cours...');
+      const result = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000, // 10 secondes max
+        maximumAge: 300000 // 5 minutes de cache max
       });
       
+      console.log('📱 ✅ Position obtenue:', result);
+      
+      const pos = {
+        lat: result.coords.latitude,
+        lng: result.coords.longitude
+      };
+      
+      setPosition(pos);
+      return pos;
+      
     } catch (error) {
-      console.error('🚀 ❌ ERREUR GLOBALE:', error);
-      return null;
+      console.error('🚀 ❌ ERREUR GÉOLOCALISATION:', error);
+      
+      // Fallback vers l'API web si Capacitor échoue
+      if (navigator.geolocation) {
+        console.log('🌐 Fallback vers API Web...');
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              console.log('🌐 ✅ Position web obtenue:', pos);
+              setPosition(pos);
+              resolve(pos);
+            },
+            (webError) => {
+              console.error('🌐 ❌ Erreur API web:', webError);
+              reject(new Error(`Géolocalisation impossible: ${webError.message}`));
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000
+            }
+          );
+        });
+      }
+      
+      throw error;
     } finally {
       setLoading(false);
     }
