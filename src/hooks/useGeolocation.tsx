@@ -43,10 +43,7 @@ export const useGeolocation = () => {
     setLoading(true);
     
     try {
-      console.log('🚀🚀🚀 GÉOLOCALISATION DÉMARRÉE - DEBUG COMPLET');
-      console.log('🚀 URL actuelle:', window.location.href);
-      console.log('🚀 User Agent:', navigator.userAgent);
-      console.log('🚀 Navigator geolocation disponible:', !!navigator.geolocation);
+      console.log('🚀 GÉOLOCALISATION DÉMARRÉE - Mode simplifié');
       
       // Vérifier le mode Force Android
       const forceAndroid = !!(window as any).ForceAndroidMode || new URLSearchParams(window.location.search).has('forceAndroid');
@@ -54,58 +51,20 @@ export const useGeolocation = () => {
       
       console.log('🚀 Force Android:', forceAndroid);
       console.log('🚀 Native détecté:', isNativeDetected);
-      console.log('🚀 Capacitor disponible:', !!(window as any).Capacitor);
       
-      // DÉTECTION ANDROID GLOBALE : Toutes versions
-      const androidVersionMatch = navigator.userAgent.match(/Android (\d+)/);
-      const androidVersion = androidVersionMatch ? parseInt(androidVersionMatch[1]) : 0;
-      const isAndroid = navigator.userAgent.includes('Android') && androidVersion > 0;
-      const isAndroid10Plus = isAndroid && androidVersion >= 10;
-      
-      console.log('🔍 Détection Android:', isAndroid);
-      console.log('🔍 Détection Android 10+:', isAndroid10Plus);
-      console.log('🔍 Version Android détectée:', androidVersion);
-      console.log('🔍 User Agent:', navigator.userAgent);
-      
-      // UTILISER CAPACITOR pour : Android détecté OU natif détecté OU force mode
-      if (isAndroid || isNativeDetected || forceAndroid) {
-        console.log('📱 MODE ANDROID NATIF - Tentative Capacitor...');
-        
-        // Utiliser méthode spécialisée Android 10+ si disponible
-        if (isAndroid10Plus && window.PermissionsPlugin?.forceRequestLocationPermissionsAndroid10) {
-          console.log('🔄 Utilisation méthode Android 10+ spécialisée...');
-          try {
-            const result = await window.PermissionsPlugin.forceRequestLocationPermissionsAndroid10();
-            if (result) {
-              const position = await Geolocation.getCurrentPosition({
-                enableHighAccuracy: true,
-                timeout: 15000
-              });
-              console.log('📱 ✅ Position Android 10+ obtenue:', position);
-              
-              const pos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              };
-              setPosition(pos);
-              return pos;
-            }
-          } catch (android10Error) {
-            console.log('📱 ⚠️ Méthode Android 10+ échouée, fallback standard:', android10Error);
-          }
-        }
-        
-        // Méthode Capacitor standard pour tous les Android
+      // Si Android natif détecté OU mode forcé : utiliser Capacitor
+      if (isNativeDetected || forceAndroid) {
+        console.log('📱 MODE ANDROID NATIF - Utilisation Capacitor');
         try {
           const permissions = await Geolocation.requestPermissions();
-          console.log('📱 Permissions Capacitor:', permissions);
+          console.log('📱 Permissions:', permissions);
           
           if (permissions.location === 'granted') {
             const position = await Geolocation.getCurrentPosition({
               enableHighAccuracy: true,
               timeout: 15000
             });
-            console.log('📱 ✅ Position Capacitor obtenue:', position);
+            console.log('📱 ✅ Position Capacitor:', position);
             
             const pos = {
               lat: position.coords.latitude,
@@ -113,60 +72,44 @@ export const useGeolocation = () => {
             };
             setPosition(pos);
             return pos;
-          } else {
-            console.log('📱 ❌ Permissions Capacitor refusées, fallback web');
           }
         } catch (capacitorError) {
           console.log('📱 ❌ Capacitor échoué, fallback web:', capacitorError);
         }
       }
       
-      // FALLBACK WEB pour tous les autres cas
-      console.log('🌐 MODE WEB DÉTECTÉ - Utilisation directe navigator.geolocation');
+      // FALLBACK : Utiliser l'API Web standard
+      console.log('🌐 MODE WEB - navigator.geolocation');
       
       if (!navigator.geolocation) {
-          throw new Error('Geolocation API not supported in this browser');
-        }
+        throw new Error('Geolocation not supported');
+      }
 
-        return new Promise((resolve, reject) => {
-          console.log('🌐 Demande de position via navigator.geolocation...');
-          
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              console.log('🌐 ✅ SUCCÈS - Position reçue:', {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: position.timestamp
-              });
-              
-              const pos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              };
-              setPosition(pos);
-              resolve(pos);
-            },
-            (error) => {
-              console.error('🌐 ❌ ERREUR géolocalisation web:', {
-                code: error.code,
-                message: error.message,
-                PERMISSION_DENIED: error.code === 1,
-                POSITION_UNAVAILABLE: error.code === 2,
-                TIMEOUT: error.code === 3
-              });
-              reject(error);
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 60000
-            }
-          );
-        });
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            console.log('🌐 ✅ Position web reçue:', position);
+            const pos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            setPosition(pos);
+            resolve(pos);
+          },
+          (error) => {
+            console.error('🌐 ❌ Erreur web:', error);
+            reject(error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 60000
+          }
+        );
+      });
       
     } catch (error) {
-      console.error('🚀 ❌ ERREUR GLOBALE géolocalisation:', error);
+      console.error('🚀 ❌ ERREUR GLOBALE:', error);
       return null;
     } finally {
       setLoading(false);
