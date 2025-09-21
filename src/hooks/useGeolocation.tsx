@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Position, GeolocationPermissions } from '@/types/permissions';
+import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 
 export const useGeolocation = () => {
@@ -34,86 +35,68 @@ export const useGeolocation = () => {
 
   const getCurrentPosition = useCallback(async (): Promise<Position | null> => {
     setLoading(true);
-    console.log('🚀 DÉBUT GÉOLOCALISATION');
+    console.log('🚀 Géolocalisation - Platform:', Capacitor.getPlatform());
+    console.log('🚀 Géolocalisation - Native:', Capacitor.isNativePlatform());
     
     try {
-      // MÉTHODE 1: Essayer Capacitor d'abord
-      console.log('📱 Tentative Capacitor...');
-      
-      const permissions = await Geolocation.requestPermissions();
-      console.log('📱 Permissions Capacitor:', permissions);
-      
-      if (permissions.location === 'granted') {
-        const result = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 300000
-        });
+      if (Capacitor.isNativePlatform()) {
+        // Mode natif - utiliser Capacitor directement
+        console.log('📱 Mode natif - utilisation Capacitor');
         
-        console.log('📱 ✅ Position Capacitor:', result);
+        const permissions = await Geolocation.requestPermissions();
+        console.log('📱 Permissions:', permissions);
         
-        const pos = {
-          lat: result.coords.latitude,
-          lng: result.coords.longitude
-        };
-        
-        setPosition(pos);
-        return pos;
-      } else {
-        console.log('📱 ❌ Permission Capacitor refusée:', permissions.location);
-      }
-      
-    } catch (capacitorError) {
-      console.log('📱 ❌ Capacitor échoué:', capacitorError);
-    }
-    
-    try {
-      // MÉTHODE 2: Fallback API Web natif
-      console.log('🌐 Tentative API Web...');
-      
-      if (!navigator.geolocation) {
-        throw new Error('Géolocalisation non supportée par ce navigateur');
-      }
-
-      return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            console.log('🌐 ✅ Position Web:', pos);
-            setPosition(pos);
-            resolve(pos);
-          },
-          (error) => {
-            console.error('🌐 ❌ Erreur API Web:', error);
-            let errorMessage = 'Erreur de géolocalisation';
-            
-            switch (error.code) {
-              case error.PERMISSION_DENIED:
-                errorMessage = 'Permission géolocalisation refusée. Activez-la dans les paramètres.';
-                break;
-              case error.POSITION_UNAVAILABLE:
-                errorMessage = 'Position non disponible. Vérifiez le GPS.';
-                break;
-              case error.TIMEOUT:
-                errorMessage = 'Délai dépassé. Réessayez.';
-                break;
-            }
-            
-            reject(new Error(errorMessage));
-          },
-          {
+        if (permissions.location === 'granted') {
+          const result = await Geolocation.getCurrentPosition({
             enableHighAccuracy: true,
-            timeout: 8000,
+            timeout: 15000,
             maximumAge: 300000
-          }
-        );
-      });
-      
+          });
+          
+          const pos = {
+            lat: result.coords.latitude,
+            lng: result.coords.longitude
+          };
+          
+          console.log('📱 ✅ Position Capacitor:', pos);
+          setPosition(pos);
+          return pos;
+        } else {
+          throw new Error('Permission géolocalisation refusée');
+        }
+      } else {
+        // Mode web - utiliser navigator.geolocation
+        console.log('🌐 Mode web - utilisation navigator.geolocation');
+        
+        if (!navigator.geolocation) {
+          throw new Error('Géolocalisation non supportée');
+        }
+
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              console.log('🌐 ✅ Position Web:', pos);
+              setPosition(pos);
+              resolve(pos);
+            },
+            (error) => {
+              console.error('🌐 ❌ Erreur:', error);
+              reject(new Error('Erreur géolocalisation: ' + error.message));
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 300000
+            }
+          );
+        });
+      }
     } catch (error) {
-      console.error('🚀 ❌ ERREUR FINALE:', error);
+      console.error('🚀 ❌ Erreur géolocalisation:', error);
       throw error;
     } finally {
       setLoading(false);

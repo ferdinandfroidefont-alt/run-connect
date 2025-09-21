@@ -2,10 +2,11 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { WelcomeVideoDialog } from "@/components/WelcomeVideoDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
-import { UltimatePermissionTest } from "@/components/UltimatePermissionTest";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
+import { Capacitor } from '@capacitor/core';
+import { useEffect } from 'react';
 
 const Index = () => {
   const { user } = useAuth();
@@ -19,6 +20,11 @@ const Index = () => {
     markVideoAsSeen 
   } = useOnboarding();
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    console.log('🏠 Index - Platform:', Capacitor.getPlatform());
+    console.log('🏠 Index - Native:', Capacitor.isNativePlatform());
+  }, []);
 
   // Extract map parameters from URL
   const lat = searchParams.get('lat');
@@ -76,9 +82,6 @@ const Index = () => {
         onClose={handleVideoSkip}
         onComplete={handleVideoComplete}
       />
-      
-      {/* TEST PERMISSIONS ULTIMATE */}
-      <UltimatePermissionTest />
     </>
   );
 };
