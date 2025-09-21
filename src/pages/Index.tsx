@@ -2,6 +2,7 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { WelcomeVideoDialog } from "@/components/WelcomeVideoDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
+import { UltimatePermissionTest } from "@/components/UltimatePermissionTest";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
@@ -75,6 +76,9 @@ const Index = () => {
         onClose={handleVideoSkip}
         onComplete={handleVideoComplete}
       />
+      
+      {/* TEST PERMISSIONS ULTIMATE */}
+      <UltimatePermissionTest />
     </>
   );
 };
