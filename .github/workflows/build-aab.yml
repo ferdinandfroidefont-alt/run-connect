@@ -21,24 +21,29 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept licenses & install SDK
+      - name: Accept licenses & install SDK components
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" \
-                     "platforms;android-35" \
-                     "build-tools;35.0.0" \
-                     "cmdline-tools;latest"
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
 
-      # ─────────── Projet Android WebView ───────────
+      # ─────────────────────────────────────────────────────────────
+      # 1) Génère le projet Android WebView minimal (comme avant)
+      # ─────────────────────────────────────────────────────────────
       - name: Create minimal Android WebView project
         run: |
           set -e
+          APP_ID="app.runconnect"
+          APP_NAME="RunConnect"
+          URL="https://run-connect.lovable.app"
+
           mkdir -p android-webview/app/src/main/java/app/runconnect
+          mkdir -p android-webview/app/src/main/res/layout
           mkdir -p android-webview/app/src/main/res/values
-          mkdir -p android-webview/app/src/main/res/xml
 
           cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          pluginManagement {
+            repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
           dependencyResolutionManagement {
             repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
             repositories { google(); mavenCentral() }
@@ -48,44 +53,38 @@ jobs:
           EOF
 
           cat > android-webview/build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.7.2' apply false }
+          plugins { id 'com.android.application' version '8.4.2' apply false }
           EOF
 
-          cat > android-webview/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          android.enableJetifier=true
-          android.suppressUnsupportedCompileSdk=35
-          EOF
-
+          # IMPORTANT : build.gradle de l'app lit les mots de passe depuis les variables d'env
           cat > android-webview/app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
 
           android {
             namespace "app.runconnect"
-            compileSdk 35
+            compileSdk 34
+
+            signingConfigs {
+              debug {
+                storeFile file("${rootDir}/keystore.jks")
+                storePassword System.getenv("STORE_PASSWORD") ?: "password"
+                keyAlias      System.getenv("KEY_ALIAS")      ?: "upload"
+                keyPassword   System.getenv("KEY_PASSWORD")   ?: "password"
+              }
+              release {
+                storeFile file("${rootDir}/keystore.jks")
+                storePassword System.getenv("STORE_PASSWORD") ?: "password"
+                keyAlias      System.getenv("KEY_ALIAS")      ?: "upload"
+                keyPassword   System.getenv("KEY_PASSWORD")   ?: "password"
+              }
+            }
 
             defaultConfig {
               applicationId "app.runconnect"
               minSdk 24
-              targetSdk 35
-              versionCode 36
-              versionName "1.10"
-            }
-
-            signingConfigs {
-              release {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-              debug {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
+              targetSdk 34
+              versionCode 2
+              versionName "1.1"
             }
 
             buildTypes {
@@ -109,34 +108,28 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.7.0'
             implementation 'com.google.android.material:material:1.12.0'
             implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.activity:activity:1.9.2'
           }
           EOF
 
+          cat > android-webview/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+
+          cat > android-webview/app/proguard-rules.pro <<'EOF'
+          # keep empty (no minify)
+          EOF
+
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="app.runconnect">
             <uses-permission android:name="android.permission.INTERNET" />
-            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-            <uses-permission android:name="android.permission.CAMERA" />
-            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
-            <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-            <uses-permission android:name="android.permission.READ_CONTACTS" />
-            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-            <uses-permission android:name="android.permission.VIBRATE" />
             <application
               android:label="RunConnect"
-              android:icon="@mipmap/ic_launcher"
-              android:roundIcon="@mipmap/ic_launcher_round"
               android:usesCleartextTraffic="false"
-              android:theme="@style/Theme.RunConnect">
-              <activity
-                android:name=".MainActivity"
-                android:exported="true"
-                android:configChanges="orientation|screenSize|keyboardHidden"
-                android:hardwareAccelerated="true">
+              android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+              <activity android:name=".MainActivity" android:exported="true"
+                        android:configChanges="orientation|screenSize|keyboardHidden">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
                   <category android:name="android.intent.category.LAUNCHER" />
@@ -146,88 +139,77 @@ jobs:
           </manifest>
           EOF
 
-          cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-            <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
-              <item name="android:statusBarColor">@android:color/transparent</item>
-              <item name="android:navigationBarColor">@android:color/transparent</item>
-              <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-            </style>
-          </resources>
+          cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
+          package app.runconnect;
+
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import androidx.appcompat.app.AppCompatActivity;
+
+          public class MainActivity extends AppCompatActivity {
+              private WebView webView;
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  webView = new WebView(this);
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setLoadWithOverviewMode(true);
+                  s.setUseWideViewPort(true);
+                  s.setAllowFileAccess(true);
+                  s.setMediaPlaybackRequiresUserGesture(false);
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.loadUrl("https://run-connect.lovable.app");
+                  setContentView(webView);
+              }
+              @Override
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) webView.goBack();
+                  else super.onBackPressed();
+              }
+          }
           EOF
 
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
-          <resources>
-            <string name="app_name">RunConnect</string>
-          </resources>
+          <resources><string name="app_name">RunConnect</string></resources>
           EOF
 
-          cat > android-webview/app/proguard-rules.pro <<'EOF'
-          # (vide)
-          EOF
-
-      - name: Install ImageMagick
+      # ─────────────────────────────────────────────────────────────
+      # 2) Recrée TON keystore (secret) et expose les variables d'env
+      # ─────────────────────────────────────────────────────────────
+      - name: Recreate keystore from secret
         run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-
-      - name: Add launcher icons from assets/appicon.png
-        working-directory: android-webview
-        run: |
-          set -e
-          src="../assets/appicon.png"
-          if [ ! -f "$src" ]; then
-            echo "assets/appicon.png manquant dans le repo"; exit 1;
-          fi
-
-          mkdir -p app/src/main/res/mipmap-hdpi \
-                   app/src/main/res/mipmap-xhdpi \
-                   app/src/main/res/mipmap-xxhdpi \
-                   app/src/main/res/mipmap-xxxhdpi \
-                   app/src/main/res/mipmap-anydpi-v26
-
-          convert "$src" -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert "$src" -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert "$src" -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert "$src" -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-          cp app/src/main/res/mipmap-hdpi/ic_launcher.png    app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xhdpi/ic_launcher.png   app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png  app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@android:color/white"/>
-            <foreground android:drawable="@mipmap/ic_launcher"/>
-          </adaptive-icon>
-          XML
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@android:color/white"/>
-            <foreground android:drawable="@mipmap/ic_launcher_round"/>
-          </adaptive-icon>
-          XML
-
-      - name: Restore upload keystore
-        working-directory: android-webview
+          # le dossier existe déjà, on écrit juste le keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > android-webview/keystore.jks
+          ls -lh android-webview/keystore.jks
         env:
-          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-        run: |
-          set -euo pipefail
-          echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
-          ls -l keystore.jks
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
+      # (Optionnel) Affiche la SHA1 pour sanity-check dans les logs
+      - name: Print keystore SHA1
+        run: |
+          keytool -list -v -keystore android-webview/keystore.jks \
+            -alias "${{ secrets.KEY_ALIAS }}" \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_ALIAS_PASSWORD }}" | grep "SHA1" || true
+
+      # ─────────────────────────────────────────────────────────────
+      # 3) Build du bundle AAB avec la signature qui vient des secrets
+      # ─────────────────────────────────────────────────────────────
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD:     ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_KEYSTORE_ALIAS:   ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         with:
-          gradle-version: 8.9
+          gradle-version: 8.6
           build-root-directory: android-webview
           arguments: :app:bundleRelease
+        env:
+          # Ces variables sont lues par build.gradle via System.getenv(...)
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
@@ -235,5 +217,4 @@ jobs:
           name: runconnect-release
           path: |
             android-webview/app/build/outputs/bundle/release/app-release.aab
-            android-webview/keystore.jks
-          if-no-files-found: error
+          if-no-files-found: warn
