@@ -162,7 +162,6 @@ jobs:
           EOF
 
           # MainActivity : SAFE MODE (software layer au boot + cookies + fallback)
-          cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
           package app.runconnect;
 
           import android.graphics.Color;
