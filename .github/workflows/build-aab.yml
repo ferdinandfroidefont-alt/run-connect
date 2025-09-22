@@ -162,6 +162,7 @@ jobs:
           EOF
 
           # MainActivity : SAFE MODE (software layer au boot + cookies + fallback)
+          EOF
           package app.runconnect;
 
           import android.graphics.Color;
