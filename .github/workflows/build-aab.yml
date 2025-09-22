@@ -1,3 +1,9 @@
+name: Build Android WebView AAB
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 package app.runconnect;
 
 import android.graphics.Color;
