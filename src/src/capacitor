@@ -84,3 +84,23 @@ export const showLocalNotif = async (title: string, body: string) => {
     console.error('❌ Notification erreur :', e);
   }
 };
+export const Permissions = {
+  forceRequestLocationPermissions: async () => {
+    return await (window as any).Capacitor.Plugins.PermissionsPlugin.forceRequestLocationPermissions();
+  },
+  forceRequestCameraPermissions: async () => {
+    return await (window as any).Capacitor.Plugins.PermissionsPlugin.forceRequestCameraPermissions();
+  },
+  forceOpenGallery: async () => {
+    return await (window as any).Capacitor.Plugins.PermissionsPlugin.forceOpenGallery();
+  },
+  openAppSettings: async () => {
+    return await (window as any).Capacitor.Plugins.PermissionsPlugin.openAppSettings();
+  },
+  showLocalNotification: async (title: string, body: string) => {
+    return await (window as any).Capacitor.Plugins.PermissionsPlugin.showLocalNotification({
+      title,
+      body,
+    });
+  }
+}
