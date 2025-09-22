@@ -6,6 +6,9 @@ import android.app.Activity;
 
 import com.getcapacitor.BridgeActivity;
 
+// ✅ Import du plugin
+import app.lovable.runconnect.PermissionsPlugin;
+
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
