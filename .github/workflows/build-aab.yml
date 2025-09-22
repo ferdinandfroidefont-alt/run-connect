@@ -1,358 +1,93 @@
-name: Build Android WebView AAB
+package app.runconnect;
 
-on:
-  workflow_dispatch:
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.webkit.CookieManager;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.view.WindowCompat;
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+public class MainActivity extends AppCompatActivity {
+    private WebView webView;
+    private final String START_URL = "https://run-connect.lovable.app";
 
-      - name: Setup Java (JDK 17)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        if (Build.VERSION.SDK_INT >= 21) {
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        }
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        try {
+            webView = new WebView(this);
+            webView.setLayerType(WebView.LAYER_TYPE_SOFTWARE, null);
 
-      - name: Accept licenses & install SDK
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" \
-                     "platforms;android-35" \
-                     "build-tools;35.0.0" \
-                     "cmdline-tools;latest"
-
-      # ─────────── Projet Android WebView (SAFE MODE) ───────────
-      - name: Create minimal Android WebView project
-        run: |
-          set -e
-          mkdir -p android-webview/app/src/main/java/app/runconnect
-          mkdir -p android-webview/app/src/main/res/values
-          mkdir -p android-webview/app/src/main/res/xml
-
-          cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories { google(); mavenCentral() }
-          }
-          rootProject.name = "RunConnect"
-          include(":app")
-          EOF
-
-          # AGP 8.7.x pour compileSdk 35
-          cat > android-webview/build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.7.2' apply false }
-          EOF
-
-          cat > android-webview/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          android.enableJetifier=true
-          android.suppressUnsupportedCompileSdk=35
-          EOF
-
-          cat > android-webview/app/build.gradle <<'EOF'
-          plugins { id 'com.android.application' }
-
-          android {
-            namespace "app.runconnect"
-            compileSdk 35
-
-            defaultConfig {
-              applicationId "app.runconnect"
-              minSdk 24
-              targetSdk 35
-              versionCode 34
-              versionName "1.10"
+            WebSettings s = webView.getSettings();
+            s.setJavaScriptEnabled(true);
+            s.setDomStorageEnabled(true);
+            s.setLoadWithOverviewMode(true);
+            s.setUseWideViewPort(true);
+            s.setAllowFileAccess(true);
+            s.setMediaPlaybackRequiresUserGesture(false);
+            if (Build.VERSION.SDK_INT >= 21) {
+                s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
             }
 
-            signingConfigs {
-              release {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-              debug {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
+            CookieManager cm = CookieManager.getInstance();
+            cm.setAcceptCookie(true);
+            if (Build.VERSION.SDK_INT >= 21) cm.setAcceptThirdPartyCookies(webView, true);
+
+            webView.setWebChromeClient(new WebChromeClient());
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                    Uri uri = request.getUrl();
+                    String host = uri.getHost() != null ? uri.getHost() : "";
+                    String url = uri.toString();
+                    if (host.contains("accounts.google.com") || url.contains("oauth")) {
+                        CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
+                        tabs.launchUrl(MainActivity.this, uri);
+                        return true;
+                    }
+                    return false;
+                }
+            });
+
+            webView.loadUrl(START_URL);
+            setContentView(webView);
+
+            webView.postDelayed(() -> {
+                try {
+                    webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
+                } catch (Throwable ignored) {}
+            }, 1000);
+
+        } catch (Throwable t) {
+            try {
+                CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
+                tabs.launchUrl(this, Uri.parse(START_URL));
+                finish();
+            } catch (Throwable ignored) {
+                android.widget.TextView tv = new android.widget.TextView(this);
+                tv.setText("RunConnect n'a pas pu démarrer sur cet appareil.");
+                tv.setPadding(48, 48, 48, 48);
+                setContentView(tv);
             }
+        }
+    }
 
-            buildTypes {
-              release {
-                minifyEnabled false
-                proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                signingConfig signingConfigs.release
-              }
-              debug {
-                signingConfig signingConfigs.debug
-              }
-            }
-
-            compileOptions {
-              sourceCompatibility JavaVersion.VERSION_17
-              targetCompatibility JavaVersion.VERSION_17
-            }
-          }
-
-          dependencies {
-            implementation 'androidx.appcompat:appcompat:1.7.0'
-            implementation 'com.google.android.material:material:1.12.0'
-            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'     // Custom Tabs (Google OAuth)
-            implementation 'androidx.activity:activity:1.9.2'    // Compat intents/activity
-          }
-          EOF
-
-          # Manifest minimal (PERMISSIONS AJOUTÉES)
-          cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <uses-permission android:name="android.permission.INTERNET" />
-            
-            <!-- Géolocalisation - Compatible tous Android -->
-            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-            
-            <!-- Caméra/Photos - Compatible tous Android -->
-            <uses-permission android:name="android.permission.CAMERA" />
-            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
-            
-            <!-- Android 13+ Photos (remplace READ_EXTERNAL_STORAGE) -->
-            <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-            
-            <!-- Contacts -->
-            <uses-permission android:name="android.permission.READ_CONTACTS" />
-            
-            <!-- Notifications Android 13+ -->
-            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-            
-            <!-- Vibration pour notifications -->
-            <uses-permission android:name="android.permission.VIBRATE" />
-            
-            <application
-              android:label="RunConnect"
-              android:icon="@mipmap/ic_launcher"
-              android:roundIcon="@mipmap/ic_launcher_round"
-              android:usesCleartextTraffic="false"
-              android:theme="@style/Theme.RunConnect">
-              <activity
-                android:name=".MainActivity"
-                android:exported="true"
-                android:configChanges="orientation|screenSize|keyboardHidden"
-                android:hardwareAccelerated="true">
-                <intent-filter>
-                  <action android:name="android.intent.action.MAIN" />
-                  <category android:name="android.intent.category.LAUNCHER" />
-                </intent-filter>
-              </activity>
-            </application>
-          </manifest>
-          EOF
-
-          # MainActivity : SAFE MODE (software layer au boot + cookies + fallback)
-          package app.runconnect;
-
-          import android.graphics.Color;
-          import android.net.Uri;
-          import android.os.Build;
-          import android.os.Bundle;
-          import android.webkit.CookieManager;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import android.webkit.WebChromeClient;
-
-          import androidx.appcompat.app.AppCompatActivity;
-          import androidx.browser.customtabs.CustomTabsIntent;
-          import androidx.core.view.WindowCompat;
-
-          public class MainActivity extends AppCompatActivity {
-              private WebView webView;
-              private final String START_URL = "https://run-connect.lovable.app";
-
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  // Edge-to-edge
-                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-                  if (Build.VERSION.SDK_INT >= 21) {
-                      getWindow().setStatusBarColor(Color.TRANSPARENT);
-                      getWindow().setNavigationBarColor(Color.TRANSPARENT);
-                  }
-
-                  try {
-                      webView = new WebView(this);
-                      // SAFE MODE : certaines GPUs/OEM crashent en hardware au boot
-                      webView.setLayerType(WebView.LAYER_TYPE_SOFTWARE, null);
-
-                      WebSettings s = webView.getSettings();
-                      s.setJavaScriptEnabled(true);
-                      s.setDomStorageEnabled(true);
-                      s.setLoadWithOverviewMode(true);
-                      s.setUseWideViewPort(true);
-                      s.setAllowFileAccess(true);
-                      s.setMediaPlaybackRequiresUserGesture(false);
-                      if (Build.VERSION.SDK_INT >= 21) {
-                          s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-                      }
-
-                      // Cookies = sessions stables
-                      CookieManager cm = CookieManager.getInstance();
-                      cm.setAcceptCookie(true);
-                      if (Build.VERSION.SDK_INT >= 21) cm.setAcceptThirdPartyCookies(webView, true);
-
-                      webView.setWebChromeClient(new WebChromeClient());
-                      webView.setWebViewClient(new WebViewClient(){
-                          @Override
-                          public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
-                              Uri uri = request.getUrl();
-                              String host = uri.getHost() != null ? uri.getHost() : "";
-                              String url = uri.toString();
-                              if (host.contains("accounts.google.com") || url.contains("oauth")) {
-                                  CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
-                                  tabs.launchUrl(MainActivity.this, uri);
-                                  return true;
-                              }
-                              return false;
-                          }
-                      });
-
-                      webView.loadUrl(START_URL);
-                      setContentView(webView);
-
-                      // Après 1s, repasse en hardware (perf) si tout va bien
-                      webView.postDelayed(() -> {
-                          try { webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null); } catch (Throwable ignored) {}
-                      }, 1000);
-
-                  } catch (Throwable t) {
-                      // Fallback ultime : ouvre en Custom Tab si WebView casse au boot
-                      try {
-                          CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
-                          tabs.launchUrl(this, Uri.parse(START_URL));
-                          finish();
-                      } catch (Throwable ignored) {
-                          android.widget.TextView tv = new android.widget.TextView(this);
-                          tv.setText("RunConnect n'a pas pu démarrer sur cet appareil.");
-                          tv.setPadding(48,48,48,48);
-                          setContentView(tv);
-                      }
-                  }
-              }
-
-              @Override
-              public void onBackPressed() {
-                  if (webView != null && webView.canGoBack()) webView.goBack();
-                  else super.onBackPressed();
-              }
-          }
-          EOF
-
-          # Thème simple
-          cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-            <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
-              <item name="android:statusBarColor">@android:color/transparent</item>
-              <item name="android:navigationBarColor">@android:color/transparent</item>
-              <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-            </style>
-          </resources>
-          EOF
-
-          cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
-          <resources>
-            <string name="app_name">RunConnect</string>
-          </resources>
-          EOF
-
-          cat > android-webview/app/proguard-rules.pro <<'EOF'
-          # (vide)
-          EOF
-
-      # ─────────── Icônes (depuis assets/appicon.png) ───────────
-      - name: Install ImageMagick
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-
-      - name: Add launcher icons from assets/appicon.png
-        working-directory: android-webview
-        run: |
-          set -e
-          src="../assets/appicon.png"
-          if [ ! -f "$src" ]; then
-            echo "assets/appicon.png manquant dans le repo"; exit 1;
-          fi
-
-          mkdir -p app/src/main/res/mipmap-hdpi \
-                   app/src/main/res/mipmap-xhdpi \
-                   app/src/main/res/mipmap-xxhdpi \
-                   app/src/main/res/mipmap-xxxhdpi \
-                   app/src/main/res/mipmap-anydpi-v26
-
-          convert "$src" -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert "$src" -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert "$src" -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert "$src" -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-          cp app/src/main/res/mipmap-hdpi/ic_launcher.png    app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xhdpi/ic_launcher.png   app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png  app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@android:color/white"/>
-            <foreground android:drawable="@mipmap/ic_launcher"/>
-          </adaptive-icon>
-          XML
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@android:color/white"/>
-            <foreground android:drawable="@mipmap/ic_launcher_round"/>
-          </adaptive-icon>
-          XML
-
-      # ─────────── Keystore depuis les SECRETS ───────────
-      - name: Restore upload keystore
-        working-directory: android-webview
-        env:
-          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-        run: |
-          set -euo pipefail
-          echo "$ANDROID_KEYSTORE_B64" | tr -d '\r' | base64 -d > keystore.jks
-          ls -l keystore.jks
-
-      # ─────────── Build AAB ───────────
-      - name: Build AAB (Gradle)
-        uses: gradle/gradle-build-action@v2
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD:     ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_KEYSTORE_ALIAS:   ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
-        with:
-          gradle-version: 8.9
-          build-root-directory: android-webview
-          arguments: :app:bundleRelease
-
-      # ─────────── Artefacts ───────────
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: runconnect-release
-          path: |
-            android-webview/app/build/outputs/bundle/release/app-release.aab
-            android-webview/keystore.jks
-          if-no-files-found: error
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
+    }
+}
