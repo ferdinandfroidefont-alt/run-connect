@@ -69,7 +69,7 @@ jobs:
               applicationId "app.runconnect"
               minSdk 24
               targetSdk 35
-              versionCode 33
+              versionCode 36
               versionName "1.10"
             }
 
