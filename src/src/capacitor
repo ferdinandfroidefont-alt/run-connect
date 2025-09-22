@@ -1,0 +1,86 @@
+// src/services/capacitor.service.ts
+import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
+import { Geolocation } from '@capacitor/geolocation';
+import { Plugins } from '@capacitor/core';
+
+const { App } = Plugins;
+
+export const initCapacitor = async () => {
+  console.log('🚀 Initialisation Capacitor...');
+
+  // Fix bug AAB Play Store : détection fausse du "web"
+  const platform = Capacitor.getPlatform();
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isAndroidUA = userAgent.includes('android');
+
+  if (platform === 'web' && isAndroidUA && (window as any).Capacitor) {
+    console.warn('⚠️ Capacitor détecté comme web sur AAB — forçage en mode Android');
+    Capacitor.getPlatform = () => 'android';
+    Capacitor.isNativePlatform = () => true;
+    (window as any).CapacitorMode = 'android';
+  }
+
+  if (Capacitor.isNativePlatform()) {
+    console.log('✅ App en mode natif');
+
+    try {
+      const geoPerms = await Geolocation.checkPermissions();
+      const camPerms = await Camera.checkPermissions();
+
+      console.log('📍 Permissions géoloc:', geoPerms);
+      console.log('📸 Permissions caméra:', camPerms);
+    } catch (e) {
+      console.error('❌ Erreur permission:', e);
+    }
+  } else {
+    console.log('🌐 App en mode web');
+  }
+};
+
+// ➕ Fonction : demander toutes les permissions d’un coup
+export const requestAllPermissions = async () => {
+  try {
+    await Geolocation.requestPermissions();
+    await Camera.requestPermissions();
+
+    console.log('✅ Permissions demandées avec succès');
+  } catch (error) {
+    console.error('❌ Erreur demande permissions :', error);
+  }
+};
+
+// ➕ Fonction : ouvrir les paramètres Android
+export const openAndroidSettings = async () => {
+  try {
+    const result = await (window as any).Capacitor.Plugins.PermissionsPlugin.openAppSettings();
+    console.log('⚙️ Ouverture paramètres :', result);
+  } catch (e) {
+    console.error('❌ Impossible d’ouvrir les paramètres :', e);
+  }
+};
+
+// ➕ Fonction : ouvrir galerie photo native
+export const triggerGallery = async () => {
+  try {
+    const result = await (window as any).Capacitor.Plugins.PermissionsPlugin.forceOpenGallery();
+    console.log('🖼️ Image choisie :', result);
+    return result;
+  } catch (e) {
+    console.error('❌ Erreur ouverture galerie :', e);
+    return null;
+  }
+};
+
+// ➕ Fonction : envoyer une notification locale
+export const showLocalNotif = async (title: string, body: string) => {
+  try {
+    await (window as any).Capacitor.Plugins.PermissionsPlugin.showLocalNotification({
+      title,
+      body
+    });
+    console.log('🔔 Notification affichée');
+  } catch (e) {
+    console.error('❌ Notification erreur :', e);
+  }
+};
