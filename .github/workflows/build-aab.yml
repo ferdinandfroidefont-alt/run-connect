@@ -20,6 +20,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
+          cmake: 3.22.1
 
       - name: Accept licenses & install SDK components
         run: |
@@ -53,7 +57,7 @@ jobs:
           EOF
 
           cat > android-webview/build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.4.2' apply false }
+          plugins { id 'com.android.application' version '8.2.2' apply false }
           EOF
 
           # IMPORTANT : build.gradle de l'app lit les mots de passe depuis les variables d'env
@@ -82,7 +86,7 @@ jobs:
             defaultConfig {
               applicationId "app.runconnect"
               minSdk 24
-              targetSdk 34
+              targetSdk 33
               versionCode 39
               versionName "1.1"
             }
@@ -115,6 +119,8 @@ jobs:
           org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
           android.useAndroidX=true
           android.enableJetifier=true
+          android.compileSdkVersion=33
+          android.buildToolsVersion=33.0.0
           EOF
 
           cat > android-webview/app/proguard-rules.pro <<'EOF'
@@ -202,9 +208,9 @@ jobs:
       - name: Build AAB (Gradle)
         uses: gradle/gradle-build-action@v2
         with:
-          gradle-version: 8.6
+          gradle-version: 8.4
           build-root-directory: android-webview
-          arguments: :app:bundleRelease
+          arguments: :app:bundleRelease --stacktrace
         env:
           # Ces variables sont lues par build.gradle via System.getenv(...)
           STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
