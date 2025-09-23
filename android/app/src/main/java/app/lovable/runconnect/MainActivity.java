@@ -76,6 +76,9 @@ public class MainActivity extends AppCompatActivity {
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
                 Log.d(TAG, "📄 Page loading started: " + url);
+                
+                // Injecter les flags dès le début du chargement
+                injectAABFlags(view);
             }
             
             @Override
@@ -83,18 +86,11 @@ public class MainActivity extends AppCompatActivity {
                 super.onPageFinished(view, url);
                 Log.d(TAG, "✅ Page loaded successfully: " + url);
                 
-                // 🔥 FORCER LA DÉTECTION NATIVE POUR AAB
-                String forceNativeJS = 
-                    "window.CapacitorForceNative = true;" +
-                    "window.isAABBuild = true;" +
-                    "window.androidPermissions = {" +
-                    "  location: " + hasLocationPermission() + "," +
-                    "  camera: true" +
-                    "};" +
-                    "console.log('🔥 AAB Native flags set:', window.CapacitorForceNative);";
+                // Réinjecter les flags à la fin pour être sûr
+                injectAABFlags(view);
                 
-                webView.evaluateJavascript(forceNativeJS, null);
-                Log.d(TAG, "🔥 Native detection JavaScript injected");
+                // Vérifier et injecter l'état des permissions
+                injectPermissionsState(view);
             }
         });
 
@@ -139,6 +135,28 @@ public class MainActivity extends AppCompatActivity {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
+    
+    private void injectAABFlags(WebView view) {
+        String jsCode = "window.CapacitorForceNative = true; " +
+                       "window.isAABBuild = true; " +
+                       "window.AndroidNativeEnvironment = true; " +
+                       "console.log('🚀 AAB: Flags natifs injectés par MainActivity');";
+        view.evaluateJavascript(jsCode, null);
+        Log.d(TAG, "🔥 Flags AAB injectés");
+    }
+    
+    private void injectPermissionsState(WebView view) {
+        boolean hasLocation = hasLocationPermission();
+        boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        
+        String jsCode = "window.androidPermissions = {" +
+                       "location: " + hasLocation + ", " +
+                       "camera: " + hasCamera + ", " +
+                       "timestamp: " + System.currentTimeMillis() + "}; " +
+                       "console.log('🔐 Permissions Android injectées:', window.androidPermissions);";
+        view.evaluateJavascript(jsCode, null);
+        Log.d(TAG, "🔐 État des permissions injecté - Location: " + hasLocation + ", Camera: " + hasCamera);
+    }
 
     // ✅ Autoriser retour arrière dans la WebView
     @Override
@@ -156,11 +174,25 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_LOCATION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "✅ Location permission granted - reloading WebView");
-                // ✅ Recharge la page pour activer la géolocalisation
+                Log.d(TAG, "✅ Location permission granted - updating WebView");
+                // Réinjecter les permissions et recharger si nécessaire
+                injectPermissionsState(webView);
+                
+                // Notifier JavaScript que les permissions ont changé
+                String jsCode = "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', {" +
+                               "detail: { location: true, timestamp: " + System.currentTimeMillis() + " }})); " +
+                               "console.log('🔐 Permissions mises à jour - Location accordée');";
+                webView.evaluateJavascript(jsCode, null);
+                
+                // Optionnel: recharger la page pour relancer la géolocalisation
                 webView.reload();
             } else {
                 Log.w(TAG, "❌ Location permission denied");
+                // Informer JavaScript du refus
+                String jsCode = "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', {" +
+                               "detail: { location: false, timestamp: " + System.currentTimeMillis() + " }})); " +
+                               "console.log('🚫 Permissions mises à jour - Location refusée');";
+                webView.evaluateJavascript(jsCode, null);
             }
         }
     }
