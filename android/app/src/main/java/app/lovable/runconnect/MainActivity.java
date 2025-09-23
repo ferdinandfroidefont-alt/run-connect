@@ -1,4 +1,4 @@
-package app.runconnect;
+package app.lovable.runconnect;
 
 import android.Manifest;
 import android.content.Context;
@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -21,13 +22,17 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "RunConnect";
     private static final int REQ_LOCATION = 1001;
     private WebView webView;
-    private final String START_URL = "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true";
+    private final String START_URL = "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true&forceNative=true";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
+        Log.d(TAG, "📍 URL to load: " + START_URL);
 
         // ✅ Full screen immersif + transparent
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
@@ -52,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
         s.setAllowFileAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setGeolocationEnabled(true);
+        
+        Log.d(TAG, "🌐 WebView configured with geolocation enabled");
 
         // ✅ Géolocalisation sans blocage (Android < 12)
         String dir = this.getApplicationContext().getDir("geolocation", Context.MODE_PRIVATE).getPath();
@@ -61,7 +68,33 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                Log.d(TAG, "📍 Geolocation permission requested for: " + origin);
                 callback.invoke(origin, true, false); // toujours autoriser
+            }
+            
+            @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                Log.d(TAG, "📄 Page loading started: " + url);
+            }
+            
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                Log.d(TAG, "✅ Page loaded successfully: " + url);
+                
+                // 🔥 FORCER LA DÉTECTION NATIVE POUR AAB
+                String forceNativeJS = 
+                    "window.CapacitorForceNative = true;" +
+                    "window.isAABBuild = true;" +
+                    "window.androidPermissions = {" +
+                    "  location: " + hasLocationPermission() + "," +
+                    "  camera: true" +
+                    "};" +
+                    "console.log('🔥 AAB Native flags set:', window.CapacitorForceNative);";
+                
+                webView.evaluateJavascript(forceNativeJS, null);
+                Log.d(TAG, "🔥 Native detection JavaScript injected");
             }
         });
 
@@ -82,19 +115,29 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // ✅ Demande de permissions si pas encore données
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (!hasLocationPermission()) {
+            Log.d(TAG, "🔐 Requesting location permissions...");
             ActivityCompat.requestPermissions(this,
                     new String[]{
                             Manifest.permission.ACCESS_FINE_LOCATION,
                             Manifest.permission.ACCESS_COARSE_LOCATION
                     },
                     REQ_LOCATION);
+        } else {
+            Log.d(TAG, "✅ Location permissions already granted");
         }
 
         // ✅ Charger le site
+        Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
         setContentView(webView);
+        
+        Log.d(TAG, "🎯 MainActivity setup complete");
+    }
+    
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     // ✅ Autoriser retour arrière dans la WebView
@@ -113,8 +156,11 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_LOCATION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "✅ Location permission granted - reloading WebView");
                 // ✅ Recharge la page pour activer la géolocalisation
                 webView.reload();
+            } else {
+                Log.w(TAG, "❌ Location permission denied");
             }
         }
     }

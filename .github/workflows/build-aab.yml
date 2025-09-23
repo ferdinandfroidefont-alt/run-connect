@@ -29,7 +29,7 @@ jobs:
       - name: 🛠️ Créer projet WebView Android minimal
         run: |
           set -e
-          mkdir -p android-webview/app/src/main/java/app/runconnect
+          mkdir -p android-webview/app/src/main/java/app/lovable/runconnect
           mkdir -p android-webview/app/src/main/res/values
 
           cat > android-webview/settings.gradle <<'EOF'
@@ -50,7 +50,7 @@ jobs:
           plugins { id 'com.android.application' }
 
           android {
-            namespace "app.runconnect"
+            namespace "app.lovable.runconnect"
             compileSdk 34
 
             signingConfigs {
@@ -69,7 +69,7 @@ jobs:
             }
 
             defaultConfig {
-              applicationId "app.runconnect"
+              applicationId "app.lovable.runconnect"
               minSdk 24
               targetSdk 35
               versionCode 42
@@ -127,7 +127,7 @@ jobs:
           EOF
 
           # ✅ Copier le VRAI MainActivity.java du projet  
-          cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/runconnect/MainActivity.java
+          cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
 
       - name: 🔐 Restaurer le keystore
         working-directory: android-webview
