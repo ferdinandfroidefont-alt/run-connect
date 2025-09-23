@@ -25,8 +25,10 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
     private static final int REQ_LOCATION = 1001;
     private WebView webView;
-    // URL configurée dynamiquement - à changer pour la production
-    private final String START_URL = System.getProperty("app.start.url", "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true&forceNative=true");
+    // URL configurée dynamiquement via variable d'environnement ou propriété système
+    private final String START_URL = System.getProperty("app.start.url", 
+        System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
+        "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true&forceNative=true");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,12 +89,18 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                Log.d(TAG, "✅ Page loaded successfully: " + url);
-                
-                // Réinjecter les flags après le chargement complet (double sécurité)
-                injectAABFlags(view);
-                injectPermissionsState(view);
-                injectDeviceInfo(view);
+                Log.d(TAG, "📦 Page terminée - injection flags AAB avec délai");
+                // Délai pour s'assurer que la page est prête
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    injectAABFlags(view);
+                    injectPermissionsState(view);
+                    injectDeviceInfo(view);
+                    
+                    // Vérification que l'injection a réussi après 500ms
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        verifyInjection(view);
+                    }, 500);
+                }, 1000); // Délai augmenté à 1000ms
                 
                 // Notifier JavaScript que l'injection est terminée
                 view.evaluateJavascript("window.androidInjectionComplete = true; console.log('🚀 Android injection completed');", null);
@@ -177,21 +185,60 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void injectDeviceInfo(WebView view) {
-        String manufacturer = Build.MANUFACTURER;
-        String model = Build.MODEL;
-        String androidVersion = Build.VERSION.RELEASE;
-        int sdkVersion = Build.VERSION.SDK_INT;
+        String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER : "unknown";
+        String model = Build.MODEL != null ? Build.MODEL : "unknown";
+        String version = Build.VERSION.RELEASE != null ? Build.VERSION.RELEASE : "unknown";
+        int sdkInt = Build.VERSION.SDK_INT;
         
-        Log.d(TAG, "🚀 Injection device info - " + manufacturer + " " + model + " Android " + androidVersion + " (SDK " + sdkVersion + ")");
+        // Détection étendue des fabricants
+        boolean isMIUI = manufacturer.toLowerCase().contains("xiaomi") || manufacturer.toLowerCase().contains("redmi") || manufacturer.toLowerCase().contains("poco");
+        boolean isSamsung = manufacturer.toLowerCase().contains("samsung");
+        boolean isOnePlus = manufacturer.toLowerCase().contains("oneplus");
+        boolean isOppo = manufacturer.toLowerCase().contains("oppo");
+        boolean isVivo = manufacturer.toLowerCase().contains("vivo");
+        boolean isHuawei = manufacturer.toLowerCase().contains("huawei") || manufacturer.toLowerCase().contains("honor");
         
-        String jsCode = "window.androidDeviceInfo = {" +
-                       "manufacturer: '" + manufacturer + "', " +
-                       "model: '" + model + "', " +
-                       "androidVersion: '" + androidVersion + "', " +
-                       "sdkVersion: " + sdkVersion + "}; " +
-                       "console.log('🚀 Device info Android injecté:', window.androidDeviceInfo);";
+        String deviceScript = String.format(
+            "window.AndroidDeviceInfo = {" +
+            "  manufacturer: '%s'," +
+            "  model: '%s'," +
+            "  version: '%s'," +
+            "  sdkInt: %d," +
+            "  isMIUI: %s," +
+            "  isSamsung: %s," +
+            "  isOnePlus: %s," +
+            "  isOppo: %s," +
+            "  isVivo: %s," +
+            "  isHuawei: %s," +
+            "  needsSpecialHandling: %s" +
+            "};",
+            manufacturer.toLowerCase(), 
+            model.toLowerCase(), 
+            version,
+            sdkInt,
+            isMIUI ? "true" : "false",
+            isSamsung ? "true" : "false",
+            isOnePlus ? "true" : "false",
+            isOppo ? "true" : "false",
+            isVivo ? "true" : "false",
+            isHuawei ? "true" : "false",
+            (isMIUI || isSamsung || isOnePlus || isOppo || isVivo || isHuawei) ? "true" : "false"
+        );
         
-        view.evaluateJavascript(jsCode, null);
+        Log.d(TAG, "📱 Injection info périphérique étendue: " + deviceScript);
+        view.evaluateJavascript(deviceScript, null);
+    }
+
+    private void verifyInjection(WebView view) {
+        String verificationScript = 
+            "console.log('🔍 Vérification injection:', {" +
+            "  CapacitorForceNative: window.CapacitorForceNative," +
+            "  isAABBuild: window.isAABBuild," +
+            "  AndroidDeviceInfo: window.AndroidDeviceInfo," +
+            "  AndroidPermissionsState: window.AndroidPermissionsState" +
+            "});";
+            
+        view.evaluateJavascript(verificationScript, null);
     }
 
     // ✅ Autoriser retour arrière dans la WebView

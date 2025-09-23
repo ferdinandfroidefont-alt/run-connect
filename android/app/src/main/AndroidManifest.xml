@@ -6,7 +6,10 @@
     <!-- 📍 GÉOLOCALISATION -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Android 10+ - Permission arrière-plan séparée -->
+    <uses-permission 
+        android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
+        android:minSdkVersion="29" />
 
     <!-- 📷 STOCKAGE & APPAREIL PHOTO -->
     <uses-permission android:name="android.permission.CAMERA" />

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Position, GeolocationPermissions } from '@/types/permissions';
+import { Position } from '@/types/permissions';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 
@@ -10,7 +10,7 @@ export const useGeolocation = () => {
   // Détection du fabricant et de la version Android
   const getDeviceInfo = useCallback(() => {
     const userAgent = navigator.userAgent;
-    const androidInfo = (window as any).androidDeviceInfo;
+    const androidInfo = (window as any).AndroidDeviceInfo;
     
     // Utiliser les infos injectées par MainActivity si disponibles
     if (androidInfo) {
@@ -18,22 +18,36 @@ export const useGeolocation = () => {
       return {
         manufacturer: androidInfo.manufacturer,
         model: androidInfo.model,
-        androidVersion: androidInfo.androidVersion,
-        sdkVersion: androidInfo.sdkVersion
+        version: androidInfo.version,
+        sdkInt: androidInfo.sdkInt,
+        isMIUI: androidInfo.isMIUI,
+        isSamsung: androidInfo.isSamsung,
+        isOnePlus: androidInfo.isOnePlus,
+        isOppo: androidInfo.isOppo,
+        isVivo: androidInfo.isVivo,
+        isHuawei: androidInfo.isHuawei,
+        needsSpecialHandling: androidInfo.needsSpecialHandling
       };
     }
     
     // Fallback sur détection UserAgent
     const androidVersion = userAgent.match(/Android (\d+(?:\.\d+)?)/)?.[1] || 'unknown';
-    const manufacturer = userAgent.includes('Samsung') ? 'Samsung' :
-                        userAgent.includes('Xiaomi') ? 'Xiaomi' :
-                        userAgent.includes('Huawei') ? 'Huawei' :
-                        userAgent.includes('OnePlus') ? 'OnePlus' :
-                        userAgent.includes('Oppo') ? 'Oppo' :
-                        userAgent.includes('Vivo') ? 'Vivo' :
-                        'Unknown';
+    const manufacturer = userAgent.includes('Samsung') ? 'samsung' :
+                        userAgent.includes('Xiaomi') ? 'xiaomi' :
+                        userAgent.includes('Huawei') ? 'huawei' :
+                        userAgent.includes('OnePlus') ? 'oneplus' :
+                        userAgent.includes('Oppo') ? 'oppo' :
+                        userAgent.includes('Vivo') ? 'vivo' :
+                        'unknown';
     
-    const deviceInfo = { manufacturer, androidVersion, userAgent };
+    const deviceInfo = { 
+      manufacturer, 
+      version: androidVersion, 
+      sdkInt: androidVersion ? parseInt(androidVersion) : 0,
+      isMIUI: manufacturer === 'xiaomi',
+      isSamsung: manufacturer === 'samsung',
+      needsSpecialHandling: ['xiaomi', 'samsung', 'huawei', 'oneplus', 'oppo', 'vivo'].includes(manufacturer)
+    };
     console.log('🔍 Device info détecté:', deviceInfo);
     return deviceInfo;
   }, []);
@@ -72,7 +86,7 @@ export const useGeolocation = () => {
     return native;
   }, []);
 
-  const checkPermissions = async (): Promise<GeolocationPermissions> => {
+  const checkPermissions = async (): Promise<{ location: string; coarseLocation: string }> => {
     console.log('🚀 useGeolocation: Vérification des permissions...');
     const deviceInfo = getDeviceInfo();
     
@@ -124,36 +138,100 @@ export const useGeolocation = () => {
     }
   };
 
-  const requestPermissions = async (): Promise<GeolocationPermissions> => {
-    console.log('🚀 useGeolocation: Demande de permissions...');
-    const deviceInfo = getDeviceInfo();
+  const handleManufacturerSpecificPermissions = async (deviceInfo: any): Promise<{ granted: boolean; message?: string }> => {
+    const manufacturerName = deviceInfo.manufacturer?.toLowerCase() || 'unknown';
+    
+    console.log('🔧 Gestion spécifique fabricant:', manufacturerName);
+    
+    const messages: Record<string, string> = {
+      xiaomi: 'Sur les appareils Xiaomi/MIUI, accédez à Paramètres → Applications → RunConnect → Permissions → Position et activez "Autoriser tout le temps"',
+      samsung: 'Sur Samsung, vérifiez Paramètres → Applications → RunConnect → Permissions → Localisation et sélectionnez "Autoriser tout le temps"',
+      huawei: 'Sur Huawei/Honor, allez dans Paramètres → Applications → RunConnect → Autorisations → Localisation et activez "Autoriser"',
+      oneplus: 'Sur OnePlus, vérifiez Paramètres → Applications → RunConnect → Autorisations → Localisation',
+      oppo: 'Sur Oppo, accédez à Paramètres → Confidentialité → Gestionnaire d\'autorisations → Localisation → RunConnect',
+      vivo: 'Sur Vivo, allez dans Paramètres → Confidentialité → Gestionnaire d\'autorisations → Localisation → RunConnect'
+    };
+
+    const message = messages[manufacturerName] || 
+      'Accédez aux Paramètres de votre téléphone → Applications → RunConnect → Permissions et activez la géolocalisation';
+
+    return { granted: false, message };
+  };
+
+  const requestPermissions = async (): Promise<{ granted: boolean; message?: string }> => {
+    console.log('🧪 REQUEST PERMISSIONS...');
     
     try {
+      // Sur Android natif avec plugin
+      if (isNative() && (window as any).PermissionsPlugin) {
+        console.log('🧪 Request permissions via plugin Android');
+        
+        const deviceInfo = getDeviceInfo();
+        const isAndroid10Plus = deviceInfo?.sdkInt >= 29;
+        
+        console.log('📱 Info périphérique pour permissions:', {
+          manufacturer: deviceInfo?.manufacturer,
+          sdkInt: deviceInfo?.sdkInt,
+          isAndroid10Plus,
+          needsSpecialHandling: deviceInfo?.needsSpecialHandling
+        });
+        
+        let result: boolean;
+        
+        if (isAndroid10Plus) {
+          console.log('🧪 Android 10+ détecté - demande séquentielle des permissions');
+          
+          // 1. D'abord les permissions de base (FINE_LOCATION, COARSE_LOCATION)
+          result = await (window as any).PermissionsPlugin.forceRequestLocationPermissions();
+          
+          if (result) {
+            // 2. Ensuite la permission background (ACCESS_BACKGROUND_LOCATION)
+            try {
+              const backgroundResult = await (window as any).PermissionsPlugin.forceRequestLocationPermissionsAndroid10();
+              console.log('📱 Résultat permission arrière-plan:', backgroundResult);
+              result = backgroundResult;
+            } catch (bgError) {
+              console.warn('⚠️ Permission arrière-plan échouée, mais permission de base OK:', bgError);
+              // On garde le résultat de base si le background échoue
+            }
+          }
+        } else {
+          result = await (window as any).PermissionsPlugin.forceRequestLocationPermissions();
+        }
+        
+        // Gestion spécifique des fabricants
+        if (!result && deviceInfo?.needsSpecialHandling) {
+          return await handleManufacturerSpecificPermissions(deviceInfo);
+        }
+        
+        return { granted: result };
+      }
+
+      // Fallback Capacitor standard
       if (isNative()) {
-        console.log('📱 Request permissions Capacitor');
+        console.log('📱 Request permissions Capacitor standard');
+        const deviceInfo = getDeviceInfo();
         const result = await Geolocation.requestPermissions();
         console.log('📱 Résultat demande permissions:', result, 'Device:', deviceInfo);
         
         // Si les permissions sont refusées, proposer d'ouvrir les paramètres sur certains fabricants
-        if (result.location === 'denied' && (deviceInfo.manufacturer === 'Xiaomi' || deviceInfo.manufacturer === 'Huawei' || deviceInfo.manufacturer === 'Oppo')) {
-          console.warn('⚠️ useGeolocation: Permissions refusées sur', deviceInfo.manufacturer, '- Redirection vers paramètres recommandée');
+        if (result.location === 'denied' && deviceInfo?.needsSpecialHandling) {
+          return await handleManufacturerSpecificPermissions(deviceInfo);
         }
         
-        return { 
-          location: result.location, 
-          coarseLocation: result.coarseLocation || result.location 
-        };
+        return { granted: result.location === 'granted' };
+      }
+
+      // Sur web
+      console.log('🌐 Request permissions web');
+      if (navigator.geolocation) {
+        return { granted: true };
       } else {
-        console.log('🌐 Request permissions web');
-        if (navigator.geolocation) {
-          return { location: 'granted', coarseLocation: 'granted' };
-        } else {
-          return { location: 'denied', coarseLocation: 'denied' };
-        }
+        return { granted: false, message: 'Géolocalisation non supportée par ce navigateur' };
       }
     } catch (error) {
-      console.log('❌ Erreur request permissions:', error, 'Device:', deviceInfo);
-      return { location: 'denied', coarseLocation: 'denied' };
+      console.log('❌ Erreur request permissions:', error);
+      return { granted: false, message: error instanceof Error ? error.message : 'Erreur inconnue' };
     }
   };
 
@@ -211,7 +289,7 @@ export const useGeolocation = () => {
           const capacitorStartTime = Date.now();
           const result = await Promise.race([
             Geolocation.getCurrentPosition({
-              enableHighAccuracy: deviceInfo.manufacturer !== 'Samsung', // Samsung parfois problématique
+              enableHighAccuracy: deviceInfo.manufacturer !== 'samsung', // Samsung parfois problématique
               timeout: 15000, // Augmenté à 15s
               maximumAge: 300000
             }),
@@ -277,7 +355,7 @@ export const useGeolocation = () => {
                 }
               },
               {
-                enableHighAccuracy: deviceInfo.manufacturer !== 'Samsung', // Samsung parfois problématique avec high accuracy
+                enableHighAccuracy: deviceInfo.manufacturer !== 'samsung', // Samsung parfois problématique avec high accuracy
                 timeout: 15000,
                 maximumAge: 300000
               }

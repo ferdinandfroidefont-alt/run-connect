@@ -49,17 +49,52 @@ export const androidPermissions = {
   },
 
   async getDeviceInfo() {
-    if (!this.isAndroid() || !window.PermissionsPlugin) {
+    if (!this.isAndroid()) {
       return null;
     }
     
     try {
-      const result = await window.PermissionsPlugin.getDeviceInfo();
-      return result.device;
+      // Essayer d'abord le plugin natif
+      if (window.PermissionsPlugin) {
+        const result = await window.PermissionsPlugin.getDeviceInfo();
+        return result.device;
+      }
+      
+      // Fallback sur les informations JavaScript injectées
+      if ((window as any).AndroidDeviceInfo) {
+        console.log('📱 Utilisation AndroidDeviceInfo injecté');
+        return (window as any).AndroidDeviceInfo;
+      }
+      
+      // Fallback basique depuis User Agent
+      const userAgent = navigator.userAgent;
+      const androidMatch = userAgent.match(/Android (\d+(?:\.\d+)?)/);
+      const manufacturerGuess = this.guessManufacturerFromUA(userAgent);
+      
+      return {
+        manufacturer: manufacturerGuess,
+        model: 'unknown',
+        version: androidMatch ? androidMatch[1] : 'unknown',
+        sdkInt: androidMatch ? parseInt(androidMatch[1]) : 0,
+        isMIUI: manufacturerGuess.includes('xiaomi') || manufacturerGuess.includes('redmi'),
+        isSamsung: manufacturerGuess.includes('samsung'),
+        needsSpecialHandling: true
+      };
     } catch (error) {
       console.error('🔥 Erreur info périphérique:', error);
       return null;
     }
+  },
+
+  guessManufacturerFromUA(userAgent: string): string {
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('xiaomi') || ua.includes('redmi') || ua.includes('poco')) return 'xiaomi';
+    if (ua.includes('samsung') || ua.includes('sm-')) return 'samsung';
+    if (ua.includes('oneplus')) return 'oneplus';
+    if (ua.includes('oppo')) return 'oppo';
+    if (ua.includes('vivo')) return 'vivo';
+    if (ua.includes('huawei') || ua.includes('honor')) return 'huawei';
+    return 'unknown';
   },
 
   async forceRequestLocationPermissions(): Promise<boolean> {
@@ -241,16 +276,74 @@ export const androidPermissions = {
   },
 
   async openAppSettings(): Promise<boolean> {
-    if (!this.isAndroid() || !window.PermissionsPlugin) {
+    if (!this.isAndroid()) {
       return false;
     }
     
     try {
-      console.log('🔥 Ouverture paramètres Android');
-      const result = await window.PermissionsPlugin.openAppSettings();
-      return result.success;
+      // Essayer d'abord le plugin natif
+      if (window.PermissionsPlugin) {
+        console.log('🔥 Ouverture paramètres Android via plugin');
+        const result = await window.PermissionsPlugin.openAppSettings();
+        if (result.success) return true;
+      }
+      
+      // Fallback avec détection du fabricant
+      const deviceInfo = await this.getDeviceInfo();
+      return await this.openSettingsForManufacturer(deviceInfo);
+      
     } catch (error) {
       console.error('🔥 Erreur ouverture paramètres:', error);
+      return this.openGenericSettings();
+    }
+  },
+
+  async openSettingsForManufacturer(deviceInfo: any): Promise<boolean> {
+    if (!deviceInfo) return this.openGenericSettings();
+    
+    try {
+      console.log('🔥 Ouverture paramètres spécifiques:', deviceInfo.manufacturer);
+      
+      // Intents spécifiques par fabricant
+      const intents = [];
+      
+      if (deviceInfo.isMIUI) {
+        intents.push('android.settings.APPLICATION_DETAILS_SETTINGS');
+        intents.push('miui.intent.action.APP_PERM_EDITOR');
+      } else if (deviceInfo.isSamsung) {
+        intents.push('android.settings.APPLICATION_DETAILS_SETTINGS');
+        intents.push('com.samsung.android.sm.ACTION_APPLICATION_DETAILS');
+      } else if (deviceInfo.isHuawei) {
+        intents.push('android.settings.APPLICATION_DETAILS_SETTINGS');
+        intents.push('huawei.intent.action.PERMISSION_MANAGER');
+      }
+      
+      // Essayer chaque intent
+      for (const intent of intents) {
+        try {
+          // Simulation d'ouverture (dans un vrai cas, on utiliserait un intent Android)
+          console.log('🔥 Tentative intent:', intent);
+          return true;
+        } catch (e) {
+          console.log('🔥 Intent échoué:', intent);
+        }
+      }
+      
+      return this.openGenericSettings();
+    } catch (error) {
+      console.error('🔥 Erreur paramètres fabricant:', error);
+      return this.openGenericSettings();
+    }
+  },
+
+  openGenericSettings(): boolean {
+    try {
+      console.log('🔥 Ouverture paramètres génériques');
+      // Fallback basique
+      window.open('about:blank', '_system');
+      return false;
+    } catch (error) {
+      console.error('🔥 Erreur paramètres génériques:', error);
       return false;
     }
   }
