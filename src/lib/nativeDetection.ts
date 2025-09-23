@@ -1,118 +1,70 @@
 import { Capacitor } from '@capacitor/core';
 
-// DÉTECTION NATIVE ULTRA ROBUSTE POUR AAB/GOOGLE PLAY
+// DÉTECTION NATIVE SIMPLIFIÉE ET ROBUSTE POUR AAB
 export const isReallyNative = (): boolean => {
   try {
-    // 🎯 PRIORITÉ 1: Flag forcé explicite
+    // 1. Flag forcé explicite (priorité absolue)
     if ((window as any).CapacitorForceNative === true) {
-      console.log('🔍✅ Mode natif forcé détecté');
+      console.log('✅ Mode natif forcé détecté');
       return true;
     }
 
-    // 🎯 PRIORITÉ 2: Protocoles natifs
-    const url = window.location.href.toLowerCase();
+    // 2. Protocoles natifs évidents
     const protocol = window.location.protocol.toLowerCase();
-    
-    if (protocol === 'capacitor:' || 
-        protocol === 'ionic:' || 
-        protocol === 'file:' ||
-        url.startsWith('capacitor://') ||
-        url.startsWith('ionic://') ||
-        document.URL.startsWith('file://')) {
-      console.log('🔍✅ Protocole natif détecté:', protocol);
+    if (protocol === 'capacitor:' || protocol === 'ionic:' || protocol === 'file:') {
+      console.log('✅ Protocole natif:', protocol);
       return true;
     }
 
-    // 🎯 PRIORITÉ 3: Interface Android native
-    if ((window as any).AndroidInterface || 
-        (window as any).Android || 
-        (window as any).webkit?.messageHandlers) {
-      console.log('🔍✅ Interface native détectée');
+    // 3. Interface Android native
+    if ((window as any).AndroidInterface || (window as any).Android) {
+      console.log('✅ Interface Android native détectée');
       return true;
     }
 
-    // 🎯 PRIORITÉ 4: Capacitor plugins natifs
-    const hasCapacitorPlugins = !!(window as any).CapacitorPlugins || 
-                               !!(window as any).Capacitor?.PluginRegistry;
-    if (hasCapacitorPlugins) {
-      console.log('🔍✅ Plugins Capacitor natifs détectés');
-      return true;
-    }
-
-    // 🎯 PRIORITÉ 5: Capacitor API native
+    // 4. Capacitor API (simple et direct)
     let capacitorNative = false;
     try {
-      if ((window as any).Capacitor && typeof Capacitor.isNativePlatform === 'function') {
-        capacitorNative = Capacitor.isNativePlatform();
-      }
+      capacitorNative = Capacitor.isNativePlatform();
     } catch (error) {
-      console.log('🔍 Erreur Capacitor.isNativePlatform:', error);
+      // Ignore errors, continue with other checks
     }
 
-    // 🎯 PRIORITÉ 6: User Agent Analysis (spécial AAB)
+    // 5. User Agent Android + WebView (spécial AAB)
     const userAgent = navigator.userAgent.toLowerCase();
     const isAndroidUserAgent = userAgent.includes('android');
-    const hasChrome = userAgent.includes('chrome');
-    const isWebView = userAgent.includes('wv') || userAgent.includes('webview');
+    const isWebView = userAgent.includes('wv') || 
+                     userAgent.includes('webview') ||
+                     (userAgent.includes('version/') && userAgent.includes('chrome'));
     
-    // Pour AAB: Android + WebView + (pas Chrome standard OR Chrome dans WebView)
-    const isAABContext = isAndroidUserAgent && (isWebView || !hasChrome || 
-                        userAgent.includes('version/') && hasChrome);
+    // Pour AAB: Android + WebView = probablement natif
+    const isAABContext = isAndroidUserAgent && isWebView;
 
-    // 🎯 PRIORITÉ 7: Variables d'environnement natives
-    const hasNativeEnv = !!(window as any).cordova || 
-                        !!(window as any).PhoneGap || 
-                        !!(window as any).phonegap ||
-                        !!(window as any).device?.platform;
+    // 6. Variables d'environnement natives connues
+    const hasNativeEnv = !!(window as any).cordova || !!(window as any).device?.platform;
 
-    // 🎯 ANALYSE FINALE
+    // RÉSULTAT FINAL
     const isNative = capacitorNative || isAABContext || hasNativeEnv;
     
-    console.log('🔍 ANALYSE COMPLÈTE DÉTECTION NATIVE:');
-    console.log('- Protocole:', protocol);
-    console.log('- URL:', url);
-    console.log('- AndroidInterface:', !!(window as any).AndroidInterface);
-    console.log('- CapacitorPlugins:', hasCapacitorPlugins);
+    console.log('🔍 DÉTECTION NATIVE SIMPLIFIÉE:');
     console.log('- Capacitor.isNativePlatform():', capacitorNative);
-    console.log('- UserAgent Android:', isAndroidUserAgent);
-    console.log('- UserAgent Chrome:', hasChrome);
-    console.log('- UserAgent WebView:', isWebView);
-    console.log('- Contexte AAB probable:', isAABContext);
-    console.log('- Env natives (Cordova etc):', hasNativeEnv);
-    console.log('- 🎯 RÉSULTAT FINAL NATIF:', isNative);
+    console.log('- Android UserAgent:', isAndroidUserAgent);
+    console.log('- WebView détectée:', isWebView);
+    console.log('- Contexte AAB:', isAABContext);
+    console.log('- 🎯 RÉSULTAT:', isNative);
 
     return isNative;
     
   } catch (error) {
-    console.error('🔍❌ Erreur détection native:', error);
-    // En cas d'erreur, assume qu'on est natif si Android détecté
-    const fallback = navigator.userAgent.toLowerCase().includes('android');
-    console.log('🔍 Fallback Android:', fallback);
-    return fallback;
+    console.error('❌ Erreur détection native:', error);
+    // Fallback: si Android détecté, assume natif
+    return navigator.userAgent.toLowerCase().includes('android');
   }
 };
 
-// ATTENDRE QUE CAPACITOR SOIT PRÊT AVANT DÉTECTION
-export const waitForCapacitorAndDetect = async (maxWait: number = 3000): Promise<boolean> => {
-  return new Promise((resolve) => {
-    let attempts = 0;
-    const maxAttempts = maxWait / 100;
-    
-    const checkCapacitor = () => {
-      attempts++;
-      
-      // Vérifier si Capacitor est disponible
-      const capacitorReady = !!(window as any).Capacitor;
-      
-      if (capacitorReady || attempts >= maxAttempts) {
-        const isNative = isReallyNative();
-        console.log(`🔍 Détection après ${attempts} tentatives:`, isNative);
-        resolve(isNative);
-      } else {
-        setTimeout(checkCapacitor, 100);
-      }
-    };
-    
-    checkCapacitor();
-  });
+// Version simplifiée de l'attente Capacitor
+export const waitForCapacitorAndDetect = async (maxWait: number = 2000): Promise<boolean> => {
+  // Attendre un peu que Capacitor se charge
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return isReallyNative();
 };

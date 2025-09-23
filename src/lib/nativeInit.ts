@@ -1,11 +1,11 @@
 import { isReallyNative } from './nativeDetection';
+import { useState, useEffect } from 'react';
 
-// SYSTÈME D'INITIALISATION NATIVE GLOBAL
+// SYSTÈME D'INITIALISATION NATIVE SIMPLIFIÉ
 class NativeManager {
   private static instance: NativeManager;
   private isNativeConfirmed: boolean | null = null;
   private initPromise: Promise<boolean> | null = null;
-  private listeners: ((isNative: boolean) => void)[] = [];
 
   private constructor() {}
 
@@ -17,53 +17,44 @@ class NativeManager {
   }
 
   public async ensureNativeStatus(): Promise<boolean> {
+    // Si déjà déterminé, retourner immédiatement
     if (this.isNativeConfirmed !== null) {
       return this.isNativeConfirmed;
     }
 
+    // Si init en cours, attendre
     if (this.initPromise) {
       return this.initPromise;
     }
 
+    // Démarrer l'init
     this.initPromise = this.performNativeDetection();
     return this.initPromise;
   }
 
   private async performNativeDetection(): Promise<boolean> {
-    console.log('🎯 INITIALISATION DÉTECTION NATIVE GLOBALE...');
+    console.log('🎯 INITIALISATION NATIVE SIMPLIFIÉE...');
 
-    // Attendre un peu que tout soit chargé
-    await new Promise(resolve => setTimeout(resolve, 200));
+    try {
+      // Attendre un peu que Capacitor soit prêt
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-    const isNative = isReallyNative();
-    
-    this.isNativeConfirmed = isNative;
-    
-    if (isNative) {
-      // Définir le flag global
-      (window as any).CapacitorForceNative = true;
-      console.log('🎯✅ STATUT NATIF CONFIRMÉ GLOBALEMENT');
-    } else {
-      console.log('🎯ℹ️ STATUT WEB CONFIRMÉ GLOBALEMENT');
-    }
-
-    // Notifier tous les listeners
-    this.listeners.forEach(listener => {
-      try {
-        listener(isNative);
-      } catch (error) {
-        console.error('Erreur listener native status:', error);
+      const isNative = isReallyNative();
+      this.isNativeConfirmed = isNative;
+      
+      if (isNative) {
+        (window as any).CapacitorForceNative = true;
+        console.log('🎯✅ MODE NATIF CONFIRMÉ');
+      } else {
+        console.log('🎯ℹ️ MODE WEB CONFIRMÉ');
       }
-    });
 
-    return isNative;
-  }
-
-  public onNativeStatusReady(callback: (isNative: boolean) => void): void {
-    if (this.isNativeConfirmed !== null) {
-      callback(this.isNativeConfirmed);
-    } else {
-      this.listeners.push(callback);
+      return isNative;
+    } catch (error) {
+      console.error('❌ Erreur init native:', error);
+      // En cas d'erreur, assume web mais permettre retry
+      this.isNativeConfirmed = false;
+      return false;
     }
   }
 
@@ -72,40 +63,37 @@ class NativeManager {
   }
 
   public forceNativeMode(): void {
-    console.log('🎯🔧 FORCE MODE NATIF DEMANDÉ');
+    console.log('🎯🔧 FORCE MODE NATIF');
     this.isNativeConfirmed = true;
     (window as any).CapacitorForceNative = true;
-    
-    this.listeners.forEach(listener => {
-      try {
-        listener(true);
-      } catch (error) {
-        console.error('Erreur listener force native:', error);
-      }
-    });
+  }
+
+  public reset(): void {
+    console.log('🎯🔄 RESET NATIVE MANAGER');
+    this.isNativeConfirmed = null;
+    this.initPromise = null;
   }
 }
 
 export const nativeManager = NativeManager.getInstance();
 
-// Hook utilitaire pour les composants
+// Hook utilitaire simplifié
 export const useNativeStatus = () => {
   const [isNative, setIsNative] = useState<boolean | null>(null);
   
   useEffect(() => {
     const checkStatus = async () => {
-      const native = await nativeManager.ensureNativeStatus();
-      setIsNative(native);
+      try {
+        const native = await nativeManager.ensureNativeStatus();
+        setIsNative(native);
+      } catch (error) {
+        console.error('❌ Erreur useNativeStatus:', error);
+        setIsNative(false);
+      }
     };
     
     checkStatus();
-    
-    // Écouter les changements
-    nativeManager.onNativeStatusReady(setIsNative);
   }, []);
   
   return isNative;
 };
-
-// Import React pour le hook
-import { useState, useEffect } from 'react';

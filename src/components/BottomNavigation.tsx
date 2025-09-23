@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { SimplePermissionsTest } from './SimplePermissionsTest';
 const navItems = [{
   path: '/',
   emoji: '🗺️',
@@ -100,7 +101,7 @@ export const BottomNavigation = () => {
       {/* Nouvelle barre du bas - couvre tout l'espace */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
         <div className="flex items-center justify-center py-2 min-h-[40px]">
-          {/* Barre vide pour l'instant */}
+          <SimplePermissionsTest />
         </div>
       </nav>
       
