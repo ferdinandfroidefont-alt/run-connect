@@ -66,7 +66,7 @@ jobs:
 
           android {
             namespace "app.runconnect"
-            compileSdk 34
+            compileSdk 33
 
             signingConfigs {
               debug {
@@ -74,12 +74,16 @@ jobs:
                 storePassword System.getenv("STORE_PASSWORD") ?: "password"
                 keyAlias      System.getenv("KEY_ALIAS")      ?: "upload"
                 keyPassword   System.getenv("KEY_PASSWORD")   ?: "password"
+                v1SigningEnabled true
+                v2SigningEnabled true
               }
               release {
                 storeFile file("${rootDir}/keystore.jks")
                 storePassword System.getenv("STORE_PASSWORD") ?: "password"
                 keyAlias      System.getenv("KEY_ALIAS")      ?: "upload"
                 keyPassword   System.getenv("KEY_PASSWORD")   ?: "password"
+                v1SigningEnabled true
+                v2SigningEnabled true
               }
             }
 
@@ -188,15 +192,39 @@ jobs:
       # ─────────────────────────────────────────────────────────────
       - name: Recreate keystore from secret
         run: |
-          # le dossier existe déjà, on écrit juste le keystore
+          # Decode keystore from base64
           echo "$KEYSTORE_BASE64" | base64 -d > android-webview/keystore.jks
           ls -lh android-webview/keystore.jks
+          
+          # Fix "Tag number over 30" error by converting to proper JKS format
+          if ! keytool -list -keystore android-webview/keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -storetype JKS > /dev/null 2>&1; then
+            echo "Converting keystore to JKS format for compatibility..."
+            # Try PKCS12 first
+            if keytool -list -keystore android-webview/keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -storetype PKCS12 > /dev/null 2>&1; then
+              keytool -importkeystore \
+                -srckeystore android-webview/keystore.jks \
+                -srcstorepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+                -srcstoretype PKCS12 \
+                -destkeystore android-webview/keystore_jks.jks \
+                -deststorepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+                -deststoretype JKS \
+                -destkeypass "${{ secrets.KEY_ALIAS_PASSWORD }}" \
+                -srcalias "${{ secrets.KEY_ALIAS }}" \
+                -destalias "${{ secrets.KEY_ALIAS }}"
+              mv android-webview/keystore_jks.jks android-webview/keystore.jks
+            fi
+          fi
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
-      # (Optionnel) Affiche la SHA1 pour sanity-check dans les logs
-      - name: Print keystore SHA1
+      # Verify keystore is readable and print SHA1
+      - name: Verify keystore and print SHA1
         run: |
+          echo "Keystore info:"
+          keytool -list -keystore android-webview/keystore.jks \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -alias "${{ secrets.KEY_ALIAS }}"
+          echo "SHA1 fingerprint:"
           keytool -list -v -keystore android-webview/keystore.jks \
             -alias "${{ secrets.KEY_ALIAS }}" \
             -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
