@@ -25,7 +25,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
     private static final int REQ_LOCATION = 1001;
     private WebView webView;
-    private final String START_URL = "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true&forceNative=true";
+    // URL configurée dynamiquement - à changer pour la production
+    private final String START_URL = System.getProperty("app.start.url", "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true&forceNative=true");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +80,8 @@ public class MainActivity extends AppCompatActivity {
                 
                 // Injecter les flags dès le début du chargement
                 injectAABFlags(view);
+                injectPermissionsState(view);
+                injectDeviceInfo(view);
             }
             
             @Override
@@ -86,11 +89,13 @@ public class MainActivity extends AppCompatActivity {
                 super.onPageFinished(view, url);
                 Log.d(TAG, "✅ Page loaded successfully: " + url);
                 
-                // Réinjecter les flags à la fin pour être sûr
+                // Réinjecter les flags après le chargement complet (double sécurité)
                 injectAABFlags(view);
-                
-                // Vérifier et injecter l'état des permissions
                 injectPermissionsState(view);
+                injectDeviceInfo(view);
+                
+                // Notifier JavaScript que l'injection est terminée
+                view.evaluateJavascript("window.androidInjectionComplete = true; console.log('🚀 Android injection completed');", null);
             }
         });
 
@@ -137,25 +142,56 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void injectAABFlags(WebView view) {
+        Log.d(TAG, "🚀 Injection des flags AAB");
+        
         String jsCode = "window.CapacitorForceNative = true; " +
                        "window.isAABBuild = true; " +
                        "window.AndroidNativeEnvironment = true; " +
-                       "console.log('🚀 AAB: Flags natifs injectés par MainActivity');";
+                       "window.capacitorReady = true; " +
+                       "console.log('🚀 Flags AAB injectés:', {CapacitorForceNative: window.CapacitorForceNative, isAABBuild: window.isAABBuild, AndroidNativeEnvironment: window.AndroidNativeEnvironment, capacitorReady: window.capacitorReady});";
+        
         view.evaluateJavascript(jsCode, null);
-        Log.d(TAG, "🔥 Flags AAB injectés");
     }
     
     private void injectPermissionsState(WebView view) {
         boolean hasLocation = hasLocationPermission();
         boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        boolean hasContacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+        
+        // Détecter si les permissions ont été refusées définitivement
+        boolean locationPermanentlyDenied = !hasLocation && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        boolean cameraPermanentlyDenied = !hasCamera && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA);
+        
+        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Contacts: " + hasContacts);
         
         String jsCode = "window.androidPermissions = {" +
-                       "location: " + hasLocation + ", " +
-                       "camera: " + hasCamera + ", " +
+                       "location: '" + (hasLocation ? "granted" : "denied") + "', " +
+                       "locationPermanentlyDenied: " + locationPermanentlyDenied + ", " +
+                       "camera: '" + (hasCamera ? "granted" : "denied") + "', " +
+                       "cameraPermanentlyDenied: " + cameraPermanentlyDenied + ", " +
+                       "contacts: '" + (hasContacts ? "granted" : "denied") + "', " +
                        "timestamp: " + System.currentTimeMillis() + "}; " +
                        "console.log('🔐 Permissions Android injectées:', window.androidPermissions);";
+        
         view.evaluateJavascript(jsCode, null);
-        Log.d(TAG, "🔐 État des permissions injecté - Location: " + hasLocation + ", Camera: " + hasCamera);
+    }
+
+    private void injectDeviceInfo(WebView view) {
+        String manufacturer = Build.MANUFACTURER;
+        String model = Build.MODEL;
+        String androidVersion = Build.VERSION.RELEASE;
+        int sdkVersion = Build.VERSION.SDK_INT;
+        
+        Log.d(TAG, "🚀 Injection device info - " + manufacturer + " " + model + " Android " + androidVersion + " (SDK " + sdkVersion + ")");
+        
+        String jsCode = "window.androidDeviceInfo = {" +
+                       "manufacturer: '" + manufacturer + "', " +
+                       "model: '" + model + "', " +
+                       "androidVersion: '" + androidVersion + "', " +
+                       "sdkVersion: " + sdkVersion + "}; " +
+                       "console.log('🚀 Device info Android injecté:', window.androidDeviceInfo);";
+        
+        view.evaluateJavascript(jsCode, null);
     }
 
     // ✅ Autoriser retour arrière dans la WebView
@@ -172,28 +208,29 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQ_LOCATION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "✅ Location permission granted - updating WebView");
-                // Réinjecter les permissions et recharger si nécessaire
-                injectPermissionsState(webView);
-                
-                // Notifier JavaScript que les permissions ont changé
-                String jsCode = "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', {" +
-                               "detail: { location: true, timestamp: " + System.currentTimeMillis() + " }})); " +
-                               "console.log('🔐 Permissions mises à jour - Location accordée');";
-                webView.evaluateJavascript(jsCode, null);
-                
-                // Optionnel: recharger la page pour relancer la géolocalisation
-                webView.reload();
-            } else {
-                Log.w(TAG, "❌ Location permission denied");
-                // Informer JavaScript du refus
-                String jsCode = "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', {" +
-                               "detail: { location: false, timestamp: " + System.currentTimeMillis() + " }})); " +
-                               "console.log('🚫 Permissions mises à jour - Location refusée');";
-                webView.evaluateJavascript(jsCode, null);
-            }
+        
+        Log.d(TAG, "🚀 onRequestPermissionsResult: " + requestCode + " - " + java.util.Arrays.toString(permissions));
+        
+        // Analyser les résultats
+        for (int i = 0; i < permissions.length; i++) {
+            String permission = permissions[i];
+            int result = grantResults[i];
+            boolean granted = result == PackageManager.PERMISSION_GRANTED;
+            boolean shouldShow = ActivityCompat.shouldShowRequestPermissionRationale(this, permission);
+            
+            Log.d(TAG, "🚀 Permission " + permission + ": granted=" + granted + ", shouldShow=" + shouldShow);
+        }
+        
+        // Mettre à jour l'état des permissions dans le WebView
+        if (webView != null) {
+            injectPermissionsState(webView);
+            injectDeviceInfo(webView);
+            
+            // Notifier JavaScript du changement de permissions
+            webView.evaluateJavascript("window.androidPermissionsUpdated = true; " +
+                                     "if (window.onAndroidPermissionsChanged) { window.onAndroidPermissionsChanged(window.androidPermissions); } " +
+                                     "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: window.androidPermissions })); " +
+                                     "console.log('🚀 Permissions updated, triggering callbacks');", null);
         }
     }
 }
