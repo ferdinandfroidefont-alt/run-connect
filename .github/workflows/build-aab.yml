@@ -107,32 +107,8 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="app.runconnect">
-
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-              <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-
-              <application
-                  android:label="RunConnect"
-                  android:theme="@style/Theme.RunConnect"
-                  android:usesCleartextTraffic="false">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:configChanges="orientation|screenSize|keyboardHidden"
-                      android:hardwareAccelerated="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
+          # ✅ Copier le VRAI AndroidManifest.xml du projet
+          cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
@@ -150,10 +126,8 @@ jobs:
           </resources>
           EOF
 
-          cat > android-webview/app/src/main/java/app/runconnect/MainActivity.java <<'EOF'
-          // ⚠️ Ton code MainActivity.java complet doit être ici.
-          // Tu peux le copier depuis ton projet local et coller ici si besoin.
-          EOF
+          # ✅ Copier le VRAI MainActivity.java du projet  
+          cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/runconnect/MainActivity.java
 
       - name: 🔐 Restaurer le keystore
         working-directory: android-webview

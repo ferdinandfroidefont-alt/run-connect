@@ -23,7 +23,7 @@ import androidx.core.view.WindowCompat;
 public class MainActivity extends AppCompatActivity {
     private static final int REQ_LOCATION = 1001;
     private WebView webView;
-    private final String START_URL = "https://run-connect.lovable.app";
+    private final String START_URL = "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -9,9 +9,19 @@ export const useGeolocation = () => {
 
   // Détection native simplifiée directe
   const isNative = () => {
-    return Capacitor.isNativePlatform() || 
+    const native = Capacitor.isNativePlatform() || 
            window.location.protocol === 'capacitor:' ||
            (navigator.userAgent.includes('Android') && navigator.userAgent.includes('wv'));
+    
+    console.log('🔍 DÉTECTION PLATEFORME:', {
+      'Capacitor.isNativePlatform()': Capacitor.isNativePlatform(),
+      'window.location.protocol': window.location.protocol,
+      'navigator.userAgent': navigator.userAgent,
+      'URL actuelle': window.location.href,
+      'Résultat isNative': native
+    });
+    
+    return native;
   };
 
   const checkPermissions = async (): Promise<GeolocationPermissions> => {
