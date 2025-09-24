@@ -112,6 +112,16 @@ jobs:
           }
           EOF
 
+          # 🎯 Créer gradle-wrapper.properties avec la bonne version
+          mkdir -p android-webview/gradle/wrapper
+          cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
           cat > android-webview/gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
           android.useAndroidX=true
@@ -157,7 +167,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         with:
-          gradle-version: 8.6
+          gradle-version: 8.7
           build-root-directory: android-webview
           arguments: :app:bundleRelease
 
