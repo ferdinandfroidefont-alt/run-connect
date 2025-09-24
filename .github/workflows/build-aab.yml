@@ -75,7 +75,6 @@ jobs:
               versionCode 43
               versionName "1.3"
               
-              // Configuration pour l'AAB production
               buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
               buildConfigField "boolean", "IS_AAB_BUILD", "true"
             }
@@ -95,7 +94,7 @@ jobs:
               sourceCompatibility JavaVersion.VERSION_17
               targetCompatibility JavaVersion.VERSION_17
             }
-            
+
             buildFeatures {
               buildConfig true
             }
@@ -112,7 +111,6 @@ jobs:
           }
           EOF
 
-          # 🎯 Créer gradle-wrapper.properties avec la bonne version
           mkdir -p android-webview/gradle/wrapper
           cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
           distributionBase=GRADLE_USER_HOME
@@ -128,7 +126,6 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # ✅ Copier le VRAI AndroidManifest.xml du projet
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
@@ -147,10 +144,8 @@ jobs:
           </resources>
           EOF
 
-          # ✅ Copier le VRAI MainActivity.java du projet  
           cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
-          
-          # 🔧 Modifier MainActivity.java pour utiliser BuildConfig en production
+
           sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
 
       - name: 🔐 Restaurer le keystore
@@ -160,16 +155,16 @@ jobs:
         run: |
           echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
 
+      # ✅ Bloc corrigé — Build avec ./gradlew au lieu de l'action officielle
       - name: 🔨 Build AAB (Gradle)
-        uses: gradle/gradle-build-action@v2
+        working-directory: android-webview
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
-        with:
-          gradle-version: 8.7
-          build-root-directory: android-webview
-          arguments: :app:bundleRelease
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:bundleRelease
 
       - name: 📦 Télécharger l'AAB
         uses: actions/upload-artifact@v4
