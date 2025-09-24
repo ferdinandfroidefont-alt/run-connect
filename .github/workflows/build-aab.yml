@@ -74,7 +74,6 @@ jobs:
               targetSdk 35
               versionCode 43
               versionName "1.3"
-              
               buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
               buildConfigField "boolean", "IS_AAB_BUILD", "true"
             }
@@ -145,7 +144,6 @@ jobs:
           EOF
 
           cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
-
           sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
 
       - name: 🔐 Restaurer le keystore
@@ -155,7 +153,6 @@ jobs:
         run: |
           echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
 
-      # ✅ Bloc corrigé — Build avec ./gradlew au lieu de l'action officielle
       - name: 🔨 Build AAB (Gradle)
         working-directory: android-webview
         env:
@@ -163,6 +160,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         run: |
+          ./gradlew wrapper --gradle-version 8.7
           chmod +x ./gradlew
           ./gradlew :app:bundleRelease
 
