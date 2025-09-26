@@ -1,4 +1,4 @@
-package app.lovable.runconnect;
+package app.runconnect;
 
 import android.Manifest;
 import android.content.Context;
