@@ -32,6 +32,8 @@ jobs:
           mkdir -p android-webview/app/src/main/java/app/lovable/runconnect
           mkdir -p android-webview/app/src/main/res/values
           mkdir -p android-webview/app/src/main/res/xml
+          mkdir -p android-webview/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android-webview/app/src/main/res/drawable
 
           cat > android-webview/settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -112,7 +114,7 @@ jobs:
           }
           EOF
 
-          # 🎯 Créer gradle-wrapper.properties avec la bonne version
+          # 🎯 Créer gradle-wrapper.properties
           mkdir -p android-webview/gradle/wrapper
           cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
           distributionBase=GRADLE_USER_HOME
@@ -128,33 +130,19 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # ✅ Copier AndroidManifest.xml et MainActivity.java réels
+          # ✅ Copier AndroidManifest et MainActivity
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
           cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
 
-          # 🔧 Modifier START_URL dynamiquement (production)
+          # 🔧 Modifier START_URL dynamiquement
           sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
 
-          # ✅ Créer styles.xml avec AppTheme manquant
+          # ✅ Créer styles.xml
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
-              <!-- Thème par défaut -->
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="android:statusBarColor">@android:color/transparent</item>
-                  <item name="android:navigationBarColor">@android:color/transparent</item>
-              </style>
-
-              <!-- Variante lancement -->
-              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme">
-                  <item name="android:windowBackground">@android:color/white</item>
-              </style>
-
-              <!-- Ton ancien thème -->
-              <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="android:statusBarColor">@android:color/transparent</item>
-                  <item name="android:navigationBarColor">@android:color/transparent</item>
-                  <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-              </style>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar"/>
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme"/>
+              <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar"/>
           </resources>
           EOF
 
@@ -165,13 +153,22 @@ jobs:
           </resources>
           EOF
 
-          # ✅ Créer file_paths.xml attendu par FileProvider
-          mkdir -p android-webview/app/src/main/res/xml
+          # ✅ Créer file_paths.xml
           cat > android-webview/app/src/main/res/xml/file_paths.xml <<'EOF'
           <paths xmlns:android="http://schemas.android.com/apk/res/android">
               <external-path name="external_files" path="." />
           </paths>
           EOF
+
+          # ✅ Icônes minimales
+          cat > android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@android:color/white"/>
+              <foreground android:drawable="@android:color/holo_blue_dark"/>
+          </adaptive-icon>
+          EOF
+
+          cp android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
       - name: 🔐 Restaurer le keystore
         working-directory: android-webview
