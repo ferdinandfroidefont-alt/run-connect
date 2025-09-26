@@ -74,6 +74,22 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "📍 Geolocation permission requested for: " + origin);
                 callback.invoke(origin, true, false); // toujours autoriser
             }
+        });
+
+        // ✅ Gérer redirection Google OAuth et lifecycle des pages
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                String host = uri.getHost() != null ? uri.getHost() : "";
+                String url = uri.toString();
+                if (host.contains("accounts.google.com") || url.contains("oauth")) {
+                    CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
+                    tabs.launchUrl(MainActivity.this, uri);
+                    return true;
+                }
+                return false; // continue dans le WebView
+            }
             
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
@@ -104,22 +120,6 @@ public class MainActivity extends AppCompatActivity {
                 
                 // Notifier JavaScript que l'injection est terminée
                 view.evaluateJavascript("window.androidInjectionComplete = true; console.log('🚀 Android injection completed');", null);
-            }
-        });
-
-        // ✅ Gérer redirection Google OAuth en dehors de WebView
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String host = uri.getHost() != null ? uri.getHost() : "";
-                String url = uri.toString();
-                if (host.contains("accounts.google.com") || url.contains("oauth")) {
-                    CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
-                    tabs.launchUrl(MainActivity.this, uri);
-                    return true;
-                }
-                return false; // continue dans le WebView
             }
         });
 
