@@ -74,7 +74,6 @@ jobs:
               targetSdk 35
               versionCode 43
               versionName "1.3"
-              
               buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
               buildConfigField "boolean", "IS_AAB_BUILD", "true"
             }
@@ -111,7 +110,6 @@ jobs:
           }
           EOF
 
-          # 🎯 Créer gradle-wrapper.properties avec la bonne version
           mkdir -p android-webview/gradle/wrapper
           cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
           distributionBase=GRADLE_USER_HOME
@@ -127,14 +125,11 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # ✅ Copier le AndroidManifest.xml et MainActivity.java réels
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
           cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
 
-          # 🔧 Modifier START_URL dynamiquement (production)
           sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
 
-          # ✅ Créer styles et strings XML
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
             <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar">
@@ -166,7 +161,9 @@ jobs:
           ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         run: |
           echo "🎯 Création du wrapper gradle si manquant..."
-          [ -f ./gradlew ] || ./gradle wrapper --gradle-version 8.7
+          if [ ! -f ./gradlew ]; then
+            gradle wrapper --gradle-version 8.7
+          fi
           chmod +x ./gradlew
           ./gradlew :app:bundleRelease
 
