@@ -715,7 +715,7 @@ export default function MySessions() {
     <>
       {/* Petite barre noire en haut uniquement pour MySessions */}
       <div className="w-full h-6 bg-background"></div>
-      <div className="container mx-auto px-4 py-4 pb-20 h-screen flex flex-col">
+      <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
         {/* Fixed Header Only */}
         <div className="flex-shrink-0 bg-background z-10 space-y-4 mb-4 pb-4">
           <div className="flex items-center justify-center">
@@ -756,7 +756,7 @@ export default function MySessions() {
         </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{height: 'calc(100vh - 12rem)'}}>
         {currentView === 'sessions' ? (
           // Sessions View
           loading ? (
