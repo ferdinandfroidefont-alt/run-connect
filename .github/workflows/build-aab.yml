@@ -29,7 +29,7 @@ jobs:
       - name: 🛠️ Créer projet WebView Android minimal
         run: |
           set -e
-          mkdir -p android-webview/app/src/main/java/app/lovable/runconnect
+          mkdir -p android-webview/app/src/main/java/app/runconnect
           mkdir -p android-webview/app/src/main/res/values
           mkdir -p android-webview/app/src/main/res/xml
           mkdir -p android-webview/app/src/main/res/mipmap-anydpi-v26
@@ -53,7 +53,7 @@ jobs:
           plugins { id 'com.android.application' }
 
           android {
-            namespace "app.lovable.runconnect"
+            namespace "app.runconnect"
             compileSdk 35
 
             signingConfigs {
@@ -72,7 +72,7 @@ jobs:
             }
 
             defaultConfig {
-              applicationId "app.lovable.runconnect"
+              applicationId "app.runconnect"
               minSdk 24
               targetSdk 35
               versionCode 43
@@ -132,10 +132,10 @@ jobs:
 
           # ✅ Copier AndroidManifest et MainActivity
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
-          cp android/app/src/main/java/app/lovable/runconnect/MainActivity.java android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
+          cp android/app/src/main/java/app/runconnect/MainActivity.java android-webview/app/src/main/java/app/runconnect/MainActivity.java
 
           # 🔧 Modifier START_URL dynamiquement
-          sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/lovable/runconnect/MainActivity.java
+          sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
 
           # ✅ Créer styles.xml
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
