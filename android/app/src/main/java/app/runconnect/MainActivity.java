@@ -25,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
+    private static final int REQ_CONTACTS = 1003;
     private WebView webView;
     // URL configurée dynamiquement via variable d'environnement ou propriété système
     private final String START_URL = System.getProperty("app.start.url", 
@@ -159,6 +160,16 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "✅ Storage permissions already granted");
         }
 
+        // ✅ Demande de permissions contacts si pas encore données
+        if (!hasContactsPermission()) {
+            Log.d(TAG, "🔐 Requesting contacts permissions...");
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_CONTACTS},
+                    REQ_CONTACTS);
+        } else {
+            Log.d(TAG, "✅ Contacts permissions already granted");
+        }
+
         // ✅ Charger le site
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
@@ -186,6 +197,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     
+    private boolean hasContactsPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+    }
+    
     private void injectAABFlags(WebView view) {
         Log.d(TAG, "🚀 Injection des flags AAB");
         
@@ -207,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
         // Détecter si les permissions ont été refusées définitivement
         boolean locationPermanentlyDenied = !hasLocation && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION);
         boolean cameraPermanentlyDenied = !hasCamera && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA);
+        boolean contactsPermanentlyDenied = !hasContacts && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS);
         
         // Pour le stockage, vérifier selon la version Android
         boolean storagePermanentlyDenied;
@@ -216,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
             storagePermanentlyDenied = !hasStorage && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE);
         }
         
-        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Storage: " + hasStorage + " (permanent: " + storagePermanentlyDenied + "), Contacts: " + hasContacts);
+        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Storage: " + hasStorage + " (permanent: " + storagePermanentlyDenied + "), Contacts: " + hasContacts + " (permanent: " + contactsPermanentlyDenied + ")");
         
         String jsCode = "window.androidPermissions = {" +
                        "location: '" + (hasLocation ? "granted" : "denied") + "', " +
@@ -226,6 +242,7 @@ public class MainActivity extends AppCompatActivity {
                        "storage: '" + (hasStorage ? "granted" : "denied") + "', " +
                        "storagePermanentlyDenied: " + storagePermanentlyDenied + ", " +
                        "contacts: '" + (hasContacts ? "granted" : "denied") + "', " +
+                       "contactsPermanentlyDenied: " + contactsPermanentlyDenied + ", " +
                        "timestamp: " + System.currentTimeMillis() + "}; " +
                        "console.log('🔐 Permissions Android injectées:', window.androidPermissions);";
         
