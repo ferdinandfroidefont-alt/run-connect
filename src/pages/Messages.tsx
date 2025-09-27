@@ -38,7 +38,8 @@ import {
   MoreVertical,
   Crown,
   Trash2,
-  User
+  User,
+  Phone
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1295,7 +1296,7 @@ const Messages = () => {
             <div className="mb-3 text-center text-sm font-medium text-muted-foreground animate-fade-in">
               🔍 Barre de recherche
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <Button
                 variant="outline"
                 className="flex flex-col items-center gap-2 h-16"
@@ -1332,6 +1333,18 @@ const Messages = () => {
                   <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
                 </svg>
                 <span className="text-xs">Strava</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-16"
+                onClick={() => {
+                  // Logic for contact functionality
+                  console.log('Contact button clicked');
+                }}
+              >
+                <Phone className="h-5 w-5" />
+                <span className="text-xs">Contact</span>
               </Button>
             </div>
           </CardContent>
