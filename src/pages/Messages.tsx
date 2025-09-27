@@ -1300,9 +1300,6 @@ const Messages = () => {
             {/* Search Buttons */}
             <Card>
               <CardContent className="p-4">
-                <div className="mb-3 text-center text-sm font-medium text-muted-foreground animate-fade-in">
-                  🔍
-                </div>
                 <div className="grid grid-cols-4 gap-3">
                   <Button
                     variant="outline"
