@@ -1150,13 +1150,7 @@ export const UniversalSearchDialog = ({
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0 bg-background border shadow-lg z-50">
                       <Command>
-                        <CommandInput 
-                          placeholder="Tapez le numéro du département..." 
-                          value={departmentSearchValue}
-                          onValueChange={setDepartmentSearchValue}
-                        />
                         <CommandList>
-                          <CommandEmpty>Aucun département trouvé.</CommandEmpty>
                           <ScrollArea className="h-[200px]">
                             <CommandGroup>
                               <CommandItem
@@ -1172,27 +1166,22 @@ export const UniversalSearchDialog = ({
                                 />
                                 Tous les départements
                               </CommandItem>
-                              {departments
-                                .filter((dept) => 
-                                  dept.toLowerCase().includes(departmentSearchValue.toLowerCase()) ||
-                                  dept.split(" - ")[0].includes(departmentSearchValue)
-                                )
-                                .map((dept) => (
-                                  <CommandItem
-                                    key={dept}
-                                    value={dept}
-                                    onSelect={(currentValue) => {
-                                      setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
-                                      setDepartmentSearchOpen(false);
-                                      setDepartmentSearchValue("");
-                                    }}
-                                  >
-                                    <Check
-                                      className={`mr-2 h-4 w-4 ${selectedDepartment === dept ? "opacity-100" : "opacity-0"}`}
-                                    />
-                                    {dept}
-                                  </CommandItem>
-                                ))}
+                              {departments.map((dept) => (
+                                <CommandItem
+                                  key={dept}
+                                  value={dept}
+                                  onSelect={(currentValue) => {
+                                    setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
+                                    setDepartmentSearchOpen(false);
+                                    setDepartmentSearchValue("");
+                                  }}
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${selectedDepartment === dept ? "opacity-100" : "opacity-0"}`}
+                                  />
+                                  {dept}
+                                </CommandItem>
+                              ))}
                             </CommandGroup>
                           </ScrollArea>
                         </CommandList>
