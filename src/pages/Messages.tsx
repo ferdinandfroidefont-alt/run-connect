@@ -1296,7 +1296,7 @@ const Messages = () => {
           </div>
 
           {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto p-2">
             {/* Search Buttons */}
             <Card>
               <CardContent className="p-2">
