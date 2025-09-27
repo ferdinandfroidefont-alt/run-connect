@@ -14,6 +14,9 @@ const config: CapacitorConfig = {
     },
     Camera: {
       requestPermissions: true
+    },
+    Browser: {
+      windowName: '_system'
     }
   },
   android: {
@@ -22,7 +25,9 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: false,
     // Configuration spéciale pour AAB/Google Play
     allowMultipleWindows: false,
-    useLegacyBridge: false
+    useLegacyBridge: false,
+    // Force l'ouverture dans le navigateur système pour OAuth
+    overrideUserAgent: 'RunConnect Mobile App'
   },
   ios: {
     scheme: 'RunConnect'

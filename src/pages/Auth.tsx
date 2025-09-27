@@ -77,26 +77,84 @@ const Auth = () => {
       
       console.log('🔥 Auth Google - Native:', isNative);
       
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          // Pour les apps natives, ne PAS rediriger vers le web
-          ...(isNative ? {} : { redirectTo: `${window.location.origin}/` }),
-        },
-      });
-      
-      if (error) throw error;
-      
-      // Si native, gérer la redirection manuellement
       if (isNative) {
-        console.log('🔥 App native - pas de redirection web');
+        // Pour les apps natives, utiliser le navigateur système
+        const { Browser } = await import('@capacitor/browser');
+        
+        // Construire l'URL d'authentification Google
+        const redirectUrl = 'app.runconnect://auth/callback';
+        const googleAuthUrl = `https://dbptgehpknjsoisirviz.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+        
+        // Ouvrir dans le navigateur système
+        await Browser.open({
+          url: googleAuthUrl,
+          windowName: '_system',
+          presentationStyle: 'fullscreen'
+        });
+        
+        console.log('🔥 Ouverture navigateur système pour Google OAuth');
+        
+        // Écouter le retour via deep link
+        const { App } = await import('@capacitor/app');
+        
+        App.addListener('appUrlOpen', async (data) => {
+          console.log('🔗 Deep link reçu:', data.url);
+          
+          if (data.url.includes('auth/callback')) {
+            // Fermer le navigateur
+            await Browser.close();
+            
+            // Traiter la callback d'authentification
+            const urlParams = new URLSearchParams(data.url.split('#')[1] || '');
+            const accessToken = urlParams.get('access_token');
+            
+            if (accessToken) {
+              // Définir la session avec le token reçu
+              const { error } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: urlParams.get('refresh_token') || ''
+              });
+              
+              if (!error) {
+                window.location.href = '/';
+              }
+            }
+          }
+        });
+        
+      } else {
+        // Pour le web, utiliser la méthode standard
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/`,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          },
+        });
+        
+        if (error) throw error;
       }
+      
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error('🔥 Erreur Google Auth:', error);
+      
+      // Gestion spécifique de l'erreur "disallowed_useragent"
+      if (error.message?.includes('disallowed_useragent') || error.message?.includes('403')) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "L'authentification Google n'est pas disponible dans cette version de l'app. Utilisez l'authentification par email.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: error.message || "Erreur lors de l'authentification Google",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
