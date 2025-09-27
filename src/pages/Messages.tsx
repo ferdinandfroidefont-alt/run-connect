@@ -18,6 +18,7 @@ import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
+import { ContactsDialog } from "@/components/ContactsDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
 import { 
   MessageCircle, 
@@ -124,6 +125,7 @@ const Messages = () => {
   const [visibleTimestamps, setVisibleTimestamps] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<{[userId: string]: {username: string, lastSeen: number}}>({});
   const [isUserTyping, setIsUserTyping] = useState(false);
+  const [showContactsDialog, setShowContactsDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1338,10 +1340,7 @@ const Messages = () => {
               <Button
                 variant="outline"
                 className="flex flex-col items-center gap-2 h-16"
-                onClick={() => {
-                  // Logic for contact functionality
-                  console.log('Contact button clicked');
-                }}
+                onClick={() => setShowContactsDialog(true)}
               >
                 <Phone className="h-5 w-5" />
                 <span className="text-xs">Contact</span>
@@ -1538,6 +1537,12 @@ const Messages = () => {
               }
             }
           }}
+        />
+
+        {/* Contacts Dialog */}
+        <ContactsDialog
+          open={showContactsDialog}
+          onClose={() => setShowContactsDialog(false)}
         />
 
         {/* Avatar Viewer */}

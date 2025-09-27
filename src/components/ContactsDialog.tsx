@@ -1,0 +1,338 @@
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { UserPlus, Smartphone, Shield, X, Phone } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useContacts } from "@/hooks/useContacts";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
+
+interface ContactSuggestion {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string;
+}
+
+interface ContactsDialogProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export const ContactsDialog = ({ open, onClose }: ContactsDialogProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { isNative, hasPermission, requestPermissions, loadContacts } = useContacts();
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+  const [contacts, setContacts] = useState<ContactSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+
+  useEffect(() => {
+    if (open && user) {
+      if (isNative && !hasPermission) {
+        setShowPermissionPrompt(true);
+      } else if (isNative && hasPermission) {
+        loadContactsFromApp();
+      }
+    }
+  }, [open, user, isNative, hasPermission]);
+
+  const loadContactsFromApp = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      console.log('📞 Loading contacts from app...');
+      const deviceContacts = await loadContacts();
+      console.log('📞 Device contacts loaded:', deviceContacts?.length || 0);
+      
+      const contactSuggestions = await findContactsInApp(deviceContacts);
+      setContacts(contactSuggestions);
+    } catch (error) {
+      console.error('❌ Error loading contacts:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger vos contacts",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const findContactsInApp = async (contacts: any[]) => {
+    console.log('📞 Finding contacts in app...');
+    if (!contacts || contacts.length === 0) {
+      return [];
+    }
+
+    try {
+      // Extract phone numbers and emails from contacts
+      const phoneNumbers: string[] = [];
+      const emails: string[] = [];
+      const contactNames: string[] = [];
+
+      contacts.forEach((contact) => {
+        if (contact.displayName) {
+          contactNames.push(contact.displayName.toLowerCase());
+        }
+        
+        contact.phoneNumbers?.forEach((phone: any) => {
+          if (phone.number) {
+            const cleanNumber = phone.number.replace(/[\s\-\(\)\+]/g, '');
+            phoneNumbers.push(cleanNumber);
+            
+            // Add variations (with/without country code)
+            if (cleanNumber.startsWith('33') && cleanNumber.length >= 11) {
+              const national = '0' + cleanNumber.substring(2);
+              phoneNumbers.push(national);
+            }
+            if (cleanNumber.startsWith('0') && cleanNumber.length === 10) {
+              const international = '33' + cleanNumber.substring(1);
+              phoneNumbers.push(international);
+            }
+          }
+        });
+        
+        contact.emails?.forEach((email: any) => {
+          if (email.address) {
+            emails.push(email.address.toLowerCase());
+          }
+        });
+      });
+
+      console.log('📞 Searching for:', { phones: phoneNumbers.length, emails: emails.length, names: contactNames.length });
+
+      if (phoneNumbers.length === 0 && emails.length === 0 && contactNames.length === 0) {
+        return [];
+      }
+
+      // Find users with matching phone numbers, emails, or similar names
+      let matchingUsers: any[] = [];
+      
+      // Search by phone
+      if (phoneNumbers.length > 0) {
+        const { data: phoneMatches } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url, phone')
+          .neq('user_id', user!.id)
+          .or(`phone.in.(${phoneNumbers.map(p => `"${p}"`).join(',')})`);
+        
+        if (phoneMatches) matchingUsers.push(...phoneMatches);
+      }
+
+      // Search by name
+      if (contactNames.length > 0) {
+        const { data: nameMatches } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url, phone')
+          .neq('user_id', user!.id)
+          .or(
+            contactNames.map(name => 
+              `display_name.ilike.%${name}%,username.ilike.%${name}%`
+            ).join(',')
+          );
+        
+        if (nameMatches) {
+          const filteredNameMatches = nameMatches.filter(profile => {
+            const profileName = (profile.display_name || profile.username || '').toLowerCase();
+            return contactNames.some(contactName => 
+              profileName.includes(contactName) || contactName.includes(profileName)
+            );
+          });
+          matchingUsers.push(...filteredNameMatches);
+        }
+      }
+
+      // Remove duplicates
+      const uniqueUsers = matchingUsers.reduce((acc, current) => {
+        const exists = acc.find((item: any) => item.user_id === current.user_id);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      // Convert to contacts format
+      const contactSuggestions = uniqueUsers.map(profile => ({
+        user_id: profile.user_id,
+        username: profile.username || profile.display_name || 'Utilisateur',
+        display_name: profile.display_name || profile.username || 'Utilisateur',
+        avatar_url: profile.avatar_url || ''
+      }));
+
+      console.log('📞 Contacts found in app:', contactSuggestions.length);
+      return contactSuggestions;
+    } catch (error) {
+      console.error('Error finding contacts in app:', error);
+      return [];
+    }
+  };
+
+  const handleRequestContactsPermission = async () => {
+    const granted = await requestPermissions();
+    if (granted) {
+      setShowPermissionPrompt(false);
+      toast({
+        title: "Contacts autorisés",
+        description: "Chargement de vos contacts..."
+      });
+      loadContactsFromApp();
+    } else {
+      toast({
+        title: "Permission refusée",
+        description: "Vous pouvez activer l'accès aux contacts dans les paramètres",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const sendFollowRequest = async (targetUserId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_follows')
+        .insert([{
+          follower_id: user.id,
+          following_id: targetUserId,
+          status: 'pending'
+        }]);
+
+      if (error) throw error;
+
+      toast({ 
+        title: "Demande envoyée", 
+        description: "Votre demande de suivi a été envoyée" 
+      });
+
+      // Remove from contacts list
+      setContacts(prev => prev.filter(c => c.user_id !== targetUserId));
+    } catch (error: any) {
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible d'envoyer la demande", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const ContactCard = ({ contact }: { contact: ContactSuggestion }) => (
+    <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+      <Avatar 
+        className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => navigateToProfile(contact.user_id)}
+      >
+        <AvatarImage src={contact.avatar_url} />
+        <AvatarFallback>
+          {contact.username?.[0] || contact.display_name?.[0] || '?'}
+        </AvatarFallback>
+      </Avatar>
+      
+      <div className="flex-1 min-w-0">
+        <p className="font-medium truncate">
+          {contact.display_name || contact.username}
+        </p>
+        <p className="text-sm text-muted-foreground truncate">
+          @{contact.username}
+        </p>
+        <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200 mt-1">
+          <Smartphone className="h-3 w-3 mr-1" />
+          Dans vos contacts
+        </Badge>
+      </div>
+      
+      <Button
+        size="sm"
+        onClick={() => sendFollowRequest(contact.user_id)}
+      >
+        <UserPlus className="h-4 w-4 mr-2" />
+        Suivre
+      </Button>
+    </div>
+  );
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5" />
+              Mes contacts sur RunConnect
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {!isNative ? (
+              <div className="text-center py-6">
+                <Smartphone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  Cette fonctionnalité est disponible uniquement sur mobile
+                </p>
+              </div>
+            ) : showPermissionPrompt ? (
+              <div className="text-center py-4">
+                <Smartphone className="h-12 w-12 text-primary mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">Trouvez vos amis facilement</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Autorisez l'accès à vos contacts pour voir vos amis qui utilisent RunConnect
+                </p>
+                <div className="flex items-center justify-center gap-2 mb-4 text-xs text-muted-foreground">
+                  <Shield className="h-4 w-4" />
+                  <span>Vos contacts restent privés et sécurisés</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowPermissionPrompt(false)}
+                    className="flex-1"
+                  >
+                    Plus tard
+                  </Button>
+                  <Button 
+                    onClick={handleRequestContactsPermission}
+                    className="flex-1"
+                  >
+                    Autoriser les contacts
+                  </Button>
+                </div>
+              </div>
+            ) : loading ? (
+              <div className="text-center py-6">
+                <Phone className="h-8 w-8 text-muted-foreground mx-auto mb-2 animate-pulse" />
+                <p className="text-sm text-muted-foreground">Recherche de vos contacts...</p>
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="text-center py-6">
+                <Phone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  Aucun de vos contacts n'utilise encore RunConnect
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Invitez-les à rejoindre l'application !
+                </p>
+              </div>
+            ) : (
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {contacts.map(contact => (
+                  <ContactCard key={contact.user_id} contact={contact} />
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ProfilePreviewDialog 
+        userId={selectedUserId} 
+        onClose={closeProfilePreview}
+      />
+    </>
+  );
+};
