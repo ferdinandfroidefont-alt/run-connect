@@ -160,15 +160,24 @@ jobs:
           </paths>
           EOF
 
-          # ✅ Icônes minimales
-          cat > android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@android:color/white"/>
-              <foreground android:drawable="@android:color/holo_blue_dark"/>
-          </adaptive-icon>
-          EOF
-
-          cp android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml android-webview/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+          # ✅ Copier l'icône personnalisée RunConnect
+          mkdir -p android-webview/app/src/main/res/mipmap-mdpi
+          mkdir -p android-webview/app/src/main/res/mipmap-hdpi
+          mkdir -p android-webview/app/src/main/res/mipmap-xhdpi
+          mkdir -p android-webview/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android-webview/app/src/main/res/mipmap-xxxhdpi
+          
+          # Copier l'icône personnalisée RunConnect dans toutes les résolutions
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
       - name: 🔐 Restaurer le keystore
         working-directory: android-webview

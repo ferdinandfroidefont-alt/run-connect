@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     // URL configurée dynamiquement via variable d'environnement ou propriété système
     private final String START_URL = System.getProperty("app.start.url", 
         System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
-        "https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovableproject.com?forceHideBadge=true&forceNative=true");
+        "https://run-connect.lovable.app");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
