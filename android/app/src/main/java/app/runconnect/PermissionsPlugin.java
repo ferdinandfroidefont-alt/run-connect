@@ -130,10 +130,21 @@ public class PermissionsPlugin extends Plugin {
 
     @PluginMethod
     public void forceRequestCameraPermissions(PluginCall call) {
-        String[] permissions = {
-            Manifest.permission.CAMERA,
-            Manifest.permission.READ_MEDIA_IMAGES
-        };
+        String[] permissions;
+        
+        if (Build.VERSION.SDK_INT >= 33) {
+            // Android 13+ - Utiliser READ_MEDIA_IMAGES
+            permissions = new String[] {
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_MEDIA_IMAGES
+            };
+        } else {
+            // Android 6-12 - Utiliser READ_EXTERNAL_STORAGE
+            permissions = new String[] {
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            };
+        }
         
         if (!hasAllPermissions(permissions)) {
             requestPermissionForAliases(permissions, call, "camera");
@@ -141,6 +152,8 @@ public class PermissionsPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("granted", true);
             result.put("device", getDeviceInfo());
+            result.put("androidVersion", Build.VERSION.SDK_INT);
+            result.put("permissionsRequested", java.util.Arrays.toString(permissions));
             call.resolve(result);
         }
     }

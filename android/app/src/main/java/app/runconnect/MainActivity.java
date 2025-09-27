@@ -24,6 +24,7 @@ import androidx.core.view.WindowCompat;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
     private static final int REQ_LOCATION = 1001;
+    private static final int REQ_STORAGE = 1002;
     private WebView webView;
     // URL configurée dynamiquement via variable d'environnement ou propriété système
     private final String START_URL = System.getProperty("app.start.url", 
@@ -123,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ✅ Demande de permissions si pas encore données
+        // ✅ Demande de permissions géolocalisation si pas encore données
         if (!hasLocationPermission()) {
             Log.d(TAG, "🔐 Requesting location permissions...");
             ActivityCompat.requestPermissions(this,
@@ -134,6 +135,28 @@ public class MainActivity extends AppCompatActivity {
                     REQ_LOCATION);
         } else {
             Log.d(TAG, "✅ Location permissions already granted");
+        }
+
+        // ✅ Demande de permissions galerie/stockage si pas encore données
+        if (!hasStoragePermission()) {
+            Log.d(TAG, "🔐 Requesting storage permissions...");
+            String[] storagePermissions;
+            if (Build.VERSION.SDK_INT >= 33) {
+                // Android 13+ - Utiliser READ_MEDIA_IMAGES
+                storagePermissions = new String[]{
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.CAMERA
+                };
+            } else {
+                // Android 6-12 - Utiliser READ_EXTERNAL_STORAGE
+                storagePermissions = new String[]{
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.CAMERA
+                };
+            }
+            ActivityCompat.requestPermissions(this, storagePermissions, REQ_STORAGE);
+        } else {
+            Log.d(TAG, "✅ Storage permissions already granted");
         }
 
         // ✅ Charger le site
@@ -147,6 +170,20 @@ public class MainActivity extends AppCompatActivity {
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+    
+    private boolean hasStoragePermission() {
+        boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        
+        if (Build.VERSION.SDK_INT >= 33) {
+            // Android 13+ - Vérifier READ_MEDIA_IMAGES
+            boolean hasMediaImages = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
+            return hasCamera && hasMediaImages;
+        } else {
+            // Android 6-12 - Vérifier READ_EXTERNAL_STORAGE
+            boolean hasStorage = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+            return hasCamera && hasStorage;
+        }
     }
     
     private void injectAABFlags(WebView view) {
@@ -165,18 +202,29 @@ public class MainActivity extends AppCompatActivity {
         boolean hasLocation = hasLocationPermission();
         boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
         boolean hasContacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+        boolean hasStorage = hasStoragePermission();
         
         // Détecter si les permissions ont été refusées définitivement
         boolean locationPermanentlyDenied = !hasLocation && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION);
         boolean cameraPermanentlyDenied = !hasCamera && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA);
         
-        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Contacts: " + hasContacts);
+        // Pour le stockage, vérifier selon la version Android
+        boolean storagePermanentlyDenied;
+        if (Build.VERSION.SDK_INT >= 33) {
+            storagePermanentlyDenied = !hasStorage && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_MEDIA_IMAGES);
+        } else {
+            storagePermanentlyDenied = !hasStorage && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+        
+        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Storage: " + hasStorage + " (permanent: " + storagePermanentlyDenied + "), Contacts: " + hasContacts);
         
         String jsCode = "window.androidPermissions = {" +
                        "location: '" + (hasLocation ? "granted" : "denied") + "', " +
                        "locationPermanentlyDenied: " + locationPermanentlyDenied + ", " +
                        "camera: '" + (hasCamera ? "granted" : "denied") + "', " +
                        "cameraPermanentlyDenied: " + cameraPermanentlyDenied + ", " +
+                       "storage: '" + (hasStorage ? "granted" : "denied") + "', " +
+                       "storagePermanentlyDenied: " + storagePermanentlyDenied + ", " +
                        "contacts: '" + (hasContacts ? "granted" : "denied") + "', " +
                        "timestamp: " + System.currentTimeMillis() + "}; " +
                        "console.log('🔐 Permissions Android injectées:', window.androidPermissions);";
