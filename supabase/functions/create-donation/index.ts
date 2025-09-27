@@ -117,7 +117,7 @@ serve(async (req) => {
         userId: user?.id 
       });
     } catch (error) {
-      logStep("Failed to record donation in database", { error: error.message });
+      logStep("Failed to record donation in database", { error: error instanceof Error ? error.message : "Unknown error" });
       // Don't fail the request if database recording fails
     }
 

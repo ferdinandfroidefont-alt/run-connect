@@ -119,7 +119,7 @@ serve(async (req) => {
     }
 
     // Combine following and followers
-    let allStravaFriends = []
+    let allStravaFriends: any[] = []
     
     if (followingResponse.ok) {
       const following = await followingResponse.json()

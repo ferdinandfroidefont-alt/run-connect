@@ -94,7 +94,7 @@ async function createFirebaseJWT(serviceAccount: FirebaseServiceAccount): Promis
     return `${message}.${signatureB64Url}`;
   } catch (error) {
     console.error('❌ Error creating JWT:', error);
-    throw new Error(`JWT creation failed: ${error.message}`);
+    throw new Error(`JWT creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -368,6 +368,11 @@ serve(async (req) => {
         case 'club_invitation':
           finalTitle = 'Invitation à un club';
           finalBody = `${data.inviter_name || 'Quelqu\'un'} vous invite à rejoindre "${data.club_name || 'un club'}"`;
+          break;
+          
+        case 'session_accepted':
+          finalTitle = 'Session acceptée';
+          finalBody = `${data.participant_name || 'Quelqu\'un'} a rejoint votre session: ${data.session_title || 'Session'}`;
           break;
           
         default:
