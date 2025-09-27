@@ -1262,113 +1262,117 @@ const Messages = () => {
     <>
       {/* Petite barre noire en haut uniquement pour Messages */}
       <div className="w-full h-6 bg-background"></div>
-      <div className="min-h-screen bg-background">
-      <div className="max-w-md mx-auto space-y-4 p-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-            <p className="text-muted-foreground text-sm">
-              Restez en contact avec la communauté
-            </p>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={() => setShowNewConversation(true)}
-              size="sm"
-              variant="outline"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Message
-            </Button>
-            <Button
-              onClick={() => setShowCreateGroup(true)}
-              size="sm"
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Users className="h-4 w-4 mr-1" />
-              Club
-            </Button>
-          </div>
-        </div>
-
-        {/* Search Buttons */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="mb-3 text-center text-sm font-medium text-muted-foreground animate-fade-in">
-              🔍 Barre de recherche
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              <Button
-                variant="outline"
-                className="flex flex-col items-center gap-2 h-16"
-                onClick={() => {
-                  setSearchActiveTab('profiles');
-                  setShowUserSearch(true);
-                }}
-              >
-                <User className="h-5 w-5" />
-                <span className="text-xs">Utilisateurs</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="flex flex-col items-center gap-2 h-16"
-                onClick={() => {
-                  setSearchActiveTab('clubs');
-                  setShowUserSearch(true);
-                }}
-              >
-                <Users className="h-5 w-5" />
-                <span className="text-xs">Clubs</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="flex flex-col items-center gap-2 h-16"
-                onClick={() => {
-                  setSearchActiveTab('strava');
-                  setShowUserSearch(true);
-                }}
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                </svg>
-                <span className="text-xs">Strava</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="flex flex-col items-center gap-2 h-16"
-                onClick={() => setShowContactsDialog(true)}
-              >
-                <Phone className="h-5 w-5" />
-                <span className="text-xs">Contact</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Conversations */}
-        <Card>
-          <CardHeader className="flex flex-row items-center space-y-0 pb-3">
-            <MessageCircle className="h-5 w-5 text-primary mr-2" />
-            <CardTitle className="text-lg">Conversations</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {conversations.length === 0 ? (
-              <div className="text-center py-8 px-4">
-                <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="max-w-md mx-auto w-full">
+          {/* Fixed Header */}
+          <div className="sticky top-0 bg-background z-10 space-y-4 p-4 border-b border-border">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Messages</h1>
                 <p className="text-muted-foreground text-sm">
-                  Aucune conversation pour le moment
-                </p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  Cliquez sur "Nouveau" pour démarrer une conversation
+                  Restez en contact avec la communauté
                 </p>
               </div>
-            ) : (
-                <div className="divide-y divide-border">
-                {conversations.map((conversation) => (
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={() => setShowNewConversation(true)}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Message
+                </Button>
+                <Button
+                  onClick={() => setShowCreateGroup(true)}
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  Club
+                </Button>
+              </div>
+            </div>
+
+            {/* Search Buttons */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-3 text-center text-sm font-medium text-muted-foreground animate-fade-in">
+                  🔍 Barre de recherche
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex flex-col items-center gap-2 h-16"
+                    onClick={() => {
+                      setSearchActiveTab('profiles');
+                      setShowUserSearch(true);
+                    }}
+                  >
+                    <User className="h-5 w-5" />
+                    <span className="text-xs">Utilisateurs</span>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="flex flex-col items-center gap-2 h-16"
+                    onClick={() => {
+                      setSearchActiveTab('clubs');
+                      setShowUserSearch(true);
+                    }}
+                  >
+                    <Users className="h-5 w-5" />
+                    <span className="text-xs">Clubs</span>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="flex flex-col items-center gap-2 h-16"
+                    onClick={() => {
+                      setSearchActiveTab('strava');
+                      setShowUserSearch(true);
+                    }}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+                    </svg>
+                    <span className="text-xs">Strava</span>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="flex flex-col items-center gap-2 h-16"
+                    onClick={() => setShowContactsDialog(true)}
+                  >
+                    <Phone className="h-5 w-5" />
+                    <span className="text-xs">Contact</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Scrollable Conversations */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center space-y-0 pb-3">
+                <MessageCircle className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Conversations</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {conversations.length === 0 ? (
+                  <div className="text-center py-8 px-4">
+                    <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
+                      Aucune conversation pour le moment
+                    </p>
+                    <p className="text-muted-foreground text-xs mt-1">
+                      Cliquez sur "Nouveau" pour démarrer une conversation
+                    </p>
+                  </div>
+                ) : (
+                    <div className="divide-y divide-border">
+                    {conversations.map((conversation) => (
                    <div
                      key={conversation.id}
                      className="flex items-center gap-3 p-4 hover:bg-muted cursor-pointer"
@@ -1446,16 +1450,18 @@ const Messages = () => {
           </CardContent>
         </Card>
 
-        {/* Friend suggestions */}
-        <Card>
-          <CardHeader className="flex flex-row items-center space-y-0 pb-3">
-            <Users className="h-5 w-5 text-primary mr-2" />
-            <CardTitle className="text-lg">Suggestions d'amis</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FriendSuggestions compact />
-          </CardContent>
-        </Card>
+            {/* Friend suggestions */}
+            <Card>
+              <CardHeader className="flex flex-row items-center space-y-0 pb-3">
+                <Users className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Suggestions d'amis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FriendSuggestions compact />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         {/* User Search Dialog */}
         <UniversalSearchDialog
@@ -1553,7 +1559,6 @@ const Messages = () => {
           username={selectedAvatarData?.username || "Utilisateur"}
         />
       </div>
-    </div>
     </>
   );
 };
