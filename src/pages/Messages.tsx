@@ -1262,10 +1262,10 @@ const Messages = () => {
     <>
       {/* Petite barre noire en haut uniquement pour Messages */}
       <div className="w-full h-6 bg-background"></div>
-      <div className="min-h-screen bg-background flex flex-col">
-        <div className="max-w-md mx-auto w-full">
+      <div className="h-screen bg-background flex flex-col">
+        <div className="max-w-md mx-auto w-full h-full flex flex-col">
           {/* Fixed Header */}
-          <div className="sticky top-0 bg-background z-10 space-y-4 p-4 border-b border-border">
+          <div className="flex-shrink-0 bg-background z-10 space-y-4 p-4 border-b border-border">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
