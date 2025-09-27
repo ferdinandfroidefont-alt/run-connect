@@ -268,18 +268,15 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             </div>
             
             <div className="flex items-center gap-2">
-              <Select value={selectedDistance} onValueChange={setSelectedDistance}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="500">500</SelectItem>
-                  <SelectItem value="1000">1000</SelectItem>
-                  <SelectItem value="2000">2000</SelectItem>
-                  <SelectItem value="5000">5000</SelectItem>
-                  <SelectItem value="10000">10000</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                type="number"
+                placeholder="Distance"
+                value={selectedDistance}
+                onChange={(e) => setSelectedDistance(e.target.value)}
+                className="w-24"
+                min="1"
+                max="50000"
+              />
               <Select value={selectedUnit} onValueChange={setSelectedUnit}>
                 <SelectTrigger className="w-16">
                   <SelectValue />
