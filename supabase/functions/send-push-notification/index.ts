@@ -334,15 +334,57 @@ serve(async (req) => {
     // 7. Send FCM push notification
     console.log('📱 Sending FCM push notification...')
     
+    // Customize notification content based on type
+    let finalTitle = title;
+    let finalBody = body;
+    let notificationData = { ...data, type: type || 'info' };
+
+    // Handle different notification types with enhanced messaging
+    if (type && data) {
+      switch (type) {
+        case 'message':
+          finalTitle = 'Nouveau message';
+          finalBody = `${data.sender_name || 'Quelqu\'un'} vous a envoyé un message`;
+          if (data.message_preview) {
+            finalBody += `: ${data.message_preview.length > 50 ? data.message_preview.substring(0, 50) + '...' : data.message_preview}`;
+          }
+          break;
+          
+        case 'friend_session':
+          finalTitle = 'Session d\'ami créée';
+          finalBody = `${data.organizer_name || 'Un ami'} a créé une session: ${data.session_title || 'Session'}`;
+          break;
+          
+        case 'follow_request':
+          finalTitle = 'Demande de suivi';
+          finalBody = `${data.follower_name || 'Quelqu\'un'} souhaite vous suivre`;
+          break;
+          
+        case 'session_request':
+          finalTitle = 'Demande de participation';
+          finalBody = `${data.requester_name || 'Quelqu\'un'} souhaite rejoindre votre session`;
+          break;
+          
+        case 'club_invitation':
+          finalTitle = 'Invitation à un club';
+          finalBody = `${data.inviter_name || 'Quelqu\'un'} vous invite à rejoindre "${data.club_name || 'un club'}"`;
+          break;
+          
+        default:
+          // Use original payload values
+          break;
+      }
+    }
+    
     try {
       const accessToken = await getFirebaseAccessToken(serviceAccount);
       const fcmSuccess = await sendFCMNotification(
         accessToken,
         serviceAccount.project_id,
         profile.push_token,
-        title,
-        body,
-        { ...data, type: type || 'info' }
+        finalTitle,
+        finalBody,
+        notificationData
       );
 
       return new Response(
