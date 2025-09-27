@@ -39,6 +39,9 @@ verify_jwt = true
 [functions.season-reset]
 verify_jwt = false
 
+[functions.send-push-notification]
+verify_jwt = true
+
 [functions.strava-connect]
 verify_jwt = true
 
