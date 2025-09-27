@@ -1296,10 +1296,10 @@ const Messages = () => {
           </div>
 
           {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-2 space-y-2">
             {/* Search Buttons */}
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-2">
                 <div className="grid grid-cols-4 gap-3">
                   <Button
                     variant="outline"
@@ -1353,7 +1353,7 @@ const Messages = () => {
 
             {/* Conversations */}
             <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-3">
+              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                 <MessageCircle className="h-5 w-5 text-primary mr-2" />
                 <CardTitle className="text-lg">Conversations</CardTitle>
               </CardHeader>
