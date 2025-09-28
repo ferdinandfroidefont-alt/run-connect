@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { UserPlus, Users, X, Smartphone, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -352,42 +353,42 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   }
 
   const SuggestionCard = ({ suggestion }: { suggestion: FriendSuggestion }) => (
-    <Card key={suggestion.user_id} className="relative">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Avatar 
-            className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => navigateToProfile(suggestion.user_id)}
-          >
-            <AvatarImage src={suggestion.avatar_url} />
-            <AvatarFallback>
-              {suggestion.username?.[0] || suggestion.display_name?.[0] || '?'}
-            </AvatarFallback>
-          </Avatar>
+    <Card className="relative h-full">
+      <CardContent className="p-6">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="relative">
+            <Avatar 
+              className="h-20 w-20 cursor-pointer hover:opacity-80 transition-opacity border-2 border-primary/20"
+              onClick={() => navigateToProfile(suggestion.user_id)}
+            >
+              <AvatarImage src={suggestion.avatar_url} />
+              <AvatarFallback className="text-lg">
+                {suggestion.username?.[0] || suggestion.display_name?.[0] || '?'}
+              </AvatarFallback>
+            </Avatar>
+            {!compact && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => dismissSuggestion(suggestion.user_id)}
+                className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-background border hover:bg-muted"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
           
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <div>
-                <p className="font-medium truncate">
-                  {suggestion.username || suggestion.display_name}
-                </p>
-                <p className="text-sm text-muted-foreground truncate">
-                  @{suggestion.username}
-                </p>
-              </div>
-              {!compact && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => dismissSuggestion(suggestion.user_id)}
-                  className="h-6 w-6 p-0 hover:bg-muted"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
+          <div className="space-y-2">
+            <div>
+              <p className="font-semibold text-lg">
+                {suggestion.username || suggestion.display_name}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                @{suggestion.username}
+              </p>
             </div>
             
-            <div className="mb-3">
+            <div className="flex justify-center">
               {suggestion.is_contact ? (
                 <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
                   <Smartphone className="h-3 w-3 mr-1" />
@@ -413,24 +414,24 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
                   Utilisateur actif
                 </Badge>
               )}
-              
-              {!compact && !suggestion.is_contact && suggestion.mutual_friend_names.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {suggestion.mutual_friend_names.slice(0, 2).join(', ')}
-                  {suggestion.mutual_friend_names.length > 2 && ` et ${suggestion.mutual_friend_names.length - 2} autre${suggestion.mutual_friend_names.length > 3 ? 's' : ''}`}
-                </p>
-              )}
             </div>
             
-            <Button
-              size="sm"
-              onClick={() => sendFollowRequest(suggestion.user_id)}
-              className="w-full"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Suivre
-            </Button>
+            {!compact && !suggestion.is_contact && suggestion.mutual_friend_names.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {suggestion.mutual_friend_names.slice(0, 2).join(', ')}
+                {suggestion.mutual_friend_names.length > 2 && ` et ${suggestion.mutual_friend_names.length - 2} autre${suggestion.mutual_friend_names.length > 3 ? 's' : ''}`}
+              </p>
+            )}
           </div>
+          
+          <Button
+            onClick={() => sendFollowRequest(suggestion.user_id)}
+            className="w-full max-w-xs"
+            size="lg"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Suivre
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -451,25 +452,53 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   }
 
   return (
-    <Card className="max-w-md mx-auto">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg">Suggestions d'amis</CardTitle>
+    <div className="w-full max-w-sm mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Suggestions d'amis</h2>
         {onClose && (
           <Button size="sm" variant="ghost" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         )}
-      </CardHeader>
-      <CardContent className="space-y-3 max-h-96 overflow-y-auto">
-        {visibleSuggestions.map(suggestion => (
-          <SuggestionCard key={suggestion.user_id} suggestion={suggestion} />
-        ))}
-      </CardContent>
+      </div>
+      
+      <Carousel
+        opts={{
+          align: "center",
+          loop: false,
+        }}
+        className="w-full"
+      >
+        <CarouselContent className="-ml-2">
+          {visibleSuggestions.map((suggestion) => (
+            <CarouselItem key={suggestion.user_id} className="pl-2 basis-full">
+              <SuggestionCard suggestion={suggestion} />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        {visibleSuggestions.length > 1 && (
+          <>
+            <CarouselPrevious className="left-0 translate-x-0" />
+            <CarouselNext className="right-0 translate-x-0" />
+          </>
+        )}
+      </Carousel>
+      
+      {visibleSuggestions.length > 1 && (
+        <div className="flex justify-center mt-4 space-x-1">
+          {visibleSuggestions.map((_, index) => (
+            <div
+              key={index}
+              className="w-2 h-2 rounded-full bg-muted-foreground/30"
+            />
+          ))}
+        </div>
+      )}
 
       <ProfilePreviewDialog 
         userId={selectedUserId} 
         onClose={closeProfilePreview}
       />
-    </Card>
+    </div>
   );
 };
