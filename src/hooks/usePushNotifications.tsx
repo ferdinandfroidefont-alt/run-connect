@@ -62,35 +62,47 @@ export const usePushNotifications = () => {
     }
   }, [isNative]);
 
-  // Plugin Android pour Android 13+
+  // Plugin Android avec compatibilité toutes versions
   const requestAndroidNotifications = async (): Promise<boolean> => {
     try {
       console.log('🤖 Demande permissions Android via plugin...');
       
-      // Utiliser le plugin personnalisé pour Android 13+ POST_NOTIFICATIONS
+      // Détecter la version Android
+      const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
+      const androidVersionInt = androidVersion ? parseInt(androidVersion) : 0;
+      console.log('📱 Version Android détectée:', androidVersionInt);
+      
+      // Utiliser le plugin personnalisé si disponible
       const plugin = (window as any).CapacitorCustomPlugins?.PermissionsPlugin;
       if (plugin) {
         const result = await plugin.requestNotificationPermissions();
         console.log('📱 Résultat plugin Android:', result);
         
         if (result.granted) {
-          // Tester avec une vraie notification locale
-          await plugin.showLocalNotification({
-            title: "RunConnect",
-            body: "Notifications activées avec succès ! 🎉"
-          });
+          // Test notification pour vérifier que ça marche vraiment
+          try {
+            await plugin.showLocalNotification({
+              title: "RunConnect",
+              body: "Notifications activées avec succès ! 🎉"
+            });
+            console.log('✅ Notification test réussie');
+          } catch (notifError) {
+            console.log('⚠️ Test notification échoué mais permissions accordées');
+          }
           
           return true;
         } else {
-          console.log('❌ Permissions Android refusées');
+          console.log('❌ Permissions Android refusées via plugin');
           return false;
         }
+      } else {
+        console.log('⚠️ Plugin Android non disponible - fallback Capacitor');
+        return false;
       }
     } catch (error) {
       console.error('❌ Erreur plugin Android:', error);
+      return false;
     }
-    
-    return false;
   };
 
   const requestPermissions = async (): Promise<boolean> => {
@@ -98,70 +110,99 @@ export const usePushNotifications = () => {
     
     try {
       if (isNative) {
-        // STRATÉGIE ANDROID NATIVE
         console.log('📱 Mode natif détecté');
         
-        // 1. Essayer plugin Android en priorité (POST_NOTIFICATIONS)
-        const androidSuccess = await requestAndroidNotifications();
-        if (androidSuccess) {
-          console.log('✅ Plugin Android réussi');
-          await checkPermissionStatus(); // Refresh status
-          toast({
-            title: "Notifications activées !",
-            description: "Vous recevrez les notifications push"
-          });
-          return true;
+        // Détecter la version Android pour choisir la stratégie
+        const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
+        const androidVersionInt = androidVersion ? parseInt(androidVersion) : 0;
+        console.log('📱 Version Android:', androidVersionInt);
+        
+        let success = false;
+        
+        // STRATÉGIE 1: Plugin Android personnalisé (toutes versions)
+        if (androidVersionInt > 0) {
+          console.log('🤖 Tentative plugin Android personnalisé...');
+          success = await requestAndroidNotifications();
+          
+          if (success) {
+            console.log('✅ Plugin Android personnalisé réussi');
+            await checkPermissionStatus();
+            toast({
+              title: "Notifications activées !",
+              description: `Compatibilité Android ${androidVersionInt} confirmée`
+            });
+            return true;
+          }
         }
         
-        // 2. Fallback Capacitor standard
-        console.log('🔄 Fallback Capacitor...');
+        // STRATÉGIE 2: Capacitor standard (fallback universel)
+        console.log('🔄 Fallback Capacitor standard...');
         const permission = await PushNotifications.requestPermissions();
+        console.log('📱 Résultat Capacitor:', permission);
         
         if (permission.receive === 'granted') {
-          console.log('✅ Capacitor réussi');
-          await PushNotifications.register();
-          await checkPermissionStatus(); // Refresh status
+          console.log('✅ Capacitor standard réussi');
           
+          // Enregistrement push pour recevoir le token
+          try {
+            await PushNotifications.register();
+            console.log('✅ Enregistrement push réussi');
+          } catch (regError) {
+            console.log('⚠️ Enregistrement push échoué mais permissions OK');
+          }
+          
+          await checkPermissionStatus();
           toast({
             title: "Notifications activées !",
-            description: "Vous recevrez les notifications push"
+            description: "Méthode Capacitor standard utilisée"
           });
           return true;
         } else {
-          console.log('❌ Capacitor refusé:', permission.receive);
-          await checkPermissionStatus(); // Refresh status even on failure
+          console.log('❌ Capacitor standard refusé:', permission.receive);
+          await checkPermissionStatus();
+          
+          // Message adapté selon la version Android
+          let advice = "Activez les notifications dans Paramètres > Applications > RunConnect";
+          if (androidVersionInt >= 13) {
+            advice += " > Notifications";
+          } else if (androidVersionInt >= 8) {
+            advice += " > Notifications d'apps";
+          }
+          
           toast({
             title: "Permission refusée",
-            description: "Activez les notifications dans Paramètres > Applications > RunConnect > Notifications",
+            description: advice,
             variant: "destructive"
           });
           return false;
         }
       } else if ('Notification' in window) {
-        // STRATÉGIE WEB
+        // STRATÉGIE WEB (navigateurs)
         console.log('🌐 Mode web détecté');
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
           console.log('✅ Web notifications accordées');
-          await checkPermissionStatus(); // Refresh status
+          await checkPermissionStatus();
           
-          // Tester avec une notification web
-          if ('Notification' in window) {
+          // Test notification web
+          try {
             new Notification('RunConnect', {
               body: 'Notifications web activées ! 🎉',
               icon: '/favicon.png'
             });
+          } catch (webNotifError) {
+            console.log('⚠️ Test notification web échoué');
           }
           
           toast({
             title: "Notifications activées !",
-            description: "Vous recevrez les notifications"
+            description: "Mode navigateur web"
           });
           return true;
         } else {
           console.log('❌ Web notifications refusées');
-          await checkPermissionStatus(); // Refresh status
+          await checkPermissionStatus();
           toast({
             title: "Permission refusée",
             description: "Activez les notifications dans les paramètres du navigateur",
@@ -170,7 +211,7 @@ export const usePushNotifications = () => {
           return false;
         }
       } else {
-        console.log('❌ Notifications non supportées');
+        console.log('❌ Notifications non supportées sur cette plateforme');
         toast({
           title: "Non supporté",
           description: "Les notifications ne sont pas disponibles sur cet appareil",
@@ -180,9 +221,15 @@ export const usePushNotifications = () => {
       }
     } catch (error) {
       console.error('🔔❌ ERREUR PERMISSIONS:', error);
+      
+      // En cas d'erreur totale, donner des conseils génériques
+      const advice = isNative 
+        ? "Allez dans Paramètres > Applications > RunConnect > Notifications et activez toutes les notifications"
+        : "Vérifiez les paramètres de notification de votre navigateur";
+        
       toast({
-        title: "Erreur",
-        description: "Impossible de configurer les notifications",
+        title: "Erreur technique",
+        description: advice,
         variant: "destructive"
       });
       return false;
