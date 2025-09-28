@@ -11,10 +11,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     
     <!-- 📷 STOCKAGE - PAR VERSION ANDROID -->
-    <!-- Android 6-9: READ_EXTERNAL_STORAGE -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    
-    <!-- Android 10-12: READ_EXTERNAL_STORAGE + Legacy -->
+    <!-- Android 6-12: READ_EXTERNAL_STORAGE -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     
     <!-- Android 13+: Permissions granulaires -->

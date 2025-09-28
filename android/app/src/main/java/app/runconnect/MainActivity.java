@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
     private WebView webView;
-    private PermissionsPlugin permissionsPlugin;
+    private PermissionsPluginFixed permissionsPlugin;
     // URL configurée dynamiquement via variable d'environnement ou propriété système
     private final String START_URL = System.getProperty("app.start.url", 
         System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
@@ -145,9 +145,10 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔐 Requesting storage permissions...");
             String[] storagePermissions;
             if (Build.VERSION.SDK_INT >= 33) {
-                // Android 13+ - Utiliser READ_MEDIA_IMAGES
+                // Android 13+ - Utiliser READ_MEDIA_IMAGES + Visual User Selected
                 storagePermissions = new String[]{
                     Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
                     Manifest.permission.CAMERA
                 };
             } else {
@@ -178,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(webView);
         
         // Initialize permissions plugin
-        permissionsPlugin = new PermissionsPlugin();
+        permissionsPlugin = new PermissionsPluginFixed();
         
         Log.d(TAG, "🎯 MainActivity setup complete");
     }
