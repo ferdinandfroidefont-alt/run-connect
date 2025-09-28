@@ -4,10 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { MIUINotificationGuide } from '@/components/MIUINotificationGuide';
+import { RedmiNote9Guide } from '@/components/RedmiNote9Guide';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { Bell, BellOff, TestTube, Settings, Smartphone, Globe } from 'lucide-react';
 
 export const NotificationManager = () => {
-  const [deviceInfo, setDeviceInfo] = useState<any>(null);
   const { 
     isRegistered, 
     permissionStatus, 
@@ -16,18 +17,9 @@ export const NotificationManager = () => {
     isNative, 
     isSupported 
   } = usePushNotifications();
+  const { deviceInfo } = useDeviceDetection();
 
-  useEffect(() => {
-    // Détecter l'appareil MIUI
-    if (isNative) {
-      const plugin = (window as any).CapacitorCustomPlugins?.PermissionsPlugin;
-      if (plugin) {
-        plugin.getDeviceInfo().then(setDeviceInfo);
-      }
-    }
-  }, [isNative]);
-
-  const isMIUIDevice = deviceInfo?.isMIUI || deviceInfo?.strategy === 'miui';
+  const isMIUIDevice = deviceInfo?.isMIUI;
 
   const getStatusBadge = () => {
     if (permissionStatus.granted) {
@@ -126,7 +118,13 @@ export const NotificationManager = () => {
         )}
 
         {/* Guide MIUI spécialisé */}
-        {isMIUIDevice && (
+        {deviceInfo.isRedmiNote9 && (
+          <div className="mt-4">
+            <RedmiNote9Guide />
+          </div>
+        )}
+        
+        {deviceInfo.isMIUI && !deviceInfo.isRedmiNote9 && (
           <div className="mt-4">
             <MIUINotificationGuide />
           </div>
