@@ -68,41 +68,73 @@ export const useContacts = () => {
         return false;
       }
       
-      console.log('👥 Demande permissions contacts avec stratégie améliorée...');
+      console.log('👥 Stratégie de demande de permissions unifiée...');
       
-      // Get device info for strategy selection
-      let deviceInfo = null;
-      if (typeof window !== 'undefined' && (window as any).PermissionsPlugin) {
-        try {
-          deviceInfo = await (window as any).PermissionsPlugin.getDeviceInfo();
-        } catch (error) {
-          console.log('👥 Device info non disponible');
-        }
-      }
-
       let granted = false;
 
-      // Use enhanced permission strategy based on device
-      if (deviceInfo?.isMIUI || deviceInfo?.manufacturer?.toLowerCase().includes('xiaomi')) {
-        console.log('👥 Utilisation stratégie MIUI pour contacts...');
-        granted = await MIUIPermissionsFix.requestContactsWithMIUIFallback();
-      } else {
+      // Détection du type d'appareil via UserAgent (plus fiable)
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isMIUI = userAgent.includes('miui') || userAgent.includes('xiaomi') || userAgent.includes('redmi');
+      
+      console.log('👥 Type d\'appareil détecté - MIUI:', isMIUI);
+
+      if (isMIUI) {
+        console.log('👥 Stratégie MIUI pour contacts...');
         try {
-          // Try enhanced native permissions first
-          granted = await forceContactsPermissions();
-        } catch (enhancedError) {
-          console.log('👥 Enhanced permissions failed, fallback to standard:', enhancedError);
-          // Fallback to standard Capacitor
+          // Essayer d'abord la méthode standard puis fallback MIUI
           const result = await Contacts.requestPermissions();
           granted = result.contacts === 'granted';
+          
+          if (!granted) {
+            console.log('👥 Standard failed, trying MIUI fallback...');
+            granted = await MIUIPermissionsFix.requestContactsWithMIUIFallback();
+          }
+        } catch (miuiError) {
+          console.log('👥 MIUI strategy failed:', miuiError);
+          // Dernier fallback : permissions natives forcées
+          try {
+            granted = await forceContactsPermissions();
+          } catch (forceError) {
+            console.log('👥 Force permissions failed:', forceError);
+            granted = false;
+          }
+        }
+      } else {
+        console.log('👥 Stratégie standard pour contacts...');
+        try {
+          // Standard Capacitor first
+          const result = await Contacts.requestPermissions();
+          granted = result.contacts === 'granted';
+          
+          if (!granted) {
+            console.log('👥 Standard failed, trying enhanced permissions...');
+            granted = await forceContactsPermissions();
+          }
+        } catch (standardError) {
+          console.log('👥 Standard strategy failed:', standardError);
+          try {
+            granted = await forceContactsPermissions();
+          } catch (forceError) {
+            console.log('👥 Force permissions failed:', forceError);
+            granted = false;
+          }
         }
       }
       
-      console.log('👥 Résultat final permissions contacts:', granted);
+      console.log('👥✅ Résultat final permissions contacts:', granted);
       setHasPermission(granted);
+      
+      // Vérifier à nouveau après un délai pour les appareils lents
+      if (granted) {
+        setTimeout(async () => {
+          const finalCheck = await checkPermissions();
+          console.log('👥 Vérification finale permissions:', finalCheck);
+        }, 1000);
+      }
+      
       return granted;
     } catch (error) {
-      console.log('👥❌ Erreur request permissions contacts:', error);
+      console.error('👥❌ Erreur globale request permissions contacts:', error);
       setHasPermission(false);
       return false;
     }

@@ -11,7 +11,7 @@ export const ContactsPermissionButton = () => {
   console.log('🔍 ContactsPermissionButton render - isNative:', isNative, 'hasPermission:', hasPermission);
 
   const handleRequestPermission = async () => {
-    console.log('🔍 ContactsPermissionButton - opening settings directly');
+    console.log('👥 ContactsPermissionButton - demande directe de permissions');
     
     if (!isNative) {
       toast({
@@ -23,22 +23,27 @@ export const ContactsPermissionButton = () => {
     }
 
     try {
-      // Ouvrir directement les paramètres Android
-      const { androidPermissions } = await import('@/lib/androidPermissions');
-      const opened = await androidPermissions.openAppSettings();
+      console.log('👥 Demande de permissions contacts...');
+      const granted = await requestPermissions();
       
-      toast({
-        title: "Paramètres ouverts",
-        description: opened 
-          ? "Activez l'accès aux contacts dans Autorisations puis revenez dans l'app"
-          : "Allez dans Paramètres > Applications > RunConnect > Autorisations > Contacts",
-        variant: opened ? "default" : "destructive"
-      });
+      if (granted) {
+        toast({
+          title: "Permissions accordées",
+          description: "Vous pouvez maintenant accéder à vos contacts",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Permissions refusées",
+          description: "Allez dans Paramètres > Applications > RunConnect > Autorisations > Contacts pour les activer manuellement",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
-      console.error('❌ Error opening settings:', error);
+      console.error('👥❌ Erreur demande permissions:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'ouvrir les paramètres du téléphone",
+        description: "Impossible de demander les permissions. Vérifiez les paramètres de votre téléphone.",
         variant: "destructive"
       });
     }
@@ -63,7 +68,7 @@ export const ContactsPermissionButton = () => {
         onClick={handleRequestPermission}
         disabled={!isNative}
       >
-        {isNative ? 'Paramètres' : 'Mobile uniquement'}
+        {hasPermission ? 'Accordé ✓' : (isNative ? 'Autoriser' : 'Mobile uniquement')}
       </Button>
     </div>
   );
