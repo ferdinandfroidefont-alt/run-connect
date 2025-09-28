@@ -151,119 +151,111 @@ export const useCamera = () => {
 
   const selectFromGallery = async (): Promise<File | null> => {
     setLoading(true);
-    console.log('🖼️ DÉBUT SÉLECTION GALERIE INTELLIGENTE...');
+    console.log('🖼️ DÉBUT SÉLECTION GALERIE OPTIMISÉE...');
     
     try {
       const isNative = await nativeManager.ensureNativeStatus();
       const device = await getDeviceStrategy();
       
-      console.log('🖼️ Mode détecté:', isNative ? 'NATIF' : 'WEB');
-      console.log('📱 Appareil:', device?.manufacturer, device?.model, 'Android', device?.osVersion);
+      console.log('🖼️ Mode:', isNative ? 'NATIF' : 'WEB');
+      console.log('📱 Appareil:', device?.manufacturer, device?.model);
+      console.log('🤖 Android:', device?.osVersion || 'Unknown');
       
       if (!isNative) {
         return await selectFromGalleryWeb();
       }
       
-      // STRATÉGIE ANDROID 13+ : Plugin natif optimisé
-      if (device?.osVersion && parseInt(device.osVersion) >= 13) {
-        console.log('🚀 Android 13+ détecté - utilisation plugin optimisé');
-        const result = await selectFromGalleryAndroid13();
+      // STRATÉGIE PAR VERSION ANDROID
+      const androidVersion = device?.osVersion ? parseInt(device.osVersion) : 0;
+      
+      // ANDROID 13+ : Photo Picker natif prioritaire
+      if (androidVersion >= 33) {
+        console.log('🚀 Android 13+ - Photo Picker API');
+        const result = await selectFromGalleryVersionSpecific('android13');
         if (result) return result;
       }
       
-      // STRATÉGIES SPÉCIFIQUES PAR FABRICANT
-      const manufacturer = device?.manufacturer?.toLowerCase() || '';
-      const brand = device?.brand?.toLowerCase() || '';
-      const model = device?.model?.toLowerCase() || '';
-      
-      if (manufacturer.includes('xiaomi') || brand.includes('xiaomi') || 
-          model.includes('redmi') || model.includes('poco') || device?.isMIUI) {
-        console.log('🔧 MIUI détecté - utilisation stratégie spécialisée');
-        const result = await selectFromGalleryManufacturer('miui');
+      // ANDROID 10-12 : Storage Access Framework
+      if (androidVersion >= 29 && androidVersion <= 32) {
+        console.log('🔐 Android 10-12 - Storage Access Framework');
+        const result = await selectFromGalleryVersionSpecific('android10to12');
         if (result) return result;
       }
       
-      if (manufacturer.includes('samsung') || brand.includes('samsung')) {
-        console.log('🔧 Samsung détecté - utilisation stratégie spécialisée');
-        const result = await selectFromGalleryManufacturer('samsung');
+      // ANDROID 6-9 : Stratégies fabricant
+      if (androidVersion >= 23 && androidVersion <= 28) {
+        console.log('🔧 Android 6-9 - Stratégies fabricant');
+        const strategy = detectManufacturerStrategy(device);
+        const result = await selectFromGalleryVersionSpecific('android6to9', strategy);
         if (result) return result;
       }
       
-      if (manufacturer.includes('huawei') || manufacturer.includes('honor') || 
-          brand.includes('huawei') || brand.includes('honor')) {
-        console.log('🔧 Huawei/Honor détecté - utilisation stratégie spécialisée');
-        const result = await selectFromGalleryManufacturer('huawei');
-        if (result) return result;
-      }
-      
-      if (manufacturer.includes('oneplus') || brand.includes('oneplus')) {
-        console.log('🔧 OnePlus détecté - utilisation stratégie spécialisée');
-        const result = await selectFromGalleryManufacturer('oneplus');
-        if (result) return result;
-      }
-      
-      if (manufacturer.includes('oppo') || manufacturer.includes('realme') ||
-          brand.includes('oppo') || brand.includes('realme')) {
-        console.log('🔧 Oppo/Realme détecté - utilisation stratégie spécialisée');
-        const result = await selectFromGalleryManufacturer('oppo');
-        if (result) return result;
-      }
-      
-      if (manufacturer.includes('lg') || manufacturer.includes('lge') ||
-          brand.includes('lg') || brand.includes('lge')) {
-        console.log('🔧 LG détecté - utilisation stratégie spécialisée');
-        const result = await selectFromGalleryManufacturer('lg');
-        if (result) return result;
-      }
-      
-      // STRATÉGIE CAPACITOR : Standard Capacitor
-      console.log('🔄 Utilisation Capacitor standard...');
+      // FALLBACK PROGRESSIF
+      console.log('🔄 Fallback Capacitor standard...');
       const result = await selectFromGalleryCapacitor();
       if (result) return result;
       
-      // FALLBACK WEB
-      console.log('🔄 Fallback web...');
+      console.log('🌐 Fallback web final...');
       return await selectFromGalleryWeb();
       
     } catch (error) {
-      console.error('🖼️❌ ERREUR SÉLECTION GALERIE:', error);
+      console.error('🖼️❌ ERREUR:', error);
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Stratégie Android 13+ avec plugin natif
-  const selectFromGalleryAndroid13 = async (): Promise<File | null> => {
-    try {
-      if ((window as any).Capacitor?.Plugins?.PermissionsPlugin) {
-        const result = await (window as any).Capacitor.Plugins.PermissionsPlugin.forceOpenGallery();
-        console.log('✅ Plugin Android 13+ résultat:', result);
-        
-        if (result.success && result.imageUri) {
-          // Convertir l'URI en File
-          return await convertUriToFile(result.imageUri, 'android13-gallery.jpg');
-        }
-      }
-    } catch (error) {
-      console.log('❌ Échec plugin Android 13+:', error);
+  // Détection stratégie fabricant améliorée
+  const detectManufacturerStrategy = (device: any): string => {
+    const manufacturer = device?.manufacturer?.toLowerCase() || '';
+    const brand = device?.brand?.toLowerCase() || '';
+    const model = device?.model?.toLowerCase() || '';
+    
+    if (manufacturer.includes('xiaomi') || brand.includes('xiaomi') || 
+        model.includes('redmi') || model.includes('poco') || device?.isMIUI) {
+      return 'miui';
     }
-    return null;
+    
+    if (manufacturer.includes('samsung') || brand.includes('samsung')) {
+      return 'samsung';
+    }
+    
+    if (manufacturer.includes('huawei') || manufacturer.includes('honor') || 
+        brand.includes('huawei') || brand.includes('honor')) {
+      return 'huawei';
+    }
+    
+    if (manufacturer.includes('oneplus') || brand.includes('oneplus')) {
+      return 'oneplus';
+    }
+    
+    if (manufacturer.includes('oppo') || manufacturer.includes('realme') ||
+        brand.includes('oppo') || brand.includes('realme')) {
+      return 'oppo';
+    }
+    
+    if (manufacturer.includes('lg') || manufacturer.includes('lge')) {
+      return 'lg';
+    }
+    
+    return 'standard';
   };
 
-  // Stratégie fabricant spécialisée
-  const selectFromGalleryManufacturer = async (strategy: string): Promise<File | null> => {
+  // Stratégie par version Android
+  const selectFromGalleryVersionSpecific = async (version: string, strategy?: string): Promise<File | null> => {
     try {
       if ((window as any).Capacitor?.Plugins?.PermissionsPlugin) {
         const result = await (window as any).Capacitor.Plugins.PermissionsPlugin.forceOpenGallery();
-        console.log(`✅ Plugin ${strategy} résultat:`, result);
+        console.log(`✅ Plugin ${version}${strategy ? '-' + strategy : ''} résultat:`, result);
         
         if (result.success && result.imageUri) {
-          return await convertUriToFile(result.imageUri, `${strategy}-gallery.jpg`);
+          const fileName = `${version}${strategy ? '-' + strategy : ''}-gallery.jpg`;
+          return await convertUriToFile(result.imageUri, fileName);
         }
       }
     } catch (error) {
-      console.log(`❌ Échec plugin ${strategy}:`, error);
+      console.log(`❌ Échec plugin ${version}${strategy ? '-' + strategy : ''}:`, error);
     }
     return null;
   };
