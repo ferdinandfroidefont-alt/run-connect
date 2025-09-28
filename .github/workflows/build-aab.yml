@@ -133,6 +133,7 @@ jobs:
           # ✅ Copier AndroidManifest et MainActivity
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
           cp android/app/src/main/java/app/runconnect/MainActivity.java android-webview/app/src/main/java/app/runconnect/MainActivity.java
+          cp android/app/src/main/java/app/runconnect/PermissionsPluginFixed.java android-webview/app/src/main/java/app/runconnect/PermissionsPluginFixed.java
 
           # 🔧 Modifier START_URL dynamiquement
           sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
