@@ -123,6 +123,20 @@ export const useCamera = () => {
   const getDeviceStrategy = async () => {
     if (!deviceInfo) {
       try {
+        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+          // Essayer d'obtenir plus d'infos via le plugin natif
+          try {
+            const nativeInfo = await (window as any).Capacitor?.Plugins?.PermissionsPlugin?.getDeviceInfo?.();
+            if (nativeInfo) {
+              setDeviceInfo(nativeInfo);
+              return nativeInfo;
+            }
+          } catch (error) {
+            console.log('❌ Plugin natif non disponible, utilisation Device API');
+          }
+        }
+        
+        // Fallback vers Device API standard
         const info = await Device.getInfo();
         setDeviceInfo(info);
         console.log('📱 Info appareil:', info);
@@ -157,12 +171,48 @@ export const useCamera = () => {
         if (result) return result;
       }
       
-      // STRATÉGIE MIUI : Plugin spécialisé
-      if (device?.manufacturer?.toLowerCase().includes('xiaomi') || 
-          device?.model?.toLowerCase().includes('redmi') ||
-          device?.model?.toLowerCase().includes('poco')) {
+      // STRATÉGIES SPÉCIFIQUES PAR FABRICANT
+      const manufacturer = device?.manufacturer?.toLowerCase() || '';
+      const brand = device?.brand?.toLowerCase() || '';
+      const model = device?.model?.toLowerCase() || '';
+      
+      if (manufacturer.includes('xiaomi') || brand.includes('xiaomi') || 
+          model.includes('redmi') || model.includes('poco') || device?.isMIUI) {
         console.log('🔧 MIUI détecté - utilisation stratégie spécialisée');
-        const result = await selectFromGalleryMIUI();
+        const result = await selectFromGalleryManufacturer('miui');
+        if (result) return result;
+      }
+      
+      if (manufacturer.includes('samsung') || brand.includes('samsung')) {
+        console.log('🔧 Samsung détecté - utilisation stratégie spécialisée');
+        const result = await selectFromGalleryManufacturer('samsung');
+        if (result) return result;
+      }
+      
+      if (manufacturer.includes('huawei') || manufacturer.includes('honor') || 
+          brand.includes('huawei') || brand.includes('honor')) {
+        console.log('🔧 Huawei/Honor détecté - utilisation stratégie spécialisée');
+        const result = await selectFromGalleryManufacturer('huawei');
+        if (result) return result;
+      }
+      
+      if (manufacturer.includes('oneplus') || brand.includes('oneplus')) {
+        console.log('🔧 OnePlus détecté - utilisation stratégie spécialisée');
+        const result = await selectFromGalleryManufacturer('oneplus');
+        if (result) return result;
+      }
+      
+      if (manufacturer.includes('oppo') || manufacturer.includes('realme') ||
+          brand.includes('oppo') || brand.includes('realme')) {
+        console.log('🔧 Oppo/Realme détecté - utilisation stratégie spécialisée');
+        const result = await selectFromGalleryManufacturer('oppo');
+        if (result) return result;
+      }
+      
+      if (manufacturer.includes('lg') || manufacturer.includes('lge') ||
+          brand.includes('lg') || brand.includes('lge')) {
+        console.log('🔧 LG détecté - utilisation stratégie spécialisée');
+        const result = await selectFromGalleryManufacturer('lg');
         if (result) return result;
       }
       
@@ -201,19 +251,19 @@ export const useCamera = () => {
     return null;
   };
 
-  // Stratégie MIUI spécialisée
-  const selectFromGalleryMIUI = async (): Promise<File | null> => {
+  // Stratégie fabricant spécialisée
+  const selectFromGalleryManufacturer = async (strategy: string): Promise<File | null> => {
     try {
       if ((window as any).Capacitor?.Plugins?.PermissionsPlugin) {
         const result = await (window as any).Capacitor.Plugins.PermissionsPlugin.forceOpenGallery();
-        console.log('✅ Plugin MIUI résultat:', result);
+        console.log(`✅ Plugin ${strategy} résultat:`, result);
         
         if (result.success && result.imageUri) {
-          return await convertUriToFile(result.imageUri, 'miui-gallery.jpg');
+          return await convertUriToFile(result.imageUri, `${strategy}-gallery.jpg`);
         }
       }
     } catch (error) {
-      console.log('❌ Échec plugin MIUI:', error);
+      console.log(`❌ Échec plugin ${strategy}:`, error);
     }
     return null;
   };

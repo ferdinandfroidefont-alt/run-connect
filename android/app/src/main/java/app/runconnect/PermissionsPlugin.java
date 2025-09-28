@@ -8,6 +8,8 @@ import java.util.List;
 import android.net.Uri;
 import android.provider.Settings;
 import android.os.Build;
+import android.text.TextUtils;
+import android.content.ComponentName;
 import android.app.Activity;
 import android.database.Cursor;
 import android.provider.MediaStore;
@@ -292,9 +294,10 @@ public class PermissionsPlugin extends Plugin {
     public void forceOpenGallery(PluginCall call) {
         // Sauvegarder l'appel pour le résultat
         this.galleryCall = call;
+        String strategy = getDeviceStrategy();
         
         try {
-            Log.d("PermissionsPlugin", "Ouverture galerie - Android " + Build.VERSION.SDK_INT + ", MIUI: " + isMIUI());
+            Log.d("PermissionsPlugin", "Ouverture galerie - Android " + Build.VERSION.SDK_INT + ", Stratégie: " + strategy);
             
             // STRATÉGIE ANDROID 13+ : Photo Picker natif en priorité
             if (Build.VERSION.SDK_INT >= 33 && isPhotoPickerAvailable()) {
@@ -303,15 +306,33 @@ public class PermissionsPlugin extends Plugin {
                 return;
             }
             
-            // STRATÉGIE MIUI : Intent spécialisé
-            if (isMIUI()) {
-                Log.d("PermissionsPlugin", "Utilisation stratégie MIUI");
-                openGalleryWithMIUIStrategy();
-                return;
+            // STRATÉGIES SPÉCIFIQUES PAR FABRICANT
+            switch (strategy) {
+                case "samsung":
+                    if (openGalleryWithSamsungStrategy()) return;
+                    break;
+                case "huawei":
+                    if (openGalleryWithHuaweiStrategy()) return;
+                    break;
+                case "oneplus":
+                    if (openGalleryWithOnePlusStrategy()) return;
+                    break;
+                case "oppo":
+                    if (openGalleryWithOppoStrategy()) return;
+                    break;
+                case "lg":
+                    if (openGalleryWithLGStrategy()) return;
+                    break;
+                case "miui":
+                    if (openGalleryWithMIUIStrategy()) return;
+                    break;
             }
             
-            // STRATÉGIE STANDARD : Intent classique
-            Log.d("PermissionsPlugin", "Utilisation stratégie standard");
+            // FALLBACK : Méthodes alternatives
+            if (openGalleryWithAlternativeMethod()) return;
+            
+            // DERNIER RECOURS : Stratégie standard
+            Log.d("PermissionsPlugin", "Utilisation stratégie standard finale");
             openGalleryStandard();
             
         } catch (Exception e) {
@@ -356,7 +377,162 @@ public class PermissionsPlugin extends Plugin {
     
     // ============ STRATÉGIE MIUI AMÉLIORÉE ============
     
-    private void openGalleryWithMIUIStrategy() {
+    private boolean openGalleryWithSamsungStrategy() {
+        try {
+            Log.d("PermissionsPlugin", "Stratégie Samsung");
+            
+            // Samsung Gallery
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            intent.setPackage("com.sec.android.gallery3d");
+            
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation Samsung Gallery");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+            // Samsung My Files
+            intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.setPackage("com.sec.android.app.myfiles");
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation Samsung My Files");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur stratégie Samsung", e);
+        }
+        return false;
+    }
+
+    private boolean openGalleryWithHuaweiStrategy() {
+        try {
+            Log.d("PermissionsPlugin", "Stratégie Huawei/Honor");
+            
+            // Huawei Gallery
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            intent.setPackage("com.android.gallery3d");
+            
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation Huawei Gallery");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+            // Huawei File Manager
+            intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.setPackage("com.huawei.hidisk");
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation Huawei File Manager");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur stratégie Huawei", e);
+        }
+        return false;
+    }
+
+    private boolean openGalleryWithOnePlusStrategy() {
+        try {
+            Log.d("PermissionsPlugin", "Stratégie OnePlus");
+            
+            // OnePlus Gallery
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            intent.setPackage("com.oneplus.gallery");
+            
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation OnePlus Gallery");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+            // OnePlus File Manager
+            intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.setPackage("com.oneplus.filemanager");
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation OnePlus File Manager");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur stratégie OnePlus", e);
+        }
+        return false;
+    }
+
+    private boolean openGalleryWithOppoStrategy() {
+        try {
+            Log.d("PermissionsPlugin", "Stratégie Oppo/Realme");
+            
+            // Oppo Gallery (ColorOS)
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            intent.setPackage("com.coloros.gallery3d");
+            
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation Oppo Gallery");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+            // Oppo File Manager
+            intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.setPackage("com.coloros.filemanager");
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation Oppo File Manager");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur stratégie Oppo", e);
+        }
+        return false;
+    }
+
+    private boolean openGalleryWithLGStrategy() {
+        try {
+            Log.d("PermissionsPlugin", "Stratégie LG");
+            
+            // LG Gallery
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            intent.setPackage("com.lge.gallery");
+            
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation LG Gallery");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+            // LG File Manager
+            intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.setPackage("com.lge.filemanager");
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation LG File Manager");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur stratégie LG", e);
+        }
+        return false;
+    }
+
+    private boolean openGalleryWithMIUIStrategy() {
         try {
             Log.d("PermissionsPlugin", "Stratégie MIUI - Android " + Build.VERSION.SDK_INT);
             
@@ -368,7 +544,7 @@ public class PermissionsPlugin extends Plugin {
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation galerie MIUI native");
                 getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
-                return;
+                return true;
             }
             
             // Méthode 2: Intent MIUI spécialisé
@@ -377,7 +553,7 @@ public class PermissionsPlugin extends Plugin {
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation intent MIUI spécialisé");
                 getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
-                return;
+                return true;
             }
             
             // Méthode 3: File Manager MIUI pour Android 13+
@@ -388,18 +564,45 @@ public class PermissionsPlugin extends Plugin {
                 if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                     Log.d("PermissionsPlugin", "Utilisation File Manager MIUI");
                     getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
-                    return;
+                    return true;
                 }
             }
             
-            // Fallback vers stratégie standard
-            Log.d("PermissionsPlugin", "Fallback vers stratégie standard depuis MIUI");
-            openGalleryStandard();
-            
         } catch (Exception e) {
             Log.e("PermissionsPlugin", "Erreur stratégie MIUI", e);
-            openGalleryStandard();
         }
+        return false;
+    }
+
+    private boolean openGalleryWithAlternativeMethod() {
+        try {
+            Log.d("PermissionsPlugin", "Méthodes alternatives");
+            
+            // Méthode ACTION_GET_CONTENT générique
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation ACTION_GET_CONTENT");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+            // Document picker comme dernier recours
+            intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.setType("image/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation ACTION_OPEN_DOCUMENT");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur méthodes alternatives", e);
+        }
+        return false;
     }
 
     private void openGalleryStandard() {
