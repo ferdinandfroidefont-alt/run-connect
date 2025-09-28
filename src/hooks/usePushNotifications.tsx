@@ -105,7 +105,7 @@ export const usePushNotifications = () => {
         const androidSuccess = await requestAndroidNotifications();
         if (androidSuccess) {
           console.log('✅ Plugin Android réussi');
-          setIsRegistered(true);
+          await checkPermissionStatus(); // Refresh status
           toast({
             title: "Notifications activées !",
             description: "Vous recevrez les notifications push"
@@ -120,7 +120,7 @@ export const usePushNotifications = () => {
         if (permission.receive === 'granted') {
           console.log('✅ Capacitor réussi');
           await PushNotifications.register();
-          setIsRegistered(true);
+          await checkPermissionStatus(); // Refresh status
           
           toast({
             title: "Notifications activées !",
@@ -129,6 +129,7 @@ export const usePushNotifications = () => {
           return true;
         } else {
           console.log('❌ Capacitor refusé:', permission.receive);
+          await checkPermissionStatus(); // Refresh status even on failure
           toast({
             title: "Permission refusée",
             description: "Activez les notifications dans Paramètres > Applications > RunConnect > Notifications",
@@ -143,7 +144,7 @@ export const usePushNotifications = () => {
         
         if (permission === 'granted') {
           console.log('✅ Web notifications accordées');
-          setIsRegistered(true);
+          await checkPermissionStatus(); // Refresh status
           
           // Tester avec une notification web
           if ('Notification' in window) {
@@ -160,6 +161,7 @@ export const usePushNotifications = () => {
           return true;
         } else {
           console.log('❌ Web notifications refusées');
+          await checkPermissionStatus(); // Refresh status
           toast({
             title: "Permission refusée",
             description: "Activez les notifications dans les paramètres du navigateur",
@@ -295,12 +297,14 @@ export const usePushNotifications = () => {
           setToken(token.value);
           setIsRegistered(true);
           savePushToken(token.value);
+          checkPermissionStatus(); // Refresh status
         });
 
         // Erreur d'enregistrement
         const regErrorListener = await PushNotifications.addListener('registrationError', (error) => {
           console.error('❌ Erreur enregistrement push:', error);
           setIsRegistered(false);
+          checkPermissionStatus(); // Refresh status
         });
 
         // Notification reçue
@@ -330,7 +334,15 @@ export const usePushNotifications = () => {
       let cleanup: (() => void) | undefined;
       setupListeners().then(cleanupFn => cleanup = cleanupFn);
 
-      return cleanup;
+      // Periodic check for permission changes (user might grant/deny in settings)
+      const interval = setInterval(() => {
+        checkPermissionStatus();
+      }, 3000);
+
+      return () => {
+        cleanup?.();
+        clearInterval(interval);
+      };
     }
   }, [user, isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
 
