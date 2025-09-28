@@ -14,6 +14,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.content.Intent;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -27,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
     private WebView webView;
+    private PermissionsPlugin permissionsPlugin;
     // URL configurée dynamiquement via variable d'environnement ou propriété système
     private final String START_URL = System.getProperty("app.start.url", 
         System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
@@ -174,6 +176,9 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
         setContentView(webView);
+        
+        // Initialize permissions plugin
+        permissionsPlugin = new PermissionsPlugin();
         
         Log.d(TAG, "🎯 MainActivity setup complete");
     }
@@ -343,6 +348,16 @@ public class MainActivity extends AppCompatActivity {
                                      "if (window.onAndroidPermissionsChanged) { window.onAndroidPermissionsChanged(window.androidPermissions); } " +
                                      "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: window.androidPermissions })); " +
                                      "console.log('🚀 Permissions updated, triggering callbacks');", null);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.d(TAG, "🔍 onActivityResult called: requestCode=" + requestCode + ", resultCode=" + resultCode);
+        
+        if (permissionsPlugin != null) {
+            permissionsPlugin.handleActivityResult(requestCode, resultCode, data);
         }
     }
 }

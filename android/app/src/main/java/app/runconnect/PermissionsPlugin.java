@@ -920,5 +920,30 @@ public class PermissionsPlugin extends Plugin {
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getActivity());
         return notificationManager.areNotificationsEnabled();
     }
-}
+
+    /**
+     * Get device-specific strategy for gallery access
+     */
+    private String getDeviceStrategy() {
+        String manufacturer = Build.MANUFACTURER.toLowerCase();
+        String brand = Build.BRAND.toLowerCase();
+
+        if (manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || brand.contains("redmi") || manufacturer.contains("poco")) {
+            return "MIUI";
+        } else if (manufacturer.contains("samsung")) {
+            return "Samsung";
+        } else if (manufacturer.contains("huawei") || manufacturer.contains("honor")) {
+            return "Huawei";
+        } else if (manufacturer.contains("oneplus")) {
+            return "OnePlus";
+        } else if (manufacturer.contains("oppo") || manufacturer.contains("realme")) {
+            return "Oppo";
+        } else if (manufacturer.contains("lg")) {
+            return "LG";
+        } else if (Build.VERSION.SDK_INT >= 33) {
+            return "Android13Plus";
+        } else {
+            return "Standard";
+        }
+    }
 }
