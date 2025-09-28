@@ -27,7 +27,10 @@ const config: CapacitorConfig = {
     allowMultipleWindows: false,
     useLegacyBridge: false,
     // Force l'ouverture dans le navigateur système pour OAuth
-    overrideUserAgent: 'RunConnect Mobile App'
+    overrideUserAgent: 'RunConnect Mobile App',
+    // Optimisations galerie Android 13+
+    deepLinkScheme: 'runconnect',
+    appendUserAgent: 'RunConnect/1.3'
   },
   ios: {
     scheme: 'RunConnect'

@@ -7,12 +7,19 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- 📷 STOCKAGE & APPAREIL PHOTO -->
+    <!-- 📷 STOCKAGE & APPAREIL PHOTO - OPTIMISÉ ANDROID 13+ -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    
+    <!-- Android 13+ - Permissions granulaires -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    
+    <!-- Fallback pour anciennes versions Android -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" 
+        tools:ignore="ScopedStorage" />
 
     <!-- 👥 CONTACTS -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />

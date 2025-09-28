@@ -3,6 +3,7 @@ package app.runconnect;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
+import android.content.pm.PackageManager;
 import java.util.List;
 import android.net.Uri;
 import android.provider.Settings;
@@ -17,6 +18,10 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import android.util.Log;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -40,7 +45,9 @@ public class PermissionsPlugin extends Plugin {
 
     private static final int PERMISSION_REQUEST_CODE = 9999;
     private static final int GALLERY_REQUEST_CODE = 9998;
+    private static final int PHOTO_PICKER_REQUEST_CODE = 9997;
     private PluginCall galleryCall;
+    private boolean isAndroid13Plus = Build.VERSION.SDK_INT >= 33;
 
     @PluginMethod
     public void forceRequestLocationPermissions(PluginCall call) {
@@ -133,13 +140,36 @@ public class PermissionsPlugin extends Plugin {
         String[] permissions;
         
         if (Build.VERSION.SDK_INT >= 33) {
-            // Android 13+ - Utiliser READ_MEDIA_IMAGES
+            // Android 13+ - Stratégie optimisée pour Photo Picker
+            Log.d("PermissionsPlugin", "Android 13+ détecté - utilisation Photo Picker API");
+            
+            // Pour Android 13+, on ne demande que CAMERA si nécessaire
+            // READ_MEDIA_VISUAL_USER_SELECTED sera géré par le Photo Picker
+            permissions = new String[] {
+                Manifest.permission.CAMERA
+            };
+            
+            // Vérifier si Photo Picker est disponible
+            if (isPhotoPickerAvailable()) {
+                Log.d("PermissionsPlugin", "Photo Picker natif disponible");
+                JSObject result = new JSObject();
+                result.put("granted", true);
+                result.put("device", getDeviceInfo());
+                result.put("androidVersion", Build.VERSION.SDK_INT);
+                result.put("photoPickerAvailable", true);
+                result.put("strategy", "PHOTO_PICKER_ANDROID13");
+                call.resolve(result);
+                return;
+            }
+            
+            // Fallback pour Android 13+ sans Photo Picker
             permissions = new String[] {
                 Manifest.permission.CAMERA,
                 Manifest.permission.READ_MEDIA_IMAGES
             };
+            
         } else {
-            // Android 6-12 - Utiliser READ_EXTERNAL_STORAGE
+            // Android 6-12 - Méthode classique
             permissions = new String[] {
                 Manifest.permission.CAMERA,
                 Manifest.permission.READ_EXTERNAL_STORAGE
@@ -147,6 +177,7 @@ public class PermissionsPlugin extends Plugin {
         }
         
         if (!hasAllPermissions(permissions)) {
+            Log.d("PermissionsPlugin", "Demande permissions: " + java.util.Arrays.toString(permissions));
             requestPermissionForAliases(permissions, call, "camera");
         } else {
             JSObject result = new JSObject();
@@ -154,6 +185,7 @@ public class PermissionsPlugin extends Plugin {
             result.put("device", getDeviceInfo());
             result.put("androidVersion", Build.VERSION.SDK_INT);
             result.put("permissionsRequested", java.util.Arrays.toString(permissions));
+            result.put("strategy", isAndroid13Plus ? "ANDROID13_PERMISSIONS" : "LEGACY_PERMISSIONS");
             call.resolve(result);
         }
     }
@@ -262,37 +294,110 @@ public class PermissionsPlugin extends Plugin {
         this.galleryCall = call;
         
         try {
-            // Sur MIUI/Xiaomi, utiliser Intent direct pour contourner les bugs Capacitor
-            if (isMIUI()) {
-                openGalleryWithIntent();
-            } else {
-                // Autres appareils Android - méthode standard
-                openGalleryStandard();
+            Log.d("PermissionsPlugin", "Ouverture galerie - Android " + Build.VERSION.SDK_INT + ", MIUI: " + isMIUI());
+            
+            // STRATÉGIE ANDROID 13+ : Photo Picker natif en priorité
+            if (Build.VERSION.SDK_INT >= 33 && isPhotoPickerAvailable()) {
+                Log.d("PermissionsPlugin", "Utilisation Photo Picker Android 13+");
+                openPhotoPicker();
+                return;
             }
+            
+            // STRATÉGIE MIUI : Intent spécialisé
+            if (isMIUI()) {
+                Log.d("PermissionsPlugin", "Utilisation stratégie MIUI");
+                openGalleryWithMIUIStrategy();
+                return;
+            }
+            
+            // STRATÉGIE STANDARD : Intent classique
+            Log.d("PermissionsPlugin", "Utilisation stratégie standard");
+            openGalleryStandard();
+            
         } catch (Exception e) {
-            call.reject("Impossible d'ouvrir la galerie", e);
+            Log.e("PermissionsPlugin", "Erreur ouverture galerie", e);
+            call.reject("Impossible d'ouvrir la galerie: " + e.getMessage(), e);
         }
     }
 
-    private void openGalleryWithIntent() {
+    // ============ ANDROID 13+ PHOTO PICKER API ============
+    
+    private boolean isPhotoPickerAvailable() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            try {
+                Intent intent = new Intent("android.provider.action.PICK_IMAGES");
+                return intent.resolveActivity(getActivity().getPackageManager()) != null;
+            } catch (Exception e) {
+                Log.e("PermissionsPlugin", "Erreur vérification Photo Picker", e);
+                return false;
+            }
+        }
+        return false;
+    }
+    
+    private void openPhotoPicker() {
         try {
-            // Méthode MIUI - Intent direct vers la galerie
+            Intent intent = new Intent("android.provider.action.PICK_IMAGES");
+            intent.setType("image/*");
+            intent.putExtra("android.provider.extra.PICK_IMAGES_MAX", 1);
+            
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Lancement Photo Picker Android 13+");
+                getActivity().startActivityForResult(intent, PHOTO_PICKER_REQUEST_CODE);
+            } else {
+                Log.w("PermissionsPlugin", "Photo Picker non disponible, fallback");
+                openGalleryWithMIUIStrategy();
+            }
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur Photo Picker", e);
+            openGalleryWithMIUIStrategy();
+        }
+    }
+    
+    // ============ STRATÉGIE MIUI AMÉLIORÉE ============
+    
+    private void openGalleryWithMIUIStrategy() {
+        try {
+            Log.d("PermissionsPlugin", "Stratégie MIUI - Android " + Build.VERSION.SDK_INT);
+            
+            // Méthode 1: Gallery MIUI native
             Intent intent = new Intent(Intent.ACTION_PICK);
             intent.setType("image/*");
-            
-            // Essayer d'abord la galerie MIUI spécifique
             intent.setPackage("com.miui.gallery");
             
-            // Si la galerie MIUI n'existe pas, utiliser le sélecteur système
-            if (intent.resolveActivity(getActivity().getPackageManager()) == null) {
-                intent.setPackage(null); // Retirer le package spécifique
-                intent = Intent.createChooser(intent, "Sélectionner une image");
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation galerie MIUI native");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return;
             }
             
-            getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+            // Méthode 2: Intent MIUI spécialisé
+            intent = new Intent("miui.intent.action.GALLERY_PICK");
+            intent.setType("image/*");
+            if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Log.d("PermissionsPlugin", "Utilisation intent MIUI spécialisé");
+                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                return;
+            }
+            
+            // Méthode 3: File Manager MIUI pour Android 13+
+            if (Build.VERSION.SDK_INT >= 33) {
+                intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*");
+                intent.setPackage("com.mi.android.globalFileexplorer");
+                if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                    Log.d("PermissionsPlugin", "Utilisation File Manager MIUI");
+                    getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                    return;
+                }
+            }
+            
+            // Fallback vers stratégie standard
+            Log.d("PermissionsPlugin", "Fallback vers stratégie standard depuis MIUI");
+            openGalleryStandard();
             
         } catch (Exception e) {
-            // Fallback vers méthode standard si MIUI échoue
+            Log.e("PermissionsPlugin", "Erreur stratégie MIUI", e);
             openGalleryStandard();
         }
     }
@@ -329,33 +434,88 @@ public class PermissionsPlugin extends Plugin {
 
     // ESSENTIEL: Traiter les résultats de l'activité galerie
     public void handleActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d("PermissionsPlugin", "handleActivityResult - code: " + requestCode + ", result: " + resultCode);
+        
+        // Gestion Photo Picker Android 13+
+        if (requestCode == PHOTO_PICKER_REQUEST_CODE && galleryCall != null) {
+            handlePhotoPickerResult(resultCode, data);
+            return;
+        }
+        
+        // Gestion galerie classique
         if (requestCode == GALLERY_REQUEST_CODE && galleryCall != null) {
+            handleGalleryResult(resultCode, data);
+            return;
+        }
+    }
+    
+    private void handlePhotoPickerResult(int resultCode, Intent data) {
+        try {
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                Uri selectedImage = data.getData();
+                
+                // Photo Picker peut aussi retourner multiple URIs
+                if (selectedImage == null && data.getClipData() != null && data.getClipData().getItemCount() > 0) {
+                    selectedImage = data.getClipData().getItemAt(0).getUri();
+                }
+                
+                if (selectedImage != null) {
+                    JSObject result = new JSObject();
+                    result.put("success", true);
+                    result.put("imageUri", selectedImage.toString());
+                    result.put("imagePath", selectedImage.toString()); // Photo Picker utilise des URIs content://
+                    result.put("method", "photo-picker-android13");
+                    result.put("device", getDeviceInfo());
+                    result.put("androidVersion", Build.VERSION.SDK_INT);
+                    
+                    Log.d("PermissionsPlugin", "Photo Picker succès: " + selectedImage.toString());
+                    galleryCall.resolve(result);
+                } else {
+                    Log.w("PermissionsPlugin", "Photo Picker: URI null");
+                    galleryCall.reject("URI image null depuis Photo Picker");
+                }
+            } else {
+                Log.d("PermissionsPlugin", "Photo Picker: sélection annulée");
+                galleryCall.reject("Sélection Photo Picker annulée");
+            }
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur Photo Picker", e);
+            galleryCall.reject("Erreur Photo Picker: " + e.getMessage(), e);
+        } finally {
+            galleryCall = null;
+        }
+    }
+    
+    private void handleGalleryResult(int resultCode, Intent data) {
+        try {
             if (resultCode == Activity.RESULT_OK && data != null) {
                 Uri selectedImage = data.getData();
                 if (selectedImage != null) {
-                    try {
-                        // Obtenir le chemin réel de l'image
-                        String imagePath = getRealImagePath(selectedImage);
-                        
-                        JSObject result = new JSObject();
-                        result.put("success", true);
-                        result.put("imageUri", selectedImage.toString());
-                        result.put("imagePath", imagePath);
-                        result.put("method", isMIUI() ? "miui-intent" : "standard-intent");
-                        result.put("device", getDeviceInfo());
-                        
-                        galleryCall.resolve(result);
-                        
-                    } catch (Exception e) {
-                        galleryCall.reject("Erreur traitement image: " + e.getMessage(), e);
-                    }
+                    // Obtenir le chemin réel de l'image
+                    String imagePath = getRealImagePath(selectedImage);
+                    
+                    JSObject result = new JSObject();
+                    result.put("success", true);
+                    result.put("imageUri", selectedImage.toString());
+                    result.put("imagePath", imagePath);
+                    result.put("method", isMIUI() ? "miui-intent" : "standard-intent");
+                    result.put("device", getDeviceInfo());
+                    result.put("androidVersion", Build.VERSION.SDK_INT);
+                    
+                    Log.d("PermissionsPlugin", "Galerie classique succès: " + selectedImage.toString());
+                    galleryCall.resolve(result);
                 } else {
+                    Log.w("PermissionsPlugin", "Galerie classique: URI null");
                     galleryCall.reject("URI image null");
                 }
             } else {
+                Log.d("PermissionsPlugin", "Galerie classique: sélection annulée");
                 galleryCall.reject("Sélection annulée ou échouée");
             }
-            
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "Erreur galerie classique", e);
+            galleryCall.reject("Erreur traitement image: " + e.getMessage(), e);
+        } finally {
             galleryCall = null;
         }
     }
