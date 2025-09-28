@@ -1,41 +1,124 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import { useNavigate } from 'react-router-dom';
+
+interface NotificationPermissionStatus {
+  granted: boolean;
+  denied: boolean;
+  prompt: boolean;
+}
 
 export const usePushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>({
+    granted: false,
+    denied: false,
+    prompt: true
+  });
+  
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
-  // DÉTECTION PLATEFORME NATIVE ROBUSTE pour AAB Play Store
-  const userAgent = navigator.userAgent;
-  const isAndroidApp = userAgent.includes('Android') && !userAgent.includes('Chrome/');
-  const isIOSApp = (userAgent.includes('iPhone') || userAgent.includes('iPad')) && !userAgent.includes('Safari');
-  const isInWebView = userAgent.includes('wv') || 
-                     (userAgent.includes('Version/') && userAgent.includes('Mobile'));
-  
-  // FORCE ANDROID si UserAgent contient Android, même si Capacitor dit "web"
-  const isNative = Capacitor.isNativePlatform() || 
-                   isAndroidApp || 
-                   isIOSApp || 
-                   isInWebView ||
-                   userAgent.includes('Android');
+  // DÉTECTION NATIVE CORRECTE - pas de faux positifs
+  const isNative = Capacitor.isNativePlatform();
+  const isSupported = isNative || ('Notification' in window);
 
-  const requestPermissions = async () => {
-    console.log('🔔 DÉBUT PERMISSIONS NOTIFICATIONS ROBUSTES...');
+  // Vérifier le statut des permissions
+  const checkPermissionStatus = useCallback(async () => {
+    try {
+      if (isNative) {
+        const status = await PushNotifications.checkPermissions();
+        const granted = status.receive === 'granted';
+        const denied = status.receive === 'denied';
+        
+        setPermissionStatus({
+          granted,
+          denied,
+          prompt: !granted && !denied
+        });
+        
+        setIsRegistered(granted);
+      } else if ('Notification' in window) {
+        const permission = Notification.permission;
+        const granted = permission === 'granted';
+        const denied = permission === 'denied';
+        
+        setPermissionStatus({
+          granted,
+          denied,
+          prompt: permission === 'default'
+        });
+        
+        setIsRegistered(granted);
+      }
+    } catch (error) {
+      console.error('❌ Erreur vérification permissions:', error);
+    }
+  }, [isNative]);
+
+  // Plugin Android pour Android 13+
+  const requestAndroidNotifications = async (): Promise<boolean> => {
+    try {
+      console.log('🤖 Demande permissions Android via plugin...');
+      
+      // Utiliser le plugin personnalisé pour Android 13+ POST_NOTIFICATIONS
+      const plugin = (window as any).CapacitorCustomPlugins?.PermissionsPlugin;
+      if (plugin) {
+        const result = await plugin.requestNotificationPermissions();
+        console.log('📱 Résultat plugin Android:', result);
+        
+        if (result.granted) {
+          // Tester avec une vraie notification locale
+          await plugin.showLocalNotification({
+            title: "RunConnect",
+            body: "Notifications activées avec succès ! 🎉"
+          });
+          
+          return true;
+        } else {
+          console.log('❌ Permissions Android refusées');
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur plugin Android:', error);
+    }
+    
+    return false;
+  };
+
+  const requestPermissions = async (): Promise<boolean> => {
+    console.log('🔔 Demande permissions notifications...');
     
     try {
-      // STRATÉGIE 1: Essayer Capacitor en priorité
-      console.log('🔄 Tentative Capacitor Push...');
-      try {
+      if (isNative) {
+        // STRATÉGIE ANDROID NATIVE
+        console.log('📱 Mode natif détecté');
+        
+        // 1. Essayer plugin Android en priorité (POST_NOTIFICATIONS)
+        const androidSuccess = await requestAndroidNotifications();
+        if (androidSuccess) {
+          console.log('✅ Plugin Android réussi');
+          setIsRegistered(true);
+          toast({
+            title: "Notifications activées !",
+            description: "Vous recevrez les notifications push"
+          });
+          return true;
+        }
+        
+        // 2. Fallback Capacitor standard
+        console.log('🔄 Fallback Capacitor...');
         const permission = await PushNotifications.requestPermissions();
-        console.log('📱 Permissions Capacitor:', permission);
         
         if (permission.receive === 'granted') {
+          console.log('✅ Capacitor réussi');
           await PushNotifications.register();
           setIsRegistered(true);
           
@@ -43,184 +126,221 @@ export const usePushNotifications = () => {
             title: "Notifications activées !",
             description: "Vous recevrez les notifications push"
           });
-          
           return true;
+        } else {
+          console.log('❌ Capacitor refusé:', permission.receive);
+          toast({
+            title: "Permission refusée",
+            description: "Activez les notifications dans Paramètres > Applications > RunConnect > Notifications",
+            variant: "destructive"
+          });
+          return false;
         }
-      } catch (capacitorError) {
-        console.log('❌ Capacitor Push échoué:', capacitorError);
-      }
-
-      // STRATÉGIE 2: Fallback Web Notifications
-      console.log('🔄 Fallback Web Notifications...');
-      if ('Notification' in window) {
-        try {
-          const permission = await Notification.requestPermission();
-          console.log('🌐 Permission Web:', permission);
+      } else if ('Notification' in window) {
+        // STRATÉGIE WEB
+        console.log('🌐 Mode web détecté');
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+          console.log('✅ Web notifications accordées');
+          setIsRegistered(true);
           
-          if (permission === 'granted') {
-            setIsRegistered(true);
-            
-            toast({
-              title: "Notifications activées !",
-              description: "Vous recevrez les notifications"
+          // Tester avec une notification web
+          if ('Notification' in window) {
+            new Notification('RunConnect', {
+              body: 'Notifications web activées ! 🎉',
+              icon: '/favicon.png'
             });
-            
-            return true;
-          } else {
-            toast({
-              title: "Permission refusée",
-              description: "Activez les notifications dans les paramètres",
-              variant: "destructive"
-            });
-            return false;
           }
-        } catch (webError) {
-          console.log('❌ Web Notifications échoué:', webError);
+          
+          toast({
+            title: "Notifications activées !",
+            description: "Vous recevrez les notifications"
+          });
+          return true;
+        } else {
+          console.log('❌ Web notifications refusées');
+          toast({
+            title: "Permission refusée",
+            description: "Activez les notifications dans les paramètres du navigateur",
+            variant: "destructive"
+          });
+          return false;
         }
+      } else {
+        console.log('❌ Notifications non supportées');
+        toast({
+          title: "Non supporté",
+          description: "Les notifications ne sont pas disponibles sur cet appareil",
+          variant: "destructive"
+        });
+        return false;
       }
-
-      // STRATÉGIE 3: Plugin Android custom (si disponible)
-      console.log('🔄 Tentative Plugin Android...');
-      if ((window as any).AndroidNotifications) {
-        try {
-          const hasPermission = (window as any).AndroidNotifications.requestPermissions();
-          if (hasPermission) {
-            setIsRegistered(true);
-            
-            toast({
-              title: "Notifications activées !",
-              description: "Configuration Android réussie"
-            });
-            
-            return true;
-          }
-        } catch (androidError) {
-          console.log('❌ Plugin Android échoué:', androidError);
-        }
-      }
-
-      // STRATÉGIE 4: Mode compatibilité (ne pas bloquer l'utilisateur)
-      console.log('🔄 Mode compatibilité...');
-      setIsRegistered(true);
-      
-      toast({
-        title: "Notifications configurées",
-        description: "Mode compatibilité activé"
-      });
-      
-      return true;
-      
     } catch (error) {
-      console.error('🔔❌ ERREUR NOTIFICATIONS:', error);
-      
-      // Toujours permettre à l'utilisateur de continuer
-      setIsRegistered(true);
-      
+      console.error('🔔❌ ERREUR PERMISSIONS:', error);
       toast({
-        title: "Notifications configurées",
-        description: "Configuration de base appliquée"
+        title: "Erreur",
+        description: "Impossible de configurer les notifications",
+        variant: "destructive"
       });
-      
-      return true;
+      return false;
     }
   };
 
-  const savePushToken = async (pushToken: string) => {
+  // Sauvegarder le token push
+  const savePushToken = useCallback(async (pushToken: string) => {
     if (!user) return;
 
     try {
-      // Note: This will fail until types are regenerated after migration
+      console.log('💾 Sauvegarde token push...');
       const { error } = await supabase
         .from('profiles')
-        .update({ push_token: pushToken })
+        .update({ 
+          push_token: pushToken,
+          notifications_enabled: true 
+        })
         .eq('user_id', user.id);
       
       if (error) {
-        console.error('Error saving push token:', error);
+        console.error('❌ Erreur sauvegarde token:', error);
       } else {
+        console.log('✅ Token sauvegardé');
         setToken(pushToken);
       }
     } catch (error) {
-      console.error('Error saving push token:', error);
+      console.error('❌ Exception sauvegarde token:', error);
     }
-  };
-
-  useEffect(() => {
-    // Check if notifications are already granted on web
-    if ('Notification' in window && Notification.permission === 'granted') {
-      setIsRegistered(true);
-    }
-
-    // Setup Capacitor listeners SEULEMENT si on est vraiment sur native
-    const hasCapacitorPush = !!(window as any).Capacitor?.Plugins?.PushNotifications || typeof PushNotifications !== 'undefined';
-    
-    if (hasCapacitorPush && isNative) {
-      console.log('🔍 Setting up Capacitor push listeners');
-      
-      // Register for push notifications
-      PushNotifications.addListener('registration', (token) => {
-        console.log('Push registration success, token: ' + token.value);
-        setIsRegistered(true);
-        savePushToken(token.value);
-      });
-
-      // Handle registration errors
-      PushNotifications.addListener('registrationError', (error) => {
-        console.error('Push registration error:', error);
-        setIsRegistered(false);
-      });
-
-      // Handle incoming notifications
-      PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('Push received: ', notification);
-        
-        // Show local toast for received notifications
-        toast({
-          title: notification.title || "Nouvelle notification",
-          description: notification.body || "",
-        });
-      });
-
-      // Handle notification tap
-      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('Push action performed: ', notification);
-        
-        // Handle navigation based on notification data
-        const data = notification.notification.data;
-        if (data?.type) {
-          handleNotificationTap(data);
-        }
-      });
-    }
-
-    return () => {
-      if (hasCapacitorPush && isNative) {
-        PushNotifications.removeAllListeners();
-      }
-    };
   }, [user]);
 
-  const handleNotificationTap = (data: any) => {
-    switch (data.type) {
-      case 'friend_request':
-        // Navigate to notifications/profile
-        window.location.href = '/profile';
-        break;
-      case 'session_created':
-      case 'session_request':
-      case 'request_accepted':
-        // Navigate to messages or sessions
-        window.location.href = '/';
-        break;
-      default:
-        break;
+  // Gestion des clics sur notification
+  const handleNotificationTap = useCallback((data: any) => {
+    console.log('👆 Notification cliquée:', data);
+    
+    try {
+      const actionData = data?.actionData || data?.data || {};
+      
+      switch (actionData.type) {
+        case 'message':
+          if (actionData.conversation_id) {
+            navigate(`/messages?conversation=${actionData.conversation_id}`);
+          } else {
+            navigate('/messages');
+          }
+          break;
+        case 'follow_request':
+          navigate('/profile');
+          break;
+        case 'session_request':
+          navigate('/');
+          break;
+        default:
+          console.log('Type notification inconnu:', actionData.type);
+      }
+    } catch (error) {
+      console.error('❌ Erreur gestion clic notification:', error);
     }
-  };
+  }, [navigate]);
+
+  // Test de notification
+  const testNotification = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      console.log('🧪 Test notification...');
+      
+      const { error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_id: user.id,
+          title: 'Test RunConnect',
+          body: 'Vos notifications fonctionnent parfaitement ! 🎉',
+          type: 'test',
+          data: { test: true }
+        }
+      });
+
+      if (error) {
+        console.error('❌ Erreur test notification:', error);
+        toast({
+          title: "Erreur test",
+          description: "Impossible d'envoyer la notification de test",
+          variant: "destructive"
+        });
+      } else {
+        console.log('✅ Test notification envoyé');
+        toast({
+          title: "Test envoyé",
+          description: "Notification de test envoyée avec succès!"
+        });
+      }
+    } catch (error) {
+      console.error('❌ Exception test notification:', error);
+    }
+  }, [user, toast]);
+
+  // Configuration des listeners
+  useEffect(() => {
+    if (!user) return;
+
+    // Vérifier le statut au montage
+    checkPermissionStatus();
+
+    // Listeners natifs seulement
+    if (isNative) {
+      console.log('🎧 Configuration listeners push natifs...');
+      
+      const setupListeners = async () => {
+        // Succès d'enregistrement
+        const regListener = await PushNotifications.addListener('registration', (token) => {
+          console.log('✅ Enregistrement push réussi:', token.value);
+          setToken(token.value);
+          setIsRegistered(true);
+          savePushToken(token.value);
+        });
+
+        // Erreur d'enregistrement
+        const regErrorListener = await PushNotifications.addListener('registrationError', (error) => {
+          console.error('❌ Erreur enregistrement push:', error);
+          setIsRegistered(false);
+        });
+
+        // Notification reçue
+        const notifListener = await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('📱 Notification reçue:', notification);
+          
+          toast({
+            title: notification.title || "Nouvelle notification",
+            description: notification.body || "",
+          });
+        });
+
+        // Notification cliquée
+        const actionListener = await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          console.log('👆 Notification action:', notification);
+          handleNotificationTap(notification.notification);
+        });
+
+        return () => {
+          regListener?.remove();
+          regErrorListener?.remove();
+          notifListener?.remove();
+          actionListener?.remove();
+        };
+      };
+
+      let cleanup: (() => void) | undefined;
+      setupListeners().then(cleanupFn => cleanup = cleanupFn);
+
+      return cleanup;
+    }
+  }, [user, isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
 
   return {
     isRegistered,
     token,
+    permissionStatus,
     requestPermissions,
-    isNative
+    testNotification,
+    isNative,
+    isSupported
   };
 };

@@ -6,8 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ForcePermissionsButton } from '@/components/ForcePermissionsButton';
 import { LocationTestButton } from '@/components/LocationTestButton';
 import { GalleryTestButton } from '@/components/GalleryTestButton';
-import { NotificationTestButton } from '@/components/NotificationTestButton';
-import { NotificationSystemTest } from '@/components/NotificationSystemTest';
+import { NotificationManager } from '@/components/NotificationManager';
 import { CompatibilityTestSuite } from '@/components/CompatibilityTestSuite';
 import { DeviceSpecificGuide } from '@/components/DeviceSpecificGuide';
 import { MobileCompatibilityTest } from '@/components/MobileCompatibilityTest';
@@ -237,10 +236,7 @@ export const AndroidTestPage = () => {
           <ForcePermissionsButton />
           <LocationTestButton />
           <GalleryTestButton />
-          <NotificationTestButton />
-          
-          {/* Test complet système notifications push */}
-          <NotificationSystemTest />
+          <NotificationManager />
           
           {/* Test compatibilité complète avec tous les téléphones */}
           <CompatibilityTestSuite />
