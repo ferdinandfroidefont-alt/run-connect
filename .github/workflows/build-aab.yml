@@ -130,13 +130,14 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # ✅ Copier AndroidManifest et MainActivity
-          cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
-          cp android/app/src/main/java/app/runconnect/MainActivity.java android-webview/app/src/main/java/app/runconnect/MainActivity.java
-          cp android/app/src/main/java/app/runconnect/PermissionsPluginFixed.java android-webview/app/src/main/java/app/runconnect/PermissionsPluginFixed.java
+          # ✅ Copier AndroidManifest (on utilisera celui d'android-webview qui est plus simple)
+          # Le MainActivity d'android-webview est déjà plus simple et n'a pas de dépendances aux plugins
 
-          # 🔧 Modifier START_URL dynamiquement
-          sed -i 's|private static final String START_URL = ".*";|private static final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
+          # 🔧 Modifier START_URL dynamiquement dans le MainActivity d'android-webview
+          sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
+          
+          # 🔧 Supprimer l'attribut package obsolète du AndroidManifest
+          sed -i 's|package="app.runconnect"||g' android-webview/app/src/main/AndroidManifest.xml
 
           # ✅ Créer styles.xml
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
