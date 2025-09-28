@@ -130,8 +130,8 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # ✅ Copier AndroidManifest (on utilisera celui d'android-webview qui est plus simple)
-          # Le MainActivity d'android-webview est déjà plus simple et n'a pas de dépendances aux plugins
+          # ✅ Copier AndroidManifest depuis android/ et le nettoyer
+          cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
           # 🔧 Modifier START_URL dynamiquement dans le MainActivity d'android-webview
           sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
