@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Contacts } from '@capacitor-community/contacts';
 import { nativeManager } from '@/lib/nativeInit';
+import { forceContactsPermissions } from '@/lib/forceNativePermissions';
+import { MIUIPermissionsFix } from '@/lib/miuiPermissionsFix';
 
 export interface Contact {
   contactId: string;
@@ -66,11 +68,37 @@ export const useContacts = () => {
         return false;
       }
       
-      console.log('👥 Demande permissions contacts...');
-      const result = await Contacts.requestPermissions();
-      console.log('👥 Résultat demande permissions:', result);
+      console.log('👥 Demande permissions contacts avec stratégie améliorée...');
       
-      const granted = result.contacts === 'granted';
+      // Get device info for strategy selection
+      let deviceInfo = null;
+      if (typeof window !== 'undefined' && (window as any).PermissionsPlugin) {
+        try {
+          deviceInfo = await (window as any).PermissionsPlugin.getDeviceInfo();
+        } catch (error) {
+          console.log('👥 Device info non disponible');
+        }
+      }
+
+      let granted = false;
+
+      // Use enhanced permission strategy based on device
+      if (deviceInfo?.isMIUI || deviceInfo?.manufacturer?.toLowerCase().includes('xiaomi')) {
+        console.log('👥 Utilisation stratégie MIUI pour contacts...');
+        granted = await MIUIPermissionsFix.requestContactsWithMIUIFallback();
+      } else {
+        try {
+          // Try enhanced native permissions first
+          granted = await forceContactsPermissions();
+        } catch (enhancedError) {
+          console.log('👥 Enhanced permissions failed, fallback to standard:', enhancedError);
+          // Fallback to standard Capacitor
+          const result = await Contacts.requestPermissions();
+          granted = result.contacts === 'granted';
+        }
+      }
+      
+      console.log('👥 Résultat final permissions contacts:', granted);
       setHasPermission(granted);
       return granted;
     } catch (error) {

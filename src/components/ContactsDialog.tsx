@@ -1,21 +1,27 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { UserPlus, Smartphone, Shield, X, Phone } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { useContacts } from "@/hooks/useContacts";
-import { useProfileNavigation } from "@/hooks/useProfileNavigation";
-import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Users, UserPlus, Smartphone, Settings, AlertCircle, CheckCircle, XCircle, Bug, Phone, Shield } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { useContacts } from '@/hooks/useContacts';
+import { useProfileNavigation } from '@/hooks/useProfileNavigation';
+import { supabase } from '@/integrations/supabase/client';
+import { ProfilePreviewDialog } from './ProfilePreviewDialog';
+import { ContactsDiagnostic } from './ContactsDiagnostic';
+import { ContactsTroubleshootingGuide } from './ContactsTroubleshootingGuide';
 
 interface ContactSuggestion {
   user_id: string;
   username: string;
-  display_name: string;
-  avatar_url: string;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 interface ContactsDialogProps {
@@ -23,24 +29,47 @@ interface ContactsDialogProps {
   onClose: () => void;
 }
 
-export const ContactsDialog = ({ open, onClose }: ContactsDialogProps) => {
+export const ContactsDialog: React.FC<ContactsDialogProps> = ({ open, onClose }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isNative, hasPermission, requestPermissions, loadContacts } = useContacts();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+  const { 
+    contacts: deviceContacts, 
+    loading: contactsLoading, 
+    hasPermission, 
+    isNative,
+    requestPermissions,
+    loadContacts 
+  } = useContacts();
+
   const [contacts, setContacts] = useState<ContactSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  const [permissionPrompt, setPermissionPrompt] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<ContactSuggestion | null>(null);
+  const [deviceInfo, setDeviceInfo] = useState<any>(null);
+  const [contactsError, setContactsError] = useState<string | undefined>();
 
   useEffect(() => {
     if (open && user) {
       if (isNative && !hasPermission) {
-        setShowPermissionPrompt(true);
+        setPermissionPrompt(true);
       } else if (isNative && hasPermission) {
         loadContactsFromApp();
       }
+      getDeviceInfo();
     }
   }, [open, user, isNative, hasPermission]);
+
+  const getDeviceInfo = async () => {
+    try {
+      if (typeof window !== 'undefined' && (window as any).PermissionsPlugin) {
+        const info = await (window as any).PermissionsPlugin.getDeviceInfo();
+        setDeviceInfo(info);
+      }
+    } catch (error) {
+      console.log('Device info non disponible:', error);
+    }
+  };
 
   const loadContactsFromApp = async () => {
     if (!user) return;
@@ -177,7 +206,7 @@ export const ContactsDialog = ({ open, onClose }: ContactsDialogProps) => {
   const handleRequestContactsPermission = async () => {
     const granted = await requestPermissions();
     if (granted) {
-      setShowPermissionPrompt(false);
+      setPermissionPrompt(false);
       toast({
         title: "Contacts autorisés",
         description: "Chargement de vos contacts..."
@@ -260,78 +289,113 @@ export const ContactsDialog = ({ open, onClose }: ContactsDialogProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Mes contacts sur RunConnect
+              <Users className="h-5 w-5" />
+              Trouver mes contacts
             </DialogTitle>
+            <DialogDescription>
+              Trouvez vos amis qui utilisent déjà l'application
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {!isNative ? (
-              <div className="text-center py-6">
-                <Smartphone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-sm text-muted-foreground">
-                  Cette fonctionnalité est disponible uniquement sur mobile
-                </p>
+          <Tabs defaultValue="contacts" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="contacts">
+                <Users className="h-4 w-4 mr-2" />
+                Contacts
+              </TabsTrigger>
+              <TabsTrigger value="diagnostic">
+                <Bug className="h-4 w-4 mr-2" />
+                Diagnostic
+              </TabsTrigger>
+              <TabsTrigger value="help">
+                <Settings className="h-4 w-4 mr-2" />
+                Aide
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="contacts" className="space-y-4">
+              <div className="space-y-4">
+                {!isNative ? (
+                  <div className="text-center py-6">
+                    <Smartphone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground">
+                      Cette fonctionnalité est disponible uniquement sur mobile
+                    </p>
+                  </div>
+                ) : permissionPrompt ? (
+                  <div className="text-center py-4">
+                    <Smartphone className="h-12 w-12 text-primary mx-auto mb-4" />
+                    <h3 className="font-semibold mb-2">Trouvez vos amis facilement</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Autorisez l'accès à vos contacts pour voir vos amis qui utilisent RunConnect
+                    </p>
+                    <div className="flex items-center justify-center gap-2 mb-4 text-xs text-muted-foreground">
+                      <Shield className="h-4 w-4" />
+                      <span>Vos contacts restent privés et sécurisés</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setPermissionPrompt(false)}
+                        className="flex-1"
+                      >
+                        Plus tard
+                      </Button>
+                      <Button 
+                        onClick={handleRequestContactsPermission}
+                        className="flex-1"
+                      >
+                        Autoriser les contacts
+                      </Button>
+                    </div>
+                  </div>
+                ) : loading ? (
+                  <div className="text-center py-6">
+                    <Phone className="h-8 w-8 text-muted-foreground mx-auto mb-2 animate-pulse" />
+                    <p className="text-sm text-muted-foreground">Recherche de vos contacts...</p>
+                  </div>
+                ) : contacts.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Phone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground">
+                      Aucun de vos contacts n'utilise encore RunConnect
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Invitez-les à rejoindre l'application !
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    {contacts.map(contact => (
+                      <ContactCard key={contact.user_id} contact={contact} />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : showPermissionPrompt ? (
-              <div className="text-center py-4">
-                <Smartphone className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Trouvez vos amis facilement</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Autorisez l'accès à vos contacts pour voir vos amis qui utilisent RunConnect
-                </p>
-                <div className="flex items-center justify-center gap-2 mb-4 text-xs text-muted-foreground">
-                  <Shield className="h-4 w-4" />
-                  <span>Vos contacts restent privés et sécurisés</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowPermissionPrompt(false)}
-                    className="flex-1"
-                  >
-                    Plus tard
-                  </Button>
-                  <Button 
-                    onClick={handleRequestContactsPermission}
-                    className="flex-1"
-                  >
-                    Autoriser les contacts
-                  </Button>
-                </div>
-              </div>
-            ) : loading ? (
-              <div className="text-center py-6">
-                <Phone className="h-8 w-8 text-muted-foreground mx-auto mb-2 animate-pulse" />
-                <p className="text-sm text-muted-foreground">Recherche de vos contacts...</p>
-              </div>
-            ) : contacts.length === 0 ? (
-              <div className="text-center py-6">
-                <Phone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-sm text-muted-foreground">
-                  Aucun de vos contacts n'utilise encore RunConnect
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Invitez-les à rejoindre l'application !
-                </p>
-              </div>
-            ) : (
-              <div className="max-h-96 overflow-y-auto space-y-2">
-                {contacts.map(contact => (
-                  <ContactCard key={contact.user_id} contact={contact} />
-                ))}
-              </div>
-            )}
-          </div>
+            </TabsContent>
+
+            <TabsContent value="diagnostic" className="space-y-4">
+              <ContactsDiagnostic />
+            </TabsContent>
+
+            <TabsContent value="help" className="space-y-4">
+              <ContactsTroubleshootingGuide 
+                deviceInfo={deviceInfo}
+                isNative={isNative}
+                hasPermission={hasPermission}
+                error={contactsError}
+              />
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
       <ProfilePreviewDialog 
-        userId={selectedUserId} 
-        onClose={closeProfilePreview}
+        userId={selectedUser?.user_id} 
+        onClose={() => setSelectedUser(null)}
       />
     </>
   );

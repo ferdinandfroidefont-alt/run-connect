@@ -181,31 +181,59 @@ export class MIUIPermissionsFix {
     await this.initialize();
     
     try {
+      console.log('🔥 MIUI Fix: Demande contacts avec fallback MIUI');
+      
+      // Try standard permissions first
+      try {
+        const { Contacts } = await import('@capacitor-community/contacts');
+        const result = await Contacts.requestPermissions();
+        if (result.contacts === 'granted') {
+          console.log('✅ MIUI Fix: Permissions contacts standard accordées');
+          this.permissionStatus.contacts = true;
+          return true;
+        }
+      } catch (standardError) {
+        console.log('🔥 MIUI Fix: Permissions standard échouées:', standardError);
+      }
+
+      // Use MIUI-specific strategy if standard fails
       if (this.isMIUIDevice()) {
-        console.log('🔥 MIUI Fix: Demande contacts pour MIUI');
+        console.log('🔥 MIUI Fix: Stratégie spécialisée MIUI pour contacts');
         
         for (let i = 0; i < 3; i++) {
           try {
             const result = await androidPermissions.forceRequestContactsPermissions();
             if (result) {
+              console.log(`✅ MIUI Fix: Contacts accordés tentative ${i + 1}`);
               this.permissionStatus.contacts = true;
               return true;
             }
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Wait between attempts
+            if (i < 2) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
           } catch (error) {
-            console.log('🔥 MIUI Fix: Erreur contacts tentative', i + 1, ':', error);
+            console.log(`🔥 MIUI Fix: Erreur contacts tentative ${i + 1}:`, error);
           }
         }
         
+        console.log('🔥 MIUI Fix: Toutes tentatives échouées - Instructions manuelles');
         this.showMIUIContactsInstructions();
         return false;
       } else {
-        const result = await androidPermissions.forceRequestContactsPermissions();
-        this.permissionStatus.contacts = result;
-        return result;
+        // Non-MIUI device, try native plugin
+        try {
+          const result = await androidPermissions.forceRequestContactsPermissions();
+          this.permissionStatus.contacts = result;
+          return result;
+        } catch (error) {
+          console.log('🔥 MIUI Fix: Plugin natif échoué pour contacts:', error);
+          return false;
+        }
       }
     } catch (error) {
-      console.error('❌ MIUI Fix: Erreur contacts:', error);
+      console.error('❌ MIUI Fix: Erreur globale contacts:', error);
       return false;
     }
   }

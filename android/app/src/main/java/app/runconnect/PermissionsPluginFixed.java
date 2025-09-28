@@ -127,6 +127,31 @@ public class PermissionsPluginFixed extends Plugin {
     // ============ PERMISSIONS PAR VERSION ANDROID ============
 
     @PluginMethod
+    public void forceRequestContactsPermissions(PluginCall call) {
+        String[] permissions = getContactsPermissionsByVersion();
+        
+        Log.d("PermissionsPlugin", "Android " + Build.VERSION.SDK_INT + " - Contacts Permissions: " + 
+              java.util.Arrays.toString(permissions));
+        
+        if (!hasAllPermissions(permissions)) {
+            requestPermissionForAliases(permissions, call, "contacts");
+        } else {
+            JSObject result = new JSObject();
+            result.put("granted", true);
+            result.put("device", getDeviceInfo());
+            result.put("androidVersion", Build.VERSION.SDK_INT);
+            result.put("permissionsRequested", java.util.Arrays.toString(permissions));
+            result.put("strategy", getPermissionStrategy());
+            call.resolve(result);
+        }
+    }
+
+    private String[] getContactsPermissionsByVersion() {
+        // READ_CONTACTS permission is consistent across Android versions
+        return new String[] { Manifest.permission.READ_CONTACTS };
+    }
+
+    @PluginMethod
     public void forceRequestCameraPermissions(PluginCall call) {
         String[] permissions = getCameraPermissionsByVersion();
         

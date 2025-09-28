@@ -182,6 +182,42 @@ export async function forceCameraPermissions() {
 }
 
 /**
+ * FORCE permissions contacts même si Capacitor dit "web"
+ */
+export async function forceContactsPermissions(): Promise<boolean> {
+  console.log('🔥 FORCE demande permissions contacts');
+  
+  // Vérifier si c'est Android et si le plugin existe avant d'essayer
+  if (androidPermissions.isAndroid() && typeof window !== 'undefined' && window.PermissionsPlugin) {
+    try {
+      const granted = await androidPermissions.forceRequestContactsPermissions();
+      if (granted) {
+        console.log('🔥 Permissions contacts accordées via plugin Android');
+        return true;
+      }
+    } catch (error) {
+      console.log('🔥 Plugin Android échoué, tentative Capacitor');
+    }
+  }
+  
+  try {
+    // Forcer l'utilisation de l'API Capacitor même si elle pense être sur le web
+    const { Contacts } = await import('@capacitor-community/contacts');
+    const result = await Contacts.requestPermissions();
+    console.log('🔥 Permissions contacts (Capacitor):', result);
+    
+    if (result.contacts !== 'granted') {
+      throw new Error('Permissions contacts refusées');
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.log('🔥 Capacitor contacts échoué:', error);
+    throw error;
+  }
+}
+
+/**
  * FORCE ouverture galerie avec stratégies multiples
  */
 export const forceOpenGallery = async (): Promise<string | null> => {
