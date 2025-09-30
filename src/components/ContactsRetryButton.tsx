@@ -17,6 +17,7 @@ export const ContactsRetryButton = () => {
     lastCheckTime,
     requestPermissions,
     recheckPermissions,
+    checkContactsPermissionsNow,
     openDeviceSettings,
     resetState
   } = useContactsWithRetry();
@@ -140,6 +141,16 @@ export const ContactsRetryButton = () => {
                 <RefreshCw className="h-4 w-4" />
               )}
               Re-vérifier Maintenant
+            </Button>
+
+            <Button
+              onClick={checkContactsPermissionsNow}
+              disabled={!isNative}
+              variant="secondary"
+              className="w-full gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Forcer la Vérification
             </Button>
 
             {!hasPermission && isNative && (
