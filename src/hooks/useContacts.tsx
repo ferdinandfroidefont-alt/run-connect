@@ -68,121 +68,32 @@ export const useContacts = () => {
         return false;
       }
       
-      console.log('👥🔄 DEMANDE PERMISSIONS CONTACTS AVEC DÉTECTION POST-AUTORISATION...');
+      console.log('👥🔄 Demande permissions contacts (méthode simplifiée)...');
       
-      let granted = false;
-
-      // Détection du type d'appareil via UserAgent (plus fiable)
-      const userAgent = navigator.userAgent.toLowerCase();
-      const isMIUI = userAgent.includes('miui') || userAgent.includes('xiaomi') || userAgent.includes('redmi');
+      // Méthode simplifiée et directe
+      const result = await Contacts.requestPermissions();
+      const granted = result.contacts === 'granted';
       
-      console.log('👥 Type d\'appareil détecté - MIUI:', isMIUI);
-
-      if (isMIUI) {
-        console.log('👥 Stratégie MIUI pour contacts avec retry amélioré...');
-        try {
-          // Essayer d'abord la méthode standard puis fallback MIUI
-          const result = await Contacts.requestPermissions();
-          granted = result.contacts === 'granted';
-          
-          if (!granted) {
-            console.log('👥 Standard failed, trying MIUI fallback...');
-            granted = await MIUIPermissionsFix.requestContactsWithMIUIFallback();
-          }
-        } catch (miuiError) {
-          console.log('👥 MIUI strategy failed:', miuiError);
-          // Dernier fallback : permissions natives forcées
-          try {
-            granted = await forceContactsPermissions();
-          } catch (forceError) {
-            console.log('👥 Force permissions failed:', forceError);
-            granted = false;
-          }
-        }
-      } else {
-        console.log('👥 Stratégie standard pour contacts...');
-        try {
-          // Standard Capacitor first
-          const result = await Contacts.requestPermissions();
-          granted = result.contacts === 'granted';
-          
-          if (!granted) {
-            console.log('👥 Standard failed, trying enhanced permissions...');
-            granted = await forceContactsPermissions();
-          }
-        } catch (standardError) {
-          console.log('👥 Standard strategy failed:', standardError);
-          try {
-            granted = await forceContactsPermissions();
-          } catch (forceError) {
-            console.log('👥 Force permissions failed:', forceError);
-            granted = false;
-          }
-        }
-      }
-      
-      console.log('👥🔄 Résultat initial permissions contacts:', granted);
-      
-      // ✨ AMÉLIORATION : Vérifications post-autorisation avec retry progressif
-      if (!granted) {
-        console.log('👥🔄 Permission refusée, tentative de détection retardée...');
-        granted = await performDelayedPermissionCheck(isMIUI);
-      }
+      console.log('👥 Résultat permissions:', granted);
       
       setHasPermission(granted);
       
-      // Vérification finale avec délai adapté au type d'appareil
-      const finalDelayMs = isMIUI ? 3000 : 1500;
+      // Une seule vérification rapide après 500ms
       setTimeout(async () => {
-        console.log('👥🔄 Vérification finale permissions après', finalDelayMs, 'ms...');
-        const finalCheck = await checkPermissions();
-        console.log('👥✅ Vérification finale permissions:', finalCheck);
-        
-        if (finalCheck && !granted) {
-          console.log('👥🎉 Permissions détectées lors de la vérification finale !');
-          setHasPermission(true);
+        const recheckResult = await Contacts.checkPermissions();
+        const recheckGranted = recheckResult.contacts === 'granted';
+        if (recheckGranted !== granted) {
+          console.log('👥✅ Permission mise à jour:', recheckGranted);
+          setHasPermission(recheckGranted);
         }
-      }, finalDelayMs);
+      }, 500);
       
       return granted;
     } catch (error) {
-      console.error('👥❌ Erreur globale request permissions contacts:', error);
+      console.error('👥❌ Erreur request permissions contacts:', error);
       setHasPermission(false);
       return false;
     }
-  };
-
-  // ✨ Nouvelle fonction : Vérification retardée des permissions
-  const performDelayedPermissionCheck = async (isMIUI: boolean): Promise<boolean> => {
-    const delays = isMIUI ? [2000, 5000, 8000] : [1000, 3000, 5000];
-    const maxAttempts = delays.length;
-    
-    console.log('👥⏳ Début vérifications retardées (MIUI:', isMIUI, ')...');
-    
-    for (let i = 0; i < maxAttempts; i++) {
-      const delay = delays[i];
-      console.log(`👥⏳ Attente ${delay}ms avant tentative ${i + 1}/${maxAttempts}...`);
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      try {
-        console.log(`👥🔍 Vérification retardée ${i + 1}/${maxAttempts}...`);
-        const result = await Contacts.checkPermissions();
-        const granted = result.contacts === 'granted';
-        
-        console.log(`👥🔍 Résultat tentative ${i + 1}:`, granted);
-        
-        if (granted) {
-          console.log('👥🎉 Permissions détectées lors de la vérification retardée !');
-          return true;
-        }
-      } catch (error) {
-        console.log(`👥❌ Erreur vérification retardée ${i + 1}:`, error);
-      }
-    }
-    
-    console.log('👥😞 Aucune permission détectée après toutes les tentatives retardées');
-    return false;
   };
 
   const loadContacts = async (): Promise<Contact[]> => {
