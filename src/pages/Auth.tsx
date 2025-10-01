@@ -72,10 +72,21 @@ const Auth = () => {
     try {
       setIsLoading(true);
       
-      // Déterminer si on est sur une app native
-      const isNative = (window as any).Capacitor?.isNativePlatform?.();
+      // Détection robuste de l'environnement natif Android
+      const capacitorNative = (window as any).Capacitor?.isNativePlatform?.();
+      const hasAndroidInterface = !!(window as any).Android || !!(window as any).AndroidInterface;
+      const isAndroidUA = /Android/i.test(navigator.userAgent);
+      const isWebView = /wv|WebView/i.test(navigator.userAgent);
+      const isNative = capacitorNative || (isAndroidUA && (hasAndroidInterface || isWebView));
       
-      console.log('🔥 Auth Google - Native:', isNative);
+      console.log('🔥 Auth Google - Detection:', {
+        capacitorNative,
+        hasAndroidInterface,
+        isAndroidUA,
+        isWebView,
+        isNative,
+        userAgent: navigator.userAgent
+      });
       
       if (isNative) {
         // Pour les apps natives, utiliser le navigateur système
