@@ -29,10 +29,39 @@ export const usePushNotifications = () => {
   const isNative = Capacitor.isNativePlatform();
   const isSupported = isNative || ('Notification' in window);
 
-  // Vérifier le statut des permissions
+  // Vérifier le statut des permissions (PRIORITÉ ANDROID INJECTÉ)
   const checkPermissionStatus = useCallback(async () => {
     try {
       if (isNative) {
+        // 🎯 PRIORITÉ 1: Vérifier l'état Android injecté (source de vérité)
+        const androidState = window.androidPermissions?.notifications;
+        
+        if (androidState) {
+          console.log('🤖 État Android injecté détecté:', androidState);
+          const granted = androidState === 'granted';
+          
+          setPermissionStatus({
+            granted,
+            denied: !granted,
+            prompt: false
+          });
+          setIsRegistered(granted);
+          
+          // Cross-vérification avec Capacitor pour logger les divergences
+          try {
+            const capacitorStatus = await PushNotifications.checkPermissions();
+            if (capacitorStatus.receive !== (granted ? 'granted' : 'denied')) {
+              console.warn('⚠️ DIVERGENCE notifications - Android:', androidState, 'vs Capacitor:', capacitorStatus.receive);
+            }
+          } catch (e) {
+            console.log('⚠️ Capacitor check échoué, on garde état Android');
+          }
+          
+          return;
+        }
+        
+        // 🔄 FALLBACK: Utiliser Capacitor si pas d'injection Android
+        console.log('🔄 Fallback Capacitor pour vérification notifications');
         const status = await PushNotifications.checkPermissions();
         const granted = status.receive === 'granted';
         const denied = status.receive === 'denied';
@@ -112,6 +141,18 @@ export const usePushNotifications = () => {
       if (isNative) {
         console.log('📱 Mode natif détecté');
         
+        // 🎯 Vérifier d'abord l'état Android injecté
+        const androidState = window.androidPermissions?.notifications;
+        if (androidState === 'granted') {
+          console.log('✅ Notifications déjà accordées selon Android');
+          await checkPermissionStatus();
+          toast({
+            title: "Notifications déjà activées",
+            description: "Vos notifications sont déjà configurées"
+          });
+          return true;
+        }
+        
         // Détecter la version Android pour choisir la stratégie
         const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
         const androidVersionInt = androidVersion ? parseInt(androidVersion) : 0;
@@ -126,7 +167,19 @@ export const usePushNotifications = () => {
           
           if (success) {
             console.log('✅ Plugin Android personnalisé réussi');
+            
+            // 🔄 Attendre la mise à jour de l'état Android
+            await new Promise(resolve => setTimeout(resolve, 300));
             await checkPermissionStatus();
+            
+            // Cross-vérifier avec l'état Android injecté
+            const finalAndroidState = window.androidPermissions?.notifications;
+            if (finalAndroidState === 'granted') {
+              console.log('✅ État Android confirmé: granted');
+            } else {
+              console.warn('⚠️ État Android non mis à jour, mais plugin dit succès');
+            }
+            
             toast({
               title: "Notifications activées !",
               description: `Compatibilité Android ${androidVersionInt} confirmée`
@@ -151,7 +204,10 @@ export const usePushNotifications = () => {
             console.log('⚠️ Enregistrement push échoué mais permissions OK');
           }
           
+          // 🔄 Attendre la mise à jour de l'état Android
+          await new Promise(resolve => setTimeout(resolve, 300));
           await checkPermissionStatus();
+          
           toast({
             title: "Notifications activées !",
             description: "Méthode Capacitor standard utilisée"
@@ -333,6 +389,15 @@ export const usePushNotifications = () => {
     // Vérifier le statut au montage
     checkPermissionStatus();
 
+    // 🎧 Écouter les mises à jour des permissions Android
+    const handleAndroidPermissionsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('🔔 Permissions Android mises à jour:', customEvent.detail);
+      checkPermissionStatus();
+    };
+
+    window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
+
     // Listeners natifs seulement
     if (isNative) {
       console.log('🎧 Configuration listeners push natifs...');
@@ -389,8 +454,13 @@ export const usePushNotifications = () => {
       return () => {
         cleanup?.();
         clearInterval(interval);
+        window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
       };
     }
+
+    return () => {
+      window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
+    };
   }, [user, isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
 
   return {

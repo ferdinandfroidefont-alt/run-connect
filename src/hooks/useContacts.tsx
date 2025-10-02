@@ -9,8 +9,16 @@ declare global {
   interface Window {
     androidPermissions?: {
       contacts?: string;
+      contactsPermanentlyDenied?: boolean;
       location?: string;
+      locationPermanentlyDenied?: boolean;
       camera?: string;
+      cameraPermanentlyDenied?: boolean;
+      storage?: string;
+      storagePermanentlyDenied?: boolean;
+      notifications?: string;
+      notificationsPermanentlyDenied?: boolean;
+      timestamp?: number;
     };
   }
 }

@@ -225,6 +225,14 @@ public class MainActivity extends AppCompatActivity {
         boolean hasContacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
         boolean hasStorage = hasStoragePermission();
         
+        // Vérifier les permissions notifications (Android 13+)
+        boolean hasNotifications = true; // Par défaut accordé pour Android < 13
+        boolean notificationsPermanentlyDenied = false;
+        if (Build.VERSION.SDK_INT >= 33) {
+            hasNotifications = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            notificationsPermanentlyDenied = !hasNotifications && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS);
+        }
+        
         // Détecter si les permissions ont été refusées définitivement
         boolean locationPermanentlyDenied = !hasLocation && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION);
         boolean cameraPermanentlyDenied = !hasCamera && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA);
@@ -238,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
             storagePermanentlyDenied = !hasStorage && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE);
         }
         
-        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Storage: " + hasStorage + " (permanent: " + storagePermanentlyDenied + "), Contacts: " + hasContacts + " (permanent: " + contactsPermanentlyDenied + ")");
+        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Storage: " + hasStorage + " (permanent: " + storagePermanentlyDenied + "), Contacts: " + hasContacts + " (permanent: " + contactsPermanentlyDenied + "), Notifications: " + hasNotifications + " (permanent: " + notificationsPermanentlyDenied + ")");
         
         String jsCode = "window.androidPermissions = {" +
                        "location: '" + (hasLocation ? "granted" : "denied") + "', " +
@@ -249,6 +257,8 @@ public class MainActivity extends AppCompatActivity {
                        "storagePermanentlyDenied: " + storagePermanentlyDenied + ", " +
                        "contacts: '" + (hasContacts ? "granted" : "denied") + "', " +
                        "contactsPermanentlyDenied: " + contactsPermanentlyDenied + ", " +
+                       "notifications: '" + (hasNotifications ? "granted" : "denied") + "', " +
+                       "notificationsPermanentlyDenied: " + notificationsPermanentlyDenied + ", " +
                        "timestamp: " + System.currentTimeMillis() + "}; " +
                        "console.log('🔐 Permissions Android injectées:', window.androidPermissions);";
         
