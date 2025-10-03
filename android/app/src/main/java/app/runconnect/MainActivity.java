@@ -56,6 +56,10 @@ public class MainActivity extends AppCompatActivity {
 
         // ✅ WebView setup
         webView = new WebView(this);
+        
+        // ✅ Ajouter l'interface JavaScript AndroidBridge
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
+        
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -369,6 +373,87 @@ public class MainActivity extends AppCompatActivity {
         
         if (permissionsPlugin != null) {
             permissionsPlugin.handleActivityResult(requestCode, resultCode, data);
+        }
+    }
+    
+    // ✅ Interface JavaScript pour les permissions natives
+    private class AndroidBridge {
+        @android.webkit.JavascriptInterface
+        public void requestContactsPermission() {
+            Log.d(TAG, "👥 AndroidBridge: demande permission contacts depuis JavaScript");
+            
+            runOnUiThread(() -> {
+                if (hasContactsPermission()) {
+                    Log.d(TAG, "👥 Permission contacts déjà accordée");
+                    injectPermissionsState(webView);
+                    notifyJavaScriptPermissionResult(true);
+                } else {
+                    Log.d(TAG, "👥 Demande permission contacts à l'utilisateur");
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.READ_CONTACTS},
+                            REQ_CONTACTS);
+                }
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void requestLocationPermission() {
+            Log.d(TAG, "📍 AndroidBridge: demande permission localisation depuis JavaScript");
+            
+            runOnUiThread(() -> {
+                if (hasLocationPermission()) {
+                    Log.d(TAG, "📍 Permission localisation déjà accordée");
+                    injectPermissionsState(webView);
+                    notifyJavaScriptPermissionResult(true);
+                } else {
+                    Log.d(TAG, "📍 Demande permission localisation à l'utilisateur");
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            },
+                            REQ_LOCATION);
+                }
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void requestStoragePermission() {
+            Log.d(TAG, "📸 AndroidBridge: demande permission stockage depuis JavaScript");
+            
+            runOnUiThread(() -> {
+                if (hasStoragePermission()) {
+                    Log.d(TAG, "📸 Permission stockage déjà accordée");
+                    injectPermissionsState(webView);
+                    notifyJavaScriptPermissionResult(true);
+                } else {
+                    Log.d(TAG, "📸 Demande permission stockage à l'utilisateur");
+                    String[] storagePermissions;
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        storagePermissions = new String[]{
+                            Manifest.permission.READ_MEDIA_IMAGES,
+                            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+                            Manifest.permission.CAMERA
+                        };
+                    } else {
+                        storagePermissions = new String[]{
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.CAMERA
+                        };
+                    }
+                    ActivityCompat.requestPermissions(MainActivity.this, storagePermissions, REQ_STORAGE);
+                }
+            });
+        }
+    }
+    
+    private void notifyJavaScriptPermissionResult(boolean granted) {
+        if (webView != null) {
+            String jsCode = String.format(
+                "if (window.onNativePermissionResult) { window.onNativePermissionResult(%s); }",
+                granted ? "true" : "false"
+            );
+            webView.evaluateJavascript(jsCode, null);
         }
     }
 }

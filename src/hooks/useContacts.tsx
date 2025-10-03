@@ -4,7 +4,7 @@ import { nativeManager } from '@/lib/nativeInit';
 import { forceContactsPermissions } from '@/lib/forceNativePermissions';
 import { MIUIPermissionsFix } from '@/lib/miuiPermissionsFix';
 
-// Interface pour l'état Android injecté
+// Interface pour l'état Android injecté et le bridge natif
 declare global {
   interface Window {
     androidPermissions?: {
@@ -20,6 +20,12 @@ declare global {
       notificationsPermanentlyDenied?: boolean;
       timestamp?: number;
     };
+    AndroidBridge?: {
+      requestContactsPermission: () => void;
+      requestLocationPermission: () => void;
+      requestStoragePermission: () => void;
+    };
+    onNativePermissionResult?: (granted: boolean) => void;
   }
 }
 
@@ -80,48 +86,17 @@ export const useContacts = () => {
         return false;
       }
       
-      console.log('👥🔍 Vérification permissions contacts...');
+      console.log('👥🔍 Vérification permissions contacts - LECTURE DIRECTE Android');
       
-      // 1. PRIORITÉ: Vérifier l'état Android injecté
-      const androidState = (window as any).androidPermissions?.contacts;
-      console.log('👥 État Android injecté:', androidState);
+      // ✅ SOLUTION: Lire UNIQUEMENT l'état Android injecté
+      const androidState = window.androidPermissions?.contacts;
+      console.log('👥 État Android:', androidState);
       
-      // 2. FALLBACK: Vérifier via Capacitor plugin
-      let capacitorState = 'prompt';
-      try {
-        const result = await Contacts.checkPermissions();
-        capacitorState = result.contacts || 'prompt';
-        console.log('👥 État Capacitor plugin:', capacitorState);
-      } catch (error) {
-        console.log('👥⚠️ Plugin Capacitor non disponible:', error);
-      }
+      const granted = androidState === 'granted';
+      console.log('👥 Résultat final:', granted ? 'GRANTED ✅' : 'DENIED ❌');
       
-      // 3. LOGIQUE DE DÉCISION: Android a toujours priorité
-      let finalGranted = false;
-      
-      if (androidState === 'granted') {
-        console.log('👥✅ Android dit GRANTED - on fait confiance à Android');
-        finalGranted = true;
-      } else if (androidState === 'denied') {
-        console.log('👥❌ Android dit DENIED - permission refusée');
-        finalGranted = false;
-      } else {
-        // Si pas d'injection Android, utiliser Capacitor
-        console.log('👥 Pas d\'injection Android, utilisation Capacitor:', capacitorState);
-        finalGranted = capacitorState === 'granted';
-      }
-      
-      // Log de divergence pour debug
-      if (androidState && capacitorState !== androidState) {
-        console.warn('👥⚠️ DIVERGENCE DÉTECTÉE:', {
-          android: androidState,
-          capacitor: capacitorState,
-          decision: finalGranted ? 'GRANTED' : 'DENIED'
-        });
-      }
-      
-      setHasPermission(finalGranted);
-      return finalGranted;
+      setHasPermission(granted);
+      return granted;
     } catch (error) {
       console.log('👥❌ Erreur check permissions contacts:', error);
       setHasPermission(false);
@@ -138,41 +113,42 @@ export const useContacts = () => {
         return false;
       }
       
-      console.log('👥🔄 Demande permissions contacts...');
+      console.log('👥🔄 Demande permissions contacts - VIA BRIDGE ANDROID NATIF');
       
-      // Vérifier d'abord si déjà accordé via Android
-      const androidState = (window as any).androidPermissions?.contacts;
-      if (androidState === 'granted') {
-        console.log('👥✅ Déjà accordé selon Android, pas besoin de redemander');
+      // Vérifier d'abord si déjà accordé
+      const currentState = window.androidPermissions?.contacts;
+      if (currentState === 'granted') {
+        console.log('👥✅ Déjà accordé selon Android');
         setHasPermission(true);
         return true;
       }
       
-      // Demander via Capacitor
-      console.log('👥 Demande via Capacitor plugin...');
-      const result = await Contacts.requestPermissions();
-      const capacitorGranted = result.contacts === 'granted';
+      // ✅ SOLUTION: Utiliser le bridge Android natif
+      if (!window.AndroidBridge) {
+        console.error('👥❌ AndroidBridge non disponible!');
+        return false;
+      }
       
-      console.log('👥 Résultat Capacitor:', capacitorGranted);
-      
-      // Vérification croisée immédiate avec Android
-      setTimeout(() => {
-        const newAndroidState = (window as any).androidPermissions?.contacts;
-        console.log('👥 État Android après demande:', newAndroidState);
+      return new Promise((resolve) => {
+        // Écouter le résultat de la permission
+        window.onNativePermissionResult = (granted: boolean) => {
+          console.log('👥 Résultat natif reçu:', granted ? 'GRANTED ✅' : 'DENIED ❌');
+          setHasPermission(granted);
+          
+          // Re-vérifier l'état après 500ms pour être sûr
+          setTimeout(() => {
+            const finalState = window.androidPermissions?.contacts;
+            console.log('👥 État final après demande:', finalState);
+            setHasPermission(finalState === 'granted');
+          }, 500);
+          
+          resolve(granted);
+        };
         
-        if (newAndroidState === 'granted') {
-          console.log('👥✅ Android confirme GRANTED');
-          setHasPermission(true);
-        } else if (newAndroidState === 'denied') {
-          console.log('👥❌ Android confirme DENIED');
-          setHasPermission(false);
-        } else {
-          // Si Android ne répond pas, utiliser Capacitor
-          setHasPermission(capacitorGranted);
-        }
-      }, 300);
-      
-      return capacitorGranted;
+        // Appeler le bridge natif
+        console.log('👥 Appel du bridge Android...');
+        window.AndroidBridge.requestContactsPermission();
+      });
     } catch (error) {
       console.error('👥❌ Erreur request permissions contacts:', error);
       setHasPermission(false);
