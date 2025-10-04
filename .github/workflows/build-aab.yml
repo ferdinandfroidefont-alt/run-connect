@@ -111,7 +111,7 @@ jobs:
             implementation 'androidx.core:core:1.13.1'
             implementation 'androidx.activity:activity:1.9.2'
             implementation 'androidx.webkit:webkit:1.11.0'
-            implementation 'com.getcapacitor:core:6.2.0'
+            implementation 'com.getcapacitor:core:6.1.2'
           }
           EOF
 
