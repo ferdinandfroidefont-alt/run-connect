@@ -344,11 +344,16 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🚀 onRequestPermissionsResult: " + requestCode + " - " + java.util.Arrays.toString(permissions));
         
         // Analyser les résultats
+        boolean allGranted = true;
         for (int i = 0; i < permissions.length; i++) {
             String permission = permissions[i];
             int result = grantResults[i];
             boolean granted = result == PackageManager.PERMISSION_GRANTED;
             boolean shouldShow = ActivityCompat.shouldShowRequestPermissionRationale(this, permission);
+            
+            if (!granted) {
+                allGranted = false;
+            }
             
             Log.d(TAG, "🚀 Permission " + permission + ": granted=" + granted + ", shouldShow=" + shouldShow);
         }
@@ -363,6 +368,23 @@ public class MainActivity extends AppCompatActivity {
                                      "if (window.onAndroidPermissionsChanged) { window.onAndroidPermissionsChanged(window.androidPermissions); } " +
                                      "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: window.androidPermissions })); " +
                                      "console.log('🚀 Permissions updated, triggering callbacks');", null);
+            
+            // ✅ CRITIQUE: Notifier le résultat via le callback JavaScript après 200ms
+            final boolean finalResult = allGranted;
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                // Déterminer le type de permission pour logger
+                String permissionType = "unknown";
+                if (requestCode == REQ_CONTACTS) {
+                    permissionType = "contacts";
+                } else if (requestCode == REQ_LOCATION) {
+                    permissionType = "location";
+                } else if (requestCode == REQ_STORAGE) {
+                    permissionType = "storage";
+                }
+                
+                Log.d(TAG, "✅ Callback JavaScript pour " + permissionType + ": " + (finalResult ? "GRANTED" : "DENIED"));
+                notifyJavaScriptPermissionResult(finalResult);
+            }, 200);
         }
     }
 
