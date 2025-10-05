@@ -333,6 +333,7 @@ export type Database = {
           push_token: string | null
           referral_code: string | null
           rgpd_accepted: boolean | null
+          rpm_avatar_url: string | null
           running_records: Json | null
           security_rules_accepted: boolean | null
           show_online_status: boolean | null
@@ -378,6 +379,7 @@ export type Database = {
           push_token?: string | null
           referral_code?: string | null
           rgpd_accepted?: boolean | null
+          rpm_avatar_url?: string | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
           show_online_status?: boolean | null
@@ -423,6 +425,7 @@ export type Database = {
           push_token?: string | null
           referral_code?: string | null
           rgpd_accepted?: boolean | null
+          rpm_avatar_url?: string | null
           running_records?: Json | null
           security_rules_accepted?: boolean | null
           show_online_status?: boolean | null

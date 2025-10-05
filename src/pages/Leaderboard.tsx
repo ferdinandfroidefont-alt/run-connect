@@ -6,7 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { PhotorealisticAvatar3D } from "@/components/PhotorealisticAvatar3D";
 import { WardrobeDialog } from "@/components/WardrobeDialog";
+import { ReadyPlayerMeCreator } from "@/components/ReadyPlayerMeCreator";
 import { useWardrobe } from "@/hooks/useWardrobe";
+import { Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -48,15 +50,33 @@ const Leaderboard = () => {
   const navigate = useNavigate();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
   const [showWardrobe, setShowWardrobe] = useState(false);
+  const [isRPMCreatorOpen, setIsRPMCreatorOpen] = useState(false);
+  const [rpmAvatarUrl, setRpmAvatarUrl] = useState<string | null>(null);
   const { getEquippedItems, userPoints } = useWardrobe();
+  const equippedItems = getEquippedItems();
 
   const USERS_PER_PAGE = 50;
 
   useEffect(() => {
     if (user) {
       fetchLeaderboards();
+      loadRpmAvatar();
     }
   }, [user, globalPage, seasonalPage, friendsPage]);
+
+  const loadRpmAvatar = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('rpm_avatar_url')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (data?.rpm_avatar_url) {
+      setRpmAvatarUrl(data.rpm_avatar_url);
+    }
+  };
 
   const fetchLeaderboards = async () => {
     try {
@@ -556,8 +576,6 @@ const Leaderboard = () => {
     );
   }
 
-  const equippedItems = getEquippedItems();
-
   return (
     <div className="min-h-screen bg-background p-4 pb-20 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <div className="max-w-md mx-auto space-y-4">
@@ -580,13 +598,29 @@ const Leaderboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center">
-              <PhotorealisticAvatar3D 
-                topItemId={equippedItems.top}
-                bottomItemId={equippedItems.bottom}
-                shoesItemId={equippedItems.shoes}
-                accessoryItemId={equippedItems.accessory}
-                className="w-full h-80 rounded-lg bg-background/50"
-              />
+              <div className="relative w-full">
+                <PhotorealisticAvatar3D 
+                  rpmAvatarUrl={rpmAvatarUrl}
+                  topItemId={equippedItems.top}
+                  bottomItemId={equippedItems.bottom}
+                  shoesItemId={equippedItems.shoes}
+                  accessoryItemId={equippedItems.accessory}
+                  className="w-full h-80 rounded-lg bg-background/50"
+                />
+                
+                {/* Button to create photorealistic avatar */}
+                {!rpmAvatarUrl && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute bottom-2 right-2"
+                    onClick={() => setIsRPMCreatorOpen(true)}
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Créer avatar photo
+                  </Button>
+                )}
+              </div>
               
               <div className="mt-4 text-center space-y-2">
                 <Badge variant="outline" className="text-base">
@@ -716,6 +750,16 @@ const Leaderboard = () => {
       <WardrobeDialog 
         open={showWardrobe}
         onOpenChange={setShowWardrobe}
+      />
+      
+      {/* Ready Player Me Creator Dialog */}
+      <ReadyPlayerMeCreator
+        open={isRPMCreatorOpen}
+        onOpenChange={setIsRPMCreatorOpen}
+        onAvatarCreated={(url) => {
+          setRpmAvatarUrl(url);
+          setIsRPMCreatorOpen(false);
+        }}
       />
     </div>
   );
