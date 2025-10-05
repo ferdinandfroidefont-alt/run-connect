@@ -15,9 +15,7 @@ const config: CapacitorConfig = {
     Camera: {
       requestPermissions: true
     },
-    Browser: {
-      windowName: '_system'
-    }
+    // Browser config removed to allow in-app OAuth flows
   },
   android: {
     allowMixedContent: false,
