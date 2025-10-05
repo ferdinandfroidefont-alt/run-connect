@@ -465,14 +465,17 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
       <Carousel
         opts={{
           align: "center",
-          loop: false,
+          loop: true,
+          slidesToScroll: 1,
         }}
         className="w-full"
       >
-        <CarouselContent className="-ml-2">
+        <CarouselContent className="-ml-4">
           {visibleSuggestions.map((suggestion) => (
-            <CarouselItem key={suggestion.user_id} className="pl-2 basis-full">
-              <SuggestionCard suggestion={suggestion} />
+            <CarouselItem key={suggestion.user_id} className="pl-4 basis-full">
+              <div className="min-h-[420px]">
+                <SuggestionCard suggestion={suggestion} />
+              </div>
             </CarouselItem>
           ))}
         </CarouselContent>
