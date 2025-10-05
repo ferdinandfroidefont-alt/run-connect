@@ -1,43 +1,35 @@
-import { useState } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, ContactShadows } from '@react-three/drei';
-import { useGLTF } from '@react-three/drei';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { PhotorealisticAvatar3D } from "./PhotorealisticAvatar3D";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { User, Users, Sparkles } from "lucide-react";
 
-// Liste des avatars disponibles
+// Available avatar models (procéduraux, pas de fichiers externes nécessaires)
 const AVAILABLE_AVATARS = [
-  {
-    id: 'male-athlete-01',
-    name: 'Athlète masculin 1',
+  { 
+    id: 'male-athlete-01', 
+    name: 'Athlète masculin',
     gender: 'male',
-    thumbnail: '/models/avatars/thumbnails/male-athlete-01.jpg', // L'utilisateur devra ajouter ces miniatures
+    description: 'Musclé et sportif',
+    icon: User
   },
-  {
-    id: 'female-athlete-01',
-    name: 'Athlète féminine 1',
+  { 
+    id: 'female-athlete-01', 
+    name: 'Athlète féminine',
     gender: 'female',
-    thumbnail: '/models/avatars/thumbnails/female-athlete-01.jpg',
+    description: 'Sportive et élancée',
+    icon: Users
   },
-  {
-    id: 'male-runner-01',
-    name: 'Coureur masculin 1',
+  { 
+    id: 'male-runner-01', 
+    name: 'Coureur endurant',
     gender: 'male',
-    thumbnail: '/models/avatars/thumbnails/male-runner-01.jpg',
+    description: 'Fin et rapide',
+    icon: Sparkles
   },
 ];
-
-interface AvatarModelProps {
-  url: string;
-}
-
-function AvatarModel({ url }: AvatarModelProps) {
-  const { scene } = useGLTF(url);
-  return <primitive object={scene} scale={1.5} position={[0, -1, 0]} />;
-}
 
 interface AvatarSelectorProps {
   open: boolean;
@@ -46,14 +38,14 @@ interface AvatarSelectorProps {
   onAvatarSelected?: (avatarId: string) => void;
 }
 
-export function AvatarSelector({ 
+export const AvatarSelector = ({ 
   open, 
   onOpenChange, 
   currentAvatarId,
   onAvatarSelected 
-}: AvatarSelectorProps) {
-  const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
-  const [previewAvatarId, setPreviewAvatarId] = useState<string | null>(null);
+}: AvatarSelectorProps) => {
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(currentAvatarId || 'male-athlete-01');
+  const [previewAvatarId, setPreviewAvatarId] = useState<string>(currentAvatarId || 'male-athlete-01');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSelectAvatar = async () => {
@@ -74,7 +66,7 @@ export function AvatarSelector({
 
       if (error) throw error;
 
-      toast.success('Avatar sélectionné avec succès');
+      toast.success('Avatar sélectionné avec succès ! 🎉');
       onAvatarSelected?.(selectedAvatarId);
       onOpenChange(false);
     } catch (error) {
@@ -89,104 +81,87 @@ export function AvatarSelector({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Choisir votre avatar</DialogTitle>
+          <DialogTitle>Choisir votre avatar 3D</DialogTitle>
           <DialogDescription>
-            Sélectionnez un avatar photoréaliste pour votre profil
+            Sélectionnez l'avatar qui vous représente le mieux (style stylisé)
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Aperçu 3D */}
-          {previewAvatarId && (
-            <div className="w-full h-[400px] bg-muted rounded-lg overflow-hidden">
-              <Canvas>
-                <PerspectiveCamera makeDefault position={[0, 0, 3]} />
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[5, 5, 5]} intensity={1} />
-                <directionalLight position={[-5, 5, -5]} intensity={0.5} />
-                <Environment preset="studio" />
-                <AvatarModel url={`/models/avatars/${previewAvatarId}.glb`} />
-                <ContactShadows 
-                  position={[0, -1, 0]} 
-                  opacity={0.4} 
-                  scale={10} 
-                  blur={2} 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 3D Preview */}
+          <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg p-4 h-[400px]">
+            <h3 className="text-sm font-medium mb-2">Aperçu 3D interactif</h3>
+            <div className="h-[calc(100%-2rem)] bg-background/50 rounded-lg overflow-hidden">
+              {previewAvatarId ? (
+                <PhotorealisticAvatar3D 
+                  avatarModelId={previewAvatarId}
+                  className="w-full h-full"
                 />
-                <OrbitControls 
-                  enableZoom={true}
-                  enablePan={false}
-                  minDistance={2}
-                  maxDistance={5}
-                  target={[0, 0, 0]}
-                />
-              </Canvas>
-            </div>
-          )}
-
-          {/* Galerie d'avatars */}
-          <div className="grid grid-cols-3 gap-4">
-            {AVAILABLE_AVATARS.map((avatar) => (
-              <button
-                key={avatar.id}
-                onClick={() => {
-                  setSelectedAvatarId(avatar.id);
-                  setPreviewAvatarId(avatar.id);
-                }}
-                onMouseEnter={() => setPreviewAvatarId(avatar.id)}
-                className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
-                  selectedAvatarId === avatar.id
-                    ? 'border-primary shadow-lg'
-                    : 'border-border'
-                } ${
-                  currentAvatarId === avatar.id
-                    ? 'ring-2 ring-primary ring-offset-2'
-                    : ''
-                }`}
-              >
-                <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                  <span className="text-sm font-medium text-center px-2">
-                    {avatar.name}
-                  </span>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Survolez un avatar pour l'aperçu
                 </div>
-                {currentAvatarId === avatar.id && (
-                  <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                    Actuel
+              )}
+            </div>
+          </div>
+
+          {/* Avatar Grid */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium">Avatars disponibles</h3>
+            <div className="grid grid-cols-1 gap-3">
+              {AVAILABLE_AVATARS.map((avatar) => {
+                const IconComponent = avatar.icon;
+                return (
+                  <div
+                    key={avatar.id}
+                    className={`relative rounded-lg border-2 cursor-pointer transition-all hover:scale-[1.02] p-4 ${
+                      selectedAvatarId === avatar.id
+                        ? 'border-primary bg-primary/5 shadow-lg'
+                        : 'border-border hover:border-primary/50 bg-card'
+                    }`}
+                    onClick={() => setSelectedAvatarId(avatar.id)}
+                    onMouseEnter={() => setPreviewAvatarId(avatar.id)}
+                    onMouseLeave={() => setPreviewAvatarId(selectedAvatarId)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        selectedAvatarId === avatar.id ? 'bg-primary/20' : 'bg-muted'
+                      }`}>
+                        <IconComponent className={`w-6 h-6 ${
+                          selectedAvatarId === avatar.id ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{avatar.name}</p>
+                        <p className="text-sm text-muted-foreground">{avatar.description}</p>
+                      </div>
+                      {selectedAvatarId === avatar.id && (
+                        <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </button>
-            ))}
+                );
+              })}
+            </div>
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSaving}
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleSelectAvatar}
-              disabled={!selectedAvatarId || isSaving}
-            >
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sélectionner
-            </Button>
-          </div>
-
-          {/* Instructions */}
-          <div className="text-sm text-muted-foreground space-y-2 border-t pt-4">
-            <p className="font-medium">📦 Installation des modèles 3D :</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>Téléchargez des modèles 3D photoréalistes depuis <a href="https://renderpeople.com" target="_blank" rel="noopener" className="text-primary hover:underline">Renderpeople.com</a></li>
-              <li>Nommez-les selon les IDs : male-athlete-01.glb, female-athlete-01.glb, etc.</li>
-              <li>Placez-les dans le dossier <code className="bg-muted px-1 py-0.5 rounded">/public/models/avatars/</code></li>
-              <li>Ajoutez des miniatures (JPG) dans <code className="bg-muted px-1 py-0.5 rounded">/public/models/avatars/thumbnails/</code></li>
-            </ol>
-          </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button 
+            onClick={handleSelectAvatar}
+            disabled={!selectedAvatarId || isSaving}
+          >
+            {isSaving ? "Sauvegarde..." : "Sélectionner"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
-}
+};

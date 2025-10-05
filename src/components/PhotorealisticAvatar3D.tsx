@@ -1,7 +1,7 @@
-import React, { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows, useGLTF } from '@react-three/drei';
-import { Loader2 } from 'lucide-react';
+import { OrbitControls, Environment } from '@react-three/drei';
+import { Suspense, useRef } from 'react';
+import * as THREE from 'three';
 
 interface PhotorealisticAvatar3DProps {
   avatarModelId?: string;
@@ -11,110 +11,164 @@ interface PhotorealisticAvatar3DProps {
   className?: string;
 }
 
-interface AvatarModelProps {
-  url: string;
+interface ProceduralAvatarProps {
+  modelId: string;
   topItemId?: string;
   bottomItemId?: string;
   shoesItemId?: string;
-  onError?: () => void;
 }
 
-function AvatarModel({ url, topItemId, bottomItemId, shoesItemId, onError }: AvatarModelProps) {
-  try {
-    const { scene } = useGLTF(url);
-  } catch (error) {
-    console.error('Erreur de chargement du modèle 3D:', error);
-    onError?.();
-    return null;
-  }
-  
-  const { scene } = useGLTF(url);
-  
-  // Apply wardrobe colors to the avatar
-  useEffect(() => {
-    scene.traverse((child: any) => {
-      if (child.isMesh) {
-        // Apply colors to clothing based on wardrobe
-        if (child.name?.includes('Top') || child.name?.includes('Shirt') || child.name?.includes('Outfit_Top')) {
-          const color = getItemColor(topItemId);
-          if (color && child.material) {
-            child.material.color.set(color);
-          }
-        }
-        if (child.name?.includes('Bottom') || child.name?.includes('Pants') || child.name?.includes('Outfit_Bottom')) {
-          const color = getItemColor(bottomItemId);
-          if (color && child.material) {
-            child.material.color.set(color);
-          }
-        }
-        if (child.name?.includes('Footwear') || child.name?.includes('Shoes') || child.name?.includes('Outfit_Footwear')) {
-          const color = getItemColor(shoesItemId);
-          if (color && child.material) {
-            child.material.color.set(color);
-          }
-        }
-      }
-    });
-  }, [scene, topItemId, bottomItemId, shoesItemId]);
+// Avatar configurations (style Fortnite/stylisé)
+const AVATAR_CONFIGS = {
+  'male-athlete-01': { 
+    skinTone: '#D4A574', 
+    hairColor: '#2C1810', 
+    build: 'athletic',
+    gender: 'male'
+  },
+  'female-athlete-01': { 
+    skinTone: '#E8B899', 
+    hairColor: '#8B4513', 
+    build: 'athletic',
+    gender: 'female'
+  },
+  'male-runner-01': { 
+    skinTone: '#C89664', 
+    hairColor: '#1A1A1A', 
+    build: 'slim',
+    gender: 'male'
+  },
+};
 
-  return <primitive object={scene} scale={2} position={[0, -1.5, 0]} />;
-}
-
-function LoadingFallback() {
-  return (
-    <mesh>
-      <boxGeometry args={[1, 2, 1]} />
-      <meshStandardMaterial color="#94a3b8" />
-    </mesh>
-  );
-}
-
-// Fallback cartoon avatar (simplified version)
-function FallbackAvatar({ topItemId, bottomItemId, shoesItemId }: { topItemId?: string; bottomItemId?: string; shoesItemId?: string }) {
-  const topColor = getItemColor(topItemId) || '#3B82F6';
-  const bottomColor = getItemColor(bottomItemId) || '#1E293B';
-  const shoesColor = getItemColor(shoesItemId) || '#0F172A';
+const ProceduralAvatar = ({ modelId, topItemId, bottomItemId, shoesItemId }: ProceduralAvatarProps) => {
+  const config = AVATAR_CONFIGS[modelId as keyof typeof AVATAR_CONFIGS] || AVATAR_CONFIGS['male-athlete-01'];
+  const groupRef = useRef<THREE.Group>(null);
 
   return (
-    <group position={[0, -0.5, 0]}>
+    <group ref={groupRef} position={[0, 0, 0]}>
       {/* Head */}
       <mesh position={[0, 1.3, 0]}>
-        <sphereGeometry args={[0.3, 32, 32]} />
-        <meshStandardMaterial color="#FFD1A1" />
+        <sphereGeometry args={[0.5, 32, 32]} />
+        <meshStandardMaterial 
+          color={config.skinTone}
+          roughness={0.7}
+          metalness={0.1}
+        />
       </mesh>
       
-      {/* Body */}
-      <mesh position={[0, 0.6, 0]}>
-        <capsuleGeometry args={[0.25, 0.6, 16, 32]} />
-        <meshStandardMaterial color={topColor} />
+      {/* Hair */}
+      <mesh position={[0, 1.5, 0]}>
+        <sphereGeometry args={[0.52, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
+        <meshStandardMaterial 
+          color={config.hairColor}
+          roughness={0.9}
+          metalness={0.1}
+        />
       </mesh>
       
-      {/* Legs */}
-      <mesh position={[-0.12, -0.1, 0]}>
-        <capsuleGeometry args={[0.1, 0.6, 16, 32]} />
-        <meshStandardMaterial color={bottomColor} />
+      {/* Eyes - Left */}
+      <mesh position={[-0.15, 1.35, 0.4]}>
+        <sphereGeometry args={[0.08, 16, 16]} />
+        <meshStandardMaterial color="#FFFFFF" />
       </mesh>
-      <mesh position={[0.12, -0.1, 0]}>
-        <capsuleGeometry args={[0.1, 0.6, 16, 32]} />
-        <meshStandardMaterial color={bottomColor} />
+      <mesh position={[-0.15, 1.35, 0.42]}>
+        <sphereGeometry args={[0.05, 16, 16]} />
+        <meshStandardMaterial color="#2C1810" />
       </mesh>
       
-      {/* Shoes */}
-      <mesh position={[-0.12, -0.5, 0.05]}>
-        <boxGeometry args={[0.15, 0.1, 0.25]} />
-        <meshStandardMaterial color={shoesColor} />
+      {/* Eyes - Right */}
+      <mesh position={[0.15, 1.35, 0.4]}>
+        <sphereGeometry args={[0.08, 16, 16]} />
+        <meshStandardMaterial color="#FFFFFF" />
       </mesh>
-      <mesh position={[0.12, -0.5, 0.05]}>
-        <boxGeometry args={[0.15, 0.1, 0.25]} />
-        <meshStandardMaterial color={shoesColor} />
+      <mesh position={[0.15, 1.35, 0.42]}>
+        <sphereGeometry args={[0.05, 16, 16]} />
+        <meshStandardMaterial color="#2C1810" />
+      </mesh>
+
+      {/* Torso/Body */}
+      <mesh position={[0, 0.5, 0]}>
+        <capsuleGeometry args={[0.4, 0.8, 16, 32]} />
+        <meshStandardMaterial 
+          color={getItemColor(topItemId || 'white-tshirt')}
+          roughness={0.8}
+          metalness={0.2}
+        />
+      </mesh>
+
+      {/* Left Arm */}
+      <mesh position={[-0.6, 0.5, 0]} rotation={[0, 0, 0.2]}>
+        <capsuleGeometry args={[0.15, 0.7, 8, 16]} />
+        <meshStandardMaterial 
+          color={config.skinTone}
+          roughness={0.7}
+          metalness={0.1}
+        />
+      </mesh>
+      
+      {/* Right Arm */}
+      <mesh position={[0.6, 0.5, 0]} rotation={[0, 0, -0.2]}>
+        <capsuleGeometry args={[0.15, 0.7, 8, 16]} />
+        <meshStandardMaterial 
+          color={config.skinTone}
+          roughness={0.7}
+          metalness={0.1}
+        />
+      </mesh>
+
+      {/* Left Leg */}
+      <mesh position={[-0.2, -0.5, 0]}>
+        <capsuleGeometry args={[0.18, 0.9, 8, 16]} />
+        <meshStandardMaterial 
+          color={getItemColor(bottomItemId || 'black-shorts')}
+          roughness={0.8}
+          metalness={0.2}
+        />
+      </mesh>
+      
+      {/* Right Leg */}
+      <mesh position={[0.2, -0.5, 0]}>
+        <capsuleGeometry args={[0.18, 0.9, 8, 16]} />
+        <meshStandardMaterial 
+          color={getItemColor(bottomItemId || 'black-shorts')}
+          roughness={0.8}
+          metalness={0.2}
+        />
+      </mesh>
+
+      {/* Left Shoe */}
+      <mesh position={[-0.2, -1.05, 0.05]}>
+        <boxGeometry args={[0.25, 0.15, 0.35]} />
+        <meshStandardMaterial 
+          color={getItemColor(shoesItemId || 'sneakers-white')}
+          roughness={0.6}
+          metalness={0.3}
+        />
+      </mesh>
+      
+      {/* Right Shoe */}
+      <mesh position={[0.2, -1.05, 0.05]}>
+        <boxGeometry args={[0.25, 0.15, 0.35]} />
+        <meshStandardMaterial 
+          color={getItemColor(shoesItemId || 'sneakers-white')}
+          roughness={0.6}
+          metalness={0.3}
+        />
       </mesh>
     </group>
   );
-}
+};
+
+const LoadingFallback = () => (
+  <mesh>
+    <sphereGeometry args={[0.5, 32, 32]} />
+    <meshStandardMaterial color="#cccccc" />
+  </mesh>
+);
 
 // Helper function to get item colors
-const getItemColor = (itemId?: string): string | null => {
-  if (!itemId) return null;
+const getItemColor = (itemId?: string): string => {
+  if (!itemId) return '#FFFFFF';
 
   const colorMap: Record<string, string> = {
     // T-shirts
@@ -154,7 +208,7 @@ const getItemColor = (itemId?: string): string | null => {
     'running-shoes-diamond': '#B9F2FF',
   };
 
-  return colorMap[itemId] || null;
+  return colorMap[itemId] || '#FFFFFF';
 };
 
 export const PhotorealisticAvatar3D = ({ 
@@ -162,79 +216,39 @@ export const PhotorealisticAvatar3D = ({
   topItemId,
   bottomItemId,
   shoesItemId,
-  className = ""
+  className = "w-full h-full"
 }: PhotorealisticAvatar3DProps) => {
-  const [hasError, setHasError] = useState(false);
-  
-  // Construire l'URL du modèle 3D local
-  const avatarUrl = `/models/avatars/${avatarModelId}.glb`;
-
   return (
-    <div className={`w-full h-full relative ${className}`}>
+    <div className={className}>
       <Canvas
-        camera={{ position: [0, 0, 3], fov: 50 }}
-        shadows
-        gl={{ antialias: true, alpha: true }}
+        camera={{ position: [0, 0, 3.5], fov: 50 }}
+        style={{ background: 'transparent' }}
       >
-        <OrbitControls 
-          enableZoom={true}
-          enablePan={false}
-          minDistance={1.5}
-          maxDistance={5}
-          target={[0, 0.5, 0]}
-        />
-
-        {/* Photorealistic lighting */}
-        <ambientLight intensity={0.4} />
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={1.2}
-          castShadow
-          shadow-mapSize={[2048, 2048]}
-        />
-        <directionalLight position={[-3, 2, -5]} intensity={0.5} />
-        <spotLight
-          position={[0, 5, 2]}
-          angle={0.3}
-          penumbra={1}
-          intensity={0.8}
-          castShadow
-        />
-
-        <Environment preset="studio" />
-
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[5, 5, 5]} intensity={1.2} />
+        <directionalLight position={[-5, 5, -5]} intensity={0.6} />
+        <pointLight position={[0, 2, 2]} intensity={0.8} />
+        
         <Suspense fallback={<LoadingFallback />}>
-          {hasError ? (
-            <FallbackAvatar 
-              topItemId={topItemId}
-              bottomItemId={bottomItemId}
-              shoesItemId={shoesItemId}
-            />
-          ) : (
-            <AvatarModel 
-              url={avatarUrl}
-              topItemId={topItemId}
-              bottomItemId={bottomItemId}
-              shoesItemId={shoesItemId}
-              onError={() => setHasError(true)}
-            />
-          )}
+          <ProceduralAvatar 
+            modelId={avatarModelId}
+            topItemId={topItemId}
+            bottomItemId={bottomItemId}
+            shoesItemId={shoesItemId}
+          />
         </Suspense>
 
-        <ContactShadows 
-          position={[0, -0.8, 0]}
-          opacity={0.4}
-          scale={4}
-          blur={2.5}
-          far={3}
+        <OrbitControls
+          enablePan={false}
+          minDistance={2}
+          maxDistance={5}
+          target={[0, 0, 0]}
+          minPolarAngle={Math.PI / 4}
+          maxPolarAngle={Math.PI / 1.5}
         />
+        
+        <Environment preset="city" />
       </Canvas>
-
-      {hasError && (
-        <div className="absolute top-2 right-2 text-xs bg-background/80 px-2 py-1 rounded">
-          Utilisation avatar de secours
-        </div>
-      )}
     </div>
   );
 };
