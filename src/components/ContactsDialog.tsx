@@ -97,86 +97,56 @@ export const ContactsDialog: React.FC<ContactsDialogProps> = ({ open, onClose })
   const findContactsInApp = async (contacts: any[]) => {
     console.log('📞 Finding contacts in app...');
     if (!contacts || contacts.length === 0) {
+      console.log('📞 No device contacts to search');
       return [];
     }
 
     try {
-      // Extract phone numbers and emails from contacts
+      // Extract and normalize phone numbers from contacts
       const phoneNumbers: string[] = [];
-      const emails: string[] = [];
-      const contactNames: string[] = [];
 
       contacts.forEach((contact) => {
-        if (contact.displayName) {
-          contactNames.push(contact.displayName.toLowerCase());
-        }
-        
         contact.phoneNumbers?.forEach((phone: any) => {
           if (phone.number) {
-            // Normaliser chaque numéro
             const normalized = normalizePhone(phone.number);
-            phoneNumbers.push(normalized);
-          }
-        });
-        
-        contact.emails?.forEach((email: any) => {
-          if (email.address) {
-            emails.push(email.address.toLowerCase());
+            if (normalized && normalized.length === 10) {
+              phoneNumbers.push(normalized);
+            }
           }
         });
       });
 
-      console.log('📞 Searching for:', { phones: phoneNumbers.length, emails: emails.length, names: contactNames.length });
+      console.log('📞 Normalized phone numbers from device:', phoneNumbers.length);
+      console.log('📞 Sample normalized numbers:', phoneNumbers.slice(0, 5));
 
-      if (phoneNumbers.length === 0 && emails.length === 0 && contactNames.length === 0) {
+      if (phoneNumbers.length === 0) {
+        console.log('📞 No valid phone numbers to search');
         return [];
       }
 
-      // Find users with matching phone numbers, emails, or similar names
+      // Search ONLY by phone numbers (in batches to avoid URL length limits)
       let matchingUsers: any[] = [];
+      const batchSize = 50;
       
-      // Search by phone (in batches to avoid URL length limits)
-      if (phoneNumbers.length > 0) {
-        const batchSize = 50;
-        for (let i = 0; i < phoneNumbers.length; i += batchSize) {
-          const batch = phoneNumbers.slice(i, i + batchSize);
-          const { data: phoneMatches } = await supabase
-            .from('profiles')
-            .select('user_id, username, display_name, avatar_url, phone')
-            .neq('user_id', user!.id)
-            .in('phone', batch);
-          
-          if (phoneMatches) matchingUsers.push(...phoneMatches);
-        }
-      }
-
-      // Search by name (improved fuzzy matching)
-      if (contactNames.length > 0) {
-        // Get all profiles to do fuzzy matching locally
-        const { data: allProfiles } = await supabase
+      for (let i = 0; i < phoneNumbers.length; i += batchSize) {
+        const batch = phoneNumbers.slice(i, i + batchSize);
+        console.log(`📞 Searching batch ${i / batchSize + 1} with ${batch.length} numbers`);
+        
+        const { data: phoneMatches, error } = await supabase
           .from('profiles')
           .select('user_id, username, display_name, avatar_url, phone')
-          .neq('user_id', user!.id);
+          .neq('user_id', user!.id)
+          .not('phone', 'is', null)
+          .in('phone', batch);
         
-        if (allProfiles) {
-          const nameMatches = allProfiles.filter(profile => {
-            const profileName = (profile.display_name || profile.username || '').toLowerCase();
-            const profileUsername = (profile.username || '').toLowerCase();
-            
-            return contactNames.some(contactName => {
-              // Exact match
-              if (profileName === contactName || profileUsername === contactName) return true;
-              
-              // Contains match
-              if (profileName.includes(contactName) || contactName.includes(profileName)) return true;
-              
-              // Word match (firstName lastName)
-              const contactWords = contactName.split(/\s+/);
-              const profileWords = profileName.split(/\s+/);
-              return contactWords.some(cw => profileWords.some(pw => pw.includes(cw) || cw.includes(pw)));
-            });
-          });
-          matchingUsers.push(...nameMatches);
+        if (error) {
+          console.error('📞 Error searching batch:', error);
+          continue;
+        }
+        
+        if (phoneMatches && phoneMatches.length > 0) {
+          console.log(`📞 Found ${phoneMatches.length} matches in this batch`);
+          matchingUsers.push(...phoneMatches);
         }
       }
 
@@ -189,6 +159,8 @@ export const ContactsDialog: React.FC<ContactsDialogProps> = ({ open, onClose })
         return acc;
       }, []);
 
+      console.log('📞 Total unique contacts found:', uniqueUsers.length);
+
       // Convert to contacts format
       const contactSuggestions = uniqueUsers.map(profile => ({
         user_id: profile.user_id,
@@ -197,10 +169,9 @@ export const ContactsDialog: React.FC<ContactsDialogProps> = ({ open, onClose })
         avatar_url: profile.avatar_url || ''
       }));
 
-      console.log('📞 Contacts found in app:', contactSuggestions.length);
       return contactSuggestions;
     } catch (error) {
-      console.error('Error finding contacts in app:', error);
+      console.error('❌ Error finding contacts in app:', error);
       return [];
     }
   };
