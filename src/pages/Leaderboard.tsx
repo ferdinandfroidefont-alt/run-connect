@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { Avatar3D } from "@/components/Avatar3D";
+import { WardrobeDialog } from "@/components/WardrobeDialog";
+import { useWardrobe } from "@/hooks/useWardrobe";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -44,6 +47,8 @@ const Leaderboard = () => {
   
   const navigate = useNavigate();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+  const [showWardrobe, setShowWardrobe] = useState(false);
+  const { getEquippedItems, userPoints } = useWardrobe();
 
   const USERS_PER_PAGE = 50;
 
@@ -563,54 +568,39 @@ const Leaderboard = () => {
           )}
         </div>
 
-        {/* Rank System Info */}
+        {/* Avatar 3D avec Garde-robe */}
         <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-accent/5">
           <CardHeader>
-            <CardTitle className="text-center">Système de rangs</CardTitle>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Mon Avatar
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Star className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm">Novice</span>
-                </div>
-                <span className="text-xs">0-499 pts</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Coins className="h-4 w-4 text-amber-600 mr-2" />
-                  <span className="text-sm">Bronze</span>
-                </div>
-                <span className="text-xs">500+ pts</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Medal className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-sm">Argent</span>
-                </div>
-                <span className="text-xs">1000+ pts</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Award className="h-4 w-4 text-yellow-500 mr-2" />
-                  <span className="text-sm">Or</span>
-                </div>
-                <span className="text-xs">2000+ pts</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Gem className="h-4 w-4 text-purple-500 mr-2" />
-                  <span className="text-sm">Platine</span>
-                </div>
-                <span className="text-xs">3000+ pts</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Diamond className="h-4 w-4 text-cyan-400 mr-2" />
-                  <span className="text-sm">Diamant</span>
-                </div>
-                <span className="text-xs">5000+ pts</span>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col items-center">
+              <Avatar3D 
+                topItemId={getEquippedItems().top}
+                bottomItemId={getEquippedItems().bottom}
+                shoesItemId={getEquippedItems().shoes}
+                accessoryItemId={getEquippedItems().accessory}
+                className="w-full h-64 rounded-lg bg-background/50"
+              />
+              
+              <div className="mt-4 text-center space-y-2">
+                <Badge variant="outline" className="text-base">
+                  {userPoints} points
+                </Badge>
+                <Button 
+                  onClick={() => setShowWardrobe(true)}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  Ma Garde-robe
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  💡 Débloquez de nouveaux vêtements en gagnant des points !
+                </p>
               </div>
             </div>
           </CardContent>
@@ -718,6 +708,12 @@ const Leaderboard = () => {
       <ProfilePreviewDialog
         userId={showProfilePreview ? selectedUserId : null}
         onClose={closeProfilePreview}
+      />
+      
+      {/* Wardrobe Dialog */}
+      <WardrobeDialog 
+        open={showWardrobe}
+        onOpenChange={setShowWardrobe}
       />
     </div>
   );
