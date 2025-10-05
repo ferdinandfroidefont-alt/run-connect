@@ -787,6 +787,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_wardrobe: {
+        Row: {
+          id: string
+          is_equipped: boolean | null
+          item_id: string
+          item_type: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_equipped?: boolean | null
+          item_id: string
+          item_type: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_equipped?: boolean | null
+          item_id?: string
+          item_type?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
