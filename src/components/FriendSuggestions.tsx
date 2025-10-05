@@ -462,8 +462,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         )}
       </div>
       
-      <div className="w-full max-w-sm mx-auto">
-        <Carousel
+      <Carousel
           opts={{
             align: "center",
             loop: true,
@@ -474,9 +473,9 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
           }}
           className="w-full"
         >
-          <CarouselContent className="-ml-4 h-full">
+          <CarouselContent className="h-full">
             {visibleSuggestions.map((suggestion) => (
-              <CarouselItem key={suggestion.user_id} className="pl-4 basis-full">
+              <CarouselItem key={suggestion.user_id} className="basis-full">
                 <div className="h-[420px] flex items-center justify-center">
                   <SuggestionCard suggestion={suggestion} />
                 </div>
@@ -489,8 +488,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
             <CarouselNext className="right-0 translate-x-0" />
           </>
         )}
-        </Carousel>
-      </div>
+      </Carousel>
       
       {visibleSuggestions.length > 1 && (
         <div className="flex justify-center mt-4 space-x-1">
