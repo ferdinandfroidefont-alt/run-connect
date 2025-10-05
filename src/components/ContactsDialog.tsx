@@ -124,37 +124,48 @@ export const ContactsDialog: React.FC<ContactsDialogProps> = ({ open, onClose })
       // Find users with matching phone numbers, emails, or similar names
       let matchingUsers: any[] = [];
       
-      // Search by phone
+      // Search by phone (in batches to avoid URL length limits)
       if (phoneNumbers.length > 0) {
-        const { data: phoneMatches } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url, phone')
-          .neq('user_id', user!.id)
-          .or(`phone.in.(${phoneNumbers.map(p => `"${p}"`).join(',')})`);
-        
-        if (phoneMatches) matchingUsers.push(...phoneMatches);
+        const batchSize = 50;
+        for (let i = 0; i < phoneNumbers.length; i += batchSize) {
+          const batch = phoneNumbers.slice(i, i + batchSize);
+          const { data: phoneMatches } = await supabase
+            .from('profiles')
+            .select('user_id, username, display_name, avatar_url, phone')
+            .neq('user_id', user!.id)
+            .in('phone', batch);
+          
+          if (phoneMatches) matchingUsers.push(...phoneMatches);
+        }
       }
 
-      // Search by name
+      // Search by name (improved fuzzy matching)
       if (contactNames.length > 0) {
-        const { data: nameMatches } = await supabase
+        // Get all profiles to do fuzzy matching locally
+        const { data: allProfiles } = await supabase
           .from('profiles')
           .select('user_id, username, display_name, avatar_url, phone')
-          .neq('user_id', user!.id)
-          .or(
-            contactNames.map(name => 
-              `display_name.ilike.%${name}%,username.ilike.%${name}%`
-            ).join(',')
-          );
+          .neq('user_id', user!.id);
         
-        if (nameMatches) {
-          const filteredNameMatches = nameMatches.filter(profile => {
+        if (allProfiles) {
+          const nameMatches = allProfiles.filter(profile => {
             const profileName = (profile.display_name || profile.username || '').toLowerCase();
-            return contactNames.some(contactName => 
-              profileName.includes(contactName) || contactName.includes(profileName)
-            );
+            const profileUsername = (profile.username || '').toLowerCase();
+            
+            return contactNames.some(contactName => {
+              // Exact match
+              if (profileName === contactName || profileUsername === contactName) return true;
+              
+              // Contains match
+              if (profileName.includes(contactName) || contactName.includes(profileName)) return true;
+              
+              // Word match (firstName lastName)
+              const contactWords = contactName.split(/\s+/);
+              const profileWords = profileName.split(/\s+/);
+              return contactWords.some(cw => profileWords.some(pw => pw.includes(cw) || cw.includes(pw)));
+            });
           });
-          matchingUsers.push(...filteredNameMatches);
+          matchingUsers.push(...nameMatches);
         }
       }
 

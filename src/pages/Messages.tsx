@@ -1342,7 +1342,10 @@ const Messages = () => {
                   <Button
                     variant="outline"
                     className="flex flex-col items-center gap-2 h-16"
-                    onClick={() => setShowContactsDialog(true)}
+                    onClick={() => {
+                      // Open dialog immediately for better UX
+                      setShowContactsDialog(true);
+                    }}
                   >
                     <Phone className="h-5 w-5" />
                     <span className="text-xs">Contact</span>
