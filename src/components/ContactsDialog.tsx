@@ -41,6 +41,26 @@ export const ContactsDialog: React.FC<ContactsDialogProps> = ({ open, onClose })
   const [permissionPrompt, setPermissionPrompt] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ContactSuggestion | null>(null);
 
+  // Normaliser un numéro de téléphone français
+  const normalizePhone = (phone: string): string => {
+    // Enlever espaces, tirets, parenthèses
+    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // Enlever le +33 et ajouter 0
+    if (cleaned.startsWith('+33')) {
+      cleaned = '0' + cleaned.substring(3);
+    } else if (cleaned.startsWith('33') && cleaned.length === 11) {
+      cleaned = '0' + cleaned.substring(2);
+    }
+    
+    // Ajouter le 0 si numéro à 9 chiffres
+    if (cleaned.length === 9 && /^[1-9]/.test(cleaned)) {
+      cleaned = '0' + cleaned;
+    }
+    
+    return cleaned;
+  };
+
   useEffect(() => {
     if (open && user) {
       if (isNative && !hasPermission) {
@@ -93,18 +113,9 @@ export const ContactsDialog: React.FC<ContactsDialogProps> = ({ open, onClose })
         
         contact.phoneNumbers?.forEach((phone: any) => {
           if (phone.number) {
-            const cleanNumber = phone.number.replace(/[\s\-\(\)\+]/g, '');
-            phoneNumbers.push(cleanNumber);
-            
-            // Add variations (with/without country code)
-            if (cleanNumber.startsWith('33') && cleanNumber.length >= 11) {
-              const national = '0' + cleanNumber.substring(2);
-              phoneNumbers.push(national);
-            }
-            if (cleanNumber.startsWith('0') && cleanNumber.length === 10) {
-              const international = '33' + cleanNumber.substring(1);
-              phoneNumbers.push(international);
-            }
+            // Normaliser chaque numéro
+            const normalized = normalizePhone(phone.number);
+            phoneNumbers.push(normalized);
           }
         });
         

@@ -216,10 +216,24 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
         }
       }
 
+      // Normaliser le numéro de téléphone avant sauvegarde
+      let normalizedPhone = formData.phone;
+      if (normalizedPhone) {
+        normalizedPhone = normalizedPhone.replace(/[\s\-\(\)]/g, '');
+        if (normalizedPhone.startsWith('+33')) {
+          normalizedPhone = '0' + normalizedPhone.substring(3);
+        } else if (normalizedPhone.startsWith('33') && normalizedPhone.length === 11) {
+          normalizedPhone = '0' + normalizedPhone.substring(2);
+        } else if (normalizedPhone.length === 9 && /^[1-9]/.test(normalizedPhone)) {
+          normalizedPhone = '0' + normalizedPhone;
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          ...formData, 
+          ...formData,
+          phone: normalizedPhone,
           avatar_url: avatarUrl,
           walking_records: recordsData.walking,
           running_records: recordsData.running,
