@@ -4,6 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWardrobe, CLOTHING_CATALOG, ClothingItem } from '@/hooks/useWardrobe';
 import { Lock, Check } from 'lucide-react';
+import { PhotorealisticAvatar3D } from './PhotorealisticAvatar3D';
+import { AvatarSelector } from './AvatarSelector';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 
 interface WardrobeDialogProps {
   open: boolean;
@@ -12,9 +16,32 @@ interface WardrobeDialogProps {
 
 export const WardrobeDialog = ({ open, onOpenChange }: WardrobeDialogProps) => {
   const { wardrobe, userPoints, equipItem, getEquippedItems } = useWardrobe();
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [avatarModelId, setAvatarModelId] = useState<string>('male-athlete-01');
   const equippedItems = getEquippedItems();
   
   const unlockedItemIds = new Set(wardrobe.map(i => i.item_id));
+
+  useEffect(() => {
+    const fetchAvatarModel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_model_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data?.avatar_model_id) {
+        setAvatarModelId(data.avatar_model_id);
+      }
+    };
+
+    if (open) {
+      fetchAvatarModel();
+    }
+  }, [open]);
   
   const renderItemCard = (item: ClothingItem) => {
     const isUnlocked = unlockedItemIds.has(item.id);
@@ -72,7 +99,7 @@ export const WardrobeDialog = ({ open, onOpenChange }: WardrobeDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>👕 Ma Garde-robe</span>
@@ -81,6 +108,29 @@ export const WardrobeDialog = ({ open, onOpenChange }: WardrobeDialogProps) => {
             </Badge>
           </DialogTitle>
         </DialogHeader>
+        
+        {/* Avatar Preview Section */}
+        <div className="border-b pb-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold">Aperçu de l'avatar</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAvatarSelector(true)}
+            >
+              Changer d'avatar
+            </Button>
+          </div>
+          <div className="aspect-square max-w-md mx-auto bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg overflow-hidden">
+            <PhotorealisticAvatar3D
+              avatarModelId={avatarModelId}
+              topItemId={equippedItems.top}
+              bottomItemId={equippedItems.bottom}
+              shoesItemId={equippedItems.shoes}
+              className="w-full h-full"
+            />
+          </div>
+        </div>
         
         <Tabs defaultValue="top" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
@@ -119,6 +169,13 @@ export const WardrobeDialog = ({ open, onOpenChange }: WardrobeDialogProps) => {
             )}
           </TabsContent>
         </Tabs>
+
+        <AvatarSelector
+          open={showAvatarSelector}
+          onOpenChange={setShowAvatarSelector}
+          currentAvatarId={avatarModelId}
+          onAvatarSelected={(newId) => setAvatarModelId(newId)}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -4,13 +4,11 @@ import { OrbitControls, Environment, ContactShadows, useGLTF } from '@react-thre
 import { Loader2 } from 'lucide-react';
 
 interface PhotorealisticAvatar3DProps {
-  rpmAvatarUrl?: string | null;
+  avatarModelId?: string;
   topItemId?: string;
   bottomItemId?: string;
   shoesItemId?: string;
-  accessoryItemId?: string;
   className?: string;
-  useFallback?: boolean;
 }
 
 interface AvatarModelProps {
@@ -18,9 +16,18 @@ interface AvatarModelProps {
   topItemId?: string;
   bottomItemId?: string;
   shoesItemId?: string;
+  onError?: () => void;
 }
 
-function AvatarModel({ url, topItemId, bottomItemId, shoesItemId }: AvatarModelProps) {
+function AvatarModel({ url, topItemId, bottomItemId, shoesItemId, onError }: AvatarModelProps) {
+  try {
+    const { scene } = useGLTF(url);
+  } catch (error) {
+    console.error('Erreur de chargement du modèle 3D:', error);
+    onError?.();
+    return null;
+  }
+  
   const { scene } = useGLTF(url);
   
   // Apply wardrobe colors to the avatar
@@ -151,16 +158,16 @@ const getItemColor = (itemId?: string): string | null => {
 };
 
 export const PhotorealisticAvatar3D = ({ 
-  rpmAvatarUrl,
+  avatarModelId = 'male-athlete-01',
   topItemId,
   bottomItemId,
   shoesItemId,
-  accessoryItemId,
-  className = "",
-  useFallback = false
+  className = ""
 }: PhotorealisticAvatar3DProps) => {
   const [hasError, setHasError] = useState(false);
-  const shouldUseRPM = rpmAvatarUrl && !useFallback && !hasError;
+  
+  // Construire l'URL du modèle 3D local
+  const avatarUrl = `/models/avatars/${avatarModelId}.glb`;
 
   return (
     <div className={`w-full h-full relative ${className}`}>
@@ -172,9 +179,9 @@ export const PhotorealisticAvatar3D = ({
         <OrbitControls 
           enableZoom={true}
           enablePan={false}
-          minDistance={shouldUseRPM ? 2 : 1.5}
-          maxDistance={shouldUseRPM ? 6 : 5}
-          target={shouldUseRPM ? [0, 0, 0] : [0, 0.5, 0]}
+          minDistance={1.5}
+          maxDistance={5}
+          target={[0, 0.5, 0]}
         />
 
         {/* Photorealistic lighting */}
@@ -197,32 +204,33 @@ export const PhotorealisticAvatar3D = ({
         <Environment preset="studio" />
 
         <Suspense fallback={<LoadingFallback />}>
-          {shouldUseRPM ? (
-            <AvatarModel 
-              url={rpmAvatarUrl}
-              topItemId={topItemId}
-              bottomItemId={bottomItemId}
-              shoesItemId={shoesItemId}
-            />
-          ) : (
+          {hasError ? (
             <FallbackAvatar 
               topItemId={topItemId}
               bottomItemId={bottomItemId}
               shoesItemId={shoesItemId}
             />
+          ) : (
+            <AvatarModel 
+              url={avatarUrl}
+              topItemId={topItemId}
+              bottomItemId={bottomItemId}
+              shoesItemId={shoesItemId}
+              onError={() => setHasError(true)}
+            />
           )}
         </Suspense>
 
         <ContactShadows 
-          position={[0, shouldUseRPM ? -1.5 : -0.8, 0]}
+          position={[0, -0.8, 0]}
           opacity={0.4}
-          scale={shouldUseRPM ? 5 : 4}
+          scale={4}
           blur={2.5}
           far={3}
         />
       </Canvas>
 
-      {!shouldUseRPM && rpmAvatarUrl && hasError && (
+      {hasError && (
         <div className="absolute top-2 right-2 text-xs bg-background/80 px-2 py-1 rounded">
           Utilisation avatar de secours
         </div>

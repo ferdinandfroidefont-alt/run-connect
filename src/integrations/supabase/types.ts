@@ -307,6 +307,7 @@ export type Database = {
         Row: {
           age: number | null
           allow_friend_suggestions: boolean | null
+          avatar_model_id: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -353,6 +354,7 @@ export type Database = {
         Insert: {
           age?: number | null
           allow_friend_suggestions?: boolean | null
+          avatar_model_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -399,6 +401,7 @@ export type Database = {
         Update: {
           age?: number | null
           allow_friend_suggestions?: boolean | null
+          avatar_model_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string

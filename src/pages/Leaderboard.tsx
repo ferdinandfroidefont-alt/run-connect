@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { PhotorealisticAvatar3D } from "@/components/PhotorealisticAvatar3D";
 import { WardrobeDialog } from "@/components/WardrobeDialog";
-import { ReadyPlayerMeCreator } from "@/components/ReadyPlayerMeCreator";
 import { useWardrobe } from "@/hooks/useWardrobe";
 import { Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,8 +49,7 @@ const Leaderboard = () => {
   const navigate = useNavigate();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
   const [showWardrobe, setShowWardrobe] = useState(false);
-  const [isRPMCreatorOpen, setIsRPMCreatorOpen] = useState(false);
-  const [rpmAvatarUrl, setRpmAvatarUrl] = useState<string | null>(null);
+  const [avatarModelId, setAvatarModelId] = useState<string>('male-athlete-01');
   const { getEquippedItems, userPoints } = useWardrobe();
   const equippedItems = getEquippedItems();
 
@@ -60,21 +58,21 @@ const Leaderboard = () => {
   useEffect(() => {
     if (user) {
       fetchLeaderboards();
-      loadRpmAvatar();
+      loadAvatarModel();
     }
   }, [user, globalPage, seasonalPage, friendsPage]);
 
-  const loadRpmAvatar = async () => {
+  const loadAvatarModel = async () => {
     if (!user) return;
     
     const { data } = await supabase
       .from('profiles')
-      .select('rpm_avatar_url')
+      .select('avatar_model_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
     
-    if (data?.rpm_avatar_url) {
-      setRpmAvatarUrl(data.rpm_avatar_url);
+    if (data?.avatar_model_id) {
+      setAvatarModelId(data.avatar_model_id);
     }
   };
 
@@ -600,26 +598,12 @@ const Leaderboard = () => {
             <div className="flex flex-col items-center">
               <div className="relative w-full">
                 <PhotorealisticAvatar3D 
-                  rpmAvatarUrl={rpmAvatarUrl}
+                  avatarModelId={avatarModelId}
                   topItemId={equippedItems.top}
                   bottomItemId={equippedItems.bottom}
                   shoesItemId={equippedItems.shoes}
-                  accessoryItemId={equippedItems.accessory}
                   className="w-full h-80 rounded-lg bg-background/50"
                 />
-                
-                {/* Button to create photorealistic avatar */}
-                {!rpmAvatarUrl && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="absolute bottom-2 right-2"
-                    onClick={() => setIsRPMCreatorOpen(true)}
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    Créer avatar photo
-                  </Button>
-                )}
               </div>
               
               <div className="mt-4 text-center space-y-2">
@@ -747,19 +731,9 @@ const Leaderboard = () => {
       />
       
       {/* Wardrobe Dialog */}
-      <WardrobeDialog 
+      <WardrobeDialog
         open={showWardrobe}
         onOpenChange={setShowWardrobe}
-      />
-      
-      {/* Ready Player Me Creator Dialog */}
-      <ReadyPlayerMeCreator
-        open={isRPMCreatorOpen}
-        onOpenChange={setIsRPMCreatorOpen}
-        onAvatarCreated={(url) => {
-          setRpmAvatarUrl(url);
-          setIsRPMCreatorOpen(false);
-        }}
       />
     </div>
   );
