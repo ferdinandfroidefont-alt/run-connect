@@ -71,6 +71,25 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- 🔔 FIREBASE CLOUD MESSAGING SERVICE -->
+        <service
+            android:name="com.getcapacitor.plugin.pushnotifications.MessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- 🔔 NOTIFICATION CHANNEL DEFAULT -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
+
+        <!-- 🔔 FIREBASE APP ID (sera rempli automatiquement par google-services.json) -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
     </application>
 
 </manifest>

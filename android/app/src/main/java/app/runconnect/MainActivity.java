@@ -1,6 +1,8 @@
 package app.runconnect;
 
 import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -182,12 +184,34 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "✅ Contacts permissions already granted");
         }
 
+        // ✅ Créer le canal de notification pour Firebase
+        createNotificationChannels();
+        
         // ✅ Charger le site
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
         setContentView(webView);
         
         Log.d(TAG, "🎯 MainActivity setup complete");
+    }
+    
+    private void createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                "high_importance_channel",
+                "Notifications RunConnect",
+                NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notifications importantes de RunConnect");
+            channel.enableVibration(true);
+            channel.enableLights(true);
+            
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+                Log.d(TAG, "🔔 Notification channel created: high_importance_channel");
+            }
+        }
     }
     
     private boolean hasLocationPermission() {
