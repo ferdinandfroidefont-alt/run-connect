@@ -24,6 +24,7 @@ declare global {
       requestContactsPermission: () => void;
       requestLocationPermission: () => void;
       requestStoragePermission: () => void;
+      getContacts: () => string;
     };
     onNativePermissionResult?: (granted: boolean) => void;
   }
@@ -160,7 +161,6 @@ export const useContacts = () => {
     console.log('👥 DÉBUT CHARGEMENT CONTACTS...');
     
     try {
-      // Vérifier mode natif
       const native = await nativeManager.ensureNativeStatus();
       
       if (!native) {
@@ -169,46 +169,39 @@ export const useContacts = () => {
 
       setLoading(true);
       
-      // Demander permissions
+      // Vérifier permissions
       const hasPerms = await requestPermissions();
-      
       if (!hasPerms) {
         throw new Error('Permission contacts refusée');
       }
 
-      // Charger contacts
-      console.log('👥 Chargement via Capacitor Contacts...');
-      const result = await Contacts.getContacts({
-        projection: {
-          name: true,
-          phones: true,
-          emails: true,
-        }
-      });
+      // ✅ UTILISER LE BRIDGE ANDROID NATIF
+      if (!window.AndroidBridge) {
+        throw new Error('AndroidBridge non disponible');
+      }
 
-      console.log('👥 Contacts bruts reçus:', result.contacts?.length || 0);
+      console.log('👥 Appel AndroidBridge.getContacts()...');
+      const contactsJson = window.AndroidBridge.getContacts();
+      const contactsData = JSON.parse(contactsJson);
+      
+      if (contactsData.error) {
+        throw new Error(contactsData.error);
+      }
+
+      console.log('👥 Contacts bruts reçus:', contactsData.length || 0);
 
       // Formatter contacts
-      const formattedContacts: Contact[] = (result.contacts || [])
-        .filter(contact => {
-          // Filtrer contacts avec au moins un nom ou téléphone
-          const hasName = contact.name?.display || contact.name?.given || contact.name?.family;
-          const hasPhone = contact.phones && contact.phones.length > 0;
+      const formattedContacts: Contact[] = contactsData
+        .filter((contact: any) => {
+          const hasName = contact.displayName;
+          const hasPhone = contact.phoneNumbers && contact.phoneNumbers.length > 0;
           return hasName || hasPhone;
         })
-        .map(contact => ({
+        .map((contact: any) => ({
           contactId: contact.contactId,
-          displayName: contact.name?.display || 
-                      `${contact.name?.given || ''} ${contact.name?.family || ''}`.trim() || 
-                      'Contact sans nom',
-          phoneNumbers: contact.phones?.map(phone => ({
-            label: phone.label || 'Téléphone',
-            number: phone.number
-          })) || [],
-          emails: contact.emails?.map(email => ({
-            label: email.label || 'Email',
-            address: email.address
-          })) || []
+          displayName: contact.displayName || 'Contact sans nom',
+          phoneNumbers: contact.phoneNumbers || [],
+          emails: contact.emails || []
         }))
         .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
 

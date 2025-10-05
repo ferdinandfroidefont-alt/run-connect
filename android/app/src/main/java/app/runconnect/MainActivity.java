@@ -15,6 +15,12 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.content.Intent;
+import android.provider.ContactsContract;
+import android.database.Cursor;
+import android.content.ContentResolver;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -449,9 +455,100 @@ public class MainActivity extends AppCompatActivity {
                             Manifest.permission.CAMERA
                         };
                     }
-                    ActivityCompat.requestPermissions(MainActivity.this, storagePermissions, REQ_STORAGE);
+                ActivityCompat.requestPermissions(MainActivity.this, storagePermissions, REQ_STORAGE);
                 }
             });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public String getContacts() {
+            Log.d(TAG, "👥 AndroidBridge: récupération des contacts depuis JavaScript");
+            
+            // Vérifier permission
+            if (!hasContactsPermission()) {
+                Log.d(TAG, "👥❌ Permission contacts refusée");
+                return "{\"error\": \"Permission denied\"}";
+            }
+            
+            try {
+                JSONArray contactsArray = new JSONArray();
+                ContentResolver cr = getContentResolver();
+                Cursor cursor = cr.query(ContactsContract.Contacts.CONTENT_URI, null, null, null, null);
+                
+                if (cursor != null && cursor.moveToFirst()) {
+                    do {
+                        String contactId = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID));
+                        String displayName = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
+                        
+                        JSONObject contact = new JSONObject();
+                        contact.put("contactId", contactId);
+                        contact.put("displayName", displayName);
+                        
+                        // Récupérer les téléphones
+                        if (cursor.getInt(cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)) > 0) {
+                            Cursor phoneCursor = cr.query(
+                                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                                null,
+                                ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
+                                new String[]{contactId},
+                                null
+                            );
+                            
+                            JSONArray phoneArray = new JSONArray();
+                            if (phoneCursor != null) {
+                                while (phoneCursor.moveToNext()) {
+                                    String phoneNumber = phoneCursor.getString(
+                                        phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                                    );
+                                    JSONObject phone = new JSONObject();
+                                    phone.put("number", phoneNumber);
+                                    phoneArray.put(phone);
+                                }
+                                phoneCursor.close();
+                            }
+                            contact.put("phoneNumbers", phoneArray);
+                        } else {
+                            contact.put("phoneNumbers", new JSONArray());
+                        }
+                        
+                        // Récupérer les emails
+                        Cursor emailCursor = cr.query(
+                            ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+                            null,
+                            ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?",
+                            new String[]{contactId},
+                            null
+                        );
+                        
+                        JSONArray emailArray = new JSONArray();
+                        if (emailCursor != null) {
+                            while (emailCursor.moveToNext()) {
+                                String email = emailCursor.getString(
+                                    emailCursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.ADDRESS)
+                                );
+                                JSONObject emailObj = new JSONObject();
+                                emailObj.put("address", email);
+                                emailArray.put(emailObj);
+                            }
+                            emailCursor.close();
+                        }
+                        contact.put("emails", emailArray);
+                        
+                        contactsArray.put(contact);
+                    } while (cursor.moveToNext());
+                    cursor.close();
+                }
+                
+                Log.d(TAG, "👥✅ Contacts récupérés: " + contactsArray.length());
+                return contactsArray.toString();
+                
+            } catch (JSONException e) {
+                Log.e(TAG, "👥❌ Erreur JSON lors de la récupération des contacts", e);
+                return "{\"error\": \"JSON error: " + e.getMessage() + "\"}";
+            } catch (Exception e) {
+                Log.e(TAG, "👥❌ Erreur lors de la récupération des contacts", e);
+                return "{\"error\": \"Error: " + e.getMessage() + "\"}";
+            }
         }
     }
     
