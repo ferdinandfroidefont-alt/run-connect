@@ -96,11 +96,11 @@ const Auth = () => {
         const redirectUrl = 'app.runconnect://auth/callback';
         const googleAuthUrl = `https://dbptgehpknjsoisirviz.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
         
-        // Ouvrir dans le navigateur système
+        // Ouvrir dans un navigateur in-app
         await Browser.open({
           url: googleAuthUrl,
-          windowName: '_system',
-          presentationStyle: 'fullscreen'
+          windowName: '_self',
+          presentationStyle: 'popover'
         });
         
         console.log('🔥 Ouverture navigateur système pour Google OAuth');
