@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@awesome-cordova-plugins/core": "^8.1.0",
     "@awesome-cordova-plugins/in-app-browser": "^8.1.0",
     "@capacitor-community/admob": "^7.0.3",
     "@capacitor-community/contacts": "^7.0.0",
