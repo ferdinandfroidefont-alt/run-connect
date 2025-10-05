@@ -462,17 +462,20 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         )}
       </div>
       
-      <Carousel
-        opts={{
-          align: "center",
-          loop: true,
-          slidesToScroll: 1,
-        }}
-        className="w-full max-w-md mx-auto"
-      >
-        <CarouselContent className="-ml-4 h-full">
-          {visibleSuggestions.map((suggestion) => (
-            <CarouselItem key={suggestion.user_id} className="pl-4 basis-full">
+        <Carousel
+          opts={{
+            align: "center",
+            loop: true,
+            slidesToScroll: 1,
+            dragFree: false,
+            containScroll: "trimSnaps",
+            skipSnaps: false,
+          }}
+          className="w-full max-w-sm mx-auto"
+        >
+          <CarouselContent className="h-full">
+            {visibleSuggestions.map((suggestion) => (
+              <CarouselItem key={suggestion.user_id} className="basis-full">
               <div className="h-[450px] flex items-center justify-center">
                 <SuggestionCard suggestion={suggestion} />
               </div>
