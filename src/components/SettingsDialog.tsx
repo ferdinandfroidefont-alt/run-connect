@@ -53,7 +53,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const { showWelcomeVideo } = useOnboarding();
   const { conversationTheme, setConversationTheme } = useConversationTheme();
-  const { isRegistered, requestPermissions, isNative } = usePushNotifications();
+  const { isRegistered, requestPermissions, isNative, testNotification } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -491,7 +491,9 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                           Notifications push
                         </label>
                         <p className="text-xs text-muted-foreground">
-                          Autoriser les notifications sur votre appareil
+                          {isNative 
+                            ? "Compatible toutes versions Android"
+                            : "Autoriser les notifications sur votre appareil"}
                         </p>
                       </div>
                     </div>
@@ -500,7 +502,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                         <span className="text-xs text-red-600">Non activées</span>
                       )}
                       {isRegistered && (
-                        <span className="text-xs text-green-600">Activées</span>
+                        <span className="text-xs text-green-600">✓ Activées</span>
                       )}
                       <Button
                         variant="outline"
@@ -512,6 +514,30 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Test notification - NOUVEAU */}
+                  {isRegistered && (
+                    <div className="flex items-center justify-between border-t pt-4">
+                      <div className="flex items-center space-x-2">
+                        <Bug className="h-4 w-4" />
+                        <div className="grid gap-1.5">
+                          <label className="text-sm font-medium leading-none">
+                            Tester les notifications
+                          </label>
+                          <p className="text-xs text-muted-foreground">
+                            Envoyer une notification de test
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={testNotification}
+                      >
+                        Tester
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Demandes de suivi */}
                   <div className="flex items-center justify-between">
