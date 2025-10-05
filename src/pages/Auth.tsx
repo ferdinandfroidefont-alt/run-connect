@@ -89,22 +89,31 @@ const Auth = () => {
       });
       
       if (isNative) {
-        // Pour les apps natives, utiliser le navigateur système
-        const { Browser } = await import('@capacitor/browser');
+        // Pour les apps natives, utiliser InAppBrowser pour WebView intégrée
+        const { InAppBrowser } = await import('@awesome-cordova-plugins/in-app-browser');
         
         // Construire l'URL d'authentification Google
         const redirectUrl = 'app.runconnect://auth/callback';
         const googleAuthUrl = `https://dbptgehpknjsoisirviz.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
         
-        // Ouvrir dans une WebView in-app (Android)
-        await Browser.open({
-          url: googleAuthUrl,
-          windowName: '_blank',
-          presentationStyle: 'fullscreen',
-          toolbarColor: '#1a1a1a'
+        // Ouvrir dans une WebView intégrée à l'app
+        const browser = InAppBrowser.create(googleAuthUrl, '_blank', {
+          location: 'no',
+          toolbar: 'yes',
+          toolbarcolor: '#1a1a1a',
+          closebuttoncaption: 'Fermer',
+          closebuttoncolor: '#ffffff',
+          hidenavigationbuttons: 'no',
+          hideurlbar: 'yes'
         });
         
-        console.log('🔥 Ouverture navigateur système pour Google OAuth');
+        console.log('🔥 Ouverture WebView in-app pour Google OAuth');
+        
+        // Écouter la fermeture de la WebView
+        browser.on('exit').subscribe(() => {
+          console.log('✅ WebView fermée, vérification session...');
+          supabase.auth.getSession();
+        });
         
         // Écouter le retour via deep link
         const { App } = await import('@capacitor/app');
@@ -113,8 +122,7 @@ const Auth = () => {
           console.log('🔗 Deep link reçu:', data.url);
           
           if (data.url.includes('auth/callback')) {
-            // Fermer le navigateur
-            await Browser.close();
+            // La WebView se ferme automatiquement
             
             // Traiter la callback d'authentification
             const urlParams = new URLSearchParams(data.url.split('#')[1] || '');
