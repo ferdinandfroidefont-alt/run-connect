@@ -439,10 +439,34 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
 
   if (compact) {
     return (
-      <div className="space-y-2">
-        {visibleSuggestions.slice(0, 10).map(suggestion => (
-          <SuggestionCard key={suggestion.user_id} suggestion={suggestion} />
-        ))}
+      <div className="w-full">
+        <Carousel
+          opts={{
+            align: "center",
+            loop: true,
+            slidesToScroll: 1,
+            dragFree: false,
+            containScroll: "trimSnaps",
+            skipSnaps: false,
+          }}
+          className="w-full"
+        >
+          <CarouselContent className="h-full">
+            {visibleSuggestions.map((suggestion) => (
+              <CarouselItem key={suggestion.user_id} className="basis-full">
+                <div className="h-[420px] flex items-center justify-center">
+                  <SuggestionCard suggestion={suggestion} />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          {visibleSuggestions.length > 1 && (
+            <>
+              <CarouselPrevious className="left-0 translate-x-0" />
+              <CarouselNext className="right-0 translate-x-0" />
+            </>
+          )}
+        </Carousel>
         <ProfilePreviewDialog 
           userId={selectedUserId} 
           onClose={closeProfilePreview}
