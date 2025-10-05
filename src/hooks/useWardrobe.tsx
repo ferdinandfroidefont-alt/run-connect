@@ -9,6 +9,9 @@ export interface WardrobeItem {
   item_type: 'top' | 'bottom' | 'shoes' | 'accessory';
   unlocked_at: string;
   is_equipped: boolean;
+  texture_url?: string;
+  brand_logo_url?: string;
+  material_type?: string;
 }
 
 export interface ClothingItem {
@@ -17,6 +20,9 @@ export interface ClothingItem {
   type: 'top' | 'bottom' | 'shoes' | 'accessory';
   pointsRequired: number;
   description: string;
+  texture_url?: string;
+  brand_logo_url?: string;
+  material_type?: string;
 }
 
 // Catalogue de vêtements débloquables

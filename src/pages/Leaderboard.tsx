@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
-import { Avatar3D } from "@/components/Avatar3D";
+import { PhotorealisticAvatar3D } from "@/components/PhotorealisticAvatar3D";
 import { WardrobeDialog } from "@/components/WardrobeDialog";
 import { useWardrobe } from "@/hooks/useWardrobe";
 import { supabase } from "@/integrations/supabase/client";
@@ -556,6 +556,8 @@ const Leaderboard = () => {
     );
   }
 
+  const equippedItems = getEquippedItems();
+
   return (
     <div className="min-h-screen bg-background p-4 pb-20 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <div className="max-w-md mx-auto space-y-4">
@@ -578,12 +580,12 @@ const Leaderboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center">
-              <Avatar3D 
-                topItemId={getEquippedItems().top}
-                bottomItemId={getEquippedItems().bottom}
-                shoesItemId={getEquippedItems().shoes}
-                accessoryItemId={getEquippedItems().accessory}
-                className="w-full h-64 rounded-lg bg-background/50"
+              <PhotorealisticAvatar3D 
+                topItemId={equippedItems.top}
+                bottomItemId={equippedItems.bottom}
+                shoesItemId={equippedItems.shoes}
+                accessoryItemId={equippedItems.accessory}
+                className="w-full h-80 rounded-lg bg-background/50"
               />
               
               <div className="mt-4 text-center space-y-2">
