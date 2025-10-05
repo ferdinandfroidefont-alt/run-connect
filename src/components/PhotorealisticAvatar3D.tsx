@@ -81,283 +81,375 @@ function BitmojiStyleAvatarModel({
 
   return (
     <group>
-      {/* === TÊTE STYLE BITMOJI (GROSSE TÊTE CHIBI) === */}
-      <group position={[0, 1.2, 0]}>
-        {/* Visage - taille augmentée pour style chibi */}
-        <OutlinedMesh outlineThickness={1.04}>
+      {/* === TÊTE PROPORTIONS RÉALISTES === */}
+      <group position={[0, 1.55, 0]}>
+        {/* Visage ovale (plus réaliste) */}
+        <OutlinedMesh outlineThickness={1.03}>
           <mesh castShadow receiveShadow material={skinMaterial}>
-            <sphereGeometry args={[0.45, 32, 32]} />
+            <sphereGeometry args={[0.35, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.95]} />
           </mesh>
         </OutlinedMesh>
         
-        {/* === YEUX EXPRESSIFS STYLE BITMOJI === */}
+        {/* Mâchoire définie */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, -0.25, 0]} castShadow receiveShadow material={skinMaterial}>
+            <boxGeometry args={[0.40, 0.18, 0.30]} />
+          </mesh>
+        </OutlinedMesh>
+        
+        {/* === YEUX RÉALISTES MAIS EXPRESSIFS === */}
         {/* Œil gauche */}
-        <group position={[-0.14, 0.12, 0.35]}>
-          {/* Blanc de l'œil - plus grand */}
-          <OutlinedMesh outlineThickness={1.05}>
+        <group position={[-0.12, 0.08, 0.30]}>
+          {/* Blanc de l'œil */}
+          <OutlinedMesh outlineThickness={1.04}>
             <mesh material={eyeWhiteMaterial}>
-              <sphereGeometry args={[0.09, 16, 16]} />
+              <sphereGeometry args={[0.055, 16, 16]} />
             </mesh>
           </OutlinedMesh>
+          {/* Iris coloré */}
+          <mesh position={[0.015, 0, 0.04]} material={createToonMaterial('#4A90E2')}>
+            <sphereGeometry args={[0.025, 16, 16]} />
+          </mesh>
           {/* Pupille */}
-          <mesh position={[0.02, -0.01, 0.06]} material={eyeMaterial}>
-            <sphereGeometry args={[0.045, 16, 16]} />
+          <mesh position={[0.02, 0, 0.05]} material={eyeMaterial}>
+            <sphereGeometry args={[0.015, 16, 16]} />
           </mesh>
-          {/* Reflet brillant 1 */}
-          <mesh position={[0.01, 0.025, 0.08]} material={eyeWhiteMaterial}>
-            <sphereGeometry args={[0.015, 8, 8]} />
-          </mesh>
-          {/* Reflet brillant 2 */}
-          <mesh position={[0.03, 0.01, 0.08]} material={eyeWhiteMaterial}>
+          {/* Reflet brillant */}
+          <mesh position={[0.015, 0.015, 0.055]} material={eyeWhiteMaterial}>
             <sphereGeometry args={[0.008, 8, 8]} />
           </mesh>
-          {/* Cils supérieurs */}
-          <mesh position={[0, 0.08, 0.05]} rotation={[0, 0, -0.1]}>
-            <boxGeometry args={[0.02, 0.05, 0.01]} />
-            <meshBasicMaterial color="#000000" />
-          </mesh>
-          <mesh position={[0.04, 0.075, 0.05]} rotation={[0, 0, 0.15]}>
-            <boxGeometry args={[0.02, 0.04, 0.01]} />
-            <meshBasicMaterial color="#000000" />
+          {/* Paupière supérieure */}
+          <mesh position={[0, 0.04, 0.04]} rotation={[-0.2, 0, 0]}>
+            <boxGeometry args={[0.08, 0.02, 0.02]} />
+            <meshBasicMaterial color="#E5B299" />
           </mesh>
         </group>
         
         {/* Œil droit */}
-        <group position={[0.14, 0.12, 0.35]}>
-          {/* Blanc de l'œil - plus grand */}
-          <OutlinedMesh outlineThickness={1.05}>
+        <group position={[0.12, 0.08, 0.30]}>
+          {/* Blanc de l'œil */}
+          <OutlinedMesh outlineThickness={1.04}>
             <mesh material={eyeWhiteMaterial}>
-              <sphereGeometry args={[0.09, 16, 16]} />
+              <sphereGeometry args={[0.055, 16, 16]} />
             </mesh>
           </OutlinedMesh>
+          {/* Iris coloré */}
+          <mesh position={[-0.015, 0, 0.04]} material={createToonMaterial('#4A90E2')}>
+            <sphereGeometry args={[0.025, 16, 16]} />
+          </mesh>
           {/* Pupille */}
-          <mesh position={[-0.02, -0.01, 0.06]} material={eyeMaterial}>
-            <sphereGeometry args={[0.045, 16, 16]} />
+          <mesh position={[-0.02, 0, 0.05]} material={eyeMaterial}>
+            <sphereGeometry args={[0.015, 16, 16]} />
           </mesh>
-          {/* Reflet brillant 1 */}
-          <mesh position={[-0.01, 0.025, 0.08]} material={eyeWhiteMaterial}>
-            <sphereGeometry args={[0.015, 8, 8]} />
-          </mesh>
-          {/* Reflet brillant 2 */}
-          <mesh position={[-0.03, 0.01, 0.08]} material={eyeWhiteMaterial}>
+          {/* Reflet brillant */}
+          <mesh position={[-0.015, 0.015, 0.055]} material={eyeWhiteMaterial}>
             <sphereGeometry args={[0.008, 8, 8]} />
           </mesh>
-          {/* Cils supérieurs */}
-          <mesh position={[0, 0.08, 0.05]} rotation={[0, 0, 0.1]}>
-            <boxGeometry args={[0.02, 0.05, 0.01]} />
-            <meshBasicMaterial color="#000000" />
-          </mesh>
-          <mesh position={[-0.04, 0.075, 0.05]} rotation={[0, 0, -0.15]}>
-            <boxGeometry args={[0.02, 0.04, 0.01]} />
-            <meshBasicMaterial color="#000000" />
+          {/* Paupière supérieure */}
+          <mesh position={[0, 0.04, 0.04]} rotation={[-0.2, 0, 0]}>
+            <boxGeometry args={[0.08, 0.02, 0.02]} />
+            <meshBasicMaterial color="#E5B299" />
           </mesh>
         </group>
         
-        {/* === SOURCILS EXPRESSIFS === */}
+        {/* === SOURCILS NATURELS === */}
         {/* Sourcil gauche */}
-        <mesh position={[-0.14, 0.24, 0.36]} rotation={[0, 0, -0.15]}>
-          <boxGeometry args={[0.12, 0.025, 0.02]} />
+        <mesh position={[-0.12, 0.16, 0.32]} rotation={[0.1, 0, -0.1]}>
+          <capsuleGeometry args={[0.015, 0.08, 4, 8]} />
           <meshBasicMaterial color="#2D1810" />
         </mesh>
         
         {/* Sourcil droit */}
-        <mesh position={[0.14, 0.24, 0.36]} rotation={[0, 0, 0.15]}>
-          <boxGeometry args={[0.12, 0.025, 0.02]} />
+        <mesh position={[0.12, 0.16, 0.32]} rotation={[0.1, 0, 0.1]}>
+          <capsuleGeometry args={[0.015, 0.08, 4, 8]} />
           <meshBasicMaterial color="#2D1810" />
         </mesh>
         
-        {/* Nez simplifié (deux petits points) */}
-        <mesh position={[-0.02, 0, 0.42]}>
-          <sphereGeometry args={[0.015, 8, 8]} />
-          <meshBasicMaterial color="#E5B299" />
-        </mesh>
-        <mesh position={[0.02, 0, 0.42]}>
-          <sphereGeometry args={[0.015, 8, 8]} />
-          <meshBasicMaterial color="#E5B299" />
-        </mesh>
-        
-        {/* === GRAND SOURIRE AVEC DENTS === */}
-        {/* Bouche rouge */}
-        <mesh position={[0, -0.12, 0.38]} rotation={[0.3, 0, 0]}>
-          <torusGeometry args={[0.12, 0.03, 8, 16, Math.PI]} />
-          <meshToonMaterial color="#DC2626" />
-        </mesh>
-        {/* Dents visibles */}
-        <mesh position={[0, -0.11, 0.40]} rotation={[0.2, 0, 0]}>
-          <boxGeometry args={[0.15, 0.025, 0.02]} />
-          <meshBasicMaterial color="#FFFFFF" />
-        </mesh>
-        
-        {/* Oreilles */}
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh position={[-0.42, 0, 0.05]} rotation={[0, 0, -0.2]} material={skinMaterial}>
-            <sphereGeometry args={[0.10, 16, 16]} />
+        {/* Nez défini style Bitmoji */}
+        <OutlinedMesh outlineThickness={1.02}>
+          <mesh position={[0, -0.02, 0.32]} rotation={[0.3, 0, 0]} material={skinMaterial}>
+            <boxGeometry args={[0.06, 0.10, 0.08]} />
           </mesh>
         </OutlinedMesh>
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh position={[0.42, 0, 0.05]} rotation={[0, 0, 0.2]} material={skinMaterial}>
-            <sphereGeometry args={[0.10, 16, 16]} />
+        {/* Narines */}
+        <mesh position={[-0.02, -0.08, 0.34]}>
+          <sphereGeometry args={[0.012, 8, 8]} />
+          <meshBasicMaterial color="#D4A088" />
+        </mesh>
+        <mesh position={[0.02, -0.08, 0.34]}>
+          <sphereGeometry args={[0.012, 8, 8]} />
+          <meshBasicMaterial color="#D4A088" />
+        </mesh>
+        
+        {/* === BOUCHE RÉALISTE === */}
+        {/* Lèvres supérieures */}
+        <mesh position={[0, -0.18, 0.30]} rotation={[0.2, 0, 0]}>
+          <capsuleGeometry args={[0.01, 0.08, 4, 8]} />
+          <meshToonMaterial color="#DC8B7C" />
+        </mesh>
+        {/* Lèvres inférieures */}
+        <mesh position={[0, -0.21, 0.30]} rotation={[0.15, 0, 0]}>
+          <capsuleGeometry args={[0.012, 0.09, 4, 8]} />
+          <meshToonMaterial color="#E59B8C" />
+        </mesh>
+        {/* Sourire léger */}
+        <mesh position={[0, -0.20, 0.31]} rotation={[0.5, 0, 0]}>
+          <torusGeometry args={[0.06, 0.008, 6, 12, Math.PI]} />
+          <meshBasicMaterial color="#DC8B7C" />
+        </mesh>
+        
+        {/* Oreilles détaillées */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[-0.34, -0.02, 0.08]} rotation={[0, 0.3, -0.3]} material={skinMaterial}>
+            <capsuleGeometry args={[0.04, 0.06, 4, 8]} />
+          </mesh>
+        </OutlinedMesh>
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0.34, -0.02, 0.08]} rotation={[0, -0.3, 0.3]} material={skinMaterial}>
+            <capsuleGeometry args={[0.04, 0.06, 4, 8]} />
           </mesh>
         </OutlinedMesh>
       </group>
 
-      {/* === CHEVEUX VOLUMIEUX STYLE BITMOJI === */}
-      {/* Couche principale */}
+      {/* === CHEVEUX STYLE BITMOJI (volume modéré) === */}
+      {/* Base des cheveux */}
       <OutlinedMesh outlineThickness={1.03}>
-        <mesh position={[0, 1.50, 0]} castShadow material={hairMaterial}>
-          <sphereGeometry args={[0.40, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
+        <mesh position={[0, 1.75, 0]} castShadow material={hairMaterial}>
+          <sphereGeometry args={[0.32, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
         </mesh>
       </OutlinedMesh>
       
-      {/* Mèches sur le côté gauche */}
+      {/* Mèche avant gauche */}
       <OutlinedMesh outlineThickness={1.03}>
-        <mesh position={[-0.28, 1.45, 0.15]} rotation={[0, 0, -0.4]} castShadow material={hairMaterial}>
+        <mesh position={[-0.20, 1.70, 0.18]} rotation={[0, 0, -0.3]} castShadow material={hairMaterial}>
+          <capsuleGeometry args={[0.06, 0.12, 4, 8]} />
+        </mesh>
+      </OutlinedMesh>
+      
+      {/* Mèche avant droite */}
+      <OutlinedMesh outlineThickness={1.03}>
+        <mesh position={[0.20, 1.70, 0.18]} rotation={[0, 0, 0.3]} castShadow material={hairMaterial}>
+          <capsuleGeometry args={[0.06, 0.12, 4, 8]} />
+        </mesh>
+      </OutlinedMesh>
+      
+      {/* Volume dessus */}
+      <OutlinedMesh outlineThickness={1.03}>
+        <mesh position={[0, 1.88, 0.05]} castShadow material={hairMaterial}>
           <sphereGeometry args={[0.18, 16, 16]} />
         </mesh>
       </OutlinedMesh>
+
+      {/* === COU PROPORTIONNÉ === */}
+      <OutlinedMesh outlineThickness={1.03}>
+        <mesh position={[0, 1.32, 0]} castShadow receiveShadow material={skinMaterial}>
+          <cylinderGeometry args={[0.10, 0.12, 0.25, 24]} />
+        </mesh>
+      </OutlinedMesh>
+
+      {/* === TORSE RÉALISTE === */}
+      <OutlinedMesh outlineThickness={1.03}>
+        <mesh position={[0, 0.88, 0]} castShadow receiveShadow material={topMaterial}>
+          <capsuleGeometry args={[0.26, 0.60, 24, 24]} />
+        </mesh>
+      </OutlinedMesh>
       
-      {/* Mèches sur le côté droit */}
-      <OutlinedMesh outlineThickness={1.03}>
-        <mesh position={[0.28, 1.45, 0.15]} rotation={[0, 0, 0.4]} castShadow material={hairMaterial}>
-          <sphereGeometry args={[0.18, 16, 16]} />
-        </mesh>
-      </OutlinedMesh>
-      
-      {/* Volume sur le dessus */}
-      <OutlinedMesh outlineThickness={1.03}>
-        <mesh position={[0, 1.62, 0]} castShadow material={hairMaterial}>
-          <sphereGeometry args={[0.22, 16, 16]} />
-        </mesh>
-      </OutlinedMesh>
+      {/* Pectoraux suggérés */}
+      <mesh position={[-0.10, 0.98, 0.22]} castShadow material={topMaterial}>
+        <sphereGeometry args={[0.08, 16, 16]} />
+      </mesh>
+      <mesh position={[0.10, 0.98, 0.22]} castShadow material={topMaterial}>
+        <sphereGeometry args={[0.08, 16, 16]} />
+      </mesh>
 
-      {/* === COU CHIBI (plus court) === */}
-      <OutlinedMesh outlineThickness={1.04}>
-        <mesh position={[0, 0.82, 0]} castShadow receiveShadow material={skinMaterial}>
-          <cylinderGeometry args={[0.12, 0.14, 0.15, 24]} />
-        </mesh>
-      </OutlinedMesh>
-
-      {/* === CORPS CHIBI (petit et trapu) === */}
-      <OutlinedMesh outlineThickness={1.03}>
-        <mesh position={[0, 0.48, 0]} castShadow receiveShadow material={topMaterial}>
-          <capsuleGeometry args={[0.22, 0.35, 24, 24]} />
-        </mesh>
-      </OutlinedMesh>
-
-      {/* === BRAS COURTS STYLE CHIBI === */}
-      {/* Bras gauche levé (pose running cute) */}
-      <group position={[-0.30, 0.56, 0]} rotation={[0.6, 0, 0.4]}>
-        <OutlinedMesh outlineThickness={1.04}>
+      {/* === BRAS PROPORTIONNÉS AVEC DÉTAILS === */}
+      {/* Bras gauche */}
+      <group position={[-0.38, 1.00, 0]} rotation={[0.4, 0, 0.2]}>
+        {/* Épaule */}
+        <OutlinedMesh outlineThickness={1.03}>
           <mesh castShadow receiveShadow material={topMaterial}>
-            <cylinderGeometry args={[0.07, 0.06, 0.25, 20]} />
+            <sphereGeometry args={[0.09, 16, 16]} />
           </mesh>
         </OutlinedMesh>
-        {/* Main ronde (pas de doigts) */}
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh position={[0, -0.16, 0]} castShadow material={skinMaterial}>
-            <sphereGeometry args={[0.08, 16, 16]} />
+        {/* Biceps */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, -0.15, 0]} castShadow receiveShadow material={topMaterial}>
+            <capsuleGeometry args={[0.07, 0.20, 8, 16]} />
           </mesh>
         </OutlinedMesh>
+        {/* Coude */}
+        <mesh position={[0, -0.26, 0]} castShadow material={skinMaterial}>
+          <sphereGeometry args={[0.07, 12, 12]} />
+        </mesh>
+        {/* Avant-bras */}
+        <group position={[0, -0.26, 0]} rotation={[-0.6, 0, 0]}>
+          <OutlinedMesh outlineThickness={1.03}>
+            <mesh position={[0, -0.12, 0]} castShadow receiveShadow material={skinMaterial}>
+              <capsuleGeometry args={[0.06, 0.18, 8, 16]} />
+            </mesh>
+          </OutlinedMesh>
+          {/* Main fermée */}
+          <OutlinedMesh outlineThickness={1.03}>
+            <mesh position={[0, -0.24, 0]} castShadow material={skinMaterial}>
+              <boxGeometry args={[0.10, 0.08, 0.10]} />
+            </mesh>
+          </OutlinedMesh>
+        </group>
       </group>
       
-      {/* Bras droit (pose running cute) */}
-      <group position={[0.30, 0.56, 0]} rotation={[-0.6, 0, -0.4]}>
-        <OutlinedMesh outlineThickness={1.04}>
+      {/* Bras droit */}
+      <group position={[0.38, 1.00, 0]} rotation={[-0.4, 0, -0.2]}>
+        {/* Épaule */}
+        <OutlinedMesh outlineThickness={1.03}>
           <mesh castShadow receiveShadow material={topMaterial}>
-            <cylinderGeometry args={[0.07, 0.06, 0.25, 20]} />
+            <sphereGeometry args={[0.09, 16, 16]} />
           </mesh>
         </OutlinedMesh>
-        {/* Main ronde */}
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh position={[0, -0.16, 0]} castShadow material={skinMaterial}>
-            <sphereGeometry args={[0.08, 16, 16]} />
+        {/* Biceps */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, -0.15, 0]} castShadow receiveShadow material={topMaterial}>
+            <capsuleGeometry args={[0.07, 0.20, 8, 16]} />
           </mesh>
         </OutlinedMesh>
+        {/* Coude */}
+        <mesh position={[0, -0.26, 0]} castShadow material={skinMaterial}>
+          <sphereGeometry args={[0.07, 12, 12]} />
+        </mesh>
+        {/* Avant-bras */}
+        <group position={[0, -0.26, 0]} rotation={[0.6, 0, 0]}>
+          <OutlinedMesh outlineThickness={1.03}>
+            <mesh position={[0, -0.12, 0]} castShadow receiveShadow material={skinMaterial}>
+              <capsuleGeometry args={[0.06, 0.18, 8, 16]} />
+            </mesh>
+          </OutlinedMesh>
+          {/* Main fermée */}
+          <OutlinedMesh outlineThickness={1.03}>
+            <mesh position={[0, -0.24, 0]} castShadow material={skinMaterial}>
+              <boxGeometry args={[0.10, 0.08, 0.10]} />
+            </mesh>
+          </OutlinedMesh>
+        </group>
       </group>
 
-      {/* === SHORT SIMPLIFIÉ === */}
+      {/* === SHORT RUNNING === */}
       <OutlinedMesh outlineThickness={1.03}>
-        <mesh position={[0, 0.20, 0]} castShadow receiveShadow material={bottomMaterial}>
-          <cylinderGeometry args={[0.24, 0.22, 0.25, 24]} />
+        <mesh position={[0, 0.42, 0]} castShadow receiveShadow material={bottomMaterial}>
+          <cylinderGeometry args={[0.28, 0.26, 0.35, 24]} />
         </mesh>
       </OutlinedMesh>
 
-      {/* === JAMBES COURTES STYLE CHIBI === */}
-      {/* Jambe gauche (légèrement levée - pose cute) */}
-      <group position={[-0.10, 0.05, 0]} rotation={[0.25, 0, 0]}>
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh castShadow receiveShadow material={skinMaterial}>
-            <cylinderGeometry args={[0.08, 0.07, 0.30, 20]} />
+      {/* === JAMBES DÉTAILLÉES === */}
+      {/* Jambe gauche */}
+      <group position={[-0.12, 0.18, 0]} rotation={[0.2, 0, 0]}>
+        {/* Cuisse */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh castShadow receiveShadow material={bottomMaterial}>
+            <capsuleGeometry args={[0.10, 0.42, 8, 16]} />
           </mesh>
         </OutlinedMesh>
+        {/* Genou */}
+        <mesh position={[0, -0.26, 0]} castShadow material={skinMaterial}>
+          <sphereGeometry args={[0.10, 12, 12]} />
+        </mesh>
+        {/* Mollet */}
+        <group position={[0, -0.26, 0]} rotation={[-0.25, 0, 0]}>
+          <OutlinedMesh outlineThickness={1.03}>
+            <mesh position={[0, -0.18, 0]} castShadow receiveShadow material={skinMaterial}>
+              <capsuleGeometry args={[0.08, 0.30, 8, 16]} />
+            </mesh>
+          </OutlinedMesh>
+        </group>
       </group>
       
       {/* Jambe droite */}
-      <group position={[0.10, 0.00, 0]} rotation={[-0.1, 0, 0]}>
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh castShadow receiveShadow material={skinMaterial}>
-            <cylinderGeometry args={[0.08, 0.07, 0.30, 20]} />
+      <group position={[0.12, 0.15, 0]} rotation={[-0.1, 0, 0]}>
+        {/* Cuisse */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh castShadow receiveShadow material={bottomMaterial}>
+            <capsuleGeometry args={[0.10, 0.42, 8, 16]} />
+          </mesh>
+        </OutlinedMesh>
+        {/* Genou */}
+        <mesh position={[0, -0.26, 0]} castShadow material={skinMaterial}>
+          <sphereGeometry args={[0.10, 12, 12]} />
+        </mesh>
+        {/* Mollet */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, -0.48, 0]} castShadow receiveShadow material={skinMaterial}>
+            <capsuleGeometry args={[0.08, 0.30, 8, 16]} />
           </mesh>
         </OutlinedMesh>
       </group>
 
-      {/* === CHAUSSURES CARTOON STYLE BITMOJI === */}
+      {/* === CHAUSSURES RUNNING DÉTAILLÉES === */}
       {/* Chaussure gauche (levée) */}
-      <group position={[-0.10, -0.22, 0.03]} rotation={[0.3, 0, 0]}>
-        {/* Semelle épaisse cartoon */}
-        <OutlinedMesh outlineThickness={1.04}>
+      <group position={[-0.12, -0.62, 0.05]} rotation={[0.3, 0, 0]}>
+        {/* Semelle running */}
+        <OutlinedMesh outlineThickness={1.03}>
           <mesh castShadow receiveShadow material={shoesMaterial}>
-            <boxGeometry args={[0.16, 0.10, 0.26]} />
+            <boxGeometry args={[0.18, 0.08, 0.30]} />
           </mesh>
         </OutlinedMesh>
-        {/* Dessus arrondi */}
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh position={[0, 0.08, -0.02]} rotation={[0, 0, Math.PI / 2]} castShadow material={shoesMaterial}>
-            <capsuleGeometry args={[0.06, 0.12, 4, 16]} />
+        {/* Corps de la chaussure */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, 0.08, -0.02]} castShadow material={shoesMaterial}>
+            <boxGeometry args={[0.16, 0.10, 0.24]} />
           </mesh>
         </OutlinedMesh>
-        {/* Logo cartoon */}
-        <mesh position={[-0.09, 0.09, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <circleGeometry args={[0.025, 16]} />
+        {/* Avant arrondi */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, 0.06, 0.12]} castShadow material={shoesMaterial}>
+            <sphereGeometry args={[0.09, 12, 12]} />
+          </mesh>
+        </OutlinedMesh>
+        {/* Logo */}
+        <mesh position={[-0.10, 0.10, 0.02]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[0.06, 0.03]} />
           <meshBasicMaterial color="#FFFFFF" />
         </mesh>
-        {/* Lacets stylisés */}
-        <mesh position={[0, 0.10, 0.04]}>
-          <boxGeometry args={[0.10, 0.01, 0.01]} />
+        {/* Lacets */}
+        <mesh position={[0, 0.12, 0.05]}>
+          <boxGeometry args={[0.12, 0.01, 0.01]} />
           <meshBasicMaterial color="#FFFFFF" />
         </mesh>
-        <mesh position={[0, 0.10, 0]}>
-          <boxGeometry args={[0.10, 0.01, 0.01]} />
+        <mesh position={[0, 0.11, 0.02]}>
+          <boxGeometry args={[0.12, 0.01, 0.01]} />
           <meshBasicMaterial color="#FFFFFF" />
         </mesh>
       </group>
 
       {/* Chaussure droite */}
-      <group position={[0.10, -0.28, 0.03]}>
-        {/* Semelle épaisse cartoon */}
-        <OutlinedMesh outlineThickness={1.04}>
+      <group position={[0.12, -0.78, 0.05]}>
+        {/* Semelle running */}
+        <OutlinedMesh outlineThickness={1.03}>
           <mesh castShadow receiveShadow material={shoesMaterial}>
-            <boxGeometry args={[0.16, 0.10, 0.26]} />
+            <boxGeometry args={[0.18, 0.08, 0.30]} />
           </mesh>
         </OutlinedMesh>
-        {/* Dessus arrondi */}
-        <OutlinedMesh outlineThickness={1.04}>
-          <mesh position={[0, 0.08, -0.02]} rotation={[0, 0, Math.PI / 2]} castShadow material={shoesMaterial}>
-            <capsuleGeometry args={[0.06, 0.12, 4, 16]} />
+        {/* Corps de la chaussure */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, 0.08, -0.02]} castShadow material={shoesMaterial}>
+            <boxGeometry args={[0.16, 0.10, 0.24]} />
           </mesh>
         </OutlinedMesh>
-        {/* Logo cartoon */}
-        <mesh position={[0.09, 0.09, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <circleGeometry args={[0.025, 16]} />
+        {/* Avant arrondi */}
+        <OutlinedMesh outlineThickness={1.03}>
+          <mesh position={[0, 0.06, 0.12]} castShadow material={shoesMaterial}>
+            <sphereGeometry args={[0.09, 12, 12]} />
+          </mesh>
+        </OutlinedMesh>
+        {/* Logo */}
+        <mesh position={[0.10, 0.10, 0.02]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[0.06, 0.03]} />
           <meshBasicMaterial color="#FFFFFF" />
         </mesh>
-        {/* Lacets stylisés */}
-        <mesh position={[0, 0.10, 0.04]}>
-          <boxGeometry args={[0.10, 0.01, 0.01]} />
+        {/* Lacets */}
+        <mesh position={[0, 0.12, 0.05]}>
+          <boxGeometry args={[0.12, 0.01, 0.01]} />
           <meshBasicMaterial color="#FFFFFF" />
         </mesh>
-        <mesh position={[0, 0.10, 0]}>
-          <boxGeometry args={[0.10, 0.01, 0.01]} />
+        <mesh position={[0, 0.11, 0.02]}>
+          <boxGeometry args={[0.12, 0.01, 0.01]} />
           <meshBasicMaterial color="#FFFFFF" />
         </mesh>
       </group>
@@ -392,15 +484,15 @@ export const PhotorealisticAvatar3D = ({
 }: PhotorealisticAvatar3DProps) => {
   return (
     <div className={className}>
-      <Canvas shadows camera={{ position: [0, 0.5, 2.8], fov: 50 }}>
+      <Canvas shadows camera={{ position: [0, 0.8, 3.5], fov: 45 }}>
         <Suspense fallback={null}>
           <OrbitControls 
             enableZoom={true}
             minPolarAngle={Math.PI / 6}
             maxPolarAngle={Math.PI / 1.6}
-            target={[0, 0.4, 0]}
-            minDistance={2}
-            maxDistance={4}
+            target={[0, 0.7, 0]}
+            minDistance={2.5}
+            maxDistance={5}
             enablePan={false}
           />
           
@@ -433,13 +525,13 @@ export const PhotorealisticAvatar3D = ({
             accessoryItemId={accessoryItemId}
           />
           
-          {/* Ombres nettes (cell-shading) */}
+          {/* Ombres douces */}
           <ContactShadows 
-            position={[0, -0.3, 0]} 
-            opacity={0.5} 
-            scale={1.8} 
-            blur={1} 
-            far={1.5}
+            position={[0, -0.8, 0]} 
+            opacity={0.4} 
+            scale={2.5} 
+            blur={2} 
+            far={2}
             resolution={256}
           />
         </Suspense>
