@@ -28,7 +28,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
     private WebView webView;
-    private PermissionsPluginFixed permissionsPlugin;
     // URL configurée dynamiquement via variable d'environnement ou propriété système
     private final String START_URL = System.getProperty("app.start.url", 
         System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
@@ -181,9 +180,6 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
         setContentView(webView);
-        
-        // Initialize permissions plugin
-        permissionsPlugin = new PermissionsPluginFixed();
         
         Log.d(TAG, "🎯 MainActivity setup complete");
     }
@@ -388,16 +384,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.d(TAG, "🔍 onActivityResult called: requestCode=" + requestCode + ", resultCode=" + resultCode);
-        
-        if (permissionsPlugin != null) {
-            permissionsPlugin.handleActivityResult(requestCode, resultCode, data);
-        }
-    }
-    
     // ✅ Interface JavaScript pour les permissions natives
     private class AndroidBridge {
         @android.webkit.JavascriptInterface
