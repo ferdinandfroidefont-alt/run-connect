@@ -136,11 +136,86 @@ jobs:
           # 🔧 Modifier START_URL dynamiquement dans le MainActivity
           sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           
-          # ✅ Copier AndroidManifest depuis android/ et le nettoyer
-          cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
-          
-          # 🔧 Supprimer l'attribut package obsolète du AndroidManifest
-          sed -i 's|package="app.runconnect"||g' android-webview/app/src/main/AndroidManifest.xml
+          # ✅ Créer AndroidManifest simplifié (sans Firebase)
+          cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+
+              <!-- 📍 GÉOLOCALISATION -->
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+              <!-- 📷 CAMERA -->
+              <uses-permission android:name="android.permission.CAMERA" />
+              
+              <!-- 📷 STOCKAGE - PAR VERSION ANDROID -->
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+              <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+
+              <!-- 👥 CONTACTS -->
+              <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+              <!-- 🌐 INTERNET / RÉSEAU -->
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+              <!-- 📲 COMPATIBILITÉ HARDWARE -->
+              <uses-feature android:name="android.hardware.camera" android:required="false" />
+              <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+              <uses-feature android:name="android.hardware.location" android:required="false" />
+              <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+              <uses-feature android:name="android.hardware.location.network" android:required="false" />
+              <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+              <application
+                  android:allowBackup="true"
+                  android:label="@string/app_name"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="true"
+                  android:requestLegacyExternalStorage="false">
+
+                  <!-- 🧠 ACTIVITÉ PRINCIPALE -->
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:hardwareAccelerated="true"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:theme="@style/AppTheme.NoActionBarLaunch">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      
+                      <!-- Deep Link pour OAuth callback -->
+                      <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="app.runconnect" />
+                      </intent-filter>
+                  </activity>
+
+                  <!-- 🔓 FILE PROVIDER POUR ACCÈS FICHIERS -->
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+
+              </application>
+
+          </manifest>
+          EOF
 
           # ✅ Créer styles.xml
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
