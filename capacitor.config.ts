@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'application.runconnect',
+  appId: 'app.runconnect',
   appName: 'RunConnect',
   webDir: 'dist',
   bundledWebRuntime: false,
@@ -24,8 +24,8 @@ const config: CapacitorConfig = {
     // Configuration spéciale pour AAB/Google Play
     allowMultipleWindows: false,
     useLegacyBridge: false,
-    // Deep linking pour OAuth
-    deepLinkScheme: 'app.runconnect',
+    // Deep linking configuré pour OAuth avec le bon scheme
+    deepLinkScheme: 'app.runconnect'
     // User-Agent léger pour éviter les blocages Google
     appendUserAgent: 'RunConnect/1.3'
   },

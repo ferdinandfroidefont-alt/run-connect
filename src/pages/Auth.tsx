@@ -89,58 +89,60 @@ const Auth = () => {
       });
       
       if (isNative) {
-        // Pour les apps natives, utiliser InAppBrowser pour WebView intégrée
-        const { InAppBrowser } = await import('@awesome-cordova-plugins/in-app-browser');
-        
-        // Construire l'URL d'authentification Google
-        const redirectUrl = 'app.runconnect://auth/callback';
-        const googleAuthUrl = `https://dbptgehpknjsoisirviz.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
-        
-        // Ouvrir dans une WebView intégrée à l'app
-        const browser = InAppBrowser.create(googleAuthUrl, '_blank', {
-          location: 'no',
-          toolbar: 'yes',
-          toolbarcolor: '#1a1a1a',
-          closebuttoncaption: 'Fermer',
-          closebuttoncolor: '#ffffff',
-          hidenavigationbuttons: 'no',
-          hideurlbar: 'yes'
-        });
-        
-        console.log('🔥 Ouverture WebView in-app pour Google OAuth');
-        
-        // Écouter la fermeture de la WebView
-        browser.on('exit').subscribe(() => {
-          console.log('✅ WebView fermée, vérification session...');
-          supabase.auth.getSession();
-        });
-        
-        // Écouter le retour via deep link
+        // Pour les apps natives Android, utiliser Browser de Capacitor
+        const { Browser } = await import('@capacitor/browser');
         const { App } = await import('@capacitor/app');
         
-        App.addListener('appUrlOpen', async (data) => {
-          console.log('🔗 Deep link reçu:', data.url);
-          
-          if (data.url.includes('auth/callback')) {
-            // La WebView se ferme automatiquement
-            
-            // Traiter la callback d'authentification
-            const urlParams = new URLSearchParams(data.url.split('#')[1] || '');
-            const accessToken = urlParams.get('access_token');
-            
-            if (accessToken) {
-              // Définir la session avec le token reçu
-              const { error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: urlParams.get('refresh_token') || ''
-              });
-              
-              if (!error) {
-                window.location.href = '/';
-              }
-            }
+        // Construire l'URL avec le deep link scheme correct
+        const redirectUrl = 'app.runconnect://auth/callback';
+        const { data: authData } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            skipBrowserRedirect: true
           }
         });
+        
+        if (authData?.url) {
+          console.log('🔥 Ouverture du navigateur pour Google OAuth');
+          
+          // Ouvrir le navigateur natif
+          await Browser.open({ url: authData.url });
+          
+          // Écouter le retour via deep link
+          const listener = await App.addListener('appUrlOpen', async (event) => {
+            console.log('🔗 Deep link reçu:', event.url);
+            
+            if (event.url.startsWith('app.runconnect://')) {
+              // Fermer le navigateur
+              await Browser.close();
+              
+              // Extraire les paramètres de l'URL
+              const url = new URL(event.url);
+              const hashParams = new URLSearchParams(url.hash.substring(1));
+              const accessToken = hashParams.get('access_token');
+              const refreshToken = hashParams.get('refresh_token');
+              
+              if (accessToken && refreshToken) {
+                // Définir la session
+                const { error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken
+                });
+                
+                if (!error) {
+                  console.log('✅ Session établie avec succès');
+                  listener.remove();
+                  window.location.href = '/';
+                } else {
+                  console.error('❌ Erreur lors de l\'établissement de la session:', error);
+                  listener.remove();
+                  throw error;
+                }
+              }
+            }
+          });
+        }
         
       } else {
         // Pour le web, utiliser la méthode standard
