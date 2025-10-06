@@ -266,6 +266,15 @@ jobs:
         run: |
           echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
 
+      - name: 🔍 Afficher empreintes SHA du keystore
+        working-directory: android-webview
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+        run: |
+          echo "📋 Empreintes du certificat pour Firebase:"
+          keytool -list -v -keystore keystore.jks -alias "$ANDROID_KEYSTORE_ALIAS" -storepass "$ANDROID_KEYSTORE_PASSWORD" | grep -E "(SHA1|SHA256)"
+
       - name: 🔨 Build AAB (Gradle)
         working-directory: android-webview
         env:
