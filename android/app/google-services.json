@@ -7,17 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:220304658307:android:ca3f532facaeb5a27830b6",
+        "mobilesdk_app_id": "1:220304658307:android:f8a62169b81dba4b7830b6",
         "android_client_info": {
-          "package_name": "com.runconnect.app"
+          "package_name": "application.runconnect"
         }
       },
       "oauth_client": [
         {
-          "client_id": "220304658307-eskg18kr3sv8c56equfq6d84g45ehona.apps.googleusercontent.com",
+          "client_id": "220304658307-aigi9ch9mi0v9626gb9bno5mv23glf29.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.runconnect.app",
+            "package_name": "application.runconnect",
             "certificate_hash": "90d3d23a5661fc29c62379f1d3c100f2d4622216"
           }
         },
