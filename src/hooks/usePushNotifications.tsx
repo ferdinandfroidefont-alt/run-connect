@@ -196,10 +196,33 @@ export const usePushNotifications = () => {
         if (permission.receive === 'granted') {
           console.log('✅ Capacitor standard réussi');
           
+          // 🎯 CRITIQUE: Configurer les listeners AVANT register()
+          await setupPushListeners();
+          
           // Enregistrement push pour recevoir le token
           try {
             await PushNotifications.register();
-            console.log('✅ Enregistrement push réussi');
+            console.log('✅ Enregistrement push demandé');
+            
+            // 🔄 FALLBACK: Si pas de token après 5s, vérifier et forcer si besoin
+            setTimeout(async () => {
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('push_token')
+                  .eq('user_id', user?.id)
+                  .single();
+                
+                if (!profile?.push_token) {
+                  console.warn('⚠️ Aucun token enregistré après 5s, forcer récupération');
+                  await PushNotifications.register();
+                } else {
+                  console.log('✅ Token déjà enregistré:', profile.push_token.substring(0, 20) + '...');
+                }
+              } catch (e) {
+                console.error('Erreur fallback token:', e);
+              }
+            }, 5000);
           } catch (regError) {
             console.log('⚠️ Enregistrement push échoué mais permissions OK');
           }
@@ -382,7 +405,60 @@ export const usePushNotifications = () => {
     }
   }, [user, toast]);
 
-  // Configuration des listeners
+  // Ref pour tracker si les listeners sont configurés
+  const listenersConfigured = useCallback(() => {
+    return (window as any).__pushListenersConfigured === true;
+  }, []);
+
+  // Configuration des listeners (DOIT être appelé AVANT register())
+  const setupPushListeners = useCallback(async () => {
+    if (!isNative || (window as any).__pushListenersConfigured) {
+      return;
+    }
+
+    console.log('🎧 Configuration listeners push natifs...');
+    
+    try {
+      // Succès d'enregistrement
+      await PushNotifications.addListener('registration', (token) => {
+        console.log('✅ Token FCM reçu:', token.value);
+        setToken(token.value);
+        setIsRegistered(true);
+        savePushToken(token.value);
+        checkPermissionStatus();
+      });
+
+      // Erreur d'enregistrement
+      await PushNotifications.addListener('registrationError', (error) => {
+        console.error('❌ Erreur enregistrement push:', error);
+        setIsRegistered(false);
+        checkPermissionStatus();
+      });
+
+      // Notification reçue
+      await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        console.log('📱 Notification reçue:', notification);
+        
+        toast({
+          title: notification.title || "Nouvelle notification",
+          description: notification.body || "",
+        });
+      });
+
+      // Notification cliquée
+      await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        console.log('👆 Notification action:', notification);
+        handleNotificationTap(notification.notification);
+      });
+
+      (window as any).__pushListenersConfigured = true;
+      console.log('✅ Listeners push configurés');
+    } catch (error) {
+      console.error('❌ Erreur configuration listeners:', error);
+    }
+  }, [isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
+
+  // Configuration au montage
   useEffect(() => {
     if (!user) return;
 
@@ -398,70 +474,21 @@ export const usePushNotifications = () => {
 
     window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
 
-    // Listeners natifs seulement
+    // Configurer les listeners natifs immédiatement
     if (isNative) {
-      console.log('🎧 Configuration listeners push natifs...');
-      
-      const setupListeners = async () => {
-        // Succès d'enregistrement
-        const regListener = await PushNotifications.addListener('registration', (token) => {
-          console.log('✅ Enregistrement push réussi:', token.value);
-          setToken(token.value);
-          setIsRegistered(true);
-          savePushToken(token.value);
-          checkPermissionStatus(); // Refresh status
-        });
-
-        // Erreur d'enregistrement
-        const regErrorListener = await PushNotifications.addListener('registrationError', (error) => {
-          console.error('❌ Erreur enregistrement push:', error);
-          setIsRegistered(false);
-          checkPermissionStatus(); // Refresh status
-        });
-
-        // Notification reçue
-        const notifListener = await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          console.log('📱 Notification reçue:', notification);
-          
-          toast({
-            title: notification.title || "Nouvelle notification",
-            description: notification.body || "",
-          });
-        });
-
-        // Notification cliquée
-        const actionListener = await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-          console.log('👆 Notification action:', notification);
-          handleNotificationTap(notification.notification);
-        });
-
-        return () => {
-          regListener?.remove();
-          regErrorListener?.remove();
-          notifListener?.remove();
-          actionListener?.remove();
-        };
-      };
-
-      let cleanup: (() => void) | undefined;
-      setupListeners().then(cleanupFn => cleanup = cleanupFn);
-
-      // Periodic check for permission changes (user might grant/deny in settings)
-      const interval = setInterval(() => {
-        checkPermissionStatus();
-      }, 3000);
-
-      return () => {
-        cleanup?.();
-        clearInterval(interval);
-        window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
-      };
+      setupPushListeners();
     }
 
+    // Periodic check for permission changes
+    const interval = setInterval(() => {
+      checkPermissionStatus();
+    }, 3000);
+
     return () => {
+      clearInterval(interval);
       window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
     };
-  }, [user, isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
+  }, [user, isNative, setupPushListeners, checkPermissionStatus]);
 
   return {
     isRegistered,
@@ -470,6 +497,7 @@ export const usePushNotifications = () => {
     requestPermissions,
     testNotification,
     isNative,
-    isSupported
+    isSupported,
+    setupPushListeners
   };
 };

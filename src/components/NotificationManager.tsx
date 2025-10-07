@@ -3,10 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useNotificationRealtimeSync } from '@/hooks/useNotificationRealtimeSync';
 import { MIUINotificationGuide } from '@/components/MIUINotificationGuide';
 import { RedmiNote9Guide } from '@/components/RedmiNote9Guide';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
-import { Bell, BellOff, TestTube, Settings, Smartphone, Globe } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Bell, BellOff, TestTube, Settings, Smartphone, Globe, Stethoscope } from 'lucide-react';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 export const NotificationManager = () => {
   const { 
@@ -15,11 +20,99 @@ export const NotificationManager = () => {
     requestPermissions, 
     testNotification,
     isNative, 
-    isSupported 
+    isSupported,
+    setupPushListeners 
   } = usePushNotifications();
   const { deviceInfo } = useDeviceDetection();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
+
+  // Activer le système de sync Realtime
+  useNotificationRealtimeSync();
 
   const isMIUIDevice = deviceInfo?.isMIUI;
+
+  // Diagnostic complet des notifications
+  const diagnoseNotifications = async () => {
+    if (!user) return;
+    
+    setDiagnosing(true);
+    setDiagnosticResult(null);
+    console.log('🔍 Diagnostic notifications...');
+
+    try {
+      // 1. Vérifier token en base
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('push_token, notifications_enabled')
+        .eq('user_id', user.id)
+        .single();
+
+      const hasToken = !!profile?.push_token;
+      console.log('📱 Token en base:', hasToken ? 'OUI ✅' : 'NON ❌');
+      console.log('🔔 Notifications enabled:', profile?.notifications_enabled);
+
+      if (hasToken) {
+        setDiagnosticResult(`✅ Token FCM enregistré: ${profile.push_token.substring(0, 30)}...`);
+        
+        toast({
+          title: "Diagnostic: OK",
+          description: "Token FCM trouvé en base de données"
+        });
+      } else {
+        setDiagnosticResult('❌ Aucun token FCM en base de données');
+        
+        // 2. Si pas de token, forcer réenregistrement
+        console.log('⚠️ Pas de token, forcer réenregistrement...');
+        
+        if (isNative) {
+          await setupPushListeners();
+          await PushNotifications.register();
+          
+          toast({
+            title: "Réenregistrement",
+            description: "Tentative de récupération du token FCM..."
+          });
+          
+          // Attendre et revérifier
+          setTimeout(async () => {
+            const { data: updatedProfile } = await supabase
+              .from('profiles')
+              .select('push_token')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (updatedProfile?.push_token) {
+              setDiagnosticResult(`✅ Token récupéré: ${updatedProfile.push_token.substring(0, 30)}...`);
+              toast({
+                title: "Succès",
+                description: "Token FCM récupéré avec succès!"
+              });
+            } else {
+              setDiagnosticResult('❌ Échec récupération token FCM');
+              toast({
+                title: "Erreur",
+                description: "Impossible de récupérer le token FCM",
+                variant: "destructive"
+              });
+            }
+          }, 3000);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur diagnostic:', error);
+      setDiagnosticResult('❌ Erreur lors du diagnostic');
+      toast({
+        title: "Erreur diagnostic",
+        description: "Une erreur s'est produite",
+        variant: "destructive"
+      });
+    } finally {
+      setDiagnosing(false);
+    }
+  };
 
   const getStatusBadge = () => {
     if (permissionStatus.granted) {
@@ -92,10 +185,19 @@ export const NotificationManager = () => {
             <p className="text-sm text-green-600">
               ✅ Notifications activées ! Vous recevrez les alertes de RunConnect.
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" onClick={testNotification} className="gap-2">
                 <TestTube className="h-4 w-4" />
                 Tester
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={diagnoseNotifications} 
+                disabled={diagnosing}
+                className="gap-2"
+              >
+                <Stethoscope className="h-4 w-4" />
+                {diagnosing ? 'Diagnostic...' : 'Diagnostic'}
               </Button>
               {isNative && (
                 <Button 
@@ -114,6 +216,12 @@ export const NotificationManager = () => {
                 </Button>
               )}
             </div>
+            
+            {diagnosticResult && (
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <p className="text-sm font-mono">{diagnosticResult}</p>
+              </div>
+            )}
           </div>
         )}
 
