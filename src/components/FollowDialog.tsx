@@ -6,6 +6,16 @@ import { OnlineStatus } from "./OnlineStatus";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Users, UserCheck, Heart, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +54,17 @@ export const FollowDialog = ({
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    type: 'unfollow' | 'remove' | null;
+    userId: string | null;
+    userName: string | null;
+  }>({
+    open: false,
+    type: null,
+    userId: null,
+    userName: null,
+  });
 
   useEffect(() => {
     if (open && user) {
@@ -122,13 +143,43 @@ export const FollowDialog = ({
     }
   };
 
+  const openConfirmDialog = (type: 'unfollow' | 'remove', userId: string, userName: string) => {
+    setConfirmDialog({
+      open: true,
+      type,
+      userId,
+      userName,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({
+      open: false,
+      type: null,
+      userId: null,
+      userName: null,
+    });
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmDialog.userId || !confirmDialog.type) return;
+
+    if (confirmDialog.type === 'unfollow') {
+      await unfollowUser(confirmDialog.userId);
+    } else if (confirmDialog.type === 'remove') {
+      await removeFollower(confirmDialog.userId);
+    }
+
+    closeConfirmDialog();
+  };
+
   const unfollowUser = async (targetUserId: string) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
         .from('user_follows')
-        .delete()
+        .update({ status: 'unfollowed' })
         .eq('follower_id', user.id)
         .eq('following_id', targetUserId);
 
@@ -162,7 +213,7 @@ export const FollowDialog = ({
     try {
       const { error } = await supabase
         .from('user_follows')
-        .delete()
+        .update({ status: 'unfollowed' })
         .eq('follower_id', followerUserId)
         .eq('following_id', user.id);
 
@@ -247,27 +298,27 @@ export const FollowDialog = ({
                </div>
                {/* Afficher les boutons seulement si on consulte son propre profil */}
                {isViewingOwnProfile && showUnfollowButton && (
-                 <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={() => unfollowUser(userItem.user_id)}
-                   className="text-destructive hover:text-destructive"
-                 >
-                   <X className="h-4 w-4 mr-1" />
-                   Ne plus suivre
-                 </Button>
-               )}
-               {isViewingOwnProfile && showRemoveButton && (
-                 <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={() => removeFollower(userItem.user_id)}
-                   className="text-destructive hover:text-destructive"
-                 >
-                   <X className="h-4 w-4 mr-1" />
-                   Supprimer
-                 </Button>
-               )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openConfirmDialog('unfollow', userItem.user_id, userItem.display_name || userItem.username)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Ne plus suivre
+                  </Button>
+                )}
+                {isViewingOwnProfile && showRemoveButton && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openConfirmDialog('remove', userItem.user_id, userItem.display_name || userItem.username)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Supprimer
+                  </Button>
+                )}
             </CardContent>
           </Card>
         ))
@@ -336,6 +387,28 @@ export const FollowDialog = ({
         userId={selectedUserId} 
         onClose={closeProfilePreview}
       />
+
+      <AlertDialog open={confirmDialog.open} onOpenChange={closeConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDialog.type === 'unfollow' ? 'Ne plus suivre ?' : 'Supprimer l\'abonné ?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog.type === 'unfollow' 
+                ? `Êtes-vous sûr de vouloir ne plus suivre ${confirmDialog.userName} ? Vous pourrez le/la suivre à nouveau plus tard.`
+                : `Êtes-vous sûr de vouloir supprimer ${confirmDialog.userName} de vos abonnés ? Cette personne ne vous suivra plus.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
