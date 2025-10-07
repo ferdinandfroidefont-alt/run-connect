@@ -89,9 +89,8 @@ const Auth = () => {
       });
       
       if (isNative) {
-        // Pour les apps natives Android, utiliser Browser de Capacitor
-        const { Browser } = await import('@capacitor/browser');
-        const { App } = await import('@capacitor/app');
+        // Pour les apps natives Android, utiliser InAppBrowser
+        const { InAppBrowser } = await import('@awesome-cordova-plugins/in-app-browser');
         
         // Construire l'URL avec le deep link scheme correct
         const redirectUrl = 'app.runconnect://auth/callback';
@@ -104,18 +103,25 @@ const Auth = () => {
         });
         
         if (authData?.url) {
-          console.log('🔥 Ouverture du navigateur pour Google OAuth');
+          console.log('🔥 Ouverture InAppBrowser pour Google OAuth');
           
-          // Ouvrir le navigateur natif
-          await Browser.open({ url: authData.url });
+          // Ouvrir le navigateur in-app
+          const browser = InAppBrowser.create(authData.url, '_blank', {
+            location: 'no',
+            clearcache: 'yes',
+            clearsessioncache: 'yes',
+            hidenavigationbuttons: 'yes',
+            hideurlbar: 'yes',
+            fullscreen: 'yes'
+          });
           
-          // Écouter le retour via deep link
-          const listener = await App.addListener('appUrlOpen', async (event) => {
-            console.log('🔗 Deep link reçu:', event.url);
+          // Écouter les changements d'URL pour détecter le callback
+          browser.on('loadstart').subscribe(async (event) => {
+            console.log('🔗 URL changée:', event.url);
             
             if (event.url.startsWith('app.runconnect://')) {
               // Fermer le navigateur
-              await Browser.close();
+              browser.close();
               
               // Extraire les paramètres de l'URL
               const url = new URL(event.url);
@@ -124,6 +130,8 @@ const Auth = () => {
               const refreshToken = hashParams.get('refresh_token');
               
               if (accessToken && refreshToken) {
+                console.log('✅ Tokens OAuth reçus');
+                
                 // Définir la session
                 const { error } = await supabase.auth.setSession({
                   access_token: accessToken,
@@ -132,15 +140,19 @@ const Auth = () => {
                 
                 if (!error) {
                   console.log('✅ Session établie avec succès');
-                  listener.remove();
                   window.location.href = '/';
                 } else {
                   console.error('❌ Erreur lors de l\'établissement de la session:', error);
-                  listener.remove();
                   throw error;
                 }
               }
             }
+          });
+          
+          // Gérer la fermeture du navigateur
+          browser.on('exit').subscribe(() => {
+            console.log('🔥 InAppBrowser fermé par l\'utilisateur');
+            setIsLoading(false);
           });
         }
         
