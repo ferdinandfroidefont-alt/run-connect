@@ -453,6 +453,11 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
 
   const markAsRead = async (notificationId: string) => {
     try {
+      // Mettre à jour l'état local immédiatement pour un feedback visuel instantané
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })
@@ -527,7 +532,15 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
               </p>
             ) : (
               notifications.map((notification) => (
-              <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''}`}>
+              <Card 
+                key={notification.id} 
+                className={`${!notification.read ? 'border-primary bg-primary/5' : ''} cursor-pointer hover:shadow-md transition-shadow`}
+                onClick={() => {
+                  if (!notification.read) {
+                    markAsRead(notification.id);
+                  }
+                }}
+              >
                 <CardContent className="p-4">
                    <div className="flex items-start gap-3">
                     {/* Avatar for session_request, follow_request, follow_accepted, and club_invitation with user data */}
