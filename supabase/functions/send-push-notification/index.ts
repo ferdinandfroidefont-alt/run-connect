@@ -256,7 +256,7 @@ serve(async (req) => {
     // 2. Get user profile and push token
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('push_token, notifications_enabled, notif_message, notif_session_request, notif_friend_request, notif_friend_session')
+      .select('push_token, notifications_enabled, notif_message, notif_session_request, notif_follow_request, notif_friend_session')
       .eq('user_id', user_id)
       .single()
 
@@ -285,7 +285,7 @@ serve(async (req) => {
         case 'session_request':
           return profile.notif_session_request === true  
         case 'follow_request':
-          return profile.notif_friend_request === true
+          return profile.notif_follow_request === true
         case 'friend_session':
           return profile.notif_friend_session === true
         default:

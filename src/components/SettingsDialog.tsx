@@ -492,7 +492,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                         </label>
                         <p className="text-xs text-muted-foreground">
                           {isNative 
-                            ? "Compatible toutes versions Android"
+                            ? "✓ Compatible toutes versions Android"
                             : "Autoriser les notifications sur votre appareil"}
                         </p>
                       </div>
@@ -514,6 +514,13 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </Button>
                     </div>
                   </div>
+
+                  {isRegistered && (
+                    <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                      <p>✓ Les préférences ci-dessous contrôlent quelles notifications push vous recevez.</p>
+                      <p className="mt-1">✓ Vérifié côté serveur pour toutes versions Android.</p>
+                    </div>
+                  )}
 
                   {/* Test notification - NOUVEAU */}
                   {isRegistered && (
@@ -548,7 +555,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                           Demandes de suivi
                         </label>
                         <p className="text-xs text-muted-foreground">
-                          Quelqu'un vous suit ou accepte votre demande
+                          Recevoir push quand quelqu'un vous suit
                         </p>
                       </div>
                     </div>
@@ -568,7 +575,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                           Messages
                         </label>
                         <p className="text-xs text-muted-foreground">
-                          Quelqu'un vous envoie un message
+                          Recevoir push pour les nouveaux messages
                         </p>
                       </div>
                     </div>
@@ -588,7 +595,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                           Demandes de session
                         </label>
                         <p className="text-xs text-muted-foreground">
-                          Quelqu'un veut rejoindre votre session
+                          Recevoir push pour les demandes de participation
                         </p>
                       </div>
                     </div>
@@ -609,7 +616,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                           {profile?.is_premium && <span className="ml-1 text-xs bg-primary text-primary-foreground px-1 rounded">PREMIUM</span>}
                         </label>
                         <p className="text-xs text-muted-foreground">
-                          Vos amis créent une nouvelle session
+                          Recevoir push quand vos amis créent une session
                         </p>
                       </div>
                     </div>
