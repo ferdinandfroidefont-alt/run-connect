@@ -270,6 +270,57 @@ export type Database = {
           },
         ]
       }
+      notification_logs: {
+        Row: {
+          created_at: string | null
+          fcm_error: string | null
+          fcm_response: Json | null
+          fcm_success: boolean | null
+          id: string
+          notification_id: string | null
+          push_token: string | null
+          sent_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fcm_error?: string | null
+          fcm_response?: Json | null
+          fcm_success?: boolean | null
+          id?: string
+          notification_id?: string | null
+          push_token?: string | null
+          sent_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fcm_error?: string | null
+          fcm_response?: Json | null
+          fcm_success?: boolean | null
+          id?: string
+          notification_id?: string | null
+          push_token?: string | null
+          sent_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string

@@ -302,7 +302,7 @@ serve(async (req) => {
     }
 
     // 5. Create notification record in database
-    const { error: notifError } = await supabaseClient
+    const { data: notificationData, error: notifError } = await supabaseClient
       .from('notifications')
       .insert({
         user_id,
@@ -311,12 +311,16 @@ serve(async (req) => {
         type: type || 'info',
         data: data || {}
       })
+      .select('id')
+      .single()
 
+    let notificationId: string | null = null;
     if (notifError) {
       console.error('❌ Error creating notification in database:', notifError)
       // Continue with push notification anyway
     } else {
-      console.log('✅ Notification saved to database')
+      notificationId = notificationData?.id;
+      console.log('✅ Notification saved to database with ID:', notificationId)
     }
 
     // 6. If no push token, return early
@@ -392,6 +396,25 @@ serve(async (req) => {
         notificationData
       );
 
+      // Log notification attempt
+      if (notificationId) {
+        try {
+          await supabaseClient
+            .from('notification_logs')
+            .insert({
+              notification_id: notificationId,
+              user_id,
+              push_token: profile.push_token,
+              fcm_success: fcmSuccess,
+              fcm_error: fcmSuccess ? null : 'FCM send failed',
+              fcm_response: { type, title: finalTitle, body: finalBody }
+            });
+          console.log('✅ Notification logged');
+        } catch (logErr) {
+          console.error('❌ Failed to log notification:', logErr);
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -406,6 +429,25 @@ serve(async (req) => {
       )
     } catch (fcmError) {
       console.error('❌ FCM error:', fcmError);
+      
+      // Log the error
+      if (notificationId) {
+        try {
+          await supabaseClient
+            .from('notification_logs')
+            .insert({
+              notification_id: notificationId,
+              user_id,
+              push_token: profile.push_token,
+              fcm_success: false,
+              fcm_error: String(fcmError),
+              fcm_response: { error: String(fcmError) }
+            });
+        } catch (logErr) {
+          console.error('❌ Failed to log error:', logErr);
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
