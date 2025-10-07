@@ -91,19 +91,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ✅ Gérer redirection Google OAuth et lifecycle des pages
+        // ✅ Gérer deep links et lifecycle des pages
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                String host = uri.getHost() != null ? uri.getHost() : "";
                 String url = uri.toString();
-                if (host.contains("accounts.google.com") || url.contains("oauth")) {
-                    CustomTabsIntent tabs = new CustomTabsIntent.Builder().build();
-                    tabs.launchUrl(MainActivity.this, uri);
-                    return true;
+                
+                // ✅ Intercepter UNIQUEMENT le callback app.runconnect://
+                if (url.startsWith("app.runconnect://")) {
+                    Log.d(TAG, "🔗 Deep link callback détecté: " + url);
+                    handleDeepLink(url);
+                    return true; // On gère nous-mêmes
                 }
-                return false; // continue dans le WebView
+                
+                // ✅ Toutes les autres URLs (y compris Google OAuth) restent dans le WebView
+                return false;
             }
             
             @Override
@@ -350,6 +353,34 @@ public class MainActivity extends AppCompatActivity {
             "});";
             
         view.evaluateJavascript(verificationScript, null);
+    }
+
+    private void handleDeepLink(String url) {
+        try {
+            Log.d(TAG, "🔗 Traitement du deep link: " + url);
+            
+            // Extraire les paramètres de l'URL
+            Uri uri = Uri.parse(url);
+            String fragment = uri.getFragment(); // Récupère la partie après #
+            
+            if (fragment != null && !fragment.isEmpty()) {
+                // Construire le JavaScript pour traiter la callback OAuth
+                String jsCode = String.format(
+                    "if (window.handleOAuthCallback) {" +
+                    "  window.handleOAuthCallback('%s');" +
+                    "} else {" +
+                    "  window.location.hash = '%s';" +
+                    "  console.log('🔗 OAuth callback reçu:', '%s');" +
+                    "}",
+                    fragment, fragment, fragment
+                );
+                
+                webView.evaluateJavascript(jsCode, null);
+                Log.d(TAG, "✅ Deep link traité avec succès");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur traitement deep link", e);
+        }
     }
 
     // ✅ Autoriser retour arrière dans la WebView
