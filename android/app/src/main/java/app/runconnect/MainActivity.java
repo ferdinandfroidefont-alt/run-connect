@@ -97,15 +97,27 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String url = uri.toString();
+                String host = uri.getHost() != null ? uri.getHost() : "";
                 
-                // ✅ Intercepter UNIQUEMENT le callback app.runconnect://
+                // ✅ 1. Intercepter le callback app.runconnect:// (retour depuis Custom Tabs)
                 if (url.startsWith("app.runconnect://")) {
-                    Log.d(TAG, "🔗 Deep link callback détecté: " + url);
+                    Log.d(TAG, "🔗 Deep link callback OAuth détecté: " + url);
                     handleDeepLink(url);
-                    return true; // On gère nous-mêmes
+                    return true;
                 }
                 
-                // ✅ Toutes les autres URLs (y compris Google OAuth) restent dans le WebView
+                // ✅ 2. Ouvrir Google OAuth dans Custom Tabs (sécurisé et conforme)
+                if (host.contains("accounts.google.com") || 
+                    (url.contains("oauth") && host.contains("google"))) {
+                    Log.d(TAG, "🔐 Ouverture OAuth Google dans Custom Tabs: " + url);
+                    CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder()
+                        .setShowTitle(true)
+                        .build();
+                    customTabsIntent.launchUrl(MainActivity.this, uri);
+                    return true;
+                }
+                
+                // ✅ 3. Toutes les autres URLs restent dans le WebView
                 return false;
             }
             
