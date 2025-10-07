@@ -41,6 +41,18 @@ public class MainActivity extends AppCompatActivity {
         System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
         "https://run-connect.lovable.app");
 
+    /**
+     * Vérifie si Chrome est installé sur l'appareil
+     */
+    private boolean isChromeInstalled() {
+        try {
+            getPackageManager().getPackageInfo("com.android.chrome", 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -109,12 +121,27 @@ public class MainActivity extends AppCompatActivity {
                 // ✅ 2. Ouvrir Google OAuth dans Custom Tabs (sécurisé et conforme)
                 if (host.contains("accounts.google.com") || 
                     (url.contains("oauth") && host.contains("google"))) {
+                    
+                    boolean chromeAvailable = isChromeInstalled();
                     Log.d(TAG, "🔐 Ouverture OAuth Google dans Custom Tabs: " + url);
-                    CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder()
-                        .setShowTitle(true)
-                        .build();
-                    customTabsIntent.launchUrl(MainActivity.this, uri);
-                    return true;
+                    Log.d(TAG, "🌐 Chrome installé: " + chromeAvailable);
+                    
+                    try {
+                        // Custom Tabs avec couleur de toolbar personnalisée
+                        CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder()
+                            .setShowTitle(true)
+                            .setToolbarColor(Color.parseColor("#1A1F2C")) // Couleur RunConnect
+                            .build();
+                        customTabsIntent.launchUrl(MainActivity.this, uri);
+                        Log.d(TAG, "✅ Custom Tabs lancé avec succès");
+                        return true;
+                    } catch (Exception e) {
+                        // Fallback : ouvrir dans le navigateur par défaut
+                        Log.e(TAG, "❌ Erreur Custom Tabs, fallback vers navigateur: " + e.getMessage());
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+                        startActivity(browserIntent);
+                        return true;
+                    }
                 }
                 
                 // ✅ 3. Toutes les autres URLs restent dans le WebView
