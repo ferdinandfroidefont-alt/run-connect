@@ -237,6 +237,24 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🎯 MainActivity setup complete");
     }
     
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "🔄 onResume - Réinjection état permissions");
+        
+        if (webView != null) {
+            // Réinjecter l'état des permissions au retour de l'app
+            injectPermissionsState(webView);
+            
+            // Notifier JavaScript que les permissions ont été mises à jour
+            webView.evaluateJavascript(
+                "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', {detail: window.androidPermissions})); " +
+                "console.log('🔄 Permissions Android rafraîchies:', window.androidPermissions);",
+                null
+            );
+        }
+    }
+    
     private void createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
