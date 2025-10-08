@@ -462,8 +462,49 @@ export const usePushNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Vérifier le statut au montage
-    checkPermissionStatus();
+    const initializePushNotifications = async () => {
+      // Vérifier le statut au montage
+      await checkPermissionStatus();
+
+      // Configurer les listeners natifs immédiatement
+      if (isNative) {
+        await setupPushListeners();
+        
+        // 🎯 CRITIQUE: Vérifier si permissions déjà accordées
+        try {
+          const status = await PushNotifications.checkPermissions();
+          console.log('📱 Statut permissions au démarrage:', status);
+          
+          if (status.receive === 'granted') {
+            console.log('✅ Permissions déjà accordées, enregistrement token...');
+            
+            // 🔥 FORCER l'enregistrement pour récupérer le token
+            await PushNotifications.register();
+            console.log('✅ Enregistrement forcé effectué');
+            
+            // Vérifier si on a déjà un token en base
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('push_token')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (profile?.push_token) {
+              console.log('✅ Token existant trouvé:', profile.push_token.substring(0, 20) + '...');
+              setToken(profile.push_token);
+            } else {
+              console.log('⚠️ Aucun token en base, attente listener registration...');
+            }
+          } else {
+            console.log('ℹ️ Permissions non accordées, attente demande utilisateur');
+          }
+        } catch (error) {
+          console.error('❌ Erreur initialisation push:', error);
+        }
+      }
+    };
+
+    initializePushNotifications();
 
     // 🎧 Écouter les mises à jour des permissions Android
     const handleAndroidPermissionsUpdate = (event: Event) => {
@@ -473,11 +514,6 @@ export const usePushNotifications = () => {
     };
 
     window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
-
-    // Configurer les listeners natifs immédiatement
-    if (isNative) {
-      setupPushListeners();
-    }
 
     // Periodic check for permission changes
     const interval = setInterval(() => {
