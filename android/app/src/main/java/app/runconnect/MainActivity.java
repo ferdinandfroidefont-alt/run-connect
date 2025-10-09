@@ -234,6 +234,15 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl(START_URL);
         setContentView(webView);
         
+        // Injecter immédiatement après le chargement de l'URL avec délai
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            Log.d(TAG, "🔄 Injection initiale forcée au démarrage");
+            injectAABFlags(webView);
+            injectPermissionsState(webView);
+            injectDeviceInfo(webView);
+            verifyInjection(webView);
+        }, 2000); // 2 secondes pour laisser la page se charger
+        
         Log.d(TAG, "🎯 MainActivity setup complete");
     }
     
@@ -248,8 +257,9 @@ public class MainActivity extends AppCompatActivity {
             
             // Notifier JavaScript que les permissions ont été mises à jour
             webView.evaluateJavascript(
+                "console.log('🔄 [ONRESUME] Avant dispatch event:', window.androidPermissions); " +
                 "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', {detail: window.androidPermissions})); " +
-                "console.log('🔄 Permissions Android rafraîchies:', window.androidPermissions);",
+                "console.log('🔄 [ONRESUME] Après dispatch event');",
                 null
             );
         }
@@ -406,7 +416,7 @@ public class MainActivity extends AppCompatActivity {
             "  CapacitorForceNative: window.CapacitorForceNative," +
             "  isAABBuild: window.isAABBuild," +
             "  AndroidDeviceInfo: window.AndroidDeviceInfo," +
-            "  AndroidPermissionsState: window.AndroidPermissionsState" +
+            "  androidPermissions: window.androidPermissions" +
             "});";
             
         view.evaluateJavascript(verificationScript, null);
