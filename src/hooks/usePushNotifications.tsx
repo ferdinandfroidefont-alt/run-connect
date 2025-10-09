@@ -173,43 +173,37 @@ export const usePushNotifications = () => {
 
   // Plugin Android avec compatibilité toutes versions
   const requestAndroidNotifications = async (): Promise<boolean> => {
+    console.log('🔔 Demande permissions notifications Android...');
+    
     try {
-      console.log('🤖 Demande permissions Android via plugin...');
-      
-      // Détecter la version Android
-      const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
-      const androidVersionInt = androidVersion ? parseInt(androidVersion) : 0;
-      console.log('📱 Version Android détectée:', androidVersionInt);
-      
-      // Utiliser le plugin personnalisé si disponible
-      const plugin = (window as any).CapacitorCustomPlugins?.PermissionsPlugin;
-      if (plugin) {
-        const result = await plugin.requestNotificationPermissions();
-        console.log('📱 Résultat plugin Android:', result);
+      // 🔥 FORCER la popup système Android via le plugin natif
+      if ((window as any).PermissionsPlugin?.requestNotificationPermissions) {
+        console.log('🔔 🔥 FORCE popup système via PermissionsPlugin.requestNotificationPermissions()');
+        const result = await (window as any).PermissionsPlugin.requestNotificationPermissions();
+        console.log('🔔 ✅ Résultat popup système Android:', result);
         
-        if (result.granted) {
-          // Test notification pour vérifier que ça marche vraiment
-          try {
-            await plugin.showLocalNotification({
-              title: "RunConnect",
-              body: "Notifications activées avec succès ! 🎉"
-            });
-            console.log('✅ Notification test réussie');
-          } catch (notifError) {
-            console.log('⚠️ Test notification échoué mais permissions accordées');
-          }
-          
-          return true;
-        } else {
-          console.log('❌ Permissions Android refusées via plugin');
-          return false;
+        // Si accordé, enregistrer immédiatement pour obtenir le token FCM
+        if (result) {
+          console.log('🔥 Permission accordée, enregistrement Firebase immédiat...');
+          await PushNotifications.register();
+          console.log('✅ PushNotifications.register() appelé après popup');
         }
-      } else {
-        console.log('⚠️ Plugin Android non disponible - fallback Capacitor');
-        return false;
+        
+        return result;
       }
+      
+      // Fallback Capacitor standard (si le plugin natif n'existe pas)
+      console.warn('⚠️ PermissionsPlugin.requestNotificationPermissions() introuvable, fallback Capacitor');
+      const result = await PushNotifications.requestPermissions();
+      
+      if (result.receive === 'granted') {
+        console.log('🔥 Permission Capacitor accordée, enregistrement Firebase...');
+        await PushNotifications.register();
+      }
+      
+      return result.receive === 'granted';
     } catch (error) {
-      console.error('❌ Erreur plugin Android:', error);
+      console.error('❌ Erreur demande permissions Android:', error);
       return false;
     }
   };
