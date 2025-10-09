@@ -47,15 +47,27 @@ export const usePushNotifications = () => {
           });
           setIsRegistered(granted);
           
-          // 🔥 SI permission accordée mais pas encore de token, forcer l'enregistrement
-          if (granted && !token) {
-            console.log('🔥 [NOTIF CHECK] Permission granted, forcing PushNotifications.register()...');
+          // 🔥 SI permission accordée, vérifier si un token existe en base
+          if (granted && user?.id) {
             setTimeout(async () => {
               try {
-                await PushNotifications.register();
-                console.log('✅ [NOTIF CHECK] PushNotifications.register() appelé avec succès');
+                // Vérifier dans la base si un token existe déjà
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('push_token')
+                  .eq('user_id', user.id)
+                  .single();
+
+                if (!profile?.push_token) {
+                  console.log('🔥 [NOTIF CHECK] Aucun token en base, enregistrement Firebase...');
+                  await PushNotifications.register();
+                  console.log('✅ [NOTIF CHECK] PushNotifications.register() appelé avec succès');
+                } else {
+                  console.log('✅ [NOTIF CHECK] Token déjà présent en base:', profile.push_token.substring(0, 30) + '...');
+                  setToken(profile.push_token); // Synchroniser l'état React
+                }
               } catch (error) {
-                console.error('❌ [NOTIF CHECK] Erreur lors de PushNotifications.register():', error);
+                console.error('❌ [NOTIF CHECK] Erreur lors du check token:', error);
               }
             }, 500); // 500ms delay pour laisser les listeners se mettre en place
           }
@@ -435,6 +447,7 @@ export const usePushNotifications = () => {
       // Succès d'enregistrement
       await PushNotifications.addListener('registration', (token) => {
         console.log('✅ Token FCM reçu:', token.value);
+        console.log('📱 Token complet:', token.value.substring(0, 50) + '...');
         setToken(token.value);
         setIsRegistered(true);
         savePushToken(token.value);
@@ -524,14 +537,26 @@ export const usePushNotifications = () => {
       const customEvent = event as CustomEvent;
       console.log('🔔 [EVENT] androidPermissionsUpdated détecté, rechargement du statut...');
       checkPermissionStatus().then(() => {
-        // Après avoir vérifié le statut, forcer l'enregistrement si nécessaire
+        // Après avoir vérifié le statut, vérifier si un token existe en base
         const androidState = window.androidPermissions?.notifications;
-        if (androidState === 'granted' && !token) {
-          console.log('🔥 [EVENT] Permission granted via onResume, forcing register...');
+        if (androidState === 'granted' && user?.id) {
           setTimeout(async () => {
             try {
-              await PushNotifications.register();
-              console.log('✅ [EVENT] PushNotifications.register() appelé après onResume');
+              // Vérifier dans la base si un token existe déjà
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('push_token')
+                .eq('user_id', user.id)
+                .single();
+
+              if (!profile?.push_token) {
+                console.log('🔥 [EVENT] Aucun token en base après onResume, enregistrement Firebase...');
+                await PushNotifications.register();
+                console.log('✅ [EVENT] PushNotifications.register() appelé après onResume');
+              } else {
+                console.log('✅ [EVENT] Token déjà présent en base après onResume:', profile.push_token.substring(0, 30) + '...');
+                setToken(profile.push_token); // Synchroniser l'état React
+              }
             } catch (error) {
               console.error('❌ [EVENT] Erreur register après onResume:', error);
             }
