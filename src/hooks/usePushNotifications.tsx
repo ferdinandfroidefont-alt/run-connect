@@ -47,6 +47,19 @@ export const usePushNotifications = () => {
           });
           setIsRegistered(granted);
           
+          // 🔥 SI permission accordée mais pas encore de token, forcer l'enregistrement
+          if (granted && !token) {
+            console.log('🔥 [NOTIF CHECK] Permission granted, forcing PushNotifications.register()...');
+            setTimeout(async () => {
+              try {
+                await PushNotifications.register();
+                console.log('✅ [NOTIF CHECK] PushNotifications.register() appelé avec succès');
+              } catch (error) {
+                console.error('❌ [NOTIF CHECK] Erreur lors de PushNotifications.register():', error);
+              }
+            }, 500); // 500ms delay pour laisser les listeners se mettre en place
+          }
+          
           // Cross-vérification avec Capacitor pour logger les divergences
           try {
             const capacitorStatus = await PushNotifications.checkPermissions();
@@ -509,8 +522,22 @@ export const usePushNotifications = () => {
     // 🎧 Écouter les mises à jour des permissions Android
     const handleAndroidPermissionsUpdate = (event: Event) => {
       const customEvent = event as CustomEvent;
-      console.log('🔔 Permissions Android mises à jour:', customEvent.detail);
-      checkPermissionStatus();
+      console.log('🔔 [EVENT] androidPermissionsUpdated détecté, rechargement du statut...');
+      checkPermissionStatus().then(() => {
+        // Après avoir vérifié le statut, forcer l'enregistrement si nécessaire
+        const androidState = window.androidPermissions?.notifications;
+        if (androidState === 'granted' && !token) {
+          console.log('🔥 [EVENT] Permission granted via onResume, forcing register...');
+          setTimeout(async () => {
+            try {
+              await PushNotifications.register();
+              console.log('✅ [EVENT] PushNotifications.register() appelé après onResume');
+            } catch (error) {
+              console.error('❌ [EVENT] Erreur register après onResume:', error);
+            }
+          }, 500);
+        }
+      });
     };
 
     window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
