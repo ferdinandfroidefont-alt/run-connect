@@ -21,18 +21,58 @@ export const NotificationManager = () => {
     testNotification,
     isNative, 
     isSupported,
-    setupPushListeners 
+    setupPushListeners,
+    checkPermissionStatus // Nouveau : forcer le recheck
   } = usePushNotifications();
   const { deviceInfo } = useDeviceDetection();
   const { user } = useAuth();
   const { toast } = useToast();
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Activer le système de sync Realtime
   useNotificationRealtimeSync();
 
   const isMIUIDevice = deviceInfo?.isMIUI;
+
+  // Forcer le rafraîchissement du statut
+  const handleRefreshStatus = async () => {
+    setRefreshing(true);
+    console.log('🔄 [REFRESH] Force refresh notification status...');
+    console.log('🔄 [REFRESH] window.androidPermissions AVANT:', JSON.stringify((window as any).androidPermissions));
+    
+    try {
+      // Forcer le recheck complet
+      await checkPermissionStatus();
+      
+      // Logger l'état après
+      console.log('🔄 [REFRESH] permissionStatus APRÈS:', permissionStatus);
+      console.log('🔄 [REFRESH] window.androidPermissions APRÈS:', JSON.stringify((window as any).androidPermissions));
+      
+      // Vérifier aussi via Capacitor
+      try {
+        const capacitorStatus = await PushNotifications.checkPermissions();
+        console.log('🔄 [REFRESH] Capacitor checkPermissions:', JSON.stringify(capacitorStatus));
+      } catch (e) {
+        console.error('❌ [REFRESH] Capacitor check failed:', e);
+      }
+      
+      toast({
+        title: "Statut rafraîchi",
+        description: "Consultez la console pour les détails"
+      });
+    } catch (error) {
+      console.error('❌ [REFRESH] Error:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de rafraîchir",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Diagnostic complet des notifications
   const diagnoseNotifications = async () => {
@@ -40,10 +80,15 @@ export const NotificationManager = () => {
     
     setDiagnosing(true);
     setDiagnosticResult(null);
-    console.log('🔍 Diagnostic notifications...');
+    console.log('🔍 [DIAGNOSTIC] Start...');
+    console.log('🔍 [DIAGNOSTIC] window.androidPermissions:', JSON.stringify((window as any).androidPermissions));
 
     try {
-      // 1. Vérifier token en base
+      // 1. Vérifier permissions via Capacitor
+      const perms = await PushNotifications.checkPermissions();
+      console.log('📱 [DIAGNOSTIC] Capacitor permissions:', JSON.stringify(perms));
+      
+      // 2. Vérifier token en base
       const { data: profile } = await supabase
         .from('profiles')
         .select('push_token, notifications_enabled')
@@ -51,8 +96,8 @@ export const NotificationManager = () => {
         .single();
 
       const hasToken = !!profile?.push_token;
-      console.log('📱 Token en base:', hasToken ? 'OUI ✅' : 'NON ❌');
-      console.log('🔔 Notifications enabled:', profile?.notifications_enabled);
+      console.log('💾 [DIAGNOSTIC] Token en base:', hasToken ? 'OUI ✅' : 'NON ❌');
+      console.log('🔔 [DIAGNOSTIC] Notifications enabled:', profile?.notifications_enabled);
 
       if (hasToken) {
         setDiagnosticResult(`✅ Token FCM enregistré: ${profile.push_token.substring(0, 30)}...`);
@@ -64,45 +109,50 @@ export const NotificationManager = () => {
       } else {
         setDiagnosticResult('❌ Aucun token FCM en base de données');
         
-        // 2. Si pas de token, forcer réenregistrement
-        console.log('⚠️ Pas de token, forcer réenregistrement...');
-        
-        if (isNative) {
-          await setupPushListeners();
-          await PushNotifications.register();
+        // 3. Si permissions OK mais pas de token, forcer réenregistrement
+        if (perms.receive === 'granted') {
+          console.log('🔄 [DIAGNOSTIC] Permissions OK mais pas de token - forcer register()...');
           
-          toast({
-            title: "Réenregistrement",
-            description: "Tentative de récupération du token FCM..."
-          });
-          
-          // Attendre et revérifier
-          setTimeout(async () => {
-            const { data: updatedProfile } = await supabase
-              .from('profiles')
-              .select('push_token')
-              .eq('user_id', user.id)
-              .single();
+          if (isNative) {
+            await setupPushListeners();
+            await PushNotifications.register();
+            console.log('✅ [DIAGNOSTIC] PushNotifications.register() called');
             
-            if (updatedProfile?.push_token) {
-              setDiagnosticResult(`✅ Token récupéré: ${updatedProfile.push_token.substring(0, 30)}...`);
-              toast({
-                title: "Succès",
-                description: "Token FCM récupéré avec succès!"
-              });
-            } else {
-              setDiagnosticResult('❌ Échec récupération token FCM');
-              toast({
-                title: "Erreur",
-                description: "Impossible de récupérer le token FCM",
-                variant: "destructive"
-              });
-            }
-          }, 3000);
+            toast({
+              title: "Réenregistrement",
+              description: "Tentative de récupération du token FCM..."
+            });
+            
+            // Attendre et revérifier
+            setTimeout(async () => {
+              const { data: updatedProfile } = await supabase
+                .from('profiles')
+                .select('push_token')
+                .eq('user_id', user.id)
+                .single();
+              
+              if (updatedProfile?.push_token) {
+                setDiagnosticResult(`✅ Token récupéré: ${updatedProfile.push_token.substring(0, 30)}...`);
+                toast({
+                  title: "Succès",
+                  description: "Token FCM récupéré avec succès!"
+                });
+              } else {
+                setDiagnosticResult('❌ Échec récupération token FCM - listener non déclenché');
+                toast({
+                  title: "Erreur",
+                  description: "Le listener 'registration' ne s'est pas déclenché",
+                  variant: "destructive"
+                });
+              }
+            }, 3000);
+          }
+        } else {
+          setDiagnosticResult(`⚠️ Permissions: ${perms.receive} - Activez dans les paramètres`);
         }
       }
     } catch (error) {
-      console.error('❌ Erreur diagnostic:', error);
+      console.error('❌ [DIAGNOSTIC] Error:', error);
       setDiagnosticResult('❌ Erreur lors du diagnostic');
       toast({
         title: "Erreur diagnostic",
@@ -175,10 +225,27 @@ export const NotificationManager = () => {
             <p className="text-sm text-muted-foreground">
               Activez les notifications pour recevoir les alertes de RunConnect en temps réel.
             </p>
-            <Button onClick={requestPermissions} className="w-full gap-2">
-              <Bell className="h-4 w-4" />
-              Activer les notifications
-            </Button>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={requestPermissions} className="flex-1 gap-2">
+                <Bell className="h-4 w-4" />
+                Activer les notifications
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshStatus} 
+                disabled={refreshing}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                {refreshing ? 'Vérif...' : 'Vérifier'}
+              </Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Si vous avez déjà activé les notifications dans les paramètres du téléphone, cliquez sur "Vérifier".
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -198,6 +265,15 @@ export const NotificationManager = () => {
               >
                 <Stethoscope className="h-4 w-4" />
                 {diagnosing ? 'Diagnostic...' : 'Diagnostic'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshStatus} 
+                disabled={refreshing}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                {refreshing ? 'Rafraîchir...' : 'Rafraîchir'}
               </Button>
               {isNative && (
                 <Button 

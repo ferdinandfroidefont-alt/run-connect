@@ -534,6 +534,7 @@ export const usePushNotifications = () => {
     testNotification,
     isNative,
     isSupported,
-    setupPushListeners
+    setupPushListeners,
+    checkPermissionStatus // Exposer pour forcer le recheck
   };
 };
