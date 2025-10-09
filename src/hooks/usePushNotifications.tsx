@@ -116,6 +116,61 @@ export const usePushNotifications = () => {
     }
   }, [isNative]);
 
+  // 🔥 Vérification NATIVE forcée (pas seulement l'état injecté)
+  const forceNativeNotificationCheck = useCallback(async () => {
+    if (!isNative || !user?.id) return;
+
+    try {
+      // ✅ Appel NATIF direct à Capacitor (ignore window.androidPermissions)
+      const nativeStatus = await PushNotifications.checkPermissions();
+      const nativeGranted = nativeStatus.receive === 'granted';
+
+      console.log('🔍 [NATIVE CHECK] PushNotifications.checkPermissions():', nativeStatus.receive);
+
+      // Si la permission native est accordée
+      if (nativeGranted) {
+        console.log('✅ [NATIVE CHECK] Permission Android détectée: granted');
+
+        // Vérifier si un token existe déjà en base
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('push_token')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile?.push_token) {
+          console.log('🔥 [NATIVE CHECK] Aucun token en base, enregistrement Firebase...');
+          
+          // ✅ FORCER l'enregistrement Firebase pour obtenir le token FCM
+          await PushNotifications.register();
+          console.log('✅ [NATIVE CHECK] PushNotifications.register() appelé');
+        } else {
+          console.log('✅ [NATIVE CHECK] Token déjà présent en base:', profile.push_token.substring(0, 30) + '...');
+          setToken(profile.push_token);
+        }
+
+        // Mettre à jour l'état React
+        setPermissionStatus({
+          granted: true,
+          denied: false,
+          prompt: false
+        });
+        setIsRegistered(true);
+      } else {
+        console.log('⚠️ [NATIVE CHECK] Permission non accordée:', nativeStatus.receive);
+        
+        setPermissionStatus({
+          granted: false,
+          denied: nativeStatus.receive === 'denied',
+          prompt: nativeStatus.receive === 'prompt'
+        });
+        setIsRegistered(false);
+      }
+    } catch (error) {
+      console.error('❌ [NATIVE CHECK] Erreur vérification native:', error);
+    }
+  }, [isNative, user]);
+
   // Plugin Android avec compatibilité toutes versions
   const requestAndroidNotifications = async (): Promise<boolean> => {
     try {
@@ -567,13 +622,14 @@ export const usePushNotifications = () => {
 
     window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
 
-    // Periodic check for permission changes
-    const interval = setInterval(() => {
-      checkPermissionStatus();
-    }, 3000);
+    // 🔥 Vérification NATIVE forcée toutes les 2 secondes
+    const nativeCheckInterval = setInterval(() => {
+      console.log('🔄 [INTERVAL] Vérification native forcée...');
+      forceNativeNotificationCheck();
+    }, 2000); // 2 secondes comme pour les contacts
 
     return () => {
-      clearInterval(interval);
+      clearInterval(nativeCheckInterval);
       window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
     };
   }, [user, isNative, setupPushListeners, checkPermissionStatus]);
@@ -587,6 +643,7 @@ export const usePushNotifications = () => {
     isNative,
     isSupported,
     setupPushListeners,
-    checkPermissionStatus // Exposer pour forcer le recheck
+    checkPermissionStatus,
+    forceNativeNotificationCheck // ✅ Exposer pour usage externe
   };
 };
