@@ -9,6 +9,7 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
+import { Browser } from '@capacitor/browser';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -89,70 +90,103 @@ const Auth = () => {
       });
       
       if (isNative) {
-        // Pour les apps natives Android, utiliser InAppBrowser
-        const { InAppBrowser } = await import('@awesome-cordova-plugins/in-app-browser');
+        console.log('🔥 OAuth Google natif Android avec Custom Tab');
         
-        // Construire l'URL avec le deep link scheme correct
-        const redirectUrl = 'app.runconnect://auth/callback';
+        // ✅ 1. Setup du listener pour capturer le deep link de retour
+        const handleDeepLink = async (event: any) => {
+          const url = event.url;
+          console.log('🔗 Deep link capturé:', url);
+          
+          if (url.startsWith('app.runconnect://auth/callback')) {
+            console.log('✅ Deep link OAuth détecté');
+            
+            // Fermer le navigateur Custom Tab
+            await Browser.close();
+            
+            // Extraire les tokens depuis l'URL
+            const urlObj = new URL(url);
+            const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+            
+            if (accessToken && refreshToken) {
+              console.log('✅ Tokens OAuth reçus');
+              
+              // Établir la session Supabase
+              const { error } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              });
+              
+              if (!error) {
+                console.log('✅ Session établie avec succès');
+                
+                // Vérifier si c'est un nouvel utilisateur
+                const { data: session } = await supabase.auth.getSession();
+                if (session?.session?.user) {
+                  const { data: existingProfile } = await supabase
+                    .from('profiles')
+                    .select('id, username')
+                    .eq('user_id', session.session.user.id)
+                    .maybeSingle();
+                  
+                  if (!existingProfile) {
+                    // Nouveau utilisateur - afficher le setup de profil
+                    setNewUserId(session.session.user.id);
+                    setShowProfileSetup(true);
+                  } else {
+                    // Utilisateur existant - rediriger
+                    window.location.href = '/';
+                  }
+                }
+              } else {
+                console.error('❌ Erreur établissement session:', error);
+                toast({
+                  title: "Erreur",
+                  description: "Impossible d'établir la session. Réessayez.",
+                  variant: "destructive",
+                });
+              }
+            }
+            
+            // Retirer le listener
+            window.removeEventListener('capacitorDeepLink', handleDeepLink);
+          }
+        };
+        
+        // ✅ 2. Enregistrer le listener AVANT d'ouvrir le navigateur
+        window.addEventListener('capacitorDeepLink', handleDeepLink);
+        
+        // ✅ 3. Générer l'URL OAuth avec le bon redirectTo
         const { data: authData } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: redirectUrl,
-            skipBrowserRedirect: true
+            redirectTo: 'app.runconnect://auth/callback',
+            skipBrowserRedirect: true,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
           }
         });
         
         if (authData?.url) {
-          console.log('🔥 Ouverture InAppBrowser pour Google OAuth');
+          console.log('🔥 Ouverture Custom Tab Chrome pour OAuth Google');
+          console.log('🔗 URL:', authData.url);
           
-          // Ouvrir le navigateur in-app
-          const browser = InAppBrowser.create(authData.url, '_blank', {
-            location: 'no',
-            clearcache: 'yes',
-            clearsessioncache: 'yes',
-            hidenavigationbuttons: 'yes',
-            hideurlbar: 'yes',
-            fullscreen: 'yes'
+          // ✅ 4. Ouvrir le Custom Tab Chrome (navigateur système)
+          await Browser.open({ 
+            url: authData.url,
+            presentationStyle: 'popover'
           });
           
-          // Écouter les changements d'URL pour détecter le callback
-          browser.on('loadstart').subscribe(async (event) => {
-            console.log('🔗 URL changée:', event.url);
-            
-            if (event.url.startsWith('app.runconnect://')) {
-              // Fermer le navigateur
-              browser.close();
-              
-              // Extraire les paramètres de l'URL
-              const url = new URL(event.url);
-              const hashParams = new URLSearchParams(url.hash.substring(1));
-              const accessToken = hashParams.get('access_token');
-              const refreshToken = hashParams.get('refresh_token');
-              
-              if (accessToken && refreshToken) {
-                console.log('✅ Tokens OAuth reçus');
-                
-                // Définir la session
-                const { error } = await supabase.auth.setSession({
-                  access_token: accessToken,
-                  refresh_token: refreshToken
-                });
-                
-                if (!error) {
-                  console.log('✅ Session établie avec succès');
-                  window.location.href = '/';
-                } else {
-                  console.error('❌ Erreur lors de l\'établissement de la session:', error);
-                  throw error;
-                }
-              }
-            }
-          });
-          
-          // Gérer la fermeture du navigateur
-          browser.on('exit').subscribe(() => {
-            console.log('🔥 InAppBrowser fermé par l\'utilisateur');
-            setIsLoading(false);
+          console.log('✅ Custom Tab ouvert, attente du deep link de retour...');
+        } else {
+          console.error('❌ Pas d\'URL OAuth générée');
+          toast({
+            title: "Erreur",
+            description: "Impossible de générer l'URL d'authentification",
+            variant: "destructive",
           });
         }
         
