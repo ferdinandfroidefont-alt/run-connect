@@ -383,6 +383,7 @@ export type Database = {
           onboarding_completed: boolean | null
           phone: string | null
           push_token: string | null
+          push_token_platform: string | null
           referral_code: string | null
           rgpd_accepted: boolean | null
           rpm_avatar_url: string | null
@@ -430,6 +431,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           push_token?: string | null
+          push_token_platform?: string | null
           referral_code?: string | null
           rgpd_accepted?: boolean | null
           rpm_avatar_url?: string | null
@@ -477,6 +479,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           push_token?: string | null
+          push_token_platform?: string | null
           referral_code?: string | null
           rgpd_accepted?: boolean | null
           rpm_avatar_url?: string | null

@@ -475,19 +475,25 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     try {
-      console.log('💾 Sauvegarde token push...');
+      const platform = Capacitor.getPlatform();
+      const tokenType = platform === 'ios' ? 'APNs' : 'FCM';
+      const platformEmoji = platform === 'ios' ? '🍎' : '🤖';
+      
+      console.log(`${platformEmoji} [${platform.toUpperCase()}] Sauvegarde token ${tokenType}:`, pushToken.substring(0, 30) + '...');
+      
       const { error } = await supabase
         .from('profiles')
         .update({ 
           push_token: pushToken,
+          push_token_platform: platform,
           notifications_enabled: true 
         })
         .eq('user_id', user.id);
       
       if (error) {
-        console.error('❌ Erreur sauvegarde token:', error);
+        console.error(`❌ [${platform.toUpperCase()}] Erreur sauvegarde token ${tokenType}:`, error);
       } else {
-        console.log('✅ Token sauvegardé');
+        console.log(`✅ [${platform.toUpperCase()}] Token ${tokenType} sauvegardé avec succès dans Supabase (plateforme: ${platform})`);
         setToken(pushToken);
       }
     } catch (error) {
