@@ -3,11 +3,13 @@ package app.runconnect;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import com.google.firebase.FirebaseApp;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
@@ -26,6 +28,7 @@ import androidx.core.view.WindowCompat;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "RunConnect";
     private WebView webView;
     private final String START_URL = "https://run-connect.lovable.app";
     private ValueCallback<Uri[]> filePathCallback;
@@ -97,6 +100,21 @@ public class MainActivity extends AppCompatActivity {
 
         webView.loadUrl(START_URL);
         setContentView(webView);
+
+        // ✅ Forcer l'initialisation Firebase au démarrage
+        try {
+            Log.d(TAG, "🔥 Initialisation Firebase Push Notifications au démarrage...");
+            
+            // Vérifier si Firebase est déjà initialisé
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                Log.w(TAG, "⚠️ Firebase n'est pas initialisé automatiquement, initialisation manuelle...");
+                FirebaseApp.initializeApp(this);
+            }
+            
+            Log.d(TAG, "✅ Firebase initialisé avec succès");
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur initialisation Firebase: " + e.getMessage(), e);
+        }
 
         // Repassage en hardware après 1s
         webView.postDelayed(() -> {

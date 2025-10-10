@@ -187,6 +187,25 @@ export const usePushNotifications = () => {
           console.log('🔥 Permission accordée, enregistrement Firebase immédiat...');
           await PushNotifications.register();
           console.log('✅ PushNotifications.register() appelé après popup');
+          
+          // Attendre 1 seconde pour laisser Firebase générer le token
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Vérifier si un token a été généré et sauvegardé
+          if (user?.id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('push_token')
+              .eq('user_id', user.id)
+              .single();
+
+            if (profile?.push_token) {
+              console.log('✅ Token FCM confirmé en base:', profile.push_token.substring(0, 30) + '...');
+            } else {
+              console.warn('⚠️ PushNotifications.register() appelé mais aucun token en base après 1s');
+              console.warn('⚠️ Vérifiez les logs Firebase dans adb logcat | grep -E "(FCM|Firebase|RunConnect)"');
+            }
+          }
         }
         
         return result;
@@ -494,18 +513,46 @@ export const usePushNotifications = () => {
     
     try {
       // Succès d'enregistrement
-      await PushNotifications.addListener('registration', (token) => {
-        console.log('✅ Token FCM reçu:', token.value);
-        console.log('📱 Token complet:', token.value.substring(0, 50) + '...');
-        setToken(token.value);
-        setIsRegistered(true);
-        savePushToken(token.value);
-        checkPermissionStatus();
+      await PushNotifications.addListener('registration', async (token) => {
+        console.log('🔥🔥🔥 [REGISTRATION] Token FCM reçu !');
+        console.log('✅ [REGISTRATION] Token FCM value:', token.value);
+        console.log('📱 [REGISTRATION] Token complet:', JSON.stringify(token));
+        
+        if (token.value) {
+          console.log('🔥 [REGISTRATION] Token valide, mise à jour de l\'état React...');
+          setToken(token.value);
+          setIsRegistered(true);
+          
+          console.log('💾 [REGISTRATION] Sauvegarde token push en base...');
+          await savePushToken(token.value);
+          console.log('✅ [REGISTRATION] Token sauvegardé avec succès');
+          
+          await checkPermissionStatus();
+          console.log('✅ [REGISTRATION] Statut mis à jour - isRegistered: true');
+        } else {
+          console.error('❌ [REGISTRATION] Token reçu mais valeur vide !', token);
+        }
       });
 
       // Erreur d'enregistrement
       await PushNotifications.addListener('registrationError', (error) => {
-        console.error('❌ Erreur enregistrement push:', error);
+        console.error('🔥🔥🔥 [FIREBASE ERROR] Erreur enregistrement FCM:', error);
+        console.error('🔥 [FIREBASE ERROR] Détails:', JSON.stringify(error));
+        
+        // Suggestions de debug selon le type d'erreur
+        if (error.error?.includes('SERVICE_NOT_AVAILABLE')) {
+          console.error('❌ Firebase Cloud Messaging non disponible');
+          console.error('💡 Vérifiez que google-services.json est bien configuré');
+        } else if (error.error?.includes('INVALID_SENDER')) {
+          console.error('❌ Sender ID Firebase invalide');
+          console.error('💡 Vérifiez le fichier google-services.json');
+        } else if (error.error?.includes('TOO_MANY_REGISTRATIONS')) {
+          console.error('❌ Trop de tentatives d\'enregistrement');
+          console.error('💡 Réinstallez l\'app ou videz le cache');
+        } else {
+          console.error('❌ Erreur FCM inconnue - vérifiez adb logcat pour plus de détails');
+        }
+        
         setIsRegistered(false);
         checkPermissionStatus();
       });
