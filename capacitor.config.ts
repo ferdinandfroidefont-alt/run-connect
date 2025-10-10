@@ -30,7 +30,13 @@ const config: CapacitorConfig = {
     appendUserAgent: 'RunConnect/1.3'
   },
   ios: {
-    scheme: 'RunConnect'
+    contentInset: 'always',
+    allowsLinkPreview: false,
+    scrollEnabled: true,
+    preferredContentMode: 'mobile',
+    limitsNavigationsToAppBoundDomains: false,
+    // Deep linking pour OAuth (même scheme qu'Android)
+    scheme: 'app.runconnect'
   }
 };
 

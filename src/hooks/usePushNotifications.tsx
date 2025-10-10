@@ -28,6 +28,11 @@ export const usePushNotifications = () => {
   // DÉTECTION NATIVE CORRECTE - pas de faux positifs
   const isNative = Capacitor.isNativePlatform();
   const isSupported = isNative || ('Notification' in window);
+  
+  // Détection de la plateforme iOS
+  const isIOS = () => {
+    return Capacitor.getPlatform() === 'ios';
+  };
 
   // Vérifier le statut des permissions (PRIORITÉ ANDROID INJECTÉ)
   const checkPermissionStatus = useCallback(async () => {
@@ -171,10 +176,67 @@ export const usePushNotifications = () => {
     }
   }, [isNative, user]);
 
-  // Plugin Android avec compatibilité toutes versions
-  const requestAndroidNotifications = async (): Promise<boolean> => {
-    console.log('🔔 Demande permissions notifications Android...');
+  // Plugin natif (Android et iOS) avec compatibilité toutes versions
+  const requestNativeNotifications = async (): Promise<boolean> => {
+    const platform = Capacitor.getPlatform();
+    console.log(`🔔 Demande permissions notifications ${platform}...`);
     
+    // iOS : demande native directe via PushNotifications
+    if (platform === 'ios') {
+      console.log('📱 iOS détecté : demande permission native Apple');
+      try {
+        const permResult = await PushNotifications.requestPermissions();
+        
+        if (permResult.receive === 'granted') {
+          console.log('✅ Permission iOS accordée');
+          await PushNotifications.register();
+          console.log('✅ PushNotifications.register() appelé (iOS)');
+          
+          // Attendre 1 seconde pour laisser Firebase générer le token
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Vérifier si un token a été généré et sauvegardé
+          if (user?.id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('push_token')
+              .eq('user_id', user.id)
+              .single();
+
+            if (profile?.push_token) {
+              console.log('✅ Token FCM confirmé en base:', profile.push_token.substring(0, 30) + '...');
+            } else {
+              console.warn('⚠️ PushNotifications.register() appelé mais aucun token en base après 1s');
+              console.warn('⚠️ Vérifiez les logs Firebase dans les logs iOS');
+            }
+          }
+          
+          toast({
+            title: "Notifications activées !",
+            description: "Vous recevrez les notifications de RunConnect"
+          });
+          return true;
+        } else {
+          console.warn('❌ Permission iOS refusée');
+          toast({
+            title: "Notifications désactivées",
+            description: "Activez-les dans Réglages > RunConnect > Notifications",
+            variant: "destructive",
+          });
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ Erreur permission iOS:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible d'activer les notifications",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
+    // Android : logique existante avec PermissionsPlugin
     try {
       // 🔥 FORCER la popup système Android via le plugin natif
       if ((window as any).PermissionsPlugin?.requestNotificationPermissions) {
@@ -253,10 +315,10 @@ export const usePushNotifications = () => {
         
         let success = false;
         
-        // STRATÉGIE 1: Plugin Android personnalisé (toutes versions)
+        // STRATÉGIE 1: Plugin natif personnalisé (toutes versions)
         if (androidVersionInt > 0) {
-          console.log('🤖 Tentative plugin Android personnalisé...');
-          success = await requestAndroidNotifications();
+          console.log('🤖 Tentative plugin natif personnalisé...');
+          success = await requestNativeNotifications();
           
           if (success) {
             console.log('✅ Plugin Android personnalisé réussi');

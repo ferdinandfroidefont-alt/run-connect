@@ -75,6 +75,7 @@ const Auth = () => {
       
       // Détection robuste de l'environnement natif Android
       const capacitorNative = (window as any).Capacitor?.isNativePlatform?.();
+      const platform = (window as any).Capacitor?.getPlatform?.() || 'web';
       const hasAndroidInterface = !!(window as any).Android || !!(window as any).AndroidInterface;
       const isAndroidUA = /Android/i.test(navigator.userAgent);
       const isWebView = /wv|WebView/i.test(navigator.userAgent);
@@ -82,6 +83,7 @@ const Auth = () => {
       
       console.log('🔥 Auth Google - Detection:', {
         capacitorNative,
+        platform,
         hasAndroidInterface,
         isAndroidUA,
         isWebView,
@@ -89,7 +91,36 @@ const Auth = () => {
         userAgent: navigator.userAgent
       });
       
-      if (isNative) {
+      // OAuth Google pour iOS
+      if (isNative && platform === 'ios') {
+        console.log('🍎 OAuth Google natif iOS avec ASWebAuthenticationSession');
+        
+        const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: 'app.runconnect://auth/callback',
+            skipBrowserRedirect: false,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          }
+        });
+        
+        if (authError) {
+          console.error('❌ Erreur OAuth iOS:', authError);
+          toast({
+            title: "Erreur",
+            description: "Impossible de se connecter avec Google",
+            variant: "destructive",
+          });
+        }
+        
+        return;
+      }
+      
+      // OAuth Google pour Android
+      if (isNative && platform === 'android') {
         console.log('🔥 OAuth Google natif Android avec Custom Tab');
         
         // ✅ 1. Setup du listener pour capturer le deep link de retour
