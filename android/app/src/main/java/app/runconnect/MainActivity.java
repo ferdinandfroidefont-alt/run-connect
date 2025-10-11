@@ -111,11 +111,27 @@ public class MainActivity extends AppCompatActivity {
                 String url = uri.toString();
                 String host = uri.getHost() != null ? uri.getHost() : "";
                 
-                // ✅ 1. Intercepter le callback app.runconnect:// (retour depuis Custom Tabs)
-                if (url.startsWith("app.runconnect://")) {
+                // ✅ 1. Intercepter le callback OAuth (app.runconnect:// ou runconnect://)
+                if (url.startsWith("app.runconnect://") || url.startsWith("runconnect://")) {
                     Log.d(TAG, "🔗 Deep link callback OAuth détecté: " + url);
-                    handleDeepLink(url);
-                    return true;
+                    
+                    // 🔥 CORRECTION : Recharger l'URL dans le WebView au lieu de manipuler le hash
+                    // Cela permet à Supabase de détecter correctement le callback OAuth
+                    try {
+                        // Convertir app.runconnect://auth/callback vers https://run-connect.lovable.app/auth/callback
+                        String webUrl = url.replace("app.runconnect://", START_URL + "/")
+                                           .replace("runconnect://", START_URL + "/");
+                        
+                        Log.d(TAG, "🔄 Redirection vers: " + webUrl);
+                        view.loadUrl(webUrl);
+                        
+                        return true; // ✅ On intercepte, le WebView gère la suite
+                    } catch (Exception e) {
+                        Log.e(TAG, "❌ Erreur ouverture callback OAuth: " + e.getMessage());
+                        // Fallback : essayer quand même handleDeepLink
+                        handleDeepLink(url);
+                        return true;
+                    }
                 }
                 
                 // ✅ 2. Ouvrir Google OAuth dans Custom Tabs (sécurisé et conforme)
