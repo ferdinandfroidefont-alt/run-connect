@@ -879,8 +879,11 @@ const Messages = () => {
         <div className="w-full h-6 bg-black"></div>
         <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full relative h-screen">
+          {/* Top Bar - Fixed */}
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-14 bg-card border-b border-border z-50"></div>
+          
           {/* Header - Fixed */}
-          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm z-50">
+          <div className="fixed top-14 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -994,7 +997,7 @@ const Messages = () => {
           </div>
 
           {/* Messages - Scrollable area with top margin for fixed header */}
-          <div className="pt-20 h-full overflow-hidden">
+          <div className="pt-[120px] h-full overflow-hidden">
             <div className={`h-full overflow-y-auto px-4 pt-4 pb-14 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
