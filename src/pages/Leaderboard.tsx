@@ -368,6 +368,15 @@ const Leaderboard = () => {
           {/* 2ème place - Gauche */}
           {second && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              <Avatar 
+                className={`h-16 w-16 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(second.user_rank)}`}
+                onClick={() => navigateToProfile(second.user_id)}
+              >
+                <AvatarImage src={second.profile?.avatar_url} />
+                <AvatarFallback className="text-lg font-bold">
+                  {second.profile?.username?.[0] || second.profile?.display_name?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
               <div className="text-center mb-2">
                 <p className="font-semibold text-sm truncate max-w-[80px]">
                   {second.profile?.username}
@@ -394,6 +403,15 @@ const Leaderboard = () => {
           {first && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <Crown className="h-10 w-10 text-yellow-500 mb-1 animate-pulse" />
+              <Avatar 
+                className={`h-20 w-20 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(first.user_rank)}`}
+                onClick={() => navigateToProfile(first.user_id)}
+              >
+                <AvatarImage src={first.profile?.avatar_url} />
+                <AvatarFallback className="text-xl font-bold">
+                  {first.profile?.username?.[0] || first.profile?.display_name?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
               <div className="text-center mb-2">
                 <p className="font-bold text-base truncate max-w-[90px]">
                   {first.profile?.username}
@@ -419,6 +437,15 @@ const Leaderboard = () => {
           {/* 3ème place - Droite */}
           {third && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
+              <Avatar 
+                className={`h-16 w-16 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(third.user_rank)}`}
+                onClick={() => navigateToProfile(third.user_id)}
+              >
+                <AvatarImage src={third.profile?.avatar_url} />
+                <AvatarFallback className="text-lg font-bold">
+                  {third.profile?.username?.[0] || third.profile?.display_name?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
               <div className="text-center mb-2">
                 <p className="font-semibold text-sm truncate max-w-[80px]">
                   {third.profile?.username}
