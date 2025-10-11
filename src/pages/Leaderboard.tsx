@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { PhotorealisticAvatar3D } from "@/components/PhotorealisticAvatar3D";
@@ -368,15 +367,6 @@ const Leaderboard = () => {
           {/* 2ème place - Gauche */}
           {second && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <Avatar 
-                className={`h-16 w-16 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(second.user_rank)}`}
-                onClick={() => navigateToProfile(second.user_id)}
-              >
-                <AvatarImage src={second.profile?.avatar_url} />
-                <AvatarFallback className="text-lg font-bold">
-                  {second.profile?.username?.[0] || second.profile?.display_name?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
               <div className="text-center mb-2">
                 <p className="font-semibold text-sm truncate max-w-[80px]">
                   {second.profile?.username}
@@ -403,15 +393,6 @@ const Leaderboard = () => {
           {first && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <Crown className="h-10 w-10 text-yellow-500 mb-1 animate-pulse" />
-              <Avatar 
-                className={`h-20 w-20 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(first.user_rank)}`}
-                onClick={() => navigateToProfile(first.user_id)}
-              >
-                <AvatarImage src={first.profile?.avatar_url} />
-                <AvatarFallback className="text-xl font-bold">
-                  {first.profile?.username?.[0] || first.profile?.display_name?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
               <div className="text-center mb-2">
                 <p className="font-bold text-base truncate max-w-[90px]">
                   {first.profile?.username}
@@ -437,15 +418,6 @@ const Leaderboard = () => {
           {/* 3ème place - Droite */}
           {third && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <Avatar 
-                className={`h-16 w-16 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(third.user_rank)}`}
-                onClick={() => navigateToProfile(third.user_id)}
-              >
-                <AvatarImage src={third.profile?.avatar_url} />
-                <AvatarFallback className="text-lg font-bold">
-                  {third.profile?.username?.[0] || third.profile?.display_name?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
               <div className="text-center mb-2">
                 <p className="font-semibold text-sm truncate max-w-[80px]">
                   {third.profile?.username}
@@ -494,15 +466,6 @@ const Leaderboard = () => {
                 <div className="w-8 flex justify-center">
                   {getRankIcon(item.rank)}
                 </div>
-                <Avatar 
-                  className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
-                  onClick={() => navigateToProfile(item.user_id)}
-                >
-                  <AvatarImage src={item.profile?.avatar_url} />
-                  <AvatarFallback className="text-lg font-bold">
-                    {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                  </AvatarFallback>
-                </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium">
