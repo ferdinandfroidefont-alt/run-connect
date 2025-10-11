@@ -719,7 +719,7 @@ export default function MySessions() {
         {/* Fixed Header Only */}
         <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
           <div className="container mx-auto px-4 pt-4">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center -mt-2">
             <Button
               onClick={() => {
                 console.log('🚀 "Créer un itinéraire" clicked - starting navigation with URL parameter');
