@@ -16,6 +16,7 @@ import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppContext } from '@/contexts/AppContext';
+import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 
 interface UserSession {
   id: string;
@@ -62,6 +63,7 @@ export default function MySessions() {
   const navigate = useNavigate();
   const location = useLocation();
   const { openCreateRoute } = useAppContext();
+  const { navigateToProfile } = useProfileNavigation();
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -448,7 +450,10 @@ export default function MySessions() {
                   <div className="space-y-2 pr-4">
                     {participants.map((participant) => (
                       <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                        <Avatar className="w-8 h-8">
+                        <Avatar 
+                          className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => navigateToProfile(participant.user_id)}
+                        >
                           <AvatarImage 
                             src={participant.profiles.avatar_url || undefined} 
                             alt={participant.profiles.username || participant.profiles.display_name} 
