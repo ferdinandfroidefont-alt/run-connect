@@ -108,6 +108,7 @@ export const InteractiveMap = ({
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
   const sessionPolylines = useRef<google.maps.Polyline[]>([]);
+  const userLocationMarker = useRef<google.maps.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState('roadmap');
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -794,9 +795,8 @@ export const InteractiveMap = ({
               toast.info(`${errorMessage}, centré sur Paris`);
             }
             
-            // Set default location (Paris) for nearby sessions
-            setUserLocation({ lat: 48.8566, lng: 2.3522 });
-            console.log("🗺️ Position par défaut (Paris) utilisée");
+            // Don't set default location for marker display
+            console.log("🗺️ Pas de position disponible, pas de marqueur");
           });
 
         toast.success("Carte Google Maps prête !");
@@ -808,6 +808,108 @@ export const InteractiveMap = ({
 
     initializeMap();
   }, [currentStyle]);
+
+  // Create user location marker with pulsating animation
+  useEffect(() => {
+    if (!map.current || !userLocation || !isMapLoaded) return;
+
+    // Remove old marker if it exists
+    if (userLocationMarker.current) {
+      userLocationMarker.current.setMap(null);
+    }
+
+    // Create pulsating blue marker for user location
+    const createPulsatingMarker = () => {
+      const size = 60;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+
+      // Create gradient for pulse effect
+      const gradient = ctx.createRadialGradient(size/2, size/2, 5, size/2, size/2, size/2);
+      gradient.addColorStop(0, 'rgba(59, 130, 246, 0.6)'); // primary blue with opacity
+      gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.3)');
+      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+      // Draw pulsating circle
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Draw solid center dot
+      ctx.fillStyle = '#3b82f6'; // primary blue
+      ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, 8, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // White border around center
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, 8, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      return canvas.toDataURL('image/png');
+    };
+
+    const markerIcon = createPulsatingMarker();
+    
+    userLocationMarker.current = new google.maps.Marker({
+      position: userLocation,
+      map: map.current,
+      icon: {
+        url: markerIcon,
+        scaledSize: new google.maps.Size(60, 60),
+        anchor: new google.maps.Point(30, 30)
+      },
+      zIndex: 1000, // Above other markers
+      title: 'Votre position'
+    });
+
+    console.log('✅ User location marker created with pulse animation');
+
+    // Animate the pulse effect
+    let scale = 1;
+    let growing = true;
+    const animate = () => {
+      if (!userLocationMarker.current) return;
+      
+      if (growing) {
+        scale += 0.02;
+        if (scale >= 1.3) growing = false;
+      } else {
+        scale -= 0.02;
+        if (scale <= 1) growing = true;
+      }
+      
+      const animatedIcon = userLocationMarker.current.getIcon() as google.maps.Icon;
+      if (animatedIcon && animatedIcon.scaledSize) {
+        userLocationMarker.current.setIcon({
+          ...animatedIcon,
+          scaledSize: new google.maps.Size(60 * scale, 60 * scale),
+          anchor: new google.maps.Point(30 * scale, 30 * scale)
+        });
+      }
+      
+      requestAnimationFrame(animate);
+    };
+    
+    const animationId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      if (userLocationMarker.current) {
+        userLocationMarker.current.setMap(null);
+      }
+    };
+  }, [userLocation, isMapLoaded]);
+
 
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
