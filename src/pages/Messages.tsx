@@ -1265,7 +1265,8 @@ const Messages = () => {
       <div className="h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
           {/* Fixed Header Only */}
-          <div className="flex-shrink-0 bg-background z-10 p-4 border-b border-border">
+          <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 p-4 border-b border-border">
+            <div className="max-w-md mx-auto w-full">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
@@ -1293,10 +1294,11 @@ const Messages = () => {
                 </Button>
               </div>
             </div>
+            </div>
           </div>
 
           {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-2 pt-32">
             {/* Search Buttons */}
             <Card>
               <CardContent className="p-2">
