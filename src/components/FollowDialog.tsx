@@ -289,6 +289,9 @@ export const FollowDialog = ({
                 </div>
                 <div>
                   <p className="font-medium">
+                    {userItem.username || userItem.display_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
                     @{userItem.username}
                   </p>
                 </div>
