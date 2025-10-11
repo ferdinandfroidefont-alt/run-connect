@@ -710,45 +710,6 @@ const Leaderboard = () => {
           )}
         </div>
 
-        {/* Avatar 3D avec Garde-robe */}
-        <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-accent/5">
-          <CardHeader>
-            <CardTitle className="text-center flex items-center justify-center gap-2">
-              <Trophy className="h-5 w-5" />
-              Mon Avatar
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col items-center">
-              <div className="relative w-full">
-                <PhotorealisticAvatar3D 
-                  avatarModelId={avatarModelId}
-                  topItemId={equippedItems.top}
-                  bottomItemId={equippedItems.bottom}
-                  shoesItemId={equippedItems.shoes}
-                  className="w-full h-80 rounded-lg bg-background/50"
-                />
-              </div>
-              
-              <div className="mt-4 text-center space-y-2">
-                <Badge variant="outline" className="text-base">
-                  {userPoints} points
-                </Badge>
-                <Button 
-                  onClick={() => setShowWardrobe(true)}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  Ma Garde-robe
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  💡 Débloquez de nouveaux vêtements en gagnant des points !
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Leaderboard Tabs */}
         <Tabs defaultValue="seasonal" className="w-full">
