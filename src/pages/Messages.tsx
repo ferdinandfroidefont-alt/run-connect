@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,6 +126,8 @@ const Messages = () => {
   const [typingUsers, setTypingUsers] = useState<{[userId: string]: {username: string, lastSeen: number}}>({});
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
+  const [isContactsLoading, setIsContactsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -149,6 +151,9 @@ const Messages = () => {
   const loadConversations = async () => {
     if (!user) return;
 
+    const startTime = performance.now();
+    console.log('📊 [PERF] Starting loadConversations...');
+
     try {
       // Get both direct conversations and club conversations
       const { data: conversationsData, error } = await supabase
@@ -158,6 +163,8 @@ const Messages = () => {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
+
+      console.log(`📊 [PERF] Loaded ${conversationsData?.length || 0} conversations in ${(performance.now() - startTime).toFixed(0)}ms`);
 
       // Process conversations with profiles, unread counts, and last message
       const conversationsWithProfiles = await Promise.all(
@@ -253,6 +260,9 @@ const Messages = () => {
         });
 
       setConversations(sortedConversations);
+      
+      const endTime = performance.now();
+      console.log(`📊 [PERF] Finished loadConversations in ${(endTime - startTime).toFixed(0)}ms total`);
     } catch (error: any) {
       console.error('Error loading conversations:', error);
       toast({ title: "Erreur", description: "Impossible de charger les conversations", variant: "destructive" });
@@ -1349,14 +1359,29 @@ const Messages = () => {
 
                   <Button
                     variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
+                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150 relative"
                     style={{ transform: 'translateZ(0)' }}
                     onClick={() => {
-                      // Open dialog immediately for better UX
-                      setShowContactsDialog(true);
+                      // Show instant feedback
+                      setIsContactsLoading(true);
+                      
+                      // Open dialog with transition
+                      startTransition(() => {
+                        setShowContactsDialog(true);
+                      });
+                      
+                      // Hide loading after short delay
+                      setTimeout(() => {
+                        setIsContactsLoading(false);
+                      }, 200);
                     }}
+                    disabled={isContactsLoading}
                   >
-                    <Phone className="h-5 w-5" />
+                    {isContactsLoading ? (
+                      <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                    ) : (
+                      <Phone className="h-5 w-5" />
+                    )}
                     <span className="text-xs">Contact</span>
                   </Button>
                 </div>

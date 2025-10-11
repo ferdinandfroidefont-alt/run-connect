@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { SimplePermissionsTest } from './SimplePermissionsTest';
 
@@ -21,6 +21,16 @@ const RippleEffect = ({ x, y }: { x: number; y: number }) => (
       pointerEvents: 'none',
     }}
   />
+);
+
+// Loading overlay for instant visual feedback
+const LoadingOverlay = () => (
+  <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-[100] flex items-center justify-center">
+    <div className="bg-card p-6 rounded-lg shadow-xl">
+      <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-3" />
+      <p className="text-sm text-muted-foreground">Chargement...</p>
+    </div>
+  </div>
 );
 const navItems = [{
   path: '/',
@@ -45,11 +55,13 @@ export const BottomNavigation = () => {
   const { user } = useAuth();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
+  const [isPending, startTransition] = useTransition();
+  const [showLoading, setShowLoading] = useState(false);
   const {
     openCreateSession
   } = useAppContext();
 
-  // Instant navigation with ripple effect
+  // Instant navigation with immediate feedback
   const handleNavigation = (path: string, event: React.MouseEvent<HTMLButtonElement>) => {
     // Create ripple effect at click position
     const rect = event.currentTarget.getBoundingClientRect();
@@ -59,8 +71,18 @@ export const BottomNavigation = () => {
     
     setRipples(prev => [...prev, { id: rippleId, x, y }]);
     
-    // Navigate immediately
-    navigate(path);
+    // Show loading overlay immediately
+    setShowLoading(true);
+    
+    // Use startTransition for non-blocking navigation
+    startTransition(() => {
+      navigate(path);
+    });
+    
+    // Hide loading after navigation (max 300ms for perceived speed)
+    setTimeout(() => {
+      setShowLoading(false);
+    }, 300);
     
     // Remove ripple after animation
     setTimeout(() => {
@@ -133,6 +155,9 @@ export const BottomNavigation = () => {
   }, [user]);
   return (
     <>
+      {/* Loading overlay */}
+      {showLoading && <LoadingOverlay />}
+      
       {/* Nouvelle barre du bas - couvre tout l'espace */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
         <div className="flex items-center justify-center py-2 min-h-[40px]">
