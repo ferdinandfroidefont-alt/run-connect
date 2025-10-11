@@ -848,8 +848,14 @@ const Profile = () => {
           </Card>
         )}
 
-        {/* Records Section - For other users */}
+        {/* Records Section - For other users - Only show if has records */}
         {isViewingOtherUser && (
+          (profile?.running_records && typeof profile.running_records === 'object' && Object.keys(profile.running_records).length > 0) ||
+          (profile?.cycling_records && typeof profile.cycling_records === 'object' && Object.keys(profile.cycling_records).length > 0) ||
+          (profile?.swimming_records && typeof profile.swimming_records === 'object' && Object.keys(profile.swimming_records).length > 0) ||
+          (profile?.triathlon_records && typeof profile.triathlon_records === 'object' && Object.keys(profile.triathlon_records).length > 0) ||
+          (profile?.walking_records && typeof profile.walking_records === 'object' && Object.keys(profile.walking_records).length > 0)
+        ) && (
           <Card>
             <CardHeader>
               <div className="flex items-center">
@@ -940,18 +946,6 @@ const Profile = () => {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* No records message */}
-              {(!profile?.running_records || typeof profile.running_records !== 'object' || Object.keys(profile.running_records).length === 0) &&
-               (!profile?.cycling_records || typeof profile.cycling_records !== 'object' || Object.keys(profile.cycling_records).length === 0) &&
-               (!profile?.swimming_records || typeof profile.swimming_records !== 'object' || Object.keys(profile.swimming_records).length === 0) &&
-               (!profile?.triathlon_records || typeof profile.triathlon_records !== 'object' || Object.keys(profile.triathlon_records).length === 0) &&
-               (!profile?.walking_records || typeof profile.walking_records !== 'object' || Object.keys(profile.walking_records).length === 0) && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Crown className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Aucun record enregistré</p>
                 </div>
               )}
             </CardContent>
