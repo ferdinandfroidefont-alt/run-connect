@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical, ArrowLeft, Filter, Check, ChevronsUpDown } from "lucide-react";
+import { Search, User, UserPlus, UserCheck, Lock, MessageCircle, Users, Copy, UserMinus, Flag, MoreVertical, ArrowLeft, Filter, Check, ChevronsUpDown, ContactRound } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -46,7 +46,7 @@ interface UniversalSearchDialogProps {
   onOpenChange: (open: boolean) => void;
   onStartConversation?: (userId: string) => void;
   onJoinClub?: (clubId: string) => void;
-  initialTab?: 'profiles' | 'clubs' | 'strava' | '';
+  initialTab?: 'profiles' | 'clubs' | 'strava' | 'contacts' | '';
 }
 
 export const UniversalSearchDialog = ({ 
@@ -58,7 +58,7 @@ export const UniversalSearchDialog = ({
 }: UniversalSearchDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava' | ''>(initialTab);
+  const [activeTab, setActiveTab] = useState<'profiles' | 'clubs' | 'strava' | 'contacts' | ''>(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [profileResults, setProfileResults] = useState<Profile[]>([]);
   const [clubResults, setClubResults] = useState<Club[]>([]);
@@ -1046,8 +1046,8 @@ export const UniversalSearchDialog = ({
               Retour
             </Button>
 
-            <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs' | 'strava')}>
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profiles' | 'clubs' | 'strava' | 'contacts')}>
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="profiles" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   Profils
@@ -1061,6 +1061,10 @@ export const UniversalSearchDialog = ({
                     <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
                   </svg>
                   Strava
+                </TabsTrigger>
+                <TabsTrigger value="contacts" className="flex items-center gap-2">
+                  <ContactRound className="h-4 w-4" />
+                  Contacts
                 </TabsTrigger>
               </TabsList>
 
@@ -1350,6 +1354,31 @@ export const UniversalSearchDialog = ({
                 </div>
               ))}
             </div>
+              </TabsContent>
+
+              <TabsContent value="contacts" className="space-y-4">
+                <Card className="border-dashed">
+                  <CardContent className="p-4 text-center">
+                    <ContactRound className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Synchronisez vos contacts pour trouver vos amis
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Importez vos contacts téléphoniques pour voir qui utilise RunConnect
+                    </p>
+                    <Button 
+                      onClick={() => {
+                        onOpenChange(false);
+                        // Déclencher l'ouverture du dialogue contacts via un événement custom
+                        window.dispatchEvent(new CustomEvent('open-contacts-dialog'));
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Ouvrir les contacts
+                    </Button>
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>
