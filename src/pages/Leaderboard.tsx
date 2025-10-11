@@ -355,60 +355,157 @@ const Leaderboard = () => {
     }
   };
 
-  const LeaderboardList = ({ data, showSeasonal = false }: { data: LeaderboardUser[], showSeasonal?: boolean }) => (
-    <div className="space-y-2">
-      {data.map((item, index) => (
-        <Card 
-          key={item.user_id} 
-          className={`
-            ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-            hover-lift hover-glow btn-interactive animate-fade-in
-          `}
-          style={{ animationDelay: `${index * 0.1}s` }}
-        >
-          <CardContent className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 flex justify-center">
-                {getRankIcon(item.rank)}
-              </div>
-              <Avatar 
-                className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
-                onClick={() => navigateToProfile(item.user_id)}
-              >
-                <AvatarImage src={item.profile?.avatar_url} />
-                <AvatarFallback className="text-lg font-bold">
-                  {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium">
-                    {item.profile?.username || item.profile?.display_name}
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  @{item.profile?.username}
+  const PodiumDisplay = ({ top3, showSeasonal = false }: { top3: LeaderboardUser[], showSeasonal?: boolean }) => {
+    if (top3.length === 0) return null;
+    
+    const first = top3[0];
+    const second = top3[1];
+    const third = top3[2];
+    
+    return (
+      <div className="mb-8 pb-8 border-b">
+        <div className="flex items-end justify-center gap-4 mb-6">
+          {/* 2ème place - Gauche */}
+          {second && (
+            <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              <div className="text-center mb-2">
+                <p className="font-semibold text-sm truncate max-w-[80px]">
+                  {second.profile?.username}
                 </p>
-                <div className="my-1">
-                  {getRankBadge(item.user_rank)}
+                <div className="flex justify-center my-1">
+                  {getRankBadge(second.user_rank)}
                 </div>
-                <div className="mt-1">
-                  <p className="font-bold text-primary">
-                    {showSeasonal ? item.seasonal_points : item.total_points} pts
-                  </p>
-                  {!showSeasonal && (
-                    <p className="text-xs text-muted-foreground">
-                      +{item.seasonal_points} cette saison
-                    </p>
-                  )}
-                </div>
+                <p className="font-bold text-primary">
+                  {showSeasonal ? second.seasonal_points : second.total_points} pts
+                </p>
+              </div>
+              <div 
+                className="w-20 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-lg border-2 border-gray-500 flex flex-col items-center justify-start pt-2 cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '100px' }}
+                onClick={() => navigateToProfile(second.user_id)}
+              >
+                <Medal className="h-8 w-8 text-gray-100 mb-1" />
+                <span className="text-2xl font-bold text-white">2</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+          )}
+          
+          {/* 1ère place - Centre */}
+          {first && (
+            <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
+              <Crown className="h-10 w-10 text-yellow-500 mb-1 animate-pulse" />
+              <div className="text-center mb-2">
+                <p className="font-bold text-base truncate max-w-[90px]">
+                  {first.profile?.username}
+                </p>
+                <div className="flex justify-center my-1">
+                  {getRankBadge(first.user_rank)}
+                </div>
+                <p className="font-bold text-primary text-lg">
+                  {showSeasonal ? first.seasonal_points : first.total_points} pts
+                </p>
+              </div>
+              <div 
+                className="w-24 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-t-lg border-2 border-yellow-700 shadow-lg shadow-yellow-500/50 flex flex-col items-center justify-start pt-2 cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '140px' }}
+                onClick={() => navigateToProfile(first.user_id)}
+              >
+                <Trophy className="h-10 w-10 text-yellow-100 mb-1" />
+                <span className="text-3xl font-bold text-white">1</span>
+              </div>
+            </div>
+          )}
+          
+          {/* 3ème place - Droite */}
+          {third && (
+            <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
+              <div className="text-center mb-2">
+                <p className="font-semibold text-sm truncate max-w-[80px]">
+                  {third.profile?.username}
+                </p>
+                <div className="flex justify-center my-1">
+                  {getRankBadge(third.user_rank)}
+                </div>
+                <p className="font-bold text-primary">
+                  {showSeasonal ? third.seasonal_points : third.total_points} pts
+                </p>
+              </div>
+              <div 
+                className="w-20 bg-gradient-to-b from-amber-500 to-amber-700 rounded-t-lg border-2 border-amber-800 flex flex-col items-center justify-start pt-2 cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '80px' }}
+                onClick={() => navigateToProfile(third.user_id)}
+              >
+                <Medal className="h-8 w-8 text-amber-100 mb-1" />
+                <span className="text-2xl font-bold text-white">3</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const LeaderboardList = ({ data, showSeasonal = false }: { data: LeaderboardUser[], showSeasonal?: boolean }) => {
+    const top3 = data.slice(0, 3);
+    const rest = data.slice(3);
+    
+    return (
+      <div className="space-y-2">
+        <PodiumDisplay top3={top3} showSeasonal={showSeasonal} />
+        
+        {rest.map((item, index) => (
+          <Card 
+            key={item.user_id} 
+            className={`
+              ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
+              hover-lift hover-glow btn-interactive animate-fade-in
+            `}
+            style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+          >
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 flex justify-center">
+                  {getRankIcon(item.rank)}
+                </div>
+                <Avatar 
+                  className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
+                  onClick={() => navigateToProfile(item.user_id)}
+                >
+                  <AvatarImage src={item.profile?.avatar_url} />
+                  <AvatarFallback className="text-lg font-bold">
+                    {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">
+                      {item.profile?.username || item.profile?.display_name}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    @{item.profile?.username}
+                  </p>
+                  <div className="my-1">
+                    {getRankBadge(item.user_rank)}
+                  </div>
+                  <div className="mt-1">
+                    <p className="font-bold text-primary">
+                      {showSeasonal ? item.seasonal_points : item.total_points} pts
+                    </p>
+                    {!showSeasonal && (
+                      <p className="text-xs text-muted-foreground">
+                        +{item.seasonal_points} cette saison
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
   const PaginationControls = ({ 
     currentPage, 
