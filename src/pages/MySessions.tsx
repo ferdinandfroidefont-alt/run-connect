@@ -2,6 +2,7 @@ import { RouteDialog } from '@/components/RouteDialog';
 import { RouteCard } from '@/components/RouteCard';
 import { RouteEditDialog } from '@/components/RouteEditDialog';
 import { EditSessionDialog } from '@/components/EditSessionDialog';
+import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export default function MySessions() {
   const navigate = useNavigate();
   const location = useLocation();
   const { openCreateRoute } = useAppContext();
-  const { navigateToProfile } = useProfileNavigation();
+  const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -487,6 +488,11 @@ export default function MySessions() {
           onClose={() => setIsEditSessionDialogOpen(false)}
           onSessionUpdated={handleSessionUpdated}
           session={selectedSession}
+        />
+        
+        <ProfilePreviewDialog
+          userId={showProfilePreview ? selectedUserId : null}
+          onClose={closeProfilePreview}
         />
       </div>
       </>
