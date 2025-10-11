@@ -938,6 +938,10 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 {selectedLocation ? "Changer le lieu (carte)" : "Sélectionner sur la carte"}
               </Button>
               
+              <p className="text-xs text-muted-foreground text-center">
+                💡 Astuce : Double-cliquez sur la carte pour placer un marqueur (à activer dans les paramètres)
+              </p>
+              
               {selectedLocation && (
                 <p className="text-sm text-muted-foreground">
                   📍 {selectedLocation.name}
