@@ -1265,7 +1265,7 @@ const Messages = () => {
       <div className="h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
           {/* Fixed Header Only */}
-          <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 p-4 border-b border-border">
+          <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
             <div className="max-w-md mx-auto w-full">
             {/* Header */}
             <div className="flex items-center justify-between">
