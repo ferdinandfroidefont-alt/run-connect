@@ -701,14 +701,6 @@ const Leaderboard = () => {
   return (
     <div className="min-h-screen bg-background p-4 pb-20 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <div className="max-w-md mx-auto space-y-4">
-        <div className="text-center py-4">
-          <h1 className="text-2xl font-bold text-foreground">Classement</h1>
-          {userRank && (
-            <Badge variant="secondary" className="mt-2">
-              Votre rang: #{userRank}
-            </Badge>
-          )}
-        </div>
 
 
         {/* Leaderboard Tabs */}
@@ -727,6 +719,14 @@ const Leaderboard = () => {
               <span className="hidden sm:inline">Amis</span>
             </TabsTrigger>
           </TabsList>
+
+          {userRank && (
+            <div className="text-center mt-2">
+              <Badge variant="secondary">
+                Votre rang: #{userRank}
+              </Badge>
+            </div>
+          )}
 
           <TabsContent value="seasonal" className="mt-4">
             <div className="space-y-4">
