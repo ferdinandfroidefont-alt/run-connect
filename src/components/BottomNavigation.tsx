@@ -167,10 +167,10 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col justify-start items-center gap-1 px-8 py-4 bg-gradient-to-r from-primary to-accent text-white rounded-2xl transition-all hover:shadow-glow hover:scale-110 -translate-y-6 scale-125 shadow-2xl shadow-primary/40 animate-glow-pulse"
+              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-primary text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30"
             >
-              <Plus size={28} className="mt-1" />
-              <span className="text-xs font-bold mt-1">CRÉER</span>
+              <Plus size={20} />
+              <span className="text-[10px] font-bold">CRÉER</span>
             </button>
           </div>
 
