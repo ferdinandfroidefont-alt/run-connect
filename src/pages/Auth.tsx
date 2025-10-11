@@ -533,11 +533,16 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-accent/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-map-panel">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">RunConnect</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 relative overflow-hidden flex items-center justify-center p-4">
+      {/* Effets d'arrière-plan animés */}
+      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
+      
+      <Card className="relative w-full max-w-md backdrop-blur-xl bg-card/90 border-2 border-white/10 shadow-2xl animate-slide-up">
+        <CardHeader className="space-y-1 text-center border-b border-white/10 pb-4">
+          <CardTitle className="text-display-md bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">RunConnect</CardTitle>
+          <CardDescription className="text-body-md">
             {authStep === 'reset'
               ? "Définissez votre nouveau mot de passe"
               : authStep === 'otp' 
@@ -548,14 +553,14 @@ const Auth = () => {
             }
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <Button
             onClick={handleGoogleAuth}
             disabled={isLoading}
-            variant="outline"
-            className="w-full"
+            variant="outline-glow"
+            className="w-full h-12"
           >
-            <FcGoogle className="mr-2 h-4 w-4" />
+            <FcGoogle className="mr-2 h-5 w-5" />
             {authMode === 'signup' ? "S'inscrire" : "Se connecter"} avec Google
           </Button>
           
@@ -605,7 +610,8 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                className="w-full"
+                variant="gradient"
+                className="w-full h-12 text-button"
                 disabled={isLoading || newPassword !== confirmPassword}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -644,7 +650,8 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                className="w-full"
+                variant="gradient"
+                className="w-full h-12 text-button"
                 disabled={isLoading || otp.length !== 6}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -741,7 +748,8 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                className="w-full"
+                variant="gradient"
+                className="w-full h-12 text-button"
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -774,7 +782,8 @@ const Auth = () => {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  variant="gradient"
+                  className="w-full h-12 text-button"
                   disabled={isLoading}
                 >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

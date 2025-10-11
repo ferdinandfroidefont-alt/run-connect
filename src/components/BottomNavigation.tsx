@@ -105,9 +105,13 @@ export const BottomNavigation = () => {
         </div>
       </nav>
       
-      {/* Barre de navigation principale collée au-dessus */}
-      <nav className="fixed bottom-6 left-0 right-0 bg-card border-t border-border z-50">
-        <div className="grid grid-cols-5 items-center px-4 py-2">
+      {/* Barre de navigation principale avec glassmorphism */}
+      <nav className="fixed bottom-6 left-0 right-0 backdrop-blur-xl bg-card/80 border-t-2 border-white/10 shadow-2xl z-50">
+        <div className="relative">
+          {/* Glow effect pour l'item actif */}
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+          
+          <div className="grid grid-cols-5 items-center px-4 py-2">
           {/* Première colonne - Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
@@ -117,8 +121,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => navigate(path)} 
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", 
-                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 h-full", 
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
@@ -137,8 +143,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => navigate(path)} 
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", 
-                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 h-full", 
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
@@ -148,7 +156,7 @@ export const BottomNavigation = () => {
             })}
           </div>
           
-          {/* Troisième colonne - Bouton Créer au centre */}
+          {/* Troisième colonne - Bouton Créer au centre avec effet premium */}
           <div className="flex justify-center">
             <button 
               onClick={() => {
@@ -159,10 +167,10 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col justify-start items-center gap-1 px-6 py-3 bg-primary text-primary-foreground rounded-full transition-all hover:bg-primary/90 shadow-xl -translate-y-4 scale-110"
+              className="flex flex-col justify-start items-center gap-1 px-8 py-4 bg-gradient-to-r from-primary to-accent text-white rounded-2xl transition-all hover:shadow-glow hover:scale-110 -translate-y-6 scale-125 shadow-2xl shadow-primary/40 animate-glow-pulse"
             >
-              <Plus size={24} className="mt-1" />
-              <span className="text-xs font-medium mt-1">CRÉER</span>
+              <Plus size={28} className="mt-1" />
+              <span className="text-xs font-bold mt-1">CRÉER</span>
             </button>
           </div>
 
@@ -177,8 +185,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => navigate(path)} 
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors relative h-full", 
-                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 relative h-full", 
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <div className="relative mt-1">
@@ -186,7 +196,7 @@ export const BottomNavigation = () => {
                     {isMessages && totalUnreadCount > 0 && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs min-w-4"
+                        className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs min-w-4 animate-bounce-subtle bg-gradient-to-r from-red-500 to-red-600 shadow-lg"
                       >
                         {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                       </Badge>
@@ -207,8 +217,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => navigate(path)} 
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-lg transition-colors h-full", 
-                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 h-full", 
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
@@ -217,6 +229,7 @@ export const BottomNavigation = () => {
               );
             })}
           </div>
+        </div>
         </div>
       </nav>
     </>

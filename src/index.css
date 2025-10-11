@@ -17,7 +17,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 27%;
 
-    --primary: 217 91% 60%;
+    --primary: 217 91% 65%;
+    --primary-glow: 217 91% 75%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 215 16% 47%;
@@ -26,7 +27,8 @@ All colors MUST be HSL.
     --muted: 215 14% 95%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 217 91% 60%;
+    --accent: 195 100% 70%;
+    --accent-glow: 195 100% 80%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
@@ -34,25 +36,41 @@ All colors MUST be HSL.
 
     --border: 215 14% 89%;
     --input: 215 14% 89%;
-    --ring: 217 91% 60%;
+    --ring: 217 91% 65%;
 
+    /* Premium gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 71% 45%) 100%);
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 72% 51%) 100%);
+    
     /* Map-specific design tokens */
     --map-control-bg: 0 0% 100%;
     --map-control-border: 215 14% 89%;
     --map-control-shadow: 215 25% 27% / 0.1;
     --map-control-hover: 215 14% 95%;
-    --map-control-active: 217 91% 60%;
-    
-    /* Gradients */
-    --gradient-map: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(195 100% 70%) 100%);
+    --map-control-active: 217 91% 65%;
+    --gradient-map: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
     --gradient-control: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(215 14% 98%) 100%);
     
-    /* Shadows */
+    /* Premium shadows */
+    --shadow-xs: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
+    --shadow-sm: 0 2px 4px -2px hsl(215 25% 27% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 27% / 0.1), 0 2px 4px -2px hsl(215 25% 27% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 27% / 0.1), 0 4px 6px -4px hsl(215 25% 27% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(215 25% 27% / 0.1), 0 8px 10px -6px hsl(215 25% 27% / 0.1);
+    --shadow-2xl: 0 25px 50px -12px hsl(215 25% 27% / 0.25);
+    --shadow-glow: 0 0 20px 5px hsl(217 91% 65% / 0.4);
     --shadow-map-control: 0 4px 6px -1px hsl(var(--map-control-shadow)), 0 2px 4px -2px hsl(var(--map-control-shadow));
     --shadow-map-panel: 0 10px 15px -3px hsl(var(--map-control-shadow)), 0 4px 6px -4px hsl(var(--map-control-shadow));
     
+    /* Glassmorphism */
+    --glass-bg: hsl(0 0% 100% / 0.05);
+    --glass-border: hsl(0 0% 100% / 0.1);
+    --glass-blur: 20px;
+    
     /* Transitions */
     --transition-map: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --radius: 0.5rem;
 
@@ -83,7 +101,8 @@ All colors MUST be HSL.
     --popover: 215 28% 17%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 217 91% 65%;
+    --primary-glow: 217 91% 75%;
     --primary-foreground: 215 28% 17%;
 
     --secondary: 215 25% 27%;
@@ -92,7 +111,8 @@ All colors MUST be HSL.
     --muted: 215 25% 27%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 217 91% 60%;
+    --accent: 195 100% 70%;
+    --accent-glow: 195 100% 80%;
     --accent-foreground: 215 28% 17%;
 
     --destructive: 0 84% 60%;
@@ -100,16 +120,19 @@ All colors MUST be HSL.
 
     --border: 215 25% 27%;
     --input: 215 25% 27%;
-    --ring: 217 91% 60%;
+    --ring: 217 91% 65%;
 
     /* Dark map controls */
     --map-control-bg: 215 25% 27%;
     --map-control-border: 215 20% 35%;
     --map-control-shadow: 0 0% 0% / 0.3;
     --map-control-hover: 215 20% 35%;
-    --map-control-active: 217 91% 60%;
-    
+    --map-control-active: 217 91% 65%;
     --gradient-control: linear-gradient(180deg, hsl(215 25% 27%) 0%, hsl(215 28% 17%) 100%);
+    
+    /* Dark glassmorphism */
+    --glass-bg: hsl(0 0% 100% / 0.03);
+    --glass-border: hsl(0 0% 100% / 0.08);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -157,7 +180,48 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Typography utilities following design guidelines */
+  /* Premium Typography System */
+  .text-display-xl {
+    @apply font-display font-bold text-4xl md:text-5xl tracking-tight;
+  }
+  
+  .text-display-lg {
+    @apply font-display font-bold text-3xl md:text-4xl tracking-tight;
+  }
+  
+  .text-display-md {
+    @apply font-display font-bold text-2xl md:text-3xl tracking-tight;
+  }
+  
+  .text-display-sm {
+    @apply font-display font-semibold text-xl md:text-2xl;
+  }
+  
+  .text-heading-xl {
+    @apply font-display font-semibold text-lg md:text-xl;
+  }
+  
+  .text-heading-lg {
+    @apply font-display font-semibold text-base md:text-lg;
+  }
+  
+  .text-body-lg {
+    @apply font-sans font-normal text-base md:text-lg leading-relaxed;
+  }
+  
+  .text-body-md {
+    @apply font-sans font-normal text-sm md:text-base leading-relaxed;
+  }
+  
+  .text-body-sm {
+    @apply font-sans font-normal text-xs md:text-sm leading-relaxed;
+  }
+  
+  .text-label {
+    @apply font-sans font-medium text-sm uppercase tracking-wider;
+  }
+  
+  /* Legacy support */
   .text-title {
     @apply font-display font-bold text-lg md:text-xl uppercase tracking-wide;
   }
