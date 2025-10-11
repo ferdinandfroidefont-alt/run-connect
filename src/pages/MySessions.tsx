@@ -1,15 +1,13 @@
 import { RouteDialog } from '@/components/RouteDialog';
 import { RouteCard } from '@/components/RouteCard';
 import { RouteEditDialog } from '@/components/RouteEditDialog';
+import { EditSessionDialog } from '@/components/EditSessionDialog';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Users, Filter, Edit, Edit2, Save, X, Route, TrendingUp, Mountain, Trash2, Upload } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Filter, Edit, Trash2, Route } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -72,13 +70,10 @@ export default function MySessions() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
   const [routesLoading, setRoutesLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<UserSession>>({});
   const [editingRoute, setEditingRoute] = useState<any>(null);
   const [routeEditLoading, setRouteEditLoading] = useState(false);
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
-  const [isAdvancedEditOpen, setIsAdvancedEditOpen] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
 
   // Load user's sessions
   const loadUserSessions = async () => {
@@ -212,7 +207,7 @@ export default function MySessions() {
 
   const editRoute = (route: any) => {
     setEditingRoute(route);
-    setIsAdvancedEditOpen(true);
+    setIsRouteEditDialogOpen(true);
   };
 
   const handleSaveRouteEdit = async (routeName: string, routeDescription: string) => {
@@ -262,125 +257,25 @@ export default function MySessions() {
 
   const handleSessionClick = async (session: UserSession) => {
     setSelectedSession(session);
-    setEditForm(session);
-    setIsEditing(false);
     await loadSessionParticipants(session.id);
   };
 
   const handleEditClick = () => {
-    setIsEditing(true);
+    setIsEditSessionDialogOpen(true);
   };
 
-  const handleCancelEdit = () => {
-    setIsEditing(false);
+  const handleSessionUpdated = async () => {
+    await loadUserSessions();
     if (selectedSession) {
-      setEditForm(selectedSession);
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!selectedSession || !editForm) return;
-
-    try {
-      const { error } = await supabase
+      const { data } = await supabase
         .from('sessions')
-        .update({
-          title: editForm.title,
-          description: editForm.description,
-          activity_type: editForm.activity_type,
-          session_type: editForm.session_type,
-          intensity: editForm.intensity,
-          location_name: editForm.location_name,
-          max_participants: editForm.max_participants,
-          image_url: editForm.image_url
-        })
-        .eq('id', selectedSession.id);
-
-      if (error) throw error;
-
-      // Update local state
-      const updatedSession = { ...selectedSession, ...editForm };
-      setSelectedSession(updatedSession);
-      setSessions(sessions.map(s => s.id === selectedSession.id ? updatedSession : s));
-      setIsEditing(false);
-      toast({
-        title: "Succès",
-        description: "Séance modifiée avec succès",
-      });
-    } catch (error) {
-      console.error('Error updating session:', error);
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la modification de la séance",
-        variant: "destructive",
-      });
+        .select('*')
+        .eq('id', selectedSession.id)
+        .single();
+      if (data) {
+        setSelectedSession(data);
+      }
     }
-  };
-
-  const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user?.id}_${Date.now()}.${fileExt}`;
-    const filePath = `session-images/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('session-images')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage
-      .from('session-images')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Erreur",
-        description: "L'image doit faire moins de 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner une image",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setUploadingImage(true);
-    try {
-      const imageUrl = await uploadImage(file);
-      setEditForm({ ...editForm, image_url: imageUrl });
-      toast({
-        title: "Succès",
-        description: "Image téléchargée avec succès",
-      });
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Erreur",
-        description: "Erreur lors du téléchargement de l'image",
-        variant: "destructive",
-      });
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const removeImage = () => {
-    setEditForm({ ...editForm, image_url: undefined });
   };
 
   const handleDeleteSession = async () => {
@@ -475,6 +370,7 @@ export default function MySessions() {
 
   if (selectedSession) {
     return (
+      <>
       <div className="container mx-auto px-4 py-6 pb-24">
         <div className="flex items-center justify-between mb-6">
           <Button
@@ -484,8 +380,8 @@ export default function MySessions() {
           >
             ← Retour aux séances
           </Button>
-          {!isEditing ? (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {new Date(selectedSession.scheduled_at) >= new Date() && (
               <Button
                 variant="outline"
                 size="sm"
@@ -495,37 +391,17 @@ export default function MySessions() {
                 <Edit className="h-4 w-4" />
                 Modifier
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteSession}
-                className="flex items-center gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Supprimer
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelEdit}
-                className="flex items-center gap-2"
-              >
-                <X className="h-4 w-4" />
-                Annuler
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSaveEdit}
-                className="flex items-center gap-2"
-              >
-                <Save className="h-4 w-4" />
-                Sauvegarder
-              </Button>
-            </div>
-          )}
+            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteSession}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Supprimer
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -539,139 +415,31 @@ export default function MySessions() {
                 />
               )}
               <div className="flex-1">
-                {!isEditing ? (
-                  <>
-                    <CardTitle className="flex items-center gap-2">
-                      <span className="text-2xl">{getActivityIcon(selectedSession.activity_type)}</span>
-                      {selectedSession.title}
-                    </CardTitle>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-2">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {format(new Date(selectedSession.scheduled_at), 'PPP à HH:mm', { locale: fr })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {selectedSession.location_name}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {participants.length} participant{participants.length > 1 ? 's' : ''}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Titre</label>
-                      <Input
-                        value={editForm.title || ''}
-                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Type d'activité</label>
-                      <Select
-                        value={editForm.activity_type || ''}
-                        onValueChange={(value) => setEditForm({ ...editForm, activity_type: value })}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="course">Course 🏃‍♂️</SelectItem>
-                          <SelectItem value="velo">Vélo 🚴‍♂️</SelectItem>
-                          <SelectItem value="marche">Marche 🚶‍♂️</SelectItem>
-                          <SelectItem value="natation">Natation 🏊‍♂️</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Lieu</label>
-                      <Input
-                        value={editForm.location_name || ''}
-                        onChange={(e) => setEditForm({ ...editForm, location_name: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Nombre maximum de participants</label>
-                      <Input
-                        type="number"
-                        value={editForm.max_participants || ''}
-                        onChange={(e) => setEditForm({ ...editForm, max_participants: parseInt(e.target.value) })}
-                        className="mt-1"
-                      />
-                    </div>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">{getActivityIcon(selectedSession.activity_type)}</span>
+                  {selectedSession.title}
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-2">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {format(new Date(selectedSession.scheduled_at), 'PPP à HH:mm', { locale: fr })}
                   </div>
-                )}
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {selectedSession.location_name}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    {participants.length} participant{participants.length > 1 ? 's' : ''}
+                  </div>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {!isEditing ? (
-              <p className="text-sm text-muted-foreground mb-4">
-                {selectedSession.description}
-              </p>
-            ) : (
-              <div className="space-y-4 mb-4">
-                <div>
-                  <label className="text-sm font-medium">Description</label>
-                  <Textarea
-                    value={editForm.description || ''}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    className="mt-1"
-                    rows={3}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Image de la séance</label>
-                  <div className="mt-1 space-y-2">
-                    {editForm.image_url && (
-                      <div className="relative inline-block">
-                        <img 
-                          src={editForm.image_url} 
-                          alt="Aperçu"
-                          className="w-32 h-24 object-cover rounded-lg"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={removeImage}
-                          className="absolute top-1 right-1 h-6 w-6 p-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        disabled={uploadingImage}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => document.getElementById('image-upload')?.click()}
-                        disabled={uploadingImage}
-                        className="flex items-center gap-2"
-                      >
-                        <Upload className="h-4 w-4" />
-                        {uploadingImage ? 'Téléchargement...' : editForm.image_url ? 'Changer l\'image' : 'Ajouter une image'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <p className="text-sm text-muted-foreground mb-4">
+              {selectedSession.description}
+            </p>
             
             <div className="space-y-3">
               <h4 className="font-medium">Participants inscrits :</h4>
@@ -707,7 +475,15 @@ export default function MySessions() {
             </div>
           </CardContent>
         </Card>
+        
+        <EditSessionDialog
+          isOpen={isEditSessionDialogOpen}
+          onClose={() => setIsEditSessionDialogOpen(false)}
+          onSessionUpdated={handleSessionUpdated}
+          session={selectedSession}
+        />
       </div>
+      </>
     );
   }
 
@@ -882,9 +658,9 @@ export default function MySessions() {
       />
 
       <RouteEditDialog
-        isOpen={isAdvancedEditOpen}
+        isOpen={isRouteEditDialogOpen}
         onClose={() => {
-          setIsAdvancedEditOpen(false);
+          setIsRouteEditDialogOpen(false);
           setEditingRoute(null);
         }}
         route={editingRoute}
