@@ -705,23 +705,8 @@ const Leaderboard = () => {
 
         {/* Leaderboard Tabs */}
         <Tabs defaultValue="seasonal" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="seasonal" className="flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Saison</span>
-            </TabsTrigger>
-            <TabsTrigger value="global" className="flex items-center gap-1">
-              <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">Global</span>
-            </TabsTrigger>
-            <TabsTrigger value="friends" className="flex items-center gap-1">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Amis</span>
-            </TabsTrigger>
-          </TabsList>
-
           {userRank && (
-            <div className="text-center mt-2">
+            <div className="text-center mb-4">
               <Badge variant="secondary">
                 Votre rang: #{userRank}
               </Badge>
@@ -729,7 +714,7 @@ const Leaderboard = () => {
           )}
 
           <TabsContent value="seasonal" className="mt-4">
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold flex items-center justify-center gap-2 text-primary">
                   <TrendingUp className="h-6 w-6" />
@@ -754,7 +739,73 @@ const Leaderboard = () => {
                   </Badge>
                 </div>
               </div>
-              <LeaderboardList data={seasonalLeaderboard} showSeasonal />
+              
+              {seasonalLeaderboard.length > 0 && (
+                <PodiumDisplay top3={seasonalLeaderboard.slice(0, 3)} showSeasonal />
+              )}
+              
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="seasonal" className="flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Saison</span>
+                </TabsTrigger>
+                <TabsTrigger value="global" className="flex items-center gap-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="hidden sm:inline">Global</span>
+                </TabsTrigger>
+                <TabsTrigger value="friends" className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Amis</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <div className="space-y-2">
+                {seasonalLeaderboard.slice(3).map((item, index) => (
+                  <Card 
+                    key={item.user_id} 
+                    className={`
+                      ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
+                      hover-lift hover-glow btn-interactive animate-fade-in
+                    `}
+                    style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+                  >
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 flex justify-center">
+                          {getRankIcon(item.rank)}
+                        </div>
+                        <Avatar 
+                          className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
+                          onClick={() => navigateToProfile(item.user_id)}
+                        >
+                          <AvatarImage src={item.profile?.avatar_url} />
+                          <AvatarFallback className="text-lg font-bold">
+                            {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">
+                              {item.profile?.username || item.profile?.display_name}
+                            </p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            @{item.profile?.username}
+                          </p>
+                          <div className="my-1">
+                            {getRankBadge(item.user_rank)}
+                          </div>
+                          <div className="mt-1">
+                            <p className="font-bold text-primary">
+                              {item.seasonal_points} pts
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
               <PaginationControls
                 currentPage={seasonalPage}
                 totalItems={totalSeasonalUsers}
@@ -764,12 +815,86 @@ const Leaderboard = () => {
           </TabsContent>
 
           <TabsContent value="global" className="mt-4">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Classement global
-              </h2>
-              <LeaderboardList data={leaderboard} />
+            <div className="flex flex-col gap-4">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold flex items-center justify-center gap-2 text-primary">
+                  <Globe className="h-6 w-6" />
+                  Classement Global
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Tous les points accumulés depuis le début
+                </p>
+              </div>
+              
+              {leaderboard.length > 0 && (
+                <PodiumDisplay top3={leaderboard.slice(0, 3)} />
+              )}
+              
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="seasonal" className="flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Saison</span>
+                </TabsTrigger>
+                <TabsTrigger value="global" className="flex items-center gap-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="hidden sm:inline">Global</span>
+                </TabsTrigger>
+                <TabsTrigger value="friends" className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Amis</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <div className="space-y-2">
+                {leaderboard.slice(3).map((item, index) => (
+                  <Card 
+                    key={item.user_id} 
+                    className={`
+                      ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
+                      hover-lift hover-glow btn-interactive animate-fade-in
+                    `}
+                    style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+                  >
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 flex justify-center">
+                          {getRankIcon(item.rank)}
+                        </div>
+                        <Avatar 
+                          className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
+                          onClick={() => navigateToProfile(item.user_id)}
+                        >
+                          <AvatarImage src={item.profile?.avatar_url} />
+                          <AvatarFallback className="text-lg font-bold">
+                            {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">
+                              {item.profile?.username || item.profile?.display_name}
+                            </p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            @{item.profile?.username}
+                          </p>
+                          <div className="my-1">
+                            {getRankBadge(item.user_rank)}
+                          </div>
+                          <div className="mt-1">
+                            <p className="font-bold text-primary">
+                              {item.total_points} pts
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              +{item.seasonal_points} cette saison
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
               <PaginationControls
                 currentPage={globalPage}
                 totalItems={totalGlobalUsers}
@@ -780,14 +905,85 @@ const Leaderboard = () => {
 
 
           <TabsContent value="friends" className="mt-4">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Vos amis
-              </h2>
+            <div className="flex flex-col gap-4">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold flex items-center justify-center gap-2 text-primary">
+                  <Users className="h-6 w-6" />
+                  Classement des Amis
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Comparez vos performances avec vos amis
+                </p>
+              </div>
               {friendsLeaderboard.length > 0 ? (
                 <>
-                  <LeaderboardList data={friendsLeaderboard} />
+                  <PodiumDisplay top3={friendsLeaderboard.slice(0, 3)} />
+                  
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="seasonal" className="flex items-center gap-1">
+                      <TrendingUp className="h-4 w-4" />
+                      <span className="hidden sm:inline">Saison</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="global" className="flex items-center gap-1">
+                      <Globe className="h-4 w-4" />
+                      <span className="hidden sm:inline">Global</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="friends" className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      <span className="hidden sm:inline">Amis</span>
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <div className="space-y-2">
+                    {friendsLeaderboard.slice(3).map((item, index) => (
+                      <Card 
+                        key={item.user_id} 
+                        className={`
+                          ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
+                          hover-lift hover-glow btn-interactive animate-fade-in
+                        `}
+                        style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+                      >
+                        <CardContent className="flex items-center justify-between p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 flex justify-center">
+                              {getRankIcon(item.rank)}
+                            </div>
+                            <Avatar 
+                              className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
+                              onClick={() => navigateToProfile(item.user_id)}
+                            >
+                              <AvatarImage src={item.profile?.avatar_url} />
+                              <AvatarFallback className="text-lg font-bold">
+                                {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">
+                                  {item.profile?.username || item.profile?.display_name}
+                                </p>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                @{item.profile?.username}
+                              </p>
+                              <div className="my-1">
+                                {getRankBadge(item.user_rank)}
+                              </div>
+                              <div className="mt-1">
+                                <p className="font-bold text-primary">
+                                  {item.total_points} pts
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  +{item.seasonal_points} cette saison
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                   <PaginationControls
                     currentPage={friendsPage}
                     totalItems={totalFriendsUsers}
