@@ -717,7 +717,8 @@ export default function MySessions() {
       <div className="w-full h-6 bg-background"></div>
       <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
         {/* Fixed Header Only */}
-        <div className="flex-shrink-0 bg-background z-10 space-y-4 mb-4 pb-4">
+        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
+          <div className="container mx-auto px-4 pt-4">
           <div className="flex items-center justify-center">
             <Button
               onClick={() => {
@@ -753,10 +754,11 @@ export default function MySessions() {
               </Button>
             </div>
           </div>
+          </div>
         </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto" style={{height: 'calc(100vh - 12rem)'}}>
+      <div className="flex-1 overflow-y-auto pt-32" style={{height: 'calc(100vh - 12rem)'}}>
         {currentView === 'sessions' ? (
           // Sessions View
           loading ? (
