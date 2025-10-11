@@ -742,16 +742,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     </Button>
                   )}
                   
-                  {/* Test Android Button */}
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.open('/android-test', '_blank')}
-                  >
-                    <Bug className="h-4 w-4 mr-2" />
-                    Test Android
-                  </Button>
-                  
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
