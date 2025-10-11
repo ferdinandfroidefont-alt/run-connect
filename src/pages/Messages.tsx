@@ -1308,7 +1308,8 @@ const Messages = () => {
                 <div className="grid grid-cols-4 gap-3">
                   <Button
                     variant="outline"
-                    className="flex flex-col items-center gap-2 h-16"
+                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
+                    style={{ transform: 'translateZ(0)' }}
                     onClick={() => {
                       setSearchActiveTab('profiles');
                       setShowUserSearch(true);
@@ -1320,7 +1321,8 @@ const Messages = () => {
                   
                   <Button
                     variant="outline"
-                    className="flex flex-col items-center gap-2 h-16"
+                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
+                    style={{ transform: 'translateZ(0)' }}
                     onClick={() => {
                       setSearchActiveTab('clubs');
                       setShowUserSearch(true);
@@ -1332,7 +1334,8 @@ const Messages = () => {
                   
                   <Button
                     variant="outline"
-                    className="flex flex-col items-center gap-2 h-16"
+                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
+                    style={{ transform: 'translateZ(0)' }}
                     onClick={() => {
                       setSearchActiveTab('strava');
                       setShowUserSearch(true);
@@ -1346,7 +1349,8 @@ const Messages = () => {
 
                   <Button
                     variant="outline"
-                    className="flex flex-col items-center gap-2 h-16"
+                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
+                    style={{ transform: 'translateZ(0)' }}
                     onClick={() => {
                       // Open dialog immediately for better UX
                       setShowContactsDialog(true);

@@ -7,6 +7,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { SimplePermissionsTest } from './SimplePermissionsTest';
+
+// Ripple effect component for instant feedback
+const RippleEffect = ({ x, y }: { x: number; y: number }) => (
+  <span
+    className="absolute rounded-full bg-white/30 animate-ping"
+    style={{
+      left: x,
+      top: y,
+      width: '20px',
+      height: '20px',
+      transform: 'translate(-50%, -50%)',
+      pointerEvents: 'none',
+    }}
+  />
+);
 const navItems = [{
   path: '/',
   emoji: '🗺️',
@@ -29,9 +44,29 @@ export const BottomNavigation = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
   const {
     openCreateSession
   } = useAppContext();
+
+  // Instant navigation with ripple effect
+  const handleNavigation = (path: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    // Create ripple effect at click position
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const rippleId = Date.now();
+    
+    setRipples(prev => [...prev, { id: rippleId, x, y }]);
+    
+    // Navigate immediately
+    navigate(path);
+    
+    // Remove ripple after animation
+    setTimeout(() => {
+      setRipples(prev => prev.filter(r => r.id !== rippleId));
+    }, 600);
+  };
 
   // Compter le nombre total de messages non lus
   useEffect(() => {
@@ -119,13 +154,15 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={() => navigate(path)} 
+                  onClick={(e) => handleNavigation(path, e)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 h-full", 
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 h-full overflow-hidden",
+                    "will-change-transform transform-gpu active:scale-95",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
+                  style={{ transform: 'translateZ(0)' }}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
@@ -141,13 +178,15 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={() => navigate(path)} 
+                  onClick={(e) => handleNavigation(path, e)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 h-full", 
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 h-full overflow-hidden",
+                    "will-change-transform transform-gpu active:scale-95",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
+                  style={{ transform: 'translateZ(0)' }}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
@@ -183,14 +222,21 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={() => navigate(path)} 
+                  onClick={(e) => handleNavigation(path, e)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 relative h-full", 
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 relative h-full overflow-hidden",
+                    "will-change-transform transform-gpu active:scale-95", // Hardware acceleration + instant feedback
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
+                  style={{ transform: 'translateZ(0)' }} // Force hardware acceleration
                 >
+                  {/* Ripple effects */}
+                  {ripples.map(ripple => (
+                    <RippleEffect key={ripple.id} x={ripple.x} y={ripple.y} />
+                  ))}
+                  
                   <div className="relative mt-1">
                     <span className="text-xl">{emoji}</span>
                     {isMessages && totalUnreadCount > 0 && (
@@ -215,13 +261,15 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={() => navigate(path)} 
+                  onClick={(e) => handleNavigation(path, e)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 h-full", 
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 h-full overflow-hidden",
+                    "will-change-transform transform-gpu active:scale-95",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
+                  style={{ transform: 'translateZ(0)' }}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
