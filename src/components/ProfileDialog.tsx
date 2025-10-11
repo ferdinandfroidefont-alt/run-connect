@@ -16,6 +16,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { UserActivityChart } from "@/components/UserActivityChart";
 
 interface Profile {
   username: string;
@@ -484,6 +485,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Activity Chart */}
+              {user?.id && (
+                <UserActivityChart 
+                  userId={user.id} 
+                  username={profile?.username}
+                />
+              )}
 
               {/* Informations personnelles */}
               <Card>
