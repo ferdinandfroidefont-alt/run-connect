@@ -289,7 +289,7 @@ export const FollowDialog = ({
                 </div>
                 <div>
                   <p className="font-medium">
-                    {userItem.username}
+                    @{userItem.username}
                   </p>
                 </div>
                </div>

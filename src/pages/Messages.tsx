@@ -1453,13 +1453,13 @@ const Messages = () => {
                           markMessagesAsReadOnOpen(conversation.id);
                         }}
                      >
-                       <div className="flex items-center justify-between">
-                         <p className="font-medium text-sm truncate">
-                           {conversation.is_group 
-                             ? conversation.group_name 
-                             : (conversation.other_participant?.username || "Utilisateur inconnu")
-                           }
-                         </p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-sm truncate">
+                          {conversation.is_group 
+                            ? conversation.group_name 
+                            : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
+                          }
+                        </p>
                          <div className="flex items-center gap-2">
                            {conversation.unread_count > 0 && (
                              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
@@ -1471,12 +1471,12 @@ const Messages = () => {
                            </span>
                          </div>
                       </div>
-                       <p className="text-xs text-muted-foreground">
-                         {conversation.is_group 
-                           ? `${conversation.group_members?.length || 0} membres`
-                           : (conversation.other_participant?.username || "utilisateur")
-                         }
-                       </p>
+                      <p className="text-xs text-muted-foreground">
+                        {conversation.is_group 
+                          ? `${conversation.group_members?.length || 0} membres`
+                          : `@${conversation.other_participant?.username || "utilisateur"}`
+                        }
+                      </p>
                     </div>
                   </div>
                 ))}
