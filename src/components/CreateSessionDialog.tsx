@@ -59,6 +59,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     distance_km: "",
     pace_general: "", // Allure générale pour footing/sortie longue
     pace_unit: "speed", // "speed" (km/h) ou "power" (watts) pour vélo
+    interval_unit: "distance", // "distance" (km) ou "time" (minutes) pour fractionné
     interval_distance: "", // Distance de chaque fraction
     interval_pace: "", // Allure de chaque fraction
     interval_count: "", // Nombre de fractions
@@ -502,6 +503,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         distance_km: "",
         pace_general: "",
         pace_unit: "speed",
+        interval_unit: "distance",
         interval_distance: "",
         interval_pace: "",
         interval_count: "",
@@ -801,16 +803,36 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                 </div>
               )}
               
+              <div>
+                <Label>Unité de fraction</Label>
+                <Select
+                  value={formData.interval_unit}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, interval_unit: value, interval_distance: "" }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="distance">Distance (km)</SelectItem>
+                    <SelectItem value="time">Temps (minutes)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="interval_distance">Distance par fraction (km)</Label>
+                  <Label htmlFor="interval_distance">
+                    {formData.interval_unit === "time" ? "Temps par fraction (min)" : "Distance par fraction (km)"}
+                  </Label>
                   <Input
                     id="interval_distance"
                     type="number"
-                    step="0.1"
+                    step={formData.interval_unit === "time" ? "1" : "0.1"}
                     value={formData.interval_distance}
                     onChange={(e) => setFormData(prev => ({ ...prev, interval_distance: e.target.value }))}
-                    placeholder="ex: 1.0"
+                    placeholder={formData.interval_unit === "time" ? "ex: 5" : "ex: 1.0"}
                     min="0"
                   />
                 </div>
