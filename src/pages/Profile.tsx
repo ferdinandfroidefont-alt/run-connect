@@ -23,6 +23,7 @@ import { StravaConnect } from "@/components/StravaConnect";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 import { SimpleAABDiagnostic } from "@/components/SimpleAABDiagnostic";
+import { UserActivityChart } from "@/components/UserActivityChart";
 
 interface Profile {
   username: string;
@@ -955,6 +956,14 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Activity Chart Section - Visible to all */}
+        {(viewingUserId || user?.id) && (
+          <UserActivityChart 
+            userId={viewingUserId || user?.id || ''} 
+            username={profile?.username}
+          />
         )}
 
         {/* Common Clubs Section - For other users */}
