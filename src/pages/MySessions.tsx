@@ -732,7 +732,7 @@ export default function MySessions() {
               Créer un itinéraire
             </Button>
           </div>
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center mt-3">
             <div className="flex gap-2">
               <Button
                 onClick={() => setCurrentView('sessions')}
