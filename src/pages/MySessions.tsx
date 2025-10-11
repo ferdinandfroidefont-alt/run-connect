@@ -449,11 +449,12 @@ export default function MySessions() {
                 <ScrollArea className="max-h-64">
                   <div className="space-y-2 pr-4">
                     {participants.map((participant) => (
-                      <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                        <Avatar 
-                          className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => navigateToProfile(participant.user_id)}
-                        >
+                      <div 
+                        key={participant.id} 
+                        className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => navigateToProfile(participant.user_id)}
+                      >
+                        <Avatar className="w-8 h-8">
                           <AvatarImage 
                             src={participant.profiles.avatar_url || undefined} 
                             alt={participant.profiles.username || participant.profiles.display_name} 
