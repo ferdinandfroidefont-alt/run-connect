@@ -20,6 +20,7 @@ import { CreateClubDialog } from "@/components/CreateClubDialog";
 import { EditClubDialog } from "@/components/EditClubDialog";
 import { ContactsDialog } from "@/components/ContactsDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { 
   MessageCircle, 
   Users, 
@@ -40,7 +41,10 @@ import {
   Crown,
   Trash2,
   User,
-  Phone
+  Phone,
+  Mic,
+  Square,
+  X
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -131,6 +135,7 @@ const Messages = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { isRecording, recordingDuration, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -567,6 +572,96 @@ const Messages = () => {
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  // Upload voice message
+  const uploadVoiceMessage = async (audioBlob: Blob, duration: number) => {
+    if (!user || !selectedConversation) return;
+
+    console.log('🎤 Upload message vocal:', audioBlob.size, 'bytes, durée:', duration, 's');
+
+    const fileName = `voice-${Date.now()}-${Math.random().toString(36).substring(2)}.webm`;
+    const filePath = `${user.id}/${fileName}`;
+
+    try {
+      setLoading(true);
+      
+      // Upload to message-files bucket
+      const { error: uploadError } = await supabase.storage
+        .from('message-files')
+        .upload(filePath, audioBlob, {
+          contentType: audioBlob.type || 'audio/webm'
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('message-files')
+        .getPublicUrl(filePath);
+
+      console.log('🎤 Message vocal uploadé:', publicUrl);
+
+      // Send message with voice attachment
+      const { error } = await supabase
+        .from('messages')
+        .insert([{
+          conversation_id: selectedConversation.id,
+          sender_id: user.id,
+          content: `Message vocal (${duration}s)`,
+          file_url: publicUrl,
+          file_type: 'audio/webm',
+          file_name: fileName,
+          message_type: 'voice'
+        }]);
+
+      if (error) {
+        console.error('Message insert error:', error);
+        throw error;
+      }
+
+      // Update conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', selectedConversation.id);
+
+      loadMessages(selectedConversation.id);
+      loadConversations();
+      toast({ title: "Succès", description: "Message vocal envoyé" });
+    } catch (error: any) {
+      console.error('🎤 Upload failed:', error);
+      toast({ 
+        title: "Erreur", 
+        description: error.message || "Impossible d'envoyer le message vocal", 
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle voice recording
+  const handleVoiceRecording = async () => {
+    if (isRecording) {
+      // Stop recording
+      const result = await stopRecording();
+      if (result) {
+        await uploadVoiceMessage(result.audioBlob, result.duration);
+      }
+    } else {
+      // Start recording
+      const success = await startRecording();
+      if (!success) {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'accéder au microphone. Vérifiez les permissions.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -1119,7 +1214,17 @@ const Messages = () => {
                           {/* File attachment */}
                           {message.file_url && (
                             <div className="mb-2">
-                              {message.file_type?.startsWith('image/') ? (
+                              {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
+                                <div className="flex items-center gap-2">
+                                  <Mic className="h-4 w-4" />
+                                  <audio 
+                                    controls 
+                                    src={message.file_url}
+                                    className="max-w-full"
+                                    style={{ height: '32px' }}
+                                  />
+                                </div>
+                              ) : message.file_type?.startsWith('image/') ? (
                                 <img 
                                   src={message.file_url} 
                                   alt={message.file_name || "Image"}
@@ -1208,51 +1313,96 @@ const Messages = () => {
           {/* Message input - Fixed at bottom */}
           <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 z-50">
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="px-3"
-                disabled={loading}
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (loading) return;
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'image/*,video/*';
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) uploadFile(file);
-                  };
-                  input.click();
-                }}
-                className="px-3"
-                disabled={loading}
-              >
-                <Image className="h-4 w-4" />
-              </Button>
-              <Input
-                placeholder="Tapez votre message..."
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  handleTyping();
-                }}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                className="flex-1"
-              />
-              <Button
-                onClick={sendMessage}
-                disabled={loading || !newMessage.trim()}
-                size="sm"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              {!isRecording && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3"
+                    disabled={loading}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (loading) return;
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*,video/*';
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) uploadFile(file);
+                      };
+                      input.click();
+                    }}
+                    className="px-3"
+                    disabled={loading}
+                  >
+                    <Image className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    placeholder="Tapez votre message..."
+                    value={newMessage}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value);
+                      handleTyping();
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={sendMessage}
+                    disabled={loading || !newMessage.trim()}
+                    size="sm"
+                    className="px-3"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleVoiceRecording}
+                    disabled={loading}
+                    size="sm"
+                    variant="outline"
+                    className="px-3"
+                  >
+                    <Mic className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              
+              {isRecording && (
+                <>
+                  <div className="flex-1 flex items-center gap-3 bg-red-500/10 border border-red-500 rounded-lg px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                      <span className="text-sm font-medium text-red-500">
+                        {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted-foreground flex-1">
+                      Enregistrement en cours...
+                    </span>
+                  </div>
+                  <Button
+                    onClick={cancelRecording}
+                    size="sm"
+                    variant="outline"
+                    className="px-3"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleVoiceRecording}
+                    size="sm"
+                    className="px-3 bg-red-500 hover:bg-red-600"
+                  >
+                    <Square className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
              </div>
             
             {/* Hidden file input */}

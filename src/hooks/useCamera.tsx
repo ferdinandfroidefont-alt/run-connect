@@ -151,51 +151,54 @@ export const useCamera = () => {
 
   const selectFromGallery = async (): Promise<File | null> => {
     setLoading(true);
-    console.log('🖼️ DÉBUT SÉLECTION GALERIE OPTIMISÉE...');
+    console.log('🖼️ DÉBUT SÉLECTION GALERIE ROBUSTE...');
     
     try {
       const isNative = await nativeManager.ensureNativeStatus();
-      const device = await getDeviceStrategy();
-      
       console.log('🖼️ Mode:', isNative ? 'NATIF' : 'WEB');
-      console.log('📱 Appareil:', device?.manufacturer, device?.model);
-      console.log('🤖 Android:', device?.osVersion || 'Unknown');
       
       if (!isNative) {
+        // Mode web - utiliser input file
+        console.log('🌐 Mode web - input file');
         return await selectFromGalleryWeb();
       }
       
-      // STRATÉGIE PAR VERSION ANDROID
-      const androidVersion = device?.osVersion ? parseInt(device.osVersion) : 0;
-      
-      // ANDROID 13+ : Photo Picker natif prioritaire
-      if (androidVersion >= 33) {
-        console.log('🚀 Android 13+ - Photo Picker API');
-        const result = await selectFromGalleryVersionSpecific('android13');
-        if (result) return result;
+      // STRATÉGIE 1: Essayer Capacitor Camera en priorité (le plus fiable)
+      console.log('🔄 Tentative Capacitor Camera standard...');
+      try {
+        // Demander les permissions
+        const permissions = await Camera.requestPermissions();
+        console.log('📱 Permissions:', permissions);
+        
+        // Vérifier si on a l'autorisation (granted ou limited pour iOS 14+)
+        if (permissions.photos === 'granted' || permissions.photos === 'limited') {
+          const result = await Camera.getPhoto({
+            quality: 90,
+            allowEditing: false,
+            resultType: CameraResultType.DataUrl,
+            source: CameraSource.Photos,
+            // Options supplémentaires pour Android
+            promptLabelHeader: 'Sélectionner une photo',
+            promptLabelCancel: 'Annuler',
+            promptLabelPhoto: 'Depuis la galerie',
+          });
+          
+          if (result.dataUrl) {
+            const response = await fetch(result.dataUrl);
+            const blob = await response.blob();
+            const file = new File([blob], 'gallery-photo.jpg', { type: 'image/jpeg' });
+            console.log('✅ Photo sélectionnée via Capacitor:', file.size, 'bytes');
+            return file;
+          }
+        } else {
+          console.log('❌ Permission refusée ou non accordée:', permissions.photos);
+        }
+      } catch (capacitorError) {
+        console.log('❌ Capacitor Camera échoué:', capacitorError);
       }
       
-      // ANDROID 10-12 : Storage Access Framework
-      if (androidVersion >= 29 && androidVersion <= 32) {
-        console.log('🔐 Android 10-12 - Storage Access Framework');
-        const result = await selectFromGalleryVersionSpecific('android10to12');
-        if (result) return result;
-      }
-      
-      // ANDROID 6-9 : Stratégies fabricant
-      if (androidVersion >= 23 && androidVersion <= 28) {
-        console.log('🔧 Android 6-9 - Stratégies fabricant');
-        const strategy = detectManufacturerStrategy(device);
-        const result = await selectFromGalleryVersionSpecific('android6to9', strategy);
-        if (result) return result;
-      }
-      
-      // FALLBACK PROGRESSIF
-      console.log('🔄 Fallback Capacitor standard...');
-      const result = await selectFromGalleryCapacitor();
-      if (result) return result;
-      
-      console.log('🌐 Fallback web final...');
+      // STRATÉGIE 2: Fallback sur le sélecteur web
+      console.log('🌐 Fallback sélecteur web...');
       return await selectFromGalleryWeb();
       
     } catch (error) {
