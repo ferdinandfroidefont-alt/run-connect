@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.runconnect",
+    "sha256_cert_fingerprints": [
+      "E2:00:38:ED:43:D9:D3:D4:1A:B1:EA:80:7E:FB:60:2D:B0:3C:C9:BC:02:A2:5D:AC:7D:10:66:0B:8E:90:CC:99"
+    ]
+  }
+}]

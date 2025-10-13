@@ -98,7 +98,7 @@ const Auth = () => {
         const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'app.runconnect://auth/callback',
+            redirectTo: 'https://app.runconnect/auth/callback',
             skipBrowserRedirect: false,
             queryParams: {
               access_type: 'offline',
@@ -128,7 +128,7 @@ const Auth = () => {
           const url = event.url;
           console.log('🔗 Deep link capturé:', url);
           
-          if (url.startsWith('app.runconnect://auth/callback')) {
+          if (url.includes('/auth/callback')) {
             console.log('✅ Deep link OAuth détecté');
             
             // Fermer le navigateur Custom Tab
@@ -192,7 +192,7 @@ const Auth = () => {
         const { data: authData } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'app.runconnect://auth/callback',
+            redirectTo: 'https://app.runconnect/auth/callback',
             skipBrowserRedirect: true,
             queryParams: {
               access_type: 'offline',
