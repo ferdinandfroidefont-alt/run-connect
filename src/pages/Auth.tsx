@@ -10,6 +10,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
 import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -119,104 +120,112 @@ const Auth = () => {
         return;
       }
       
-      // OAuth Google pour Android
+      // OAuth Google pour Android avec App Links
       if (isNative && platform === 'android') {
-        console.log('🔥 OAuth Google natif Android avec Custom Tab');
+        console.log('🔥 OAuth Google natif Android avec App Links');
         
-        // ✅ 1. Setup du listener pour capturer le deep link de retour
-        const handleDeepLink = async (event: any) => {
-          const url = event.url;
-          console.log('🔗 Deep link capturé:', url);
-          
-          if (url.includes('/auth/callback')) {
-            console.log('✅ Deep link OAuth détecté');
+        try {
+          // ✅ 1. Écouter le retour via App.addListener (API Capacitor officielle)
+          const urlListener = await App.addListener('appUrlOpen', async (data: { url: string }) => {
+            console.log('📱 Deep Link intercepté par Android:', data.url);
             
-            // Fermer le navigateur Custom Tab
-            await Browser.close();
-            
-            // Extraire les tokens depuis l'URL
-            const urlObj = new URL(url);
-            const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
-            const refreshToken = hashParams.get('refresh_token');
-            
-            if (accessToken && refreshToken) {
-              console.log('✅ Tokens OAuth reçus');
+            if (data.url.includes('/auth/callback')) {
+              console.log('✅ Callback OAuth capturé');
               
-              // Établir la session Supabase
-              const { error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken
-              });
+              // Nettoyer le listener
+              await urlListener.remove();
               
-              if (!error) {
-                console.log('✅ Session établie avec succès');
+              // Fermer le navigateur Custom Tab
+              try {
+                await Browser.close();
+              } catch (e) {
+                console.log('Browser déjà fermé');
+              }
+              
+              // Extraire les tokens depuis l'URL
+              const urlObj = new URL(data.url);
+              const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+              const accessToken = hashParams.get('access_token');
+              const refreshToken = hashParams.get('refresh_token');
+              
+              if (accessToken && refreshToken) {
+                console.log('✅ Tokens OAuth reçus');
                 
-                // Vérifier si c'est un nouvel utilisateur
-                const { data: session } = await supabase.auth.getSession();
-                if (session?.session?.user) {
-                  const { data: existingProfile } = await supabase
-                    .from('profiles')
-                    .select('id, username')
-                    .eq('user_id', session.session.user.id)
-                    .maybeSingle();
-                  
-                  if (!existingProfile) {
-                    // Nouveau utilisateur - afficher le setup de profil
-                    setNewUserId(session.session.user.id);
-                    setShowProfileSetup(true);
-                  } else {
-                    // Utilisateur existant - rediriger
-                    window.location.href = '/';
-                  }
-                }
-              } else {
-                console.error('❌ Erreur établissement session:', error);
-                toast({
-                  title: "Erreur",
-                  description: "Impossible d'établir la session. Réessayez.",
-                  variant: "destructive",
+                // Établir la session Supabase
+                const { error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken
                 });
+                
+                if (!error) {
+                  console.log('✅ Session établie avec succès');
+                  
+                  // Vérifier si c'est un nouvel utilisateur
+                  const { data: session } = await supabase.auth.getSession();
+                  if (session?.session?.user) {
+                    const { data: existingProfile } = await supabase
+                      .from('profiles')
+                      .select('id, username')
+                      .eq('user_id', session.session.user.id)
+                      .maybeSingle();
+                    
+                    if (!existingProfile) {
+                      setNewUserId(session.session.user.id);
+                      setShowProfileSetup(true);
+                    } else {
+                      window.location.href = '/';
+                    }
+                  }
+                } else {
+                  console.error('❌ Erreur établissement session:', error);
+                  toast({
+                    title: "Erreur",
+                    description: "Impossible d'établir la session. Réessayez.",
+                    variant: "destructive",
+                  });
+                }
               }
             }
-            
-            // Retirer le listener
-            window.removeEventListener('capacitorDeepLink', handleDeepLink);
-          }
-        };
-        
-        // ✅ 2. Enregistrer le listener AVANT d'ouvrir le navigateur
-        window.addEventListener('capacitorDeepLink', handleDeepLink);
-        
-        // ✅ 3. Générer l'URL OAuth avec le bon redirectTo
-        const { data: authData } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: 'https://run-connect.lovable.app/auth/callback',
-            skipBrowserRedirect: true,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          }
-        });
-        
-        if (authData?.url) {
-          console.log('🔥 Ouverture Custom Tab Chrome pour OAuth Google');
-          console.log('🔗 URL:', authData.url);
-          
-          // ✅ 4. Ouvrir le Custom Tab Chrome (navigateur système)
-          await Browser.open({ 
-            url: authData.url,
-            presentationStyle: 'popover'
           });
           
-          console.log('✅ Custom Tab ouvert, attente du deep link de retour...');
-        } else {
-          console.error('❌ Pas d\'URL OAuth générée');
+          // ✅ 2. Générer l'URL OAuth
+          const { data: authData } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: 'https://run-connect.lovable.app/auth/callback',
+              skipBrowserRedirect: true,
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent'
+              }
+            }
+          });
+          
+          if (authData?.url) {
+            console.log('🔗 Ouverture Custom Tab pour OAuth');
+            console.log('URL:', authData.url);
+            
+            // ✅ 3. Ouvrir dans Custom Tab Chrome
+            await Browser.open({ 
+              url: authData.url,
+              presentationStyle: 'popover'
+            });
+            
+            console.log('✅ Custom Tab ouvert - Android interceptera le callback via App Links');
+          } else {
+            console.error('❌ Pas d\'URL OAuth générée');
+            await urlListener.remove();
+            toast({
+              title: "Erreur",
+              description: "Impossible de générer l'URL d'authentification",
+              variant: "destructive",
+            });
+          }
+        } catch (error: any) {
+          console.error('❌ Erreur OAuth Android:', error);
           toast({
             title: "Erreur",
-            description: "Impossible de générer l'URL d'authentification",
+            description: error.message || "Impossible de se connecter avec Google",
             variant: "destructive",
           });
         }
