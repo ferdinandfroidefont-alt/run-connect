@@ -98,7 +98,7 @@ const Auth = () => {
         const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'https://app.runconnect/auth/callback',
+            redirectTo: 'https://run-connect.lovable.app/auth/callback',
             skipBrowserRedirect: false,
             queryParams: {
               access_type: 'offline',
@@ -192,7 +192,7 @@ const Auth = () => {
         const { data: authData } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'https://app.runconnect/auth/callback',
+            redirectTo: 'https://run-connect.lovable.app/auth/callback',
             skipBrowserRedirect: true,
             queryParams: {
               access_type: 'offline',
