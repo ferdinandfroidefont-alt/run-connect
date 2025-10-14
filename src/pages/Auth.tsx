@@ -9,7 +9,7 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
-import { InAppBrowser, DefaultWebViewOptions } from '@capacitor/inappbrowser';
+import { InAppBrowser } from '@capgo/inappbrowser';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -145,11 +145,11 @@ const Auth = () => {
         }
         
         // Listener pour détecter la navigation vers le callback
-        const handle = await InAppBrowser.addListener('browserPageNavigationCompleted', async (data) => {
-          console.log('🔗 Navigation complétée vers:', data.url);
+        const handle = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
+          console.log('🔗 URL changée:', event.url);
           
-          if (data.url.includes('/auth/callback')) {
-            const urlObj = new URL(data.url);
+          if (event.url.includes('/auth/callback')) {
+            const urlObj = new URL(event.url);
             const hashParams = new URLSearchParams(urlObj.hash.substring(1));
             const accessToken = hashParams.get('access_token');
             const refreshToken = hashParams.get('refresh_token');
@@ -190,14 +190,11 @@ const Auth = () => {
           }
         });
         
-        // Ouvrir dans une WebView intégrée à l'app
-        await InAppBrowser.openInWebView({
+        // Ouvrir dans une WebView pure in-app (pas Chrome)
+        await InAppBrowser.openWebView({
           url: authData.url,
-          options: {
-            ...DefaultWebViewOptions,
-            clearCache: true,
-            clearSessionCache: true
-          }
+          title: 'Se connecter avec Google',
+          isPresentAfterPageLoad: false
         });
         
         return;
