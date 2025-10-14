@@ -9,8 +9,7 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
-import { Browser } from '@capacitor/browser';
-import { App } from '@capacitor/app';
+import { InAppBrowser, DefaultWebViewOptions } from '@capacitor/inappbrowser';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -120,9 +119,9 @@ const Auth = () => {
         return;
       }
       
-      // OAuth Google pour Android avec Custom Tabs
+      // OAuth Google pour Android avec InAppBrowser WebView
       if (isNative && platform === 'android') {
-        console.log('🔥 OAuth Google natif Android avec Custom Tab');
+        console.log('🔥 OAuth Google natif Android avec InAppBrowser WebView (in-app)');
         
         const { data: authData } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -145,12 +144,12 @@ const Auth = () => {
           return;
         }
         
-        // Listener pour le deep link de retour
-        const listener = await App.addListener('appUrlOpen', async ({ url }) => {
-          console.log('🔗 Deep link reçu:', url);
+        // Listener pour détecter la navigation vers le callback
+        const handle = await InAppBrowser.addListener('browserPageNavigationCompleted', async (data) => {
+          console.log('🔗 Navigation complétée vers:', data.url);
           
-          if (url.includes('/auth/callback')) {
-            const urlObj = new URL(url);
+          if (data.url.includes('/auth/callback')) {
+            const urlObj = new URL(data.url);
             const hashParams = new URLSearchParams(urlObj.hash.substring(1));
             const accessToken = hashParams.get('access_token');
             const refreshToken = hashParams.get('refresh_token');
@@ -158,6 +157,10 @@ const Auth = () => {
             if (accessToken && refreshToken) {
               console.log('✅ Tokens OAuth reçus');
               
+              // Fermer le browser in-app
+              await InAppBrowser.close();
+              
+              // Établir la session
               const { error } = await supabase.auth.setSession({
                 access_token: accessToken,
                 refresh_token: refreshToken
@@ -180,18 +183,21 @@ const Auth = () => {
                   }
                 }
               }
+              
+              // Supprimer le listener
+              handle.remove();
             }
-            
-            // Supprimer le listener
-            listener.remove();
           }
         });
         
-        // Ouvrir Custom Tab Android (reste dans l'app)
-        await Browser.open({ 
+        // Ouvrir dans une WebView intégrée à l'app
+        await InAppBrowser.openInWebView({
           url: authData.url,
-          windowName: '_blank',
-          toolbarColor: '#ffffff'
+          options: {
+            ...DefaultWebViewOptions,
+            clearCache: true,
+            clearSessionCache: true
+          }
         });
         
         return;
