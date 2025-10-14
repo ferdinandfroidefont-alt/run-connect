@@ -9,7 +9,7 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
-import { Browser } from '@capacitor/browser';
+import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser';
 import { App } from '@capacitor/app';
 
 const Auth = () => {
@@ -120,36 +120,62 @@ const Auth = () => {
         return;
       }
       
-      // OAuth Google pour Android avec App Links
+      // OAuth Google pour Android avec InAppBrowser
       if (isNative && platform === 'android') {
-        console.log('🔥 OAuth Google natif Android avec App Links');
+        console.log('🔥 OAuth Google natif Android avec InAppBrowser');
         
         try {
-          // ✅ 1. Écouter le retour via App.addListener (API Capacitor officielle)
-          const urlListener = await App.addListener('appUrlOpen', async (data: { url: string }) => {
-            console.log('📱 Deep Link intercepté par Android:', data.url);
-            
-            if (data.url.includes('/auth/callback')) {
-              console.log('✅ Callback OAuth capturé');
-              
-              // Nettoyer le listener
-              await urlListener.remove();
-              
-              // Fermer le navigateur Custom Tab
-              try {
-                await Browser.close();
-              } catch (e) {
-                console.log('Browser déjà fermé');
+          // ✅ 1. Générer l'URL OAuth
+          const { data: authData } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: 'https://run-connect.lovable.app/auth/callback',
+              skipBrowserRedirect: true,
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent'
               }
+            }
+          });
+          
+          if (!authData?.url) {
+            console.error('❌ Pas d\'URL OAuth générée');
+            toast({
+              title: "Erreur",
+              description: "Impossible de générer l'URL d'authentification",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          console.log('🔗 Ouverture InAppBrowser pour OAuth');
+          
+          // ✅ 2. Ouvrir InAppBrowser DANS l'app
+          const browser = InAppBrowser.create(
+            authData.url,
+            '_blank',
+            'location=yes,toolbar=yes,clearcache=yes,clearsessioncache=yes,closebuttoncaption=Fermer'
+          );
+          
+          // ✅ 3. Écouter le changement d'URL dans l'InAppBrowser
+          browser.on('loadstop').subscribe(async (event) => {
+            console.log('🔍 InAppBrowser URL:', event.url);
+            
+            // Vérifier si on est sur la page de callback
+            if (event.url.includes('/auth/callback')) {
+              console.log('✅ Callback OAuth détecté');
               
               // Extraire les tokens depuis l'URL
-              const urlObj = new URL(data.url);
+              const urlObj = new URL(event.url);
               const hashParams = new URLSearchParams(urlObj.hash.substring(1));
               const accessToken = hashParams.get('access_token');
               const refreshToken = hashParams.get('refresh_token');
               
               if (accessToken && refreshToken) {
                 console.log('✅ Tokens OAuth reçus');
+                
+                // Fermer l'InAppBrowser
+                browser.close();
                 
                 // Établir la session Supabase
                 const { error } = await supabase.auth.setSession({
@@ -188,39 +214,12 @@ const Auth = () => {
             }
           });
           
-          // ✅ 2. Générer l'URL OAuth
-          const { data: authData } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo: 'https://run-connect.lovable.app/auth/callback',
-              skipBrowserRedirect: true,
-              queryParams: {
-                access_type: 'offline',
-                prompt: 'consent'
-              }
-            }
+          // Gérer la fermeture manuelle du navigateur
+          browser.on('exit').subscribe(() => {
+            console.log('🚪 InAppBrowser fermé par l\'utilisateur');
+            setIsLoading(false);
           });
           
-          if (authData?.url) {
-            console.log('🔗 Ouverture Custom Tab pour OAuth');
-            console.log('URL:', authData.url);
-            
-            // ✅ 3. Ouvrir dans Custom Tab Chrome
-            await Browser.open({ 
-              url: authData.url,
-              presentationStyle: 'popover'
-            });
-            
-            console.log('✅ Custom Tab ouvert - Android interceptera le callback via App Links');
-          } else {
-            console.error('❌ Pas d\'URL OAuth générée');
-            await urlListener.remove();
-            toast({
-              title: "Erreur",
-              description: "Impossible de générer l'URL d'authentification",
-              variant: "destructive",
-            });
-          }
         } catch (error: any) {
           console.error('❌ Erreur OAuth Android:', error);
           toast({
