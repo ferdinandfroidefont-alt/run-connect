@@ -10,6 +10,9 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
 import { InAppBrowser } from '@capgo/inappbrowser';
+import { Browser } from '@capacitor/browser';
+import { Device } from '@capacitor/device';
+import { App } from '@capacitor/app';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -119,10 +122,20 @@ const Auth = () => {
         return;
       }
       
-      // OAuth Google pour Android avec InAppBrowser WebView
+      // OAuth Google pour Android - Double stratégie MIUI vs autres
       if (isNative && platform === 'android') {
-        console.log('🔥 OAuth Google natif Android avec InAppBrowser WebView (in-app)');
+        // Détecter si c'est un appareil MIUI/Xiaomi
+        const deviceInfo = await Device.getInfo();
+        const manufacturer = deviceInfo.manufacturer.toLowerCase();
+        const model = deviceInfo.model.toLowerCase();
+        const isMIUI = manufacturer.includes('xiaomi') || 
+                       manufacturer.includes('redmi') || 
+                       manufacturer.includes('poco') ||
+                       model.includes('mi ');
         
+        console.log('🔥 Android Device Info:', { manufacturer, model, isMIUI });
+        
+        // Générer l'URL OAuth
         const { data: authData } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -144,58 +157,114 @@ const Auth = () => {
           return;
         }
         
-        // Listener pour détecter la navigation vers le callback
-        const handle = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
-          console.log('🔗 URL changée:', event.url);
+        if (isMIUI) {
+          // STRATÉGIE MIUI : Navigateur externe + Deep Link
+          console.log('🔥 MIUI détecté - Utilisation du navigateur Mi + Deep Link');
           
-          if (event.url.includes('/auth/callback')) {
-            const urlObj = new URL(event.url);
-            const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
-            const refreshToken = hashParams.get('refresh_token');
+          // Listener pour le deep link (App Links HTTPS)
+          const listener = await App.addListener('appUrlOpen', async ({ url }) => {
+            console.log('🔗 Deep link reçu:', url);
             
-            if (accessToken && refreshToken) {
-              console.log('✅ Tokens OAuth reçus');
+            if (url.includes('/auth/callback')) {
+              const urlObj = new URL(url);
+              const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+              const accessToken = hashParams.get('access_token');
+              const refreshToken = hashParams.get('refresh_token');
               
-              // Fermer le browser in-app
-              await InAppBrowser.close();
-              
-              // Établir la session
-              const { error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken
-              });
-              
-              if (!error) {
-                const { data: session } = await supabase.auth.getSession();
-                if (session?.session?.user) {
-                  const { data: existingProfile } = await supabase
-                    .from('profiles')
-                    .select('id, username')
-                    .eq('user_id', session.session.user.id)
-                    .maybeSingle();
-                  
-                  if (!existingProfile) {
-                    setNewUserId(session.session.user.id);
-                    setShowProfileSetup(true);
-                  } else {
-                    window.location.href = '/';
+              if (accessToken && refreshToken) {
+                console.log('✅ Tokens OAuth reçus depuis navigateur Mi');
+                
+                // Établir la session
+                const { error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken
+                });
+                
+                if (!error) {
+                  const { data: session } = await supabase.auth.getSession();
+                  if (session?.session?.user) {
+                    const { data: existingProfile } = await supabase
+                      .from('profiles')
+                      .select('id, username')
+                      .eq('user_id', session.session.user.id)
+                      .maybeSingle();
+                    
+                    if (!existingProfile) {
+                      setNewUserId(session.session.user.id);
+                      setShowProfileSetup(true);
+                    } else {
+                      window.location.href = '/';
+                    }
                   }
                 }
+                
+                listener.remove();
               }
-              
-              // Supprimer le listener
-              handle.remove();
             }
-          }
-        });
-        
-        // Ouvrir dans une WebView pure in-app (pas Chrome)
-        await InAppBrowser.openWebView({
-          url: authData.url,
-          title: 'Se connecter avec Google',
-          isPresentAfterPageLoad: false
-        });
+          });
+          
+          // Ouvrir dans le navigateur Mi (externe, inévitable sur MIUI)
+          await Browser.open({ 
+            url: authData.url,
+            windowName: '_system'
+          });
+          
+        } else {
+          // STRATÉGIE STANDARD : InAppBrowser WebView in-app
+          console.log('🔥 Android standard - InAppBrowser WebView (in-app)');
+          
+          // Listener pour détecter la navigation vers le callback
+          const handle = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
+            console.log('🔗 URL changée:', event.url);
+            
+            if (event.url.includes('/auth/callback')) {
+              const urlObj = new URL(event.url);
+              const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+              const accessToken = hashParams.get('access_token');
+              const refreshToken = hashParams.get('refresh_token');
+              
+              if (accessToken && refreshToken) {
+                console.log('✅ Tokens OAuth reçus');
+                
+                // Fermer le browser in-app
+                await InAppBrowser.close();
+                
+                // Établir la session
+                const { error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken
+                });
+                
+                if (!error) {
+                  const { data: session } = await supabase.auth.getSession();
+                  if (session?.session?.user) {
+                    const { data: existingProfile } = await supabase
+                      .from('profiles')
+                      .select('id, username')
+                      .eq('user_id', session.session.user.id)
+                      .maybeSingle();
+                    
+                    if (!existingProfile) {
+                      setNewUserId(session.session.user.id);
+                      setShowProfileSetup(true);
+                    } else {
+                      window.location.href = '/';
+                    }
+                  }
+                }
+                
+                handle.remove();
+              }
+            }
+          });
+          
+          // Ouvrir dans une WebView pure in-app (pas Chrome)
+          await InAppBrowser.openWebView({
+            url: authData.url,
+            title: 'Se connecter avec Google',
+            isPresentAfterPageLoad: false
+          });
+        }
         
         return;
       } else {
