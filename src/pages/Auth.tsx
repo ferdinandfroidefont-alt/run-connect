@@ -139,7 +139,7 @@ const Auth = () => {
         const { data: authData } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'https://run-connect.lovable.app/auth/callback',
+            redirectTo: 'app.runconnect://oauth/callback',
             skipBrowserRedirect: true,
             queryParams: {
               access_type: 'offline',
@@ -165,7 +165,7 @@ const Auth = () => {
           const listener = await App.addListener('appUrlOpen', async ({ url }) => {
             console.log('🔗 Deep link reçu:', url);
             
-            if (url.includes('/auth/callback')) {
+            if (url.includes('app.runconnect://oauth/callback')) {
               const urlObj = new URL(url);
               const hashParams = new URLSearchParams(urlObj.hash.substring(1));
               const accessToken = hashParams.get('access_token');
@@ -217,7 +217,7 @@ const Auth = () => {
           const handle = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
             console.log('🔗 URL changée:', event.url);
             
-            if (event.url.includes('/auth/callback')) {
+            if (event.url.includes('app.runconnect://oauth/callback')) {
               const urlObj = new URL(event.url);
               const hashParams = new URLSearchParams(urlObj.hash.substring(1));
               const accessToken = hashParams.get('access_token');
