@@ -14,6 +14,30 @@ import { Browser } from '@capacitor/browser';
 import { Device } from '@capacitor/device';
 import { App } from '@capacitor/app';
 
+// Helper pour extraire les tokens OAuth depuis URL (query string OU fragment)
+const extractOAuthTokens = (url: string): { accessToken: string | null, refreshToken: string | null } => {
+  try {
+    const urlObj = new URL(url);
+    
+    // Essayer d'abord le fragment (#access_token=...)
+    let params = new URLSearchParams(urlObj.hash.substring(1));
+    let accessToken = params.get('access_token');
+    let refreshToken = params.get('refresh_token');
+    
+    // Si pas dans le fragment, essayer la query string (?access_token=...)
+    if (!accessToken) {
+      params = new URLSearchParams(urlObj.search);
+      accessToken = params.get('access_token');
+      refreshToken = params.get('refresh_token');
+    }
+    
+    return { accessToken, refreshToken };
+  } catch (error) {
+    console.error('❌ Erreur parsing URL:', error);
+    return { accessToken: null, refreshToken: null };
+  }
+};
+
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [authStep, setAuthStep] = useState<'email' | 'otp' | 'password' | 'reset'>('email');
@@ -96,12 +120,12 @@ const Auth = () => {
       
       // OAuth Google pour iOS
       if (isNative && platform === 'ios') {
-        console.log('🍎 OAuth Google natif iOS avec ASWebAuthenticationSession');
+        console.log('🍎 [STEP 1] OAuth Google natif iOS avec custom scheme');
         
         const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'https://run-connect.lovable.app/auth/callback',
+            redirectTo: 'app.runconnect://oauth/callback',
             skipBrowserRedirect: false,
             queryParams: {
               access_type: 'offline',
@@ -122,18 +146,45 @@ const Auth = () => {
         return;
       }
       
-      // OAuth Google pour Android - Double stratégie MIUI vs autres
+      // OAuth Google pour Android - Stratégie multi-marques
       if (isNative && platform === 'android') {
-        // Détecter si c'est un appareil MIUI/Xiaomi
+        console.log('🔥 [STEP 2] Détection device Android');
+        
+        // Détecter le device
         const deviceInfo = await Device.getInfo();
         const manufacturer = deviceInfo.manufacturer.toLowerCase();
         const model = deviceInfo.model.toLowerCase();
+        
+        // Liste exhaustive des marques qui forcent le navigateur externe
         const isMIUI = manufacturer.includes('xiaomi') || 
                        manufacturer.includes('redmi') || 
                        manufacturer.includes('poco') ||
-                       model.includes('mi ');
+                       model.includes('mi') ||  // Sans espace pour matcher mi9, mi11, etc.
+                       model.includes('redmi');
+
+        // Autres marques chinoises avec même comportement
+        const isChineseBrand = manufacturer.includes('oneplus') ||
+                               manufacturer.includes('oppo') ||
+                               manufacturer.includes('vivo') ||
+                               manufacturer.includes('realme') ||
+                               manufacturer.includes('huawei') ||
+                               manufacturer.includes('honor');
+
+        // Samsung avec OneUI a aussi des restrictions
+        const isSamsung = manufacturer.includes('samsung');
+
+        const forceExternalBrowser = isMIUI || isChineseBrand || isSamsung;
         
-        console.log('🔥 Android Device Info:', { manufacturer, model, isMIUI });
+        console.log('🔥 [STEP 2] Device Info:', { 
+          manufacturer, 
+          model, 
+          isMIUI, 
+          isChineseBrand,
+          isSamsung,
+          forceExternalBrowser 
+        });
+        
+        console.log('🔥 [STEP 3] Génération URL OAuth');
         
         // Générer l'URL OAuth
         const { data: authData } = await supabase.auth.signInWithOAuth({
@@ -157,22 +208,38 @@ const Auth = () => {
           return;
         }
         
-        if (isMIUI) {
-          // STRATÉGIE MIUI : Navigateur externe + Deep Link
-          console.log('🔥 MIUI détecté - Utilisation du navigateur Mi + Deep Link');
+        console.log('🔥 [STEP 3] URL OAuth générée:', authData.url);
+        
+        if (forceExternalBrowser) {
+          // STRATÉGIE : Navigateur externe + Deep Link (MIUI/Chinese/Samsung)
+          console.log('🔥 [STEP 4] Device nécessite navigateur externe');
           
-          // Listener pour le deep link (App Links HTTPS)
+          // Timeout de 5 minutes
+          const timeout = setTimeout(() => {
+            console.log('⏱️ Timeout OAuth - L\'utilisateur n\'a pas complété l\'authentification');
+            listener.remove();
+            pollingInterval && clearInterval(pollingInterval);
+            setIsLoading(false);
+            toast({
+              title: "Délai dépassé",
+              description: "L'authentification a pris trop de temps. Veuillez réessayer.",
+              variant: "destructive",
+            });
+          }, 300000);
+          
+          // Listener pour le deep link
           const listener = await App.addListener('appUrlOpen', async ({ url }) => {
-            console.log('🔗 Deep link reçu:', url);
+            console.log('🔥 [STEP 6] Deep link reçu:', url);
+            clearTimeout(timeout);
+            pollingInterval && clearInterval(pollingInterval);
             
             if (url.includes('app.runconnect://oauth/callback')) {
-              const urlObj = new URL(url);
-              const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-              const accessToken = hashParams.get('access_token');
-              const refreshToken = hashParams.get('refresh_token');
+              const { accessToken, refreshToken } = extractOAuthTokens(url);
+              
+              console.log('🔥 [STEP 7] Tokens extraits:', { hasAccess: !!accessToken, hasRefresh: !!refreshToken });
               
               if (accessToken && refreshToken) {
-                console.log('✅ Tokens OAuth reçus depuis navigateur Mi');
+                console.log('✅ Tokens OAuth reçus depuis navigateur externe');
                 
                 // Établir la session
                 const { error } = await supabase.auth.setSession({
@@ -181,6 +248,7 @@ const Auth = () => {
                 });
                 
                 if (!error) {
+                  console.log('🔥 [STEP 8] Session établie');
                   const { data: session } = await supabase.auth.getSession();
                   if (session?.session?.user) {
                     const { data: existingProfile } = await supabase
@@ -203,7 +271,35 @@ const Auth = () => {
             }
           });
           
-          // Ouvrir dans le navigateur Mi (externe, inévitable sur MIUI)
+          console.log('🔥 [STEP 4] Listener App Links enregistré');
+          
+          // Fallback : Polling de session toutes les 2 secondes
+          const pollingInterval = setInterval(async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              console.log('✅ Session détectée par polling!');
+              clearInterval(pollingInterval);
+              clearTimeout(timeout);
+              listener.remove();
+              
+              const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('id, username')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+              
+              if (!existingProfile) {
+                setNewUserId(session.user.id);
+                setShowProfileSetup(true);
+              } else {
+                window.location.href = '/';
+              }
+            }
+          }, 2000);
+          
+          console.log('🔥 [STEP 5] Ouverture navigateur externe');
+          
+          // Ouvrir dans le navigateur externe
           await Browser.open({ 
             url: authData.url,
             windowName: '_system'
@@ -211,17 +307,30 @@ const Auth = () => {
           
         } else {
           // STRATÉGIE STANDARD : InAppBrowser WebView in-app
-          console.log('🔥 Android standard - InAppBrowser WebView (in-app)');
+          console.log('🔥 [STEP 4] Android standard - InAppBrowser WebView');
+          
+          // Timeout de 5 minutes
+          const timeout = setTimeout(() => {
+            console.log('⏱️ Timeout OAuth - InAppBrowser');
+            handle.remove();
+            InAppBrowser.close();
+            setIsLoading(false);
+            toast({
+              title: "Délai dépassé",
+              description: "L'authentification a pris trop de temps. Veuillez réessayer.",
+              variant: "destructive",
+            });
+          }, 300000);
           
           // Listener pour détecter la navigation vers le callback
           const handle = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
-            console.log('🔗 URL changée:', event.url);
+            console.log('🔥 [STEP 6] URL changée:', event.url);
+            clearTimeout(timeout);
             
             if (event.url.includes('app.runconnect://oauth/callback')) {
-              const urlObj = new URL(event.url);
-              const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-              const accessToken = hashParams.get('access_token');
-              const refreshToken = hashParams.get('refresh_token');
+              const { accessToken, refreshToken } = extractOAuthTokens(event.url);
+              
+              console.log('🔥 [STEP 7] Tokens extraits:', { hasAccess: !!accessToken, hasRefresh: !!refreshToken });
               
               if (accessToken && refreshToken) {
                 console.log('✅ Tokens OAuth reçus');
@@ -236,6 +345,7 @@ const Auth = () => {
                 });
                 
                 if (!error) {
+                  console.log('🔥 [STEP 8] Session établie');
                   const { data: session } = await supabase.auth.getSession();
                   if (session?.session?.user) {
                     const { data: existingProfile } = await supabase
@@ -257,6 +367,8 @@ const Auth = () => {
               }
             }
           });
+          
+          console.log('🔥 [STEP 5] Ouverture InAppBrowser WebView');
           
           // Ouvrir dans une WebView pure in-app (pas Chrome)
           await InAppBrowser.openWebView({

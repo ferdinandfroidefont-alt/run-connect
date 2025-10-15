@@ -24,8 +24,8 @@ const config: CapacitorConfig = {
     // Configuration spéciale pour AAB/Google Play
     allowMultipleWindows: false,
     useLegacyBridge: false,
-    // Deep linking configuré pour OAuth avec App Links (HTTPS)
-    deepLinkScheme: 'https',
+    // Deep linking configuré pour OAuth avec custom scheme
+    deepLinkScheme: 'app.runconnect',
     // User-Agent léger pour éviter les blocages Google
     appendUserAgent: 'RunConnect/1.3'
   },
