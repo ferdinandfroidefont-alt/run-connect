@@ -100,21 +100,27 @@ const Auth = () => {
     try {
       setIsLoading(true);
       
+      // ✅ PRIORITÉ 1 : Flag forcé par l'initialisation (main.tsx)
+      const forceNative = (window as any).CapacitorForceNative === true;
+      
       // Détection robuste de l'environnement natif Android
       const capacitorNative = (window as any).Capacitor?.isNativePlatform?.();
       const platform = (window as any).Capacitor?.getPlatform?.() || 'web';
       const hasAndroidInterface = !!(window as any).Android || !!(window as any).AndroidInterface;
       const isAndroidUA = /Android/i.test(navigator.userAgent);
       const isWebView = /wv|WebView/i.test(navigator.userAgent);
-      const isNative = capacitorNative || (isAndroidUA && (hasAndroidInterface || isWebView));
+      
+      // ✅ FORCER LE MODE NATIF si le flag est activé
+      const isNative = forceNative || capacitorNative || (isAndroidUA && (hasAndroidInterface || isWebView));
       
       console.log('🔥 Auth Google - Detection:', {
+        forceNative,          // ← NOUVEAU : montre le flag forcé
         capacitorNative,
         platform,
         hasAndroidInterface,
         isAndroidUA,
         isWebView,
-        isNative,
+        isNative,             // ← Maintenant sera TRUE grâce à forceNative
         userAgent: navigator.userAgent
       });
       
@@ -380,19 +386,19 @@ const Auth = () => {
         
         return;
       } else {
-        // Pour le web, utiliser la méthode standard
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/`,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          },
+        // ❌ PAS DE MODE WEB - FORCER L'UTILISATEUR À UTILISER L'APP NATIVE
+        console.error('❌ ACCÈS REFUSÉ - Mode natif requis pour Google Auth');
+        console.error('❌ forceNative:', (window as any).CapacitorForceNative);
+        console.error('❌ Capacitor:', (window as any).Capacitor);
+        
+        toast({
+          title: "Mode natif requis",
+          description: "Veuillez utiliser l'application mobile pour vous connecter avec Google",
+          variant: "destructive",
         });
         
-        if (error) throw error;
+        setIsLoading(false);
+        return;
       }
       
     } catch (error: any) {
