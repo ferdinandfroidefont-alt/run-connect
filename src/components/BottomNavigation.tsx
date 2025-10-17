@@ -4,34 +4,10 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { SimplePermissionsTest } from './SimplePermissionsTest';
 
-// Ripple effect component for instant feedback
-const RippleEffect = ({ x, y }: { x: number; y: number }) => (
-  <span
-    className="absolute rounded-full bg-white/30 animate-ping"
-    style={{
-      left: x,
-      top: y,
-      width: '20px',
-      height: '20px',
-      transform: 'translate(-50%, -50%)',
-      pointerEvents: 'none',
-    }}
-  />
-);
-
-// Loading overlay for instant visual feedback
-const LoadingOverlay = () => (
-  <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-[100] flex items-center justify-center">
-    <div className="bg-card p-6 rounded-lg shadow-xl">
-      <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-3" />
-      <p className="text-sm text-muted-foreground">Chargement...</p>
-    </div>
-  </div>
-);
 const navItems = [{
   path: '/',
   emoji: '🗺️',
@@ -54,40 +30,13 @@ export const BottomNavigation = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
-  const [isPending, startTransition] = useTransition();
-  const [showLoading, setShowLoading] = useState(false);
   const {
     openCreateSession
   } = useAppContext();
 
-  // Instant navigation with immediate feedback
-  const handleNavigation = (path: string, event: React.MouseEvent<HTMLButtonElement>) => {
-    // Create ripple effect at click position
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const rippleId = Date.now();
-    
-    setRipples(prev => [...prev, { id: rippleId, x, y }]);
-    
-    // Show loading overlay immediately
-    setShowLoading(true);
-    
-    // Use startTransition for non-blocking navigation
-    startTransition(() => {
-      navigate(path);
-    });
-    
-    // Hide loading after navigation (max 300ms for perceived speed)
-    setTimeout(() => {
-      setShowLoading(false);
-    }, 300);
-    
-    // Remove ripple after animation
-    setTimeout(() => {
-      setRipples(prev => prev.filter(r => r.id !== rippleId));
-    }, 600);
+  // Navigation INSTANTANÉE sans délai
+  const handleNavigation = (path: string) => {
+    navigate(path);
   };
 
   // Compter le nombre total de messages non lus
@@ -155,8 +104,6 @@ export const BottomNavigation = () => {
   }, [user]);
   return (
     <>
-      {/* Loading overlay */}
-      {showLoading && <LoadingOverlay />}
       
       {/* Nouvelle barre du bas - couvre tout l'espace */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
@@ -179,15 +126,13 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={(e) => handleNavigation(path, e)}
+                  onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 h-full overflow-hidden",
-                    "will-change-transform transform-gpu active:scale-95",
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
-                  style={{ transform: 'translateZ(0)' }}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
@@ -203,15 +148,13 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={(e) => handleNavigation(path, e)}
+                  onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 h-full overflow-hidden",
-                    "will-change-transform transform-gpu active:scale-95",
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
-                  style={{ transform: 'translateZ(0)' }}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
@@ -247,21 +190,14 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={(e) => handleNavigation(path, e)}
+                  onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 relative h-full overflow-hidden",
-                    "will-change-transform transform-gpu active:scale-95", // Hardware acceleration + instant feedback
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button relative h-full",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
-                  style={{ transform: 'translateZ(0)' }} // Force hardware acceleration
                 >
-                  {/* Ripple effects */}
-                  {ripples.map(ripple => (
-                    <RippleEffect key={ripple.id} x={ripple.x} y={ripple.y} />
-                  ))}
-                  
                   <div className="relative mt-1">
                     <span className="text-xl">{emoji}</span>
                     {isMessages && totalUnreadCount > 0 && (
@@ -286,15 +222,13 @@ export const BottomNavigation = () => {
               return (
                 <button 
                   key={path} 
-                  onClick={(e) => handleNavigation(path, e)}
+                  onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 h-full overflow-hidden",
-                    "will-change-transform transform-gpu active:scale-95",
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
-                  style={{ transform: 'translateZ(0)' }}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
