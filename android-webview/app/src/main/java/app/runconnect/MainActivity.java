@@ -61,16 +61,44 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= 21) {
             s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         }
+        
+        // ✅ MODE CACHE : Utiliser le cache si pas de connexion
+        s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        s.setAppCacheEnabled(true);
+        s.setAppCachePath(getApplicationContext().getCacheDir().getAbsolutePath());
+        Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
 
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= 21) cm.setAcceptThirdPartyCookies(webView, true);
 
-        // Gère les URL OAuth (Google, etc.)
+        // Gère les URL OAuth (Google, etc.) + gestion erreur réseau
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return false;
+            }
+            
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                Log.e(TAG, "❌ Erreur réseau détectée: " + description);
+                
+                // Afficher la page offline uniquement pour les erreurs réseau
+                if (errorCode == WebViewClient.ERROR_HOST_LOOKUP || 
+                    errorCode == WebViewClient.ERROR_CONNECT || 
+                    errorCode == WebViewClient.ERROR_TIMEOUT ||
+                    errorCode == WebViewClient.ERROR_INTERNET_DISCONNECTED) {
+                    
+                    Log.d(TAG, "🔴 Chargement page offline");
+                    view.loadUrl("file:///android_asset/offline.html");
+                }
+            }
+            
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
+                if (Build.VERSION.SDK_INT >= 23) {
+                    onReceivedError(view, error.getErrorCode(), error.getDescription().toString(), request.getUrl().toString());
+                }
             }
         });
 

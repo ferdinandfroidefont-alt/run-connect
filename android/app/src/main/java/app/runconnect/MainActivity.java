@@ -88,7 +88,13 @@ public class MainActivity extends AppCompatActivity {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setGeolocationEnabled(true);
         
+        // ✅ MODE CACHE : Utiliser le cache si pas de connexion
+        s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        s.setAppCacheEnabled(true);
+        s.setAppCachePath(getApplicationContext().getCacheDir().getAbsolutePath());
+        
         Log.d(TAG, "🌐 WebView configured with geolocation enabled");
+        Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
 
         // ✅ Géolocalisation sans blocage (Android < 12)
         String dir = this.getApplicationContext().getDir("geolocation", Context.MODE_PRIVATE).getPath();
@@ -162,6 +168,28 @@ public class MainActivity extends AppCompatActivity {
                 
                 // ✅ 3. Toutes les autres URLs restent dans le WebView
                 return false;
+            }
+            
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                Log.e(TAG, "❌ Erreur réseau: " + description + " (code: " + errorCode + ")");
+                
+                // Afficher la page offline uniquement pour les erreurs réseau
+                if (errorCode == WebViewClient.ERROR_HOST_LOOKUP || 
+                    errorCode == WebViewClient.ERROR_CONNECT || 
+                    errorCode == WebViewClient.ERROR_TIMEOUT ||
+                    errorCode == WebViewClient.ERROR_INTERNET_DISCONNECTED) {
+                    
+                    Log.d(TAG, "🔴 Chargement page offline");
+                    view.loadUrl("file:///android_asset/offline.html");
+                }
+            }
+            
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
+                if (Build.VERSION.SDK_INT >= 23) {
+                    onReceivedError(view, error.getErrorCode(), error.getDescription().toString(), request.getUrl().toString());
+                }
             }
             
             @Override
