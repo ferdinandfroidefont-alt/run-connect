@@ -64,8 +64,6 @@ public class MainActivity extends AppCompatActivity {
         
         // ✅ MODE CACHE : Utiliser le cache si pas de connexion
         s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-        s.setAppCacheEnabled(true);
-        s.setAppCachePath(getApplicationContext().getCacheDir().getAbsolutePath());
         Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
 
         CookieManager cm = CookieManager.getInstance();
@@ -86,8 +84,7 @@ public class MainActivity extends AppCompatActivity {
                 // Afficher la page offline uniquement pour les erreurs réseau
                 if (errorCode == WebViewClient.ERROR_HOST_LOOKUP || 
                     errorCode == WebViewClient.ERROR_CONNECT || 
-                    errorCode == WebViewClient.ERROR_TIMEOUT ||
-                    errorCode == WebViewClient.ERROR_INTERNET_DISCONNECTED) {
+                    errorCode == WebViewClient.ERROR_TIMEOUT) {
                     
                     Log.d(TAG, "🔴 Chargement page offline");
                     view.loadUrl("file:///android_asset/offline.html");
