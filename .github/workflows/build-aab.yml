@@ -286,11 +286,6 @@ jobs:
           [ -f ./gradlew ] || gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
           ./gradlew :app:bundleRelease
-
-      - name: 📦 Télécharger l'AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: runconnect-release
-          path: |
-            android-webview/app/build/outputs/bundle/release/app-release.aab
-            android-webview/keystore.jks
+          
+          echo "✅ AAB généré avec succès :"
+          ls -lh app/build/outputs/bundle/release/app-release.aab
