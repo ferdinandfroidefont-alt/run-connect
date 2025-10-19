@@ -74,6 +74,28 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri url = request.getUrl();
+                String urlString = url.toString();
+
+                // ✅ 1. Intercepter les redirections OAuth (Supabase, Firebase, Google)
+                if (urlString.startsWith("app.runconnect://auth") ||
+                    urlString.contains("auth/callback") ||
+                    urlString.contains("supabase.co") ||
+                    urlString.contains("firebaseapp.com")) {
+                    Log.d(TAG, "✅ Redirection OAuth interceptée : " + urlString);
+                    view.loadUrl(urlString);
+                    return true;
+                }
+
+                // ✅ 2. Ouvrir les liens externes hors de l'app dans le navigateur
+                if (!url.getHost().contains("run-connect.lovable.app") &&
+                    !url.getHost().contains("app.runconnect")) {
+                    Intent i = new Intent(Intent.ACTION_VIEW, url);
+                    startActivity(i);
+                    return true;
+                }
+
+                // ✅ 3. Tous les autres liens restent dans la WebView
                 return false;
             }
             

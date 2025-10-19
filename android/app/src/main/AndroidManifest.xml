@@ -71,7 +71,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data 
                     android:scheme="app.runconnect"
-                    android:host="oauth"
+                    android:host="auth"
                     android:pathPrefix="/callback" />
             </intent-filter>
 
