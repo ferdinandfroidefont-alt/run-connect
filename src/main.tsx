@@ -2,36 +2,39 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-// ✅ DÉTECTION SYNCHRONE IMMÉDIATE (AVANT le render)
+// ✅ DÉTECTION NATIVE AMÉLIORÉE (AVANT le render)
 const detectNativeImmediately = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
-  const isAndroid = userAgent.includes('android');
-  const isWebView = userAgent.includes('wv') || 
-                   userAgent.includes('webview') ||
-                   (userAgent.includes('version/') && userAgent.includes('chrome'));
-  
-  const hasAndroidInterface = !!(window as any).Android || !!(window as any).AndroidInterface;
+  const userAgent = navigator.userAgent;
   const protocol = window.location.protocol.toLowerCase();
-  const isNativeProtocol = protocol === 'capacitor:' || protocol === 'ionic:' || protocol === 'file:';
   
-  // Si Android + (WebView OU interface native OU protocole natif) = NATIF
-  const isNative = isAndroid && (isWebView || hasAndroidInterface || isNativeProtocol);
+  // ✅ INDICATEURS INFAILLIBLES ANDROID AAB
+  const hasCapacitor = !!(window as any).Capacitor;
+  const hasAndroidBridge = !!(window as any).AndroidBridge;
+  const isFileProtocol = protocol === 'file:' || protocol === 'capacitor:' || protocol === 'ionic:';
+  const hasCustomUA = userAgent.includes('RunConnect/'); // Custom UA défini dans capacitor.config.ts
+  const isAndroid = /Android/i.test(userAgent);
   
-  console.log('🔥 DÉTECTION SYNCHRONE IMMÉDIATE:', {
+  // ✅ MODE NATIF si au moins 2 indicateurs sont présents
+  const indicators = [hasCapacitor, hasAndroidBridge, isFileProtocol, hasCustomUA].filter(Boolean).length;
+  const isNative = isAndroid && indicators >= 2;
+  
+  console.log('🔥 DÉTECTION NATIVE AMÉLIORÉE:', {
     userAgent,
-    isAndroid,
-    isWebView,
-    hasAndroidInterface,
     protocol,
-    isNativeProtocol,
-    isNative
+    hasCapacitor,
+    hasAndroidBridge,
+    isFileProtocol,
+    hasCustomUA,
+    isAndroid,
+    indicators,
+    isNative: isNative ? '✅ NATIF' : '❌ WEB'
   });
   
   if (isNative) {
     (window as any).CapacitorForceNative = true;
-    console.log('✅ MODE NATIF FORCÉ IMMÉDIATEMENT');
+    console.log('✅ MODE NATIF FORCÉ - Google Auth activé');
   } else {
-    console.log('ℹ️ MODE WEB DÉTECTÉ');
+    console.log('ℹ️ MODE WEB DÉTECTÉ - Fallback OAuth web');
   }
   
   return isNative;

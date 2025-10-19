@@ -100,27 +100,24 @@ const Auth = () => {
     try {
       setIsLoading(true);
       
-      // ✅ PRIORITÉ 1 : Flag forcé par l'initialisation (main.tsx)
+      // ✅ DÉTECTION ULTRA-FIABLE
       const forceNative = (window as any).CapacitorForceNative === true;
-      
-      // Détection robuste de l'environnement natif Android
-      const capacitorNative = (window as any).Capacitor?.isNativePlatform?.();
+      const hasCapacitor = !!(window as any).Capacitor;
+      const hasAndroidBridge = !!(window as any).AndroidBridge;
       const platform = (window as any).Capacitor?.getPlatform?.() || 'web';
-      const hasAndroidInterface = !!(window as any).Android || !!(window as any).AndroidInterface;
-      const isAndroidUA = /Android/i.test(navigator.userAgent);
-      const isWebView = /wv|WebView/i.test(navigator.userAgent);
+      const isFileProtocol = window.location.protocol === 'file:' || 
+                             window.location.protocol === 'capacitor:';
       
-      // ✅ FORCER LE MODE NATIF si le flag est activé
-      const isNative = forceNative || capacitorNative || (isAndroidUA && (hasAndroidInterface || isWebView));
+      // ✅ MODE NATIF = forceNative OU (Capacitor + FileProtocol)
+      const isNative = forceNative || (hasCapacitor && isFileProtocol) || hasAndroidBridge;
       
-      console.log('🔥 Auth Google - Detection:', {
-        forceNative,          // ← NOUVEAU : montre le flag forcé
-        capacitorNative,
+      console.log('🔥 Auth Google - Détection:', {
+        forceNative,
+        hasCapacitor,
+        hasAndroidBridge,
         platform,
-        hasAndroidInterface,
-        isAndroidUA,
-        isWebView,
-        isNative,             // ← Maintenant sera TRUE grâce à forceNative
+        isFileProtocol,
+        isNative: isNative ? '✅ NATIF' : '❌ WEB',
         userAgent: navigator.userAgent
       });
       
@@ -385,21 +382,31 @@ const Auth = () => {
         }
         
         return;
-      } else {
-        // ❌ PAS DE MODE WEB - FORCER L'UTILISATEUR À UTILISER L'APP NATIVE
-        console.error('❌ ACCÈS REFUSÉ - Mode natif requis pour Google Auth');
-        console.error('❌ forceNative:', (window as any).CapacitorForceNative);
-        console.error('❌ Capacitor:', (window as any).Capacitor);
-        
+      }
+      
+      // ✅ MODE WEB : OAuth Google classique (navigateur)
+      console.log('🌐 Mode web - OAuth Google standard');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      });
+      
+      if (error) {
         toast({
-          title: "Mode natif requis",
-          description: "Veuillez utiliser l'application mobile pour vous connecter avec Google",
+          title: "Erreur",
+          description: "Impossible de se connecter avec Google",
           variant: "destructive",
         });
-        
-        setIsLoading(false);
-        return;
       }
+      
+      return;
       
     } catch (error: any) {
       console.error('🔥 Erreur Google Auth:', error);
