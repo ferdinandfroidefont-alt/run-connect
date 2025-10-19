@@ -729,18 +729,11 @@ export const usePushNotifications = () => {
       });
     };
 
-    window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
+      window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
 
-    // 🔥 Vérification NATIVE forcée toutes les 2 secondes
-    const nativeCheckInterval = setInterval(() => {
-      console.log('🔄 [INTERVAL] Vérification native forcée...');
-      forceNativeNotificationCheck();
-    }, 2000); // 2 secondes comme pour les contacts
-
-    return () => {
-      clearInterval(nativeCheckInterval);
-      window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
-    };
+      return () => {
+        window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
+      };
   }, [user, isNative, setupPushListeners, checkPermissionStatus]);
 
   return {
