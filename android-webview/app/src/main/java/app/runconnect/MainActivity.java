@@ -80,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        s.setSupportMultipleWindows(true); // ✅ Support des popups OAuth
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         s.setAllowFileAccess(true);
@@ -120,6 +121,50 @@ public class MainActivity extends AppCompatActivity {
                 }
                 return true;
             }
+
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                Log.d(TAG, "🪟 onCreateWindow appelé - Gestion popup OAuth dans WebView");
+                
+                // Créer une nouvelle WebView pour la popup OAuth
+                WebView newWebView = new WebView(MainActivity.this);
+                WebSettings settings = newWebView.getSettings();
+                settings.setJavaScriptEnabled(true);
+                settings.setDomStorageEnabled(true);
+                settings.setSupportMultipleWindows(false);
+                settings.setGeolocationEnabled(true);
+                
+                // Réutiliser le même WebChromeClient
+                newWebView.setWebChromeClient(this);
+                
+                // Réutiliser le même WebViewClient pour intercepter les redirections
+                newWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                        String url = request.getUrl().toString();
+                        Log.d(TAG, "🔗 [POPUP] URL interceptée: " + url);
+                        
+                        // Si c'est un callback OAuth, charger dans la WebView PRINCIPALE
+                        if (url.startsWith("app.runconnect://") || url.contains("auth/callback") || url.contains("oauth/callback")) {
+                            Log.d(TAG, "✅ Callback OAuth détecté dans popup, chargement dans WebView principale");
+                            MainActivity.this.webView.loadUrl(url);
+                            // Fermer la popup
+                            view.destroy();
+                            return true;
+                        }
+                        
+                        // Charger dans la popup
+                        return false;
+                    }
+                });
+                
+                // Transporter la nouvelle WebView
+                ((WebView.WebViewTransport) resultMsg.obj).setWebView(newWebView);
+                resultMsg.sendToTarget();
+                
+                Log.d(TAG, "✅ Popup WebView créée avec succès");
+                return true;
+            }
         });
 
         // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
@@ -141,41 +186,32 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 }
                 
-                // 2. OUVRIR GOOGLE OAUTH DANS CUSTOM TABS IN-APP (PAS CHROME EXTERNE)
+                // 2. GARDER GOOGLE OAUTH DANS LA WEBVIEW (pas Custom Tabs)
                 if (host.contains("accounts.google.com") || 
                     (url.contains("oauth") && host.contains("google")) ||
                     host.contains("googleapis.com")) {
                     
-                    Log.d(TAG, "🔐 Ouverture OAuth Google dans Custom Tabs IN-APP : " + url);
-                    
-                    try {
-                        // Custom Tabs avec couleur de toolbar personnalisée
-                        CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-                        builder.setShowTitle(true);
-                        builder.setToolbarColor(Color.parseColor("#1A1F2C")); // Couleur RunConnect
-                        
-                        CustomTabsIntent customTabsIntent = builder.build();
-                        customTabsIntent.launchUrl(MainActivity.this, uri);
-                        
-                        Log.d(TAG, "✅ Custom Tabs lancé avec succès");
-                        return true;
-                    } catch (Exception e) {
-                        // Fallback : ouvrir dans le navigateur par défaut
-                        Log.e(TAG, "❌ Erreur Custom Tabs, fallback vers navigateur: " + e.getMessage());
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-                        startActivity(browserIntent);
-                        return true;
-                    }
+                    Log.d(TAG, "🔐 Chargement OAuth Google DANS la WebView : " + url);
+                    view.loadUrl(url); // ✅ RESTER DANS LA WEBVIEW
+                    return false; // false = géré par la WebView
                 }
                 
-                // 3. Intercepter Supabase/Firebase
-                if (host.contains("supabase.co") || host.contains("firebaseapp.com")) {
-                    Log.d(TAG, "✅ URL Supabase/Firebase interceptée : " + url);
-                    view.loadUrl(url);
+                // 3. Ouvrir Strava en EXTERNE (navigateur)
+                if (host.contains("strava.com")) {
+                    Log.d(TAG, "🚴 Ouverture Strava dans navigateur externe : " + url);
+                    Intent i = new Intent(Intent.ACTION_VIEW, uri);
+                    startActivity(i);
                     return true;
                 }
                 
-                // 4. Ouvrir les liens externes dans le navigateur
+                // 4. Intercepter Supabase/Firebase DANS la WebView
+                if (host.contains("supabase.co") || host.contains("firebaseapp.com")) {
+                    Log.d(TAG, "✅ URL Supabase/Firebase chargée dans WebView : " + url);
+                    view.loadUrl(url);
+                    return false;
+                }
+                
+                // 6. Ouvrir les liens externes dans le navigateur
                 if (!host.contains("run-connect.lovable.app") &&
                     !host.contains("app.runconnect") &&
                     !host.isEmpty()) {
@@ -185,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 }
                 
-                // 5. Tous les autres liens restent dans la WebView
+                // 7. Tous les autres liens restent dans la WebView
                 Log.d(TAG, "🔄 Chargement dans WebView : " + url);
                 return false;
             }

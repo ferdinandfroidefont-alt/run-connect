@@ -137,10 +137,19 @@ jobs:
           sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           
           # 🔍 Vérifier que Custom Tabs est bien présent dans le code
-          if grep -q "CustomTabsIntent" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
-            echo "✅ Custom Tabs détecté dans MainActivity.java"
+          # 🔍 Vérifier que setSupportMultipleWindows est présent
+          if grep -q "setSupportMultipleWindows" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
+            echo "✅ setSupportMultipleWindows détecté"
           else
-            echo "❌ ERREUR: Custom Tabs manquant dans MainActivity.java !"
+            echo "⚠️ ATTENTION: setSupportMultipleWindows manquant - ajout automatique"
+            sed -i '/setDomStorageEnabled(true);/a \        s.setSupportMultipleWindows(true);' android-webview/app/src/main/java/app/runconnect/MainActivity.java
+          fi
+
+          # 🔍 Vérifier que onCreateWindow est présent
+          if grep -q "onCreateWindow" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
+            echo "✅ onCreateWindow détecté"
+          else
+            echo "❌ ERREUR: onCreateWindow manquant dans MainActivity.java !"
             exit 1
           fi
           
@@ -200,7 +209,29 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                       
-                      <!-- Deep Link pour OAuth callback -->
+                      <!-- Deep Link pour OAuth callback - Version spécifique -->
+                      <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data 
+                              android:scheme="app.runconnect"
+                              android:host="oauth"
+                              android:pathPrefix="/callback" />
+                      </intent-filter>
+
+                      <!-- Deep Link pour Auth callback - Version alternative -->
+                      <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data 
+                              android:scheme="app.runconnect"
+                              android:host="auth"
+                              android:pathPrefix="/callback" />
+                      </intent-filter>
+
+                      <!-- Deep Link générique - Fallback -->
                       <intent-filter>
                           <action android:name="android.intent.action.VIEW" />
                           <category android:name="android.intent.category.DEFAULT" />
