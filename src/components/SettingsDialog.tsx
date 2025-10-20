@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2, Bug } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2, Bug, Languages } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +20,9 @@ import { QRShareDialog } from "./QRShareDialog";
 import { useConversationTheme } from "@/hooks/useConversationTheme";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { ReferralDialog } from "./ReferralDialog";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { languages, Language } from "@/lib/translations";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Profile {
   username: string;
@@ -54,6 +57,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { showWelcomeVideo } = useOnboarding();
   const { conversationTheme, setConversationTheme } = useConversationTheme();
   const { isRegistered, requestPermissions, isNative, testNotification } = usePushNotifications();
+  const { language, setLanguage } = useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -257,6 +261,33 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Language Selector */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Languages className="h-4 w-4" />
+                      <div className="grid gap-1.5">
+                        <label className="text-sm font-medium leading-none">
+                          Langue
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Choisir la langue de l'application
+                        </p>
+                      </div>
+                    </div>
+                    <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(languages).map(([code, { nativeName }]) => (
+                          <SelectItem key={code} value={code}>
+                            {nativeName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Theme Toggle */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
