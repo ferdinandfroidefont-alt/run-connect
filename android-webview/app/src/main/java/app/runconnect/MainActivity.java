@@ -1,56 +1,82 @@
 package app.runconnect;
 
 import android.Manifest;
-import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.pm.PackageManager;
-import com.google.firebase.FirebaseApp;
-import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
-import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.ValueCallback;
+import android.content.Intent;
+import android.provider.ContactsContract;
+import android.database.Cursor;
+import android.content.ContentResolver;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.view.WindowCompat;
 
 public class MainActivity extends AppCompatActivity {
-
     private static final String TAG = "RunConnect";
+    private static final int REQ_LOCATION = 1001;
+    private static final int REQ_STORAGE = 1002;
+    private static final int REQ_CONTACTS = 1003;
     private WebView webView;
-    private final String START_URL = "https://run-connect.lovable.app";
     private ValueCallback<Uri[]> filePathCallback;
+    
+    // URL configurée depuis BuildConfig (modifié par le workflow)
+    private final String START_URL = "https://run-connect.lovable.app";
+
+    /**
+     * Vérifie si Chrome est installé sur l'appareil
+     */
+    private boolean isChromeInstalled() {
+        try {
+            getPackageManager().getPackageInfo("com.android.chrome", 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
+        Log.d(TAG, "📍 URL to load: " + START_URL);
 
-        // Edge-to-edge UI
+        // Full screen immersif + transparent
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         if (Build.VERSION.SDK_INT >= 21) {
             getWindow().setStatusBarColor(Color.TRANSPARENT);
             getWindow().setNavigationBarColor(Color.TRANSPARENT);
         }
 
-        // Demander dynamiquement les permissions sensibles
+        // Demander les permissions au démarrage
         requestAllPermissions();
 
-        // Création du WebView
+        // WebView setup
         webView = new WebView(this);
         webView.setLayerType(WebView.LAYER_TYPE_SOFTWARE, null);
-
+        
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -58,52 +84,116 @@ public class MainActivity extends AppCompatActivity {
         s.setUseWideViewPort(true);
         s.setAllowFileAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
+        s.setGeolocationEnabled(true);
+        
+        // MODE CACHE : Utiliser le cache si pas de connexion
+        s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        
         if (Build.VERSION.SDK_INT >= 21) {
             s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         }
         
-        // ✅ MODE CACHE : Utiliser le cache si pas de connexion
-        s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
 
-        CookieManager cm = CookieManager.getInstance();
+        // Cookies
+        android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
         cm.setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= 21) cm.setAcceptThirdPartyCookies(webView, true);
 
-        // Gère les URL OAuth (Google, etc.) + gestion erreur réseau
+        // WebChromeClient avec géoloc + file picker
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                Log.d(TAG, "📍 Geolocation permission requested for: " + origin);
+                callback.invoke(origin, true, false);
+            }
+
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                MainActivity.this.filePathCallback = filePathCallback;
+                Intent intent = fileChooserParams.createIntent();
+                try {
+                    fileChooserLauncher.launch(intent);
+                } catch (Exception e) {
+                    filePathCallback.onReceiveValue(null);
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri url = request.getUrl();
-                String urlString = url.toString();
-
-                // ✅ 1. Intercepter les redirections OAuth (Supabase, Firebase, Google)
-                if (urlString.startsWith("app.runconnect://auth") ||
-                    urlString.contains("auth/callback") ||
-                    urlString.contains("supabase.co") ||
-                    urlString.contains("firebaseapp.com")) {
-                    Log.d(TAG, "✅ Redirection OAuth interceptée : " + urlString);
-                    view.loadUrl(urlString);
+                Uri uri = request.getUrl();
+                String url = uri.toString();
+                String host = uri.getHost() != null ? uri.getHost() : "";
+                
+                Log.d(TAG, "🔗 shouldOverrideUrlLoading: " + url);
+                
+                // 1. INTERCEPTER LE CALLBACK OAUTH (app.runconnect://)
+                if (url.startsWith("app.runconnect://auth") ||
+                    url.startsWith("app.runconnect://oauth") ||
+                    url.contains("auth/callback")) {
+                    Log.d(TAG, "✅ Deep link OAuth intercepté : " + url);
+                    view.loadUrl(url);
                     return true;
                 }
-
-                // ✅ 2. Ouvrir les liens externes hors de l'app dans le navigateur
-                if (!url.getHost().contains("run-connect.lovable.app") &&
-                    !url.getHost().contains("app.runconnect")) {
-                    Intent i = new Intent(Intent.ACTION_VIEW, url);
+                
+                // 2. OUVRIR GOOGLE OAUTH DANS CUSTOM TABS IN-APP (PAS CHROME EXTERNE)
+                if (host.contains("accounts.google.com") || 
+                    (url.contains("oauth") && host.contains("google")) ||
+                    host.contains("googleapis.com")) {
+                    
+                    Log.d(TAG, "🔐 Ouverture OAuth Google dans Custom Tabs IN-APP : " + url);
+                    
+                    try {
+                        // Custom Tabs avec couleur de toolbar personnalisée
+                        CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                        builder.setShowTitle(true);
+                        builder.setToolbarColor(Color.parseColor("#1A1F2C")); // Couleur RunConnect
+                        
+                        CustomTabsIntent customTabsIntent = builder.build();
+                        customTabsIntent.launchUrl(MainActivity.this, uri);
+                        
+                        Log.d(TAG, "✅ Custom Tabs lancé avec succès");
+                        return true;
+                    } catch (Exception e) {
+                        // Fallback : ouvrir dans le navigateur par défaut
+                        Log.e(TAG, "❌ Erreur Custom Tabs, fallback vers navigateur: " + e.getMessage());
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+                        startActivity(browserIntent);
+                        return true;
+                    }
+                }
+                
+                // 3. Intercepter Supabase/Firebase
+                if (host.contains("supabase.co") || host.contains("firebaseapp.com")) {
+                    Log.d(TAG, "✅ URL Supabase/Firebase interceptée : " + url);
+                    view.loadUrl(url);
+                    return true;
+                }
+                
+                // 4. Ouvrir les liens externes dans le navigateur
+                if (!host.contains("run-connect.lovable.app") &&
+                    !host.contains("app.runconnect") &&
+                    !host.isEmpty()) {
+                    Log.d(TAG, "🌐 Lien externe, ouverture navigateur : " + url);
+                    Intent i = new Intent(Intent.ACTION_VIEW, uri);
                     startActivity(i);
                     return true;
                 }
-
-                // ✅ 3. Tous les autres liens restent dans la WebView
+                
+                // 5. Tous les autres liens restent dans la WebView
+                Log.d(TAG, "🔄 Chargement dans WebView : " + url);
                 return false;
             }
             
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                Log.e(TAG, "❌ Erreur réseau détectée: " + description);
+                Log.e(TAG, "❌ Erreur réseau: " + description + " (code: " + errorCode + ")");
                 
-                // Afficher la page offline uniquement pour les erreurs réseau
                 if (errorCode == WebViewClient.ERROR_HOST_LOOKUP || 
                     errorCode == WebViewClient.ERROR_CONNECT || 
                     errorCode == WebViewClient.ERROR_TIMEOUT) {
@@ -121,47 +211,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // WebChromeClient avec géoloc, fichier, etc.
-        webView.setWebChromeClient(new WebChromeClient() {
-
-            // Gestion géolocalisation
-            @Override
-            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                callback.invoke(origin, true, false);
-            }
-
-            // Gestion input type="file"
-            @Override
-            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                MainActivity.this.filePathCallback = filePathCallback;
-                Intent intent = fileChooserParams.createIntent();
-                try {
-                    fileChooserLauncher.launch(intent);
-                } catch (Exception e) {
-                    filePathCallback.onReceiveValue(null);
-                    return false;
-                }
-                return true;
-            }
-        });
-
         webView.loadUrl(START_URL);
         setContentView(webView);
-
-        // ✅ Forcer l'initialisation Firebase au démarrage
-        try {
-            Log.d(TAG, "🔥 Initialisation Firebase Push Notifications au démarrage...");
-            
-            // Vérifier si Firebase est déjà initialisé
-            if (FirebaseApp.getApps(this).isEmpty()) {
-                Log.w(TAG, "⚠️ Firebase n'est pas initialisé automatiquement, initialisation manuelle...");
-                FirebaseApp.initializeApp(this);
-            }
-            
-            Log.d(TAG, "✅ Firebase initialisé avec succès");
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Erreur initialisation Firebase: " + e.getMessage(), e);
-        }
 
         // Repassage en hardware après 1s
         webView.postDelayed(() -> {
@@ -169,13 +220,13 @@ public class MainActivity extends AppCompatActivity {
         }, 1000);
     }
 
-    // Choix de fichier via intent
+    // File Chooser Launcher
     private final ActivityResultLauncher<Intent> fileChooserLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (filePathCallback == null) return;
                 Uri[] results = null;
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                if (result.getResultCode() == android.app.Activity.RESULT_OK && result.getData() != null) {
                     results = new Uri[]{result.getData().getData()};
                 }
                 filePathCallback.onReceiveValue(results);
@@ -183,7 +234,6 @@ public class MainActivity extends AppCompatActivity {
             }
     );
 
-    // Gestion du bouton retour
     @Override
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
@@ -193,7 +243,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Demande toutes les permissions utiles à l'app
     private void requestAllPermissions() {
         String[] permissions = new String[] {
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -212,7 +261,6 @@ public class MainActivity extends AppCompatActivity {
         ActivityCompat.requestPermissions(this, permissions, 123);
     }
 
-    // Petite fonction pour ajouter dynamiquement des permissions dans le tableau
     private String[] append(String[] arr, String permission) {
         String[] result = new String[arr.length + 1];
         System.arraycopy(arr, 0, result, 0, arr.length);
@@ -220,10 +268,8 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    // Optionnel : retour sur autorisations
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, androidx.annotation.NonNull String[] permissions, androidx.annotation.NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        // Tu peux ici afficher un toast si une permission est refusée
     }
 }

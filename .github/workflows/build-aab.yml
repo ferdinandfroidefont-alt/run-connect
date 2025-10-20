@@ -136,6 +136,14 @@ jobs:
           # 🔧 Modifier START_URL dynamiquement dans le MainActivity
           sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           
+          # 🔍 Vérifier que Custom Tabs est bien présent dans le code
+          if grep -q "CustomTabsIntent" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
+            echo "✅ Custom Tabs détecté dans MainActivity.java"
+          else
+            echo "❌ ERREUR: Custom Tabs manquant dans MainActivity.java !"
+            exit 1
+          fi
+          
           # ✅ Créer AndroidManifest simplifié (sans Firebase)
           cat > android-webview/app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
