@@ -23,6 +23,7 @@ import android.content.ContentResolver;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
+import android.os.Message;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -109,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        s.setSupportMultipleWindows(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         s.setAllowFileAccess(true);
@@ -125,12 +127,55 @@ public class MainActivity extends AppCompatActivity {
         String dir = this.getApplicationContext().getDir("geolocation", Context.MODE_PRIVATE).getPath();
         s.setGeolocationDatabasePath(dir);
 
-        // ✅ Autoriser la géolocalisation sans popup
+        // ✅ Autoriser la géolocalisation sans popup + Gérer les popups OAuth
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 Log.d(TAG, "📍 Geolocation permission requested for: " + origin);
                 callback.invoke(origin, true, false); // toujours autoriser
+            }
+            
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                Log.d(TAG, "🪟 onCreateWindow appelé - Gestion popup OAuth dans WebView");
+                
+                // Créer une nouvelle WebView pour la popup OAuth
+                WebView newWebView = new WebView(MainActivity.this);
+                WebSettings settings = newWebView.getSettings();
+                settings.setJavaScriptEnabled(true);
+                settings.setDomStorageEnabled(true);
+                settings.setSupportMultipleWindows(false);
+                settings.setGeolocationEnabled(true);
+                
+                // Réutiliser le même WebChromeClient
+                newWebView.setWebChromeClient(this);
+                
+                // Gérer les redirections dans la popup
+                newWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                        String url = request.getUrl().toString();
+                        Log.d(TAG, "🔗 [POPUP] URL interceptée: " + url);
+                        
+                        // Si callback OAuth, charger dans la WebView PRINCIPALE
+                        if (url.startsWith("app.runconnect://") || url.contains("auth/callback") || url.contains("oauth/callback")) {
+                            Log.d(TAG, "✅ Callback OAuth détecté dans popup, chargement dans WebView principale");
+                            MainActivity.this.webView.loadUrl(url);
+                            view.destroy();
+                            return true;
+                        }
+                        
+                        // Charger dans la popup
+                        return false;
+                    }
+                });
+                
+                // Transporter la nouvelle WebView
+                ((WebView.WebViewTransport) resultMsg.obj).setWebView(newWebView);
+                resultMsg.sendToTarget();
+                
+                Log.d(TAG, "✅ Popup WebView créée avec succès");
+                return true;
             }
         });
 
