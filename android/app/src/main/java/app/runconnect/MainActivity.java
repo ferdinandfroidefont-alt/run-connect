@@ -40,6 +40,33 @@ public class MainActivity extends AppCompatActivity {
     private final String START_URL = System.getProperty("app.start.url", 
         System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
         "https://run-connect.lovable.app");
+    
+    // Cache mémoire pour les contacts (évite relecture à chaque appel)
+    private static class ContactsCache {
+        private String cachedData = null;
+        private long lastUpdateTime = 0;
+        private static final long CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        
+        public boolean isValid() {
+            return cachedData != null && (System.currentTimeMillis() - lastUpdateTime) < CACHE_DURATION;
+        }
+        
+        public void update(String data) {
+            this.cachedData = data;
+            this.lastUpdateTime = System.currentTimeMillis();
+        }
+        
+        public String getData() {
+            return cachedData;
+        }
+        
+        public void invalidate() {
+            cachedData = null;
+            lastUpdateTime = 0;
+        }
+    }
+    
+    private final ContactsCache contactsCache = new ContactsCache();
 
     /**
      * Vérifie si Chrome est installé sur l'appareil
@@ -624,94 +651,145 @@ public class MainActivity extends AppCompatActivity {
         }
         
         @android.webkit.JavascriptInterface
-        public String getContacts() {
-            Log.d(TAG, "👥 AndroidBridge: récupération des contacts depuis JavaScript");
+        public void getContacts() {
+            Log.d(TAG, "👥 AndroidBridge: récupération contacts (asynchrone)");
             
             // Vérifier permission
             if (!hasContactsPermission()) {
                 Log.d(TAG, "👥❌ Permission contacts refusée");
-                return "{\"error\": \"Permission denied\"}";
+                notifyContactsResult("{\"error\": \"Permission denied\"}");
+                return;
             }
             
-            try {
-                JSONArray contactsArray = new JSONArray();
-                ContentResolver cr = getContentResolver();
-                Cursor cursor = cr.query(ContactsContract.Contacts.CONTENT_URI, null, null, null, null);
+            // ✅ Vérifier le cache d'abord (instantané)
+            if (contactsCache.isValid()) {
+                Log.d(TAG, "👥⚡ Utilisation cache contacts");
+                notifyContactsResult(contactsCache.getData());
+                return;
+            }
+            
+            // ✅ LANCER LA RÉCUPÉRATION EN ARRIÈRE-PLAN (NON-BLOQUANT)
+            new Thread(() -> {
+                long startTime = System.currentTimeMillis();
+                Log.d(TAG, "👥🔄 Début récupération contacts en background thread");
                 
-                if (cursor != null && cursor.moveToFirst()) {
-                    do {
-                        String contactId = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID));
-                        String displayName = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-                        
-                        JSONObject contact = new JSONObject();
-                        contact.put("contactId", contactId);
-                        contact.put("displayName", displayName);
-                        
-                        // Récupérer les téléphones
-                        if (cursor.getInt(cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)) > 0) {
-                            Cursor phoneCursor = cr.query(
-                                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                                null,
-                                ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
-                                new String[]{contactId},
-                                null
-                            );
-                            
-                            JSONArray phoneArray = new JSONArray();
-                            if (phoneCursor != null) {
-                                while (phoneCursor.moveToNext()) {
-                                    String phoneNumber = phoneCursor.getString(
-                                        phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                                    );
-                                    JSONObject phone = new JSONObject();
-                                    phone.put("number", phoneNumber);
-                                    phoneArray.put(phone);
-                                }
-                                phoneCursor.close();
-                            }
-                            contact.put("phoneNumbers", phoneArray);
-                        } else {
-                            contact.put("phoneNumbers", new JSONArray());
-                        }
-                        
-                        // Récupérer les emails
-                        Cursor emailCursor = cr.query(
-                            ContactsContract.CommonDataKinds.Email.CONTENT_URI,
-                            null,
-                            ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?",
+                try {
+                    String result = fetchContactsSync();
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    Log.d(TAG, "👥✅ Contacts chargés en " + elapsed + " ms");
+                    
+                    // ✅ Mettre à jour le cache
+                    contactsCache.update(result);
+                    
+                    // ✅ Notifier JavaScript sur le UI thread
+                    notifyContactsResult(result);
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "👥❌ Erreur récupération contacts", e);
+                    notifyContactsResult("{\"error\": \"" + e.getMessage() + "\"}");
+                }
+            }).start();
+        }
+
+        // Méthode synchrone appelée uniquement dans le thread background
+        private String fetchContactsSync() throws Exception {
+            JSONArray contactsArray = new JSONArray();
+            ContentResolver cr = getContentResolver();
+            
+            // ✅ OPTIMISATION: Utiliser une projection limitée (colonnes nécessaires seulement)
+            String[] projection = new String[]{
+                ContactsContract.Contacts._ID,
+                ContactsContract.Contacts.DISPLAY_NAME,
+                ContactsContract.Contacts.HAS_PHONE_NUMBER
+            };
+            
+            Cursor cursor = cr.query(
+                ContactsContract.Contacts.CONTENT_URI,
+                projection,
+                null,
+                null,
+                ContactsContract.Contacts.DISPLAY_NAME + " ASC" // Tri SQL (plus rapide)
+            );
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                int idIndex = cursor.getColumnIndex(ContactsContract.Contacts._ID);
+                int nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME);
+                int hasPhoneIndex = cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER);
+                
+                do {
+                    String contactId = cursor.getString(idIndex);
+                    String displayName = cursor.getString(nameIndex);
+                    
+                    JSONObject contact = new JSONObject();
+                    contact.put("contactId", contactId);
+                    contact.put("displayName", displayName);
+                    
+                    // ✅ Récupérer téléphones UNIQUEMENT si hasPhoneNumber = true
+                    JSONArray phoneArray = new JSONArray();
+                    if (cursor.getInt(hasPhoneIndex) > 0) {
+                        Cursor phoneCursor = cr.query(
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                            new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER},
+                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
                             new String[]{contactId},
                             null
                         );
                         
-                        JSONArray emailArray = new JSONArray();
-                        if (emailCursor != null) {
-                            while (emailCursor.moveToNext()) {
-                                String email = emailCursor.getString(
-                                    emailCursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.ADDRESS)
-                                );
-                                JSONObject emailObj = new JSONObject();
-                                emailObj.put("address", email);
-                                emailArray.put(emailObj);
+                        if (phoneCursor != null) {
+                            while (phoneCursor.moveToNext()) {
+                                JSONObject phone = new JSONObject();
+                                phone.put("number", phoneCursor.getString(0));
+                                phoneArray.put(phone);
                             }
-                            emailCursor.close();
+                            phoneCursor.close();
                         }
-                        contact.put("emails", emailArray);
-                        
-                        contactsArray.put(contact);
-                    } while (cursor.moveToNext());
-                    cursor.close();
-                }
+                    }
+                    contact.put("phoneNumbers", phoneArray);
+                    
+                    // ✅ Récupérer emails (optimisé avec projection)
+                    JSONArray emailArray = new JSONArray();
+                    Cursor emailCursor = cr.query(
+                        ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+                        new String[]{ContactsContract.CommonDataKinds.Email.ADDRESS},
+                        ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?",
+                        new String[]{contactId},
+                        null
+                    );
+                    
+                    if (emailCursor != null) {
+                        while (emailCursor.moveToNext()) {
+                            JSONObject emailObj = new JSONObject();
+                            emailObj.put("address", emailCursor.getString(0));
+                            emailArray.put(emailObj);
+                        }
+                        emailCursor.close();
+                    }
+                    contact.put("emails", emailArray);
+                    
+                    contactsArray.put(contact);
+                } while (cursor.moveToNext());
                 
-                Log.d(TAG, "👥✅ Contacts récupérés: " + contactsArray.length());
-                return contactsArray.toString();
-                
-            } catch (JSONException e) {
-                Log.e(TAG, "👥❌ Erreur JSON lors de la récupération des contacts", e);
-                return "{\"error\": \"JSON error: " + e.getMessage() + "\"}";
-            } catch (Exception e) {
-                Log.e(TAG, "👥❌ Erreur lors de la récupération des contacts", e);
-                return "{\"error\": \"Error: " + e.getMessage() + "\"}";
+                cursor.close();
             }
+            
+            return contactsArray.toString();
+        }
+
+        // Méthode pour notifier JavaScript depuis n'importe quel thread
+        private void notifyContactsResult(String result) {
+            runOnUiThread(() -> {
+                if (webView != null) {
+                    String escapedResult = result.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r");
+                    String jsCode = "window.dispatchEvent(new CustomEvent('contactsLoaded', { detail: '" + escapedResult + "' }));";
+                    webView.evaluateJavascript(jsCode, null);
+                }
+            });
+        }
+
+        @android.webkit.JavascriptInterface
+        public void invalidateContactsCache() {
+            Log.d(TAG, "👥🗑️ Cache contacts invalidé");
+            contactsCache.invalidate();
         }
     }
     

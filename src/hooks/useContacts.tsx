@@ -24,7 +24,8 @@ declare global {
       requestContactsPermission: () => void;
       requestLocationPermission: () => void;
       requestStoragePermission: () => void;
-      getContacts: () => string;
+      getContacts: () => void; // ✅ Asynchrone, pas de retour direct
+      invalidateContactsCache: () => void; // ✅ Nouveau
     };
     onNativePermissionResult?: (granted: boolean) => void;
   }
@@ -175,47 +176,82 @@ export const useContacts = () => {
         throw new Error('Permission contacts refusée');
       }
 
-      // ✅ UTILISER LE BRIDGE ANDROID NATIF
+      // ✅ NOUVELLE APPROCHE: Écouter l'événement asynchrone
       if (!window.AndroidBridge) {
         throw new Error('AndroidBridge non disponible');
       }
 
-      console.log('👥 Appel AndroidBridge.getContacts()...');
-      const contactsJson = window.AndroidBridge.getContacts();
-      const contactsData = JSON.parse(contactsJson);
-      
-      if (contactsData.error) {
-        throw new Error(contactsData.error);
-      }
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          setLoading(false);
+          reject(new Error('Timeout récupération contacts (30s)'));
+        }, 30000); // 30 secondes max
 
-      console.log('👥 Contacts bruts reçus:', contactsData.length || 0);
+        // ✅ Écouter le résultat depuis le thread background
+        const handleContactsLoaded = (event: any) => {
+          clearTimeout(timeout);
+          window.removeEventListener('contactsLoaded', handleContactsLoaded);
+          
+          try {
+            const contactsData = JSON.parse(event.detail);
+            
+            if (contactsData.error) {
+              setLoading(false);
+              reject(new Error(contactsData.error));
+              return;
+            }
 
-      // Formatter contacts
-      const formattedContacts: Contact[] = contactsData
-        .filter((contact: any) => {
-          const hasName = contact.displayName;
-          const hasPhone = contact.phoneNumbers && contact.phoneNumbers.length > 0;
-          return hasName || hasPhone;
-        })
-        .map((contact: any) => ({
-          contactId: contact.contactId,
-          displayName: contact.displayName || 'Contact sans nom',
-          phoneNumbers: contact.phoneNumbers || [],
-          emails: contact.emails || []
-        }))
-        .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+            console.log('👥 Contacts bruts reçus:', contactsData.length || 0);
 
-      console.log('👥✅ Contacts formatés:', formattedContacts.length);
-      
-      setContacts(formattedContacts);
-      return formattedContacts;
+            // Formatter contacts
+            const formattedContacts: Contact[] = contactsData
+              .filter((contact: any) => {
+                const hasName = contact.displayName;
+                const hasPhone = contact.phoneNumbers && contact.phoneNumbers.length > 0;
+                return hasName || hasPhone;
+              })
+              .map((contact: any) => ({
+                contactId: contact.contactId,
+                displayName: contact.displayName || 'Contact sans nom',
+                phoneNumbers: contact.phoneNumbers || [],
+                emails: contact.emails || []
+              }));
+
+            console.log('👥✅ Contacts formatés:', formattedContacts.length);
+            
+            setContacts(formattedContacts);
+            setLoading(false);
+            resolve(formattedContacts);
+
+          } catch (error) {
+            console.error('👥❌ Erreur parsing contacts:', error);
+            setLoading(false);
+            reject(error);
+          }
+        };
+
+        window.addEventListener('contactsLoaded', handleContactsLoaded);
+        
+        // ✅ Lancer la récupération asynchrone (retour immédiat)
+        console.log('👥⚡ Appel AndroidBridge.getContacts() (non-bloquant)...');
+        window.AndroidBridge!.getContacts();
+      });
 
     } catch (error) {
       console.error('👥❌ ERREUR CHARGEMENT CONTACTS:', error);
-      throw error;
-    } finally {
       setLoading(false);
+      throw error;
     }
+  };
+
+  const refreshContacts = async (): Promise<Contact[]> => {
+    console.log('👥🔄 Force refresh contacts (invalidation cache)');
+    
+    if (window.AndroidBridge) {
+      window.AndroidBridge.invalidateContactsCache();
+    }
+    
+    return loadContacts();
   };
 
   return {
@@ -225,6 +261,7 @@ export const useContacts = () => {
     isNative,
     checkPermissions,
     requestPermissions,
-    loadContacts
+    loadContacts,
+    refreshContacts
   };
 };
