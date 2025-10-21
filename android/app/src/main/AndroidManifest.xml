@@ -95,10 +95,20 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- 🔔 FIREBASE CLOUD MESSAGING -->
+        <!-- 🔔 FIREBASE CLOUD MESSAGING - Service personnalisé RunConnect -->
+        <service
+            android:name=".MessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        
+        <!-- 🔔 Service Capacitor par défaut (fallback) -->
         <service
             android:name="com.getcapacitor.plugin.pushnotifications.MessagingService"
-            android:exported="false">
+            android:exported="false"
+            android:enabled="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>

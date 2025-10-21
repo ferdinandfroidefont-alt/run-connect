@@ -32,12 +32,18 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import androidx.annotation.NonNull;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
-    private WebView webView;
+    public WebView webView;
+    public static MainActivity instance;
     private final String START_URL = "https://run-connect.lovable.app";
     
     // Cache mémoire pour les contacts (évite relecture à chaque appel)
@@ -82,6 +88,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Stocker l'instance pour accès depuis MessagingService
+        instance = this;
         
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
@@ -324,6 +333,12 @@ public class MainActivity extends AppCompatActivity {
         // ✅ Créer le canal de notification pour Firebase
         createNotificationChannels();
         
+        // 🔥 INITIALISER FIREBASE ET RÉCUPÉRER LE TOKEN FCM
+        initializeFirebaseMessaging();
+        
+        // ✅ Vérifier si notifications déjà autorisées au démarrage
+        checkNotificationPermissionAtStartup();
+        
         // ✅ Charger le site
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
@@ -392,6 +407,7 @@ public class MainActivity extends AppCompatActivity {
             channel.setDescription("Notifications importantes de RunConnect");
             channel.enableVibration(true);
             channel.enableLights(true);
+            channel.setShowBadge(true);
             
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
@@ -399,6 +415,92 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "🔔 Notification channel created: high_importance_channel");
             }
         }
+    }
+    
+    /**
+     * 🔥 INITIALISER FIREBASE MESSAGING ET RÉCUPÉRER LE TOKEN FCM
+     */
+    private void initializeFirebaseMessaging() {
+        Log.d(TAG, "🔥 [FIREBASE INIT] Initialisation Firebase Cloud Messaging...");
+        
+        // Récupérer le token FCM existant
+        FirebaseMessaging.getInstance().getToken()
+            .addOnCompleteListener(new OnCompleteListener<String>() {
+                @Override
+                public void onComplete(@NonNull Task<String> task) {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "❌ [FIREBASE INIT] Échec récupération token FCM", task.getException());
+                        return;
+                    }
+
+                    // Récupérer le token
+                    String token = task.getResult();
+                    Log.d(TAG, "🔥🔥🔥 [FIREBASE INIT] TOKEN FCM RÉCUPÉRÉ !");
+                    Log.d(TAG, "🔥 [FIREBASE INIT] Token: " + token);
+                    
+                    // Injecter le token dans JavaScript
+                    injectFCMToken(webView, token);
+                }
+            });
+        
+        // Écouter les mises à jour du token
+        Log.d(TAG, "🔥 [FIREBASE INIT] Configuration listener token refresh...");
+        // Note: Le listener onNewToken dans MessagingService gérera les nouveaux tokens
+    }
+    
+    /**
+     * 🔥 VÉRIFIER SI NOTIFICATIONS DÉJÀ AUTORISÉES AU DÉMARRAGE
+     */
+    private void checkNotificationPermissionAtStartup() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            boolean hasNotificationPermission = ContextCompat.checkSelfPermission(this, 
+                Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            
+            if (hasNotificationPermission) {
+                Log.d(TAG, "✅ [NOTIF CHECK] Notifications déjà autorisées au démarrage");
+                
+                // Récupérer immédiatement le token FCM
+                FirebaseMessaging.getInstance().getToken()
+                    .addOnCompleteListener(new OnCompleteListener<String>() {
+                        @Override
+                        public void onComplete(@NonNull Task<String> task) {
+                            if (task.isSuccessful() && task.getResult() != null) {
+                                String token = task.getResult();
+                                Log.d(TAG, "🔥 [NOTIF CHECK] Token FCM au démarrage: " + token);
+                                injectFCMToken(webView, token);
+                            } else {
+                                Log.w(TAG, "⚠️ [NOTIF CHECK] Échec récupération token au démarrage");
+                            }
+                        }
+                    });
+            } else {
+                Log.d(TAG, "ℹ️ [NOTIF CHECK] Notifications non autorisées au démarrage");
+            }
+        } else {
+            Log.d(TAG, "ℹ️ [NOTIF CHECK] Android < 13, pas de vérification POST_NOTIFICATIONS");
+        }
+    }
+    
+    /**
+     * 🔥 INJECTER LE TOKEN FCM DANS JAVASCRIPT
+     */
+    private void injectFCMToken(WebView view, String token) {
+        if (view == null || token == null) {
+            Log.w(TAG, "⚠️ [FCM INJECT] WebView ou token null, injection impossible");
+            return;
+        }
+        
+        String jsCode = String.format(
+            "window.fcmToken = '%s'; " +
+            "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
+            "console.log('🔥 [MainActivity] Token FCM injecté:', '%s');",
+            token, token, token.substring(0, 30) + "..."
+        );
+        
+        view.post(() -> {
+            view.evaluateJavascript(jsCode, null);
+            Log.d(TAG, "✅ [FCM INJECT] Token FCM injecté dans JavaScript");
+        });
     }
     
     private boolean hasLocationPermission() {

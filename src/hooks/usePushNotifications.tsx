@@ -648,6 +648,40 @@ export const usePushNotifications = () => {
     }
   }, [isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
 
+  // 🔥 ÉCOUTER LE TOKEN FCM INJECTÉ PAR MAINACTIVITY
+  useEffect(() => {
+    if (!user?.id || !isNative) return;
+
+    const handleFCMTokenFromNative = (event: any) => {
+      const nativeToken = event.detail?.token;
+      if (nativeToken) {
+        console.log('🔥🔥🔥 [FCM EVENT] Token FCM reçu de MainActivity !');
+        console.log('🔥 [FCM EVENT] Token:', nativeToken.substring(0, 30) + '...');
+        
+        setToken(nativeToken);
+        setIsRegistered(true);
+        
+        // Sauvegarder immédiatement dans Supabase
+        savePushToken(nativeToken);
+      }
+    };
+
+    window.addEventListener('fcmTokenReady', handleFCMTokenFromNative);
+    
+    // Vérifier si un token est déjà disponible dans window
+    if ((window as any).fcmToken) {
+      console.log('🔥 [FCM CHECK] Token déjà disponible dans window.fcmToken');
+      const existingToken = (window as any).fcmToken;
+      setToken(existingToken);
+      setIsRegistered(true);
+      savePushToken(existingToken);
+    }
+
+    return () => {
+      window.removeEventListener('fcmTokenReady', handleFCMTokenFromNative);
+    };
+  }, [user?.id, isNative, savePushToken]);
+
   // Configuration au montage
   useEffect(() => {
     if (!user) return;

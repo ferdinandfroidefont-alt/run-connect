@@ -797,6 +797,9 @@ public class PermissionsPlugin extends Plugin {
                 if (ContextCompat.checkSelfPermission(getActivity(), 
                     Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                     
+                    Log.d("PermissionsPlugin", "🔔 Demande permission POST_NOTIFICATIONS Android 13+");
+                    
+                    // 🔥 DÉCLENCHER FIREBASE APRÈS PERMISSION ACCORDÉE
                     requestPermissionForAlias("notifications", call, "requestNotificationPermissions");
                     return;
                 }
@@ -811,6 +814,11 @@ public class PermissionsPlugin extends Plugin {
             result.put("sdkVersion", Build.VERSION.SDK_INT);
             
             if (areEnabled) {
+                Log.d("PermissionsPlugin", "✅ Notifications déjà activées");
+                
+                // 🔥 DÉCLENCHER FIREBASE IMMÉDIATEMENT SI DÉJÀ AUTORISÉ
+                triggerFirebaseRegistration();
+                
                 call.resolve(result);
             } else {
                 result.put("needsSettings", true);
@@ -825,6 +833,31 @@ public class PermissionsPlugin extends Plugin {
         }
     }
     
+    /**
+     * 🔥 DÉCLENCHER L'ENREGISTREMENT FIREBASE APRÈS PERMISSION ACCORDÉE
+     */
+    private void triggerFirebaseRegistration() {
+        try {
+            Log.d("PermissionsPlugin", "🔥 Déclenchement enregistrement Firebase...");
+            
+            // Notifier MainActivity pour récupérer le token FCM
+            if (getActivity() instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) getActivity();
+                mainActivity.runOnUiThread(() -> {
+                    // Déclencher l'initialisation Firebase dans MainActivity
+                    String jsCode = "if (window.PushNotifications && window.PushNotifications.register) { " +
+                                  "console.log('🔥 [PermissionsPlugin] Déclenchement PushNotifications.register()'); " +
+                                  "window.PushNotifications.register(); " +
+                                  "}";
+                    mainActivity.webView.evaluateJavascript(jsCode, null);
+                    Log.d("PermissionsPlugin", "✅ Firebase registration déclenché via JavaScript");
+                });
+            }
+        } catch (Exception e) {
+            Log.e("PermissionsPlugin", "❌ Erreur déclenchement Firebase:", e);
+        }
+    }
+    
     @PluginMethod
     public void showLocalNotification(PluginCall call) {
         try {
@@ -836,7 +869,7 @@ public class PermissionsPlugin extends Plugin {
                 createNotificationChannel();
             }
             
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(getActivity(), "runconnect_channel")
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getActivity(), "high_importance_channel")
                 .setSmallIcon(android.R.drawable.ic_dialog_info) // Icône par défaut
                 .setContentTitle(title)
                 .setContentText(body)
@@ -875,16 +908,19 @@ public class PermissionsPlugin extends Plugin {
     
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "RunConnect Notifications";
-            String description = "Notifications pour RunConnect";
+            // Utiliser le même canal que MainActivity pour cohérence
+            CharSequence name = "Notifications RunConnect";
+            String description = "Notifications importantes de RunConnect";
             int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel channel = new NotificationChannel("runconnect_channel", name, importance);
+            NotificationChannel channel = new NotificationChannel("high_importance_channel", name, importance);
             channel.setDescription(description);
             channel.enableLights(true);
             channel.enableVibration(true);
+            channel.setShowBadge(true);
             
             NotificationManager notificationManager = getActivity().getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
+            Log.d("PermissionsPlugin", "✅ Canal de notification créé: high_importance_channel");
         }
     }
     
