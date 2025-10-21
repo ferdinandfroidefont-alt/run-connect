@@ -9,30 +9,29 @@
 
     <!-- 📷 CAMERA -->
     <uses-permission android:name="android.permission.CAMERA" />
-    
+
     <!-- 🎤 MICROPHONE / AUDIO -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    
-    <!-- 📷 STOCKAGE - PAR VERSION ANDROID -->
-    <!-- Android 6-12: READ_EXTERNAL_STORAGE -->
+
+    <!-- 💾 STOCKAGE -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    
-    <!-- Android 13+: Permissions granulaires -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <!-- 👥 CONTACTS -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
-    <!-- 🌐 INTERNET / RÉSEAU / NOTIFICATIONS -->
+    <!-- 🔔 NOTIFICATIONS -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 🌐 INTERNET / RÉSEAU -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- 📲 COMPATIBILITÉ HARDWARE (Play Console) -->
+    <!-- 📲 COMPATIBILITÉ HARDWARE -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
@@ -47,9 +46,10 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"
+        android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true"
-        android:requestLegacyExternalStorage="false">
+        android:requestLegacyExternalStorage="true"
+        android:theme="@style/AppTheme.NoActionBarFull">
 
         <!-- 🧠 ACTIVITÉ PRINCIPALE -->
         <activity
@@ -58,24 +58,24 @@
             android:launchMode="singleTop"
             android:hardwareAccelerated="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:theme="@style/AppTheme.NoActionBarLaunch">
+            android:theme="@style/AppTheme.NoActionBarFull">
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
-            <!-- Deep Link OAuth avec custom scheme (solution MIUI) -->
+
+            <!-- 🔐 Deep Link OAuth -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data 
-                    android:scheme="app.runconnect"
-                    android:host="auth"
-                    android:pathPrefix="/callback" />
+                <data android:scheme="app.runconnect"
+                      android:host="auth"
+                      android:pathPrefix="/callback" />
             </intent-filter>
 
-            <!-- Deep Link générique pour autres cas -->
+            <!-- Deep Link générique -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -84,7 +84,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 🔓 FILE PROVIDER POUR ACCÈS FICHIERS -->
+        <!-- 🔓 FILE PROVIDER -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -95,7 +95,7 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- 🔔 FIREBASE CLOUD MESSAGING SERVICE -->
+        <!-- 🔔 FIREBASE CLOUD MESSAGING -->
         <service
             android:name="com.getcapacitor.plugin.pushnotifications.MessagingService"
             android:exported="false">
@@ -104,16 +104,12 @@
             </intent-filter>
         </service>
 
-        <!-- 🔔 NOTIFICATION CHANNEL DEFAULT -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="high_importance_channel" />
 
-        <!-- 🔔 FIREBASE APP ID (sera rempli automatiquement par google-services.json) -->
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
-
     </application>
-
 </manifest>
