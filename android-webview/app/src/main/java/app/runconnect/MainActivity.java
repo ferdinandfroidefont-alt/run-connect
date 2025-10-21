@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
+    private static final int REQ_MICROPHONE = 1004;
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
     
@@ -286,6 +287,7 @@ public class MainActivity extends AppCompatActivity {
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.CAMERA,
                 Manifest.permission.READ_CONTACTS,
+                Manifest.permission.RECORD_AUDIO,
                 Manifest.permission.VIBRATE,
         };
 
