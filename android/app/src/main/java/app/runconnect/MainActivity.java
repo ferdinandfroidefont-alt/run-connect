@@ -24,6 +24,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
 import android.os.Message;
+import android.util.Base64;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -740,93 +741,161 @@ public class MainActivity extends AppCompatActivity {
         private String fetchContactsSync() throws Exception {
             JSONArray contactsArray = new JSONArray();
             ContentResolver cr = getContentResolver();
+            Cursor cursor = null;
             
-            // ✅ OPTIMISATION: Utiliser une projection limitée (colonnes nécessaires seulement)
-            String[] projection = new String[]{
-                ContactsContract.Contacts._ID,
-                ContactsContract.Contacts.DISPLAY_NAME,
-                ContactsContract.Contacts.HAS_PHONE_NUMBER
-            };
-            
-            Cursor cursor = cr.query(
-                ContactsContract.Contacts.CONTENT_URI,
-                projection,
-                null,
-                null,
-                ContactsContract.Contacts.DISPLAY_NAME + " ASC" // Tri SQL (plus rapide)
-            );
-            
-            if (cursor != null && cursor.moveToFirst()) {
+            try {
+                // ✅ OPTIMISATION: Utiliser une projection limitée
+                String[] projection = new String[]{
+                    ContactsContract.Contacts._ID,
+                    ContactsContract.Contacts.DISPLAY_NAME,
+                    ContactsContract.Contacts.HAS_PHONE_NUMBER
+                };
+                
+                cursor = cr.query(
+                    ContactsContract.Contacts.CONTENT_URI,
+                    projection,
+                    null,
+                    null,
+                    ContactsContract.Contacts.DISPLAY_NAME + " ASC"
+                );
+                
+                if (cursor == null) {
+                    Log.w(TAG, "👥⚠️ Cursor contacts est null");
+                    return "[]"; // Retourner tableau vide au lieu d'une exception
+                }
+                
+                if (!cursor.moveToFirst()) {
+                    Log.d(TAG, "👥 Aucun contact trouvé");
+                    return "[]";
+                }
+                
                 int idIndex = cursor.getColumnIndex(ContactsContract.Contacts._ID);
                 int nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME);
                 int hasPhoneIndex = cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER);
                 
+                // Vérifier que les colonnes existent
+                if (idIndex < 0 || nameIndex < 0 || hasPhoneIndex < 0) {
+                    Log.e(TAG, "👥❌ Colonnes contacts invalides");
+                    return "[]";
+                }
+                
                 do {
-                    String contactId = cursor.getString(idIndex);
-                    String displayName = cursor.getString(nameIndex);
-                    
-                    JSONObject contact = new JSONObject();
-                    contact.put("contactId", contactId);
-                    contact.put("displayName", displayName);
-                    
-                    // ✅ Récupérer téléphones UNIQUEMENT si hasPhoneNumber = true
-                    JSONArray phoneArray = new JSONArray();
-                    if (cursor.getInt(hasPhoneIndex) > 0) {
-                        Cursor phoneCursor = cr.query(
-                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                            new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER},
-                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
-                            new String[]{contactId},
-                            null
-                        );
+                    try {
+                        String contactId = cursor.getString(idIndex);
+                        String displayName = cursor.getString(nameIndex);
                         
-                        if (phoneCursor != null) {
-                            while (phoneCursor.moveToNext()) {
-                                JSONObject phone = new JSONObject();
-                                phone.put("number", phoneCursor.getString(0));
-                                phoneArray.put(phone);
+                        JSONObject contact = new JSONObject();
+                        contact.put("contactId", contactId);
+                        contact.put("displayName", displayName != null ? displayName : "");
+                        
+                        // ✅ Récupérer téléphones
+                        JSONArray phoneArray = new JSONArray();
+                        if (cursor.getInt(hasPhoneIndex) > 0) {
+                            Cursor phoneCursor = null;
+                            try {
+                                phoneCursor = cr.query(
+                                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                                    new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER},
+                                    ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
+                                    new String[]{contactId},
+                                    null
+                                );
+                                
+                                if (phoneCursor != null) {
+                                    while (phoneCursor.moveToNext()) {
+                                        String phoneNumber = phoneCursor.getString(0);
+                                        if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                                            JSONObject phone = new JSONObject();
+                                            phone.put("number", phoneNumber);
+                                            phoneArray.put(phone);
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.w(TAG, "👥⚠️ Erreur lecture téléphone contact " + contactId, e);
+                            } finally {
+                                if (phoneCursor != null) {
+                                    phoneCursor.close();
+                                }
                             }
-                            phoneCursor.close();
                         }
-                    }
-                    contact.put("phoneNumbers", phoneArray);
-                    
-                    // ✅ Récupérer emails (optimisé avec projection)
-                    JSONArray emailArray = new JSONArray();
-                    Cursor emailCursor = cr.query(
-                        ContactsContract.CommonDataKinds.Email.CONTENT_URI,
-                        new String[]{ContactsContract.CommonDataKinds.Email.ADDRESS},
-                        ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?",
-                        new String[]{contactId},
-                        null
-                    );
-                    
-                    if (emailCursor != null) {
-                        while (emailCursor.moveToNext()) {
-                            JSONObject emailObj = new JSONObject();
-                            emailObj.put("address", emailCursor.getString(0));
-                            emailArray.put(emailObj);
+                        contact.put("phoneNumbers", phoneArray);
+                        
+                        // ✅ Récupérer emails
+                        JSONArray emailArray = new JSONArray();
+                        Cursor emailCursor = null;
+                        try {
+                            emailCursor = cr.query(
+                                ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+                                new String[]{ContactsContract.CommonDataKinds.Email.ADDRESS},
+                                ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?",
+                                new String[]{contactId},
+                                null
+                            );
+                            
+                            if (emailCursor != null) {
+                                while (emailCursor.moveToNext()) {
+                                    String emailAddress = emailCursor.getString(0);
+                                    if (emailAddress != null && !emailAddress.isEmpty()) {
+                                        JSONObject emailObj = new JSONObject();
+                                        emailObj.put("address", emailAddress);
+                                        emailArray.put(emailObj);
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.w(TAG, "👥⚠️ Erreur lecture email contact " + contactId, e);
+                        } finally {
+                            if (emailCursor != null) {
+                                emailCursor.close();
+                            }
                         }
-                        emailCursor.close();
+                        contact.put("emails", emailArray);
+                        
+                        contactsArray.put(contact);
+                        
+                    } catch (Exception e) {
+                        // Si un contact pose problème, continuer avec les autres
+                        Log.w(TAG, "👥⚠️ Erreur traitement d'un contact, on continue...", e);
                     }
-                    contact.put("emails", emailArray);
-                    
-                    contactsArray.put(contact);
                 } while (cursor.moveToNext());
                 
-                cursor.close();
+                Log.d(TAG, "👥✅ " + contactsArray.length() + " contacts récupérés avec succès");
+                return contactsArray.toString();
+                
+            } catch (SecurityException e) {
+                Log.e(TAG, "👥❌ Permission refusée pour accéder aux contacts", e);
+                throw new Exception("Permission refusée");
+            } catch (Exception e) {
+                Log.e(TAG, "👥❌ Erreur globale récupération contacts", e);
+                throw new Exception("Erreur lecture contacts: " + e.getMessage());
+            } finally {
+                if (cursor != null) {
+                    cursor.close();
+                }
             }
-            
-            return contactsArray.toString();
         }
 
         // Méthode pour notifier JavaScript depuis n'importe quel thread
         private void notifyContactsResult(String result) {
             runOnUiThread(() -> {
                 if (webView != null) {
-                    String escapedResult = result.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r");
-                    String jsCode = "window.dispatchEvent(new CustomEvent('contactsLoaded', { detail: '" + escapedResult + "' }));";
-                    webView.evaluateJavascript(jsCode, null);
+                    try {
+                        // ✅ Encoder en Base64 pour éviter tout problème d'échappement
+                        String base64Result = Base64.encodeToString(
+                            result.getBytes("UTF-8"), 
+                            Base64.NO_WRAP
+                        );
+                        
+                        String jsCode = "window.dispatchEvent(new CustomEvent('contactsLoaded', { detail: atob('" + base64Result + "') }));";
+                        webView.evaluateJavascript(jsCode, null);
+                        Log.d(TAG, "👥✅ Résultat contacts envoyé au JavaScript (Base64)");
+                    } catch (Exception e) {
+                        Log.e(TAG, "👥❌ Erreur encodage résultat contacts", e);
+                        String errorJson = "{\"error\": \"Erreur encodage données\"}";
+                        String jsCode = "window.dispatchEvent(new CustomEvent('contactsLoaded', { detail: '" + errorJson + "' }));";
+                        webView.evaluateJavascript(jsCode, null);
+                    }
                 }
             });
         }
