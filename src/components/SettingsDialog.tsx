@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2, Bug, Languages } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2, Bug, Languages, ArrowLeft, Search, ChevronRight, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,6 +23,7 @@ import { ReferralDialog } from "./ReferralDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { languages, Language } from "@/lib/translations";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface Profile {
   username: string;
@@ -62,6 +63,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showConversationThemes, setShowConversationThemes] = useState(false);
   const [showReferralDialog, setShowReferralDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const { toast } = useToast();
 
@@ -239,65 +241,72 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
-          <DialogHeader className="p-6 pb-0 shrink-0">
-            <DialogTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
-              <Settings className="h-6 w-6" />
-              Paramètres
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-md max-h-[90vh] p-0 flex flex-col backdrop-blur-xl bg-background/95 border-border/50">
+          {/* Header avec flèche retour et recherche */}
+          <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
+            <div className="flex items-center gap-3 p-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full hover:bg-muted/50"
+                onClick={() => onOpenChange(false)}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h2 className="text-lg font-semibold">Paramètres</h2>
+            </div>
+            
+            {/* Barre de recherche */}
+            <div className="px-4 pb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher dans les paramètres"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-muted/30 border-border/50 focus-visible:ring-primary/50"
+                />
+              </div>
+            </div>
+          </div>
           
-          <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
-            <div className="space-y-4 pb-4 min-h-full"
-                 style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <div className="px-4 pb-6 space-y-8">
               
-              {/* Theme Settings */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Settings className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Paramètres généraux</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              {/* Section: Paramètres généraux */}
+              <div className="space-y-3 animate-fade-in">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  Paramètres généraux
+                </h3>
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   {/* Language Selector */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Languages className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Langue
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Choisir la langue de l'application
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Languages className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Langue</label>
+                        <p className="text-xs text-muted-foreground">Choisir la langue de l'application</p>
                       </div>
                     </div>
                     <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                      <SelectTrigger className="w-[140px]">
+                      <SelectTrigger className="w-[120px] h-8 text-xs border-border/50 bg-background/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(languages).map(([code, { nativeName }]) => (
-                          <SelectItem key={code} value={code}>
-                            {nativeName}
-                          </SelectItem>
+                          <SelectItem key={code} value={code}>{nativeName}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   {/* Theme Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Mode {theme === 'dark' ? 'sombre' : 'clair'}
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Basculer entre thème clair et sombre
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      {theme === 'dark' ? <Moon className="h-5 w-5 text-muted-foreground" /> : <Sun className="h-5 w-5 text-muted-foreground" />}
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Mode {theme === 'dark' ? 'sombre' : 'clair'}</label>
+                        <p className="text-xs text-muted-foreground">Basculer entre thème clair et sombre</p>
                       </div>
                     </div>
                     <Switch
@@ -307,246 +316,181 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
 
                   {/* Password Reset */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Key className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Mot de passe
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Réinitialiser votre mot de passe
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Key className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Mot de passe</label>
+                        <p className="text-xs text-muted-foreground">Réinitialiser votre mot de passe</p>
                       </div>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
+                      className="h-8 text-xs text-primary hover:text-primary hover:bg-primary/10"
                       onClick={handlePasswordReset}
                       disabled={isChangingPassword}
                     >
-                      {isChangingPassword ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        'Changer'
-                      )}
+                      {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Changer'}
                     </Button>
                   </div>
 
-                   {/* Long Press to Create Session */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-2">
-                       <Settings className="h-4 w-4" />
-                       <div className="grid gap-1.5">
-                         <label className="text-sm font-medium leading-none">
-                           Appui long sur la carte
-                         </label>
-                         <p className="text-xs text-muted-foreground">
-                           Créer une session en appuyant longuement sur la carte
-                         </p>
-                       </div>
-                     </div>
-                     <Switch
-                       checked={localStorage.getItem('enableLongPressCreate') === 'true'}
-                       onCheckedChange={(checked) => {
-                         localStorage.setItem('enableLongPressCreate', checked.toString());
-                         toast({
-                           title: "Paramètre mis à jour",
-                           description: checked ? "Appui long activé sur la carte" : "Appui long désactivé sur la carte"
-                         });
-                       }}
-                     />
-                   </div>
+                  {/* Long Press to Create Session */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Settings className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Appui long sur la carte</label>
+                        <p className="text-xs text-muted-foreground">Créer une session en appuyant longuement</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={localStorage.getItem('enableLongPressCreate') === 'true'}
+                      onCheckedChange={(checked) => {
+                        localStorage.setItem('enableLongPressCreate', checked.toString());
+                        toast({
+                          title: "Paramètre mis à jour",
+                          description: checked ? "Appui long activé" : "Appui long désactivé"
+                        });
+                      }}
+                    />
+                  </div>
 
-                   {/* Friend Suggestions */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-2">
-                       <Users className="h-4 w-4" />
-                       <div className="grid gap-1.5">
-                         <label className="text-sm font-medium leading-none">
-                           Suggestions d'amis
-                         </label>
-                         <p className="text-xs text-muted-foreground">
-                           Autoriser les suggestions et être suggéré
-                         </p>
-                       </div>
-                     </div>
-                     <Switch
-                       checked={profile?.allow_friend_suggestions !== false}
-                       onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
-                     />
-                   </div>
+                  {/* Friend Suggestions */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Suggestions d'amis</label>
+                        <p className="text-xs text-muted-foreground">Autoriser les suggestions</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.allow_friend_suggestions !== false}
+                      onCheckedChange={(checked) => updatePrivacySettings('allow_friend_suggestions', checked)}
+                    />
+                  </div>
 
                   {/* Share Profile */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Share2 className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Partager mon profil
-                        </label>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
+                       onClick={() => {
+                         if (profile) {
+                           shareProfile({
+                             username: profile.username,
+                             displayName: profile.display_name,
+                             bio: profile.bio
+                           });
+                         }
+                       }}>
+                    <div className="flex items-center gap-3 flex-1">
+                      <Share2 className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Partager mon profil</label>
+                        <p className="text-xs text-muted-foreground">Partagez sur Instagram, WhatsApp...</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  </div>
+
+                  {/* Contacts Access */}
+                  <div className="p-4">
+                    <ContactsPermissionButton />
+                  </div>
+
+                  {/* Conversation Themes */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
+                       onClick={() => setShowConversationThemes(true)}>
+                    <div className="flex items-center gap-3 flex-1">
+                      <Palette className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Thèmes de conversation</label>
+                        <p className="text-xs text-muted-foreground">Personnaliser l'apparence</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  </div>
+
+                  {/* Parrainage */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
+                       onClick={() => setShowReferralDialog(true)}>
+                    <div className="flex items-center gap-3 flex-1">
+                      <Gift className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Parrainage</label>
+                        <p className="text-xs text-muted-foreground">Invitez vos amis et gagnez du premium</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  </div>
+
+                  {/* Don / Premium */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
+                       onClick={() => {
+                         onOpenChange(false);
+                         window.location.href = '/subscription';
+                       }}>
+                    <div className="flex items-center gap-3 flex-1">
+                      <Gift className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Soutenir l'application</label>
+                        <p className="text-xs text-muted-foreground">Don ou abonnement premium</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Notifications */}
+              <div className="space-y-3 animate-fade-in">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  Notifications
+                </h3>
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+                  {/* Notifications Push */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Smartphone className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Notifications push</label>
                         <p className="text-xs text-muted-foreground">
-                          Partagez votre profil sur Instagram, WhatsApp...
+                          {isRegistered ? "✓ Activées" : "Autoriser les notifications"}
                         </p>
                       </div>
                     </div>
                     <Button
-                      variant="outline"
+                      variant={isRegistered ? "ghost" : "default"}
                       size="sm"
-                      onClick={() => {
-                        if (profile) {
-                          shareProfile({
-                            username: profile.username,
-                            displayName: profile.display_name,
-                            bio: profile.bio
-                          });
-                        }
-                      }}
+                      className="h-8 text-xs"
+                      onClick={handleNotificationToggle}
+                      disabled={isRegistered}
                     >
-                      Partager
+                      {isRegistered ? '✓ Activées' : 'Activer'}
                     </Button>
                   </div>
 
-                   {/* Contacts Access - Only show on mobile */}
-                   <ContactsPermissionButton />
-
-                  {/* Conversation Themes */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-2">
-                       <Palette className="h-4 w-4" />
-                       <div className="grid gap-1.5">
-                         <label className="text-sm font-medium leading-none">
-                           Thèmes de conversation
-                         </label>
-                         <p className="text-xs text-muted-foreground">
-                           Personnaliser l'apparence des messages
-                         </p>
-                       </div>
-                     </div>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowConversationThemes(true)}
-                     >
-                       Choisir
-                     </Button>
-                   </div>
-
-                   {/* Parrainage */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-2">
-                       <Gift className="h-4 w-4" />
-                       <div className="grid gap-1.5">
-                         <label className="text-sm font-medium leading-none">
-                           Parrainage
-                         </label>
-                         <p className="text-xs text-muted-foreground">
-                           Invitez vos amis et gagnez du premium !
-                         </p>
-                       </div>
-                     </div>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowReferralDialog(true)}
-                     >
-                       Voir mon code
-                     </Button>
-                   </div>
-
-                   {/* Don / Premium */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-2">
-                       <Gift className="h-4 w-4" />
-                       <div className="grid gap-1.5">
-                         <label className="text-sm font-medium leading-none">
-                           Soutenir l'application
-                         </label>
-                         <p className="text-xs text-muted-foreground">
-                           Faire un don ou gérer votre abonnement premium
-                         </p>
-                       </div>
-                     </div>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => {
-                         onOpenChange(false);
-                         window.location.href = '/subscription';
-                       }}
-                     >
-                       Soutenir
-                     </Button>
-                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Notifications Settings */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Bell className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Préférences de notifications</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Notifications générales */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Smartphone className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Notifications push
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          {isNative 
-                            ? "✓ Compatible toutes versions Android"
-                            : "Autoriser les notifications sur votre appareil"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {!isRegistered && (
-                        <span className="text-xs text-red-600">Non activées</span>
-                      )}
-                      {isRegistered && (
-                        <span className="text-xs text-green-600">✓ Activées</span>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleNotificationToggle}
-                        disabled={isRegistered}
-                      >
-                        {isRegistered ? 'Activées' : 'Activer'}
-                      </Button>
-                    </div>
-                  </div>
-
                   {isRegistered && (
-                    <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-                      <p>✓ Les préférences ci-dessous contrôlent quelles notifications push vous recevez.</p>
-                      <p className="mt-1">✓ Vérifié côté serveur pour toutes versions Android.</p>
+                    <div className="p-4 bg-muted/20">
+                      <p className="text-xs text-muted-foreground">
+                        ✓ Les préférences ci-dessous contrôlent quelles notifications vous recevez.
+                      </p>
                     </div>
                   )}
 
-                  {/* Test notification - NOUVEAU */}
+                  {/* Test notification */}
                   {isRegistered && (
-                    <div className="flex items-center justify-between border-t pt-4">
-                      <div className="flex items-center space-x-2">
-                        <Bug className="h-4 w-4" />
-                        <div className="grid gap-1.5">
-                          <label className="text-sm font-medium leading-none">
-                            Tester les notifications
-                          </label>
-                          <p className="text-xs text-muted-foreground">
-                            Envoyer une notification de test
-                          </p>
+                    <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                      <div className="flex items-center gap-3 flex-1">
+                        <Bug className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <label className="text-sm font-medium">Tester les notifications</label>
+                          <p className="text-xs text-muted-foreground">Envoyer une notification de test</p>
                         </div>
                       </div>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
+                        className="h-8 text-xs text-primary hover:text-primary hover:bg-primary/10"
                         onClick={testNotification}
                       >
                         Tester
@@ -555,16 +499,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   )}
 
                   {/* Demandes de suivi */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Demandes de suivi
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Recevoir push quand quelqu'un vous suit
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Demandes de suivi</label>
+                        <p className="text-xs text-muted-foreground">Push quand quelqu'un vous suit</p>
                       </div>
                     </div>
                     <Switch
@@ -575,16 +515,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
 
                   {/* Messages */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <MessageCircle className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Messages
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Recevoir push pour les nouveaux messages
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Messages</label>
+                        <p className="text-xs text-muted-foreground">Push pour les nouveaux messages</p>
                       </div>
                     </div>
                     <Switch
@@ -595,16 +531,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
 
                   {/* Demandes de session */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Play className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Demandes de session
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Recevoir push pour les demandes de participation
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Play className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Demandes de session</label>
+                        <p className="text-xs text-muted-foreground">Push pour les demandes de participation</p>
                       </div>
                     </div>
                     <Switch
@@ -615,17 +547,15 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
 
                   {/* Sessions d'amis (Premium) */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">
                           Sessions d'amis
-                          {profile?.is_premium && <span className="ml-1 text-xs bg-primary text-primary-foreground px-1 rounded">PREMIUM</span>}
+                          {profile?.is_premium && <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">PREMIUM</span>}
                         </label>
-                        <p className="text-xs text-muted-foreground">
-                          Recevoir push quand vos amis créent une session
-                        </p>
+                        <p className="text-xs text-muted-foreground">Push quand vos amis créent une session</p>
                       </div>
                     </div>
                     <Switch
@@ -634,43 +564,35 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       disabled={!isRegistered || !profile?.is_premium}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              {/* Strava & Instagram Connection */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Shield className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Connexions externes</CardTitle>
+              {/* Section: Connexions externes */}
+              <div className="space-y-3 animate-fade-in">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  Connexions externes
+                </h3>
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+                  <div className="p-4 space-y-6">
+                    <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
+                    <InstagramConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
-                  <InstagramConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              {/* Privacy & Legal Settings */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Shield className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Confidentialité & Légal</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              {/* Section: Confidentialité & Légal */}
+              <div className="space-y-3 animate-fade-in">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  Confidentialité & Légal
+                </h3>
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   {/* RGPD */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Règlement RGPD
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Traitement des données personnelles
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Règlement RGPD</label>
+                        <p className="text-xs text-muted-foreground">Traitement des données personnelles</p>
                       </div>
                     </div>
                     <Switch
@@ -680,16 +602,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
 
                   {/* Security Rules */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Règles de sécurité
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Règles d'utilisation et sécurité
-                        </p>
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Shield className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Règles de sécurité</label>
+                        <p className="text-xs text-muted-foreground">Règles d'utilisation et sécurité</p>
                       </div>
                     </div>
                     <Switch
@@ -697,68 +615,71 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       onCheckedChange={(checked) => updatePrivacySettings('security_rules_accepted', checked)}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              {/* Support */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <Mail className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Support</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center space-y-2">
+              {/* Section: Support */}
+              <div className="space-y-3 animate-fade-in">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  Support
+                </h3>
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden">
+                  <div className="p-4 text-center space-y-3">
                     <p className="text-sm text-muted-foreground">
                       Besoin d'aide ? Contactez notre équipe support
                     </p>
                     <a 
                       href="mailto:ferdinand.froidefont@gmail.com"
-                      className="inline-flex items-center gap-2 text-primary hover:underline"
+                      className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
                     >
                       <Mail className="h-4 w-4" />
-                      ferdinand.froidefont@gmail.com
+                      <span className="text-sm">ferdinand.froidefont@gmail.com</span>
                     </a>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              {/* Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button 
-                    variant="outline" 
+              {/* Section: Actions */}
+              <div className="space-y-3 animate-fade-in pb-4">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  Actions
+                </h3>
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+                  <button 
                     onClick={handleSignOut}
-                    className="w-full text-destructive hover:text-destructive"
+                    className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group"
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Se déconnecter
-                  </Button>
+                    <div className="flex items-center gap-3">
+                      <LogOut className="h-5 w-5 text-destructive" />
+                      <span className="text-sm font-medium text-destructive">Se déconnecter</span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-destructive opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </button>
                   
-                  {/* Creator Button - Only for specific email */}
+                  {/* Creator Button */}
                   {user?.email === 'ferdinand.froidefont@gmail.com' && (
-                    <Button
-                      variant="outline"
-                      className="w-full bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border-primary/20"
+                    <button
+                      className="w-full flex items-center justify-between p-4 hover:bg-primary/5 transition-colors group bg-primary/5"
                     >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Créateur
-                    </Button>
+                      <div className="flex items-center gap-3">
+                        <Settings className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium text-primary">Créateur</span>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-primary opacity-60 group-hover:opacity-100 transition-opacity" />
+                    </button>
                   )}
                   
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                      <button
+                        className="w-full flex items-center justify-between p-4 hover:bg-destructive/5 transition-colors group"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer mon compte
-                      </Button>
+                        <div className="flex items-center gap-3">
+                          <Trash2 className="h-5 w-5 text-destructive" />
+                          <span className="text-sm font-medium text-destructive">Supprimer mon compte</span>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-destructive opacity-60 group-hover:opacity-100 transition-opacity" />
+                      </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
@@ -779,13 +700,8 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                </CardContent>
-              </Card>
-            </div>
-            
-            {/* Indicateur de scroll en bas */}
-            <div className="flex justify-center pt-4 pb-2">
-              <div className="h-1 w-12 bg-muted rounded-full opacity-50"></div>
+                </div>
+              </div>
             </div>
           </ScrollArea>
         </DialogContent>
