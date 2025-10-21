@@ -644,6 +644,33 @@ const Messages = () => {
     }
   };
 
+  // Delete message
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', user.id); // Security check
+
+      if (error) throw error;
+
+      // Remove message from local state
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      
+      toast({ title: "Succès", description: "Message supprimé" });
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de supprimer le message", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   // Handle voice recording
   const handleVoiceRecording = async () => {
     if (isRecording) {
@@ -1171,13 +1198,29 @@ const Messages = () => {
                           </div>
                         )}
                         
-                        <div
-                          className={`rounded-lg p-3 transition-all duration-200 ${
-                            isOwnMessage
-                              ? getThemeClasses().ownMessage
-                              : getThemeClasses().otherMessage
-                          } ${showIndividualTime ? 'shadow-lg' : ''}`}
-                        >
+                        <div className="relative group">
+                          <div
+                            className={`rounded-lg p-3 transition-all duration-200 ${
+                              isOwnMessage
+                                ? getThemeClasses().ownMessage
+                                : getThemeClasses().otherMessage
+                            } ${showIndividualTime ? 'shadow-lg' : ''}`}
+                          >
+                            {/* Delete button for own messages */}
+                            {isOwnMessage && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                onClick={() => {
+                                  if (confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
+                                    handleDeleteMessage(message.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
                            {/* Session sharing */}
                            {message.message_type === 'session' && message.session && (
                              <div 
@@ -1255,11 +1298,12 @@ const Messages = () => {
                                  )}
                                </div>
                              </div>
-                           )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
+                       </div>
+                     </div>
+                   </div>
                 );
               })}
               
