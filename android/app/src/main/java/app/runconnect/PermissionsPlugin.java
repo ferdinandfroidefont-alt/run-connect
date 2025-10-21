@@ -785,6 +785,7 @@ public class PermissionsPlugin extends Plugin {
                 }
                 savedCall.reject("Permissions refusées - vérifiez les paramètres MIUI si Xiaomi/Redmi");
             }
+        }
     }
 
     @PluginMethod
