@@ -1066,10 +1066,11 @@ public class MainActivity extends AppCompatActivity {
     private void notifyJavaScriptPermissionResult(boolean granted) {
         if (webView != null) {
             String jsCode = String.format(
-                "if (window.onNativePermissionResult) { window.onNativePermissionResult(%s); }",
+                "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: { granted: %s } }));",
                 granted ? "true" : "false"
             );
             webView.evaluateJavascript(jsCode, null);
+            Log.d(TAG, "✅ Événement androidPermissionsUpdated envoyé avec granted=" + granted);
         }
     }
 }
