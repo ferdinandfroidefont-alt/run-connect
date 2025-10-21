@@ -17,14 +17,29 @@ export const PermissionRequestDialog = () => {
   } = useMultiplatformPermissions();
   
   useEffect(() => {
+    // ✅ AJOUT LOGS DEBUG
+    console.log('🔍 PermissionRequestDialog - État:', {
+      isNative,
+      platform,
+      'window.CapacitorForceNative': (window as any).CapacitorForceNative,
+      'Capacitor.isNativePlatform()': Capacitor.isNativePlatform(),
+      hasSeenPermissions: localStorage.getItem('hasSeenPermissions')
+    });
+    
     // Vérifier si premier lancement (uniquement sur mobile)
-    if (!isNative) return;
+    if (!isNative) {
+      console.log('❌ Dialog non affiché car isNative = false');
+      return;
+    }
     
     const hasSeenPermissions = localStorage.getItem('hasSeenPermissions');
     if (!hasSeenPermissions) {
+      console.log('✅ Premier lancement détecté, ouverture dialog...');
       setOpen(true);
+    } else {
+      console.log('ℹ️ Permissions déjà vues, dialog non affiché');
     }
-  }, [isNative]);
+  }, [isNative, platform]);
   
   const handleRequestPermissions = async () => {
     await requestAllPermissions();

@@ -3,37 +3,32 @@ import App from './App.tsx'
 import './index.css'
 import { LanguageProvider } from "./contexts/LanguageContext";
 
-// ✅ DÉTECTION NATIVE AMÉLIORÉE (AVANT le render)
+// ✅ DÉTECTION NATIVE ULTRA-FIABLE (AVANT le render)
 const detectNativeImmediately = () => {
   const userAgent = navigator.userAgent;
   const protocol = window.location.protocol.toLowerCase();
   
-  // ✅ INDICATEURS INFAILLIBLES ANDROID AAB
-  const hasCapacitor = !!(window as any).Capacitor;
-  const hasAndroidBridge = !!(window as any).AndroidBridge;
+  // ✅ VÉRIFICATIONS MULTIPLES
   const isFileProtocol = protocol === 'file:' || protocol === 'capacitor:' || protocol === 'ionic:';
-  const hasCustomUA = userAgent.includes('RunConnect/'); // Custom UA défini dans capacitor.config.ts
   const isAndroid = /Android/i.test(userAgent);
+  const hasWebView = /wv/.test(userAgent); // WebView Android
   
-  // ✅ MODE NATIF si au moins 2 indicateurs sont présents
-  const indicators = [hasCapacitor, hasAndroidBridge, isFileProtocol, hasCustomUA].filter(Boolean).length;
-  const isNative = isAndroid && indicators >= 2;
+  // ✅ SI au moins 1 indicateur => NATIF
+  const isNative = isAndroid && (isFileProtocol || hasWebView || (window as any).AndroidBridge);
   
-  console.log('🔥 DÉTECTION NATIVE AMÉLIORÉE:', {
+  console.log('🔥 DÉTECTION NATIVE SYNCHRONE:', {
     userAgent,
     protocol,
-    hasCapacitor,
-    hasAndroidBridge,
     isFileProtocol,
-    hasCustomUA,
     isAndroid,
-    indicators,
-    isNative: isNative ? '✅ NATIF' : '❌ WEB'
+    hasWebView,
+    hasAndroidBridge: !!(window as any).AndroidBridge,
+    '🎯 RÉSULTAT': isNative ? '✅ NATIF' : '❌ WEB'
   });
   
   if (isNative) {
     (window as any).CapacitorForceNative = true;
-    console.log('✅ MODE NATIF FORCÉ - Google Auth activé');
+    console.log('✅✅✅ FLAG NATIF DÉFINI - Permissions seront demandées !');
   } else {
     console.log('ℹ️ MODE WEB DÉTECTÉ - Fallback OAuth web');
   }

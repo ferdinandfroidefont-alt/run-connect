@@ -16,7 +16,8 @@ export interface PermissionStatus {
 
 export const useMultiplatformPermissions = () => {
   const platform = Capacitor.getPlatform();
-  const isNative = Capacitor.isNativePlatform();
+  // ✅ CORRIGÉ: Utiliser le flag défini dans main.tsx comme fallback
+  const isNative = (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform();
   const platformEmoji = platform === 'ios' ? '🍎' : platform === 'android' ? '🤖' : '🌐';
   const { toast } = useToast();
   
