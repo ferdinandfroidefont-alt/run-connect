@@ -84,6 +84,7 @@ interface Message {
   content: string;
   created_at: string;
   read_at: string | null;
+  deleted_at?: string | null;
   file_url?: string | null;
   file_type?: string | null;
   file_name?: string | null;
@@ -644,21 +645,25 @@ const Messages = () => {
     }
   };
 
-  // Delete message
+  // Delete message (mark as deleted)
   const handleDeleteMessage = async (messageId: string) => {
     if (!user) return;
     
     try {
       const { error } = await supabase
         .from('messages')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', messageId)
         .eq('sender_id', user.id); // Security check
 
       if (error) throw error;
 
-      // Remove message from local state
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      // Update message in local state
+      setMessages(prev => prev.map(m => 
+        m.id === messageId 
+          ? { ...m, deleted_at: new Date().toISOString() }
+          : m
+      ));
       
       toast({ title: "Succès", description: "Message supprimé" });
     } catch (error: any) {
@@ -1206,14 +1211,14 @@ const Messages = () => {
                                 : getThemeClasses().otherMessage
                             } ${showIndividualTime ? 'shadow-lg' : ''}`}
                           >
-                            {/* Delete button for own messages */}
-                            {isOwnMessage && (
+                            {/* Delete button for own messages (only if not deleted) */}
+                            {isOwnMessage && !message.deleted_at && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                                 onClick={() => {
-                                  if (confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
+                                  if (confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
                                     handleDeleteMessage(message.id);
                                   }
                                 }}
@@ -1221,69 +1226,77 @@ const Messages = () => {
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             )}
-                           {/* Session sharing */}
-                           {message.message_type === 'session' && message.session && (
-                             <div 
-                               className="mb-2 p-3 bg-background/50 rounded border cursor-pointer hover:bg-background/70 transition-colors"
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 handleSessionClick(message.session);
-                               }}
-                             >
-                               <div className="flex items-center justify-between mb-2">
-                                 <div className="flex items-center gap-2">
-                                   <Calendar className="h-4 w-4 text-primary" />
-                                   <span className="font-medium text-sm">{message.session.title}</span>
-                                 </div>
-                                 <span className="text-xs text-muted-foreground">Cliquer pour voir sur la carte</span>
-                               </div>
-                               <div className="space-y-1 text-xs">
-                                 <div className="flex items-center gap-1">
-                                   <Clock className="h-3 w-3" />
-                                   <span>{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
-                                 </div>
-                                 <div className="flex items-center gap-1">
-                                   <MapPin className="h-3 w-3" />
-                                   <span>{message.session.location_name}</span>
-                                 </div>
-                                 <div className="flex items-center gap-1">
-                                   <Users className="h-3 w-3" />
-                                   <span>{message.session.current_participants}/{message.session.max_participants} participants</span>
-                                 </div>
-                               </div>
-                             </div>
-                           )}
 
-                          {/* File attachment */}
-                          {message.file_url && (
-                            <div className="mb-2">
-                              {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
-                                <div className="flex items-center gap-2">
-                                  <Mic className="h-4 w-4" />
-                                  <audio 
-                                    controls 
-                                    src={message.file_url}
-                                    className="max-w-full"
-                                    style={{ height: '32px' }}
-                                  />
-                                </div>
-                              ) : message.file_type?.startsWith('image/') ? (
-                                <img 
-                                  src={message.file_url} 
-                                  alt={message.file_name || "Image"}
-                                  className="max-w-full h-auto rounded-lg"
-                                  style={{ maxHeight: '200px' }}
-                                />
-                              ) : (
-                                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
-                                  <Paperclip className="h-4 w-4" />
-                                  <span className="text-sm truncate">{message.file_name}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          <p className="text-sm">{message.content}</p>
+                            {/* Show deleted message */}
+                            {message.deleted_at ? (
+                              <p className="text-sm italic text-muted-foreground">Message supprimé</p>
+                            ) : (
+                              <>
+                                {/* Session sharing */}
+                                {message.message_type === 'session' && message.session && (
+                                  <div 
+                                    className="mb-2 p-3 bg-background/50 rounded border cursor-pointer hover:bg-background/70 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSessionClick(message.session);
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4 text-primary" />
+                                        <span className="font-medium text-sm">{message.session.title}</span>
+                                      </div>
+                                      <span className="text-xs text-muted-foreground">Cliquer pour voir sur la carte</span>
+                                    </div>
+                                    <div className="space-y-1 text-xs">
+                                      <div className="flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        <span>{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <MapPin className="h-3 w-3" />
+                                        <span>{message.session.location_name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <Users className="h-3 w-3" />
+                                        <span>{message.session.current_participants}/{message.session.max_participants} participants</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* File attachment */}
+                                {message.file_url && (
+                                  <div className="mb-2">
+                                    {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
+                                      <div className="flex items-center gap-2">
+                                        <Mic className="h-4 w-4" />
+                                        <audio 
+                                          controls 
+                                          src={message.file_url}
+                                          className="max-w-full"
+                                          style={{ height: '32px' }}
+                                        />
+                                      </div>
+                                    ) : message.file_type?.startsWith('image/') ? (
+                                      <img 
+                                        src={message.file_url} 
+                                        alt={message.file_name || "Image"}
+                                        className="max-w-full h-auto rounded-lg"
+                                        style={{ maxHeight: '200px' }}
+                                      />
+                                    ) : (
+                                      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                                        <Paperclip className="h-4 w-4" />
+                                        <span className="text-sm truncate">{message.file_name}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                <p className="text-sm">{message.content}</p>
+                              </>
+                            )}
                          
                            {/* Read status for own messages - minimal display */}
                            {isOwnMessage && (
