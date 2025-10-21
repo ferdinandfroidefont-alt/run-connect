@@ -156,11 +156,12 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # ✅ Copier TOUS les fichiers Java (MainActivity + PermissionsPlugin)
-          cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
-          
-          # 🔧 Modifier START_URL dynamiquement dans le MainActivity
-          sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
+        # ✅ Copier TOUS les fichiers Java (MainActivity + PermissionsPlugin)
+        cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
+        
+        # 🔧 Modifier START_URL dynamiquement dans le MainActivity (support des 3 formats)
+        sed -i 's|private final String START_URL = System.getProperty.*|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
+        sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           
           # 🔍 Vérifier que Custom Tabs est bien présent dans le code
           # 🔍 Vérifier que setSupportMultipleWindows est présent
@@ -187,11 +188,18 @@ jobs:
 
           # ✅ Créer styles.xml
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar"/>
+            <resources xmlns:tools="http://schemas.android.com/tools">
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                <item name="android:windowFullscreen">true</item>
+                <item name="android:windowTranslucentStatus">true</item>
+                <item name="android:windowTranslucentNavigation">true</item>
+                <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
+              </style>
               <style name="AppTheme.NoActionBarLaunch" parent="AppTheme"/>
-              <style name="Theme.RunConnect" parent="Theme.AppCompat.Light.NoActionBar"/>
-          </resources>
+              <style name="AppTheme.NoActionBarFull" parent="AppTheme">
+                <item name="android:windowFullscreen">true</item>
+              </style>
+            </resources>
           EOF
 
           # ✅ Créer strings.xml
