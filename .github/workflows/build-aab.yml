@@ -159,12 +159,12 @@ jobs:
           android.enableJetifier=true
           EOF
 
-        # ✅ Copier TOUS les fichiers Java (MainActivity + PermissionsPlugin)
-        cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
-        
-        # 🔧 Modifier START_URL dynamiquement dans le MainActivity (support des 3 formats)
-        sed -i 's|private final String START_URL = System.getProperty.*|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
-        sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
+          # ✅ Copier TOUS les fichiers Java (MainActivity + PermissionsPlugin)
+          cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
+          
+          # 🔧 Modifier START_URL dynamiquement dans le MainActivity (support des 3 formats)
+          sed -i 's|private final String START_URL = System.getProperty.*|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
+          sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           
           # 🔍 Vérifier que Custom Tabs est bien présent dans le code
           # 🔍 Vérifier que setSupportMultipleWindows est présent
