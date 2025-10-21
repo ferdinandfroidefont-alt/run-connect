@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { useNotificationRealtimeSync } from '@/hooks/useNotificationRealtimeSync';
 import { MIUINotificationGuide } from '@/components/MIUINotificationGuide';
 import { RedmiNote9Guide } from '@/components/RedmiNote9Guide';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
@@ -30,9 +29,6 @@ export const NotificationManager = () => {
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Activer le système de sync Realtime
-  useNotificationRealtimeSync();
 
   const isMIUIDevice = deviceInfo?.isMIUI;
 
