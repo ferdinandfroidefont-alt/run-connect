@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
-    private static final int REQ_NOTIFICATIONS = 1004; // ✅ AJOUT: Constante pour notifications
+    private static final int REQ_NOTIFICATIONS = 1006; // ✅ Code unique pour notifications
     public WebView webView;
     public static MainActivity instance;
     private final String START_URL = "https://run-connect.lovable.app";
@@ -346,7 +346,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔐 Requesting notification permissions...");
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    1005);
+                    REQ_NOTIFICATIONS); // ✅ Utiliser la constante
         } else {
             Log.d(TAG, "✅ Notification permissions already granted or not required");
         }
