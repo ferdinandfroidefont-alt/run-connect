@@ -855,6 +855,89 @@ const Messages = () => {
     }
   }, [user]);
 
+  // Real-time updates for conversations list
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('🔄 Setting up real-time channel for conversations list');
+
+    // Listen to changes in conversations table
+    const conversationsChannel = supabase
+      .channel('user-conversations-list')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'conversations'
+        },
+        (payload) => {
+          console.log('🆕 New conversation created:', payload.new);
+          loadConversations(); // Reload to get the new conversation
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations'
+        },
+        (payload) => {
+          console.log('✏️ Conversation updated:', payload.new);
+          loadConversations(); // Reload to get updated conversation
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Conversations channel status:', status);
+      });
+
+    // Listen to new messages in any conversation to update last message preview
+    const allMessagesChannel = supabase
+      .channel('all-user-messages-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          const newMessage = payload.new as any;
+          console.log('📨 New message in any conversation:', newMessage);
+          
+          // Only reload if not in the selected conversation (to avoid double updates)
+          if (!selectedConversation || newMessage.conversation_id !== selectedConversation.id) {
+            loadConversations();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          console.log('✏️ Message updated in any conversation:', payload.new);
+          // Reload to update read status indicators
+          if (!selectedConversation) {
+            loadConversations();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 All messages channel status:', status);
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up conversations realtime channels');
+      supabase.removeChannel(conversationsChannel);
+      supabase.removeChannel(allMessagesChannel);
+    };
+  }, [user, selectedConversation]);
+
   // Removed message limit check - no longer needed
 
   useEffect(() => {
@@ -866,8 +949,10 @@ const Messages = () => {
   useEffect(() => {
     if (!selectedConversation) return;
 
+    console.log('🔄 Setting up real-time channels for conversation:', selectedConversation.id);
+
     const messagesChannel = supabase
-      .channel('messages')
+      .channel(`messages-${selectedConversation.id}`) // Unique channel per conversation
       .on(
         'postgres_changes',
         {
@@ -876,18 +961,81 @@ const Messages = () => {
           table: 'messages',
           filter: `conversation_id=eq.${selectedConversation.id}`
         },
-        (payload) => {
-          const newMessage = payload.new as Message;
+        async (payload) => {
+          console.log('📨 New message received via realtime:', payload.new);
+          const newMessage = payload.new as any;
+          
+          // Load sender profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_id, username, display_name, avatar_url')
+            .eq('user_id', newMessage.sender_id)
+            .single();
+
+          // Load session if it's a session message
+          let session = null;
+          if (newMessage.session_id) {
+            const { data: sessionData } = await supabase
+              .from('sessions')
+              .select('id, title, activity_type, location_name, location_lat, location_lng, scheduled_at, max_participants, current_participants')
+              .eq('id', newMessage.session_id)
+              .single();
+            session = sessionData;
+          }
+
+          const messageWithProfile = {
+            ...newMessage,
+            sender: profile || {
+              user_id: newMessage.sender_id,
+              username: 'Utilisateur inconnu',
+              display_name: 'Utilisateur inconnu',
+              avatar_url: null
+            },
+            session: session
+          };
+
+          // Add message to state if not already present
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === newMessage.id);
+            if (exists) return prev;
+            return [...prev, messageWithProfile];
+          });
           
           // If message is from another user, mark as read immediately since conversation is open
           if (newMessage.sender_id !== user?.id) {
-            markMessagesAsReadOnOpen(selectedConversation.id);
+            await supabase
+              .from('messages')
+              .update({ read_at: new Date().toISOString() })
+              .eq('id', newMessage.id);
           }
-          
-          loadMessages(selectedConversation.id);
+
+          // Refresh conversations list to update last message
+          loadConversations();
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        },
+        (payload) => {
+          console.log('✏️ Message updated via realtime:', payload.new);
+          const updatedMessage = payload.new as any;
+          
+          // Update message in state (for deleted messages or read status)
+          setMessages(prev => prev.map(m => 
+            m.id === updatedMessage.id 
+              ? { ...m, ...updatedMessage }
+              : m
+          ));
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Messages channel status:', status);
+      });
 
     // Typing indicators channel
     const typingChannel = supabase
@@ -909,9 +1057,12 @@ const Messages = () => {
           return updated;
         });
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('⌨️ Typing channel status:', status);
+      });
 
     return () => {
+      console.log('🔌 Cleaning up realtime channels');
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(typingChannel);
     };
