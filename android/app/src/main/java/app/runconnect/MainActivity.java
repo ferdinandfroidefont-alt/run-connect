@@ -484,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 🔥 INJECTER LE TOKEN FCM DANS JAVASCRIPT
      */
-    private void injectFCMToken(WebView view, String token) {
+    public void injectFCMToken(WebView view, String token) {
         if (view == null || token == null) {
             Log.w(TAG, "⚠️ [FCM INJECT] WebView ou token null, injection impossible");
             return;

@@ -882,23 +882,39 @@ public class PermissionsPlugin extends Plugin {
      */
     private void triggerFirebaseRegistration() {
         try {
-            Log.d("PermissionsPlugin", "🔥 Déclenchement enregistrement Firebase...");
+            Log.d("PermissionsPlugin", "🔥 [TRIGGER FCM] Démarrage récupération token FCM...");
             
-            // Notifier MainActivity pour récupérer le token FCM
             if (getActivity() instanceof MainActivity) {
                 MainActivity mainActivity = (MainActivity) getActivity();
+                
                 mainActivity.runOnUiThread(() -> {
-                    // Déclencher l'initialisation Firebase dans MainActivity
-                    String jsCode = "if (window.PushNotifications && window.PushNotifications.register) { " +
-                                  "console.log('🔥 [PermissionsPlugin] Déclenchement PushNotifications.register()'); " +
-                                  "window.PushNotifications.register(); " +
-                                  "}";
-                    mainActivity.webView.evaluateJavascript(jsCode, null);
-                    Log.d("PermissionsPlugin", "✅ Firebase registration déclenché via JavaScript");
+                    // 🔥 RÉCUPÉRER LE TOKEN FCM DIRECTEMENT EN JAVA !
+                    com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                        .addOnCompleteListener(new com.google.android.gms.tasks.OnCompleteListener<String>() {
+                            @Override
+                            public void onComplete(@androidx.annotation.NonNull com.google.android.gms.tasks.Task<String> task) {
+                                if (!task.isSuccessful()) {
+                                    Log.w("PermissionsPlugin", "❌ [TRIGGER FCM] Échec récupération token", task.getException());
+                                    return;
+                                }
+                                
+                                String token = task.getResult();
+                                if (token != null && !token.isEmpty()) {
+                                    Log.d("PermissionsPlugin", "🔥🔥🔥 [TRIGGER FCM] TOKEN FCM RÉCUPÉRÉ !");
+                                    Log.d("PermissionsPlugin", "🔥 [TRIGGER FCM] Token: " + token.substring(0, 30) + "...");
+                                    
+                                    // Injecter dans JavaScript via MainActivity
+                                    mainActivity.injectFCMToken(mainActivity.webView, token);
+                                    Log.d("PermissionsPlugin", "✅ [TRIGGER FCM] Token injecté dans JavaScript");
+                                } else {
+                                    Log.w("PermissionsPlugin", "⚠️ [TRIGGER FCM] Token vide ou null");
+                                }
+                            }
+                        });
                 });
             }
         } catch (Exception e) {
-            Log.e("PermissionsPlugin", "❌ Erreur déclenchement Firebase:", e);
+            Log.e("PermissionsPlugin", "❌ [TRIGGER FCM] Exception:", e);
         }
     }
     
