@@ -308,4 +308,20 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, androidx.annotation.NonNull String[] permissions, androidx.annotation.NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
+
+    // ✅ AJOUT : Gestion du deep link OAuth (Google -> App)
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+
+        Uri data = intent != null ? intent.getData() : null;
+        if (data != null && data.toString().startsWith("app.runconnect://")) {
+            Log.d(TAG, "🔗 Deep link OAuth reçu via onNewIntent: " + data.toString());
+            String webUrl = data.toString()
+                .replace("app.runconnect://", START_URL + "/")
+                .replace("runconnect://", START_URL + "/");
+            webView.loadUrl(webUrl);
+        }
+    }
 }
