@@ -724,12 +724,59 @@ export const usePushNotifications = () => {
       });
     };
 
-      window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
+    window.addEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
 
-      return () => {
-        window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
-      };
-  }, [user, isNative, setupPushListeners, checkPermissionStatus]);
+    // 🔥 NOUVEAU: Écouter le retour au premier plan de l'app
+    let appStateListener: any;
+    if (isNative) {
+      import('@capacitor/app').then(({ App }) => {
+        appStateListener = App.addListener('appStateChange', async ({ isActive }) => {
+          if (isActive) {
+            console.log('🔄 App revenue au premier plan, re-vérification des permissions...');
+            
+            try {
+              // Re-vérifier le statut des permissions
+              const status = await PushNotifications.checkPermissions();
+              console.log('📱 Nouveau statut permissions:', status);
+              
+              if (status.receive === 'granted') {
+                console.log('✅ Permissions accordées détectées au retour !');
+                
+                // Vérifier si on a déjà un token
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('push_token')
+                  .eq('user_id', user.id)
+                  .single();
+                
+                if (!profile?.push_token) {
+                  console.log('🔥 Pas de token trouvé, enregistrement...');
+                  await PushNotifications.register();
+                  
+                  toast({
+                    title: "Notifications activées",
+                    description: "Vous recevrez maintenant les alertes de sessions",
+                  });
+                } else {
+                  console.log('✅ Token déjà présent:', profile.push_token.substring(0, 20) + '...');
+                  setToken(profile.push_token);
+                }
+              }
+            } catch (error) {
+              console.error('❌ Erreur re-vérification permissions:', error);
+            }
+          }
+        });
+      });
+    }
+
+    return () => {
+      window.removeEventListener('androidPermissionsUpdated', handleAndroidPermissionsUpdate);
+      if (appStateListener) {
+        appStateListener.remove();
+      }
+    };
+  }, [user, isNative, setupPushListeners, checkPermissionStatus, toast]);
 
   return {
     isRegistered,
