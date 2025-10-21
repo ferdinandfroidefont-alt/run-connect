@@ -333,6 +333,10 @@ public class MainActivity extends AppCompatActivity {
         // ✅ Créer le canal de notification pour Firebase
         createNotificationChannels();
         
+        // ✅ Enregistrer le plugin custom PermissionsPlugin
+        this.registerPlugin(PermissionsPlugin.class);
+        Log.d(TAG, "✅ PermissionsPlugin custom enregistré");
+        
         // 🔥 INITIALISER FIREBASE ET RÉCUPÉRER LE TOKEN FCM
         initializeFirebaseMessaging();
         

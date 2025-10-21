@@ -236,61 +236,15 @@ export const usePushNotifications = () => {
       }
     }
     
-    // Android : logique existante avec PermissionsPlugin
-    try {
-      // 🔥 FORCER la popup système Android via le plugin natif
-      if ((window as any).PermissionsPlugin?.requestNotificationPermissions) {
-        console.log('🔔 🔥 FORCE popup système via PermissionsPlugin.requestNotificationPermissions()');
-        const result = await (window as any).PermissionsPlugin.requestNotificationPermissions();
-        console.log('🔔 ✅ Résultat popup système Android:', result);
-        
-        // Le plugin natif retourne { granted: boolean }, pas juste un booléen
-        const isGranted = result && (result.granted === true);
-        
-        // Si accordé, enregistrer immédiatement pour obtenir le token FCM
-        if (isGranted) {
-          console.log('🔥 Permission accordée, enregistrement Firebase immédiat...');
-          await PushNotifications.register();
-          console.log('✅ PushNotifications.register() appelé après popup');
-          
-          // Attendre 1 seconde pour laisser Firebase générer le token
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // Vérifier si un token a été généré et sauvegardé
-          if (user?.id) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('push_token')
-              .eq('user_id', user.id)
-              .single();
-
-            if (profile?.push_token) {
-              console.log('✅ Token FCM confirmé en base:', profile.push_token.substring(0, 30) + '...');
-            } else {
-              console.warn('⚠️ PushNotifications.register() appelé mais aucun token en base après 1s');
-              console.warn('⚠️ Vérifiez les logs Firebase dans adb logcat | grep -E "(FCM|Firebase|RunConnect)"');
-            }
-          }
-        }
-        
-        // Retourner un booléen simple pour cohérence
-        return isGranted;
-      }
-      
-      // Fallback Capacitor standard (si le plugin natif n'existe pas)
-      console.warn('⚠️ PermissionsPlugin.requestNotificationPermissions() introuvable, fallback Capacitor');
-      const result = await PushNotifications.requestPermissions();
-      
-      if (result.receive === 'granted') {
-        console.log('🔥 Permission Capacitor accordée, enregistrement Firebase...');
-        await PushNotifications.register();
-      }
-      
-      return result.receive === 'granted';
-    } catch (error) {
-      console.error('❌ Erreur demande permissions Android:', error);
-      return false;
-    }
+    // Android : Géré par useMultiplatformPermissions via PermissionsPlugin
+    console.log('📱 [ANDROID] Notifications gérées par PermissionRequestDialog');
+    
+    toast({
+      title: "Notifications",
+      description: "Utilisez le bouton 'Autoriser les permissions' au premier lancement",
+    });
+    
+    return false;
   };
 
   const requestPermissions = async (): Promise<boolean> => {

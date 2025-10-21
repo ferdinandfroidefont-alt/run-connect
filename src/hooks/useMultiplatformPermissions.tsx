@@ -73,16 +73,25 @@ export const useMultiplatformPermissions = () => {
   const requestAndroidPermissions = async (): Promise<boolean> => {
     let hasRefused = false;
 
-    // 1. Notifications
-    console.log('🤖 [ANDROID] Demande permission notifications...');
+    // 1. Notifications - UTILISER PLUGIN CUSTOM !
+    console.log('🤖 [ANDROID] Demande permission notifications via plugin custom...');
     try {
-      const notifResult = await PushNotifications.requestPermissions();
-      if (notifResult.receive === 'granted') {
-        console.log('✅ [ANDROID] Permission notifications accordée');
-        await PushNotifications.register();
-        setPermissionStatus(prev => ({ ...prev, notifications: true }));
+      // @ts-ignore - Plugin custom PermissionsPlugin
+      const PermissionsPlugin = (window as any).Capacitor?.Plugins?.PermissionsPlugin;
+      
+      if (PermissionsPlugin) {
+        console.log('✅ [ANDROID] Plugin custom trouvé, appel requestNotificationPermissions()');
+        const notifResult = await PermissionsPlugin.requestNotificationPermissions();
+        
+        if (notifResult?.granted === true) {
+          console.log('✅ [ANDROID] Permission notifications accordée via plugin custom');
+          setPermissionStatus(prev => ({ ...prev, notifications: true }));
+        } else {
+          console.log('❌ [ANDROID] Permission notifications refusée');
+          hasRefused = true;
+        }
       } else {
-        console.log('❌ [ANDROID] Permission notifications refusée');
+        console.error('❌ [ANDROID] Plugin custom PermissionsPlugin non trouvé !');
         hasRefused = true;
       }
     } catch (error) {
