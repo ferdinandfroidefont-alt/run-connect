@@ -364,7 +364,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Lancement Photo Picker Android 13+");
-                getActivity().startActivityForResult(intent, PHOTO_PICKER_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handlePhotoPickerResult");
             } else {
                 Log.w("PermissionsPlugin", "Photo Picker non disponible, fallback");
                 openGalleryWithMIUIStrategy();
@@ -372,6 +372,25 @@ public class PermissionsPlugin extends Plugin {
         } catch (Exception e) {
             Log.e("PermissionsPlugin", "Erreur Photo Picker", e);
             openGalleryWithMIUIStrategy();
+        }
+    }
+    
+    @com.getcapacitor.annotation.ActivityCallback
+    private void handlePhotoPickerResult(PluginCall call, ActivityResult result) {
+        if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+            Uri uri = result.getData().getData();
+            if (uri != null) {
+                JSObject ret = new JSObject();
+                ret.put("success", true);
+                ret.put("imageUri", uri.toString());
+                ret.put("method", "PHOTO_PICKER_ANDROID13");
+                Log.d("PermissionsPlugin", "Photo sélectionnée via Photo Picker: " + uri.toString());
+                call.resolve(ret);
+            } else {
+                call.reject("URI null du Photo Picker");
+            }
+        } else {
+            call.reject("Sélection annulée ou erreur");
         }
     }
     
@@ -388,7 +407,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation Samsung Gallery");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -398,7 +417,7 @@ public class PermissionsPlugin extends Plugin {
             intent.setPackage("com.sec.android.app.myfiles");
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation Samsung My Files");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -419,7 +438,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation Huawei Gallery");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -429,7 +448,7 @@ public class PermissionsPlugin extends Plugin {
             intent.setPackage("com.huawei.hidisk");
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation Huawei File Manager");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -450,7 +469,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation OnePlus Gallery");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -460,7 +479,7 @@ public class PermissionsPlugin extends Plugin {
             intent.setPackage("com.oneplus.filemanager");
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation OnePlus File Manager");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -481,7 +500,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation Oppo Gallery");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -491,7 +510,7 @@ public class PermissionsPlugin extends Plugin {
             intent.setPackage("com.coloros.filemanager");
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation Oppo File Manager");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -512,7 +531,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation LG Gallery");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -522,7 +541,7 @@ public class PermissionsPlugin extends Plugin {
             intent.setPackage("com.lge.filemanager");
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation LG File Manager");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -543,7 +562,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation galerie MIUI native");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -552,7 +571,7 @@ public class PermissionsPlugin extends Plugin {
             intent.setType("image/*");
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation intent MIUI spécialisé");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -563,7 +582,7 @@ public class PermissionsPlugin extends Plugin {
                 intent.setPackage("com.mi.android.globalFileexplorer");
                 if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                     Log.d("PermissionsPlugin", "Utilisation File Manager MIUI");
-                    getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                    startActivityForResult(galleryCall, intent, "handleGalleryResult");
                     return true;
                 }
             }
@@ -585,7 +604,7 @@ public class PermissionsPlugin extends Plugin {
             
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation ACTION_GET_CONTENT");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -595,7 +614,7 @@ public class PermissionsPlugin extends Plugin {
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
                 Log.d("PermissionsPlugin", "Utilisation ACTION_OPEN_DOCUMENT");
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
                 return true;
             }
             
@@ -613,7 +632,7 @@ public class PermissionsPlugin extends Plugin {
             
             // Vérifier que l'intent peut être résolu
             if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
-                getActivity().startActivityForResult(intent, GALLERY_REQUEST_CODE);
+                startActivityForResult(galleryCall, intent, "handleGalleryResult");
             } else {
                 // Fallback vers GET_CONTENT si PICK échoue
                 Intent fallbackIntent = new Intent(Intent.ACTION_GET_CONTENT);
@@ -621,7 +640,7 @@ public class PermissionsPlugin extends Plugin {
                 fallbackIntent.addCategory(Intent.CATEGORY_OPENABLE);
                 
                 if (fallbackIntent.resolveActivity(getActivity().getPackageManager()) != null) {
-                    getActivity().startActivityForResult(fallbackIntent, GALLERY_REQUEST_CODE);
+                    startActivityForResult(galleryCall, fallbackIntent, "handleGalleryResult");
                 } else {
                     throw new Exception("Aucune application galerie trouvée");
                 }
@@ -635,91 +654,43 @@ public class PermissionsPlugin extends Plugin {
         }
     }
 
-    // ESSENTIEL: Traiter les résultats de l'activité galerie
-    public void handleActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d("PermissionsPlugin", "handleActivityResult - code: " + requestCode + ", result: " + resultCode);
-        
-        // Gestion Photo Picker Android 13+
-        if (requestCode == PHOTO_PICKER_REQUEST_CODE && galleryCall != null) {
-            handlePhotoPickerResult(resultCode, data);
-            return;
-        }
-        
-        // Gestion galerie classique
-        if (requestCode == GALLERY_REQUEST_CODE && galleryCall != null) {
-            handleGalleryResult(resultCode, data);
-            return;
-        }
-    }
-    
-    private void handlePhotoPickerResult(int resultCode, Intent data) {
+    // ✅ CALLBACK CAPACITOR MODERNE POUR GALERIE
+    @com.getcapacitor.annotation.ActivityCallback
+    private void handleGalleryResult(PluginCall call, ActivityResult result) {
         try {
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                Uri selectedImage = data.getData();
+            if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                Uri selectedImage = result.getData().getData();
                 
                 // Photo Picker peut aussi retourner multiple URIs
-                if (selectedImage == null && data.getClipData() != null && data.getClipData().getItemCount() > 0) {
-                    selectedImage = data.getClipData().getItemAt(0).getUri();
+                if (selectedImage == null && result.getData().getClipData() != null && result.getData().getClipData().getItemCount() > 0) {
+                    selectedImage = result.getData().getClipData().getItemAt(0).getUri();
                 }
                 
-                if (selectedImage != null) {
-                    JSObject result = new JSObject();
-                    result.put("success", true);
-                    result.put("imageUri", selectedImage.toString());
-                    result.put("imagePath", selectedImage.toString()); // Photo Picker utilise des URIs content://
-                    result.put("method", "photo-picker-android13");
-                    result.put("device", getDeviceInfo());
-                    result.put("androidVersion", Build.VERSION.SDK_INT);
-                    
-                    Log.d("PermissionsPlugin", "Photo Picker succès: " + selectedImage.toString());
-                    galleryCall.resolve(result);
-                } else {
-                    Log.w("PermissionsPlugin", "Photo Picker: URI null");
-                    galleryCall.reject("URI image null depuis Photo Picker");
-                }
-            } else {
-                Log.d("PermissionsPlugin", "Photo Picker: sélection annulée");
-                galleryCall.reject("Sélection Photo Picker annulée");
-            }
-        } catch (Exception e) {
-            Log.e("PermissionsPlugin", "Erreur Photo Picker", e);
-            galleryCall.reject("Erreur Photo Picker: " + e.getMessage(), e);
-        } finally {
-            galleryCall = null;
-        }
-    }
-    
-    private void handleGalleryResult(int resultCode, Intent data) {
-        try {
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                Uri selectedImage = data.getData();
                 if (selectedImage != null) {
                     // Obtenir le chemin réel de l'image
                     String imagePath = getRealImagePath(selectedImage);
                     
-                    JSObject result = new JSObject();
-                    result.put("success", true);
-                    result.put("imageUri", selectedImage.toString());
-                    result.put("imagePath", imagePath);
-                    result.put("method", isMIUI() ? "miui-intent" : "standard-intent");
-                    result.put("device", getDeviceInfo());
-                    result.put("androidVersion", Build.VERSION.SDK_INT);
+                    JSObject resultObj = new JSObject();
+                    resultObj.put("success", true);
+                    resultObj.put("imageUri", selectedImage.toString());
+                    resultObj.put("imagePath", imagePath);
+                    resultObj.put("method", isMIUI() ? "miui-intent" : "standard-intent");
+                    resultObj.put("device", getDeviceInfo());
+                    resultObj.put("androidVersion", Build.VERSION.SDK_INT);
                     
-                    Log.d("PermissionsPlugin", "Galerie classique succès: " + selectedImage.toString());
-                    galleryCall.resolve(result);
+                    Log.d("PermissionsPlugin", "Galerie succès: " + selectedImage.toString());
+                    call.resolve(resultObj);
                 } else {
-                    Log.w("PermissionsPlugin", "Galerie classique: URI null");
-                    galleryCall.reject("URI image null");
+                    Log.w("PermissionsPlugin", "Galerie: URI null");
+                    call.reject("URI image null");
                 }
             } else {
-                Log.d("PermissionsPlugin", "Galerie classique: sélection annulée");
-                galleryCall.reject("Sélection annulée ou échouée");
+                Log.d("PermissionsPlugin", "Galerie: sélection annulée");
+                call.reject("Sélection annulée ou échouée");
             }
         } catch (Exception e) {
-            Log.e("PermissionsPlugin", "Erreur galerie classique", e);
-            galleryCall.reject("Erreur traitement image: " + e.getMessage(), e);
-        } finally {
-            galleryCall = null;
+            Log.e("PermissionsPlugin", "Erreur galerie", e);
+            call.reject("Erreur traitement image: " + e.getMessage(), e);
         }
     }
 
