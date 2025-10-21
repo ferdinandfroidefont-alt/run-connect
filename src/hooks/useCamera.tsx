@@ -151,33 +151,39 @@ export const useCamera = () => {
 
   const selectFromGallery = async (): Promise<File | null> => {
     setLoading(true);
-    console.log('🖼️ DÉBUT SÉLECTION GALERIE ROBUSTE...');
+    console.log('🖼️ DÉBUT SÉLECTION GALERIE...');
     
     try {
+      // Détecter si on est dans une WebView native Android
+      const isAndroidWebView = /Android.*WebView/.test(navigator.userAgent) || 
+                               (window as any).AndroidBridge !== undefined;
+      
+      if (isAndroidWebView) {
+        console.log('📱 Mode WebView native Android détecté');
+        // Utiliser input file HTML qui déclenchera onShowFileChooser dans MainActivity
+        return await selectFromGalleryWeb();
+      }
+      
+      // Mode Capacitor/Web standard
       const isNative = await nativeManager.ensureNativeStatus();
-      console.log('🖼️ Mode:', isNative ? 'NATIF' : 'WEB');
       
       if (!isNative) {
-        // Mode web - utiliser input file
         console.log('🌐 Mode web - input file');
         return await selectFromGalleryWeb();
       }
       
-      // STRATÉGIE 1: Essayer Capacitor Camera en priorité (le plus fiable)
-      console.log('🔄 Tentative Capacitor Camera standard...');
+      // Capacitor Camera (pour les builds Capacitor standards)
+      console.log('🔄 Tentative Capacitor Camera...');
       try {
-        // Demander les permissions
         const permissions = await Camera.requestPermissions();
         console.log('📱 Permissions:', permissions);
         
-        // Vérifier si on a l'autorisation (granted ou limited pour iOS 14+)
         if (permissions.photos === 'granted' || permissions.photos === 'limited') {
           const result = await Camera.getPhoto({
             quality: 90,
             allowEditing: false,
             resultType: CameraResultType.DataUrl,
             source: CameraSource.Photos,
-            // Options supplémentaires pour Android
             promptLabelHeader: 'Sélectionner une photo',
             promptLabelCancel: 'Annuler',
             promptLabelPhoto: 'Depuis la galerie',
@@ -187,18 +193,15 @@ export const useCamera = () => {
             const response = await fetch(result.dataUrl);
             const blob = await response.blob();
             const file = new File([blob], 'gallery-photo.jpg', { type: 'image/jpeg' });
-            console.log('✅ Photo sélectionnée via Capacitor:', file.size, 'bytes');
+            console.log('✅ Photo via Capacitor:', file.size, 'bytes');
             return file;
           }
-        } else {
-          console.log('❌ Permission refusée ou non accordée:', permissions.photos);
         }
       } catch (capacitorError) {
-        console.log('❌ Capacitor Camera échoué:', capacitorError);
+        console.log('❌ Capacitor échoué, fallback web:', capacitorError);
       }
       
-      // STRATÉGIE 2: Fallback sur le sélecteur web
-      console.log('🌐 Fallback sélecteur web...');
+      // Fallback web
       return await selectFromGalleryWeb();
       
     } catch (error) {
