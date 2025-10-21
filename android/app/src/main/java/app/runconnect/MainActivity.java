@@ -138,45 +138,8 @@ public class MainActivity extends AppCompatActivity {
             
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-                Log.d(TAG, "🪟 onCreateWindow appelé - Gestion popup OAuth dans WebView");
-                
-                // Créer une nouvelle WebView pour la popup OAuth
-                WebView newWebView = new WebView(MainActivity.this);
-                WebSettings settings = newWebView.getSettings();
-                settings.setJavaScriptEnabled(true);
-                settings.setDomStorageEnabled(true);
-                settings.setSupportMultipleWindows(false);
-                settings.setGeolocationEnabled(true);
-                
-                // Réutiliser le même WebChromeClient
-                newWebView.setWebChromeClient(this);
-                
-                // Gérer les redirections dans la popup
-                newWebView.setWebViewClient(new WebViewClient() {
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                        String url = request.getUrl().toString();
-                        Log.d(TAG, "🔗 [POPUP] URL interceptée: " + url);
-                        
-                        // Si callback OAuth, charger dans la WebView PRINCIPALE
-                        if (url.startsWith("app.runconnect://") || url.contains("auth/callback") || url.contains("oauth/callback")) {
-                            Log.d(TAG, "✅ Callback OAuth détecté dans popup, chargement dans WebView principale");
-                            MainActivity.this.webView.loadUrl(url);
-                            view.destroy();
-                            return true;
-                        }
-                        
-                        // Charger dans la popup
-                        return false;
-                    }
-                });
-                
-                // Transporter la nouvelle WebView
-                ((WebView.WebViewTransport) resultMsg.obj).setWebView(newWebView);
-                resultMsg.sendToTarget();
-                
-                Log.d(TAG, "✅ Popup WebView créée avec succès");
-                return true;
+                Log.d(TAG, "🪟 onCreateWindow appelé - Bloqué (utilise Chrome Custom Tabs)");
+                return false; // Bloquer les popups, on gère via Custom Tabs
             }
         });
 
@@ -184,16 +147,29 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String url = uri.toString();
-                String host = uri.getHost() != null ? uri.getHost() : "";
-                
-                // ✅ 1. Intercepter le callback OAuth (app.runconnect:// ou runconnect://)
-                if (url.startsWith("app.runconnect://") || url.startsWith("runconnect://")) {
-                    Log.d(TAG, "🔗 Deep link callback OAuth détecté: " + url);
+                String url = request.getUrl().toString();
+                Log.d(TAG, "🔗 URL interceptée: " + url);
+
+                // ✅ Si c'est une URL d'authentification Google OAuth, ouvrir dans Chrome Custom Tabs
+                if (url.contains("accounts.google.com/o/oauth2") || 
+                    url.contains("accounts.google.com/signin/oauth")) {
+                    Log.d(TAG, "🔐 OAuth Google détecté, ouverture dans Chrome Custom Tabs");
                     
-                    // 🔥 CORRECTION : Recharger l'URL dans le WebView au lieu de manipuler le hash
-                    // Cela permet à Supabase de détecter correctement le callback OAuth
+                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                    builder.setShowTitle(true);
+                    builder.setUrlBarHidingEnabled(false);
+                    builder.setToolbarColor(Color.parseColor("#000000"));
+                    
+                    CustomTabsIntent customTabsIntent = builder.build();
+                    customTabsIntent.launchUrl(MainActivity.this, Uri.parse(url));
+                    
+                    return true; // Bloquer le chargement dans la WebView
+                }
+
+                // ✅ Si callback OAuth (app.runconnect://), charger dans la WebView
+                if (url.startsWith("app.runconnect://") || url.startsWith("runconnect://")) {
+                    Log.d(TAG, "✅ Callback OAuth détecté: " + url);
+                    
                     try {
                         // Convertir app.runconnect://auth/callback vers https://run-connect.lovable.app/auth/callback
                         String webUrl = url.replace("app.runconnect://", START_URL + "/")
@@ -202,26 +178,28 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "🔄 Redirection vers: " + webUrl);
                         view.loadUrl(webUrl);
                         
-                        return true; // ✅ On intercepte, le WebView gère la suite
+                        return true;
                     } catch (Exception e) {
                         Log.e(TAG, "❌ Erreur ouverture callback OAuth: " + e.getMessage());
-                        // Fallback : essayer quand même handleDeepLink
                         handleDeepLink(url);
                         return true;
                     }
                 }
-                
-            // ✅ 2. Laisser Google OAuth s'ouvrir dans la popup WebView (onCreateWindow)
-            if (host.contains("accounts.google.com") || 
-                (url.contains("oauth") && host.contains("google"))) {
-                
-                Log.d(TAG, "🔐 OAuth Google détecté - délégation à popup WebView (onCreateWindow)");
-                // Ne PAS intercepter - laisser onCreateWindow créer une popup WebView
-                // Cela garde l'utilisateur DANS l'app, pas de sortie vers Chrome
-                return false; // ✅ false = charger dans le WebView/popup
-            }
-                
-                // ✅ 3. Toutes les autres URLs restent dans le WebView
+
+                // ✅ Si lien externe (http/https), ouvrir dans le navigateur
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    if (!url.contains("run-connect.lovable.app") && 
+                        !url.contains("lovableproject.com") &&
+                        !url.contains("supabase.co") &&
+                        !url.contains("accounts.google.com")) {
+                        Log.d(TAG, "🌐 Lien externe détecté, ouverture dans le navigateur");
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                        return true;
+                    }
+                }
+
+                // ✅ Charger dans la WebView par défaut
                 return false;
             }
             
