@@ -1,8 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { ThemeProvider } from "./contexts/ThemeContext";
-import { AppProvider } from "./contexts/AppContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 
 // ✅ DÉTECTION NATIVE AMÉLIORÉE (AVANT le render)
@@ -81,11 +79,7 @@ initializeCapacitorPlugins();
 
 // ✅ Render l'app (maintenant window.CapacitorForceNative est DÉJÀ défini)
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider>
-    <LanguageProvider>
-      <AppProvider>
-        <App />
-      </AppProvider>
-    </LanguageProvider>
-  </ThemeProvider>
+  <LanguageProvider>
+    <App />
+  </LanguageProvider>
 )
