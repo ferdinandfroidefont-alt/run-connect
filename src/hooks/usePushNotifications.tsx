@@ -244,8 +244,11 @@ export const usePushNotifications = () => {
         const result = await (window as any).PermissionsPlugin.requestNotificationPermissions();
         console.log('🔔 ✅ Résultat popup système Android:', result);
         
+        // Le plugin natif retourne { granted: boolean }, pas juste un booléen
+        const isGranted = result && (result.granted === true);
+        
         // Si accordé, enregistrer immédiatement pour obtenir le token FCM
-        if (result) {
+        if (isGranted) {
           console.log('🔥 Permission accordée, enregistrement Firebase immédiat...');
           await PushNotifications.register();
           console.log('✅ PushNotifications.register() appelé après popup');
@@ -270,7 +273,8 @@ export const usePushNotifications = () => {
           }
         }
         
-        return result;
+        // Retourner un booléen simple pour cohérence
+        return isGranted;
       }
       
       // Fallback Capacitor standard (si le plugin natif n'existe pas)
@@ -319,8 +323,9 @@ export const usePushNotifications = () => {
         if (androidVersionInt > 0) {
           console.log('🤖 Tentative plugin natif personnalisé...');
           success = await requestNativeNotifications();
+          console.log('🔔 Retour requestNativeNotifications():', success, 'type:', typeof success);
           
-          if (success) {
+          if (success === true) {
             console.log('✅ Plugin Android personnalisé réussi');
             
             // 🔄 Attendre la mise à jour de l'état Android
@@ -340,6 +345,8 @@ export const usePushNotifications = () => {
               description: `Compatibilité Android ${androidVersionInt} confirmée`
             });
             return true;
+          } else {
+            console.log('❌ Plugin Android a échoué ou refusé, retour:', success);
           }
         }
         
