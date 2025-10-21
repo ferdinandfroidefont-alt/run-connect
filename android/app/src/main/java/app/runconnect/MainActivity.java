@@ -211,31 +211,15 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 
-                // ✅ 2. Ouvrir Google OAuth dans Custom Tabs (sécurisé et conforme)
-                if (host.contains("accounts.google.com") || 
-                    (url.contains("oauth") && host.contains("google"))) {
-                    
-                    boolean chromeAvailable = isChromeInstalled();
-                    Log.d(TAG, "🔐 Ouverture OAuth Google dans Custom Tabs: " + url);
-                    Log.d(TAG, "🌐 Chrome installé: " + chromeAvailable);
-                    
-                    try {
-                        // Custom Tabs avec couleur de toolbar personnalisée
-                        CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder()
-                            .setShowTitle(true)
-                            .setToolbarColor(Color.parseColor("#1A1F2C")) // Couleur RunConnect
-                            .build();
-                        customTabsIntent.launchUrl(MainActivity.this, uri);
-                        Log.d(TAG, "✅ Custom Tabs lancé avec succès");
-                        return true;
-                    } catch (Exception e) {
-                        // Fallback : ouvrir dans le navigateur par défaut
-                        Log.e(TAG, "❌ Erreur Custom Tabs, fallback vers navigateur: " + e.getMessage());
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-                        startActivity(browserIntent);
-                        return true;
-                    }
-                }
+            // ✅ 2. Laisser Google OAuth s'ouvrir dans la popup WebView (onCreateWindow)
+            if (host.contains("accounts.google.com") || 
+                (url.contains("oauth") && host.contains("google"))) {
+                
+                Log.d(TAG, "🔐 OAuth Google détecté - délégation à popup WebView (onCreateWindow)");
+                // Ne PAS intercepter - laisser onCreateWindow créer une popup WebView
+                // Cela garde l'utilisateur DANS l'app, pas de sortie vers Chrome
+                return false; // ✅ false = charger dans le WebView/popup
+            }
                 
                 // ✅ 3. Toutes les autres URLs restent dans le WebView
                 return false;
