@@ -263,25 +263,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ✅ ENREGISTRER LE PLUGIN CUSTOM PERMISSIONSPLUGIN
-        try {
-            Log.d(TAG, "🔌 Tentative d'enregistrement manuel de PermissionsPlugin...");
-            // Créer une instance du bridge Capacitor
-            com.getcapacitor.Bridge bridge = new com.getcapacitor.Bridge(
-                this,
-                webView,
-                new java.util.ArrayList<>(), // Liste vide de plugins initiaux
-                null // Pas de config custom
-            );
-            
-            // Enregistrer le plugin custom
-            bridge.registerPlugin(PermissionsPlugin.class);
-            
-            Log.d(TAG, "✅✅✅ PermissionsPlugin enregistré via Bridge manuel !");
-            Log.d(TAG, "🎯 window.Capacitor.Plugins.PermissionsPlugin maintenant disponible en JavaScript");
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Erreur enregistrement PermissionsPlugin", e);
-        }
 
         // ✅ Demande de permissions géolocalisation si pas encore données
         if (!hasLocationPermission()) {
