@@ -135,8 +135,8 @@ jobs:
             implementation 'com.google.firebase:firebase-messaging'
             implementation 'com.google.firebase:firebase-analytics'
             
-            // Capacitor Core (pour PermissionsPlugin)
-            implementation 'com.getcapacitor:core:6.0.0'
+            // Capacitor Core (pour PermissionsPlugin) - version 6.1.2 (dernière stable de Capacitor 6)
+            implementation 'com.capacitorjs:core:6.1.2'
           }
           EOF
 
