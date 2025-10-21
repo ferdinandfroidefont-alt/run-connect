@@ -54,7 +54,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { user, session, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
-  const { showWelcomeVideo } = useOnboarding();
   const { conversationTheme, setConversationTheme } = useConversationTheme();
   const { isRegistered, requestPermissions, isNative, testNotification } = usePushNotifications();
   const { language, setLanguage } = useLanguage();
@@ -331,28 +330,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       ) : (
                         'Changer'
                       )}
-                    </Button>
-                  </div>
-
-                  {/* Vidéo de bienvenue */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Play className="h-4 w-4" />
-                      <div className="grid gap-1.5">
-                        <label className="text-sm font-medium leading-none">
-                          Vidéo de présentation
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Revoir la vidéo des fonctionnalités
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={showWelcomeVideo}
-                    >
-                      Regarder
                     </Button>
                   </div>
 

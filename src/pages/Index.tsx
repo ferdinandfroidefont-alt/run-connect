@@ -1,6 +1,5 @@
 import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
-import { WelcomeVideoDialog } from "@/components/WelcomeVideoDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { NativePermissionTester } from "@/components/NativePermissionTester";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -14,11 +13,9 @@ const Index = () => {
   const { 
     needsOnboarding, 
     needsProfileSetup,
-    needsWelcomeVideo, 
     loading, 
     completeOnboarding,
-    completeProfileSetup,
-    markVideoAsSeen 
+    completeProfileSetup
   } = useOnboarding();
   const [searchParams] = useSearchParams();
   const [showPermissionTester, setShowPermissionTester] = useState(false);
@@ -45,14 +42,6 @@ const Index = () => {
   const lng = searchParams.get('lng');
   const zoom = searchParams.get('zoom');
   const sessionId = searchParams.get('sessionId');
-
-  const handleVideoComplete = () => {
-    markVideoAsSeen();
-  };
-
-  const handleVideoSkip = () => {
-    markVideoAsSeen();
-  };
 
   if (loading) {
     return (
@@ -89,13 +78,6 @@ const Index = () => {
           onComplete={completeProfileSetup}
         />
       )}
-      
-      {/* Vidéo de bienvenue pour les nouveaux utilisateurs */}
-      <WelcomeVideoDialog
-        open={needsWelcomeVideo && !needsOnboarding && !needsProfileSetup}
-        onClose={handleVideoSkip}
-        onComplete={handleVideoComplete}
-      />
       
       {/* Testeur de permissions (debug) */}
       {showPermissionTester && (
