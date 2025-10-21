@@ -24,6 +24,7 @@ declare global {
       requestContactsPermission: () => void;
       requestLocationPermission: () => void;
       requestStoragePermission: () => void;
+      requestNotificationPermissions: () => void; // ✅ AJOUT SOLUTION 3
       getContacts: () => void; // ✅ Asynchrone, pas de retour direct
       invalidateContactsCache: () => void; // ✅ Nouveau
     };

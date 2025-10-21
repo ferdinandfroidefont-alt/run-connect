@@ -74,25 +74,48 @@ export const useMultiplatformPermissions = () => {
   const requestAndroidPermissions = async (): Promise<boolean> => {
     let hasRefused = false;
 
-    // 1. Notifications - UTILISER PLUGIN CUSTOM !
-    console.log('🤖 [ANDROID] Demande permission notifications via plugin custom...');
+    // 1. Notifications - SOLUTION 3: Appel direct AndroidBridge
+    console.log('🤖 [ANDROID] Demande permission notifications via AndroidBridge...');
     try {
-      // @ts-ignore - Plugin custom PermissionsPlugin
-      const PermissionsPlugin = (window as any).Capacitor?.Plugins?.PermissionsPlugin;
-      
-      if (PermissionsPlugin) {
-        console.log('✅ [ANDROID] Plugin custom trouvé, appel requestNotificationPermissions()');
-        const notifResult = await PermissionsPlugin.requestNotificationPermissions();
+      // @ts-ignore - AndroidBridge natif
+      if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
+        console.log('✅ [ANDROID] AndroidBridge trouvé, appel requestNotificationPermissions()');
         
-        if (notifResult?.granted === true) {
-          console.log('✅ [ANDROID] Permission notifications accordée via plugin custom');
+        // Créer une Promise pour gérer le callback asynchrone
+        const notificationPromise = new Promise<boolean>((resolve) => {
+          // Timeout de sécurité
+          const timeout = setTimeout(() => {
+            console.log('⏱️ [ANDROID] Timeout permission notifications');
+            resolve(false);
+          }, 30000); // 30 secondes max
+          
+          // Écouter le résultat
+          const handler = (event: any) => {
+            clearTimeout(timeout);
+            const granted = event.detail?.granted === true;
+            console.log('📱 [ANDROID] Résultat popup notifications:', granted ? 'ACCORDÉ ✅' : 'REFUSÉ ❌');
+            window.removeEventListener('androidPermissionsUpdated', handler);
+            resolve(granted);
+          };
+          
+          window.addEventListener('androidPermissionsUpdated', handler);
+        });
+        
+        // Déclencher la demande de permission
+        window.AndroidBridge.requestNotificationPermissions();
+        
+        // Attendre le résultat
+        const granted = await notificationPromise;
+        
+        if (granted) {
+          console.log('✅ [ANDROID] Permission notifications accordée via AndroidBridge');
           setPermissionStatus(prev => ({ ...prev, notifications: true }));
         } else {
           console.log('❌ [ANDROID] Permission notifications refusée');
           hasRefused = true;
         }
       } else {
-        console.error('❌ [ANDROID] Plugin custom PermissionsPlugin non trouvé !');
+        console.error('❌ [ANDROID] AndroidBridge.requestNotificationPermissions non trouvé !');
         hasRefused = true;
       }
     } catch (error) {

@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
+    private static final int REQ_NOTIFICATIONS = 1004; // ✅ AJOUT: Constante pour notifications
     public WebView webView;
     public static MainActivity instance;
     private final String START_URL = "https://run-connect.lovable.app";
@@ -743,6 +744,8 @@ public class MainActivity extends AppCompatActivity {
                     permissionType = "location";
                 } else if (requestCode == REQ_STORAGE) {
                     permissionType = "storage";
+                } else if (requestCode == REQ_NOTIFICATIONS) {
+                    permissionType = "notifications";
                 }
                 
                 Log.d(TAG, "✅ Callback JavaScript pour " + permissionType + ": " + (finalResult ? "GRANTED" : "DENIED"));
@@ -817,6 +820,34 @@ public class MainActivity extends AppCompatActivity {
                         };
                     }
                 ActivityCompat.requestPermissions(MainActivity.this, storagePermissions, REQ_STORAGE);
+                }
+            });
+        }
+        
+        // ✅ SOLUTION 3: Méthode directe pour demander permission notifications
+        @android.webkit.JavascriptInterface
+        public void requestNotificationPermissions() {
+            Log.d(TAG, "🔔 AndroidBridge: demande permission notifications depuis JavaScript");
+            
+            runOnUiThread(() -> {
+                // Vérifier si Android 13+ (POST_NOTIFICATIONS requis)
+                if (Build.VERSION.SDK_INT >= 33) {
+                    int notificationPermission = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS);
+                    
+                    if (notificationPermission == PackageManager.PERMISSION_GRANTED) {
+                        Log.d(TAG, "🔔 Permission notifications déjà accordée");
+                        injectPermissionsState(webView);
+                        notifyJavaScriptPermissionResult(true);
+                    } else {
+                        Log.d(TAG, "🔔 Demande popup système POST_NOTIFICATIONS pour Android 13+");
+                        ActivityCompat.requestPermissions(MainActivity.this,
+                                new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                                REQ_NOTIFICATIONS);
+                    }
+                } else {
+                    // Android < 13: notifications toujours autorisées par défaut
+                    Log.d(TAG, "🔔 Android < 13: notifications autorisées par défaut");
+                    notifyJavaScriptPermissionResult(true);
                 }
             });
         }
