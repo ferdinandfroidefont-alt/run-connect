@@ -38,10 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
     private WebView webView;
-    // URL configurée dynamiquement via variable d'environnement ou propriété système
-    private final String START_URL = System.getProperty("app.start.url", 
-        System.getenv("RUNCONNECT_URL") != null ? System.getenv("RUNCONNECT_URL") : 
-        "https://run-connect.lovable.app");
+    private final String START_URL = "https://run-connect.lovable.app";
     
     // Cache mémoire pour les contacts (évite relecture à chaque appel)
     private static class ContactsCache {
