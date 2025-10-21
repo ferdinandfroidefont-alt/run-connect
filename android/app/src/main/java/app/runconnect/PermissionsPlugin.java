@@ -758,6 +758,40 @@ public class PermissionsPlugin extends Plugin {
     protected void handleRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.handleRequestPermissionsResult(requestCode, permissions, grantResults);
         
+        // 🔥 GESTION SPÉCIFIQUE POUR LES NOTIFICATIONS (code 2001)
+        if (requestCode == 2001) {
+            PluginCall savedCall = getSavedCall();
+            if (savedCall == null) {
+                Log.w("PermissionsPlugin", "⚠️ Pas de savedCall pour notifications");
+                return;
+            }
+            
+            boolean granted = grantResults.length > 0 && 
+                             grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            
+            Log.d("PermissionsPlugin", "📱 Résultat popup notifications: " + (granted ? "ACCORDÉ ✅" : "REFUSÉ ❌"));
+            
+            JSObject result = new JSObject();
+            result.put("granted", granted);
+            result.put("device", getDeviceInfo());
+            result.put("sdkVersion", Build.VERSION.SDK_INT);
+            
+            if (granted) {
+                Log.d("PermissionsPlugin", "🔥 Permission accordée, déclenchement Firebase...");
+                triggerFirebaseRegistration();
+                savedCall.resolve(result);
+            } else {
+                Log.d("PermissionsPlugin", "❌ Permission refusée par l'utilisateur");
+                result.put("needsSettings", true);
+                result.put("advice", isMIUI() ? 
+                    "Sur MIUI, allez dans Paramètres > Apps > RunConnect > Notifications" :
+                    "Activez les notifications dans Paramètres > Apps > RunConnect");
+                savedCall.resolve(result); // Résoudre quand même, pas reject
+            }
+            return;
+        }
+        
+        // Gestion des autres permissions (géolocalisation, caméra, contacts)
         if (requestCode == PERMISSION_REQUEST_CODE) {
             PluginCall savedCall = getSavedCall();
             if (savedCall == null) {
@@ -791,21 +825,32 @@ public class PermissionsPlugin extends Plugin {
     @PluginMethod
     public void requestNotificationPermissions(PluginCall call) {
         try {
-            // Demander les permissions de notifications Android
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Android 13+ nécessite permission EXPLICIT
+                // Android 13+ : vérifier si déjà accordé
                 if (ContextCompat.checkSelfPermission(getActivity(), 
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
                     
-                    Log.d("PermissionsPlugin", "🔔 Demande permission POST_NOTIFICATIONS Android 13+");
+                    Log.d("PermissionsPlugin", "✅ Notifications déjà autorisées");
+                    triggerFirebaseRegistration();
                     
-                    // 🔥 DÉCLENCHER FIREBASE APRÈS PERMISSION ACCORDÉE
-                    requestPermissionForAlias("notifications", call, "requestNotificationPermissions");
+                    JSObject result = new JSObject();
+                    result.put("granted", true);
+                    result.put("device", getDeviceInfo());
+                    result.put("sdkVersion", Build.VERSION.SDK_INT);
+                    call.resolve(result);
                     return;
                 }
+                
+                // 🔥 DÉCLENCHER LA POPUP SYSTÈME ANDROID 13+
+                Log.d("PermissionsPlugin", "🔔 Demande popup système POST_NOTIFICATIONS pour Android 13+");
+                saveCall(call); // Sauvegarder pour le callback
+                ActivityCompat.requestPermissions(getActivity(),
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    2001); // Code unique pour notifications
+                return;
             }
             
-            // Vérifier si les notifications sont activées
+            // Android < 13 : pas besoin de permission explicite, vérifier si activées
             boolean areEnabled = areNotificationsEnabled();
             
             JSObject result = new JSObject();
@@ -814,13 +859,11 @@ public class PermissionsPlugin extends Plugin {
             result.put("sdkVersion", Build.VERSION.SDK_INT);
             
             if (areEnabled) {
-                Log.d("PermissionsPlugin", "✅ Notifications déjà activées");
-                
-                // 🔥 DÉCLENCHER FIREBASE IMMÉDIATEMENT SI DÉJÀ AUTORISÉ
+                Log.d("PermissionsPlugin", "✅ Notifications activées (Android < 13)");
                 triggerFirebaseRegistration();
-                
                 call.resolve(result);
             } else {
+                Log.d("PermissionsPlugin", "⚠️ Notifications désactivées dans les paramètres");
                 result.put("needsSettings", true);
                 result.put("advice", isMIUI() ? 
                     "Sur MIUI, allez dans Paramètres > Apps > RunConnect > Notifications" :
@@ -829,6 +872,7 @@ public class PermissionsPlugin extends Plugin {
             }
             
         } catch (Exception e) {
+            Log.e("PermissionsPlugin", "❌ Erreur demande permissions notifications", e);
             call.reject("Erreur demande permissions notifications", e);
         }
     }
