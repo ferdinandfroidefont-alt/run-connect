@@ -39,7 +39,11 @@ jobs:
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
             repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories { google(); mavenCentral() }
+            repositories { 
+              google()
+              mavenCentral()
+              maven { url 'https://jitpack.io' }
+            }
           }
           rootProject.name = "RunConnect"
           include(":app")
@@ -115,6 +119,12 @@ jobs:
             buildFeatures {
               buildConfig true
             }
+          }
+
+          repositories {
+            google()
+            mavenCentral()
+            maven { url 'https://jitpack.io' }
           }
 
           dependencies {
