@@ -25,8 +25,8 @@ export const usePushNotifications = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // DÉTECTION NATIVE CORRECTE - pas de faux positifs
-  const isNative = Capacitor.isNativePlatform();
+  // DÉTECTION NATIVE UNIFIÉE - utilise le même flag que useMultiplatformPermissions
+  const isNative = (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform();
   const isSupported = isNative || ('Notification' in window);
   
   // Détection de la plateforme iOS
