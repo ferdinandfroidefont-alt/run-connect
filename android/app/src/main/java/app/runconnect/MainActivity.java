@@ -321,17 +321,6 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "✅ Microphone permissions already granted");
         }
 
-        // ✅ Demande de permissions notifications (Android 13+) si pas encore données
-        if (Build.VERSION.SDK_INT >= 33 && 
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "🔐 Requesting notification permissions...");
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    REQ_NOTIFICATIONS); // ✅ Utiliser la constante
-        } else {
-            Log.d(TAG, "✅ Notification permissions already granted or not required");
-        }
-
         // ✅ Créer le canal de notification pour Firebase
         createNotificationChannels();
         
