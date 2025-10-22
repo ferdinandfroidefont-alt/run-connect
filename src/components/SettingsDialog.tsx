@@ -130,25 +130,22 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
 
   const handleNotificationToggle = async () => {
     const success = await requestPermissions();
-    if (!success) {
-      // Si la permission échoue, ouvrir les paramètres Android
-      const { androidPermissions } = await import('@/lib/androidPermissions');
-      const opened = await androidPermissions.openAppSettings();
-      if (opened) {
-        toast({
-          title: "Paramètres ouverts",
-          description: "Activez les notifications dans les paramètres Android puis revenez dans l'app.",
-        });
-      }
-    } else if (user) {
-      // Mettre à jour le profil pour marquer les notifications comme activées
+    if (success && user) {
+      // Permission accordée : mettre à jour le profil
       await supabase
         .from('profiles')
         .update({ notifications_enabled: true })
         .eq('user_id', user.id);
       
       setProfile(prev => prev ? { ...prev, notifications_enabled: true } : null);
+      
+      toast({
+        title: "Notifications activées",
+        description: "Vous recevrez les notifications de RunConnect",
+      });
     }
+    // Si refusé (success === false), ne rien faire de plus
+    // Le hook usePushNotifications affiche déjà un toast approprié
   };
 
   const updatePrivacySettings = async (field: string, value: boolean) => {
