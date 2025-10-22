@@ -236,15 +236,73 @@ export const usePushNotifications = () => {
       }
     }
     
-    // Android : Géré par useMultiplatformPermissions via PermissionsPlugin
-    console.log('📱 [ANDROID] Notifications gérées par PermissionRequestDialog');
-    
-    toast({
-      title: "Notifications",
-      description: "Utilisez le bouton 'Autoriser les permissions' au premier lancement",
-    });
-    
-    return false;
+    // Android : Appel direct AndroidBridge (MÊME CODE QUE useMultiplatformPermissions)
+    console.log('🤖 [ANDROID] Demande permission notifications via AndroidBridge...');
+    try {
+      // @ts-ignore - AndroidBridge natif
+      if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
+        console.log('✅ [ANDROID] AndroidBridge trouvé, appel requestNotificationPermissions()');
+        
+        // Créer une Promise pour gérer le callback asynchrone
+        const notificationPromise = new Promise<boolean>((resolve) => {
+          // Timeout de sécurité
+          const timeout = setTimeout(() => {
+            console.log('⏱️ [ANDROID] Timeout permission notifications');
+            resolve(false);
+          }, 30000); // 30 secondes max
+          
+          // Écouter le résultat
+          const handler = (event: any) => {
+            clearTimeout(timeout);
+            const granted = event.detail?.granted === true;
+            console.log('📱 [ANDROID] Résultat popup notifications:', granted ? 'ACCORDÉ ✅' : 'REFUSÉ ❌');
+            window.removeEventListener('androidPermissionsUpdated', handler);
+            resolve(granted);
+          };
+          
+          window.addEventListener('androidPermissionsUpdated', handler);
+        });
+        
+        // Déclencher la demande de permission (POPUP ANDROID SYSTÈME)
+        window.AndroidBridge.requestNotificationPermissions();
+        
+        // Attendre le résultat
+        const granted = await notificationPromise;
+        
+        if (granted) {
+          console.log('✅ [ANDROID] Permission notifications accordée');
+          toast({
+            title: "Notifications activées !",
+            description: "Vous recevrez les notifications de RunConnect"
+          });
+          return true;
+        } else {
+          console.log('❌ [ANDROID] Permission notifications refusée');
+          toast({
+            title: "Permission refusée",
+            description: "Vous pouvez l'activer plus tard dans les paramètres",
+            variant: "destructive"
+          });
+          return false;
+        }
+      } else {
+        console.error('❌ [ANDROID] AndroidBridge.requestNotificationPermissions non trouvé !');
+        toast({
+          title: "Erreur",
+          description: "Impossible d'activer les notifications",
+          variant: "destructive"
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ [ANDROID] Erreur permission notifications:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'activer les notifications",
+        variant: "destructive"
+      });
+      return false;
+    }
   };
 
   const requestPermissions = async (): Promise<boolean> => {
