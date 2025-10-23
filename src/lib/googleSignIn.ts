@@ -75,7 +75,8 @@ export const googleSignIn = (): Promise<GoogleSignInResult> => {
  * Déconnexion Google
  */
 export const googleSignOut = async (): Promise<void> => {
-  if (!isNativeGoogleSignInAvailable()) {
+  const available = await isNativeGoogleSignInAvailable();
+  if (!available) {
     console.log('🔥 Native Google Sign-Out not available, skipping');
     return;
   }

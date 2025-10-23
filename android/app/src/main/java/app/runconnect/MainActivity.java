@@ -279,21 +279,11 @@ public class MainActivity extends AppCompatActivity {
                 String url = request.getUrl().toString();
                 Log.d(TAG, "🔗 URL interceptée: " + url);
 
-                // ✅ Si c'est une URL d'authentification Google OAuth, ouvrir dans Chrome Custom Tabs
-                if (url.contains("accounts.google.com/o/oauth2") || 
-                    url.contains("accounts.google.com/signin/oauth")) {
-                    Log.d(TAG, "🔐 OAuth Google détecté, ouverture dans Chrome Custom Tabs");
-                    
-                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-                    builder.setShowTitle(true);
-                    builder.setUrlBarHidingEnabled(false);
-                    builder.setToolbarColor(Color.parseColor("#000000"));
-                    
-                    CustomTabsIntent customTabsIntent = builder.build();
-                    customTabsIntent.launchUrl(MainActivity.this, Uri.parse(url));
-                    
-                    return true; // Bloquer le chargement dans la WebView
+                // ✅ LOG DE DEBUG : Vérifier qu'aucune URL OAuth Google n'est interceptée
+                if (url.contains("accounts.google.com")) {
+                    Log.e(TAG, "❌❌❌ URL GOOGLE OAUTH INTERCEPTÉE - NE DEVRAIT JAMAIS ARRIVER AVEC FIREBASE AUTH NATIF !");
                 }
+
 
                 // ✅ Si callback OAuth (app.runconnect://), charger dans la WebView
                 if (url.startsWith("app.runconnect://") || url.startsWith("runconnect://")) {
@@ -462,7 +452,7 @@ public class MainActivity extends AppCompatActivity {
             injectPermissionsState(webView);
             injectDeviceInfo(webView);
             verifyInjection(webView);
-        }, 2000); // 2 secondes pour laisser la page se charger
+        }, 1000); // ✅ Réduit à 1s pour que AndroidBridge soit disponible plus rapidement
         
         Log.d(TAG, "🎯 MainActivity setup complete");
     }
