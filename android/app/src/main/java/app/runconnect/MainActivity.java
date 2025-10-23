@@ -13,6 +13,7 @@ import android.util.Log;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
 import android.webkit.ValueCallback;
+import android.webkit.PermissionRequest;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -43,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
+    private static final int REQ_CAMERA = 1004; // 📹 Code pour caméra
+    private static final int REQ_MICROPHONE = 1005; // 🎤 Code pour microphone
     private static final int REQ_NOTIFICATIONS = 1006; // ✅ Code unique pour notifications
     private static final int FILE_CHOOSER_REQUEST_CODE = 3000; // 🖼️ Code pour file chooser
     private ValueCallback<Uri[]> filePathCallback; // 🖼️ Callback pour récupérer l'URI du fichier
@@ -183,6 +186,65 @@ public class MainActivity extends AppCompatActivity {
                     MainActivity.this.filePathCallback = null;
                     return false;
                 }
+            }
+            
+            /**
+             * 🎤 GÉRER LES PERMISSIONS WEBVIEW (MICROPHONE, CAMÉRA)
+             */
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                Log.d(TAG, "🎤 [PERMISSION REQUEST] Demande de permission WebView");
+                
+                if (request.getResources() == null || request.getResources().length == 0) {
+                    Log.w(TAG, "🎤⚠️ [PERMISSION REQUEST] Aucune ressource demandée");
+                    request.deny();
+                    return;
+                }
+
+                for (String resource : request.getResources()) {
+                    Log.d(TAG, "🎤 [PERMISSION REQUEST] Ressource demandée: " + resource);
+                    
+                    // Gérer le microphone
+                    if (resource.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
+                        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) 
+                            == PackageManager.PERMISSION_GRANTED) {
+                            Log.d(TAG, "🎤✅ [PERMISSION REQUEST] Permission RECORD_AUDIO accordée, autorisation WebView");
+                            request.grant(request.getResources());
+                            return;
+                        } else {
+                            Log.d(TAG, "🎤⚠️ [PERMISSION REQUEST] Permission RECORD_AUDIO manquante, demande popup Android");
+                            ActivityCompat.requestPermissions(
+                                MainActivity.this,
+                                new String[]{Manifest.permission.RECORD_AUDIO},
+                                REQ_MICROPHONE
+                            );
+                            request.deny();
+                            return;
+                        }
+                    }
+                    
+                    // Gérer la caméra
+                    if (resource.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) {
+                        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) 
+                            == PackageManager.PERMISSION_GRANTED) {
+                            Log.d(TAG, "📹✅ [PERMISSION REQUEST] Permission CAMERA accordée, autorisation WebView");
+                            request.grant(request.getResources());
+                            return;
+                        } else {
+                            Log.d(TAG, "📹⚠️ [PERMISSION REQUEST] Permission CAMERA manquante, demande popup Android");
+                            ActivityCompat.requestPermissions(
+                                MainActivity.this,
+                                new String[]{Manifest.permission.CAMERA},
+                                REQ_CAMERA
+                            );
+                            request.deny();
+                            return;
+                        }
+                    }
+                }
+                
+                Log.w(TAG, "⚠️ [PERMISSION REQUEST] Ressource non gérée, refus");
+                request.deny();
             }
         });
 
