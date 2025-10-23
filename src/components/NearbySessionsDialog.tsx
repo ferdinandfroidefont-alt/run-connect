@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "@/components/ShareSessionToConversationDialog";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Users, UserPlus, Share2 } from "lucide-react";
+import { MapPin, Calendar, Users, UserPlus, Share2, ArrowLeft, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -263,38 +263,46 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent 
-          side="top" 
-          className="w-full h-full min-h-screen p-0 border-0 max-w-none backdrop-blur-xl bg-background/95 border-border/50"
-        >
-          {/* Petite barre en haut */}
-          <div className="w-full h-6 bg-background"></div>
-          
-          {/* Sticky Header avec filtres */}
-          <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50 px-6 pb-4">
-            <SheetHeader className="mb-4">
-              <div className="flex items-center justify-between">
-                <SheetTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Séances proches de moi
-                </SheetTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={toggleAllActivities}
-                  className="text-xs text-primary hover:underline"
-                >
-                  {selectedActivities.length === ACTIVITY_TYPES.length 
-                    ? "Tout désactiver" 
-                    : "Tout sélectionner"}
-                </Button>
-              </div>
-            </SheetHeader>
+    <SheetContent 
+      side="top" 
+      className="w-full h-full min-h-screen p-0 flex flex-col backdrop-blur-xl bg-background/80 border-border/50"
+    >
+      {/* Sticky Header avec filtres */}
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
+        {/* Flèche de retour + Titre */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full hover:bg-muted/50"
+            onClick={onClose}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h2 className="text-lg font-semibold">Séances proches de moi</h2>
+        </div>
 
-            {/* Sports Section */}
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-4 space-y-3 animate-fade-in">
-              <h3 className="text-sm font-semibold">Sports</h3>
-              
+        {/* Section Sports et filtres */}
+        <div className="px-4 pb-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Sports disponibles
+            </h3>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={toggleAllActivities}
+              className="text-xs text-primary hover:underline"
+            >
+              {selectedActivities.length === ACTIVITY_TYPES.length 
+                ? "Tout désactiver" 
+                : "Tout sélectionner"}
+            </Button>
+          </div>
+
+          {/* Sports Section */}
+          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden animate-fade-in">
+            <div className="p-4">
               <ScrollArea className="w-full">
                 <div className="flex gap-2 pb-2 w-max">
                   {ACTIVITY_TYPES.map(activity => (
@@ -316,62 +324,89 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                 </div>
               </ScrollArea>
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Distance Filter */}
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-4 mt-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Distance maximale
-                </label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={selectedDistance}
-                    onChange={(e) => setSelectedDistance(e.target.value)}
-                    className="w-24 text-right"
-                    min="100"
-                    max="50000"
-                  />
-                  <span className="text-sm text-muted-foreground">km</span>
+      {/* Contenu scrollable */}
+      <ScrollArea className="flex-1 overflow-y-auto">
+        <div className="px-4 pb-6 space-y-6">
+          {/* Section Distance */}
+          <div className="space-y-3 animate-fade-in">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Filtres de recherche
+            </h3>
+            
+            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden">
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Distance maximale
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={selectedDistance}
+                      onChange={(e) => setSelectedDistance(e.target.value)}
+                      className="w-20 h-8 text-xs text-right border-border/50 bg-background/50"
+                      min="1"
+                      max="100"
+                    />
+                    <span className="text-xs text-muted-foreground">km</span>
+                  </div>
                 </div>
               </div>
               
-              <Button 
-                onClick={loadNearbySessions}
-                className="w-full rounded-full bg-primary hover:bg-primary/90 transition-all shadow-md"
-              >
-                Appliquer les filtres
-              </Button>
+              <div className="p-4 bg-muted/20 border-t border-border/30">
+                <Button
+                  onClick={loadNearbySessions}
+                  disabled={loading}
+                  className="w-full rounded-full bg-primary hover:bg-primary/90 transition-all shadow-md hover:shadow-lg"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Recherche...
+                    </>
+                  ) : (
+                    'Appliquer les filtres'
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
-
-          {/* Sessions List */}
-          <ScrollArea className="flex-1 px-6">
-            <div className="space-y-3 py-4">
-              {loading ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Recherche des séances...</p>
-                </div>
-              ) : sessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-3 animate-fade-in">
-                  <div className="text-6xl animate-bounce">🏃‍♂️💨</div>
+          {/* Résultats */}
+          {loading ? (
+            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
+              <div className="flex flex-col items-center justify-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Recherche des séances à proximité...</p>
+              </div>
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
+              <div className="flex flex-col items-center justify-center space-y-4 animate-fade-in">
+                <div className="text-6xl animate-bounce">🏃‍♂️💨</div>
+                <div className="text-center space-y-2">
                   <p className="text-lg font-semibold">Aucune séance trouvée</p>
-                  <p className="text-sm text-muted-foreground text-center max-w-xs">
+                  <p className="text-sm text-muted-foreground max-w-xs">
                     Essaye d'élargir la distance ou d'activer d'autres sports.
                   </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={resetFilters}
-                    className="mt-4"
-                  >
-                    Réinitialiser les filtres
-                  </Button>
                 </div>
-              ) : (
-                sessions.map((session) => (
-                  <Card key={session.id} className="transition-all duration-200 hover:shadow-lg hover:scale-[1.01] animate-fade-in border-border/50 bg-card/30 backdrop-blur-sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="rounded-full"
+                >
+                  Réinitialiser les filtres
+                </Button>
+              </div>
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <Card key={session.id} className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.01] animate-fade-in">
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         {/* Header */}
@@ -480,8 +515,12 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </ScrollArea>
 
           {/* Actions */}
-          <div className="px-6 py-4 border-t border-border/50 backdrop-blur-xl bg-background/95">
-            <Button variant="outline" onClick={onClose} className="w-full rounded-full">
+          <div className="px-4 py-4 border-t border-border/50 backdrop-blur-xl bg-background/80">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="w-full rounded-full hover:bg-muted/50 transition-colors"
+            >
               Fermer
             </Button>
           </div>
