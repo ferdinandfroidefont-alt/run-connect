@@ -25,8 +25,11 @@ export const usePushNotifications = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // 🔥 FONCTION HELPER pour réévaluer isNative dynamiquement
+  const checkIsNative = () => (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform();
+  
   // DÉTECTION NATIVE UNIFIÉE - utilise le même flag que useMultiplatformPermissions
-  const isNative = (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform();
+  const isNative = checkIsNative();
   const isSupported = isNative || ('Notification' in window);
   
   // Détection de la plateforme iOS
@@ -308,166 +311,140 @@ export const usePushNotifications = () => {
   const requestPermissions = async (): Promise<boolean> => {
     console.log('🔔 Demande permissions notifications...');
     
+    // 🔥 RÉÉVALUER isNative pour être sûr du statut natif
+    const isReallyNative = checkIsNative();
+    
+    console.log('🔍 isNative vérifié:', {
+      'isNative (initial)': isNative,
+      'isReallyNative (maintenant)': isReallyNative,
+      'window.CapacitorForceNative': (window as any).CapacitorForceNative,
+      'Capacitor.isNativePlatform()': Capacitor.isNativePlatform()
+    });
+    
+    if (!isReallyNative) {
+      console.log('❌ Mode web détecté, notifications non supportées');
+      toast({
+        title: "Non supporté",
+        description: "Les notifications nécessitent l'application mobile",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     try {
-      if (isNative) {
-        console.log('📱 Mode natif détecté');
+      // 🎯 Vérifier d'abord l'état Android injecté
+      const androidState = window.androidPermissions?.notifications;
+      if (androidState === 'granted') {
+        console.log('✅ Notifications déjà accordées selon Android');
+        await checkPermissionStatus();
+        toast({
+          title: "Notifications déjà activées",
+          description: "Vos notifications sont déjà configurées"
+        });
+        return true;
+      }
         
-        // 🎯 Vérifier d'abord l'état Android injecté
-        const androidState = window.androidPermissions?.notifications;
-        if (androidState === 'granted') {
-          console.log('✅ Notifications déjà accordées selon Android');
-          await checkPermissionStatus();
-          toast({
-            title: "Notifications déjà activées",
-            description: "Vos notifications sont déjà configurées"
-          });
-          return true;
-        }
+      // Détecter la version Android pour choisir la stratégie
+      const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
+      const androidVersionInt = androidVersion ? parseInt(androidVersion) : 0;
+      console.log('📱 Version Android:', androidVersionInt);
+      
+      let success = false;
+      
+      // STRATÉGIE 1: Plugin natif personnalisé (toutes versions)
+      if (androidVersionInt > 0) {
+        console.log('🤖 Tentative plugin natif personnalisé...');
+        success = await requestNativeNotifications();
+        console.log('🔔 Retour requestNativeNotifications():', success, 'type:', typeof success);
         
-        // Détecter la version Android pour choisir la stratégie
-        const androidVersion = navigator.userAgent.match(/Android (\d+)/)?.[1];
-        const androidVersionInt = androidVersion ? parseInt(androidVersion) : 0;
-        console.log('📱 Version Android:', androidVersionInt);
-        
-        let success = false;
-        
-        // STRATÉGIE 1: Plugin natif personnalisé (toutes versions)
-        if (androidVersionInt > 0) {
-          console.log('🤖 Tentative plugin natif personnalisé...');
-          success = await requestNativeNotifications();
-          console.log('🔔 Retour requestNativeNotifications():', success, 'type:', typeof success);
-          
-          if (success === true) {
-            console.log('✅ Plugin Android personnalisé réussi');
-            
-            // 🔄 Attendre la mise à jour de l'état Android
-            await new Promise(resolve => setTimeout(resolve, 300));
-            await checkPermissionStatus();
-            
-            // Cross-vérifier avec l'état Android injecté
-            const finalAndroidState = window.androidPermissions?.notifications;
-            if (finalAndroidState === 'granted') {
-              console.log('✅ État Android confirmé: granted');
-            } else {
-              console.warn('⚠️ État Android non mis à jour, mais plugin dit succès');
-            }
-            
-            toast({
-              title: "Notifications activées !",
-              description: `Compatibilité Android ${androidVersionInt} confirmée`
-            });
-            return true;
-          } else {
-            console.log('❌ Plugin Android a échoué ou refusé, retour:', success);
-          }
-        }
-        
-        // STRATÉGIE 2: Capacitor standard (fallback universel)
-        console.log('🔄 Fallback Capacitor standard...');
-        const permission = await PushNotifications.requestPermissions();
-        console.log('📱 Résultat Capacitor:', permission);
-        
-        if (permission.receive === 'granted') {
-          console.log('✅ Capacitor standard réussi');
-          
-          // 🎯 CRITIQUE: Configurer les listeners AVANT register()
-          await setupPushListeners();
-          
-          // Enregistrement push pour recevoir le token
-          try {
-            await PushNotifications.register();
-            console.log('✅ Enregistrement push demandé');
-            
-            // 🔄 FALLBACK: Si pas de token après 5s, vérifier et forcer si besoin
-            setTimeout(async () => {
-              try {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('push_token')
-                  .eq('user_id', user?.id)
-                  .single();
-                
-                if (!profile?.push_token) {
-                  console.warn('⚠️ Aucun token enregistré après 5s, forcer récupération');
-                  await PushNotifications.register();
-                } else {
-                  console.log('✅ Token déjà enregistré:', profile.push_token.substring(0, 20) + '...');
-                }
-              } catch (e) {
-                console.error('Erreur fallback token:', e);
-              }
-            }, 5000);
-          } catch (regError) {
-            console.log('⚠️ Enregistrement push échoué mais permissions OK');
-          }
+        if (success === true) {
+          console.log('✅ Plugin Android personnalisé réussi');
           
           // 🔄 Attendre la mise à jour de l'état Android
           await new Promise(resolve => setTimeout(resolve, 300));
           await checkPermissionStatus();
           
-          toast({
-            title: "Notifications activées !",
-            description: "Méthode Capacitor standard utilisée"
-          });
-          return true;
-        } else {
-          console.log('❌ Capacitor standard refusé:', permission.receive);
-          await checkPermissionStatus();
-          
-          // Message adapté selon la version Android
-          let advice = "Activez les notifications dans Paramètres > Applications > RunConnect";
-          if (androidVersionInt >= 13) {
-            advice += " > Notifications";
-          } else if (androidVersionInt >= 8) {
-            advice += " > Notifications d'apps";
+          // Cross-vérifier avec l'état Android injecté
+          const finalAndroidState = window.androidPermissions?.notifications;
+          if (finalAndroidState === 'granted') {
+            console.log('✅ État Android confirmé: granted');
+          } else {
+            console.warn('⚠️ État Android non mis à jour, mais plugin dit succès');
           }
           
           toast({
-            title: "Permission refusée",
-            description: advice,
-            variant: "destructive"
+            title: "Notifications activées !",
+            description: `Compatibilité Android ${androidVersionInt} confirmée`
           });
-          return false;
+          return true;
+        } else {
+          console.log('❌ Plugin Android a échoué ou refusé, retour:', success);
         }
-      } else if ('Notification' in window) {
-        // STRATÉGIE WEB (navigateurs)
-        console.log('🌐 Mode web détecté');
-        const permission = await Notification.requestPermission();
+      }
+      
+      // STRATÉGIE 2: Capacitor standard (fallback universel)
+      console.log('🔄 Fallback Capacitor standard...');
+      const permission = await PushNotifications.requestPermissions();
+      console.log('📱 Résultat Capacitor:', permission);
+      
+      if (permission.receive === 'granted') {
+        console.log('✅ Capacitor standard réussi');
         
-        if (permission === 'granted') {
-          console.log('✅ Web notifications accordées');
-          await checkPermissionStatus();
+        // 🎯 CRITIQUE: Configurer les listeners AVANT register()
+        await setupPushListeners();
+        
+        // Enregistrement push pour recevoir le token
+        try {
+          await PushNotifications.register();
+          console.log('✅ Enregistrement push demandé');
           
-          // Test notification web
-          try {
-            new Notification('RunConnect', {
-              body: 'Notifications web activées ! 🎉',
-              icon: '/favicon.png'
-            });
-          } catch (webNotifError) {
-            console.log('⚠️ Test notification web échoué');
-          }
-          
-          toast({
-            title: "Notifications activées !",
-            description: "Mode navigateur web"
-          });
-          return true;
-        } else {
-          console.log('❌ Web notifications refusées');
-          await checkPermissionStatus();
-          toast({
-            title: "Permission refusée",
-            description: "Activez les notifications dans les paramètres du navigateur",
-            variant: "destructive"
-          });
-          return false;
+          // 🔄 FALLBACK: Si pas de token après 5s, vérifier et forcer si besoin
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('push_token')
+                .eq('user_id', user?.id)
+                .single();
+              
+              if (!profile?.push_token) {
+                console.warn('⚠️ Aucun token enregistré après 5s, forcer récupération');
+                await PushNotifications.register();
+              } else {
+                console.log('✅ Token déjà enregistré:', profile.push_token.substring(0, 20) + '...');
+              }
+            } catch (e) {
+              console.error('Erreur fallback token:', e);
+            }
+          }, 5000);
+        } catch (regError) {
+          console.log('⚠️ Enregistrement push échoué mais permissions OK');
         }
-      } else {
-        console.log('❌ Notifications non supportées sur cette plateforme');
+        
+        // 🔄 Attendre la mise à jour de l'état Android
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await checkPermissionStatus();
+        
         toast({
-          title: "Non supporté",
-          description: "Les notifications ne sont pas disponibles sur cet appareil",
+          title: "Notifications activées !",
+          description: "Méthode Capacitor standard utilisée"
+        });
+        return true;
+      } else {
+        console.log('❌ Capacitor standard refusé:', permission.receive);
+        await checkPermissionStatus();
+        
+        // Message adapté selon la version Android
+        let advice = "Activez les notifications dans Paramètres > Applications > RunConnect";
+        if (androidVersionInt >= 13) {
+          advice += " > Notifications";
+        } else if (androidVersionInt >= 8) {
+          advice += " > Notifications d'apps";
+        }
+        
+        toast({
+          title: "Permission refusée",
+          description: advice,
           variant: "destructive"
         });
         return false;
@@ -476,12 +453,12 @@ export const usePushNotifications = () => {
       console.error('🔔❌ ERREUR PERMISSIONS:', error);
       
       // En cas d'erreur totale, donner des conseils génériques
-      const advice = isNative 
+      const advice = isReallyNative 
         ? "Allez dans Paramètres > Applications > RunConnect > Notifications et activez toutes les notifications"
-        : "Vérifiez les paramètres de notification de votre navigateur";
-        
+        : "Vérifiez les paramètres de votre navigateur";
+      
       toast({
-        title: "Erreur technique",
+        title: "Erreur",
         description: advice,
         variant: "destructive"
       });

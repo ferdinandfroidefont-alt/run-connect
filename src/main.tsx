@@ -29,6 +29,11 @@ const detectNativeImmediately = () => {
   if (isNative) {
     (window as any).CapacitorForceNative = true;
     console.log('✅✅✅ FLAG NATIF DÉFINI - Permissions seront demandées !');
+    
+    // 🔥 DISPATCHER UN ÉVÉNEMENT POUR NOTIFIER LES HOOKS
+    window.dispatchEvent(new CustomEvent('capacitorNativeReady', { 
+      detail: { isNative: true } 
+    }));
   } else {
     console.log('ℹ️ MODE WEB DÉTECTÉ - Fallback OAuth web');
   }
