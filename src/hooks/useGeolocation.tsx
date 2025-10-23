@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Position } from '@/types/permissions';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -243,11 +243,36 @@ export const useGeolocation = () => {
     setLoading(true);
 
     try {
-      // Attendre plus longtemps que les flags soient injectés par MainActivity (AAB fix)
-      const waitTime = retryCount === 0 ? 1000 : 500; // Plus de temps au premier essai
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      
+      // ✅ NOUVEAU : Toujours vérifier et demander les permissions AVANT d'essayer de récupérer la position
       const nativeMode = isNative();
+      
+      if (nativeMode) {
+        console.log('🔐 Vérification permissions avant getCurrentPosition...');
+        
+        // Vérifier d'abord si on a déjà les permissions
+        const permissionCheck = await checkPermissions();
+        console.log('🔐 État permissions:', permissionCheck);
+        
+        // Si permissions non accordées, les demander EXPLICITEMENT
+        if (permissionCheck.location !== 'granted') {
+          console.log('🔐 Permissions non accordées, demande explicite...');
+          const requestResult = await requestPermissions();
+          
+          if (!requestResult.granted) {
+            console.error('❌ Permissions refusées par l\'utilisateur');
+            throw new Error('Permissions de localisation refusées');
+          }
+          
+          console.log('✅ Permissions accordées !');
+          
+          // Attendre un peu pour que les permissions soient bien enregistrées
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      // Attendre que les flags soient injectés par MainActivity (AAB fix)
+      const waitTime = retryCount === 0 ? 1000 : 500;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
       const androidPerms = (window as any).androidPermissions;
       const isAAB = (window as any).isAABBuild;
       const injectionComplete = (window as any).androidInjectionComplete;
@@ -437,6 +462,24 @@ export const useGeolocation = () => {
       setLoading(false);
     }
   }, [isNative, getDeviceInfo]);
+
+  // Écouter les changements de permissions Android
+  useEffect(() => {
+    const handlePermissionsUpdate = (event: any) => {
+      console.log('🔔 Mise à jour permissions Android reçue:', event.detail);
+      
+      // Si la localisation vient d'être accordée, on pourrait relancer getCurrentPosition
+      if (event.detail?.location === true) {
+        console.log('✅ Permission localisation accordée via popup Android');
+      }
+    };
+    
+    window.addEventListener('androidPermissionsUpdated', handlePermissionsUpdate);
+    
+    return () => {
+      window.removeEventListener('androidPermissionsUpdated', handlePermissionsUpdate);
+    };
+  }, []);
 
   return {
     position,

@@ -71,9 +71,6 @@ public class MainActivity extends AppCompatActivity {
             getWindow().setNavigationBarColor(Color.TRANSPARENT);
         }
 
-        // Demander les permissions au démarrage
-        requestAllPermissions();
-
         // WebView setup
         webView = new WebView(this);
         webView.setLayerType(WebView.LAYER_TYPE_SOFTWARE, null);
@@ -286,35 +283,50 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void requestAllPermissions() {
-        String[] permissions = new String[] {
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.CAMERA,
-                Manifest.permission.READ_CONTACTS,
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.VIBRATE,
-        };
-
-        if (Build.VERSION.SDK_INT >= 33) {
-            permissions = append(permissions, Manifest.permission.READ_MEDIA_IMAGES);
-            permissions = append(permissions, Manifest.permission.POST_NOTIFICATIONS);
-        }
-
-        ActivityCompat.requestPermissions(this, permissions, 123);
-    }
-
-    private String[] append(String[] arr, String permission) {
-        String[] result = new String[arr.length + 1];
-        System.arraycopy(arr, 0, result, 0, arr.length);
-        result[arr.length] = permission;
-        return result;
-    }
-
     @Override
-    public void onRequestPermissionsResult(int requestCode, androidx.annotation.NonNull String[] permissions, androidx.annotation.NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @androidx.annotation.NonNull String[] permissions, @androidx.annotation.NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        StringBuilder resultJson = new StringBuilder("{");
+        for (int i = 0; i < permissions.length; i++) {
+            String permission = permissions[i];
+            boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
+            
+            // Mapper les permissions Android vers des noms simples
+            String permName = "unknown";
+            if (permission.equals(Manifest.permission.ACCESS_FINE_LOCATION) || 
+                permission.equals(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                permName = "location";
+            } else if (permission.equals(Manifest.permission.CAMERA)) {
+                permName = "camera";
+            } else if (permission.equals(Manifest.permission.READ_CONTACTS)) {
+                permName = "contacts";
+            } else if (permission.equals(Manifest.permission.POST_NOTIFICATIONS)) {
+                permName = "notifications";
+            } else if (permission.equals(Manifest.permission.READ_EXTERNAL_STORAGE) || 
+                       permission.equals(Manifest.permission.READ_MEDIA_IMAGES)) {
+                permName = "storage";
+            } else if (permission.equals(Manifest.permission.RECORD_AUDIO)) {
+                permName = "microphone";
+            }
+            
+            if (i > 0) resultJson.append(",");
+            resultJson.append("\"").append(permName).append("\":").append(granted);
+            
+            Log.d(TAG, "📱 Permission " + permission + " → " + (granted ? "ACCORDÉE ✅" : "REFUSÉE ❌"));
+        }
+        resultJson.append("}");
+        
+        // Injecter les résultats dans JavaScript
+        final String jsCode = "window.androidPermissions = " + resultJson.toString() + ";" +
+                             "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: window.androidPermissions }));";
+        
+        if (webView != null) {
+            webView.post(() -> {
+                webView.evaluateJavascript(jsCode, null);
+                Log.d(TAG, "✅ Résultats permissions injectés dans JavaScript");
+            });
+        }
     }
 
     // ✅ AJOUT : Gestion du deep link OAuth (Google -> App)
