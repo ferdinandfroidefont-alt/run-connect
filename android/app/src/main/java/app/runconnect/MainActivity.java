@@ -264,7 +264,9 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        // ✅ Demande de permissions géolocalisation si pas encore données
+        // ❌ DÉSACTIVÉ - Les permissions sont maintenant demandées à la demande via AndroidBridge
+        // Plus de demandes automatiques au démarrage pour éviter la popup bleue
+        /*
         if (!hasLocationPermission()) {
             Log.d(TAG, "🔐 Requesting location permissions...");
             ActivityCompat.requestPermissions(this,
@@ -277,19 +279,16 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "✅ Location permissions already granted");
         }
 
-        // ✅ Demande de permissions galerie/stockage si pas encore données
         if (!hasStoragePermission()) {
             Log.d(TAG, "🔐 Requesting storage permissions...");
             String[] storagePermissions;
             if (Build.VERSION.SDK_INT >= 33) {
-                // Android 13+ - Utiliser READ_MEDIA_IMAGES + Visual User Selected
                 storagePermissions = new String[]{
                     Manifest.permission.READ_MEDIA_IMAGES,
                     Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
                     Manifest.permission.CAMERA
                 };
             } else {
-                // Android 6-12 - Utiliser READ_EXTERNAL_STORAGE
                 storagePermissions = new String[]{
                     Manifest.permission.READ_EXTERNAL_STORAGE,
                     Manifest.permission.CAMERA
@@ -300,7 +299,6 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "✅ Storage permissions already granted");
         }
 
-        // ✅ Demande de permissions contacts si pas encore données
         if (!hasContactsPermission()) {
             Log.d(TAG, "🔐 Requesting contacts permissions...");
             ActivityCompat.requestPermissions(this,
@@ -310,7 +308,6 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "✅ Contacts permissions already granted");
         }
 
-        // ✅ Demande de permissions microphone si pas encore données
         if (Build.VERSION.SDK_INT >= 23 && 
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "🔐 Requesting microphone permissions...");
@@ -320,6 +317,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.d(TAG, "✅ Microphone permissions already granted");
         }
+        */
 
         // ✅ Créer le canal de notification pour Firebase
         createNotificationChannels();

@@ -9,7 +9,6 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
-import { PermissionRequestDialog } from "@/components/PermissionRequestDialog";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MySessions from "./pages/MySessions";
@@ -36,7 +35,6 @@ const App = () => {
           <AppProvider>
             <TooltipProvider>
             <AdMobInitializer />
-            <PermissionRequestDialog />
             <Toaster />
             <Sonner />
           <BrowserRouter>
