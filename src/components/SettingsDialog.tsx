@@ -67,6 +67,33 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   
   const { toast } = useToast();
 
+  // Fonction de filtrage pour la recherche
+  const matchesSearch = (text: string) => {
+    if (!searchQuery.trim()) return true;
+    const normalizedQuery = searchQuery.toLowerCase().trim();
+    const normalizedText = text.toLowerCase();
+    return normalizedText.includes(normalizedQuery);
+  };
+
+  // Déterminer quelles sections afficher selon la recherche
+  const showGeneralSettings = !searchQuery.trim() || 
+    matchesSearch("langue language paramètres généraux thème mode sombre clair mot de passe password réinitialiser appui long carte session suggestions amis partager profil instagram whatsapp contacts conversation thèmes parrainage premium don soutenir");
+  
+  const showNotifications = !searchQuery.trim() || 
+    matchesSearch("notifications push demandes suivi messages session amis premium test");
+  
+  const showExternalConnections = !searchQuery.trim() || 
+    matchesSearch("connexions externes strava instagram");
+  
+  const showPrivacyLegal = !searchQuery.trim() || 
+    matchesSearch("confidentialité légal rgpd données personnelles sécurité règles");
+  
+  const showSupport = !searchQuery.trim() || 
+    matchesSearch("support aide contact email ferdinand");
+  
+  const showActions = !searchQuery.trim() || 
+    matchesSearch("actions déconnecter logout supprimer compte delete créateur");
+
   useEffect(() => {
     if (user && open) {
       fetchProfile();
@@ -282,6 +309,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
             <div className="px-4 pb-6 space-y-8">
               
               {/* Section: Paramètres généraux */}
+              {showGeneralSettings && (
               <div className="space-y-3 animate-fade-in">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Paramètres généraux
@@ -448,8 +476,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Section: Notifications */}
+              {showNotifications && (
               <div className="space-y-3 animate-fade-in">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Notifications
@@ -574,8 +604,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Section: Connexions externes */}
+              {showExternalConnections && (
               <div className="space-y-3 animate-fade-in">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Connexions externes
@@ -587,8 +619,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Section: Confidentialité & Légal */}
+              {showPrivacyLegal && (
               <div className="space-y-3 animate-fade-in">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Confidentialité & Légal
@@ -625,8 +659,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Section: Support */}
+              {showSupport && (
               <div className="space-y-3 animate-fade-in">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Support
@@ -646,8 +682,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Section: Actions */}
+              {showActions && (
               <div className="space-y-3 animate-fade-in pb-4">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Actions
@@ -710,6 +748,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   </AlertDialog>
                 </div>
               </div>
+              )}
             </div>
           </ScrollArea>
         </DialogContent>
