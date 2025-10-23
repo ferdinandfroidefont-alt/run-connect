@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "@/components/ShareSessionToConversationDialog";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Users, UserPlus, Share2, ArrowLeft, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Calendar, Users, UserPlus, Share2, ArrowLeft, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -74,21 +74,78 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedSessionToShare, setSelectedSessionToShare] = useState<Session | null>(null);
-  const [showLeftFade, setShowLeftFade] = useState(false);
-  const [showRightFade, setShowRightFade] = useState(true);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
 
-  const scrollSportsLeft = () => {
-    const container = document.querySelector('.sports-scroll-container') as HTMLElement;
-    if (container) {
-      container.scrollBy({ left: -200, behavior: 'smooth' });
-    }
+  // Gérer le carrousel infini
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      const itemWidth = scrollWidth / 3; // On a 3 copies des items
+      
+      // Si on scroll trop à droite, revenir au début (sans animation)
+      if (scrollLeft >= itemWidth * 2) {
+        container.style.scrollBehavior = 'auto';
+        container.scrollLeft = itemWidth;
+        setTimeout(() => {
+          container.style.scrollBehavior = 'smooth';
+        }, 0);
+      }
+      
+      // Si on scroll trop à gauche, aller à la fin (sans animation)
+      if (scrollLeft <= 0) {
+        container.style.scrollBehavior = 'auto';
+        container.scrollLeft = itemWidth;
+        setTimeout(() => {
+          container.style.scrollBehavior = 'smooth';
+        }, 0);
+      }
+    };
+
+    // Initialiser au milieu pour permettre le scroll dans les 2 directions
+    const itemWidth = container.scrollWidth / 3;
+    container.scrollLeft = itemWidth;
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isOpen]);
+
+  // Gérer le drag avec la souris (desktop)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
+    isDraggingRef.current = true;
+    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
+    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
+    scrollContainerRef.current.style.cursor = 'grabbing';
+    scrollContainerRef.current.style.scrollBehavior = 'auto';
   };
 
-  const scrollSportsRight = () => {
-    const container = document.querySelector('.sports-scroll-container') as HTMLElement;
-    if (container) {
-      container.scrollBy({ left: 200, behavior: 'smooth' });
-    }
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 2; // Vitesse du drag
+    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handleMouseUp = () => {
+    if (!scrollContainerRef.current) return;
+    isDraggingRef.current = false;
+    scrollContainerRef.current.style.cursor = 'grab';
+    scrollContainerRef.current.style.scrollBehavior = 'smooth';
+  };
+
+  const handleMouseLeave = () => {
+    if (!scrollContainerRef.current) return;
+    isDraggingRef.current = false;
+    scrollContainerRef.current.style.cursor = 'grab';
+    scrollContainerRef.current.style.scrollBehavior = 'smooth';
   };
 
   // Load nearby sessions
@@ -273,30 +330,6 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   useEffect(() => {
     if (isOpen) {
       loadNearbySessions();
-      
-      // Gérer les indicateurs de fade au scroll
-      const scrollContainer = document.querySelector('.sports-scroll-container');
-      
-      if (scrollContainer) {
-        const handleScroll = () => {
-          const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
-          
-          // Afficher le fade gauche si on n'est pas tout à gauche
-          setShowLeftFade(scrollLeft > 10);
-          
-          // Afficher le fade droit si on n'est pas tout à droite
-          setShowRightFade(scrollLeft < scrollWidth - clientWidth - 10);
-        };
-        
-        // Vérifier l'état initial
-        handleScroll();
-        
-        scrollContainer.addEventListener('scroll', handleScroll);
-        
-        return () => {
-          scrollContainer.removeEventListener('scroll', handleScroll);
-        };
-      }
     }
   }, [isOpen, selectedDistance, selectedActivities, userLocation]);
 
@@ -340,24 +373,67 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             </Button>
           </div>
 
-          {/* Sports Section avec scroll horizontal amélioré */}
+          {/* Carrousel infini des sports */}
           <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden animate-fade-in">
-            <div className="p-4 relative">
-              {/* Container avec scroll horizontal natif */}
+            <div className="p-4">
               <div 
-                className="sports-scroll-container overflow-x-auto scrollbar-hide scroll-smooth"
+                ref={scrollContainerRef}
+                className="overflow-x-auto scrollbar-hide cursor-grab select-none"
                 style={{
                   WebkitOverflowScrolling: 'touch',
                   touchAction: 'pan-x',
-                  scrollSnapType: 'x mandatory'
+                  scrollBehavior: 'smooth'
                 }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
               >
                 <div className="flex gap-2 pb-2">
+                  {/* Première copie (pour scroll vers la gauche) */}
                   {ACTIVITY_TYPES.map(activity => (
                     <button
-                      key={activity.value}
+                      key={`prev-${activity.value}`}
                       onClick={() => toggleActivity(activity.value)}
-                      style={{ scrollSnapAlign: 'start' }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px] flex-shrink-0",
+                        "hover:shadow-md hover:scale-105 active:scale-95",
+                        selectedActivities.includes(activity.value)
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                          : "bg-muted/50 text-muted-foreground border-border/50 opacity-60"
+                      )}
+                    >
+                      <span className="text-lg">{activity.emoji}</span>
+                      <span className="text-sm font-medium whitespace-nowrap">{activity.label}</span>
+                    </button>
+                  ))}
+                  
+                  {/* Copie principale (visible au centre) */}
+                  {ACTIVITY_TYPES.map(activity => (
+                    <button
+                      key={`main-${activity.value}`}
+                      onClick={() => toggleActivity(activity.value)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px] flex-shrink-0",
+                        "hover:shadow-md hover:scale-105 active:scale-95",
+                        selectedActivities.includes(activity.value)
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                          : "bg-muted/50 text-muted-foreground border-border/50 opacity-60"
+                      )}
+                    >
+                      <span className="text-lg">{activity.emoji}</span>
+                      <span className="text-sm font-medium whitespace-nowrap">{activity.label}</span>
+                    </button>
+                  ))}
+                  
+                  {/* Troisième copie (pour scroll vers la droite) */}
+                  {ACTIVITY_TYPES.map(activity => (
+                    <button
+                      key={`next-${activity.value}`}
+                      onClick={() => toggleActivity(activity.value)}
+                      onMouseDown={(e) => e.stopPropagation()}
                       className={cn(
                         "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px] flex-shrink-0",
                         "hover:shadow-md hover:scale-105 active:scale-95",
@@ -372,36 +448,6 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                   ))}
                 </div>
               </div>
-              
-              {/* Gradient fade indicators (left & right) */}
-              <div className={cn(
-                "scroll-fade-left pointer-events-none absolute left-0 top-0 h-full w-8 bg-gradient-to-r from-card/30 to-transparent transition-opacity duration-300",
-                showLeftFade ? "opacity-100" : "opacity-0"
-              )} />
-              <div className={cn(
-                "scroll-fade-right pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-card/30 to-transparent transition-opacity duration-300",
-                showRightFade ? "opacity-100" : "opacity-0"
-              )} />
-              
-              {/* Navigation arrows (desktop only) */}
-              <button
-                onClick={scrollSportsLeft}
-                className={cn(
-                  "hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all z-10",
-                  showLeftFade ? "opacity-100" : "opacity-0 pointer-events-none"
-                )}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={scrollSportsRight}
-                className={cn(
-                  "hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all z-10",
-                  showRightFade ? "opacity-100" : "opacity-0 pointer-events-none"
-                )}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
             </div>
           </div>
         </div>
