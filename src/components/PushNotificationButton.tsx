@@ -12,11 +12,14 @@ export const PushNotificationButton = () => {
     
     try {
       console.log('🔔 Demande de permissions notifications...');
-      await requestPermissions();
-      toast({
-        title: "Notifications",
-        description: "Permissions de notifications demandées",
-      });
+      const granted = await requestPermissions();
+      
+      if (granted) {
+        toast({
+          title: "Notifications activées !",
+          description: "Vous recevrez les notifications de RunConnect",
+        });
+      }
     } catch (error) {
       console.error('❌ Erreur demande permissions notifications:', error);
     }
