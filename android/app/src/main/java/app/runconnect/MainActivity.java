@@ -518,12 +518,24 @@ public class MainActivity extends AppCompatActivity {
         
         // 🔥 GÉRER LE RÉSULTAT GOOGLE SIGN-IN
         if (requestCode == GOOGLE_SIGN_IN_REQUEST_CODE) {
-            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] onActivityResult - resultCode=" + resultCode);
+            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] onActivityResult");
+            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] resultCode=" + resultCode + " (OK=" + RESULT_OK + ", CANCELED=" + RESULT_CANCELED + ")");
+            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] data=" + (data != null ? data.toString() : "null"));
             
             // Gérer l'annulation par l'utilisateur
             if (resultCode == RESULT_CANCELED) {
-                Log.d(TAG, "❌ [GOOGLE SIGN-IN] Utilisateur a annulé le sign-in");
-                notifyGoogleSignInError("User canceled");
+                Log.e(TAG, "❌ [GOOGLE SIGN-IN] RESULT_CANCELED détecté");
+                Log.e(TAG, "❌ [GOOGLE SIGN-IN] Cause possible:");
+                Log.e(TAG, "❌   1. SHA-1 certificate hash incorrect dans Firebase Console");
+                Log.e(TAG, "❌   2. Client OAuth Android non configuré dans Google Cloud Console");
+                Log.e(TAG, "❌   3. Web Client ID manquant dans strings.xml");
+                notifyGoogleSignInError("User canceled (voir logs Logcat pour déboguer)");
+                return;
+            }
+            
+            if (resultCode != RESULT_OK) {
+                Log.e(TAG, "❌ [GOOGLE SIGN-IN] resultCode inattendu: " + resultCode);
+                notifyGoogleSignInError("Unexpected result code: " + resultCode);
                 return;
             }
             
@@ -535,16 +547,33 @@ public class MainActivity extends AppCompatActivity {
                 String displayName = account.getDisplayName();
                 
                 Log.d(TAG, "🔥✅ Google Sign-In réussi - Email: " + email);
+                Log.d(TAG, "🔥✅ ID Token présent: " + (idToken != null));
                 
                 if (idToken == null) {
-                    Log.e(TAG, "❌ No ID Token received");
-                    notifyGoogleSignInError("No ID Token received");
+                    Log.e(TAG, "❌ No ID Token received from Google");
+                    Log.e(TAG, "❌ Web Client ID utilisé: " + getString(R.string.default_web_client_id));
+                    notifyGoogleSignInError("No ID Token (vérifier Web Client ID dans Firebase)");
                 } else {
                     notifyGoogleSignInSuccess(idToken, email, displayName);
                 }
             } catch (ApiException e) {
-                Log.e(TAG, "❌ Google Sign-In failed: " + e.getStatusCode());
-                notifyGoogleSignInError("Sign-in failed: " + e.getMessage());
+                int statusCode = e.getStatusCode();
+                Log.e(TAG, "❌ Google Sign-In failed with ApiException");
+                Log.e(TAG, "❌ Status Code: " + statusCode);
+                Log.e(TAG, "❌ Message: " + e.getMessage());
+                
+                String errorMessage;
+                if (statusCode == 10) {
+                    errorMessage = "Erreur de configuration (SHA-1 ou OAuth Client)";
+                } else if (statusCode == 12501) {
+                    errorMessage = "User canceled (ApiException)";
+                } else if (statusCode == 12500) {
+                    errorMessage = "Sign-in configuration error";
+                } else {
+                    errorMessage = "Sign-in failed (code " + statusCode + ")";
+                }
+                
+                notifyGoogleSignInError(errorMessage);
             }
             return;
         }
@@ -1273,14 +1302,18 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 
-                try {
-                    Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                    startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE);
-                    Log.d(TAG, "🚀 Google Sign-In Intent lancé");
-                } catch (Exception e) {
-                    Log.e(TAG, "❌ Error launching Google Sign-In", e);
-                    notifyGoogleSignInError("Error launching sign-in: " + e.getMessage());
-                }
+                // ✅ FORCER SIGN-OUT avant sign-in pour éviter les conflits
+                Log.d(TAG, "🔥 Forcing sign-out before sign-in...");
+                mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
+                    try {
+                        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                        startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE);
+                        Log.d(TAG, "🚀 Google Sign-In Intent lancé après sign-out");
+                    } catch (Exception e) {
+                        Log.e(TAG, "❌ Error launching Google Sign-In", e);
+                        notifyGoogleSignInError("Error launching sign-in: " + e.getMessage());
+                    }
+                });
             });
         }
         

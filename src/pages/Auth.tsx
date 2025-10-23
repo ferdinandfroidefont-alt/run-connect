@@ -117,9 +117,20 @@ const Auth = () => {
           return;
         } catch (nativeError: any) {
           console.error('🔥❌ Native Google Sign-In failed:', nativeError);
+          
+          let errorMessage = nativeError.message || "Erreur lors de l'authentification Google";
+          
+          // Ajouter des conseils de débogage
+          if (errorMessage.includes("User canceled")) {
+            errorMessage += "\n\n⚠️ Si vous avez sélectionné un compte, vérifiez:\n" +
+                           "1. SHA-1 certificate dans Firebase Console\n" +
+                           "2. Configuration OAuth Google Cloud\n" +
+                           "Consultez les logs Logcat pour plus de détails.";
+          }
+          
           toast({
-            title: "Erreur",
-            description: nativeError.message || "Erreur lors de l'authentification Google",
+            title: "Erreur Google Sign-In",
+            description: errorMessage,
             variant: "destructive",
           });
           return;
