@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { format, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -106,10 +106,9 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
     return (
       <Card className="animate-fade-in">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Activité {username ? `de @${username}` : ''}
-          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Séances créées et rejointes sur les 8 dernières semaines
+          </p>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -126,10 +125,6 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
   return (
     <Card className="animate-fade-in">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          Activité {username ? `de @${username}` : ''}
-        </CardTitle>
         <p className="text-sm text-muted-foreground">
           Séances créées et rejointes sur les 8 dernières semaines
         </p>
