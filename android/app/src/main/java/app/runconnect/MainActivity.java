@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -43,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
     private static final int REQ_NOTIFICATIONS = 1006; // ✅ Code unique pour notifications
+    private static final int FILE_CHOOSER_REQUEST_CODE = 3000; // 🖼️ Code pour file chooser
+    private ValueCallback<Uri[]> filePathCallback; // 🖼️ Callback pour récupérer l'URI du fichier
     public WebView webView;
     public static MainActivity instance;
     private final String START_URL = "https://run-connect.lovable.app";
@@ -135,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         String dir = this.getApplicationContext().getDir("geolocation", Context.MODE_PRIVATE).getPath();
         s.setGeolocationDatabasePath(dir);
 
-        // ✅ Autoriser la géolocalisation sans popup + Gérer les popups OAuth
+        // ✅ Autoriser la géolocalisation sans popup + Gérer les popups OAuth + File Chooser
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
@@ -147,6 +150,39 @@ public class MainActivity extends AppCompatActivity {
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
                 Log.d(TAG, "🪟 onCreateWindow appelé - Bloqué (utilise Chrome Custom Tabs)");
                 return false; // Bloquer les popups, on gère via Custom Tabs
+            }
+            
+            // 🖼️ GÉRER L'OUVERTURE DE FICHIERS / GALERIE
+            @Override
+            public boolean onShowFileChooser(
+                WebView webView,
+                ValueCallback<Uri[]> filePathCallback,
+                FileChooserParams fileChooserParams
+            ) {
+                Log.d(TAG, "🖼️ [FILE CHOOSER] onShowFileChooser appelé");
+                
+                // Si un callback existe déjà, l'annuler
+                if (MainActivity.this.filePathCallback != null) {
+                    MainActivity.this.filePathCallback.onReceiveValue(null);
+                }
+                
+                MainActivity.this.filePathCallback = filePathCallback;
+                
+                try {
+                    // Créer un Intent pour ouvrir la galerie
+                    Intent intent = new Intent(Intent.ACTION_PICK);
+                    intent.setType("image/*");
+                    intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png", "image/jpg"});
+                    
+                    Log.d(TAG, "🖼️ [FILE CHOOSER] Lancement Intent.ACTION_PICK");
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                    return true;
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "🖼️❌ [FILE CHOOSER] Erreur ouverture galerie", e);
+                    MainActivity.this.filePathCallback = null;
+                    return false;
+                }
             }
         });
 
@@ -368,7 +404,41 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(TAG, "📸 onActivityResult called - requestCode: " + requestCode + ", resultCode: " + resultCode);
-        // Les résultats sont automatiquement transmis au plugin Capacitor
+        
+        // 🖼️ GÉRER LE RÉSULTAT DU FILE CHOOSER
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            Log.d(TAG, "🖼️ [FILE CHOOSER] onActivityResult - requestCode=" + requestCode + ", resultCode=" + resultCode);
+            
+            if (filePathCallback == null) {
+                Log.w(TAG, "🖼️⚠️ [FILE CHOOSER] filePathCallback est null");
+                return;
+            }
+            
+            Uri[] results = null;
+            
+            // Vérifier si l'utilisateur a sélectionné un fichier
+            if (resultCode == RESULT_OK && data != null) {
+                String dataString = data.getDataString();
+                
+                if (dataString != null) {
+                    results = new Uri[]{Uri.parse(dataString)};
+                    Log.d(TAG, "🖼️✅ [FILE CHOOSER] Fichier sélectionné: " + dataString);
+                } else {
+                    Log.w(TAG, "🖼️⚠️ [FILE CHOOSER] dataString est null");
+                }
+            } else if (resultCode == RESULT_CANCELED) {
+                Log.d(TAG, "🖼️ℹ️ [FILE CHOOSER] Sélection annulée par l'utilisateur");
+            } else {
+                Log.w(TAG, "🖼️⚠️ [FILE CHOOSER] Résultat inattendu: " + resultCode);
+            }
+            
+            // Toujours appeler onReceiveValue, même si results est null
+            filePathCallback.onReceiveValue(results);
+            filePathCallback = null;
+            return;
+        }
+        
+        // Les autres résultats sont automatiquement transmis au plugin Capacitor
     }
 
     @Override
