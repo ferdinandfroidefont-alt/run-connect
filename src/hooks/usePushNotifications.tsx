@@ -221,20 +221,10 @@ export const usePushNotifications = () => {
           return true;
         } else {
           console.warn('❌ Permission iOS refusée');
-          toast({
-            title: "Notifications désactivées",
-            description: "Activez-les dans Réglages > RunConnect > Notifications",
-            variant: "destructive",
-          });
           return false;
         }
       } catch (error) {
         console.error('❌ Erreur permission iOS:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible d'activer les notifications",
-          variant: "destructive",
-        });
         return false;
       }
     }
@@ -281,29 +271,14 @@ export const usePushNotifications = () => {
           return true;
         } else {
           console.log('❌ [ANDROID] Permission notifications refusée');
-          toast({
-            title: "Permission refusée",
-            description: "Vous pouvez l'activer plus tard dans les paramètres",
-            variant: "destructive"
-          });
           return false;
         }
       } else {
         console.error('❌ [ANDROID] AndroidBridge.requestNotificationPermissions non trouvé !');
-        toast({
-          title: "Erreur",
-          description: "Impossible d'activer les notifications",
-          variant: "destructive"
-        });
         return false;
       }
     } catch (error) {
       console.error('❌ [ANDROID] Erreur permission notifications:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'activer les notifications",
-        variant: "destructive"
-      });
       return false;
     }
   };
@@ -323,11 +298,6 @@ export const usePushNotifications = () => {
     
     if (!isReallyNative) {
       console.log('❌ Mode web détecté, notifications non supportées');
-      toast({
-        title: "Non supporté",
-        description: "Les notifications nécessitent l'application mobile",
-        variant: "destructive"
-      });
       return false;
     }
     

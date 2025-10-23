@@ -19,11 +19,6 @@ export const PushNotificationButton = () => {
       });
     } catch (error) {
       console.error('❌ Erreur demande permissions notifications:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de demander les permissions notifications",
-        variant: "destructive",
-      });
     }
   };
 
