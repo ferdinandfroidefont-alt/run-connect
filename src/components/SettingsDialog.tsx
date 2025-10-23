@@ -56,7 +56,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { theme, setTheme } = useTheme();
   const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const { conversationTheme, setConversationTheme } = useConversationTheme();
-  const { isRegistered, requestPermissions, isNative, testNotification } = usePushNotifications();
+  const { isRegistered, requestPermissions, isNative, testNotification, checkPermissionStatus } = usePushNotifications();
   const { language, setLanguage } = useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,68 +129,33 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   };
 
   const handleNotificationToggle = async () => {
-    // ✅ Attendre que AndroidBridge soit disponible (max 3s)
-    let bridgeAvailable = false;
-    for (let i = 0; i < 30; i++) {
-      // @ts-ignore
-      if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
-        bridgeAvailable = true;
-        break;
+    try {
+      console.log('🔔 [SETTINGS] Début activation notifications...');
+      
+      const granted = await requestPermissions();
+      
+      if (granted && user) {
+        console.log('✅ [SETTINGS] Permissions accordées');
+        await checkPermissionStatus();
+        
+        // Vérifier que le token est bien en base
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('push_token')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile?.push_token) {
+          toast({
+            title: "⚠️ Token manquant",
+            description: "Permissions OK mais token non reçu. Relancez l'app.",
+            variant: "destructive"
+          });
+        }
       }
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    if (!bridgeAvailable) {
-      toast({
-        title: "Erreur",
-        description: "Service de notifications non disponible. Redémarrez l'application.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    console.log('🔔 [SETTINGS] Demande popup notifications via AndroidBridge...');
-    
-    const notificationPromise = new Promise<boolean>((resolve) => {
-      const timeout = setTimeout(() => resolve(false), 60000); // ✅ 60s au lieu de 30s
-      
-      const handler = (event: any) => {
-        clearTimeout(timeout);
-        const granted = event.detail?.granted === true;
-        console.log('✅ [SETTINGS] Résultat popup:', granted);
-        window.removeEventListener('androidPermissionsUpdated', handler);
-        resolve(granted);
-      };
-      
-      // ✅ ATTACHER LE LISTENER EN PREMIER
-      window.addEventListener('androidPermissionsUpdated', handler);
-    });
-    
-    // ✅ ENSUITE déclencher la popup
-    // @ts-ignore
-    window.AndroidBridge.requestNotificationPermissions();
-    
-    const granted = await notificationPromise;
-    
-    if (granted && user) {
-      await supabase
-        .from('profiles')
-        .update({ notifications_enabled: true })
-        .eq('user_id', user.id);
-      
-      setProfile(prev => prev ? { ...prev, notifications_enabled: true } : null);
-      
-      toast({
-        title: "Notifications activées !",
-        description: "Vous recevrez les notifications de RunConnect"
-      });
-    } else {
-      // ✅ Afficher un toast si refusé
-      toast({
-        title: "Permission refusée",
-        description: "Vous pouvez activer les notifications dans Paramètres > Applications > RunConnect",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error('❌ [SETTINGS] Erreur activation notifications:', error);
     }
   };
 

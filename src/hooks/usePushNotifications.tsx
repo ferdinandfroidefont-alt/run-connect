@@ -149,7 +149,10 @@ export const usePushNotifications = () => {
         if (!profile?.push_token) {
           console.log('🔥 [NATIVE CHECK] Aucun token en base, enregistrement Firebase...');
           
-          // ✅ FORCER l'enregistrement Firebase pour obtenir le token FCM
+          // Configuration listeners puis enregistrement FCM
+          console.log('🔔 [NATIVE] Configuration listeners puis enregistrement FCM...');
+          await setupPushListeners();
+          await new Promise(resolve => setTimeout(resolve, 100));
           await PushNotifications.register();
           console.log('✅ [NATIVE CHECK] PushNotifications.register() appelé');
         } else {
@@ -182,18 +185,17 @@ export const usePushNotifications = () => {
   // Helper: Vérifier Google Play Services (requis pour FCM sur Android)
   const checkGooglePlayServices = async (): Promise<boolean> => {
     try {
-      // Vérifier via un appel JavaScript bridge
-      return await new Promise<boolean>((resolve) => {
-        if (typeof (window as any).AndroidBridge?.hasGooglePlayServices === 'function') {
-          const result = (window as any).AndroidBridge.hasGooglePlayServices();
-          resolve(result === true);
-        } else {
-          // Si pas de méthode, on assume que c'est dispo (mieux que bloquer)
-          resolve(true);
-        }
-      });
-    } catch {
-      return true; // En cas d'erreur, on assume que c'est dispo
+      if (typeof (window as any).AndroidBridge?.hasGooglePlayServices === 'function') {
+        const result = (window as any).AndroidBridge.hasGooglePlayServices();
+        console.log('🔍 [GPS] Google Play Services:', result ? 'disponibles ✅' : 'NON disponibles ❌');
+        return result === true;
+      }
+      // Si pas de méthode, on assume que c'est dispo
+      console.log('🔍 [GPS] Méthode non disponible, assume OK');
+      return true;
+    } catch (error) {
+      console.error('❌ [GPS] Erreur vérification:', error);
+      return true;
     }
   };
 
@@ -489,6 +491,12 @@ export const usePushNotifications = () => {
       
       if (error) {
         console.error(`❌ [${platform.toUpperCase()}] Erreur sauvegarde token ${tokenType}:`, error);
+        toast({
+          title: "Erreur sauvegarde",
+          description: "Le token n'a pas pu être enregistré. Réessayez.",
+          variant: "destructive"
+        });
+        throw error;
       } else {
         console.log(`✅ [${platform.toUpperCase()}] Token ${tokenType} sauvegardé avec succès dans Supabase (plateforme: ${platform})`);
         setToken(pushToken);
@@ -600,7 +608,7 @@ export const usePushNotifications = () => {
       });
 
       // Erreur d'enregistrement
-      await PushNotifications.addListener('registrationError', (error) => {
+      await PushNotifications.addListener('registrationError', async (error) => {
         console.error('🔥🔥🔥 [FIREBASE ERROR] Erreur enregistrement FCM:', error);
         console.error('🔥 [FIREBASE ERROR] Détails:', JSON.stringify(error));
         
@@ -617,6 +625,21 @@ export const usePushNotifications = () => {
         } else {
           console.error('❌ Erreur FCM inconnue - vérifiez adb logcat pour plus de détails');
         }
+        
+        // Retry automatique après 5 secondes
+        setTimeout(async () => {
+          console.log('🔄 [RETRY] Nouvelle tentative enregistrement FCM...');
+          try {
+            await PushNotifications.register();
+          } catch (retryError) {
+            console.error('❌ [RETRY] Échec retry:', retryError);
+            toast({
+              title: "Erreur Firebase",
+              description: "Impossible d'obtenir le token. Vérifiez votre connexion.",
+              variant: "destructive"
+            });
+          }
+        }, 5000);
         
         setIsRegistered(false);
         checkPermissionStatus();

@@ -1016,6 +1016,21 @@ public class MainActivity extends AppCompatActivity {
         }
         
         @android.webkit.JavascriptInterface
+        public boolean hasGooglePlayServices() {
+            try {
+                com.google.android.gms.common.GoogleApiAvailability availability = 
+                    com.google.android.gms.common.GoogleApiAvailability.getInstance();
+                int resultCode = availability.isGooglePlayServicesAvailable(MainActivity.this);
+                boolean available = resultCode == com.google.android.gms.common.ConnectionResult.SUCCESS;
+                Log.d(TAG, "🔍 Google Play Services: " + (available ? "disponibles ✅" : "NON disponibles ❌"));
+                return available;
+            } catch (Exception e) {
+                Log.e(TAG, "❌ Erreur vérification Google Play Services:", e);
+                return false;
+            }
+        }
+        
+        @android.webkit.JavascriptInterface
         public void getContacts() {
             Log.d(TAG, "👥 AndroidBridge: récupération contacts (asynchrone)");
             

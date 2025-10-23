@@ -33,12 +33,13 @@ public class MessagingService extends FirebaseMessagingService {
         
         // Envoyer le token à JavaScript via l'événement window
         try {
-            // Injecter le token dans window pour que React puisse le récupérer
+        // Injecter le token dans window pour que React puisse le récupérer
             String jsCode = String.format(
                 "window.fcmToken = '%s'; " +
                 "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
+                "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
                 "console.log('🔥 [FCM Service] Token injecté dans window:', '%s');",
-                token, token, token.substring(0, 30) + "..."
+                token, token, token, token.substring(0, 30) + "..."
             );
             
             Log.d(TAG, "✅ [FCM] Token prêt à être injecté dans JavaScript");
@@ -118,7 +119,7 @@ public class MessagingService extends FirebaseMessagingService {
         
         // Construire la notification
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Icône par défaut
+            .setSmallIcon(R.mipmap.ic_launcher) // Utiliser l'icône de l'app
             .setContentTitle(title != null ? title : "RunConnect")
             .setContentText(body != null ? body : "Nouvelle notification")
             .setAutoCancel(true)
