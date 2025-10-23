@@ -10,24 +10,45 @@ export interface GoogleSignInResult {
 }
 
 /**
- * Vérifie si Google Sign-In natif est disponible
+ * Vérifie si Google Sign-In natif est disponible (attend max 3s que AndroidBridge soit chargé)
  */
-export const isNativeGoogleSignInAvailable = (): boolean => {
-  return typeof window !== 'undefined' && 
-         typeof window.AndroidBridge?.googleSignIn === 'function';
+export const isNativeGoogleSignInAvailable = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+  
+  // Attendre max 3 secondes que AndroidBridge soit chargé
+  for (let i = 0; i < 30; i++) {
+    if (typeof window.AndroidBridge?.googleSignIn === 'function') {
+      console.log('🔥 AndroidBridge.googleSignIn détecté après', i * 100, 'ms');
+      return true;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  console.log('🔥 AndroidBridge.googleSignIn NON disponible après 3s');
+  return false;
 };
 
 /**
- * Lance le processus de connexion Google natif
+ * Lance le processus de connexion Google natif avec timeout de 60s
  */
 export const googleSignIn = (): Promise<GoogleSignInResult> => {
   return new Promise((resolve, reject) => {
-    if (!isNativeGoogleSignInAvailable()) {
+    // Vérification synchrone (l'appel async a déjà été fait avant)
+    if (typeof window.AndroidBridge?.googleSignIn !== 'function') {
       reject(new Error('Native Google Sign-In not available'));
       return;
     }
 
+    // Timeout de 60 secondes
+    const timeout = setTimeout(() => {
+      window.removeEventListener('googleSignInSuccess', successHandler as any);
+      window.removeEventListener('googleSignInError', errorHandler as any);
+      console.error('🔥⏱️ Google Sign-In timeout (60s)');
+      reject(new Error('Google Sign-In timeout (60s)'));
+    }, 60000);
+
     const successHandler = (event: CustomEvent<GoogleSignInResult>) => {
+      clearTimeout(timeout);
       window.removeEventListener('googleSignInSuccess', successHandler as any);
       window.removeEventListener('googleSignInError', errorHandler as any);
       console.log('🔥✅ Google Sign-In success:', event.detail);
@@ -35,6 +56,7 @@ export const googleSignIn = (): Promise<GoogleSignInResult> => {
     };
 
     const errorHandler = (event: CustomEvent<string>) => {
+      clearTimeout(timeout);
       window.removeEventListener('googleSignInSuccess', successHandler as any);
       window.removeEventListener('googleSignInError', errorHandler as any);
       console.error('🔥❌ Google Sign-In error:', event.detail);

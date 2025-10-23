@@ -528,6 +528,13 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == GOOGLE_SIGN_IN_REQUEST_CODE) {
             Log.d(TAG, "🔥 [GOOGLE SIGN-IN] onActivityResult - resultCode=" + resultCode);
             
+            // Gérer l'annulation par l'utilisateur
+            if (resultCode == RESULT_CANCELED) {
+                Log.d(TAG, "❌ [GOOGLE SIGN-IN] Utilisateur a annulé le sign-in");
+                notifyGoogleSignInError("User canceled");
+                return;
+            }
+            
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);

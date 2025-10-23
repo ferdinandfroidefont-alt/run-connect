@@ -9,35 +9,7 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User } from "lucide-react";
-import { InAppBrowser } from '@capgo/inappbrowser';
-import { Browser } from '@capacitor/browser';
-import { Device } from '@capacitor/device';
-import { App } from '@capacitor/app';
 import { googleSignIn, isNativeGoogleSignInAvailable } from '@/lib/googleSignIn';
-
-// Helper pour extraire les tokens OAuth depuis URL (query string OU fragment)
-const extractOAuthTokens = (url: string): { accessToken: string | null, refreshToken: string | null } => {
-  try {
-    const urlObj = new URL(url);
-    
-    // Essayer d'abord le fragment (#access_token=...)
-    let params = new URLSearchParams(urlObj.hash.substring(1));
-    let accessToken = params.get('access_token');
-    let refreshToken = params.get('refresh_token');
-    
-    // Si pas dans le fragment, essayer la query string (?access_token=...)
-    if (!accessToken) {
-      params = new URLSearchParams(urlObj.search);
-      accessToken = params.get('access_token');
-      refreshToken = params.get('refresh_token');
-    }
-    
-    return { accessToken, refreshToken };
-  } catch (error) {
-    console.error('❌ Erreur parsing URL:', error);
-    return { accessToken: null, refreshToken: null };
-  }
-};
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -101,9 +73,11 @@ const Auth = () => {
     try {
       setIsLoading(true);
       
-      // 🔥 NOUVELLE MÉTHODE: Google Sign-In natif via AndroidBridge (Firebase)
-      if (isNativeGoogleSignInAvailable()) {
-        console.log('🔥 [FIREBASE AUTH] Google Sign-In natif détecté');
+      // 🔥 Vérifier si Google Sign-In natif est disponible (attend 3s max)
+      const isNativeAvailable = await isNativeGoogleSignInAvailable();
+      
+      if (isNativeAvailable) {
+        console.log('🔥 [FIREBASE AUTH] Google Sign-In natif Android détecté');
         
         try {
           // Étape 1: Obtenir le token Firebase depuis le plugin natif
@@ -145,322 +119,19 @@ const Auth = () => {
           console.error('🔥❌ Native Google Sign-In failed:', nativeError);
           toast({
             title: "Erreur",
-            description: nativeError.message || "Erreur lors de l'authentification Google native",
+            description: nativeError.message || "Erreur lors de l'authentification Google",
             variant: "destructive",
           });
           return;
         }
       }
       
-      // ✅ FALLBACK: OAuth classique pour web ou iOS
-      console.log('🌐 Fallback vers OAuth Google classique');
-      
-      // ✅ DÉTECTION ULTRA-FIABLE
-      const forceNative = (window as any).CapacitorForceNative === true;
-      const hasCapacitor = !!(window as any).Capacitor;
-      const hasAndroidBridge = !!(window as any).AndroidBridge;
-      const platform = (window as any).Capacitor?.getPlatform?.() || 'web';
-      const isFileProtocol = window.location.protocol === 'file:' || 
-                             window.location.protocol === 'capacitor:';
-      
-      // ✅ MODE NATIF = forceNative OU (Capacitor + FileProtocol)
-      const isNative = forceNative || (hasCapacitor && isFileProtocol) || hasAndroidBridge;
-      
-      console.log('🔥 Auth Google - Détection:', {
-        forceNative,
-        hasCapacitor,
-        hasAndroidBridge,
-        platform,
-        isFileProtocol,
-        isNative: isNative ? '✅ NATIF' : '❌ WEB',
-        userAgent: navigator.userAgent
+      // ❌ Pas de fallback web : Google Sign-In uniquement sur Android natif
+      toast({
+        title: "Non disponible",
+        description: "La connexion Google n'est disponible que sur l'application mobile Android",
+        variant: "destructive",
       });
-      
-      // OAuth Google pour iOS
-      if (isNative && platform === 'ios') {
-        console.log('🍎 [STEP 1] OAuth Google natif iOS avec custom scheme');
-        
-        const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: 'app.runconnect://oauth/callback',
-            skipBrowserRedirect: false,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          }
-        });
-        
-        if (authError) {
-          console.error('❌ Erreur OAuth iOS:', authError);
-          toast({
-            title: "Erreur",
-            description: "Impossible de se connecter avec Google",
-            variant: "destructive",
-          });
-        }
-        
-        return;
-      }
-      
-      // OAuth Google pour Android - Stratégie multi-marques
-      if (isNative && platform === 'android') {
-        console.log('🔥 [STEP 2] Détection device Android');
-        
-        // Détecter le device
-        const deviceInfo = await Device.getInfo();
-        const manufacturer = deviceInfo.manufacturer.toLowerCase();
-        const model = deviceInfo.model.toLowerCase();
-        
-        // Liste exhaustive des marques qui forcent le navigateur externe
-        const isMIUI = manufacturer.includes('xiaomi') || 
-                       manufacturer.includes('redmi') || 
-                       manufacturer.includes('poco') ||
-                       model.includes('mi') ||  // Sans espace pour matcher mi9, mi11, etc.
-                       model.includes('redmi');
-
-        // Autres marques chinoises avec même comportement
-        const isChineseBrand = manufacturer.includes('oneplus') ||
-                               manufacturer.includes('oppo') ||
-                               manufacturer.includes('vivo') ||
-                               manufacturer.includes('realme') ||
-                               manufacturer.includes('huawei') ||
-                               manufacturer.includes('honor');
-
-        // Samsung avec OneUI a aussi des restrictions
-        const isSamsung = manufacturer.includes('samsung');
-
-        const forceExternalBrowser = isMIUI || isChineseBrand || isSamsung;
-        
-        console.log('🔥 [STEP 2] Device Info:', { 
-          manufacturer, 
-          model, 
-          isMIUI, 
-          isChineseBrand,
-          isSamsung,
-          forceExternalBrowser 
-        });
-        
-        console.log('🔥 [STEP 3] Génération URL OAuth');
-        
-        // Générer l'URL OAuth
-        const { data: authData } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: 'app.runconnect://oauth/callback',
-            skipBrowserRedirect: true,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          }
-        });
-        
-        if (!authData?.url) {
-          toast({
-            title: "Erreur",
-            description: "Impossible de générer l'URL d'authentification",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        console.log('🔥 [STEP 3] URL OAuth générée:', authData.url);
-        
-        if (forceExternalBrowser) {
-          // STRATÉGIE : Navigateur externe + Deep Link (MIUI/Chinese/Samsung)
-          console.log('🔥 [STEP 4] Device nécessite navigateur externe');
-          
-          // Timeout de 5 minutes
-          const timeout = setTimeout(() => {
-            console.log('⏱️ Timeout OAuth - L\'utilisateur n\'a pas complété l\'authentification');
-            listener.remove();
-            pollingInterval && clearInterval(pollingInterval);
-            setIsLoading(false);
-            toast({
-              title: "Délai dépassé",
-              description: "L'authentification a pris trop de temps. Veuillez réessayer.",
-              variant: "destructive",
-            });
-          }, 300000);
-          
-          // Listener pour le deep link
-          const listener = await App.addListener('appUrlOpen', async ({ url }) => {
-            console.log('🔥 [STEP 6] Deep link reçu:', url);
-            clearTimeout(timeout);
-            pollingInterval && clearInterval(pollingInterval);
-            
-            if (url.includes('app.runconnect://oauth/callback')) {
-              const { accessToken, refreshToken } = extractOAuthTokens(url);
-              
-              console.log('🔥 [STEP 7] Tokens extraits:', { hasAccess: !!accessToken, hasRefresh: !!refreshToken });
-              
-              if (accessToken && refreshToken) {
-                console.log('✅ Tokens OAuth reçus depuis navigateur externe');
-                
-                // Établir la session
-                const { error } = await supabase.auth.setSession({
-                  access_token: accessToken,
-                  refresh_token: refreshToken
-                });
-                
-                if (!error) {
-                  console.log('🔥 [STEP 8] Session établie');
-                  const { data: session } = await supabase.auth.getSession();
-                  if (session?.session?.user) {
-                    const { data: existingProfile } = await supabase
-                      .from('profiles')
-                      .select('id, username')
-                      .eq('user_id', session.session.user.id)
-                      .maybeSingle();
-                    
-                    if (!existingProfile) {
-                      setNewUserId(session.session.user.id);
-                      setShowProfileSetup(true);
-                    } else {
-                      window.location.href = '/';
-                    }
-                  }
-                }
-                
-                listener.remove();
-              }
-            }
-          });
-          
-          console.log('🔥 [STEP 4] Listener App Links enregistré');
-          
-          // Fallback : Polling de session toutes les 2 secondes
-          const pollingInterval = setInterval(async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              console.log('✅ Session détectée par polling!');
-              clearInterval(pollingInterval);
-              clearTimeout(timeout);
-              listener.remove();
-              
-              const { data: existingProfile } = await supabase
-                .from('profiles')
-                .select('id, username')
-                .eq('user_id', session.user.id)
-                .maybeSingle();
-              
-              if (!existingProfile) {
-                setNewUserId(session.user.id);
-                setShowProfileSetup(true);
-              } else {
-                window.location.href = '/';
-              }
-            }
-          }, 2000);
-          
-          console.log('🔥 [STEP 5] Ouverture navigateur externe');
-          
-          // Ouvrir dans le navigateur externe
-          await Browser.open({ 
-            url: authData.url,
-            windowName: '_system'
-          });
-          
-        } else {
-          // STRATÉGIE STANDARD : InAppBrowser WebView in-app
-          console.log('🔥 [STEP 4] Android standard - InAppBrowser WebView');
-          
-          // Timeout de 5 minutes
-          const timeout = setTimeout(() => {
-            console.log('⏱️ Timeout OAuth - InAppBrowser');
-            handle.remove();
-            InAppBrowser.close();
-            setIsLoading(false);
-            toast({
-              title: "Délai dépassé",
-              description: "L'authentification a pris trop de temps. Veuillez réessayer.",
-              variant: "destructive",
-            });
-          }, 300000);
-          
-          // Listener pour détecter la navigation vers le callback
-          const handle = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
-            console.log('🔥 [STEP 6] URL changée:', event.url);
-            clearTimeout(timeout);
-            
-            if (event.url.includes('app.runconnect://oauth/callback')) {
-              const { accessToken, refreshToken } = extractOAuthTokens(event.url);
-              
-              console.log('🔥 [STEP 7] Tokens extraits:', { hasAccess: !!accessToken, hasRefresh: !!refreshToken });
-              
-              if (accessToken && refreshToken) {
-                console.log('✅ Tokens OAuth reçus');
-                
-                // Fermer le browser in-app
-                await InAppBrowser.close();
-                
-                // Établir la session
-                const { error } = await supabase.auth.setSession({
-                  access_token: accessToken,
-                  refresh_token: refreshToken
-                });
-                
-                if (!error) {
-                  console.log('🔥 [STEP 8] Session établie');
-                  const { data: session } = await supabase.auth.getSession();
-                  if (session?.session?.user) {
-                    const { data: existingProfile } = await supabase
-                      .from('profiles')
-                      .select('id, username')
-                      .eq('user_id', session.session.user.id)
-                      .maybeSingle();
-                    
-                    if (!existingProfile) {
-                      setNewUserId(session.session.user.id);
-                      setShowProfileSetup(true);
-                    } else {
-                      window.location.href = '/';
-                    }
-                  }
-                }
-                
-                handle.remove();
-              }
-            }
-          });
-          
-          console.log('🔥 [STEP 5] Ouverture InAppBrowser WebView');
-          
-          // Ouvrir dans une WebView pure in-app (pas Chrome)
-          await InAppBrowser.openWebView({
-            url: authData.url,
-            title: 'Se connecter avec Google',
-            isPresentAfterPageLoad: false
-          });
-        }
-        
-        return;
-      }
-      
-      // ✅ MODE WEB : OAuth Google classique (navigateur)
-      console.log('🌐 Mode web - OAuth Google standard');
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
-        }
-      });
-      
-      if (error) {
-        toast({
-          title: "Erreur",
-          description: "Impossible de se connecter avec Google",
-          variant: "destructive",
-        });
-      }
-      
       return;
       
     } catch (error: any) {
