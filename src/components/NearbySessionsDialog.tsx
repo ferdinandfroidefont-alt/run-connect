@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "@/components/ShareSessionToConversationDialog";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Users, UserPlus, Share2, ArrowLeft, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Users, UserPlus, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -266,152 +265,113 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent 
           side="top" 
-          className="w-full h-full min-h-screen p-0 flex flex-col backdrop-blur-xl bg-background/95 border-0 max-w-none"
+          className="w-full h-full min-h-screen p-0 border-0 max-w-none backdrop-blur-xl bg-background/95 border-border/50"
         >
-          {/* Header sticky avec flèche retour */}
-          <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
-            {/* En-tête avec flèche retour */}
-            <div className="flex items-center gap-3 p-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full hover:bg-muted/50"
-                onClick={onClose}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h2 className="text-lg font-semibold">Séances proches de moi</h2>
-            </div>
+          {/* Petite barre en haut */}
+          <div className="w-full h-6 bg-background"></div>
+          
+          {/* Sticky Header avec filtres */}
+          <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50 px-6 pb-4">
+            <SheetHeader className="mb-4">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Séances proches de moi
+                </SheetTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={toggleAllActivities}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {selectedActivities.length === ACTIVITY_TYPES.length 
+                    ? "Tout désactiver" 
+                    : "Tout sélectionner"}
+                </Button>
+              </div>
+            </SheetHeader>
 
-          </div>
-
-          {/* Contenu scrollable */}
-          <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="px-4 pb-6 space-y-8">
-              {/* Section Sports - lignes verticales avec Switch */}
-              <div className="space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Sports disponibles
-                  </h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={toggleAllActivities}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    {selectedActivities.length === ACTIVITY_TYPES.length 
-                      ? "Tout désactiver" 
-                      : "Tout sélectionner"}
-                  </Button>
-                </div>
-                
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+            {/* Sports Section */}
+            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-4 space-y-3 animate-fade-in">
+              <h3 className="text-sm font-semibold">Sports</h3>
+              
+              <ScrollArea className="w-full">
+                <div className="flex gap-2 pb-2 w-max">
                   {ACTIVITY_TYPES.map(activity => (
-                    <div 
+                    <button
                       key={activity.value}
                       onClick={() => toggleActivity(activity.value)}
                       className={cn(
-                        "flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group cursor-pointer",
-                        selectedActivities.includes(activity.value) && "bg-primary/10"
+                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px]",
+                        "hover:shadow-md hover:scale-105 active:scale-95",
+                        selectedActivities.includes(activity.value)
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                          : "bg-muted/50 text-muted-foreground border-border/50 opacity-60"
                       )}
                     >
-                      <div className="flex items-center gap-3 flex-1">
-                        <span className="text-2xl">{activity.emoji}</span>
-                        <div className="flex-1">
-                          <label className="text-sm font-medium cursor-pointer">{activity.label}</label>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={selectedActivities.includes(activity.value)}
-                        onCheckedChange={() => toggleActivity(activity.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
+                      <span className="text-lg">{activity.emoji}</span>
+                      <span className="text-sm font-medium whitespace-nowrap">{activity.label}</span>
+                    </button>
                   ))}
                 </div>
-              </div>
+              </ScrollArea>
+            </div>
 
-              {/* Section Filtres de recherche */}
-              <div className="space-y-3 animate-fade-in">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
-                  Filtres de recherche
-                </h3>
-                
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-                  {/* Distance maximale */}
-                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-                    <div className="flex items-center gap-3 flex-1">
-                      <MapPin className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <label className="text-sm font-medium">Distance maximale</label>
-                        <p className="text-xs text-muted-foreground">Rayon de recherche des séances</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={selectedDistance}
-                        onChange={(e) => setSelectedDistance(e.target.value)}
-                        className="w-20 h-8 text-xs text-right border-border/50 bg-background/50"
-                        min="1"
-                        max="100"
-                      />
-                      <span className="text-xs text-muted-foreground">km</span>
-                    </div>
-                  </div>
-                  
-                  {/* Bouton Appliquer */}
-                  <div className="p-4 bg-muted/20">
-                    <Button 
-                      onClick={loadNearbySessions}
-                      disabled={loading}
-                      className="w-full rounded-full bg-primary hover:bg-primary/90 transition-all shadow-md hover:shadow-lg"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Recherche...
-                        </>
-                      ) : (
-                        'Appliquer les filtres'
-                      )}
-                    </Button>
-                  </div>
+            {/* Distance Filter */}
+            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-4 mt-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Distance maximale
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={selectedDistance}
+                    onChange={(e) => setSelectedDistance(e.target.value)}
+                    className="w-24 text-right"
+                    min="100"
+                    max="50000"
+                  />
+                  <span className="text-sm text-muted-foreground">km</span>
                 </div>
               </div>
+              
+              <Button 
+                onClick={loadNearbySessions}
+                className="w-full rounded-full bg-primary hover:bg-primary/90 transition-all shadow-md"
+              >
+                Appliquer les filtres
+              </Button>
+            </div>
+          </div>
 
-              {/* Résultats */}
+          {/* Sessions List */}
+          <ScrollArea className="flex-1 px-6">
+            <div className="space-y-3 py-4">
               {loading ? (
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
-                  <div className="flex flex-col items-center justify-center space-y-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Recherche des séances à proximité...</p>
-                  </div>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Recherche des séances...</p>
                 </div>
               ) : sessions.length === 0 ? (
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
-                  <div className="flex flex-col items-center justify-center space-y-4 animate-fade-in">
-                    <div className="text-6xl animate-bounce">🏃‍♂️💨</div>
-                    <div className="text-center space-y-2">
-                      <p className="text-lg font-semibold">Aucune séance trouvée</p>
-                      <p className="text-sm text-muted-foreground max-w-xs">
-                        Essaye d'élargir la distance ou d'activer d'autres sports.
-                      </p>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={resetFilters}
-                      className="rounded-full"
-                    >
-                      Réinitialiser les filtres
-                    </Button>
-                  </div>
+                <div className="flex flex-col items-center justify-center py-12 space-y-3 animate-fade-in">
+                  <div className="text-6xl animate-bounce">🏃‍♂️💨</div>
+                  <p className="text-lg font-semibold">Aucune séance trouvée</p>
+                  <p className="text-sm text-muted-foreground text-center max-w-xs">
+                    Essaye d'élargir la distance ou d'activer d'autres sports.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={resetFilters}
+                    className="mt-4"
+                  >
+                    Réinitialiser les filtres
+                  </Button>
                 </div>
               ) : (
                 sessions.map((session) => (
-                  <Card key={session.id} className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.01] animate-fade-in">
+                  <Card key={session.id} className="transition-all duration-200 hover:shadow-lg hover:scale-[1.01] animate-fade-in border-border/50 bg-card/30 backdrop-blur-sm">
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         {/* Header */}
@@ -519,13 +479,9 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             </div>
           </ScrollArea>
 
-          {/* Footer avec bouton fermer */}
-          <div className="px-4 py-4 border-t border-border/50 backdrop-blur-xl bg-background/80">
-            <Button 
-              variant="outline" 
-              onClick={onClose} 
-              className="w-full rounded-full hover:bg-muted/50 transition-colors"
-            >
+          {/* Actions */}
+          <div className="px-6 py-4 border-t border-border/50 backdrop-blur-xl bg-background/95">
+            <Button variant="outline" onClick={onClose} className="w-full rounded-full">
               Fermer
             </Button>
           </div>
