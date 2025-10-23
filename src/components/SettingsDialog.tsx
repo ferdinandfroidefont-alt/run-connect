@@ -129,7 +129,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   };
 
   const handleNotificationToggle = async () => {
-    // 🔥 APPEL DIRECT ANDROIDBRIDGE (comme useMultiplatformPermissions)
+    // 🔥 APPEL DIRECT ANDROIDBRIDGE - POPUP ANDROID NATIVE UNIQUEMENT
     // @ts-ignore
     if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
       console.log('🔔 [SETTINGS] Demande popup notifications via AndroidBridge...');
@@ -154,6 +154,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
       
       const granted = await notificationPromise;
       
+      // ✅ Seulement mettre à jour la DB si accordé, pas de toast d'erreur si refusé
       if (granted && user) {
         await supabase
           .from('profiles')
@@ -166,21 +167,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           title: "Notifications activées !",
           description: "Vous recevrez les notifications de RunConnect"
         });
-      } else if (!granted) {
-        toast({
-          title: "Permission refusée",
-          description: "Vous pouvez l'activer plus tard dans les paramètres Android",
-          variant: "destructive"
-        });
       }
-    } else {
-      console.error('❌ [SETTINGS] AndroidBridge non disponible');
-      toast({
-        title: "Erreur",
-        description: "AndroidBridge non disponible",
-        variant: "destructive"
-      });
+      // Si refusé: RIEN, la popup Android a déjà informé l'utilisateur
     }
+    // Si AndroidBridge n'existe pas: RIEN, ne devrait jamais arriver en production
   };
 
   const updatePrivacySettings = async (field: string, value: boolean) => {
