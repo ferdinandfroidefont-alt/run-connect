@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
@@ -985,6 +986,14 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "🔔 Permission notifications déjà accordée");
                         injectPermissionsState(webView);
                         notifyJavaScriptPermissionResult(true);
+                    } else if (!ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)) {
+                        // ✅ Refusé définitivement → Rediriger vers les paramètres
+                        Log.d(TAG, "🔔 Permission refusée définitivement, ouverture paramètres...");
+                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        Uri uri = Uri.fromParts("package", getPackageName(), null);
+                        intent.setData(uri);
+                        startActivity(intent);
+                        notifyJavaScriptPermissionResult(false);
                     } else {
                         Log.d(TAG, "🔔 Demande popup système POST_NOTIFICATIONS pour Android 13+");
                         ActivityCompat.requestPermissions(MainActivity.this,
@@ -992,9 +1001,16 @@ public class MainActivity extends AppCompatActivity {
                                 REQ_NOTIFICATIONS);
                     }
                 } else {
-                    // Android < 13: notifications toujours autorisées par défaut
-                    Log.d(TAG, "🔔 Android < 13: notifications autorisées par défaut");
-                    notifyJavaScriptPermissionResult(true);
+                    // ✅ Android < 13: vérifier l'état réel
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                        boolean areEnabled = notificationManager.areNotificationsEnabled();
+                        Log.d(TAG, "🔔 Android < 13: notifications " + (areEnabled ? "activées" : "désactivées"));
+                        notifyJavaScriptPermissionResult(areEnabled);
+                    } else {
+                        Log.d(TAG, "🔔 Android < 8: notifications toujours autorisées");
+                        notifyJavaScriptPermissionResult(true);
+                    }
                 }
             });
         }

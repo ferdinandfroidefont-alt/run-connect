@@ -129,48 +129,69 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   };
 
   const handleNotificationToggle = async () => {
-    // 🔥 APPEL DIRECT ANDROIDBRIDGE - POPUP ANDROID NATIVE UNIQUEMENT
-    // @ts-ignore
-    if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
-      console.log('🔔 [SETTINGS] Demande popup notifications via AndroidBridge...');
-      
-      const notificationPromise = new Promise<boolean>((resolve) => {
-        const timeout = setTimeout(() => resolve(false), 30000);
-        
-        const handler = (event: any) => {
-          clearTimeout(timeout);
-          const granted = event.detail?.granted === true;
-          console.log('✅ [SETTINGS] Résultat popup:', granted);
-          window.removeEventListener('androidPermissionsUpdated', handler);
-          resolve(granted);
-        };
-        
-        window.addEventListener('androidPermissionsUpdated', handler);
-      });
-      
-      // 🎯 DÉCLENCHER LA POPUP ANDROID SYSTÈME
+    // ✅ Attendre que AndroidBridge soit disponible (max 3s)
+    let bridgeAvailable = false;
+    for (let i = 0; i < 30; i++) {
       // @ts-ignore
-      window.AndroidBridge.requestNotificationPermissions();
-      
-      const granted = await notificationPromise;
-      
-      // ✅ Seulement mettre à jour la DB si accordé, pas de toast d'erreur si refusé
-      if (granted && user) {
-        await supabase
-          .from('profiles')
-          .update({ notifications_enabled: true })
-          .eq('user_id', user.id);
-        
-        setProfile(prev => prev ? { ...prev, notifications_enabled: true } : null);
-        
-        toast({
-          title: "Notifications activées !",
-          description: "Vous recevrez les notifications de RunConnect"
-        });
+      if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
+        bridgeAvailable = true;
+        break;
       }
-      // Si refusé: RIEN, la popup Android a déjà informé l'utilisateur
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
-    // Si AndroidBridge n'existe pas: RIEN, ne devrait jamais arriver en production
+    
+    if (!bridgeAvailable) {
+      toast({
+        title: "Erreur",
+        description: "Service de notifications non disponible. Redémarrez l'application.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('🔔 [SETTINGS] Demande popup notifications via AndroidBridge...');
+    
+    const notificationPromise = new Promise<boolean>((resolve) => {
+      const timeout = setTimeout(() => resolve(false), 60000); // ✅ 60s au lieu de 30s
+      
+      const handler = (event: any) => {
+        clearTimeout(timeout);
+        const granted = event.detail?.granted === true;
+        console.log('✅ [SETTINGS] Résultat popup:', granted);
+        window.removeEventListener('androidPermissionsUpdated', handler);
+        resolve(granted);
+      };
+      
+      // ✅ ATTACHER LE LISTENER EN PREMIER
+      window.addEventListener('androidPermissionsUpdated', handler);
+    });
+    
+    // ✅ ENSUITE déclencher la popup
+    // @ts-ignore
+    window.AndroidBridge.requestNotificationPermissions();
+    
+    const granted = await notificationPromise;
+    
+    if (granted && user) {
+      await supabase
+        .from('profiles')
+        .update({ notifications_enabled: true })
+        .eq('user_id', user.id);
+      
+      setProfile(prev => prev ? { ...prev, notifications_enabled: true } : null);
+      
+      toast({
+        title: "Notifications activées !",
+        description: "Vous recevrez les notifications de RunConnect"
+      });
+    } else {
+      // ✅ Afficher un toast si refusé
+      toast({
+        title: "Permission refusée",
+        description: "Vous pouvez activer les notifications dans Paramètres > Applications > RunConnect",
+        variant: "destructive"
+      });
+    }
   };
 
   const updatePrivacySettings = async (field: string, value: boolean) => {

@@ -179,6 +179,24 @@ export const usePushNotifications = () => {
     }
   }, [isNative, user]);
 
+  // Helper: Vérifier Google Play Services (requis pour FCM sur Android)
+  const checkGooglePlayServices = async (): Promise<boolean> => {
+    try {
+      // Vérifier via un appel JavaScript bridge
+      return await new Promise<boolean>((resolve) => {
+        if (typeof (window as any).AndroidBridge?.hasGooglePlayServices === 'function') {
+          const result = (window as any).AndroidBridge.hasGooglePlayServices();
+          resolve(result === true);
+        } else {
+          // Si pas de méthode, on assume que c'est dispo (mieux que bloquer)
+          resolve(true);
+        }
+      });
+    } catch {
+      return true; // En cas d'erreur, on assume que c'est dispo
+    }
+  };
+
   // Plugin natif (Android et iOS) avec compatibilité toutes versions
   const requestNativeNotifications = async (): Promise<boolean> => {
     const platform = Capacitor.getPlatform();
@@ -299,6 +317,19 @@ export const usePushNotifications = () => {
     if (!isReallyNative) {
       console.log('❌ Mode web détecté, notifications non supportées');
       return false;
+    }
+    
+    // ✅ Vérifier Google Play Services (requis pour FCM)
+    if (Capacitor.getPlatform() === 'android') {
+      const hasGPS = await checkGooglePlayServices();
+      if (!hasGPS) {
+        toast({
+          title: "Google Play Services requis",
+          description: "Les notifications push nécessitent Google Play Services",
+          variant: "destructive"
+        });
+        return false;
+      }
     }
     
     try {
