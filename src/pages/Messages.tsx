@@ -21,7 +21,8 @@ import { EditClubDialog } from "@/components/EditClubDialog";
 import { ContactsDialog } from "@/components/ContactsDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
-import { 
+import { useCamera } from "@/hooks/useCamera";
+import {
   MessageCircle, 
   Users, 
   Send, 
@@ -137,6 +138,10 @@ const Messages = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { isRecording, recordingDuration, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
+  const { selectFromGallery, loading: cameraLoading } = useCamera();
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  
+  const isLoading = loading || cameraLoading;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -496,18 +501,89 @@ const Messages = () => {
     }
   };
 
+  // Compression d'image
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = document.createElement('img') as HTMLImageElement;
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          const MAX_WIDTH = 1920;
+          const MAX_HEIGHT = 1920;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            if (width > height) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            } else {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              console.log(`📸 Compression: ${file.size} → ${compressedFile.size} bytes`);
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Compression failed'));
+            }
+          }, 'image/jpeg', 0.85);
+        };
+      };
+      reader.onerror = reject;
+    });
+  };
+
   // Upload file to Supabase Storage
   const uploadFile = async (file: File) => {
     if (!user || !selectedConversation) return;
 
     console.log('Starting file upload:', file.name, file.type);
 
-    const fileExt = file.name.split('.').pop();
+    // Vérifier la taille (max 50 MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast({
+        title: "Fichier trop volumineux",
+        description: "La taille maximale est de 50 MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Compresser si c'est une image > 1 MB
+    let fileToUpload = file;
+    if (file.type.startsWith('image/') && file.size > 1024 * 1024) {
+      try {
+        setUploadProgress('Compression de l\'image...');
+        fileToUpload = await compressImage(file);
+      } catch (error) {
+        console.log('⚠️ Compression échouée, upload original');
+      }
+    }
+
+    const fileExt = fileToUpload.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${user.id}/${fileName}`;
 
     try {
       setLoading(true);
+      setUploadProgress(`Upload de ${fileToUpload.name}...`);
       
       // Upload to message-files bucket
       const { error: uploadError } = await supabase.storage
@@ -518,6 +594,8 @@ const Messages = () => {
         console.error('Upload error:', uploadError);
         throw uploadError;
       }
+
+      setUploadProgress('Envoi du message...');
 
       const { data: { publicUrl } } = supabase.storage
         .from('message-files')
@@ -561,6 +639,7 @@ const Messages = () => {
       });
     } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -1520,34 +1599,79 @@ const Messages = () => {
 
           {/* Message input - Fixed at bottom */}
           <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 z-50">
+            {uploadProgress && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg mb-2">
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-muted-foreground">{uploadProgress}</span>
+              </div>
+            )}
             <div className="flex gap-2">
               {!isRecording && (
                 <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="*/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 50 * 1024 * 1024) {
+                          toast({
+                            title: "Fichier trop volumineux",
+                            description: "La taille maximale est de 50 MB",
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        uploadFile(file);
+                      }
+                    }}
+                    className="hidden"
+                    disabled={isLoading}
+                  />
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
                     className="px-3"
-                    disabled={loading}
+                    disabled={isLoading}
                   >
                     <Paperclip className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      if (loading) return;
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*,video/*';
-                      input.onchange = (e) => {
-                        const file = (e.target as HTMLInputElement).files?.[0];
-                        if (file) uploadFile(file);
-                      };
-                      input.click();
+                    onClick={async () => {
+                      console.log('🖼️ Bouton Image cliqué');
+                      try {
+                        const file = await selectFromGallery();
+                        if (file) {
+                          console.log('📸 Fichier sélectionné:', file.name);
+                          uploadFile(file);
+                        } else {
+                          toast({
+                            title: "Aucun fichier",
+                            description: "Aucune image sélectionnée",
+                            variant: "default"
+                          });
+                        }
+                      } catch (error: any) {
+                        console.error('❌ Erreur sélection galerie:', error);
+                        let errorMessage = "Impossible d'accéder à la galerie. Vérifiez les permissions.";
+                        if (error.message === 'PERMISSION_DENIED') {
+                          errorMessage = "Permission refusée. Activez l'accès à la galerie dans les paramètres.";
+                        } else if (error.message === 'TIMEOUT') {
+                          errorMessage = "Délai d'attente dépassé. Réessayez.";
+                        }
+                        toast({
+                          title: "Erreur",
+                          description: errorMessage,
+                          variant: "destructive"
+                        });
+                      }
                     }}
                     className="px-3"
-                    disabled={loading}
+                    disabled={isLoading}
                   >
                     <Image className="h-4 w-4" />
                   </Button>

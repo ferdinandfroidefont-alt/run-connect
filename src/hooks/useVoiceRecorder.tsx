@@ -15,7 +15,24 @@ export const useVoiceRecorder = () => {
 
   const startRecording = async (): Promise<boolean> => {
     try {
-      console.log('🎤 Demande permission microphone...');
+      console.log('🎤 Vérification permissions microphone...');
+      
+      // Vérifier d'abord les permissions
+      if (navigator.permissions) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          console.log('🎤 État permission:', permissionStatus.state);
+          
+          if (permissionStatus.state === 'denied') {
+            console.error('❌ Permission microphone refusée définitivement');
+            throw new Error('PERMISSION_DENIED');
+          }
+        } catch (permError) {
+          console.log('⚠️ Permissions API non disponible, tentative directe');
+        }
+      }
+      
+      console.log('🎤 Demande accès microphone...');
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -60,8 +77,14 @@ export const useVoiceRecorder = () => {
 
       console.log('🎤 Enregistrement démarré');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erreur microphone:', error);
+      
+      // Gérer le cas "refus définitif"
+      if (error.message === 'PERMISSION_DENIED' || error.name === 'NotAllowedError') {
+        throw new Error('PERMISSION_SETTINGS');
+      }
+      
       return false;
     }
   };

@@ -204,9 +204,17 @@ export const useCamera = () => {
       // Fallback web
       return await selectFromGalleryWeb();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('🖼️❌ ERREUR:', error);
-      return null;
+      
+      // Lancer une erreur avec message explicite
+      if (error.name === 'NotAllowedError' || error.message?.includes('permission')) {
+        throw new Error('PERMISSION_DENIED');
+      } else if (error.message?.includes('timeout')) {
+        throw new Error('TIMEOUT');
+      } else {
+        throw new Error('UNKNOWN_ERROR');
+      }
     } finally {
       setLoading(false);
     }
@@ -303,7 +311,7 @@ export const useCamera = () => {
       
       const timeoutId = setTimeout(() => {
         resolve(null);
-      }, 30000);
+      }, 90000); // 90 secondes
       
       input.onchange = (event) => {
         clearTimeout(timeoutId);

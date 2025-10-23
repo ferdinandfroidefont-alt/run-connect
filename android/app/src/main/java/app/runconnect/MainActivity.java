@@ -1018,6 +1018,35 @@ public class MainActivity extends AppCompatActivity {
         @android.webkit.JavascriptInterface
         public boolean hasGooglePlayServices() {
             try {
+                Class.forName("com.google.android.gms.common.GoogleApiAvailability");
+                return true;
+            } catch (ClassNotFoundException e) {
+                Log.w(TAG, "⚠️ Google Play Services non disponibles");
+                return false;
+            }
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void openSettings() {
+            runOnUiThread(() -> {
+                Log.d(TAG, "🔧 Ouverture des paramètres de l'application");
+                try {
+                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    Uri uri = Uri.fromParts("package", getPackageName(), null);
+                    intent.setData(uri);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Erreur ouverture paramètres: " + e.getMessage());
+                    // Fallback: ouvrir les paramètres généraux
+                    Intent intent = new Intent(Settings.ACTION_SETTINGS);
+                    startActivity(intent);
+                }
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public boolean hasGooglePlayServices() {
+            try {
                 com.google.android.gms.common.GoogleApiAvailability availability = 
                     com.google.android.gms.common.GoogleApiAvailability.getInstance();
                 int resultCode = availability.isGooglePlayServicesAvailable(MainActivity.this);
