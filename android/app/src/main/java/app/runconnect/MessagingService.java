@@ -103,34 +103,45 @@ public class MessagingService extends FirebaseMessagingService {
         
         // Intent pour ouvrir l'app quand on clique sur la notification
         Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         
         // Ajouter les données à l'intent
         for (java.util.Map.Entry<String, String> entry : data.entrySet()) {
             intent.putExtra(entry.getKey(), entry.getValue());
         }
         
+        // ✅ MODIFIÉ: FLAG_IMMUTABLE pour Android 12+
+        int flags = PendingIntent.FLAG_ONE_SHOT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        } else {
+            flags |= PendingIntent.FLAG_UPDATE_CURRENT;
+        }
+        
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, 
             0, 
             intent, 
-            PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
+            flags
         );
         
-        // Construire la notification
+        // ✅ MODIFIÉ: Notification plus riche
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher) // Utiliser l'icône de l'app
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title != null ? title : "RunConnect")
             .setContentText(body != null ? body : "Nouvelle notification")
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body)) // ← Texte long
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // ← Son + vibration + LED
             .setContentIntent(pendingIntent)
-            .setVibrate(new long[]{0, 500, 250, 500});
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // ← Affichage écran verrouillé
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setColor(0xFF3B82F6); // ← Couleur primaire (bleu)
         
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         
         if (notificationManager != null) {
-            // Utiliser un ID unique basé sur le timestamp
             int notificationId = (int) System.currentTimeMillis();
             notificationManager.notify(notificationId, notificationBuilder.build());
             

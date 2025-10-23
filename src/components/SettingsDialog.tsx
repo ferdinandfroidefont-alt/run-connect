@@ -157,32 +157,67 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
 
   const handleNotificationToggle = async () => {
     try {
-      console.log('🔔 [SETTINGS] Début activation notifications...');
+      console.log('🔔 [SETTINGS] Toggle notifications, isRegistered:', isRegistered);
       
-      const granted = await requestPermissions();
-      
-      if (granted && user) {
-        console.log('✅ [SETTINGS] Permissions accordées');
-        await checkPermissionStatus();
+      if (!isRegistered) {
+        // L'utilisateur veut activer
+        console.log('🔔 [SETTINGS] Activation notifications...');
         
-        // Vérifier que le token est bien en base
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('push_token')
-          .eq('user_id', user.id)
-          .single();
+        const granted = await requestPermissions();
+        
+        if (granted && user) {
+          console.log('✅ [SETTINGS] Permissions accordées');
+          await checkPermissionStatus();
+          
+          // Vérifier que le token est bien en base après 3s
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('push_token')
+            .eq('user_id', user.id)
+            .single();
 
-        if (!profile?.push_token) {
+          if (!profile?.push_token) {
+            toast({
+              title: "⚠️ Token manquant",
+              description: "Permissions OK mais token non reçu. Relancez l'app.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "✅ Notifications activées",
+              description: "Vous recevrez les alertes de RunConnect"
+            });
+          }
+        } else {
+          // Permission refusée, ouvrir les paramètres
           toast({
-            title: "⚠️ Token manquant",
-            description: "Permissions OK mais token non reçu. Relancez l'app.",
+            title: "Permission refusée",
+            description: "Ouvrez les paramètres pour activer",
+            variant: "destructive"
+          });
+        }
+      } else {
+        // L'utilisateur veut désactiver → rediriger vers les paramètres Android
+        console.log('🔔 [SETTINGS] Désactivation notifications → ouvrir paramètres');
+        
+        if (isNative && typeof (window as any).AndroidBridge?.openSettings === 'function') {
+          (window as any).AndroidBridge.openSettings();
+          
+          toast({
+            title: "Ouvrir les paramètres",
+            description: "Désactivez les notifications dans les paramètres Android"
+          });
+        } else {
+          toast({
+            title: "Paramètres Android",
+            description: "Allez dans Paramètres > Apps > RunConnect > Notifications",
             variant: "destructive"
           });
         }
       }
     } catch (error) {
-      console.error('❌ [SETTINGS] Erreur activation notifications:', error);
+      console.error('❌ [SETTINGS] Erreur toggle notifications:', error);
     }
   };
 
