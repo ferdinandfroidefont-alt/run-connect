@@ -47,6 +47,9 @@ dependencies {
     implementation 'com.google.firebase:firebase-messaging'
     implementation 'com.google.firebase:firebase-analytics'
     
+    // Google Sign-In pour authentification native
+    implementation 'com.google.android.gms:play-services-auth:21.0.0'
+    
     // Chrome Custom Tabs pour OAuth Google sécurisé
     implementation 'androidx.browser:browser:1.8.0'
 }

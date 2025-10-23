@@ -38,6 +38,11 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import androidx.annotation.NonNull;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
@@ -48,10 +53,12 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_MICROPHONE = 1005; // 🎤 Code pour microphone
     private static final int REQ_NOTIFICATIONS = 1006; // ✅ Code unique pour notifications
     private static final int FILE_CHOOSER_REQUEST_CODE = 3000; // 🖼️ Code pour file chooser
+    private static final int GOOGLE_SIGN_IN_REQUEST_CODE = 9001; // 🔐 Code pour Google Sign-In
     private ValueCallback<Uri[]> filePathCallback; // 🖼️ Callback pour récupérer l'URI du fichier
     public WebView webView;
     public static MainActivity instance;
     private final String START_URL = "https://run-connect.lovable.app";
+    private GoogleSignInClient mGoogleSignInClient; // 🔥 Client Google Sign-In
     
     // Cache mémoire pour les contacts (évite relecture à chaque appel)
     private static class ContactsCache {
@@ -101,6 +108,23 @@ public class MainActivity extends AppCompatActivity {
         
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
+        
+        // 🔥 Initialiser Google Sign-In Client
+        try {
+            String webClientId = getString(R.string.default_web_client_id);
+            Log.d(TAG, "🔑 Initializing Google Sign-In with Web Client ID");
+            
+            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
+                .requestEmail()
+                .requestProfile()
+                .build();
+            
+            mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+            Log.d(TAG, "✅ Google Sign-In Client initialized successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error initializing Google Sign-In: " + e.getMessage());
+        }
 
         // ✅ Full screen immersif + transparent
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
@@ -497,6 +521,32 @@ public class MainActivity extends AppCompatActivity {
             // Toujours appeler onReceiveValue, même si results est null
             filePathCallback.onReceiveValue(results);
             filePathCallback = null;
+            return;
+        }
+        
+        // 🔥 GÉRER LE RÉSULTAT GOOGLE SIGN-IN
+        if (requestCode == GOOGLE_SIGN_IN_REQUEST_CODE) {
+            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] onActivityResult - resultCode=" + resultCode);
+            
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                String idToken = account.getIdToken();
+                String email = account.getEmail();
+                String displayName = account.getDisplayName();
+                
+                Log.d(TAG, "🔥✅ Google Sign-In réussi - Email: " + email);
+                
+                if (idToken == null) {
+                    Log.e(TAG, "❌ No ID Token received");
+                    notifyGoogleSignInError("No ID Token received");
+                } else {
+                    notifyGoogleSignInSuccess(idToken, email, displayName);
+                }
+            } catch (ApiException e) {
+                Log.e(TAG, "❌ Google Sign-In failed: " + e.getStatusCode());
+                notifyGoogleSignInError("Sign-in failed: " + e.getMessage());
+            }
             return;
         }
         
@@ -1161,6 +1211,58 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "👥🗑️ Cache contacts invalidé");
             contactsCache.invalidate();
         }
+        
+        /**
+         * 🔥 GOOGLE SIGN-IN: Lancer la connexion Google native
+         */
+        @android.webkit.JavascriptInterface
+        public void googleSignIn() {
+            Log.d(TAG, "🔥 AndroidBridge: Google Sign-In demandé depuis JavaScript");
+            
+            runOnUiThread(() -> {
+                if (mGoogleSignInClient == null) {
+                    Log.e(TAG, "❌ GoogleSignInClient not initialized");
+                    notifyGoogleSignInError("GoogleSignInClient not initialized");
+                    return;
+                }
+                
+                try {
+                    Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                    startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE);
+                    Log.d(TAG, "🚀 Google Sign-In Intent lancé");
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Error launching Google Sign-In", e);
+                    notifyGoogleSignInError("Error launching sign-in: " + e.getMessage());
+                }
+            });
+        }
+        
+        /**
+         * 🔥 GOOGLE SIGN-OUT: Déconnexion Google
+         */
+        @android.webkit.JavascriptInterface
+        public void googleSignOut() {
+            Log.d(TAG, "🚪 AndroidBridge: Google Sign-Out demandé depuis JavaScript");
+            
+            runOnUiThread(() -> {
+                if (mGoogleSignInClient == null) {
+                    Log.e(TAG, "❌ GoogleSignInClient not initialized");
+                    return;
+                }
+                
+                mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "✅ Google Sign-Out réussi");
+                        webView.evaluateJavascript(
+                            "window.dispatchEvent(new CustomEvent('googleSignOutSuccess'));", 
+                            null
+                        );
+                    } else {
+                        Log.e(TAG, "❌ Google Sign-Out échoué");
+                    }
+                });
+            });
+        }
     }
     
     private void notifyJavaScriptPermissionResult(boolean granted) {
@@ -1171,6 +1273,44 @@ public class MainActivity extends AppCompatActivity {
             );
             webView.evaluateJavascript(jsCode, null);
             Log.d(TAG, "✅ Événement androidPermissionsUpdated envoyé avec granted=" + granted);
+        }
+    }
+    
+    /**
+     * 🔥 Notifier JavaScript du résultat Google Sign-In
+     */
+    private void notifyGoogleSignInSuccess(String idToken, String email, String displayName) {
+        if (webView != null) {
+            runOnUiThread(() -> {
+                try {
+                    JSONObject result = new JSONObject();
+                    result.put("idToken", idToken);
+                    result.put("email", email != null ? email : "");
+                    result.put("displayName", displayName != null ? displayName : "");
+                    
+                    String base64Result = Base64.encodeToString(
+                        result.toString().getBytes("UTF-8"),
+                        Base64.NO_WRAP
+                    );
+                    
+                    String jsCode = "window.dispatchEvent(new CustomEvent('googleSignInSuccess', { detail: JSON.parse(atob('" + base64Result + "')) }));";
+                    webView.evaluateJavascript(jsCode, null);
+                    Log.d(TAG, "🔥✅ Google Sign-In success event dispatched");
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Error encoding Google Sign-In result", e);
+                    notifyGoogleSignInError("Error encoding result");
+                }
+            });
+        }
+    }
+    
+    private void notifyGoogleSignInError(String error) {
+        if (webView != null) {
+            runOnUiThread(() -> {
+                String jsCode = "window.dispatchEvent(new CustomEvent('googleSignInError', { detail: '" + error.replace("'", "\\'") + "' }));";
+                webView.evaluateJavascript(jsCode, null);
+                Log.d(TAG, "🔥❌ Google Sign-In error event dispatched: " + error);
+            });
         }
     }
 }

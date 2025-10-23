@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RunConnect</string>
+    <string name="title_activity_main">RunConnect</string>
+    <string name="package_name">app.runconnect</string>
+    <string name="custom_url_scheme">app.runconnect</string>
+    
+    <!-- 🔑 Firebase Google Sign-In Web Client ID -->
+    <!-- TODO: Replace with your actual Web Client ID from Firebase Console -->
+    <!-- Get it from: Firebase Console > Project Settings > General > Web API Key -->
+    <!-- Format: xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com -->
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+</resources>
