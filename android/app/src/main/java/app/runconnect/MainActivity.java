@@ -44,6 +44,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.ConnectionResult;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
@@ -1013,17 +1014,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
-        }
-        
-        @android.webkit.JavascriptInterface
-        public boolean hasGooglePlayServices() {
-            try {
-                Class.forName("com.google.android.gms.common.GoogleApiAvailability");
-                return true;
-            } catch (ClassNotFoundException e) {
-                Log.w(TAG, "⚠️ Google Play Services non disponibles");
-                return false;
-            }
         }
         
         @android.webkit.JavascriptInterface
