@@ -27,6 +27,8 @@ declare global {
       requestNotificationPermissions: () => void; // ✅ AJOUT SOLUTION 3
       getContacts: () => void; // ✅ Asynchrone, pas de retour direct
       invalidateContactsCache: () => void; // ✅ Nouveau
+      googleSignIn: () => void; // 🔥 Google Sign-In natif
+      googleSignOut: () => void; // 🔥 Google Sign-Out natif
     };
     onNativePermissionResult?: (granted: boolean) => void;
   }

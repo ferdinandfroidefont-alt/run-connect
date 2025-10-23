@@ -13,6 +13,7 @@ import { InAppBrowser } from '@capgo/inappbrowser';
 import { Browser } from '@capacitor/browser';
 import { Device } from '@capacitor/device';
 import { App } from '@capacitor/app';
+import { googleSignIn, isNativeGoogleSignInAvailable } from '@/lib/googleSignIn';
 
 // Helper pour extraire les tokens OAuth depuis URL (query string OU fragment)
 const extractOAuthTokens = (url: string): { accessToken: string | null, refreshToken: string | null } => {
@@ -99,6 +100,60 @@ const Auth = () => {
   const handleGoogleAuth = async () => {
     try {
       setIsLoading(true);
+      
+      // 🔥 NOUVELLE MÉTHODE: Google Sign-In natif via AndroidBridge (Firebase)
+      if (isNativeGoogleSignInAvailable()) {
+        console.log('🔥 [FIREBASE AUTH] Google Sign-In natif détecté');
+        
+        try {
+          // Étape 1: Obtenir le token Firebase depuis le plugin natif
+          const { idToken, email, displayName } = await googleSignIn();
+          
+          console.log('🔥✅ Firebase ID Token reçu');
+          
+          // Étape 2: Envoyer le token à Supabase via signInWithIdToken
+          const { data: { user, session }, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: idToken,
+          });
+          
+          if (error) {
+            console.error('❌ Supabase signInWithIdToken error:', error);
+            throw error;
+          }
+          
+          console.log('✅ Supabase session created:', { user: user?.email });
+          
+          // Étape 3: Vérifier si le profil existe
+          if (user) {
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('id, username')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            
+            if (!existingProfile) {
+              setNewUserId(user.id);
+              setShowProfileSetup(true);
+            } else {
+              window.location.href = '/';
+            }
+          }
+          
+          return;
+        } catch (nativeError: any) {
+          console.error('🔥❌ Native Google Sign-In failed:', nativeError);
+          toast({
+            title: "Erreur",
+            description: nativeError.message || "Erreur lors de l'authentification Google native",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      // ✅ FALLBACK: OAuth classique pour web ou iOS
+      console.log('🌐 Fallback vers OAuth Google classique');
       
       // ✅ DÉTECTION ULTRA-FIABLE
       const forceNative = (window as any).CapacitorForceNative === true;
