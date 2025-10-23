@@ -80,13 +80,18 @@ public class MainActivity extends AppCompatActivity {
         
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
+        s.setDomStorageEnabled(true);  // ✅ DOM Storage (sessionStorage)
+        s.setDatabaseEnabled(true);     // ✅ Enable Web SQL Database for localStorage
         s.setSupportMultipleWindows(true); // ✅ Support des popups OAuth
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         s.setAllowFileAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setGeolocationEnabled(true);
+        
+        // ✅ Configuration explicite du localStorage path
+        String databasePath = getApplicationContext().getDir("database", Context.MODE_PRIVATE).getPath();
+        s.setDatabasePath(databasePath);
         
         // MODE CACHE : Utiliser le cache si pas de connexion
         s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
@@ -96,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
         }
         
         Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
+        Log.d(TAG, "💾 LocalStorage database path: " + databasePath);
 
         // Cookies
         android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();

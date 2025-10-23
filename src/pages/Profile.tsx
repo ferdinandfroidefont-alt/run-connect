@@ -240,10 +240,14 @@ const Profile = () => {
     }
   };
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (retryCount = 0) => {
     try {
       const targetUserId = viewingUserId || user?.id;
       if (!targetUserId) return;
+
+      console.log(`🔍 [Profile] Fetching profile (attempt ${retryCount + 1}/3)`);
+      console.log(`🔍 [Profile] Target User ID:`, targetUserId);
+      console.log(`🔍 [Profile] Is viewing other user:`, isViewingOtherUser);
 
       if (isViewingOtherUser) {
         // Viewing another user's profile - use public profile function
@@ -261,6 +265,7 @@ const Profile = () => {
             rgpd_accepted: false,
             security_rules_accepted: false
           };
+          console.log(`✅ [Profile] Public profile loaded:`, publicProfile.username);
           setProfile(publicProfile);
           setFormData(publicProfile);
         }
@@ -272,14 +277,25 @@ const Profile = () => {
           .eq('user_id', targetUserId)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          // Si l'erreur est liée à l'authentification, retry
+          if (error.message.includes('JWT') && retryCount < 2) {
+            console.warn(`⚠️ Auth error, retrying in 1s... (${retryCount + 1}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return fetchProfile(retryCount + 1);
+          }
+          throw error;
+        }
+        
+        console.log(`✅ [Profile] Own profile loaded:`, data?.username);
         setProfile(data);
         setFormData(data);
       }
     } catch (error: any) {
+      console.error(`❌ [Profile] Fetch profile error:`, error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger le profil",
+        description: "Impossible de charger le profil. Reconnectez-vous si le problème persiste.",
         variant: "destructive",
       });
     } finally {

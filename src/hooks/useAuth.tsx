@@ -108,6 +108,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
+      console.log('🔄 Session access_token present:', !!session?.access_token);
+      console.log('🔄 Session refresh_token present:', !!session?.refresh_token);
+      
+      // Vérifier le localStorage
+      const storedSession = localStorage.getItem('sb-dbptgehpknjsoisirviz-auth-token');
+      console.log('🔄 LocalStorage session found:', !!storedSession);
       
       setSession(session);
       setUser(session?.user ?? null);

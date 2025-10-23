@@ -97,15 +97,29 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
     }
   };
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (retryCount = 0) => {
     try {
+      console.log(`🔍 [ProfileDialog] Fetching profile (attempt ${retryCount + 1}/3)`);
+      console.log(`🔍 [ProfileDialog] User ID:`, user?.id);
+      console.log(`🔍 [ProfileDialog] User authenticated:`, !!user);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user?.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Si l'erreur est liée à l'authentification, retry
+        if (error.message.includes('JWT') && retryCount < 2) {
+          console.warn(`⚠️ Auth error, retrying in 1s... (${retryCount + 1}/3)`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return fetchProfile(retryCount + 1);
+        }
+        throw error;
+      }
+      
+      console.log(`✅ [ProfileDialog] Profile loaded successfully:`, data?.username);
       setProfile(data);
       setFormData(data);
       
@@ -127,9 +141,10 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
           { ...defaultRecords.swimming, ...data.swimming_records } : defaultRecords.swimming
       });
     } catch (error: any) {
+      console.error(`❌ [ProfileDialog] Fetch profile error:`, error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger votre profil",
+        description: "Impossible de charger votre profil. Reconnectez-vous si le problème persiste.",
         variant: "destructive",
       });
     } finally {
