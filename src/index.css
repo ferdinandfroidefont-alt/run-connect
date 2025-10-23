@@ -319,3 +319,20 @@ All colors MUST be HSL.
     transform: translateY(0);
   }
 }
+
+/* ===== Scroll horizontal fluide pour les sports ===== */
+
+/* Masquer la scrollbar sur tous les navigateurs */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Smooth scrolling avec inertie */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}

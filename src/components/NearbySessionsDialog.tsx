@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "@/components/ShareSessionToConversationDialog";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Users, UserPlus, Share2, ArrowLeft, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Users, UserPlus, Share2, ArrowLeft, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,22 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedSessionToShare, setSelectedSessionToShare] = useState<Session | null>(null);
+  const [showLeftFade, setShowLeftFade] = useState(false);
+  const [showRightFade, setShowRightFade] = useState(true);
+
+  const scrollSportsLeft = () => {
+    const container = document.querySelector('.sports-scroll-container') as HTMLElement;
+    if (container) {
+      container.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollSportsRight = () => {
+    const container = document.querySelector('.sports-scroll-container') as HTMLElement;
+    if (container) {
+      container.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
 
   // Load nearby sessions
   const loadNearbySessions = async () => {
@@ -257,6 +273,30 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   useEffect(() => {
     if (isOpen) {
       loadNearbySessions();
+      
+      // Gérer les indicateurs de fade au scroll
+      const scrollContainer = document.querySelector('.sports-scroll-container');
+      
+      if (scrollContainer) {
+        const handleScroll = () => {
+          const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+          
+          // Afficher le fade gauche si on n'est pas tout à gauche
+          setShowLeftFade(scrollLeft > 10);
+          
+          // Afficher le fade droit si on n'est pas tout à droite
+          setShowRightFade(scrollLeft < scrollWidth - clientWidth - 10);
+        };
+        
+        // Vérifier l'état initial
+        handleScroll();
+        
+        scrollContainer.addEventListener('scroll', handleScroll);
+        
+        return () => {
+          scrollContainer.removeEventListener('scroll', handleScroll);
+        };
+      }
     }
   }, [isOpen, selectedDistance, selectedActivities, userLocation]);
 
@@ -300,17 +340,26 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             </Button>
           </div>
 
-          {/* Sports Section */}
+          {/* Sports Section avec scroll horizontal amélioré */}
           <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden animate-fade-in">
-            <div className="p-4">
-              <ScrollArea className="w-full">
-                <div className="flex gap-2 pb-2 w-max">
+            <div className="p-4 relative">
+              {/* Container avec scroll horizontal natif */}
+              <div 
+                className="sports-scroll-container overflow-x-auto scrollbar-hide scroll-smooth"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-x',
+                  scrollSnapType: 'x mandatory'
+                }}
+              >
+                <div className="flex gap-2 pb-2">
                   {ACTIVITY_TYPES.map(activity => (
                     <button
                       key={activity.value}
                       onClick={() => toggleActivity(activity.value)}
+                      style={{ scrollSnapAlign: 'start' }}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px]",
+                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px] flex-shrink-0",
                         "hover:shadow-md hover:scale-105 active:scale-95",
                         selectedActivities.includes(activity.value)
                           ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
@@ -322,7 +371,37 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                     </button>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
+              
+              {/* Gradient fade indicators (left & right) */}
+              <div className={cn(
+                "scroll-fade-left pointer-events-none absolute left-0 top-0 h-full w-8 bg-gradient-to-r from-card/30 to-transparent transition-opacity duration-300",
+                showLeftFade ? "opacity-100" : "opacity-0"
+              )} />
+              <div className={cn(
+                "scroll-fade-right pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-card/30 to-transparent transition-opacity duration-300",
+                showRightFade ? "opacity-100" : "opacity-0"
+              )} />
+              
+              {/* Navigation arrows (desktop only) */}
+              <button
+                onClick={scrollSportsLeft}
+                className={cn(
+                  "hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all z-10",
+                  showLeftFade ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={scrollSportsRight}
+                className={cn(
+                  "hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm shadow-md hover:bg-background transition-all z-10",
+                  showRightFade ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
