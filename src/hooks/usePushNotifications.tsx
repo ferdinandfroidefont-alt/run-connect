@@ -26,7 +26,7 @@ export const usePushNotifications = () => {
   const navigate = useNavigate();
   
   // 🔥 FONCTION HELPER pour réévaluer isNative dynamiquement
-  const checkIsNative = () => (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform();
+  const checkIsNative = () => (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform() || typeof (window as any).AndroidBridge !== 'undefined';
   
   // DÉTECTION NATIVE UNIFIÉE - utilise le même flag que useMultiplatformPermissions
   const isNative = checkIsNative();
