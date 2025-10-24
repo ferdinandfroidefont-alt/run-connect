@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
@@ -16,6 +16,8 @@ import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
 import { SessionQuestions } from "./SessionQuestions";
 import { useAdMob } from '@/hooks/useAdMob';
+import { useGPSValidation } from '@/hooks/useGPSValidation';
+import { ValidateParticipantsDialog } from './ValidateParticipantsDialog';
 
 interface Session {
   id: string;
@@ -63,11 +65,14 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
+  const { validatePresence, validating: validatingGPS } = useGPSValidation();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showValidateDialog, setShowValidateDialog] = useState(false);
+  const [gpsValidated, setGpsValidated] = useState(false);
 
   // Check if user has already requested to join this session or is a participant
   useEffect(() => {
@@ -88,12 +93,13 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       // Check if user is a participant
       const { data: participantData } = await supabase
         .from('session_participants')
-        .select('id')
+        .select('id, confirmed_by_gps')
         .eq('session_id', session.id)
         .eq('user_id', user.id)
         .maybeSingle();
 
       setIsParticipant(!!participantData);
+      setGpsValidated(participantData?.confirmed_by_gps || false);
     };
 
     checkUserStatus();
@@ -214,6 +220,33 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGPSValidation = async () => {
+    if (!user || !session) return;
+
+    const result = await validatePresence(
+      session.id,
+      session.location_lat,
+      session.location_lng,
+      session.scheduled_at,
+      user.id
+    );
+
+    if (result.success) {
+      setGpsValidated(true);
+      toast({ 
+        title: "✅ GPS validé", 
+        description: `Présence confirmée (${result.distance}m du point de RDV)` 
+      });
+      onSessionUpdated();
+    } else {
+      toast({ 
+        title: "❌ Validation GPS impossible", 
+        description: result.error, 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -546,6 +579,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 <Badge variant="secondary" className="justify-center py-2">
                   Votre séance
                 </Badge>
+                {!isScheduled && (
+                  <Button
+                    onClick={() => setShowValidateDialog(true)}
+                    variant="default"
+                    className="w-full"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Valider les participants
+                  </Button>
+                )}
                 <Button
                   onClick={handleDeleteSession}
                   disabled={loading}
@@ -557,14 +600,43 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 </Button>
               </>
             ) : isParticipant ? (
-              <Button
-                onClick={handleLeaveSession}
-                disabled={loading}
-                variant="destructive"
-                className="w-full"
-              >
-                {loading ? "Traitement..." : "Quitter la séance"}
-              </Button>
+              <>
+                {isScheduled && !gpsValidated && (
+                  <Button
+                    onClick={handleGPSValidation}
+                    disabled={validatingGPS}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    {validatingGPS ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Validation GPS en cours...
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="mr-2 h-4 w-4" />
+                        📍 Je suis arrivé (Validation GPS)
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {gpsValidated && (
+                  <Badge className="w-full justify-center py-2" variant="default">
+                    ✅ GPS validé - Présence confirmée
+                  </Badge>
+                )}
+
+                <Button
+                  onClick={handleLeaveSession}
+                  disabled={loading}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  {loading ? "Traitement..." : "Quitter la séance"}
+                </Button>
+              </>
             ) : hasRequested ? (
               <Button
                 onClick={handleCancelRequest}
@@ -618,6 +690,19 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           setShowShareDialog(false);
         }}
       />
+
+      {/* Validate Participants Dialog */}
+      {showValidateDialog && (
+        <ValidateParticipantsDialog
+          sessionId={session.id}
+          sessionTitle={session.title}
+          open={showValidateDialog}
+          onClose={() => {
+            setShowValidateDialog(false);
+            onSessionUpdated();
+          }}
+        />
+      )}
     </Dialog>
   );
 };

@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag, MapPin, CheckCircle2 } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { PhotorealisticAvatar3D } from "@/components/PhotorealisticAvatar3D";
 import { WardrobeDialog } from "@/components/WardrobeDialog";
 import { useWardrobe } from "@/hooks/useWardrobe";
@@ -28,6 +29,10 @@ interface LeaderboardUser {
   };
   rank: number;
   user_rank: string;
+  user_stats?: {
+    reliability_rate: number;
+    streak_weeks: number;
+  };
 }
 
 const Leaderboard = () => {
@@ -278,6 +283,13 @@ const Leaderboard = () => {
     return 'novice';
   };
 
+  const getUserTitle = (points: number) => {
+    if (points >= 200) return { title: "Champion", color: "text-yellow-500", icon: "👑" };
+    if (points >= 100) return { title: "Expert", color: "text-purple-500", icon: "🎖️" };
+    if (points >= 50) return { title: "Confirmé", color: "text-blue-500", icon: "🏃" };
+    return { title: "Novice", color: "text-gray-500", icon: "⭐" };
+  };
+
   const getRankBorderColor = (userRank: string): string => {
     switch (userRank) {
       case 'diamant':
@@ -512,17 +524,40 @@ const Leaderboard = () => {
                   <p className="text-sm text-muted-foreground">
                     @{item.profile?.username}
                   </p>
-                  <div className="my-1">
+                  <div className="flex items-center gap-2 my-1">
                     {getRankBadge(item.user_rank)}
+                    {item.user_stats?.reliability_rate && item.user_stats.reliability_rate >= 90 && (
+                      <Badge variant="secondary" className="text-xs">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        GPS validé
+                      </Badge>
+                    )}
+                    {item.user_stats?.reliability_rate && item.user_stats.reliability_rate >= 95 && (
+                      <Badge variant="default" className="text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Fiable
+                      </Badge>
+                    )}
                   </div>
                   <div className="mt-1">
                     <p className="font-bold text-primary">
                       {showSeasonal ? item.seasonal_points : item.total_points} pts
                     </p>
                     {!showSeasonal && (
-                      <p className="text-xs text-muted-foreground">
-                        +{item.seasonal_points} cette saison
-                      </p>
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          +{item.seasonal_points} cette saison
+                        </p>
+                        <div className="relative w-full h-2 bg-muted rounded-full overflow-hidden mt-1">
+                          <div 
+                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
+                            style={{ width: `${((item.total_points % 50) / 50) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {item.total_points % 50}/50 pts avant le prochain rang
+                        </p>
+                      </>
                     )}
                   </div>
                 </div>

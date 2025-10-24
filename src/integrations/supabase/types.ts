@@ -19,7 +19,7 @@ export type Database = {
           action: string
           details: Json | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           table_name: string
           timestamp: string | null
           user_agent: string | null
@@ -29,7 +29,7 @@ export type Database = {
           action: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           table_name: string
           timestamp?: string | null
           user_agent?: string | null
@@ -39,7 +39,7 @@ export type Database = {
           action?: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           table_name?: string
           timestamp?: string | null
           user_agent?: string | null
@@ -589,22 +589,46 @@ export type Database = {
       }
       session_participants: {
         Row: {
+          confirmed_by_creator: boolean | null
+          confirmed_by_gps: boolean | null
+          device_id: string | null
+          gps_lat: number | null
+          gps_lng: number | null
+          gps_validation_time: string | null
           id: string
           joined_at: string
+          points_awarded: number | null
           session_id: string
           user_id: string
+          validation_status: string | null
         }
         Insert: {
+          confirmed_by_creator?: boolean | null
+          confirmed_by_gps?: boolean | null
+          device_id?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          gps_validation_time?: string | null
           id?: string
           joined_at?: string
+          points_awarded?: number | null
           session_id: string
           user_id: string
+          validation_status?: string | null
         }
         Update: {
+          confirmed_by_creator?: boolean | null
+          confirmed_by_gps?: boolean | null
+          device_id?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          gps_validation_time?: string | null
           id?: string
           joined_at?: string
+          points_awarded?: number | null
           session_id?: string
           user_id?: string
+          validation_status?: string | null
         }
         Relationships: [
           {
@@ -790,6 +814,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_badges: {
+        Row: {
+          badge_description: string | null
+          badge_icon: string | null
+          badge_id: string
+          badge_name: string
+          id: string
+          unlocked_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          badge_description?: string | null
+          badge_icon?: string | null
+          badge_id: string
+          badge_name: string
+          id?: string
+          unlocked_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          badge_description?: string | null
+          badge_icon?: string | null
+          badge_id?: string
+          badge_name?: string
+          id?: string
+          unlocked_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_follows: {
         Row: {
           created_at: string
@@ -850,6 +912,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stats: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_streak_update: string | null
+          reliability_rate: number | null
+          streak_weeks: number | null
+          total_sessions_absent: number | null
+          total_sessions_completed: number | null
+          total_sessions_joined: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_streak_update?: string | null
+          reliability_rate?: number | null
+          streak_weeks?: number | null
+          total_sessions_absent?: number | null
+          total_sessions_completed?: number | null
+          total_sessions_joined?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_streak_update?: string | null
+          reliability_rate?: number | null
+          streak_weeks?: number | null
+          total_sessions_absent?: number | null
+          total_sessions_completed?: number | null
+          total_sessions_joined?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_wardrobe: {
         Row: {
           id: string
@@ -886,10 +995,7 @@ export type Database = {
         Args: { invitation_id: string }
         Returns: boolean
       }
-      accept_follow_request: {
-        Args: { follow_id: string }
-        Returns: boolean
-      }
+      accept_follow_request: { Args: { follow_id: string }; Returns: boolean }
       add_user_points: {
         Args: { points_to_add: number; user_id_param: string }
         Returns: undefined
@@ -902,9 +1008,10 @@ export type Database = {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
       }
-      block_user: {
-        Args: { user_to_block_id: string }
-        Returns: boolean
+      block_user: { Args: { user_to_block_id: string }; Returns: boolean }
+      calculate_and_award_points: {
+        Args: { participant_id: string }
+        Returns: number
       }
       can_user_send_message: {
         Args: { user_id_param: string }
@@ -913,6 +1020,10 @@ export type Database = {
       check_account_lockout: {
         Args: { user_id_param: string }
         Returns: boolean
+      }
+      check_and_award_badges: {
+        Args: { user_id_param: string }
+        Returns: undefined
       }
       check_rate_limit: {
         Args: {
@@ -923,42 +1034,26 @@ export type Database = {
         }
         Returns: boolean
       }
-      cleanup_audit_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      cleanup_expired_sessions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_audit_logs: { Args: never; Returns: number }
+      cleanup_expired_sessions: { Args: never; Returns: undefined }
       decline_club_invitation: {
         Args: { invitation_id: string }
         Returns: boolean
       }
-      delete_user_data: {
-        Args: { target_user_id: string }
-        Returns: undefined
+      delete_user_data: { Args: { target_user_id: string }; Returns: undefined }
+      detect_suspicious_patterns: {
+        Args: never
+        Returns: {
+          details: Json
+          reason: string
+          user_id: string
+        }[]
       }
-      encrypt_critical_data: {
-        Args: { data_text: string }
-        Returns: string
-      }
-      force_user_logout: {
-        Args: { target_user_id: string }
-        Returns: boolean
-      }
-      generate_club_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_referral_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_security_report: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      encrypt_critical_data: { Args: { data_text: string }; Returns: string }
+      force_user_logout: { Args: { target_user_id: string }; Returns: boolean }
+      generate_club_code: { Args: never; Returns: string }
+      generate_referral_code: { Args: never; Returns: string }
+      generate_security_report: { Args: never; Returns: Json }
       get_common_clubs: {
         Args: { user_1_id: string; user_2_id: string }
         Returns: {
@@ -995,10 +1090,7 @@ export type Database = {
         Args: { username_param: string }
         Returns: string
       }
-      get_follower_count: {
-        Args: { profile_user_id: string }
-        Returns: number
-      }
+      get_follower_count: { Args: { profile_user_id: string }; Returns: number }
       get_following_count: {
         Args: { profile_user_id: string }
         Returns: number
@@ -1028,10 +1120,7 @@ export type Database = {
           username: string
         }[]
       }
-      get_leaderboard_total_count: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      get_leaderboard_total_count: { Args: never; Returns: number }
       get_public_profile: {
         Args: { profile_user_id: string }
         Returns: {
@@ -1102,7 +1191,7 @@ export type Database = {
         }[]
       }
       get_security_alerts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           alert_type: string
           count: number
@@ -1112,7 +1201,7 @@ export type Database = {
         }[]
       }
       get_security_dashboard: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           access_count: number
           action: string
@@ -1127,18 +1216,20 @@ export type Database = {
           conversation_id: string
         }[]
       }
-      get_user_rank: {
-        Args: { points: number }
-        Returns: string
-      }
+      get_user_rank: { Args: { points: number }; Returns: string }
       increment_daily_message_count: {
         Args: { user_id_param: string }
         Returns: number
+      }
+      increment_user_sessions_joined: {
+        Args: { user_id_param: string }
+        Returns: undefined
       }
       is_user_blocked: {
         Args: { blocked_user_id: string; blocker_user_id: string }
         Returns: boolean
       }
+      mark_absent_participants: { Args: never; Returns: undefined }
       process_referral: {
         Args: { new_user_id: string; referral_code_param: string }
         Returns: boolean
@@ -1147,18 +1238,9 @@ export type Database = {
         Args: { points_to_remove: number; user_id_param: string }
         Returns: undefined
       }
-      sanitize_input: {
-        Args: { input_text: string }
-        Returns: string
-      }
-      security_maintenance: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_season_reset: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      sanitize_input: { Args: { input_text: string }; Returns: string }
+      security_maintenance: { Args: never; Returns: Json }
+      trigger_season_reset: { Args: never; Returns: undefined }
       update_push_token: {
         Args: { push_token_param: string; user_id_param: string }
         Returns: undefined
