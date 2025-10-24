@@ -170,6 +170,9 @@ public class MainActivity extends AppCompatActivity {
         // ✅ WebView setup
         webView = new WebView(this);
         
+        // ✅ Créer le canal de notification au démarrage
+        createNotificationChannelAtStartup();
+        
         // ✅ Ajouter l'interface JavaScript AndroidBridge
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         
@@ -895,6 +898,89 @@ public class MainActivity extends AppCompatActivity {
             
         view.evaluateJavascript(verificationScript, null);
     }
+    
+    // ✅ NOUVELLE MÉTHODE: Créer le canal de notification au démarrage
+    private void createNotificationChannelAtStartup() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                "high_importance_channel",
+                "Notifications RunConnect",
+                NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notifications importantes de RunConnect");
+            channel.enableVibration(true);
+            channel.enableLights(true);
+            channel.setLightColor(Color.BLUE);
+            channel.setShowBadge(true);
+            
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+                Log.d(TAG, "✅ [NOTIF CHANNEL] Canal créé au démarrage");
+            }
+        }
+    }
+    
+    // ✅ NOUVELLE MÉTHODE: Vérifier et enregistrer Firebase si nécessaire
+    private void checkAndRegisterFirebase() {
+        Log.d(TAG, "🔥 [FCM] Vérification enregistrement Firebase...");
+        
+        // Vérifier si un token existe déjà dans SharedPreferences
+        String existingToken = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+            .getString("fcm_token", null);
+        
+        if (existingToken != null && !existingToken.isEmpty()) {
+            Log.d(TAG, "🔥 [FCM] Token existant trouvé: " + existingToken.substring(0, 30) + "...");
+            
+            // Réinjecter dans la WebView
+            webView.evaluateJavascript(
+                String.format(
+                    "window.fcmToken = '%s'; " +
+                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
+                    "console.log('🔥 [FCM] Token réinjecté:', '%s');",
+                    existingToken, existingToken, existingToken.substring(0, 30) + "..."
+                ),
+                null
+            );
+        } else {
+            Log.d(TAG, "🔥 [FCM] Aucun token, demande à Firebase...");
+            
+            // Demander un nouveau token à Firebase
+            FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(new OnCompleteListener<String>() {
+                    @Override
+                    public void onComplete(@NonNull Task<String> task) {
+                        if (!task.isSuccessful()) {
+                            Log.e(TAG, "❌ [FCM] Échec récupération token", task.getException());
+                            return;
+                        }
+                        
+                        String token = task.getResult();
+                        Log.d(TAG, "✅ [FCM] Nouveau token reçu: " + token.substring(0, 30) + "...");
+                        
+                        // Sauvegarder dans SharedPreferences
+                        getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+                            .edit()
+                            .putString("fcm_token", token)
+                            .apply();
+                        
+                        // Injecter dans WebView
+                        runOnUiThread(() -> {
+                            webView.evaluateJavascript(
+                                String.format(
+                                    "window.fcmToken = '%s'; " +
+                                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
+                                    "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
+                                    "console.log('🔥 [FCM] Nouveau token injecté:', '%s');",
+                                    token, token, token, token.substring(0, 30) + "..."
+                                ),
+                                null
+                            );
+                        });
+                    }
+                });
+        }
+    }
 
     private void handleDeepLink(String url) {
         try {
@@ -983,6 +1069,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 
                 Log.d(TAG, "✅ Callback JavaScript pour " + permissionType + ": " + (finalResult ? "GRANTED" : "DENIED"));
+                
+                // ✅ CRITIQUE: Si notifications accordées, forcer enregistrement Firebase
+                if (requestCode == REQ_NOTIFICATIONS && finalResult) {
+                    Log.d(TAG, "✅ [NOTIF] Permission accordée, enregistrement Firebase...");
+                    checkAndRegisterFirebase();
+                }
+                
                 notifyJavaScriptPermissionResult(finalResult);
             }, 200);
         }
@@ -1064,6 +1157,9 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔔 AndroidBridge: demande permission notifications depuis JavaScript");
             
             runOnUiThread(() -> {
+                // Créer le canal dès maintenant
+                createNotificationChannelAtStartup();
+                
                 // Vérifier si Android 13+ (POST_NOTIFICATIONS requis)
                 if (Build.VERSION.SDK_INT >= 33) {
                     int notificationPermission = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS);
@@ -1071,15 +1167,36 @@ public class MainActivity extends AppCompatActivity {
                     if (notificationPermission == PackageManager.PERMISSION_GRANTED) {
                         Log.d(TAG, "🔔 Permission notifications déjà accordée");
                         injectPermissionsState(webView);
+                        
+                        // ✅ CRITIQUE: Forcer l'enregistrement Firebase si pas encore fait
+                        checkAndRegisterFirebase();
+                        
                         notifyJavaScriptPermissionResult(true);
                     } else if (!ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)) {
-                        // ✅ Refusé définitivement → Rediriger vers les paramètres
-                        Log.d(TAG, "🔔 Permission refusée définitivement, ouverture paramètres...");
-                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                        Uri uri = Uri.fromParts("package", getPackageName(), null);
-                        intent.setData(uri);
-                        startActivity(intent);
-                        notifyJavaScriptPermissionResult(false);
+                        // Permission refusée définitivement
+                        boolean wasRequested = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+                            .getBoolean("notification_permission_requested", false);
+                        
+                        if (wasRequested) {
+                            // Déjà demandé et refusé → Rediriger vers paramètres
+                            Log.d(TAG, "🔔 Permission refusée définitivement, ouverture paramètres...");
+                            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                            Uri uri = Uri.fromParts("package", getPackageName(), null);
+                            intent.setData(uri);
+                            startActivity(intent);
+                            notifyJavaScriptPermissionResult(false);
+                        } else {
+                            // Première demande
+                            Log.d(TAG, "🔔 Première demande popup POST_NOTIFICATIONS");
+                            getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+                                .edit()
+                                .putBoolean("notification_permission_requested", true)
+                                .apply();
+                            
+                            ActivityCompat.requestPermissions(MainActivity.this,
+                                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                                    REQ_NOTIFICATIONS);
+                        }
                     } else {
                         Log.d(TAG, "🔔 Demande popup système POST_NOTIFICATIONS pour Android 13+");
                         ActivityCompat.requestPermissions(MainActivity.this,
@@ -1087,16 +1204,93 @@ public class MainActivity extends AppCompatActivity {
                                 REQ_NOTIFICATIONS);
                     }
                 } else {
-                    // ✅ Android < 13: vérifier l'état réel
+                    // Android < 13: vérifier l'état réel
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                         boolean areEnabled = notificationManager.areNotificationsEnabled();
                         Log.d(TAG, "🔔 Android < 13: notifications " + (areEnabled ? "activées" : "désactivées"));
-                        notifyJavaScriptPermissionResult(areEnabled);
+                        
+                        if (!areEnabled) {
+                            // Rediriger vers paramètres pour Android 10-12
+                            Log.d(TAG, "🔔 Redirection vers paramètres pour activer notifications");
+                            Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                            startActivity(intent);
+                            notifyJavaScriptPermissionResult(false);
+                        } else {
+                            // Notifications activées, forcer enregistrement Firebase
+                            checkAndRegisterFirebase();
+                            notifyJavaScriptPermissionResult(true);
+                        }
                     } else {
                         Log.d(TAG, "🔔 Android < 8: notifications toujours autorisées");
+                        checkAndRegisterFirebase();
                         notifyJavaScriptPermissionResult(true);
                     }
+                }
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void sendTestNotification(String title, String body) {
+            Log.d(TAG, "🔔 [TEST] Envoi notification test locale");
+            
+            runOnUiThread(() -> {
+                // Créer le canal si nécessaire
+                createNotificationChannelAtStartup();
+                
+                // Créer l'intent pour ouvrir l'app
+                Intent intent = new Intent(MainActivity.this, MainActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                
+                int flags = android.app.PendingIntent.FLAG_ONE_SHOT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    flags |= android.app.PendingIntent.FLAG_IMMUTABLE;
+                } else {
+                    flags |= android.app.PendingIntent.FLAG_UPDATE_CURRENT;
+                }
+                
+                android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(
+                    MainActivity.this, 
+                    0, 
+                    intent, 
+                    flags
+                );
+                
+                // Créer la notification
+                androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(MainActivity.this, "high_importance_channel")
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setContentTitle(title != null ? title : "Test RunConnect")
+                    .setContentText(body != null ? body : "Ceci est une notification test")
+                    .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
+                    .setAutoCancel(true)
+                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                    .setDefaults(androidx.core.app.NotificationCompat.DEFAULT_ALL)
+                    .setContentIntent(pendingIntent)
+                    .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
+                    .setCategory(androidx.core.app.NotificationCompat.CATEGORY_MESSAGE)
+                    .setColor(0xFF3B82F6);
+                
+                NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                
+                if (notificationManager != null) {
+                    int notificationId = (int) System.currentTimeMillis();
+                    notificationManager.notify(notificationId, builder.build());
+                    
+                    Log.d(TAG, "✅ [TEST] Notification test affichée (ID: " + notificationId + ")");
+                    
+                    // Notifier JavaScript
+                    webView.evaluateJavascript(
+                        "window.dispatchEvent(new CustomEvent('testNotificationSent', {detail: {success: true}})); " +
+                        "console.log('✅ [TEST] Notification test envoyée');",
+                        null
+                    );
+                } else {
+                    Log.e(TAG, "❌ [TEST] NotificationManager non disponible");
+                    webView.evaluateJavascript(
+                        "window.dispatchEvent(new CustomEvent('testNotificationSent', {detail: {success: false}}));",
+                        null
+                    );
                 }
             });
         }

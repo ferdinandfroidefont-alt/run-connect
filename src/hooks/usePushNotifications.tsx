@@ -384,18 +384,52 @@ export const usePushNotifications = () => {
         const granted = await notificationPromise;
         
         if (granted) {
-          console.log('✅ Permission accordée, configuration Firebase...');
+          console.log('✅ Permission accordée, attente token Firebase...');
           
-          // Configurer listeners puis enregistrer token
-          await setupPushListeners();
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await PushNotifications.register();
-          
-          toast({
-            title: "Notifications activées !",
-            description: "Vous recevrez les notifications de RunConnect"
+          // ✅ ATTENDRE LE TOKEN FIREBASE (max 5 secondes)
+          const tokenReceived = await new Promise<boolean>((resolve) => {
+            let tokenCheckCount = 0;
+            const maxChecks = 10; // 10 × 500ms = 5 secondes
+            
+            const checkToken = async () => {
+              tokenCheckCount++;
+              
+              // Vérifier si un token existe en base
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('push_token')
+                .eq('user_id', user?.id)
+                .single();
+              
+              if (profile?.push_token) {
+                console.log('✅ Token Firebase confirmé en base:', profile.push_token.substring(0, 30) + '...');
+                setToken(profile.push_token);
+                resolve(true);
+              } else if (tokenCheckCount >= maxChecks) {
+                console.warn('⏱️ Timeout: Token Firebase non reçu après 5 secondes');
+                resolve(false);
+              } else {
+                setTimeout(checkToken, 500);
+              }
+            };
+            
+            checkToken();
           });
-          return true;
+          
+          if (tokenReceived) {
+            toast({
+              title: "Notifications activées !",
+              description: "Vous recevrez les notifications de RunConnect"
+            });
+          } else {
+            toast({
+              title: "Notifications activées",
+              description: "Token Firebase en attente...",
+              variant: "default"
+            });
+          }
+          
+          return tokenReceived;
         } else {
           console.log('❌ Permission refusée');
           

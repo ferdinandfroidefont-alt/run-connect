@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { MIUINotificationGuide } from '@/components/MIUINotificationGuide';
 import { RedmiNote9Guide } from '@/components/RedmiNote9Guide';
+import { TestLocalNotificationButton } from '@/components/TestLocalNotificationButton';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -248,11 +249,18 @@ export const NotificationManager = () => {
             <p className="text-sm text-green-600">
               ✅ Notifications activées ! Vous recevrez les alertes de RunConnect.
             </p>
+            {permissionStatus.granted && (
+              <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                Canal Android actif : high_importance_channel
+              </div>
+            )}
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" onClick={testNotification} className="gap-2">
                 <TestTube className="h-4 w-4" />
                 Tester
               </Button>
+              <TestLocalNotificationButton />
               <Button 
                 variant="outline" 
                 onClick={diagnoseNotifications} 
