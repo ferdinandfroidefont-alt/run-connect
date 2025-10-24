@@ -58,17 +58,21 @@ export default function Search() {
   }, []);
 
   return (
-    <div 
-      className={`fixed inset-0 z-[60] ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
-      style={{ 
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)'
-      }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-    >
-      {/* Fond glassmorphism */}
-      <div className="absolute inset-0 glass-primary" />
+    <>
+      {/* Barre supérieure système */}
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-[61]" />
+      
+      <div 
+        className={`fixed inset-0 z-[60] ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        style={{ 
+          paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)',
+          paddingBottom: 'env(safe-area-inset-bottom)'
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+      >
+        {/* Fond glassmorphism */}
+        <div className="absolute inset-0 glass-primary" />
       
       {/* Contenu */}
       <div className="relative h-full flex flex-col">
@@ -99,6 +103,7 @@ export default function Search() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
