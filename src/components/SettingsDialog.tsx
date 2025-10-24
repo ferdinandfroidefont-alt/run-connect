@@ -24,6 +24,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { languages, Language } from "@/lib/translations";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom";
 
 interface Profile {
   username: string;
@@ -58,6 +59,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { conversationTheme, setConversationTheme } = useConversationTheme();
   const { isRegistered, requestPermissions, isNative, testNotification, checkPermissionStatus } = usePushNotifications();
   const { language, setLanguage } = useLanguage();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -663,35 +665,150 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   Confidentialité & Légal
                 </h3>
                 <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-                  {/* RGPD */}
-                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-                    <div className="flex items-center gap-3 flex-1">
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <label className="text-sm font-medium">Règlement RGPD</label>
-                        <p className="text-xs text-muted-foreground">Traitement des données personnelles</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={profile?.rgpd_accepted || false}
-                      onCheckedChange={(checked) => updatePrivacySettings('rgpd_accepted', checked)}
-                    />
+                  {/* Info text */}
+                  <div className="p-4 bg-primary/5 border-b border-primary/20">
+                    <p className="text-xs text-center text-muted-foreground">
+                      Ces options sont <strong className="text-foreground">obligatoires</strong> pour continuer à utiliser RunConnect conformément à la réglementation Google Play.
+                    </p>
                   </div>
 
-                  {/* Security Rules */}
-                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-                    <div className="flex items-center gap-3 flex-1">
-                      <Shield className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <label className="text-sm font-medium">Règles de sécurité</label>
-                        <p className="text-xs text-muted-foreground">Règles d'utilisation et sécurité</p>
+                  {/* RGPD */}
+                  <AlertDialog>
+                    <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                      <div className="flex items-center gap-3 flex-1">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <label className="text-sm font-medium">Règlement RGPD</label>
+                          <p className="text-xs text-muted-foreground">Traitement des données personnelles</p>
+                        </div>
                       </div>
+                      <Switch
+                        checked={profile?.rgpd_accepted || false}
+                        onCheckedChange={(checked) => {
+                          if (!checked) {
+                            // Ouvrir le dialog de confirmation
+                            const trigger = document.getElementById('rgpd-revoke-trigger');
+                            trigger?.click();
+                          } else {
+                            updatePrivacySettings('rgpd_accepted', checked);
+                          }
+                        }}
+                      />
                     </div>
-                    <Switch
-                      checked={profile?.security_rules_accepted || false}
-                      onCheckedChange={(checked) => updatePrivacySettings('security_rules_accepted', checked)}
-                    />
-                  </div>
+                    <AlertDialogTrigger id="rgpd-revoke-trigger" className="hidden" />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Retirer votre consentement RGPD ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Êtes-vous sûr de vouloir retirer votre consentement ? Vous serez déconnecté 
+                          immédiatement et devrez accepter à nouveau les conditions pour utiliser l'application.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={async () => {
+                            if (!user) return;
+                            try {
+                              await supabase
+                                .from('profiles')
+                                .update({ 
+                                  rgpd_accepted: false, 
+                                  security_rules_accepted: false 
+                                })
+                                .eq('user_id', user.id);
+                              
+                              toast({
+                                title: "Consentement révoqué",
+                                description: "Vous allez être déconnecté.",
+                              });
+                              
+                              setTimeout(() => signOut(), 1000);
+                            } catch (error) {
+                              console.error('Erreur révocation:', error);
+                              toast({
+                                title: "Erreur",
+                                description: "Impossible de révoquer le consentement.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Confirmer et déconnecter
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  {/* Security Rules */}
+                  <AlertDialog>
+                    <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                      <div className="flex items-center gap-3 flex-1">
+                        <Shield className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <label className="text-sm font-medium">Règles de sécurité</label>
+                          <p className="text-xs text-muted-foreground">Règles d'utilisation et sécurité</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={profile?.security_rules_accepted || false}
+                        onCheckedChange={(checked) => {
+                          if (!checked) {
+                            // Ouvrir le dialog de confirmation
+                            const trigger = document.getElementById('security-revoke-trigger');
+                            trigger?.click();
+                          } else {
+                            updatePrivacySettings('security_rules_accepted', checked);
+                          }
+                        }}
+                      />
+                    </div>
+                    <AlertDialogTrigger id="security-revoke-trigger" className="hidden" />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Retirer votre acceptation des règles ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Êtes-vous sûr de vouloir retirer votre consentement ? Vous serez déconnecté 
+                          immédiatement et devrez accepter à nouveau les conditions pour utiliser l'application.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={async () => {
+                            if (!user) return;
+                            try {
+                              await supabase
+                                .from('profiles')
+                                .update({ 
+                                  rgpd_accepted: false, 
+                                  security_rules_accepted: false 
+                                })
+                                .eq('user_id', user.id);
+                              
+                              toast({
+                                title: "Consentement révoqué",
+                                description: "Vous allez être déconnecté.",
+                              });
+                              
+                              setTimeout(() => signOut(), 1000);
+                            } catch (error) {
+                              console.error('Erreur révocation:', error);
+                              toast({
+                                title: "Erreur",
+                                description: "Impossible de révoquer le consentement.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Confirmer et déconnecter
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
 
                   {/* Revoke Consent */}
                   {profile?.rgpd_accepted && profile?.security_rules_accepted && (
@@ -755,21 +872,22 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   )}
 
                   {/* Privacy Policy Link */}
-                  <a 
-                    href="https://runconnect.fr/confidentialite"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group"
+                  <button 
+                    onClick={() => {
+                      navigate('/privacy');
+                      onOpenChange(false);
+                    }}
+                    className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group"
                   >
                     <div className="flex items-center gap-3">
                       <Info className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
+                      <div className="flex-1 text-left">
                         <span className="text-sm font-medium">Politique de confidentialité</span>
                         <p className="text-xs text-muted-foreground">Consulter notre politique complète</p>
                       </div>
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground opacity-60 group-hover:opacity-100 transition-opacity" />
-                  </a>
+                  </button>
                 </div>
               </div>
               )}
