@@ -29,7 +29,8 @@ export const isNativeGoogleSignInAvailable = async (): Promise<boolean> => {
 };
 
 /**
- * Lance le processus de connexion Google natif avec timeout de 60s
+ * Lance le processus de connexion Google natif avec timeout de 120s
+ * 🔥 CORRECTION #4: Timeout augmenté à 120s
  */
 export const googleSignIn = (): Promise<GoogleSignInResult> => {
   return new Promise((resolve, reject) => {
@@ -39,13 +40,13 @@ export const googleSignIn = (): Promise<GoogleSignInResult> => {
       return;
     }
 
-    // Timeout de 60 secondes
+    // Timeout de 120 secondes (2 minutes)
     const timeout = setTimeout(() => {
       window.removeEventListener('googleSignInSuccess', successHandler as any);
       window.removeEventListener('googleSignInError', errorHandler as any);
-      console.error('🔥⏱️ Google Sign-In timeout (60s)');
-      reject(new Error('Google Sign-In timeout (60s)'));
-    }, 60000);
+      console.error('🔥⏱️ Google Sign-In timeout (120s)');
+      reject(new Error('Google Sign-In timeout (120s)'));
+    }, 120000);
 
     const successHandler = (event: CustomEvent<GoogleSignInResult>) => {
       clearTimeout(timeout);

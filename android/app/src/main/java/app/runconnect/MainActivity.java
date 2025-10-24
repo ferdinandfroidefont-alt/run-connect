@@ -101,6 +101,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 🔥 CORRECTION #2: Vérifier la disponibilité de Google Play Services
+     */
+    private boolean checkGooglePlayServices() {
+        com.google.android.gms.common.GoogleApiAvailability availability = 
+            com.google.android.gms.common.GoogleApiAvailability.getInstance();
+        int resultCode = availability.isGooglePlayServicesAvailable(this);
+        
+        if (resultCode != com.google.android.gms.common.ConnectionResult.SUCCESS) {
+            Log.e(TAG, "❌ Google Play Services indisponible (code: " + resultCode + ")");
+            if (availability.isUserResolvableError(resultCode)) {
+                availability.getErrorDialog(this, resultCode, 9000).show();
+            }
+            return false;
+        }
+        Log.d(TAG, "✅ Google Play Services disponible");
+        return true;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -116,14 +135,21 @@ public class MainActivity extends AppCompatActivity {
             String webClientId = getString(R.string.default_web_client_id);
             Log.d(TAG, "🔑 Initializing Google Sign-In with Web Client ID");
             
+            // 🔥 CORRECTION #1: Ajouter requestServerAuthCode pour un token complet
             GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(webClientId)
+                .requestServerAuthCode(webClientId)  // ✅ AJOUTÉ
                 .requestEmail()
                 .requestProfile()
                 .build();
             
             mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
             Log.d(TAG, "✅ Google Sign-In Client initialized successfully");
+            
+            // 🔥 CORRECTION #3: Vérifier Google Play Services au démarrage
+            if (!checkGooglePlayServices()) {
+                Log.e(TAG, "⚠️ Google Sign-In peut ne pas fonctionner correctement");
+            }
         } catch (Exception e) {
             Log.e(TAG, "❌ Error initializing Google Sign-In: " + e.getMessage());
         }
@@ -522,13 +548,33 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔥 [GOOGLE SIGN-IN] resultCode=" + resultCode + " (OK=" + RESULT_OK + ", CANCELED=" + RESULT_CANCELED + ")");
             Log.d(TAG, "🔥 [GOOGLE SIGN-IN] data=" + (data != null ? data.toString() : "null"));
             
-            // Gérer l'annulation par l'utilisateur
+            // 🔥 CORRECTION #6: Améliorer les logs RESULT_CANCELED
             if (resultCode == RESULT_CANCELED) {
                 Log.e(TAG, "❌ [GOOGLE SIGN-IN] RESULT_CANCELED détecté");
                 Log.e(TAG, "❌ [GOOGLE SIGN-IN] Cause possible:");
                 Log.e(TAG, "❌   1. SHA-1 certificate hash incorrect dans Firebase Console");
                 Log.e(TAG, "❌   2. Client OAuth Android non configuré dans Google Cloud Console");
                 Log.e(TAG, "❌   3. Web Client ID manquant dans strings.xml");
+                Log.e(TAG, "❌   4. Google Play Services obsolète ou non disponible");
+                
+                // ✅ NOUVEAU : Essayer d'extraire l'erreur détaillée
+                if (data != null) {
+                    Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                    try {
+                        task.getResult(ApiException.class);
+                    } catch (ApiException e) {
+                        Log.e(TAG, "❌ RESULT_CANCELED avec ApiException StatusCode: " + e.getStatusCode());
+                        Log.e(TAG, "❌ ApiException Message: " + e.getMessage());
+                        
+                        // Si StatusCode 10 → SHA-1 incorrect
+                        if (e.getStatusCode() == 10) {
+                            Log.e(TAG, "❌❌❌ CAUSE CONFIRMÉE : SHA-1 NE CORRESPOND PAS");
+                            notifyGoogleSignInError("SHA-1 certificate mismatch - Vérifier Firebase Console");
+                            return;
+                        }
+                    }
+                }
+                
                 notifyGoogleSignInError("User canceled (voir logs Logcat pour déboguer)");
                 return;
             }
@@ -565,10 +611,20 @@ public class MainActivity extends AppCompatActivity {
                 String errorMessage;
                 if (statusCode == 10) {
                     errorMessage = "Erreur de configuration (SHA-1 ou OAuth Client)";
+                    Log.e(TAG, "❌ SHA-1 actuel du keystore ne correspond PAS à Firebase/Google Cloud");
+                    Log.e(TAG, "❌ Vérifier:");
+                    Log.e(TAG, "❌   1. Certificat Play App Signing dans Play Console");
+                    Log.e(TAG, "❌   2. SHA-1 enregistré dans Firebase Console");
+                    Log.e(TAG, "❌   3. Client OAuth Android dans Google Cloud Console");
+                    
+                    // 🔥 CORRECTION #5: Nettoyer le cache après erreur
+                    mGoogleSignInClient.signOut();
                 } else if (statusCode == 12501) {
                     errorMessage = "User canceled (ApiException)";
                 } else if (statusCode == 12500) {
                     errorMessage = "Sign-in configuration error";
+                    // 🔥 CORRECTION #5: Nettoyer le cache après erreur
+                    mGoogleSignInClient.signOut();
                 } else {
                     errorMessage = "Sign-in failed (code " + statusCode + ")";
                 }
@@ -1290,6 +1346,7 @@ public class MainActivity extends AppCompatActivity {
         
         /**
          * 🔥 GOOGLE SIGN-IN: Lancer la connexion Google native
+         * 🔥 CORRECTION #3 et #7: Vérifier Play Services + Forcer sélection compte
          */
         @android.webkit.JavascriptInterface
         public void googleSignIn() {
@@ -1302,13 +1359,29 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 
+                // 🔥 CORRECTION #3: Vérifier Google Play Services avant de continuer
+                if (!checkGooglePlayServices()) {
+                    notifyGoogleSignInError("Google Play Services unavailable");
+                    return;
+                }
+                
+                // 🔥 CORRECTION #3: Vérifier et nettoyer le cache de compte existant
+                GoogleSignInAccount existingAccount = GoogleSignIn.getLastSignedInAccount(MainActivity.this);
+                if (existingAccount != null) {
+                    Log.d(TAG, "🔥 Compte Google déjà connecté détecté, déconnexion préventive");
+                }
+                
                 // ✅ FORCER SIGN-OUT avant sign-in pour éviter les conflits
-                Log.d(TAG, "🔥 Forcing sign-out before sign-in...");
+                Log.d(TAG, "🔥 Nettoyage cache + lancement Sign-In avec sélection forcée");
                 mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
                     try {
                         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                        
+                        // 🔥 CORRECTION #7: Forcer la popup de sélection de compte
+                        signInIntent.putExtra(com.google.android.gms.auth.api.signin.internal.Constants.EXTRA_FORCE_ACCOUNT_CHOOSER, true);
+                        
                         startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE);
-                        Log.d(TAG, "🚀 Google Sign-In Intent lancé après sign-out");
+                        Log.d(TAG, "🚀 Google Sign-In Intent lancé avec sélection forcée");
                     } catch (Exception e) {
                         Log.e(TAG, "❌ Error launching Google Sign-In", e);
                         notifyGoogleSignInError("Error launching sign-in: " + e.getMessage());
