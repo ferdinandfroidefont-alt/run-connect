@@ -19,6 +19,7 @@ import Subscription from "./pages/Subscription";
 import DonationSuccess from "./pages/DonationSuccess";
 import DonationCanceled from "./pages/DonationCanceled";
 import NotFound from "./pages/NotFound";
+import Search from "./pages/Search";
 import { SecurityDashboard } from "./components/SecurityDashboard";
 import { AndroidTestPage } from "./components/AndroidTestPage";
 
@@ -47,6 +48,7 @@ const App = () => {
               <Route path="/profile" element={<Layout><Profile /></Layout>} />
               <Route path="/profile/:userId" element={<Layout><Profile /></Layout>} />
               <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
+              <Route path="/search" element={<Search />} />
               <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
               <Route path="/android-test" element={<Layout><AndroidTestPage /></Layout>} />
               <Route path="/donation-success" element={<DonationSuccess />} />

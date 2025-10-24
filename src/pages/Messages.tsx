@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { UniversalSearchDialog } from "@/components/UniversalSearchDialog";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -119,8 +118,6 @@ const Messages = () => {
   const [searchUsers, setSearchUsers] = useState("");
   const [availableUsers, setAvailableUsers] = useState<Profile[]>([]);
   const [showNewConversation, setShowNewConversation] = useState(false);
-  const [showUserSearch, setShowUserSearch] = useState(false);
-  const [searchActiveTab, setSearchActiveTab] = useState<'profiles' | 'clubs' | 'strava' | ''>('');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
@@ -1802,10 +1799,7 @@ const Messages = () => {
                     variant="outline"
                     className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
                     style={{ transform: 'translateZ(0)' }}
-                    onClick={() => {
-                      setSearchActiveTab('profiles');
-                      setShowUserSearch(true);
-                    }}
+                    onClick={() => navigate('/search?tab=profiles')}
                   >
                     <User className="h-5 w-5" />
                     <span className="text-xs">Utilisateurs</span>
@@ -1815,10 +1809,7 @@ const Messages = () => {
                     variant="outline"
                     className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
                     style={{ transform: 'translateZ(0)' }}
-                    onClick={() => {
-                      setSearchActiveTab('clubs');
-                      setShowUserSearch(true);
-                    }}
+                    onClick={() => navigate('/search?tab=clubs')}
                   >
                     <Users className="h-5 w-5" />
                     <span className="text-xs">Clubs</span>
@@ -1828,10 +1819,7 @@ const Messages = () => {
                     variant="outline"
                     className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
                     style={{ transform: 'translateZ(0)' }}
-                    onClick={() => {
-                      setSearchActiveTab('strava');
-                      setShowUserSearch(true);
-                    }}
+                    onClick={() => navigate('/search?tab=strava')}
                   >
                     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
@@ -1979,28 +1967,6 @@ const Messages = () => {
             </Card>
           </div>
         </div>
-
-        {/* User Search Dialog */}
-        <UniversalSearchDialog
-          open={showUserSearch}
-          onOpenChange={(open) => {
-            setShowUserSearch(open);
-            if (!open) setSearchActiveTab('');
-          }}
-          onStartConversation={startConversation}
-          initialTab={searchActiveTab}
-          onJoinClub={(clubId) => {
-            // Find the club conversation and set it as selected
-            const clubConv = conversations.find(c => c.id === clubId);
-            if (clubConv) {
-               setSelectedConversation(clubConv);
-               loadMessages(clubId);
-               // Marquer les messages comme lus automatiquement
-               markMessagesAsReadOnOpen(clubId);
-            }
-            setShowUserSearch(false);
-          }}
-        />
 
         {/* Create Club Dialog */}
         <CreateClubDialog

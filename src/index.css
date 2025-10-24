@@ -63,10 +63,14 @@ All colors MUST be HSL.
     --shadow-map-control: 0 4px 6px -1px hsl(var(--map-control-shadow)), 0 2px 4px -2px hsl(var(--map-control-shadow));
     --shadow-map-panel: 0 10px 15px -3px hsl(var(--map-control-shadow)), 0 4px 6px -4px hsl(var(--map-control-shadow));
     
-    /* Glassmorphism */
+    /* Glassmorphism - Enhanced for search page */
     --glass-bg: hsl(0 0% 100% / 0.05);
     --glass-border: hsl(0 0% 100% / 0.1);
     --glass-blur: 20px;
+    --glass-bg-primary: hsl(215 28% 17% / 0.55);
+    --glass-bg-card: hsl(0 0% 100% / 0.08);
+    --glass-border-card: hsl(0 0% 100% / 0.12);
+    --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.12);
     
     /* Transitions */
     --transition-map: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -130,9 +134,13 @@ All colors MUST be HSL.
     --map-control-active: 217 91% 65%;
     --gradient-control: linear-gradient(180deg, hsl(215 25% 27%) 0%, hsl(215 28% 17%) 100%);
     
-    /* Dark glassmorphism */
+    /* Dark glassmorphism - Enhanced for search page */
     --glass-bg: hsl(0 0% 100% / 0.03);
     --glass-border: hsl(0 0% 100% / 0.08);
+    --glass-bg-primary: hsl(215 28% 17% / 0.65);
+    --glass-bg-card: hsl(0 0% 100% / 0.06);
+    --glass-border-card: hsl(0 0% 100% / 0.10);
+    --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.24);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -297,6 +305,29 @@ All colors MUST be HSL.
   .instant-button:active {
     transform: scale(0.98) translateZ(0);
   }
+
+  /* Glassmorphism utilities */
+  .glass-primary {
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    background: var(--glass-bg-primary);
+    border: 1px solid var(--glass-border-card);
+  }
+  
+  .glass-card {
+    background: var(--glass-bg-card);
+    border: 1px solid var(--glass-border-card);
+    border-radius: 16px;
+    box-shadow: var(--glass-shadow);
+  }
+  
+  /* Fallback si backdrop-filter non supporté */
+  @supports not (backdrop-filter: blur(14px)) {
+    .glass-primary {
+      background: hsl(var(--background));
+      border-color: hsl(var(--border));
+    }
+  }
 }
 
 /* Animations */
@@ -318,6 +349,36 @@ All colors MUST be HSL.
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-down {
+  animation: slide-down 0.25s cubic-bezier(0.4, 0, 0.6, 1);
 }
 
 /* ===== Scroll horizontal fluide pour les sports ===== */
