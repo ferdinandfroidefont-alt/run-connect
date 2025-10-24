@@ -74,7 +74,6 @@ export default function MySessions() {
   const [loading, setLoading] = useState(false);
   const [routesLoading, setRoutesLoading] = useState(false);
   const [editingRoute, setEditingRoute] = useState<any>(null);
-  const [routeEditLoading, setRouteEditLoading] = useState(false);
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
 
@@ -211,40 +210,6 @@ export default function MySessions() {
   const editRoute = (route: any) => {
     setEditingRoute(route);
     setIsRouteEditDialogOpen(true);
-  };
-
-  const handleSaveRouteEdit = async (routeName: string, routeDescription: string) => {
-    if (!editingRoute) return;
-    
-    setRouteEditLoading(true);
-    try {
-      const { error } = await supabase
-        .from('routes')
-        .update({
-          name: routeName,
-          description: routeDescription
-        })
-        .eq('id', editingRoute.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Succès",
-        description: "Itinéraire modifié avec succès",
-      });
-      setIsRouteEditDialogOpen(false);
-      setEditingRoute(null);
-      loadUserRoutes();
-    } catch (error) {
-      console.error('Error updating route:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier l'itinéraire",
-        variant: "destructive",
-      });
-    } finally {
-      setRouteEditLoading(false);
-    }
   };
 
   const formatDistance = (meters: number | null) => {
@@ -655,20 +620,7 @@ export default function MySessions() {
         )}
       </div>
 
-      {/* Route Edit Dialogs */}
-      <RouteDialog
-        isOpen={isRouteEditDialogOpen}
-        onClose={() => {
-          setIsRouteEditDialogOpen(false);
-          setEditingRoute(null);
-        }}
-        onSave={handleSaveRouteEdit}
-        title="Modifier l'itinéraire"
-        initialName={editingRoute?.name || ''}
-        initialDescription={editingRoute?.description || ''}
-        loading={routeEditLoading}
-      />
-
+      {/* Route Edit Dialog */}
       <RouteEditDialog
         isOpen={isRouteEditDialogOpen}
         onClose={() => {
