@@ -1496,24 +1496,22 @@ const Messages = () => {
                                 {message.file_url && (
                                   <div className="mb-2">
                                      {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
-                                       <div className="flex items-center gap-2 glass-card p-2 border border-border/20">
-                                         <Mic className="h-4 w-4 text-primary" />
+                                       <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-background/30 backdrop-blur-sm border border-border/20 shadow-md">
+                                         <Mic className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                                          <audio 
                                            controls 
                                            src={message.file_url}
                                            className="max-w-full audio-player-glass"
-                                           style={{ height: '32px' }}
+                                           style={{ height: '28px', width: '160px' }}
                                          />
                                        </div>
                                      ) : message.file_type?.startsWith('image/') ? (
-                                       <div className="glass-card p-1.5 border border-border/30 shadow-xl">
-                                         <img 
-                                           src={message.file_url} 
-                                           alt={message.file_name || "Image"}
-                                           className="max-w-full h-auto rounded-xl"
-                                           style={{ maxHeight: '200px' }}
-                                         />
-                                       </div>
+                                       <img 
+                                         src={message.file_url} 
+                                         alt=""
+                                         className="max-w-full h-auto rounded-2xl shadow-lg backdrop-blur-sm border border-white/10"
+                                         style={{ maxHeight: '200px' }}
+                                       />
                                     ) : (
                                       <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
                                         <Paperclip className="h-4 w-4" />
@@ -1523,7 +1521,10 @@ const Messages = () => {
                                   </div>
                                 )}
                                 
-                                <p className="text-sm">{message.content}</p>
+                                {/* Show text content only if it's not a media-only message */}
+                                {message.content && !message.content.match(/^(Image partagée|Message vocal)/i) && (
+                                  <p className="text-sm">{message.content}</p>
+                                )}
                               </>
                             )}
                          
