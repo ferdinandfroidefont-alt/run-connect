@@ -328,6 +328,20 @@ All colors MUST be HSL.
       border-color: hsl(var(--border));
     }
   }
+
+  /* Audio player custom styling for glass effect */
+  .audio-player-glass {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+  }
+
+  .audio-player-glass::-webkit-media-controls-panel {
+    background: transparent;
+  }
+
+  .audio-player-glass::-webkit-media-controls-enclosure {
+    background: transparent;
+    border-radius: 8px;
+  }
 }
 
 /* Animations */

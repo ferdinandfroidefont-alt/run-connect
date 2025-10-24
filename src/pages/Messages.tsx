@@ -1247,7 +1247,7 @@ const Messages = () => {
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-card border-b border-border z-50"></div>
           
           {/* Header - Fixed */}
-          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border bg-card/95 backdrop-blur-sm z-50">
+          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -1259,8 +1259,8 @@ const Messages = () => {
               
               {selectedConversation.is_group ? (
                 <>
-                  <Avatar 
-                    className="h-8 w-8 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-primary/50 transition-all duration-200"
+                   <Avatar 
+                     className="h-8 w-8 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-primary/50 transition-all duration-200 glass-card border border-white/20"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -1304,9 +1304,9 @@ const Messages = () => {
                 </>
               ) : (
                 <>
-                  <div className="relative">
-                    <Avatar 
-                      className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                   <div className="relative">
+                     <Avatar 
+                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all glass-card border border-white/20"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1430,14 +1430,14 @@ const Messages = () => {
                           </div>
                         )}
                         
-                        <div className="relative group">
-                          <div
-                            className={`rounded-lg p-3 transition-all duration-200 ${
-                              isOwnMessage
-                                ? getThemeClasses().ownMessage
-                                : getThemeClasses().otherMessage
-                            } ${showIndividualTime ? 'shadow-lg' : ''}`}
-                          >
+                         <div className="relative group">
+                           <div
+                             className={`rounded-2xl p-3.5 transition-all duration-200 ${
+                               isOwnMessage
+                                 ? getThemeClasses().ownMessage
+                                 : getThemeClasses().otherMessage
+                             } ${showIndividualTime ? 'shadow-2xl scale-[1.02]' : ''}`}
+                           >
                             {/* Delete button for own messages (only if not deleted) */}
                             {isOwnMessage && !message.deleted_at && (
                               <Button
@@ -1495,23 +1495,25 @@ const Messages = () => {
                                 {/* File attachment */}
                                 {message.file_url && (
                                   <div className="mb-2">
-                                    {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
-                                      <div className="flex items-center gap-2">
-                                        <Mic className="h-4 w-4" />
-                                        <audio 
-                                          controls 
-                                          src={message.file_url}
-                                          className="max-w-full"
-                                          style={{ height: '32px' }}
-                                        />
-                                      </div>
-                                    ) : message.file_type?.startsWith('image/') ? (
-                                      <img 
-                                        src={message.file_url} 
-                                        alt={message.file_name || "Image"}
-                                        className="max-w-full h-auto rounded-lg"
-                                        style={{ maxHeight: '200px' }}
-                                      />
+                                     {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
+                                       <div className="flex items-center gap-2 glass-card p-2 border border-border/20">
+                                         <Mic className="h-4 w-4 text-primary" />
+                                         <audio 
+                                           controls 
+                                           src={message.file_url}
+                                           className="max-w-full audio-player-glass"
+                                           style={{ height: '32px' }}
+                                         />
+                                       </div>
+                                     ) : message.file_type?.startsWith('image/') ? (
+                                       <div className="glass-card p-1.5 border border-border/30 shadow-xl">
+                                         <img 
+                                           src={message.file_url} 
+                                           alt={message.file_name || "Image"}
+                                           className="max-w-full h-auto rounded-xl"
+                                           style={{ maxHeight: '200px' }}
+                                         />
+                                       </div>
                                     ) : (
                                       <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
                                         <Paperclip className="h-4 w-4" />
@@ -1596,115 +1598,116 @@ const Messages = () => {
 
           {/* Message input - Fixed at bottom */}
           <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 z-50">
+            <div className="glass-primary backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-border/30">
             {uploadProgress && (
               <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg mb-2">
                 <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span className="text-sm text-muted-foreground">{uploadProgress}</span>
               </div>
             )}
-            <div className="flex gap-2">
-              {!isRecording && (
-                <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="*/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (file.size > 50 * 1024 * 1024) {
+              <div className="flex gap-2">
+                {!isRecording && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="*/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 50 * 1024 * 1024) {
+                            toast({
+                              title: "Fichier trop volumineux",
+                              description: "La taille maximale est de 50 MB",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          uploadFile(file);
+                        }
+                      }}
+                      className="hidden"
+                      disabled={isLoading}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      disabled={isLoading}
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        console.log('🖼️ Bouton Image cliqué');
+                        try {
+                          const file = await selectFromGallery();
+                          if (file) {
+                            console.log('📸 Fichier sélectionné:', file.name);
+                            uploadFile(file);
+                          } else {
+                            toast({
+                              title: "Aucun fichier",
+                              description: "Aucune image sélectionnée",
+                              variant: "default"
+                            });
+                          }
+                        } catch (error: any) {
+                          console.error('❌ Erreur sélection galerie:', error);
+                          let errorMessage = "Impossible d'accéder à la galerie. Vérifiez les permissions.";
+                          if (error.message === 'PERMISSION_DENIED') {
+                            errorMessage = "Permission refusée. Activez l'accès à la galerie dans les paramètres.";
+                          } else if (error.message === 'TIMEOUT') {
+                            errorMessage = "Délai d'attente dépassé. Réessayez.";
+                          }
                           toast({
-                            title: "Fichier trop volumineux",
-                            description: "La taille maximale est de 50 MB",
+                            title: "Erreur",
+                            description: errorMessage,
                             variant: "destructive"
                           });
-                          return;
                         }
-                        uploadFile(file);
-                      }
-                    }}
-                    className="hidden"
-                    disabled={isLoading}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-3"
-                    disabled={isLoading}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      console.log('🖼️ Bouton Image cliqué');
-                      try {
-                        const file = await selectFromGallery();
-                        if (file) {
-                          console.log('📸 Fichier sélectionné:', file.name);
-                          uploadFile(file);
-                        } else {
-                          toast({
-                            title: "Aucun fichier",
-                            description: "Aucune image sélectionnée",
-                            variant: "default"
-                          });
-                        }
-                      } catch (error: any) {
-                        console.error('❌ Erreur sélection galerie:', error);
-                        let errorMessage = "Impossible d'accéder à la galerie. Vérifiez les permissions.";
-                        if (error.message === 'PERMISSION_DENIED') {
-                          errorMessage = "Permission refusée. Activez l'accès à la galerie dans les paramètres.";
-                        } else if (error.message === 'TIMEOUT') {
-                          errorMessage = "Délai d'attente dépassé. Réessayez.";
-                        }
-                        toast({
-                          title: "Erreur",
-                          description: errorMessage,
-                          variant: "destructive"
-                        });
-                      }
-                    }}
-                    className="px-3"
-                    disabled={isLoading}
-                  >
-                    <Image className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    placeholder="Tapez votre message..."
-                    value={newMessage}
-                    onChange={(e) => {
-                      setNewMessage(e.target.value);
-                      handleTyping();
-                    }}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={sendMessage}
-                    disabled={loading || !newMessage.trim()}
-                    size="sm"
-                    className="px-3"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={handleVoiceRecording}
-                    disabled={loading}
-                    size="sm"
-                    variant="outline"
-                    className="px-3"
-                  >
-                    <Mic className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-              
-              {isRecording && (
-                <>
-                  <div className="flex-1 flex items-center gap-3 bg-red-500/10 border border-red-500 rounded-lg px-4 py-2">
+                      }}
+                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      disabled={isLoading}
+                    >
+                      <Image className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      placeholder="Tapez votre message..."
+                      value={newMessage}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value);
+                        handleTyping();
+                      }}
+                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                      className="flex-1 glass-card border-border/40 focus:border-primary/60 bg-background/40"
+                    />
+                    <Button
+                      onClick={sendMessage}
+                      disabled={loading || !newMessage.trim()}
+                      size="sm"
+                      className="px-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-primary/50 transition-all duration-200"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={handleVoiceRecording}
+                      disabled={loading}
+                      size="sm"
+                      variant="outline"
+                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+                
+                {isRecording && (
+                  <>
+                    <div className="flex-1 flex items-center gap-3 glass-card bg-red-500/20 border border-red-500/50 rounded-xl px-4 py-2 backdrop-blur-md shadow-lg">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                       <span className="text-sm font-medium text-red-500">
@@ -1730,9 +1733,10 @@ const Messages = () => {
                   >
                     <Square className="h-4 w-4" />
                   </Button>
-                </>
-              )}
-             </div>
+                  </>
+                )}
+              </div>
+            </div>
             
             {/* Hidden file input */}
             <input
