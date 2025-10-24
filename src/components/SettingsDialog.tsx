@@ -692,6 +692,84 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                       onCheckedChange={(checked) => updatePrivacySettings('security_rules_accepted', checked)}
                     />
                   </div>
+
+                  {/* Revoke Consent */}
+                  {profile?.rgpd_accepted && profile?.security_rules_accepted && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-destructive/5 transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <Shield className="h-5 w-5 text-destructive" />
+                            <div className="flex-1 text-left">
+                              <span className="text-sm font-medium text-destructive">Révoquer mon consentement</span>
+                              <p className="text-xs text-muted-foreground">Vous serez déconnecté</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-destructive opacity-60 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Révoquer votre consentement ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            En révoquant votre consentement RGPD et aux règles de sécurité, vous serez déconnecté 
+                            et devrez les accepter à nouveau pour utiliser RunConnect.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={async () => {
+                              if (!user) return;
+                              try {
+                                await supabase
+                                  .from('profiles')
+                                  .update({ 
+                                    rgpd_accepted: false, 
+                                    security_rules_accepted: false 
+                                  })
+                                  .eq('user_id', user.id);
+                                
+                                toast({
+                                  title: "Consentement révoqué",
+                                  description: "Vous allez être déconnecté.",
+                                });
+                                
+                                setTimeout(() => signOut(), 1000);
+                              } catch (error) {
+                                console.error('Erreur révocation consentement:', error);
+                                toast({
+                                  title: "Erreur",
+                                  description: "Impossible de révoquer le consentement.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Révoquer et déconnecter
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+
+                  {/* Privacy Policy Link */}
+                  <a 
+                    href="https://runconnect.fr/confidentialite"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Info className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">Politique de confidentialité</span>
+                        <p className="text-xs text-muted-foreground">Consulter notre politique complète</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </a>
                 </div>
               </div>
               )}
