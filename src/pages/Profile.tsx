@@ -670,13 +670,6 @@ const Profile = () => {
               
               const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
               const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
-
-              {/* Reliability Badge */}
-              {!isViewingOtherUser && reliabilityRate > 0 && (
-                <div className="mt-4 w-full">
-                  <ReliabilityBadge rate={reliabilityRate} />
-                </div>
-              )}
               
               if (isStravaVerified && isInstagramVerified) {
                 return (
@@ -746,6 +739,13 @@ const Profile = () => {
                 );
               }
             })()}
+            
+            {/* Reliability Badge */}
+            {!isViewingOtherUser && reliabilityRate > 0 && (
+              <div className="mt-4 w-full px-4">
+                <ReliabilityBadge rate={reliabilityRate} />
+              </div>
+            )}
             
             <div className="flex gap-4 mt-2">
               <button
