@@ -21,6 +21,7 @@ import { ContactsDialog } from "@/components/ContactsDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useCamera } from "@/hooks/useCamera";
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import {
   MessageCircle, 
   Users, 
@@ -44,7 +45,8 @@ import {
   Phone,
   Mic,
   Square,
-  X
+  X,
+  Smile
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -131,9 +133,11 @@ const Messages = () => {
   const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [isContactsLoading, setIsContactsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { isRecording, recordingDuration, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
   const { selectFromGallery, loading: cameraLoading } = useCamera();
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -805,6 +809,35 @@ const Messages = () => {
       });
     }, 3000);
   };
+
+  // Handle emoji selection
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage(prev => prev + emojiData.emoji);
+    handleTyping();
+  };
+
+  // Check if message contains only emojis
+  const isOnlyEmojis = (text: string) => {
+    const emojiRegex = /^[\p{Emoji}\s]+$/u;
+    return emojiRegex.test(text.trim());
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   // Clean up typing users periodically
   useEffect(() => {
@@ -1523,7 +1556,13 @@ const Messages = () => {
                                 
                                 {/* Show text content only if it's not a media-only message */}
                                 {message.content && !message.content.match(/^(Image partagée|Message vocal)/i) && (
-                                  <p className="text-sm">{message.content}</p>
+                                  <p className={`${
+                                    isOnlyEmojis(message.content) 
+                                      ? 'text-4xl leading-tight' 
+                                      : 'text-sm'
+                                  }`}>
+                                    {message.content}
+                                  </p>
                                 )}
                               </>
                             )}
@@ -1599,6 +1638,25 @@ const Messages = () => {
 
           {/* Message input - Fixed at bottom */}
           <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 z-50">
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <div 
+                ref={emojiPickerRef}
+                className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
+              >
+                <div className="glass-primary backdrop-blur-xl rounded-2xl p-2 shadow-2xl border border-border/30">
+                  <EmojiPicker
+                    onEmojiClick={handleEmojiClick}
+                    theme={Theme.AUTO}
+                    width={320}
+                    height={400}
+                    searchPlaceHolder="Rechercher un emoji..."
+                    previewConfig={{ showPreview: false }}
+                  />
+                </div>
+              </div>
+            )}
+            
             <div className="glass-primary backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-border/30">
             {uploadProgress && (
               <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg mb-2">
@@ -1675,6 +1733,17 @@ const Messages = () => {
                       disabled={isLoading}
                     >
                       <Image className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`px-3 glass-card border-border/40 hover:bg-background/60 transition-all duration-200 ${
+                        showEmojiPicker ? 'bg-primary/20 border-primary/40 shadow-lg shadow-primary/20' : ''
+                      }`}
+                      disabled={isLoading}
+                    >
+                      <Smile className="h-4 w-4" />
                     </Button>
                     <Input
                       placeholder="Tapez votre message..."
