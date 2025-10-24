@@ -2,6 +2,8 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { UserProfileProvider } from "@/contexts/UserProfileContext";
+import { AuthProvider } from "@/hooks/useAuth";
 
 // ✅ DÉTECTION NATIVE ULTRA-FIABLE (AVANT le render)
 const detectNativeImmediately = () => {
@@ -79,7 +81,11 @@ initializeCapacitorPlugins();
 
 // ✅ Render l'app (maintenant window.CapacitorForceNative est DÉJÀ défini)
 createRoot(document.getElementById("root")!).render(
-  <LanguageProvider>
-    <App />
-  </LanguageProvider>
+  <AuthProvider>
+    <UserProfileProvider>
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
+    </UserProfileProvider>
+  </AuthProvider>
 )

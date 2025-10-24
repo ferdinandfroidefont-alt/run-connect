@@ -3,8 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-// Plus d'useEffect pour permissions
-import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
@@ -27,42 +25,37 @@ import { AndroidTestPage } from "./components/AndroidTestPage";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // SUPPRIMÉ: Plus de demande automatique de permissions au démarrage
-  // L'utilisateur en a marre qu'on lui demande sans arrêt !
-
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <AppProvider>
-            <TooltipProvider>
+        <AppProvider>
+          <TooltipProvider>
             <AdMobInitializer />
             <Toaster />
             <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<Layout><Index /></Layout>} />
-              <Route path="/my-sessions" element={<Layout><MySessions /></Layout>} />
-              <Route path="/messages" element={<Layout><Messages /></Layout>} />
-              <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
-              <Route path="/profile" element={<Layout><Profile /></Layout>} />
-              <Route path="/profile/:userId" element={<Layout><Profile /></Layout>} />
-              <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/route-create" element={<RouteCreation />} />
-              <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
-              <Route path="/android-test" element={<Layout><AndroidTestPage /></Layout>} />
-              <Route path="/donation-success" element={<DonationSuccess />} />
-              <Route path="/donation-canceled" element={<DonationCanceled />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AppProvider>
-    </AuthProvider>
-  </ThemeProvider>
-</QueryClientProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<Layout><Index /></Layout>} />
+                <Route path="/my-sessions" element={<Layout><MySessions /></Layout>} />
+                <Route path="/messages" element={<Layout><Messages /></Layout>} />
+                <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
+                <Route path="/profile" element={<Layout><Profile /></Layout>} />
+                <Route path="/profile/:userId" element={<Layout><Profile /></Layout>} />
+                <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/route-create" element={<RouteCreation />} />
+                <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
+                <Route path="/android-test" element={<Layout><AndroidTestPage /></Layout>} />
+                <Route path="/donation-success" element={<DonationSuccess />} />
+                <Route path="/donation-canceled" element={<DonationCanceled />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AppProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 

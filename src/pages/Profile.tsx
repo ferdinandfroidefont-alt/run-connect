@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ interface UserRoute {
 
 const Profile = () => {
   const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
+  const { userProfile: globalProfile, refreshProfile: refreshGlobalProfile } = useUserProfile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { userId: urlUserId } = useParams();
@@ -111,7 +113,17 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      fetchProfile();
+      // Si on regarde son propre profil, utiliser le profil global
+      if (!isViewingOtherUser && globalProfile) {
+        console.log('✅ [Profile] Using global profile:', globalProfile.username);
+        setProfile(globalProfile);
+        setFormData(globalProfile);
+        setLoading(false);
+      } else {
+        // Sinon charger le profil spécifique
+        fetchProfile();
+      }
+      
       fetchFollowCounts();
       if (!isViewingOtherUser) {
         fetchUserRoutes();
@@ -127,7 +139,7 @@ const Profile = () => {
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
-  }, [user, viewingUserId, isViewingOtherUser]);
+  }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
 
   const fetchFollowCounts = async () => {
     const targetUserId = viewingUserId || user?.id;
@@ -405,6 +417,10 @@ const Profile = () => {
       setIsEditing(false);
       setAvatarFile(null);
       setAvatarPreview("");
+      
+      // Rafraîchir le profil global
+      await refreshGlobalProfile();
+      
       toast({
         title: "Profil mis à jour !",
         description: "Vos modifications ont été sauvegardées.",
