@@ -1829,30 +1829,12 @@ const Messages = () => {
 
                   <Button
                     variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150 relative"
+                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
                     style={{ transform: 'translateZ(0)' }}
-                    onClick={() => {
-                      // Show instant feedback
-                      setIsContactsLoading(true);
-                      
-                      // Open dialog with transition
-                      startTransition(() => {
-                        setShowContactsDialog(true);
-                      });
-                      
-                      // Hide loading after short delay
-                      setTimeout(() => {
-                        setIsContactsLoading(false);
-                      }, 200);
-                    }}
-                    disabled={isContactsLoading}
+                    onClick={() => navigate('/search?tab=contacts')}
                   >
-                    {isContactsLoading ? (
-                      <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
-                    ) : (
-                      <Phone className="h-5 w-5" />
-                    )}
-                    <span className="text-xs">Contact</span>
+                    <Phone className="h-5 w-5" />
+                    <span className="text-xs">Contacts</span>
                   </Button>
                 </div>
               </CardContent>
