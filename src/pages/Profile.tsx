@@ -25,6 +25,7 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 import { SimpleAABDiagnostic } from "@/components/SimpleAABDiagnostic";
 import { UserActivityChart } from "@/components/UserActivityChart";
+import { ReliabilityBadge } from "@/components/ReliabilityBadge";
 
 interface Profile {
   username: string;
@@ -91,6 +92,7 @@ const Profile = () => {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
+  const [reliabilityRate, setReliabilityRate] = useState(0);
   const { toast } = useToast();
   const { selectFromGallery, loading: cameraLoading } = useCamera();
   
@@ -127,6 +129,7 @@ const Profile = () => {
       fetchFollowCounts();
       if (!isViewingOtherUser) {
         fetchUserRoutes();
+        fetchReliabilityRate();
       } else {
         fetchCommonClubs();
         // Fetch connection history only for creator
@@ -225,6 +228,25 @@ const Profile = () => {
       });
     } finally {
       setRoutesLoading(false);
+    }
+  };
+
+  const fetchReliabilityRate = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_stats')
+        .select('reliability_rate')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setReliabilityRate(data.reliability_rate || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching reliability rate:', error);
     }
   };
 
@@ -648,6 +670,13 @@ const Profile = () => {
               
               const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
               const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
+
+              {/* Reliability Badge */}
+              {!isViewingOtherUser && reliabilityRate > 0 && (
+                <div className="mt-4 w-full">
+                  <ReliabilityBadge rate={reliabilityRate} />
+                </div>
+              )}
               
               if (isStravaVerified && isInstagramVerified) {
                 return (

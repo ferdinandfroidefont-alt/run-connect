@@ -17,7 +17,7 @@ import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDi
 import { SessionQuestions } from "./SessionQuestions";
 import { useAdMob } from '@/hooks/useAdMob';
 import { useGPSValidation } from '@/hooks/useGPSValidation';
-import { ValidateParticipantsDialog } from './ValidateParticipantsDialog';
+import { useNavigate } from 'react-router-dom';
 
 interface Session {
   id: string;
@@ -66,12 +66,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const { validatePresence, validating: validatingGPS } = useGPSValidation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [showValidateDialog, setShowValidateDialog] = useState(false);
   const [gpsValidated, setGpsValidated] = useState(false);
 
   // Check if user has already requested to join this session or is a participant
@@ -581,7 +581,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 </Badge>
                 {!isScheduled && (
                   <Button
-                    onClick={() => setShowValidateDialog(true)}
+                    onClick={() => navigate(`/confirm-presence/${session.id}`)}
                     variant="default"
                     className="w-full"
                   >
@@ -690,19 +690,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           setShowShareDialog(false);
         }}
       />
-
-      {/* Validate Participants Dialog */}
-      {showValidateDialog && (
-        <ValidateParticipantsDialog
-          sessionId={session.id}
-          sessionTitle={session.title}
-          open={showValidateDialog}
-          onClose={() => {
-            setShowValidateDialog(false);
-            onSessionUpdated();
-          }}
-        />
-      )}
     </Dialog>
   );
 };

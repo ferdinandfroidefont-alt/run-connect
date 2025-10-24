@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import Search from "./pages/Search";
 import RouteCreation from "./pages/RouteCreation";
 import Privacy from "./pages/Privacy";
+import ConfirmPresence from "./pages/ConfirmPresence";
 import { SecurityDashboard } from "./components/SecurityDashboard";
 import { AndroidTestPage } from "./components/AndroidTestPage";
 
@@ -47,6 +48,8 @@ const App = () => {
                 <Route path="/search" element={<Search />} />
                 <Route path="/route-create" element={<RouteCreation />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/confirm-presence" element={<ConfirmPresence />} />
+                <Route path="/confirm-presence/:sessionId" element={<ConfirmPresence />} />
                 <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
                 <Route path="/android-test" element={<Layout><AndroidTestPage /></Layout>} />
                 <Route path="/donation-success" element={<DonationSuccess />} />

@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { HelpDialog } from './HelpDialog';
-import { ConfirmPresenceDialog } from './ConfirmPresenceDialog';
+import { CheckCircle } from 'lucide-react';
 
 // Declare global google maps types
 declare global {
@@ -132,7 +132,7 @@ export const InteractiveMap = ({
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
-  const [showConfirmPresenceDialog, setShowConfirmPresenceDialog] = useState(false);
+  
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   
   // Check URL parameters for route creation mode
@@ -1486,7 +1486,7 @@ export const InteractiveMap = ({
           <Button 
             variant="outline"
             className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-green-600 text-white hover:bg-green-700 border-green-600"
-            onClick={() => setShowConfirmPresenceDialog(true)}
+            onClick={() => navigate('/confirm-presence')}
             title="Confirmer ma présence GPS"
           >
             <div className="text-sm">✅📍</div>
@@ -1603,14 +1603,6 @@ export const InteractiveMap = ({
       <NearbySessionsDialog
         isOpen={showNearbySessionsDialog}
         onClose={() => setShowNearbySessionsDialog(false)}
-        userLocation={userLocation}
-      />
-
-      {/* Confirm Presence Dialog */}
-      <ConfirmPresenceDialog
-        open={showConfirmPresenceDialog}
-        onClose={() => setShowConfirmPresenceDialog(false)}
-        userId={user?.id || ''}
         userLocation={userLocation}
       />
 
