@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { HelpDialog } from './HelpDialog';
+import { ConfirmPresenceDialog } from './ConfirmPresenceDialog';
 
 // Declare global google maps types
 declare global {
@@ -131,6 +132,7 @@ export const InteractiveMap = ({
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
+  const [showConfirmPresenceDialog, setShowConfirmPresenceDialog] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   
   // Check URL parameters for route creation mode
@@ -1477,9 +1479,21 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Nearby Sessions Button - ENCORE PLUS HAUT */}
+      {/* Confirm Presence & Nearby Sessions Buttons */}
       {user && (
-        <div className="absolute right-4 bottom-4 z-10">
+        <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
+          {/* Confirm Presence Button */}
+          <Button 
+            variant="outline"
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-green-600 text-white hover:bg-green-700 border-green-600"
+            onClick={() => setShowConfirmPresenceDialog(true)}
+            title="Confirmer ma présence GPS"
+          >
+            <div className="text-sm">✅📍</div>
+            <div className="text-xs leading-tight">Confirmer présence</div>
+          </Button>
+
+          {/* Nearby Sessions Button */}
           <Button 
             variant="outline"
             className={`shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto ${
@@ -1591,6 +1605,15 @@ export const InteractiveMap = ({
         onClose={() => setShowNearbySessionsDialog(false)}
         userLocation={userLocation}
       />
+
+      {/* Confirm Presence Dialog */}
+      <ConfirmPresenceDialog
+        open={showConfirmPresenceDialog}
+        onClose={() => setShowConfirmPresenceDialog(false)}
+        userId={user?.id || ''}
+        userLocation={userLocation}
+      />
+
       {/* Help Dialog */}
       <HelpDialog
         isOpen={showHelpDialog}
