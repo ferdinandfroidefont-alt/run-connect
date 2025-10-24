@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useTransition } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppContext } from "@/contexts/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,6 +113,7 @@ const Messages = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { getThemeClasses } = useConversationTheme();
+  const { setHideBottomNav } = useAppContext();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -151,6 +153,15 @@ const Messages = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Show/hide bottom navigation based on conversation state
+  useEffect(() => {
+    if (selectedConversation) {
+      setHideBottomNav(true);
+    } else {
+      setHideBottomNav(false);
+    }
+  }, [selectedConversation, setHideBottomNav]);
 
   // Avatar viewer
   const handleAvatarClick = (avatarUrl: string | null, username: string) => {
@@ -1272,12 +1283,10 @@ const Messages = () => {
   if (selectedConversation) {
     return (
       <>
-        {/* Petite barre noire en haut uniquement pour les conversations */}
-        <div className="w-full h-6 bg-black"></div>
         <div className="min-h-screen bg-background">
-        <div className="max-w-md mx-auto w-full relative h-screen">
+        <div className="max-w-md mx-auto w-full relative h-screen flex flex-col">
           {/* Top Bar - Fixed */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-card border-b border-border z-50"></div>
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
           
           {/* Header - Fixed */}
           <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
@@ -1394,8 +1403,8 @@ const Messages = () => {
           </div>
 
           {/* Messages - Scrollable area with top margin for fixed header */}
-          <div className="pt-[88px] h-full overflow-hidden">
-            <div className={`h-full overflow-y-auto px-4 pt-4 pb-14 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none'}}>
+          <div className="pt-[88px] flex-1 overflow-hidden">
+            <div className={`h-full overflow-y-auto px-4 pt-4 pb-40 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1637,7 +1646,7 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input - Fixed at bottom */}
-          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 z-50">
+          <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 pb-4 bg-background/95 backdrop-blur-sm border-t border-border/30 z-50">
             {/* Emoji Picker */}
             {showEmojiPicker && (
               <div 

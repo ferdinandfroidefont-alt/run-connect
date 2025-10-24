@@ -7,6 +7,8 @@ interface AppContextType {
   setOpenCreateSession: (openFunction: () => void) => void;
   openCreateRoute: () => void;
   setOpenCreateRoute: (openFunction: () => void) => void;
+  hideBottomNav: boolean;
+  setHideBottomNav: (hide: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,6 +29,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [refreshSessions, setRefreshSessionsState] = useState<() => void>(() => () => {});
   const [openCreateSession, setOpenCreateSessionState] = useState<() => void>(() => () => {});
   const [openCreateRoute, setOpenCreateRouteState] = useState<() => void>(() => () => {});
+  const [hideBottomNav, setHideBottomNav] = useState(false);
 
   const setRefreshSessions = useCallback((refresh: () => void) => {
     setRefreshSessionsState(() => refresh);
@@ -47,7 +50,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       openCreateSession,
       setOpenCreateSession,
       openCreateRoute,
-      setOpenCreateRoute
+      setOpenCreateRoute,
+      hideBottomNav,
+      setHideBottomNav
     }}>
       {children}
     </AppContext.Provider>

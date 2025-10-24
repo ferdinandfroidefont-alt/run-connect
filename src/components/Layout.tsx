@@ -2,6 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { BottomNavigation } from './BottomNavigation';
+import { useAppContext } from '@/contexts/AppContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
+  const { hideBottomNav } = useAppContext();
 
   if (loading) {
     return <div className="min-h-screen bg-background" />;
@@ -21,8 +23,8 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="pb-32">{children}</main>
-      <BottomNavigation />
+      <main className={hideBottomNav ? "" : "pb-32"}>{children}</main>
+      {!hideBottomNav && <BottomNavigation />}
     </div>
   );
 };
