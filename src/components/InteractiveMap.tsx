@@ -152,14 +152,44 @@ export const InteractiveMap = ({
   const directionsService = useRef<google.maps.DirectionsService | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
 
-  // Handle URL parameter changes for route creation
+  // Handle URL parameter changes for route creation and save
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const shouldCreateRoute = urlParams.get('createRoute') === 'true';
+    const shouldSaveRoute = urlParams.get('saveRoute') === 'true';
     
     if (shouldCreateRoute && !isRouteCreationMode) {
       console.log('🎯 URL parameter detected - activating route creation mode');
       setIsRouteCreationMode(true);
+      
+      // Clear the URL parameter after activation
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      console.log('✅ URL parameter cleared');
+    }
+    
+    if (shouldSaveRoute) {
+      console.log('💾 URL parameter detected - opening route save dialog');
+      
+      // Récupérer les données du parcours depuis localStorage
+      const pendingRouteData = localStorage.getItem('pendingRoute');
+      if (pendingRouteData) {
+        try {
+          const routeData = JSON.parse(pendingRouteData);
+          routeCoordinates.current = routeData.coordinates.map((coord: any) => 
+            new google.maps.LatLng(coord.lat, coord.lng)
+          );
+          setRouteElevations(routeData.elevations || []);
+          
+          // Ouvrir le dialog de sauvegarde
+          setIsRouteDialogOpen(true);
+          
+          // Nettoyer localStorage
+          localStorage.removeItem('pendingRoute');
+        } catch (error) {
+          console.error('Erreur lors de la récupération du parcours:', error);
+        }
+      }
       
       // Clear the URL parameter after activation
       const newUrl = window.location.pathname;
@@ -938,70 +968,8 @@ export const InteractiveMap = ({
 
 
   const handleCreateRoute = () => {
-    console.log('🗺️ InteractiveMap handleCreateRoute called');
-    console.log('🔍 Current isRouteCreationMode state:', isRouteCreationMode);
-    
-    // Always ensure route creation mode is activated
-    setIsRouteCreationMode(true);
-    console.log('✓ Route creation mode set to true');
-    
-    // Force a re-render by logging the state change
-    setTimeout(() => {
-      console.log('🔄 Route creation mode after state change:', isRouteCreationMode);
-    }, 50);
-    
-    // Clear any existing route
-    if (routePath.current) {
-      routePath.current.setMap(null);
-    }
-    if (directionsRenderer.current) {
-      directionsRenderer.current.setMap(null);
-    }
-    routeCoordinates.current = [];
-    waypoints.current = [];
-    setRouteElevations([]);
-    
-    // Hide all existing markers when creating route
-    markers.current.forEach(marker => marker.setVisible(false));
-    console.log(`Hidden ${markers.current.length} markers`);
-    
-    // Add click listeners to map for route creation
-    if (map.current) {
-      const clickListener = map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
-        console.log('🎯 Map clicked during route creation', event.latLng?.toString());
-        console.log('🔍 Route creation mode state:', isRouteCreationMode);
-        if (event.latLng) {
-          waypoints.current.push(event.latLng);
-          console.log(`✅ Added waypoint ${waypoints.current.length}: ${event.latLng.toString()}`);
-          
-          // Create visual marker for the waypoint
-          const marker = new google.maps.Marker({
-            position: event.latLng,
-            map: map.current,
-            title: `Point ${waypoints.current.length}`,
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: '#3b82f6',
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 2
-            }
-          });
-          
-          if (waypoints.current.length >= 2) {
-            console.log('🚀 Creating directions route with', waypoints.current.length, 'waypoints');
-            createDirectionsRoute();
-          }
-        }
-      });
-      
-      // Store listener to remove later
-      map.current.set('routeClickListener', clickListener);
-      console.log('✓ Click listener added to map');
-    } else {
-      console.log('❌ Map not available');
-    }
+    console.log('🗺️ InteractiveMap handleCreateRoute called - navigating to route creation');
+    navigate('/route-create');
   };
 
   const createDirectionsRoute = () => {
@@ -1545,17 +1513,12 @@ export const InteractiveMap = ({
         {user && (
           <Button
             onClick={() => {
-              console.log('🖱️ Pencil button clicked directly');
-              handleCreateRoute();
+              console.log('🖱️ Pencil button clicked - navigating to route creation');
+              navigate('/route-create');
             }}
             size="sm"
-            variant={isRouteCreationMode ? "default" : "outline"}
-            className={cn(
-              "w-8 h-7 p-0 shadow-map-control flex items-center justify-center",
-              isRouteCreationMode 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                : "bg-card/90 backdrop-blur-sm"
-            )}
+            variant="outline"
+            className="w-8 h-7 p-0 shadow-map-control flex items-center justify-center bg-card/90 backdrop-blur-sm"
             title="Créer un itinéraire"
           >
             <PenTool className="h-3 w-3" />

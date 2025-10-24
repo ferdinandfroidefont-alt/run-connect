@@ -411,22 +411,16 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       return;
     }
     
-    if (onCreateRoute) {
-      onClose(); // Ferme le dialog
-      onCreateRoute(); // Lance le mode création d'itinéraire
-      console.log('✓ onCreateRoute called successfully');
-      toast({ 
-        title: "Mode itinéraire activé", 
-        description: "Cliquez sur la carte pour dessiner votre itinéraire" 
-      });
-    } else {
-      console.log('❌ onCreateRoute is not available');
-      toast({ 
-        title: "Erreur", 
-        description: "Fonction de création d'itinéraire non disponible",
-        variant: "destructive"
-      });
-    }
+    // Fermer le dialog
+    onClose();
+    
+    // Naviguer vers la page de création d'itinéraire
+    navigate('/route-create');
+    
+    toast({ 
+      title: "Mode itinéraire activé", 
+      description: "Cliquez sur la carte pour dessiner votre itinéraire" 
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
