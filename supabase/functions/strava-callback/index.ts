@@ -65,7 +65,41 @@ Deno.serve(async (req) => {
     });
 
     if (!stravaTokenResponse.ok) {
-      console.error('Failed to exchange code for token:', await stravaTokenResponse.text());
+      const errorText = await stravaTokenResponse.text();
+      console.error('Failed to exchange code for token:', errorText);
+      
+      // Handle 403 Athlete quota exceeded
+      if (stravaTokenResponse.status === 403) {
+        return new Response(
+          `
+          <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+              <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
+                <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                <h1 style="margin: 0 0 20px 0;">Connexion temporairement indisponible</h1>
+                <p style="margin: 0 0 20px 0; opacity: 0.9;">Le quota d'API Strava a été atteint.</p>
+                <p style="margin: 0; opacity: 0.8; font-size: 14px;">Veuillez réessayer dans quelques heures.</p>
+              </div>
+              <script>
+                setTimeout(() => {
+                  if (window.opener) {
+                    window.opener.location.href = window.opener.location.origin + '/profile';
+                  }
+                  window.close();
+                }, 3000);
+              </script>
+            </body>
+          </html>
+          `,
+          { 
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'text/html' 
+            } 
+          }
+        );
+      }
+      
       throw new Error('Failed to get access token from Strava');
     }
 
@@ -91,26 +125,41 @@ Deno.serve(async (req) => {
 
     console.log('Profile updated successfully for user:', state);
 
+    // Detect if running in native app or web
+    const userAgent = req.headers.get('user-agent') || '';
+    const isNativeApp = userAgent.includes('wv') || userAgent.includes('WebView');
+    
     // Return success page with redirect
-    const baseUrl = req.headers.get('origin') || 'https://91401b07-9cff-4f05-94e7-3eb42a9b7a7a.sandbox.lovable.dev';
+    const webUrl = 'https://runconnectlovable.app/profile';
+    const nativeUrl = 'runconnect://auth/strava/success';
+    const redirectUrl = isNativeApp ? nativeUrl : webUrl;
     
     return new Response(
       `
       <html>
         <head>
-          <meta http-equiv="refresh" content="2;url=${baseUrl}/profile">
+          <meta http-equiv="refresh" content="2;url=${redirectUrl}">
         </head>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
           <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
             <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
             <h1 style="margin: 0 0 20px 0;">Connexion Strava réussie !</h1>
             <p style="margin: 0 0 20px 0; opacity: 0.9;">Votre compte Strava a été connecté et vérifié avec succès.</p>
-            <p style="margin: 0; opacity: 0.8; font-size: 14px;">Redirection automatique vers votre profil...</p>
+            <p style="margin: 0; opacity: 0.8; font-size: 14px;">Redirection automatique...</p>
           </div>
           <script>
-            // Redirect after 2 seconds
+            // Try to redirect to app first, fallback to web
             setTimeout(() => {
-              window.location.href = '${baseUrl}/profile';
+              const nativeAppUrl = '${nativeUrl}';
+              const webAppUrl = '${webUrl}';
+              
+              // Try native app redirect
+              window.location.href = nativeAppUrl;
+              
+              // Fallback to web after 500ms if native doesn't work
+              setTimeout(() => {
+                window.location.href = webAppUrl;
+              }, 500);
             }, 2000);
           </script>
         </body>
@@ -127,15 +176,23 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in Strava callback:', error);
     
+    const webUrl = 'https://runconnectlovable.app/profile';
+    
     return new Response(
       `
       <html>
-        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-          <h1>❌ Erreur de connexion Strava</h1>
-          <p>Une erreur s'est produite lors de la connexion à Strava.</p>
-          <p>Veuillez réessayer plus tard.</p>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+          <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
+            <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+            <h1 style="margin: 0 0 20px 0;">Erreur de connexion Strava</h1>
+            <p style="margin: 0 0 20px 0; opacity: 0.9;">Une erreur s'est produite lors de la connexion.</p>
+            <p style="margin: 0; opacity: 0.8; font-size: 14px;">Veuillez réessayer plus tard.</p>
+          </div>
           <script>
             setTimeout(() => {
+              if (window.opener) {
+                window.opener.location.href = '${webUrl}';
+              }
               window.close();
             }, 3000);
           </script>

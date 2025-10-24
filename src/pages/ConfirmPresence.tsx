@@ -154,16 +154,14 @@ export default function ConfirmPresence() {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-4 mb-6"
         >
-          {(roleChoice || selectedSession) && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="glass-card"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="glass-card"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <h1 className="text-display-md text-foreground">
             Confirmer la présence
           </h1>
