@@ -1209,10 +1209,14 @@ const Messages = () => {
 
   if (showNewConversation) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-md mx-auto">
-          {/* Header */}
-          <div className="flex items-center gap-3 p-4 border-b border-border bg-card/95 backdrop-blur-sm">
+      <>
+        {/* Barre système Android */}
+        <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+        
+        <div className="min-h-screen bg-background">
+          <div className="max-w-md mx-auto pt-6">
+            {/* Header */}
+            <div className="flex items-center gap-3 p-4 border-b border-border bg-card/95 backdrop-blur-sm">
             <Button
               variant="ghost"
               size="sm"
@@ -1274,9 +1278,10 @@ const Messages = () => {
                  </div>
                </div>
              ))}
-          </div>
+           </div>
         </div>
       </div>
+      </>
     );
   }
 

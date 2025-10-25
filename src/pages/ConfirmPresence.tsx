@@ -139,8 +139,12 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-accent/20 relative overflow-hidden">
-      {/* Background glass effects */}
+    <>
+      {/* Barre système Android */}
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+      
+      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-accent/20 relative overflow-hidden">
+        {/* Background glass effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
@@ -271,5 +275,6 @@ export default function ConfirmPresence() {
         )}
       </div>
     </div>
+    </>
   );
 }
