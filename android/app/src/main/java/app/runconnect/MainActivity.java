@@ -1566,16 +1566,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 
                 // ✅ FORCER SIGN-OUT avant sign-in pour éviter les conflits
-                Log.d(TAG, "🔥 Nettoyage cache + lancement Sign-In avec sélection forcée");
+                Log.d(TAG, "🔥 Nettoyage cache + lancement Sign-In");
                 mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
                     try {
                         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                        
-                        // 🔥 CORRECTION #7: Forcer la popup de sélection de compte
-                        signInIntent.putExtra(com.google.android.gms.auth.api.signin.internal.Constants.EXTRA_FORCE_ACCOUNT_CHOOSER, true);
-                        
+                        // Le sign-out ci-dessus suffit à forcer le choix de compte
                         startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE);
-                        Log.d(TAG, "🚀 Google Sign-In Intent lancé avec sélection forcée");
+                        Log.d(TAG, "🚀 Google Sign-In Intent lancé");
                     } catch (Exception e) {
                         Log.e(TAG, "❌ Error launching Google Sign-In", e);
                         notifyGoogleSignInError("Error launching sign-in: " + e.getMessage());
