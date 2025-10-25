@@ -407,9 +407,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        // ❌ DÉSACTIVÉ - Les permissions sont maintenant demandées à la demande via AndroidBridge
-        // Plus de demandes automatiques au démarrage pour éviter la popup bleue
-        /*
+        // ✅ RÉACTIVÉ - Demande automatique de permissions au démarrage
+        // Affiche les pop-ups Android natives dès le premier lancement
         if (!hasLocationPermission()) {
             Log.d(TAG, "🔐 Requesting location permissions...");
             ActivityCompat.requestPermissions(this,
@@ -460,7 +459,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.d(TAG, "✅ Microphone permissions already granted");
         }
-        */
 
         // ✅ Créer le canal de notification pour Firebase
         createNotificationChannels();
