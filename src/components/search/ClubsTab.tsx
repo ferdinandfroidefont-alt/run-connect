@@ -284,10 +284,10 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full p-0 glass-card">
+              <PopoverContent className="w-[calc(100vw-2rem)] p-0 glass-card z-[70]" align="start">
                 <Command>
                   <CommandList>
-                    <ScrollArea className="h-[200px]">
+                    <ScrollArea className="h-[300px]">
                       <CommandGroup>
                         <CommandItem
                           value=""

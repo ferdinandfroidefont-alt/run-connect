@@ -65,7 +65,7 @@ export default function Search() {
       <div 
         className={`fixed inset-0 z-[60] ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{ 
-          paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)',
+          paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)'
         }}
         onTouchStart={handleTouchStart}

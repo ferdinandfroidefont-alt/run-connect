@@ -34,10 +34,17 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
       permissionPrompt
     });
 
-    if (isNative && hasPermission && deviceContacts && deviceContacts.length > 0) {
+    if (isNative && hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0 && !loading) {
       loadContactsFromApp();
     }
   }, [isNative, hasPermission, deviceContacts]);
+
+  useEffect(() => {
+    // Recharger automatiquement après autorisation
+    if (hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0) {
+      loadContactsFromApp();
+    }
+  }, [hasPermission]);
 
   const normalizePhone = (phone: string): string => {
     let normalized = phone.replace(/\D/g, '');
@@ -140,19 +147,27 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
     try {
       await requestPermissions();
       
-      // Wait a bit for state to update
+      // Attendre un peu pour que les permissions soient bien enregistrées
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (hasPermission) {
-        console.log('[ContactsTab] Permission granted, loading contacts...');
-        await loadContacts();
+      // Forcer le rechargement des contacts depuis le device
+      await loadContacts();
+      
+      // Attendre que les contacts soient chargés
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Puis charger les suggestions
+      if (deviceContacts && deviceContacts.length > 0) {
+        await loadContactsFromApp();
       } else {
-        console.log('[ContactsTab] Permission not granted');
-        toast({
-          title: "Permission refusée",
-          description: "Vous devez autoriser l'accès à vos contacts pour utiliser cette fonctionnalité",
-          variant: "destructive"
-        });
+        console.log('[ContactsTab] No contacts loaded yet, will retry...');
+        // Retry après 2s si pas de contacts
+        setTimeout(async () => {
+          await loadContacts();
+          if (deviceContacts && deviceContacts.length > 0) {
+            await loadContactsFromApp();
+          }
+        }, 2000);
       }
     } catch (error) {
       console.error('[ContactsTab] Error requesting permission:', error);

@@ -31,14 +31,14 @@ export const SearchTabs = ({ activeTab, onTabChange }: SearchTabsProps) => {
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-full transition-all",
+            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-full transition-all whitespace-nowrap",
             activeTab === tab.id
               ? "bg-primary text-primary-foreground shadow-lg"
               : "text-muted-foreground hover:text-foreground"
           )}
         >
           {tab.icon}
-          <span className="text-sm font-medium">{tab.label}</span>
+          <span className="text-xs font-medium">{tab.label}</span>
         </button>
       ))}
     </div>

@@ -24,7 +24,7 @@ export const SearchHeader = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-10 glass-card px-4 py-3 flex items-center gap-3">
+    <header className="sticky top-0 z-10 glass-card px-4 py-4 flex items-center gap-3 mt-6">
       {/* Flèche retour */}
       <Button
         variant="ghost"
@@ -44,7 +44,7 @@ export const SearchHeader = ({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={placeholder}
-          className="pl-10 glass-card border-0 bg-background/50"
+          className="pl-10 glass-card border-0 bg-background/50 h-10"
         />
       </div>
     </header>
