@@ -341,10 +341,10 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
       className="w-full h-full min-h-screen p-0 flex flex-col backdrop-blur-xl bg-background/80 border-border/50"
     >
       {/* Barre système Android */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+      <div className="fixed top-0 left-0 right-0 w-full h-4 bg-background z-50"></div>
       
       {/* Sticky Header avec filtres */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50 pt-6">
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50 pt-4">
         {/* Flèche de retour + Titre */}
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <Button
@@ -643,7 +643,10 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </ScrollArea>
 
           {/* Actions */}
-          <div className="px-4 py-4 border-t border-border/50 backdrop-blur-xl bg-background/80">
+          <div 
+            className="px-4 py-4 border-t border-border/50 backdrop-blur-xl bg-background/80"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+          >
             <Button
               variant="outline"
               onClick={onClose}

@@ -1651,7 +1651,10 @@ const Messages = () => {
           </Dialog>
 
           {/* Message input - Fixed at bottom */}
-          <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 pb-4 bg-background/95 backdrop-blur-sm border-t border-border/30 z-50">
+          <div 
+            className="fixed bottom-0 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-50"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+          >
             {/* Emoji Picker */}
             {showEmojiPicker && (
               <div 
