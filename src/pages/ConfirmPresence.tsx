@@ -140,18 +140,18 @@ export default function ConfirmPresence() {
 
   return (
     <>
-      {/* Barre système Android */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+      {/* Barre système Android - fusionnée avec le fond */}
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background/95 backdrop-blur-xl z-50"></div>
       
-      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-accent/20 relative overflow-hidden">
-        {/* Background glass effects */}
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        {/* Background subtle effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 min-h-screen p-4 pb-24">
+      <div className="relative z-10 min-h-screen p-4 pb-24 pt-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -162,17 +162,17 @@ export default function ConfirmPresence() {
             variant="ghost"
             size="icon"
             onClick={() => navigate('/')}
-            className="glass-card"
+            className="bg-card/30 backdrop-blur-sm border border-border/50 hover:bg-muted/30"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-display-md text-foreground">
+          <h1 className="text-2xl font-semibold text-foreground">
             Confirmer la présence
           </h1>
         </motion.div>
 
         {loading ? (
-          <div className="glass-card p-12 flex items-center justify-center">
+          <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-12 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : !roleChoice ? (
@@ -180,7 +180,7 @@ export default function ConfirmPresence() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-8"
+            className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8"
           >
             <p className="text-center text-muted-foreground mb-12 text-lg">
               Choisissez votre rôle pour cette séance
@@ -191,9 +191,9 @@ export default function ConfirmPresence() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleRoleChoice('creator')}
-                className="glass-card p-8 flex flex-col items-center gap-4 hover:bg-primary/5 transition-all cursor-pointer border-2 border-transparent hover:border-primary/30 hover:shadow-lg hover:shadow-primary/20"
+                className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
               >
-                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCheck className="h-10 w-10 text-primary" />
                 </div>
                 <h2 className="text-xl font-bold">Je suis créateur</h2>
@@ -206,9 +206,9 @@ export default function ConfirmPresence() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleRoleChoice('participant')}
-                className="glass-card p-8 flex flex-col items-center gap-4 hover:bg-primary/5 transition-all cursor-pointer border-2 border-transparent hover:border-primary/30 hover:shadow-lg hover:shadow-primary/20"
+                className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
               >
-                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-accent/20 to-accent/10 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-full bg-accent/10 flex items-center justify-center">
                   <Users className="h-10 w-10 text-accent" />
                 </div>
                 <h2 className="text-xl font-bold">Je participe</h2>
@@ -225,7 +225,7 @@ export default function ConfirmPresence() {
             animate={{ opacity: 1, y: 0 }}
           >
             {sessions.length === 0 ? (
-              <div className="glass-card p-12 text-center">
+              <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-12 text-center">
                 <p className="text-xl font-semibold mb-2">Aucune séance récente</p>
                 <p className="text-muted-foreground">
                   {roleChoice === 'creator' 
@@ -234,7 +234,7 @@ export default function ConfirmPresence() {
                 </p>
               </div>
             ) : (
-              <div className="glass-card p-6">
+              <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-6">
                 <h2 className="text-2xl font-bold mb-2">
                   {roleChoice === 'creator' 
                     ? "Sélectionnez votre séance"
