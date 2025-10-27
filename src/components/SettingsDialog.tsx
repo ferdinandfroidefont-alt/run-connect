@@ -50,9 +50,10 @@ interface Profile {
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialSearch?: string;
 }
 
-export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
+export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDialogProps) => {
   const { user, session, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
@@ -65,9 +66,16 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showConversationThemes, setShowConversationThemes] = useState(false);
   const [showReferralDialog, setShowReferralDialog] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   
   const { toast } = useToast();
+
+  // Réinitialiser la recherche quand initialSearch change
+  useEffect(() => {
+    if (initialSearch) {
+      setSearchQuery(initialSearch);
+    }
+  }, [initialSearch]);
 
   // Fonction de filtrage pour la recherche
   const matchesSearch = (text: string) => {

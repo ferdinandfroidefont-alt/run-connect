@@ -90,6 +90,7 @@ const Profile = () => {
   const [routesLoading, setRoutesLoading] = useState(false);
   const [commonClubs, setCommonClubs] = useState<any[]>([]);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [settingsFocus, setSettingsFocus] = useState<string>("");
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const [reliabilityRate, setReliabilityRate] = useState(0);
@@ -116,11 +117,14 @@ const Profile = () => {
   // Ouvrir automatiquement les paramètres si tab=settings
   useEffect(() => {
     const tabParam = searchParams.get('tab');
+    const focusParam = searchParams.get('focus');
     if (tabParam === 'settings' && !isViewingOtherUser) {
+      setSettingsFocus(focusParam || "");
       setShowSettingsDialog(true);
       // Nettoyer l'URL
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('tab');
+      newParams.delete('focus');
       navigate({ search: newParams.toString() }, { replace: true });
     }
   }, [searchParams, navigate, isViewingOtherUser]);
@@ -1226,6 +1230,7 @@ const Profile = () => {
         <SettingsDialog
           open={showSettingsDialog}
           onOpenChange={setShowSettingsDialog}
+          initialSearch={settingsFocus}
         />
 
         {/* Report User Dialog */}

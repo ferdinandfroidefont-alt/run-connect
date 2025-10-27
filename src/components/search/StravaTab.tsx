@@ -111,7 +111,7 @@ export const StravaTab = ({ searchQuery }: { searchQuery: string }) => {
   };
 
   const handleConnectStrava = () => {
-    navigate('/profile?tab=settings');
+    navigate('/profile?tab=settings&focus=strava');
   };
 
   if (loading) {
