@@ -154,6 +154,17 @@ const Messages = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Scroll to bottom when conversation is selected
+  useEffect(() => {
+    if (selectedConversation) {
+      // Small delay to ensure messages are loaded
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedConversation]);
+
   // Show/hide bottom navigation based on conversation state
   useEffect(() => {
     if (selectedConversation) {
@@ -1289,7 +1300,7 @@ const Messages = () => {
     return (
       <>
         <div className="min-h-screen bg-background">
-        <div className="max-w-md mx-auto w-full relative h-screen flex flex-col">
+        <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* Top Bar - Fixed */}
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
           
@@ -1408,8 +1419,8 @@ const Messages = () => {
           </div>
 
           {/* Messages - Scrollable area with top margin for fixed header */}
-          <div className="pt-[88px] flex-1 overflow-hidden">
-            <div className={`h-full overflow-y-auto px-4 pt-4 pb-40 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none'}}>
+          <div className="pt-[88px] flex-1 overflow-y-auto min-h-0">
+            <div className={`h-full px-4 pt-4 pb-4 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1650,10 +1661,10 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Message input - Fixed at bottom */}
+          {/* Message input - Sticky at bottom (follows keyboard) */}
           <div 
-            className="fixed bottom-0 left-1/2 transform -translate-x-1/2 max-w-md w-full p-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-50"
-            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+            className="sticky bottom-0 w-full p-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
+            style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
           >
             {/* Emoji Picker */}
             {showEmojiPicker && (

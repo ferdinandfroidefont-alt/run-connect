@@ -58,6 +58,7 @@
             android:launchMode="singleTop"
             android:hardwareAccelerated="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/AppTheme.NoActionBarFull">
             
             <intent-filter>

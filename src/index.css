@@ -411,3 +411,47 @@ All colors MUST be HSL.
 .scroll-smooth {
   scroll-behavior: smooth;
 }
+
+/* ===================================
+   ⌨️ ANDROID KEYBOARD HANDLING
+   =================================== */
+
+/* Prevent auto-zoom on input focus (iOS & Android) */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Android keyboard handling - mobile only */
+@media screen and (max-width: 768px) {
+  /* Ensure root containers handle height properly */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+  
+  #root {
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Container aware of keyboard */
+  .keyboard-aware-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height - accounts for mobile keyboards */
+    overflow: hidden;
+  }
+
+  /* Input container that moves with keyboard */
+  .keyboard-input-container {
+    flex-shrink: 0;
+    transform: translateZ(0); /* Force GPU acceleration for smooth movement */
+    will-change: transform;
+  }
+}
