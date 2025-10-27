@@ -1,5 +1,6 @@
 import { toast as sonnerToast } from "sonner";
 import { CheckCircle, XCircle, AlertCircle, Info, Loader2 } from "lucide-react";
+import { isReallyNative } from "@/lib/nativeDetection";
 
 export type ToastType = "success" | "error" | "warning" | "info" | "loading";
 
@@ -51,6 +52,12 @@ const getToastStyles = (type: ToastType) => {
 
 export const enhancedToast = {
   success: (options: EnhancedToastOptions) => {
+    // 🔇 Désactiver les toasts de succès sur Android
+    if (isReallyNative()) {
+      console.log('🔇 Toast success désactivé sur Android:', options.title);
+      return null;
+    }
+    
     return sonnerToast.custom((t) => (
       <div className={getToastStyles("success")}>
         {getToastIcon("success")}
@@ -109,6 +116,12 @@ export const enhancedToast = {
   },
 
   warning: (options: EnhancedToastOptions) => {
+    // 🔇 Désactiver les toasts warning sur Android
+    if (isReallyNative()) {
+      console.log('🔇 Toast warning désactivé sur Android:', options.title);
+      return null;
+    }
+    
     return sonnerToast.custom((t) => (
       <div className={getToastStyles("warning")}>
         {getToastIcon("warning")}
@@ -138,6 +151,12 @@ export const enhancedToast = {
   },
 
   info: (options: EnhancedToastOptions) => {
+    // 🔇 Désactiver les toasts info sur Android
+    if (isReallyNative()) {
+      console.log('🔇 Toast info désactivé sur Android:', options.title);
+      return null;
+    }
+    
     return sonnerToast.custom((t) => (
       <div className={getToastStyles("info")}>
         {getToastIcon("info")}
@@ -167,6 +186,12 @@ export const enhancedToast = {
   },
 
   loading: (options: EnhancedToastOptions) => {
+    // 🔇 Désactiver les toasts loading sur Android
+    if (isReallyNative()) {
+      console.log('🔇 Toast loading désactivé sur Android:', options.title);
+      return null;
+    }
+    
     return sonnerToast.custom((t) => (
       <div className={getToastStyles("loading")}>
         {getToastIcon("loading")}
