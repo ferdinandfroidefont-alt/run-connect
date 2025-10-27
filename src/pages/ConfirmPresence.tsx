@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
@@ -24,6 +25,7 @@ export default function ConfirmPresence() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   
   const [loading, setLoading] = useState(false);
   const [roleChoice, setRoleChoice] = useState<'creator' | 'participant' | null>(null);
@@ -167,7 +169,7 @@ export default function ConfirmPresence() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-2xl font-semibold text-foreground">
-            Confirmer la présence
+            {t('confirmPresence.title')}
           </h1>
         </motion.div>
 
@@ -183,7 +185,7 @@ export default function ConfirmPresence() {
             className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8"
           >
             <p className="text-center text-muted-foreground mb-12 text-lg">
-              Choisissez votre rôle pour cette séance
+              {t('confirmPresence.selectRole')}
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
@@ -196,9 +198,9 @@ export default function ConfirmPresence() {
                 <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCheck className="h-10 w-10 text-primary" />
                 </div>
-                <h2 className="text-xl font-bold">Je suis créateur</h2>
+                <h2 className="text-xl font-bold">{t('confirmPresence.creator')}</h2>
                 <p className="text-sm text-muted-foreground text-center">
-                  Validez les participants présents à votre séance
+                  {t('confirmPresence.creatorDescription')}
                 </p>
               </motion.button>
 
@@ -211,9 +213,9 @@ export default function ConfirmPresence() {
                 <div className="h-20 w-20 rounded-full bg-accent/10 flex items-center justify-center">
                   <Users className="h-10 w-10 text-accent" />
                 </div>
-                <h2 className="text-xl font-bold">Je participe</h2>
+                <h2 className="text-xl font-bold">{t('confirmPresence.participant')}</h2>
                 <p className="text-sm text-muted-foreground text-center">
-                  Confirmez votre présence sur le lieu de la séance
+                  {t('confirmPresence.participantDescription')}
                 </p>
               </motion.button>
             </div>
@@ -226,24 +228,22 @@ export default function ConfirmPresence() {
           >
             {sessions.length === 0 ? (
               <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-12 text-center">
-                <p className="text-xl font-semibold mb-2">Aucune séance récente</p>
+                <p className="text-xl font-semibold mb-2">{t('confirmPresence.noSessions')}</p>
                 <p className="text-muted-foreground">
                   {roleChoice === 'creator' 
-                    ? "Vous n'avez créé aucune séance récente"
-                    : "Vous ne participez à aucune séance récente"}
+                    ? t('confirmPresence.noCreatorSessions')
+                    : t('confirmPresence.noParticipantSessions')}
                 </p>
               </div>
             ) : (
               <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-6">
                 <h2 className="text-2xl font-bold mb-2">
-                  {roleChoice === 'creator' 
-                    ? "Sélectionnez votre séance"
-                    : "Sélectionnez la séance"}
+                  {t('confirmPresence.selectSession')}
                 </h2>
                 <p className="text-muted-foreground mb-6">
                   {roleChoice === 'creator'
-                    ? "Choisissez la séance dont vous êtes le créateur"
-                    : "Choisissez la séance à laquelle vous participez"}
+                    ? t('confirmPresence.selectCreatorSession')
+                    : t('confirmPresence.selectParticipantSession')}
                 </p>
                 <SessionSelector
                   sessions={sessions}

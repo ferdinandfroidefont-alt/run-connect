@@ -4,12 +4,14 @@ import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { NativePermissionTester } from "@/components/NativePermissionTester";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams } from "react-router-dom";
 import { useEffect, useState } from 'react';
 import { nativeManager } from '@/lib/nativeInit';
 
 const Index = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { 
     needsOnboarding, 
     needsProfileSetup,
@@ -47,7 +49,7 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">Chargement...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );

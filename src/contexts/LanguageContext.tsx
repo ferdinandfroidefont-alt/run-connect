@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { translations, Language } from '@/lib/translations';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LanguageContextType {
   language: Language;
@@ -26,13 +27,56 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     const saved = localStorage.getItem('app-language');
     return (saved as Language) || 'fr';
   });
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('app-language', language);
-  }, [language]);
+    const loadLanguageFromProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferred_language')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (profile?.preferred_language) {
+            setLanguageState(profile.preferred_language as Language);
+            localStorage.setItem('app-language', profile.preferred_language);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading language from profile:', error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
 
-  const setLanguage = (lang: Language) => {
+    loadLanguageFromProfile();
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('app-language', language);
+    }
+  }, [language, isLoaded]);
+
+  const setLanguage = async (lang: Language) => {
     setLanguageState(lang);
+    
+    // Sauvegarder aussi dans la base de données
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ preferred_language: lang })
+          .eq('user_id', user.id);
+      }
+    } catch (error) {
+      console.error('Error saving language to profile:', error);
+    }
   };
 
   const t = (key: string): string => {

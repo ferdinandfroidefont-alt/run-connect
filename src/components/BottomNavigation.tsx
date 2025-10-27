@@ -3,36 +3,40 @@ import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { SimplePermissionsTest } from './SimplePermissionsTest';
 
-const navItems = [{
-  path: '/',
-  emoji: '🗺️',
-  label: 'Carte'
-}, {
-  path: '/my-sessions',
-  emoji: '🚴‍♂️',
-  label: 'Mes Séances'
-}, {
-  path: '/messages',
-  emoji: '💬',
-  label: 'Messages'
-}, {
-  path: '/leaderboard',
-  emoji: '🏆',
-  label: 'Classement'
-}];
 export const BottomNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const {
     openCreateSession
   } = useAppContext();
+
+  // Navigation items with translations
+  const navItems = [{
+    path: '/',
+    emoji: '🗺️',
+    label: t('navigation.home')
+  }, {
+    path: '/my-sessions',
+    emoji: '🚴‍♂️',
+    label: t('navigation.mySessions')
+  }, {
+    path: '/messages',
+    emoji: '💬',
+    label: t('navigation.messages')
+  }, {
+    path: '/leaderboard',
+    emoji: '🏆',
+    label: t('navigation.leaderboard')
+  }];
 
   // Navigation INSTANTANÉE sans délai
   const handleNavigation = (path: string) => {
@@ -177,7 +181,7 @@ export const BottomNavigation = () => {
               className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-primary text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30"
             >
               <Plus size={20} />
-              <span className="text-[10px] font-bold">CRÉER</span>
+              <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
             </button>
           </div>
 
