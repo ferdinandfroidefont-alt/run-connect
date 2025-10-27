@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 
 interface StravaConnectProps {
   profile?: {
@@ -18,6 +20,33 @@ interface StravaConnectProps {
 export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }: StravaConnectProps) => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const isNative = Capacitor.isNativePlatform();
+  
+  // 🔥 Listen for Strava auth success event from native app
+  useEffect(() => {
+    const handleStravaAuthSuccess = async (event: any) => {
+      console.log('✅ Strava auth success event received:', event);
+      
+      toast.success('✅ Connexion Strava réussie !');
+      
+      // Wait a bit for the database to update
+      setTimeout(() => {
+        if (onProfileUpdate) {
+          onProfileUpdate();
+        } else {
+          window.location.reload();
+        }
+      }, 1000);
+    };
+    
+    // Listen for custom event from native
+    window.addEventListener('stravaAuthSuccess', handleStravaAuthSuccess);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('stravaAuthSuccess', handleStravaAuthSuccess);
+    };
+  }, [onProfileUpdate]);
 
   const handleStravaConnect = async () => {
     if (!user) return;
@@ -33,8 +62,36 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
 
       if (error) throw error;
 
-      // Redirect to Strava OAuth
-      window.location.href = data.authUrl;
+      // 🔥 Use Browser plugin for better WebView management on native
+      if (isNative) {
+        console.log('📱 Opening Strava OAuth in native browser');
+        await Browser.open({ 
+          url: data.authUrl,
+          presentationStyle: 'popover'
+        });
+        
+        // The app will be notified via deep link + event when auth succeeds
+      } else {
+        // Web: Open in new window
+        console.log('🌐 Opening Strava OAuth in web popup');
+        window.open(data.authUrl, 'strava_auth', 'width=600,height=700');
+        
+        // Listen for message from popup
+        const handleMessage = (event: MessageEvent) => {
+          if (event.data?.type === 'strava_auth_success') {
+            toast.success('✅ Connexion Strava réussie !');
+            setTimeout(() => {
+              if (onProfileUpdate) {
+                onProfileUpdate();
+              } else {
+                window.location.reload();
+              }
+            }, 1000);
+            window.removeEventListener('message', handleMessage);
+          }
+        };
+        window.addEventListener('message', handleMessage);
+      }
     } catch (error) {
       console.error('Error connecting to Strava:', error);
       toast.error('Erreur lors de la connexion à Strava');

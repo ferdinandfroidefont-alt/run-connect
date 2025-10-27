@@ -127,6 +127,9 @@ public class MainActivity extends AppCompatActivity {
         // Stocker l'instance pour accès depuis MessagingService
         instance = this;
         
+        // Handle deep link if activity was started with one
+        handleIntent(getIntent());
+        
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
         
@@ -503,6 +506,59 @@ public class MainActivity extends AppCompatActivity {
                 null
             );
         }
+    }
+    
+    /**
+     * 🔥 HANDLE NEW INTENT - Pour gérer les deep links Strava
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.d(TAG, "🔗 onNewIntent appelé");
+        setIntent(intent);
+        handleIntent(intent);
+    }
+    
+    /**
+     * 🔥 HANDLE INTENT - Gérer les deep links (Strava, etc.)
+     */
+    private void handleIntent(Intent intent) {
+        if (intent == null) {
+            Log.d(TAG, "🔗 Intent null, aucun deep link");
+            return;
+        }
+        
+        Uri data = intent.getData();
+        if (data == null) {
+            Log.d(TAG, "🔗 Pas de données dans l'intent");
+            return;
+        }
+        
+        String deepLink = data.toString();
+        Log.d(TAG, "🔗 Deep link reçu: " + deepLink);
+        
+        // Vérifier si c'est un callback Strava
+        if (deepLink.contains("strava/success")) {
+            Log.d(TAG, "✅ Callback Strava détecté !");
+            
+            // Injecter un événement JavaScript pour notifier l'app web
+            if (webView != null) {
+                webView.post(() -> {
+                    String script = "window.dispatchEvent(new CustomEvent('stravaAuthSuccess', { detail: { success: true } }));";
+                    webView.evaluateJavascript(script, value -> {
+                        Log.d(TAG, "✅ Événement stravaAuthSuccess injecté dans la WebView");
+                    });
+                    
+                    // Rediriger vers la page de profil
+                    webView.loadUrl(START_URL + "/profile");
+                });
+            }
+            
+            return;
+        }
+        
+        // Gérer d'autres deep links si nécessaire
+        Log.d(TAG, "🔗 Deep link non géré: " + deepLink);
     }
     
     @Override

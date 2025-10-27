@@ -125,42 +125,60 @@ Deno.serve(async (req) => {
 
     console.log('Profile updated successfully for user:', state);
 
-    // Detect if running in native app or web
+    // Determine if we're in a native app or web browser
     const userAgent = req.headers.get('user-agent') || '';
-    const isNativeApp = userAgent.includes('wv') || userAgent.includes('WebView');
-    
-    // Return success page with redirect
-    const webUrl = 'https://runconnectlovable.app/profile';
-    const nativeUrl = 'runconnect://auth/strava/success';
-    const redirectUrl = isNativeApp ? nativeUrl : webUrl;
-    
+    const isNative = userAgent.includes('RunConnect') || 
+                     userAgent.includes('wv') || 
+                     userAgent.includes('Android');
+
+    console.log('User agent:', userAgent);
+    console.log('Is native app:', isNative);
+
+    // Return success page with automatic redirect
+    // ✅ FIXED: Use correct deep link scheme app.runconnect://
+    const redirectUrl = isNative 
+      ? `app.runconnect://auth/strava/success`
+      : `https://run-connect.lovable.app/profile`;
+
+    console.log('Redirecting to:', redirectUrl);
+
     return new Response(
       `
+      <!DOCTYPE html>
       <html>
         <head>
-          <meta http-equiv="refresh" content="2;url=${redirectUrl}">
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Strava Connected</title>
+          <meta http-equiv="refresh" content="0;url=${redirectUrl}">
         </head>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
           <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
             <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
-            <h1 style="margin: 0 0 20px 0;">Connexion Strava réussie !</h1>
-            <p style="margin: 0 0 20px 0; opacity: 0.9;">Votre compte Strava a été connecté et vérifié avec succès.</p>
-            <p style="margin: 0; opacity: 0.8; font-size: 14px;">Redirection automatique...</p>
+            <h2 style="color: #FC4C02;">Connexion Strava réussie !</h2>
+            <p>Retour à RunConnect...</p>
           </div>
           <script>
-            // Try to redirect to app first, fallback to web
-            setTimeout(() => {
-              const nativeAppUrl = '${nativeUrl}';
-              const webAppUrl = '${webUrl}';
-              
-              // Try native app redirect
-              window.location.href = nativeAppUrl;
-              
-              // Fallback to web after 500ms if native doesn't work
+            // For native app - trigger redirect immediately
+            if (${isNative}) {
+              window.location.href = '${redirectUrl}';
+              // Close this window after redirect
               setTimeout(() => {
-                window.location.href = webAppUrl;
+                try {
+                  window.close();
+                } catch (e) {
+                  console.log('Cannot close window:', e);
+                }
               }, 500);
-            }, 2000);
+            } else {
+              // For web - use postMessage to parent window
+              if (window.opener) {
+                window.opener.postMessage({ type: 'strava_auth_success' }, '*');
+                setTimeout(() => window.close(), 500);
+              } else {
+                window.location.href = '${redirectUrl}';
+              }
+            }
           </script>
         </body>
       </html>
