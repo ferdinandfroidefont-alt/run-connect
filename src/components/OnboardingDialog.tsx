@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Shield, FileText, Check, X } from "lucide-react";
+import { Bell, Shield, FileText, Check, X, Languages } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { languages, Language } from "@/lib/translations";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OnboardingDialogProps {
   isOpen: boolean;
@@ -16,7 +19,9 @@ interface OnboardingDialogProps {
 export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [step, setStep] = useState(1);
+  const { language, setLanguage, t } = useLanguage();
+  const [step, setStep] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(language);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [acceptedRGPD, setAcceptedRGPD] = useState(false);
   const [acceptedSecurity, setAcceptedSecurity] = useState(false);
@@ -36,8 +41,8 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
         
         if (permission === 'granted') {
           toast({
-            title: "Notifications activées",
-            description: "Vous recevrez désormais des notifications pour les nouvelles séances et messages."
+            title: t('onboarding.notificationsGranted'),
+            description: t('onboarding.notificationsDescription')
           });
         }
       } catch (error) {
@@ -66,11 +71,15 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
     try {
       console.log('📤 Sending upsert request to profiles table...');
       
+      // Sauvegarder la langue choisie
+      setLanguage(selectedLanguage);
+      
       // Utiliser upsert pour créer ou mettre à jour le profil
       const { error, data } = await supabase
         .from('profiles')
         .upsert({
           user_id: user.id,
+          preferred_language: selectedLanguage,
           notifications_enabled: notificationPermission === 'granted',
           rgpd_accepted: acceptedRGPD,
           security_rules_accepted: acceptedSecurity,
@@ -95,8 +104,8 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
       console.log('✅ Onboarding completed successfully!');
       
       toast({
-        title: "Configuration terminée",
-        description: "Votre compte est maintenant configuré et prêt à l'emploi!"
+        title: t('onboarding.setupComplete'),
+        description: t('onboarding.setupCompleteDescription')
       });
 
       onComplete();
@@ -116,6 +125,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
     }
   };
 
+  const canProceedToStep1 = selectedLanguage !== null;
   const canProceedToStep2 = notificationPermission !== null;
   const canComplete = acceptedRGPD && acceptedSecurity;
 
@@ -131,33 +141,71 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center">
-            Configuration de votre compte
+            {t('onboarding.title')}
           </DialogTitle>
         </DialogHeader>
+
+        {step === 0 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="text-center pb-3">
+                <Languages className="h-12 w-12 mx-auto text-primary mb-2" />
+                <CardTitle className="text-lg">{t('onboarding.languageTitle')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  {t('onboarding.languageDescription')}
+                </p>
+                
+                <Select value={selectedLanguage} onValueChange={(value) => setSelectedLanguage(value as Language)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(languages).map(([code, { nativeName }]) => (
+                      <SelectItem key={code} value={code}>{nativeName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
+            <Button
+              onClick={() => {
+                setLanguage(selectedLanguage);
+                setStep(1);
+              }}
+              disabled={!canProceedToStep1}
+              className="w-full"
+            >
+              {t('onboarding.continue')}
+            </Button>
+          </div>
+        )}
 
         {step === 1 && (
           <div className="space-y-6">
             <Card>
               <CardHeader className="text-center pb-3">
                 <Bell className="h-12 w-12 mx-auto text-primary mb-2" />
-                <CardTitle className="text-lg">Notifications</CardTitle>
+                <CardTitle className="text-lg">{t('onboarding.notificationsTitle')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground text-center">
-                  Autorisez les notifications pour être informé des nouvelles séances, demandes de participation et messages.
+                  {t('onboarding.notificationsDescription')}
                 </p>
                 
                 {notificationPermission === 'granted' && (
                   <div className="flex items-center justify-center gap-2 text-green-600">
                     <Check className="h-4 w-4" />
-                    <span className="text-sm">Notifications autorisées</span>
+                    <span className="text-sm">{t('onboarding.notificationsGranted')}</span>
                   </div>
                 )}
                 
                 {notificationPermission === 'denied' && (
                   <div className="flex items-center justify-center gap-2 text-red-600">
                     <X className="h-4 w-4" />
-                    <span className="text-sm">Notifications refusées</span>
+                    <span className="text-sm">{t('onboarding.notificationsDenied')}</span>
                   </div>
                 )}
                 
@@ -167,7 +215,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                     disabled={notificationPermission === 'granted'}
                     className="flex-1"
                   >
-                    {notificationPermission === 'granted' ? 'Autorisées' : 'Autoriser'}
+                    {notificationPermission === 'granted' ? t('onboarding.notificationsGranted') : t('onboarding.allow')}
                   </Button>
                   <Button
                     variant="outline"
@@ -175,19 +223,28 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                     disabled={notificationPermission !== null}
                     className="flex-1"
                   >
-                    Passer
+                    {t('onboarding.skip')}
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Button
-              onClick={() => setStep(2)}
-              disabled={!canProceedToStep2}
-              className="w-full"
-            >
-              Continuer
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep(0)}
+                className="flex-1"
+              >
+                {t('onboarding.back')}
+              </Button>
+              <Button
+                onClick={() => setStep(2)}
+                disabled={!canProceedToStep2}
+                className="flex-1"
+              >
+                {t('onboarding.continue')}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -199,15 +256,13 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <FileText className="h-5 w-5" />
-                    Règlement RGPD
+                    {t('onboarding.rgpdTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Nous collectons et traitons vos données personnelles (nom, email, photo de profil) 
-                      uniquement dans le cadre de l'utilisation de l'application. Vous disposez d'un droit 
-                      d'accès, de rectification et de suppression de vos données.
+                      {t('onboarding.rgpdDescription')}
                     </p>
                     <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
                          onClick={() => {
@@ -227,7 +282,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                         htmlFor="rgpd" 
                         className="text-sm font-medium leading-relaxed cursor-pointer flex-1"
                       >
-                        J'accepte le traitement de mes données personnelles
+                        {t('onboarding.rgpdAccept')}
                       </label>
                     </div>
                   </div>
@@ -239,15 +294,13 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Shield className="h-5 w-5" />
-                    Règles de sécurité
+                    {t('onboarding.securityTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Pour votre sécurité et celle des autres utilisateurs, vous vous engagez à :
-                      ne pas partager vos identifiants, signaler tout comportement inapproprié, 
-                      et respecter les autres membres de la communauté.
+                      {t('onboarding.securityDescription')}
                     </p>
                     <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
                          onClick={() => {
@@ -267,7 +320,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                         htmlFor="security" 
                         className="text-sm font-medium leading-relaxed cursor-pointer flex-1"
                       >
-                        J'accepte les règles de sécurité et d'utilisation
+                        {t('onboarding.securityAccept')}
                       </label>
                     </div>
                   </div>
@@ -281,14 +334,14 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                 onClick={() => setStep(1)}
                 className="flex-1"
               >
-                Retour
+                {t('onboarding.back')}
               </Button>
               <Button
                 onClick={handleComplete}
                 disabled={!canComplete || loading}
                 className={`flex-1 ${!canComplete ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {loading ? "Configuration..." : "Terminer"}
+                {loading ? t('onboarding.finishing') : t('onboarding.finish')}
               </Button>
             </div>
           </div>
