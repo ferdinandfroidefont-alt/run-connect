@@ -16,7 +16,12 @@ interface Profile {
   avatar_url: string | null;
 }
 
-export const StravaTab = ({ searchQuery }: { searchQuery: string }) => {
+interface StravaTabProps {
+  searchQuery: string;
+  onOpenSettings?: (focus?: string) => void;
+}
+
+export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -111,7 +116,11 @@ export const StravaTab = ({ searchQuery }: { searchQuery: string }) => {
   };
 
   const handleConnectStrava = () => {
-    navigate('/profile?tab=settings&focus=strava');
+    if (onOpenSettings) {
+      onOpenSettings('strava');
+    } else {
+      navigate('/profile?tab=settings&focus=strava');
+    }
   };
 
   if (loading) {

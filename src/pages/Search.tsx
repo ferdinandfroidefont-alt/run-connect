@@ -6,6 +6,7 @@ import { ProfilesTab } from '@/components/search/ProfilesTab';
 import { ClubsTab } from '@/components/search/ClubsTab';
 import { StravaTab } from '@/components/search/StravaTab';
 import { ContactsTab } from '@/components/search/ContactsTab';
+import { SettingsDialog } from '@/components/SettingsDialog';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
 
@@ -18,6 +19,8 @@ export default function Search() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isClosing, setIsClosing] = useState(false);
   const [startY, setStartY] = useState(0);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [settingsFocus, setSettingsFocus] = useState<string>("");
 
   // Gestion du swipe pour fermer
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -56,6 +59,11 @@ export default function Search() {
       document.body.style.overflow = '';
     };
   }, []);
+
+  const handleOpenSettings = (focus?: string) => {
+    setSettingsFocus(focus || "");
+    setShowSettingsDialog(true);
+  };
 
   return (
     <>
@@ -96,7 +104,10 @@ export default function Search() {
             <ClubsTab searchQuery={searchQuery} />
           )}
           {activeTab === 'strava' && (
-            <StravaTab searchQuery={searchQuery} />
+            <StravaTab 
+              searchQuery={searchQuery} 
+              onOpenSettings={handleOpenSettings}
+            />
           )}
           {activeTab === 'contacts' && (
             <ContactsTab searchQuery={searchQuery} />
@@ -104,6 +115,13 @@ export default function Search() {
         </div>
       </div>
       </div>
+
+      {/* Settings Dialog */}
+      <SettingsDialog
+        open={showSettingsDialog}
+        onOpenChange={setShowSettingsDialog}
+        initialSearch={settingsFocus}
+      />
     </>
   );
 }
