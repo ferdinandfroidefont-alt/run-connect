@@ -475,8 +475,8 @@ export default function MySessions() {
           <div className="flex items-center justify-center -mt-2">
             <Button
               onClick={() => {
-                console.log('🚀 "Créer un itinéraire" clicked - starting navigation with URL parameter');
-                navigate('/?createRoute=true');
+                console.log('🚀 "Créer un itinéraire" clicked - navigating to route creation');
+                navigate('/route-create');
               }}
               size="sm"
               className="gap-2"
