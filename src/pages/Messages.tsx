@@ -144,6 +144,17 @@ const Messages = () => {
   const { selectFromGallery, loading: cameraLoading } = useCamera();
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   
+  // Long press & multi-select states
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  
+  // Conversation settings states
+  const [isMuted, setIsMuted] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  
   const isLoading = loading || cameraLoading;
 
   const scrollToBottom = () => {
@@ -407,37 +418,133 @@ const Messages = () => {
     navigate(`/?${params.toString()}`);
   };
 
+  // Long press handlers
+  const handleLongPressStart = (conversation: Conversation) => {
+    const timer = setTimeout(() => {
+      setIsSelectionMode(true);
+      setSelectedConversations(new Set([conversation.id]));
+    }, 500); // 500ms for long press
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const toggleConversationSelection = (conversationId: string) => {
+    setSelectedConversations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(conversationId)) {
+        newSet.delete(conversationId);
+      } else {
+        newSet.add(conversationId);
+      }
+      
+      // Exit selection mode if no conversations selected
+      if (newSet.size === 0) {
+        setIsSelectionMode(false);
+      }
+      
+      return newSet;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedConversations(new Set());
+  };
+
+  const confirmBulkDelete = () => {
+    setShowBulkDeleteDialog(true);
+  };
+
+  const bulkDeleteConversations = async () => {
+    if (!user) return;
+
+    try {
+      setShowBulkDeleteDialog(false);
+
+      for (const convId of selectedConversations) {
+        const conv = conversations.find(c => c.id === convId);
+        if (!conv) continue;
+
+        if (conv.is_group) {
+          // For groups, just leave
+          await supabase
+            .from('group_members')
+            .delete()
+            .eq('conversation_id', convId)
+            .eq('user_id', user.id);
+        } else {
+          // For direct conversations, delete messages and conversation
+          await supabase
+            .from('messages')
+            .delete()
+            .eq('conversation_id', convId);
+          
+          await supabase
+            .from('conversations')
+            .delete()
+            .eq('id', convId);
+        }
+      }
+
+      toast({
+        title: "Supprimé",
+        description: `${selectedConversations.size} conversation(s) supprimée(s)`
+      });
+
+      exitSelectionMode();
+      loadConversations();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer les conversations",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Delete conversation
-  const confirmDeleteConversation = () => {
+  const confirmDeleteConversation = (conversation?: Conversation) => {
+    if (conversation) {
+      setConversationToDelete(conversation);
+    }
     setShowDeleteDialog(true);
   };
 
   const deleteConversation = async () => {
+    const convToDelete = conversationToDelete || selectedConversation;
+    if (!convToDelete || !user) return;
     if (!selectedConversation || !user) return;
 
     try {
       setShowDeleteDialog(false);
+      setConversationToDelete(null);
 
-      if (selectedConversation.is_group) {
+      if (convToDelete.is_group) {
         // For groups, only the creator can delete the entire group
-        if (selectedConversation.created_by === user.id) {
+        if (convToDelete.created_by === user.id) {
           // Delete all group members first
           await supabase
             .from('group_members')
             .delete()
-            .eq('conversation_id', selectedConversation.id);
+            .eq('conversation_id', convToDelete.id);
           
           // Delete all messages
           await supabase
             .from('messages')
             .delete()
-            .eq('conversation_id', selectedConversation.id);
+            .eq('conversation_id', convToDelete.id);
           
           // Delete the conversation
           const { error } = await supabase
             .from('conversations')
             .delete()
-            .eq('id', selectedConversation.id);
+            .eq('id', convToDelete.id);
           
           if (error) throw error;
           
@@ -450,7 +557,7 @@ const Messages = () => {
           const { error } = await supabase
             .from('group_members')
             .delete()
-            .eq('conversation_id', selectedConversation.id)
+            .eq('conversation_id', convToDelete.id)
             .eq('user_id', user.id);
           
           if (error) throw error;
@@ -465,12 +572,12 @@ const Messages = () => {
         await supabase
           .from('messages')
           .delete()
-          .eq('conversation_id', selectedConversation.id);
+          .eq('conversation_id', convToDelete.id);
         
         const { error } = await supabase
           .from('conversations')
           .delete()
-          .eq('id', selectedConversation.id);
+          .eq('id', convToDelete.id);
         
         if (error) throw error;
         
@@ -1301,11 +1408,11 @@ const Messages = () => {
       <>
         <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
-          {/* Top Bar - Fixed */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
+          {/* Top Bar - Fixed - Remonté légèrement */}
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
           
-          {/* Header - Fixed */}
-          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
+          {/* Header - Fixed - Remonté et plus compact */}
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -1402,9 +1509,54 @@ const Messages = () => {
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-sm">
+                  {!selectedConversation.is_group && (
+                    <DropdownMenuItem 
+                      onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Voir le profil
+                    </DropdownMenuItem>
+                  )}
+                  
                   <DropdownMenuItem 
-                    onClick={confirmDeleteConversation}
+                    onClick={() => {
+                      setSelectedConversation(null);
+                      setShowCreateGroup(true);
+                    }}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Créer un chat de groupe
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="justify-between"
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-2">{isMuted ? "🔔" : "🔕"}</span>
+                      <span>Notifications</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {isMuted ? "Activées" : "Désactivées"}
+                    </span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    onClick={() => setIsPinned(!isPinned)}
+                    className="justify-between"
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-2">📌</span>
+                      <span>Épingler</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {isPinned ? "Oui" : "Non"}
+                    </span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    onClick={() => confirmDeleteConversation()}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -1418,8 +1570,8 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Messages - Scrollable area with top margin for fixed header */}
-          <div className="pt-[88px] flex-1 overflow-y-auto min-h-0">
+          {/* Messages - Scrollable area with top margin for fixed header - Ajusté pour nouveau header */}
+          <div className="pt-[72px] flex-1 overflow-y-auto min-h-0">
             <div className={`h-full px-4 pt-4 pb-4 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -1633,18 +1785,21 @@ const Messages = () => {
               <DialogHeader>
                 <DialogTitle>Confirmer la suppression</DialogTitle>
                 <DialogDescription>
-                  {selectedConversation?.is_group 
-                    ? selectedConversation.created_by === user?.id
-                      ? `Êtes-vous sûr de vouloir supprimer définitivement le club "${selectedConversation.group_name}" ? Cette action est irréversible.`
-                      : `Êtes-vous sûr de vouloir quitter le club "${selectedConversation.group_name}" ?`
-                    : `Êtes-vous sûr de vouloir supprimer cette conversation avec ${selectedConversation?.other_participant?.username || selectedConversation?.other_participant?.display_name} ? Tous les messages seront perdus.`
+                  {(conversationToDelete || selectedConversation)?.is_group 
+                    ? (conversationToDelete || selectedConversation)?.created_by === user?.id
+                      ? `Êtes-vous sûr de vouloir supprimer définitivement le club "${(conversationToDelete || selectedConversation)?.group_name}" ? Cette action est irréversible.`
+                      : `Êtes-vous sûr de vouloir quitter le club "${(conversationToDelete || selectedConversation)?.group_name}" ?`
+                    : `Êtes-vous sûr de vouloir supprimer cette conversation avec ${(conversationToDelete || selectedConversation)?.other_participant?.username || (conversationToDelete || selectedConversation)?.other_participant?.display_name} ? Tous les messages seront perdus.`
                   }
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setShowDeleteDialog(false)}
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setConversationToDelete(null);
+                  }}
                 >
                   Annuler
                 </Button>
@@ -1652,7 +1807,7 @@ const Messages = () => {
                   variant="destructive"
                   onClick={deleteConversation}
                 >
-                  {selectedConversation?.is_group && selectedConversation.created_by !== user?.id 
+                  {(conversationToDelete || selectedConversation)?.is_group && (conversationToDelete || selectedConversation)?.created_by !== user?.id 
                     ? "Quitter" 
                     : "Supprimer"
                   }
@@ -1661,10 +1816,36 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Message input - Sticky at bottom (follows keyboard) */}
+          {/* Bulk Delete Dialog */}
+          <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Confirmer la suppression</DialogTitle>
+                <DialogDescription>
+                  Êtes-vous sûr de vouloir supprimer {selectedConversations.size} conversation(s) ? Cette action est irréversible.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBulkDeleteDialog(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={bulkDeleteConversations}
+                >
+                  Supprimer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Message input - Sticky at bottom (follows keyboard) - Descendu légèrement */}
           <div 
-            className="sticky bottom-0 w-full p-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
-            style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+            className="sticky bottom-0 w-full p-3 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
           >
             {/* Emoji Picker */}
             {showEmojiPicker && (
@@ -1858,41 +2039,72 @@ const Messages = () => {
       <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
       <div className="h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
-          {/* Fixed Header Only */}
-          <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
+          {/* Fixed Header Only - Remonté légèrement */}
+          <div className="fixed top-4 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
             <div className="max-w-md mx-auto w-full">
             {/* Header */}
             <div className="flex items-center justify-between">
+              {isSelectionMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={exitSelectionMode}
+                  className="mr-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-                <p className="text-muted-foreground text-sm">
-                  Restez en contact avec la communauté
-                </p>
+                <h1 className="text-2xl font-bold text-foreground">
+                  {isSelectionMode 
+                    ? `${selectedConversations.size} sélectionné(s)` 
+                    : "Messages"
+                  }
+                </h1>
+                {!isSelectionMode && (
+                  <p className="text-muted-foreground text-sm">
+                    Restez en contact avec la communauté
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-2">
-                <Button
-                  onClick={() => setShowNewConversation(true)}
-                  size="sm"
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Message
-                </Button>
-                <Button
-                  onClick={() => setShowCreateGroup(true)}
-                  size="sm"
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  <Users className="h-4 w-4 mr-1" />
-                  Club
-                </Button>
+                {isSelectionMode ? (
+                  <Button
+                    onClick={confirmBulkDelete}
+                    size="sm"
+                    variant="destructive"
+                    disabled={selectedConversations.size === 0}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Supprimer
+                  </Button>
+                ) : (
+                  <>
+                  <Button
+                    onClick={() => setShowNewConversation(true)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Message
+                  </Button>
+                  <Button
+                    onClick={() => setShowCreateGroup(true)}
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Users className="h-4 w-4 mr-1" />
+                    Club
+                  </Button>
+                </>
+                )}
               </div>
             </div>
             </div>
           </div>
 
-          {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 overflow-y-auto p-2 pt-32">
+          {/* Scrollable Content - Search Bar + Conversations - Ajusté pour nouveau header */}
+          <div className="flex-1 overflow-y-auto p-2 pt-28">
             {/* Search Buttons */}
             <Card>
               <CardContent className="p-2">
@@ -1964,14 +2176,38 @@ const Messages = () => {
                     {conversations.map((conversation) => (
                    <div
                      key={conversation.id}
-                     className="flex items-center gap-3 p-4 hover:bg-muted cursor-pointer"
+                     className={`flex items-center gap-3 p-4 hover:bg-muted cursor-pointer transition-colors ${
+                       selectedConversations.has(conversation.id) ? 'bg-primary/10' : ''
+                     }`}
+                     onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
+                     onTouchEnd={handleLongPressEnd}
+                     onTouchCancel={handleLongPressEnd}
+                     onContextMenu={(e) => {
+                       e.preventDefault();
+                       setConversationToDelete(conversation);
+                       confirmDeleteConversation(conversation);
+                     }}
                    >
+                     {isSelectionMode && (
+                       <div className="flex items-center mr-2">
+                         <input
+                           type="checkbox"
+                           checked={selectedConversations.has(conversation.id)}
+                           onChange={() => toggleConversationSelection(conversation.id)}
+                           className="w-5 h-5 rounded border-2 border-primary"
+                           onClick={(e) => e.stopPropagation()}
+                         />
+                       </div>
+                     )}
+                     
                      <div className="relative">
                         <Avatar 
                           className="h-12 w-12 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (conversation.is_group) {
+                              if (isSelectionMode) {
+                                toggleConversationSelection(conversation.id);
+                              } else if (conversation.is_group) {
                                 setSelectedConversation(conversation);
                                 setGroupInfoData(conversation);
                                 setShowGroupInfo(true);
@@ -2001,10 +2237,14 @@ const Messages = () => {
                      <div 
                        className="flex-1 min-w-0 cursor-pointer"
                         onClick={() => {
-                          setSelectedConversation(conversation);
-                          loadMessages(conversation.id);
-                          // Marquer les messages comme lus automatiquement
-                          markMessagesAsReadOnOpen(conversation.id);
+                          if (isSelectionMode) {
+                            toggleConversationSelection(conversation.id);
+                          } else {
+                            setSelectedConversation(conversation);
+                            loadMessages(conversation.id);
+                            // Marquer les messages comme lus automatiquement
+                            markMessagesAsReadOnOpen(conversation.id);
+                          }
                         }}
                      >
                       <div className="flex items-center justify-between">
