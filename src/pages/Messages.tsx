@@ -2103,8 +2103,8 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Scrollable Content - Search Bar + Conversations - Ajusté pour nouveau header */}
-          <div className="flex-1 overflow-y-auto p-2 pt-28">
+          {/* Scrollable Content - Search Bar + Conversations */}
+          <div className="flex-1 overflow-y-auto p-2 pt-32">
             {/* Search Buttons */}
             <Card>
               <CardContent className="p-2">
