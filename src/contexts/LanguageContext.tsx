@@ -39,7 +39,7 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
             .from('profiles')
             .select('preferred_language')
             .eq('user_id', user.id)
-            .maybeSingle();
+            .maybeSingle() as any;
           
           if (profile?.preferred_language) {
             setLanguageState(profile.preferred_language as Language);
@@ -69,10 +69,10 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase
+        await (supabase
           .from('profiles')
-          .update({ preferred_language: lang })
-          .eq('user_id', user.id);
+          .update({ preferred_language: lang } as any)
+          .eq('user_id', user.id));
       }
     } catch (error) {
       console.error('Error saving language to profile:', error);

@@ -385,6 +385,7 @@ export type Database = {
           notifications_enabled: boolean | null
           onboarding_completed: boolean | null
           phone: string | null
+          preferred_language: string | null
           push_token: string | null
           push_token_platform: string | null
           referral_code: string | null
@@ -433,6 +434,7 @@ export type Database = {
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          preferred_language?: string | null
           push_token?: string | null
           push_token_platform?: string | null
           referral_code?: string | null
@@ -481,6 +483,7 @@ export type Database = {
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          preferred_language?: string | null
           push_token?: string | null
           push_token_platform?: string | null
           referral_code?: string | null

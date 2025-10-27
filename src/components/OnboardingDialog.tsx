@@ -75,7 +75,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
       setLanguage(selectedLanguage);
       
       // Utiliser upsert pour créer ou mettre à jour le profil
-      const { error, data } = await supabase
+      const { error, data } = await (supabase
         .from('profiles')
         .upsert({
           user_id: user.id,
@@ -85,9 +85,9 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
           security_rules_accepted: acceptedSecurity,
           onboarding_completed: true,
           updated_at: new Date().toISOString()
-        }, {
+        } as any, {
           onConflict: 'user_id'
-        });
+        }));
 
       console.log('📥 Upsert response received:', { data, error });
 
