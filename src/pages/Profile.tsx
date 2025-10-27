@@ -113,6 +113,18 @@ const Profile = () => {
     }
   }, [searchParams, toast, navigate]);
 
+  // Ouvrir automatiquement les paramètres si tab=settings
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'settings' && !isViewingOtherUser) {
+      setShowSettingsDialog(true);
+      // Nettoyer l'URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('tab');
+      navigate({ search: newParams.toString() }, { replace: true });
+    }
+  }, [searchParams, navigate, isViewingOtherUser]);
+
   useEffect(() => {
     if (user) {
       // Si on regarde son propre profil, utiliser le profil global
