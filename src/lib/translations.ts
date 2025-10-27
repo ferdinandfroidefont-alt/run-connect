@@ -109,7 +109,7 @@ export const translations: Record<Language, any> = {
       leaderboard: 'Classement',
     },
     sessions: {
-      create: 'Créer une séance',
+      create: 'Créer',
       upcoming: 'Séances à venir',
       past: 'Séances passées',
       participants: 'Participants',
@@ -227,7 +227,7 @@ export const translations: Record<Language, any> = {
       leaderboard: 'Leaderboard',
     },
     sessions: {
-      create: 'Create Session',
+      create: 'Create',
       upcoming: 'Upcoming Sessions',
       past: 'Past Sessions',
       participants: 'Participants',
@@ -345,7 +345,7 @@ export const translations: Record<Language, any> = {
       leaderboard: 'Clasificación',
     },
     sessions: {
-      create: 'Crear Sesión',
+      create: 'Crear',
       upcoming: 'Próximas Sesiones',
       past: 'Sesiones Pasadas',
       participants: 'Participantes',
@@ -463,7 +463,7 @@ export const translations: Record<Language, any> = {
       leaderboard: 'Classificação',
     },
     sessions: {
-      create: 'Criar Sessão',
+      create: 'Criar',
       upcoming: 'Próximas Sessões',
       past: 'Sessões Passadas',
       participants: 'Participantes',
@@ -581,7 +581,7 @@ export const translations: Record<Language, any> = {
       leaderboard: 'Rangliste',
     },
     sessions: {
-      create: 'Sitzung erstellen',
+      create: 'Erstellen',
       upcoming: 'Kommende Sitzungen',
       past: 'Vergangene Sitzungen',
       participants: 'Teilnehmer',
@@ -699,7 +699,7 @@ export const translations: Record<Language, any> = {
       leaderboard: '排行榜',
     },
     sessions: {
-      create: '创建会话',
+      create: '创建',
       upcoming: '即将举行的会话',
       past: '过去的会话',
       participants: '参与者',
@@ -817,7 +817,7 @@ export const translations: Record<Language, any> = {
       leaderboard: 'لوحة المتصدرين',
     },
     sessions: {
-      create: 'إنشاء جلسة',
+      create: 'إنشاء',
       upcoming: 'الجلسات القادمة',
       past: 'الجلسات السابقة',
       participants: 'المشاركون',
