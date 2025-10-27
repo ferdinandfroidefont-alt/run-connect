@@ -208,10 +208,17 @@ jobs:
             </resources>
           EOF
 
-          # ✅ Créer strings.xml
+          # ✅ Créer strings.xml avec Android Client ID pour Google Sign-In
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
           <resources>
             <string name="app_name">RunConnect</string>
+            <string name="title_activity_main">RunConnect</string>
+            <string name="package_name">app.runconnect</string>
+            <string name="custom_url_scheme">app.runconnect</string>
+            
+            <!-- 🔑 Firebase Google Sign-In Android Client ID (Type 1) -->
+            <string name="default_web_client_id">220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com</string>
           </resources>
           EOF
 

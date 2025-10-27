@@ -15,6 +15,7 @@ interface NotificationPermissionStatus {
 export const usePushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>({
     granted: false,
     denied: false,
@@ -384,7 +385,21 @@ export const usePushNotifications = () => {
         const granted = await notificationPromise;
         
         if (granted) {
-          console.log('✅ Permission accordée, attente token Firebase...');
+          console.log('✅ Permission accordée, enregistrement FCM...');
+          
+          // ✅ Setup listeners d'abord
+          if (!listenersConfigured()) {
+            await setupPushListeners();
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+          // ✅ CRITIQUE : Appel explicite à register()
+          try {
+            await PushNotifications.register();
+            console.log('✅ [FCM] PushNotifications.register() appelé');
+          } catch (error) {
+            console.error('❌ [FCM] Erreur lors de register():', error);
+          }
           
           // ✅ ATTENDRE LE TOKEN FIREBASE (max 5 secondes)
           const tokenReceived = await new Promise<boolean>((resolve) => {
@@ -452,12 +467,30 @@ export const usePushNotifications = () => {
 
   // Sauvegarder le token push
   const savePushToken = useCallback(async (pushToken: string) => {
-    if (!user) return;
+    if (!user) {
+      console.log('⏳ [FCM] User non défini, token en attente:', pushToken.substring(0, 30) + '...');
+      setPendingToken(pushToken);
+      setToken(pushToken);
+      return;
+    }
 
     try {
       const platform = Capacitor.getPlatform();
       const tokenType = platform === 'ios' ? 'APNs' : 'FCM';
       const platformEmoji = platform === 'ios' ? '🍎' : '🤖';
+      
+      // Vérifier si le token existe déjà en base (éviter doublons)
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('push_token')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingProfile?.push_token === pushToken) {
+        console.log('✅ [FCM] Token déjà sauvegardé');
+        setPendingToken(null);
+        return;
+      }
       
       console.log(`${platformEmoji} [${platform.toUpperCase()}] Sauvegarde token ${tokenType}:`, pushToken.substring(0, 30) + '...');
       
@@ -481,11 +514,13 @@ export const usePushNotifications = () => {
       } else {
         console.log(`✅ [${platform.toUpperCase()}] Token ${tokenType} sauvegardé avec succès dans Supabase (plateforme: ${platform})`);
         setToken(pushToken);
+        setIsRegistered(true);
+        setPendingToken(null);
       }
     } catch (error) {
       console.error('❌ Exception sauvegarde token:', error);
     }
-  }, [user]);
+  }, [user, toast]);
 
   // Gestion des clics sur notification
   const handleNotificationTap = useCallback((data: any) => {
@@ -649,9 +684,17 @@ export const usePushNotifications = () => {
     }
   }, [isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
 
+  // 🔥 SAUVEGARDER LE TOKEN EN ATTENTE DÈS QUE USER EST DÉFINI
+  useEffect(() => {
+    if (user && pendingToken) {
+      console.log('✅ [FCM] User maintenant défini, sauvegarde du token en attente');
+      savePushToken(pendingToken);
+    }
+  }, [user, pendingToken, savePushToken]);
+
   // 🔥 ÉCOUTER LE TOKEN FCM INJECTÉ PAR MAINACTIVITY
   useEffect(() => {
-    if (!user?.id || !isNative) return;
+    if (!isNative) return;
 
     const handleFCMTokenFromNative = (event: any) => {
       const nativeToken = event.detail?.token;
@@ -662,7 +705,7 @@ export const usePushNotifications = () => {
         setToken(nativeToken);
         setIsRegistered(true);
         
-        // Sauvegarder immédiatement dans Supabase
+        // Sauvegarder immédiatement (ou mettre en attente si user pas défini)
         savePushToken(nativeToken);
       }
     };
@@ -681,7 +724,7 @@ export const usePushNotifications = () => {
     return () => {
       window.removeEventListener('fcmTokenReady', handleFCMTokenFromNative);
     };
-  }, [user?.id, isNative, savePushToken]);
+  }, [isNative, savePushToken]);
 
   // Configuration au montage
   useEffect(() => {
