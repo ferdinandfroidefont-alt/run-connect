@@ -1,5 +1,6 @@
 import { useTheme } from "@/contexts/ThemeContext"
-import { Toaster as Sonner, toast } from "sonner"
+import { Toaster as Sonner, toast as sonnerToast } from "sonner"
+import { isReallyNative } from "@/lib/nativeDetection"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
@@ -25,5 +26,40 @@ const Toaster = ({ ...props }: ToasterProps) => {
     />
   )
 }
+
+// 🔇 Wrapper pour désactiver les toasts non-error sur Android
+const toast = {
+  ...sonnerToast,
+  success: (...args: Parameters<typeof sonnerToast.success>) => {
+    if (isReallyNative()) {
+      console.log('🔇 Toast success désactivé sur Android');
+      return;
+    }
+    return sonnerToast.success(...args);
+  },
+  info: (...args: Parameters<typeof sonnerToast.info>) => {
+    if (isReallyNative()) {
+      console.log('🔇 Toast info désactivé sur Android');
+      return;
+    }
+    return sonnerToast.info(...args);
+  },
+  warning: (...args: Parameters<typeof sonnerToast.warning>) => {
+    if (isReallyNative()) {
+      console.log('🔇 Toast warning désactivé sur Android');
+      return;
+    }
+    return sonnerToast.warning(...args);
+  },
+  loading: (...args: Parameters<typeof sonnerToast.loading>) => {
+    if (isReallyNative()) {
+      console.log('🔇 Toast loading désactivé sur Android');
+      return;
+    }
+    return sonnerToast.loading(...args);
+  },
+  // Garder les toasts error actifs (critiques)
+  error: sonnerToast.error,
+};
 
 export { Toaster, toast }
