@@ -55,14 +55,34 @@ export const useContacts = () => {
 
   useEffect(() => {
     const initNativeStatus = async () => {
-      const native = await nativeManager.ensureNativeStatus();
-      setIsNative(native);
-      if (native) {
+      // Vérifier immédiatement si AndroidBridge existe
+      const hasAndroidBridge = !!(window as any).AndroidBridge;
+      const forceNative = (window as any).CapacitorForceNative === true;
+      
+      console.log('👥 Init native status - AndroidBridge:', hasAndroidBridge, 'ForceNative:', forceNative);
+      
+      if (hasAndroidBridge || forceNative) {
+        setIsNative(true);
         checkPermissions();
+      } else {
+        const native = await nativeManager.ensureNativeStatus();
+        setIsNative(native);
+        if (native) {
+          checkPermissions();
+        }
       }
     };
     
     initNativeStatus();
+
+    // Écouter l'événement native ready depuis main.tsx
+    const handleNativeReady = (event: any) => {
+      console.log('👥 Événement capacitorNativeReady reçu:', event.detail);
+      if (event.detail?.isNative) {
+        setIsNative(true);
+        checkPermissions();
+      }
+    };
 
     // Écouter les mises à jour de permissions depuis Android
     const handlePermissionUpdate = (event: any) => {
@@ -74,9 +94,11 @@ export const useContacts = () => {
       }
     };
 
+    window.addEventListener('capacitorNativeReady', handleNativeReady);
     window.addEventListener('androidPermissionsUpdated', handlePermissionUpdate);
     
     return () => {
+      window.removeEventListener('capacitorNativeReady', handleNativeReady);
       window.removeEventListener('androidPermissionsUpdated', handlePermissionUpdate);
     };
   }, []);
