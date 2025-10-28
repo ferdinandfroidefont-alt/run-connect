@@ -2092,12 +2092,17 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Glassmorphism Filter Pills */}
-          {!isSelectionMode && <MessageFilterPills />}
-
           {/* Conversations List - No borders */}
-          <ScrollArea className="flex-1 overflow-y-auto px-4 pb-24 scroll-smooth">
-            {conversations.length === 0 ? (
+          <ScrollArea className="flex-1 overflow-y-auto pb-24 scroll-smooth">
+            {/* Glassmorphism Filter Pills */}
+            {!isSelectionMode && (
+              <div className="mt-3">
+                <MessageFilterPills />
+              </div>
+            )}
+
+            <div className="px-4">
+              {conversations.length === 0 ? (
               <div className="text-center text-muted-foreground py-12 px-4">
                 <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-30" />
                 <p className="text-base font-medium mb-1">Aucune conversation</p>
@@ -2226,9 +2231,10 @@ const Messages = () => {
                    </h3>
                    <FriendSuggestions compact={true} />
                  </div>
-               )}
-             </>
+                )}
+              </>
             )}
+            </div>
           </ScrollArea>
         </div>
       </div>
