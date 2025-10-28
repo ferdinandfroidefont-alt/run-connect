@@ -802,8 +802,8 @@ const Leaderboard = () => {
                 <PodiumDisplay top3={seasonalLeaderboard.slice(0, 3)} showSeasonal />
               )}
               
-              <div 
-                className="grid w-full grid-cols-3 p-1 rounded-lg"
+              <TabsList 
+                className="grid w-full grid-cols-3"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
                   backdropFilter: 'blur(10px)'
@@ -830,7 +830,7 @@ const Leaderboard = () => {
                   <Users className="h-4 w-4" />
                   <span className="hidden sm:inline">Amis</span>
                 </TabsTrigger>
-              </div>
+              </TabsList>
               
               <div className="space-y-2">
                 {seasonalLeaderboard.slice(3).map((item, index) => (
@@ -908,8 +908,8 @@ const Leaderboard = () => {
                 <PodiumDisplay top3={leaderboard.slice(0, 3)} />
               )}
               
-              <div 
-                className="grid w-full grid-cols-3 p-1 rounded-lg"
+              <TabsList 
+                className="grid w-full grid-cols-3"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
                   backdropFilter: 'blur(10px)'
@@ -936,7 +936,7 @@ const Leaderboard = () => {
                   <Users className="h-4 w-4" />
                   <span className="hidden sm:inline">Amis</span>
                 </TabsTrigger>
-              </div>
+              </TabsList>
               
               <div className="space-y-2">
                 {leaderboard.slice(3).map((item, index) => (
@@ -1017,8 +1017,8 @@ const Leaderboard = () => {
                 <>
                   <PodiumDisplay top3={friendsLeaderboard.slice(0, 3)} />
                   
-                  <div 
-                    className="grid w-full grid-cols-3 p-1 rounded-lg"
+                  <TabsList 
+                    className="grid w-full grid-cols-3"
                     style={{
                       background: 'rgba(255, 255, 255, 0.05)',
                       backdropFilter: 'blur(10px)'
@@ -1045,7 +1045,7 @@ const Leaderboard = () => {
                       <Users className="h-4 w-4" />
                       <span className="hidden sm:inline">Amis</span>
                     </TabsTrigger>
-                  </div>
+                  </TabsList>
                   
                   <div className="space-y-2">
                     {friendsLeaderboard.slice(3).map((item, index) => (
