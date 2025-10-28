@@ -694,20 +694,6 @@ public class MainActivity extends AppCompatActivity {
         // Les autres résultats sont automatiquement transmis au plugin Capacitor
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        
-        Uri data = intent != null ? intent.getData() : null;
-        if (data != null && data.toString().startsWith("app.runconnect://")) {
-            Log.d(TAG, "🔗 Deep link OAuth reçu via onNewIntent: " + data.toString());
-            String webUrl = data.toString()
-                .replace("app.runconnect://", START_URL + "/")
-                .replace("runconnect://", START_URL + "/");
-            webView.loadUrl(webUrl);
-        }
-    }
     
     private void createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
