@@ -6,21 +6,20 @@ import { cn } from "@/lib/utils"
 
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.20)] hover:scale-[1.02] active:scale-95",
-        gradient: "bg-gradient-to-r from-primary via-primary-glow to-accent text-white shadow-[0_8px_30px_rgba(0,0,0,0.20)] hover:shadow-glow hover:scale-105 active:scale-95",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95",
+        gradient: "bg-gradient-to-r from-primary via-primary-glow to-accent text-white shadow-lg hover:shadow-glow hover:scale-105 active:scale-95",
         destructive:
-          "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.20)] hover:scale-[1.02] active:scale-95",
+          "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95",
         outline:
-          "backdrop-blur-xl bg-background/50 hover:bg-accent/50 hover:text-accent-foreground shadow-[0_0_30px_10px_hsl(211_100%_58%_/_0.15)] hover:shadow-[0_0_30px_10px_hsl(211_100%_58%_/_0.3)] hover:scale-[1.02] active:scale-95",
-        "outline-glow": "backdrop-blur-xl bg-background/50 text-primary hover:bg-primary/10 shadow-[0_0_30px_10px_hsl(211_100%_58%_/_0.3)] hover:scale-[1.02] active:scale-95",
-        glass: "backdrop-blur-xl bg-white/8 hover:bg-white/12 border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:scale-[1.02] active:scale-95",
+          "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-95",
+        "outline-glow": "border-2 border-primary bg-background text-primary hover:bg-primary/10 hover:shadow-glow hover:scale-[1.02] active:scale-95",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.20)] hover:scale-[1.02] active:scale-95",
-        ghost: "hover:bg-accent/50 hover:text-accent-foreground hover:scale-[1.02] active:scale-95",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-95",
+        ghost: "hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] active:scale-95",
         "ghost-hover": "hover:bg-primary/10 hover:text-primary hover:scale-[1.02] active:scale-95",
         link: "text-primary underline-offset-4 hover:underline",
       },
