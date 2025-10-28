@@ -116,11 +116,11 @@ export const BottomNavigation = () => {
         </div>
       </nav>
       
-      {/* Barre de navigation principale avec glassmorphism */}
-      <nav className="fixed bottom-6 left-0 right-0 backdrop-blur-xl bg-card/80 border-t-2 border-white/10 shadow-2xl z-50">
+      {/* Barre de navigation principale flottante glassmorphic premium */}
+      <nav className="fixed bottom-6 left-4 right-4 glass-premium shadow-2xl rounded-2xl z-50 mx-auto max-w-md">
         <div className="relative">
-          {/* Glow effect pour l'item actif */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+          {/* Effet lumineux subtil au fond */}
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
           
           <div className="grid grid-cols-5 items-center px-4 py-2">
           {/* Première colonne - Carte */}
@@ -132,10 +132,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full transition-all duration-300",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/20 shadow-glow scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5 hover:scale-105"
                   )}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
@@ -154,10 +154,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full transition-all duration-300",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/20 shadow-glow scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5 hover:scale-105"
                   )}
                 >
                   <span className="text-xl mt-1">{emoji}</span>
@@ -178,7 +178,7 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-primary text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30"
+              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-gradient-to-br from-primary to-accent text-white rounded-full transition-all hover:shadow-glow hover:scale-110 active:scale-95 -translate-y-4 scale-110 shadow-xl shadow-primary/50 animate-glow-pulse"
             >
               <Plus size={20} />
               <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
@@ -196,10 +196,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button relative h-full",
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button relative h-full transition-all duration-300",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/20 shadow-glow scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5 hover:scale-105"
                   )}
                 >
                   <div className="relative mt-1">
@@ -228,10 +228,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full transition-all duration-300",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/20 shadow-glow scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5 hover:scale-105"
                   )}
                 >
                   <span className="text-xl mt-1">{emoji}</span>

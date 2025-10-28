@@ -2,153 +2,151 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* RunConnect Premium Design System - Glassmorphism & Neon 
+   All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 27%;
+    /* Palette principale premium - RunConnect */
+    --background: 218 25% 5%;  /* #0B0E13 - Noir bleuté profond */
+    --foreground: 0 0% 100%;   /* Blanc pur */
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card: 218 25% 8%;  /* Légèrement plus clair que background */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover: 218 25% 10%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 217 91% 65%;
-    --primary-glow: 217 91% 75%;
-    --primary-foreground: 210 40% 98%;
+    /* Cyan néon #3D8BF2 */
+    --primary: 211 100% 58%;
+    --primary-glow: 211 100% 68%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 16% 47%;
-    --secondary-foreground: 210 40% 98%;
+    /* Violet électrique #6C63FF */
+    --accent: 247 85% 70%;
+    --accent-glow: 247 85% 80%;
+    --accent-foreground: 0 0% 100%;
 
-    --muted: 215 14% 95%;
-    --muted-foreground: 215 16% 47%;
+    --secondary: 216 18% 26%;
+    --secondary-foreground: 0 0% 100%;
 
-    --accent: 195 100% 70%;
-    --accent-glow: 195 100% 80%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 216 18% 20%;
+    --muted-foreground: 216 16% 68%;  /* #A8B2C3 */
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 215 14% 89%;
-    --input: 215 14% 89%;
-    --ring: 217 91% 65%;
+    --border: 0 0% 100% / 0.08;  /* Bordures translucides */
+    --input: 216 18% 20%;
+    --ring: 211 100% 58%;
 
-    /* Premium gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
+    /* Premium gradients néon */
+    --gradient-primary: linear-gradient(135deg, hsl(211 100% 58%) 0%, hsl(247 85% 70%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(247 85% 70%) 0%, hsl(211 100% 58%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 71% 45%) 100%);
     --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 72% 51%) 100%);
     
     /* Map-specific design tokens */
-    --map-control-bg: 0 0% 100%;
-    --map-control-border: 215 14% 89%;
-    --map-control-shadow: 215 25% 27% / 0.1;
-    --map-control-hover: 215 14% 95%;
-    --map-control-active: 217 91% 65%;
-    --gradient-map: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
-    --gradient-control: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(215 14% 98%) 100%);
+    --map-control-bg: 218 25% 8% / 0.85;
+    --map-control-border: 0 0% 100% / 0.1;
+    --map-control-shadow: 0 0% 0% / 0.45;
+    --map-control-hover: 216 18% 20%;
+    --map-control-active: 211 100% 58%;
+    --gradient-map: linear-gradient(135deg, hsl(211 100% 58%) 0%, hsl(247 85% 70%) 100%);
+    --gradient-control: linear-gradient(180deg, hsl(218 25% 8% / 0.85) 0%, hsl(218 25% 5%) 100%);
     
-    /* Premium shadows */
-    --shadow-xs: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
-    --shadow-sm: 0 2px 4px -2px hsl(215 25% 27% / 0.1);
-    --shadow-md: 0 4px 6px -1px hsl(215 25% 27% / 0.1), 0 2px 4px -2px hsl(215 25% 27% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(215 25% 27% / 0.1), 0 4px 6px -4px hsl(215 25% 27% / 0.1);
-    --shadow-xl: 0 20px 25px -5px hsl(215 25% 27% / 0.1), 0 8px 10px -6px hsl(215 25% 27% / 0.1);
-    --shadow-2xl: 0 25px 50px -12px hsl(215 25% 27% / 0.25);
-    --shadow-glow: 0 0 20px 5px hsl(217 91% 65% / 0.4);
-    --shadow-map-control: 0 4px 6px -1px hsl(var(--map-control-shadow)), 0 2px 4px -2px hsl(var(--map-control-shadow));
-    --shadow-map-panel: 0 10px 15px -3px hsl(var(--map-control-shadow)), 0 4px 6px -4px hsl(var(--map-control-shadow));
+    /* Premium shadows avec ombres douces */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 2px 4px -2px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.45);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.45);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 30px 10px hsl(211 100% 58% / 0.3);
+    --shadow-glow-accent: 0 0 30px 10px hsl(247 85% 70% / 0.3);
+    --shadow-map-control: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --shadow-map-panel: 0 10px 30px rgba(0, 0, 0, 0.5);
     
-    /* Glassmorphism - Enhanced for search page */
-    --glass-bg: hsl(0 0% 100% / 0.05);
+    /* Glassmorphism Premium */
+    --glass-bg: hsl(0 0% 100% / 0.08);
     --glass-border: hsl(0 0% 100% / 0.1);
-    --glass-blur: 20px;
-    --glass-bg-primary: hsl(215 28% 17% / 0.55);
+    --glass-blur: 10px;
+    --glass-bg-primary: hsl(218 25% 8% / 0.85);
     --glass-bg-card: hsl(0 0% 100% / 0.08);
-    --glass-border-card: hsl(0 0% 100% / 0.12);
-    --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.12);
+    --glass-border-card: hsl(0 0% 100% / 0.1);
+    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     
-    /* Transitions */
+    /* Transitions douces */
     --transition-map: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 218 25% 8%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 211 100% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 216 18% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 211 100% 58%;
   }
 
   .dark {
-    --background: 215 28% 17%;
-    --foreground: 210 40% 98%;
+    /* Mode sombre = thème par défaut */
+    --background: 218 25% 5%;
+    --foreground: 0 0% 100%;
 
-    --card: 215 28% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 218 25% 8%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 215 28% 17%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 218 25% 10%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 217 91% 65%;
-    --primary-glow: 217 91% 75%;
-    --primary-foreground: 215 28% 17%;
+    --primary: 211 100% 58%;
+    --primary-glow: 211 100% 68%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 25% 27%;
-    --secondary-foreground: 210 40% 98%;
+    --accent: 247 85% 70%;
+    --accent-glow: 247 85% 80%;
+    --accent-foreground: 0 0% 100%;
 
-    --muted: 215 25% 27%;
-    --muted-foreground: 215 20% 65%;
+    --secondary: 216 18% 26%;
+    --secondary-foreground: 0 0% 100%;
 
-    --accent: 195 100% 70%;
-    --accent-glow: 195 100% 80%;
-    --accent-foreground: 215 28% 17%;
+    --muted: 216 18% 20%;
+    --muted-foreground: 216 16% 68%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
-    --ring: 217 91% 65%;
+    --border: 0 0% 100% / 0.08;
+    --input: 216 18% 20%;
+    --ring: 211 100% 58%;
 
-    /* Dark map controls */
-    --map-control-bg: 215 25% 27%;
-    --map-control-border: 215 20% 35%;
-    --map-control-shadow: 0 0% 0% / 0.3;
-    --map-control-hover: 215 20% 35%;
-    --map-control-active: 217 91% 65%;
-    --gradient-control: linear-gradient(180deg, hsl(215 25% 27%) 0%, hsl(215 28% 17%) 100%);
+    --map-control-bg: 218 25% 8% / 0.85;
+    --map-control-border: 0 0% 100% / 0.1;
+    --map-control-shadow: 0 0% 0% / 0.45;
+    --map-control-hover: 216 18% 20%;
+    --map-control-active: 211 100% 58%;
+    --gradient-control: linear-gradient(180deg, hsl(218 25% 8% / 0.85) 0%, hsl(218 25% 5%) 100%);
     
-    /* Dark glassmorphism - Enhanced for search page */
-    --glass-bg: hsl(0 0% 100% / 0.03);
-    --glass-border: hsl(0 0% 100% / 0.08);
-    --glass-bg-primary: hsl(215 28% 17% / 0.65);
-    --glass-bg-card: hsl(0 0% 100% / 0.06);
-    --glass-border-card: hsl(0 0% 100% / 0.10);
-    --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.24);
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --glass-bg: hsl(0 0% 100% / 0.08);
+    --glass-border: hsl(0 0% 100% / 0.1);
+    --glass-bg-primary: hsl(218 25% 8% / 0.85);
+    --glass-bg-card: hsl(0 0% 100% / 0.08);
+    --glass-border-card: hsl(0 0% 100% / 0.1);
+    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    
+    --sidebar-background: 218 25% 8%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 211 100% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 216 18% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 211 100% 58%;
   }
 }
 
@@ -226,12 +224,12 @@ All colors MUST be HSL.
   }
   
   .text-label {
-    @apply font-sans font-medium text-sm uppercase tracking-wider;
+    @apply font-sans font-medium text-sm tracking-wide;
   }
   
   /* Legacy support */
   .text-title {
-    @apply font-display font-bold text-lg md:text-xl uppercase tracking-wide;
+    @apply font-display font-bold text-lg md:text-xl tracking-wide;
   }
   
   .text-subtitle {
@@ -239,7 +237,7 @@ All colors MUST be HSL.
   }
   
   .text-heading {
-    @apply font-display font-medium text-sm md:text-base uppercase tracking-wider;
+    @apply font-display font-medium text-sm md:text-base tracking-wide;
   }
   
   .text-body {
@@ -251,7 +249,7 @@ All colors MUST be HSL.
   }
   
   .text-button {
-    @apply font-display font-semibold text-sm uppercase tracking-wide;
+    @apply font-display font-semibold text-sm tracking-wide;
   }
   
   /* Custom Scrollbars - Override global hide when needed */
@@ -306,7 +304,16 @@ All colors MUST be HSL.
     transform: scale(0.98) translateZ(0);
   }
 
-  /* Glassmorphism utilities */
+  /* Glassmorphism utilities - Premium RunConnect */
+  .glass-premium {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border-radius: 1rem;
+  }
+
   .glass-primary {
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -320,11 +327,26 @@ All colors MUST be HSL.
     border-radius: 16px;
     box-shadow: var(--glass-shadow);
   }
+
+  /* Floating glassmorphic button */
+  .glass-floating {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-floating:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  }
   
   /* Fallback si backdrop-filter non supporté */
-  @supports not (backdrop-filter: blur(14px)) {
-    .glass-primary {
-      background: hsl(var(--background));
+  @supports not (backdrop-filter: blur(10px)) {
+    .glass-primary, .glass-premium, .glass-floating {
+      background: hsl(var(--card));
       border-color: hsl(var(--border));
     }
   }
