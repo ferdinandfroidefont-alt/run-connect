@@ -32,21 +32,21 @@ const getToastIcon = (type: ToastType) => {
 };
 
 const getToastStyles = (type: ToastType) => {
-  const baseStyles = "flex items-start gap-3 p-4 rounded-lg border backdrop-blur-sm";
+  const baseStyles = "flex items-start gap-3 p-4 rounded-2xl backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.3)]";
   
   switch (type) {
     case "success":
-      return `${baseStyles} bg-green-50/90 border-green-200 dark:bg-green-950/90 dark:border-green-800`;
+      return `${baseStyles} bg-green-500/10 border border-green-500/20`;
     case "error":
-      return `${baseStyles} bg-red-50/90 border-red-200 dark:bg-red-950/90 dark:border-red-800`;
+      return `${baseStyles} bg-red-500/10 border border-red-500/20`;
     case "warning":
-      return `${baseStyles} bg-yellow-50/90 border-yellow-200 dark:bg-yellow-950/90 dark:border-yellow-800`;
+      return `${baseStyles} bg-yellow-500/10 border border-yellow-500/20`;
     case "info":
-      return `${baseStyles} bg-blue-50/90 border-blue-200 dark:bg-blue-950/90 dark:border-blue-800`;
+      return `${baseStyles} bg-blue-500/10 border border-blue-500/20`;
     case "loading":
-      return `${baseStyles} bg-background/90 border-border`;
+      return `${baseStyles} bg-background/80 border border-border/30`;
     default:
-      return `${baseStyles} bg-background/90 border-border`;
+      return `${baseStyles} bg-background/80 border border-border/30`;
   }
 };
 

@@ -293,17 +293,17 @@ const Leaderboard = () => {
   const getRankBorderColor = (userRank: string): string => {
     switch (userRank) {
       case 'diamant':
-        return 'border-4 border-cyan-400 shadow-lg shadow-cyan-400/50 ring-2 ring-cyan-300/30';
+        return 'shadow-[0_0_20px_rgba(34,211,238,0.4)]';
       case 'platine':
-        return 'border-4 border-purple-500 shadow-lg shadow-purple-500/50 ring-2 ring-purple-300/30';
+        return 'shadow-[0_0_20px_rgba(168,85,247,0.4)]';
       case 'or':
-        return 'border-4 border-yellow-500 shadow-lg shadow-yellow-500/50 ring-2 ring-yellow-300/30';
+        return 'shadow-[0_0_20px_rgba(234,179,8,0.4)]';
       case 'argent':
-        return 'border-4 border-gray-400 shadow-lg shadow-gray-400/50 ring-2 ring-gray-300/30';
+        return 'shadow-[0_0_20px_rgba(156,163,175,0.4)]';
       case 'bronze':
-        return 'border-4 border-amber-600 shadow-lg shadow-amber-600/50 ring-2 ring-amber-300/30';
+        return 'shadow-[0_0_20px_rgba(217,119,6,0.4)]';
       default:
-        return 'border-2 border-gray-300';
+        return 'shadow-[0_0_10px_rgba(0,0,0,0.2)]';
     }
   };
 
@@ -324,45 +324,45 @@ const Leaderboard = () => {
     switch (userRank) {
       case 'diamant':
         return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white border-0">
-            <Diamond className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-400 backdrop-blur-xl">
+            <Diamond className="h-2.5 w-2.5 mr-1" />
             Diamant
-          </Badge>
+          </span>
         );
       case 'platine':
         return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
-            <Gem className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 backdrop-blur-xl">
+            <Gem className="h-2.5 w-2.5 mr-1" />
             Platine
-          </Badge>
+          </span>
         );
       case 'or':
         return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
-            <Award className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 backdrop-blur-xl">
+            <Award className="h-2.5 w-2.5 mr-1" />
             Or
-          </Badge>
+          </span>
         );
       case 'argent':
         return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-gray-400 to-gray-600 text-white border-0">
-            <Medal className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-400/10 text-gray-300 backdrop-blur-xl">
+            <Medal className="h-2.5 w-2.5 mr-1" />
             Argent
-          </Badge>
+          </span>
         );
       case 'bronze':
         return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-amber-600 to-amber-800 text-white border-0">
-            <Coins className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/10 text-amber-400 backdrop-blur-xl">
+            <Coins className="h-2.5 w-2.5 mr-1" />
             Bronze
-          </Badge>
+          </span>
         );
       default:
         return (
-          <Badge variant="outline">
-            <Star className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted/10 text-muted-foreground backdrop-blur-xl">
+            <Star className="h-2.5 w-2.5 mr-1" />
             Novice
-          </Badge>
+          </span>
         );
     }
   };

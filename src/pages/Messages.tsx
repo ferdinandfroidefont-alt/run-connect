@@ -1749,20 +1749,20 @@ const Messages = () => {
                              <div className={`flex justify-end mt-1 ${
                                isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
                              }`}>
-                               <div className="flex items-center">
-                                 {message.read_at ? (
-                                   <CheckCheck className="h-3 w-3 text-blue-500" />
-                                 ) : (
-                                   <Check className="h-3 w-3" />
-                                 )}
-                               </div>
-                             </div>
-                            )}
-                          </div>
+                                <div className="flex items-center">
+                                  {message.read_at ? (
+                                    <CheckCheck className="h-3 w-3 text-blue-500" />
+                                  ) : (
+                                    <Check className="h-3 w-3" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                       </div>
-                     </div>
-                   </div>
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
               
@@ -2028,7 +2028,7 @@ const Messages = () => {
             />
           </div>
         </div>
-      </div>
+        </div>
       </>
     );
   }
@@ -2103,80 +2103,25 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 overflow-y-auto p-2 pt-32">
-            {/* Search Buttons */}
-            <Card>
-              <CardContent className="p-2">
-                <div className="grid grid-cols-4 gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=profiles')}
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="text-xs">Utilisateurs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=clubs')}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="text-xs">Clubs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=strava')}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                    </svg>
-                    <span className="text-xs">Strava</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=contacts')}
-                  >
-                    <Phone className="h-5 w-5" />
-                    <span className="text-xs">Contacts</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
+          {/* Scrollable Content - Conversations only */}
+          <div className="flex-1 overflow-y-auto pt-32 pb-24">
             {/* Conversations */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <MessageCircle className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Conversations</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {conversations.length === 0 ? (
-                  <div className="text-center py-8 px-4">
-                    <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">
-                      Aucune conversation pour le moment
-                    </p>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      Cliquez sur "Nouveau" pour démarrer une conversation
-                    </p>
-                  </div>
-                ) : (
-                    <div className="divide-y divide-border">
-                    {conversations.map((conversation) => (
+            {conversations.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <MessageCircle className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground text-base font-medium">
+                  Aucune conversation
+                </p>
+                <p className="text-muted-foreground/70 text-sm mt-2">
+                  Appuyez sur + pour démarrer une conversation
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1 px-2">
+                {conversations.map((conversation) => (
                    <div
                      key={conversation.id}
-                     className={`flex items-center gap-3 p-4 hover:bg-muted cursor-pointer transition-colors ${
+                     className={`flex items-center gap-3 p-4 hover:bg-muted/30 cursor-pointer transition-all rounded-xl mx-2 my-1 ${
                        selectedConversations.has(conversation.id) ? 'bg-primary/10' : ''
                      }`}
                      onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
@@ -2272,12 +2217,10 @@ const Messages = () => {
                         }
                       </p>
                     </div>
-                  </div>
+                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
 
             {/* Friend suggestions */}
             <Card>
