@@ -1,17 +1,21 @@
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ReliabilityBadgeProps {
   rate: number;
   className?: string;
+  onClick?: () => void;
 }
 
-export const ReliabilityBadge = ({ rate, className = '' }: ReliabilityBadgeProps) => {
+export const ReliabilityBadge = ({ rate, className = '', onClick }: ReliabilityBadgeProps) => {
+  const { t } = useLanguage();
+  
   const getConfig = (rate: number) => {
     if (rate >= 95) {
       return {
-        label: 'Très fiable',
+        label: t('reliability.veryReliable'),
         icon: <CheckCircle2 className="h-3 w-3" />,
         color: 'bg-green-500',
         variant: 'default' as const,
@@ -19,7 +23,7 @@ export const ReliabilityBadge = ({ rate, className = '' }: ReliabilityBadgeProps
       };
     } else if (rate >= 80) {
       return {
-        label: 'Régulier',
+        label: t('reliability.regular'),
         icon: <CheckCircle2 className="h-3 w-3" />,
         color: 'bg-blue-500',
         variant: 'secondary' as const,
@@ -27,7 +31,7 @@ export const ReliabilityBadge = ({ rate, className = '' }: ReliabilityBadgeProps
       };
     } else if (rate >= 60) {
       return {
-        label: 'Occasionnel',
+        label: t('reliability.occasional'),
         icon: <AlertTriangle className="h-3 w-3" />,
         color: 'bg-orange-500',
         variant: 'outline' as const,
@@ -35,7 +39,7 @@ export const ReliabilityBadge = ({ rate, className = '' }: ReliabilityBadgeProps
       };
     } else {
       return {
-        label: 'Peu fiable',
+        label: t('reliability.unreliable'),
         icon: <XCircle className="h-3 w-3" />,
         color: 'bg-red-500',
         variant: 'destructive' as const,
@@ -47,10 +51,13 @@ export const ReliabilityBadge = ({ rate, className = '' }: ReliabilityBadgeProps
   const config = getConfig(rate);
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div 
+      className={`flex items-center gap-3 ${className} ${onClick ? 'cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex-1">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-medium">Fiabilité</span>
+          <span className="text-sm font-medium">{t('reliability.label')}</span>
           <span className={`text-sm font-bold ${config.textColor}`}>
             {rate.toFixed(0)}%
           </span>

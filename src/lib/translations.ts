@@ -12,6 +12,27 @@ export const languages: Record<Language, { name: string; nativeName: string }> =
 
 export const translations: Record<Language, any> = {
   fr: {
+    reliability: {
+      title: "Avis de fiabilité",
+      label: "Fiabilité",
+      rate: "Taux de fiabilité",
+      veryReliable: "Très fiable",
+      regular: "Régulier",
+      occasional: "Occasionnel",
+      unreliable: "Peu fiable",
+      sessionsCreated: "Séances créées",
+      sessionsJoined: "Séances rejointes",
+      summary: "{{name}} a participé à {{joined}} séances et en a organisé {{created}}."
+    },
+    records: {
+      title: "Records personnels",
+      noRecords: "Aucun record enregistré",
+      running: "Course à pied",
+      cycling: "Cyclisme",
+      swimming: "Natation",
+      triathlon: "Triathlon",
+      walking: "Marche"
+    },
     onboarding: {
       title: 'Bienvenue sur RunConnect',
       languageTitle: 'Choisissez votre langue',
@@ -130,6 +151,27 @@ export const translations: Record<Language, any> = {
     },
   },
   en: {
+    reliability: {
+      title: "Reliability Rating",
+      label: "Reliability",
+      rate: "Reliability rate",
+      veryReliable: "Very reliable",
+      regular: "Regular",
+      occasional: "Occasional",
+      unreliable: "Unreliable",
+      sessionsCreated: "Sessions created",
+      sessionsJoined: "Sessions joined",
+      summary: "{{name}} has participated in {{joined}} sessions and organized {{created}}."
+    },
+    records: {
+      title: "Personal Records",
+      noRecords: "No records registered",
+      running: "Running",
+      cycling: "Cycling",
+      swimming: "Swimming",
+      triathlon: "Triathlon",
+      walking: "Walking"
+    },
     onboarding: {
       title: 'Welcome to RunConnect',
       languageTitle: 'Choose your language',
@@ -248,6 +290,27 @@ export const translations: Record<Language, any> = {
     },
   },
   es: {
+    reliability: {
+      title: "Calificación de fiabilidad",
+      label: "Fiabilidad",
+      rate: "Tasa de fiabilidad",
+      veryReliable: "Muy fiable",
+      regular: "Regular",
+      occasional: "Ocasional",
+      unreliable: "Poco fiable",
+      sessionsCreated: "Sesiones creadas",
+      sessionsJoined: "Sesiones unidas",
+      summary: "{{name}} ha participado en {{joined}} sesiones y ha organizado {{created}}."
+    },
+    records: {
+      title: "Récords personales",
+      noRecords: "No hay récords registrados",
+      running: "Carrera",
+      cycling: "Ciclismo",
+      swimming: "Natación",
+      triathlon: "Triatlón",
+      walking: "Caminata"
+    },
     onboarding: {
       title: 'Bienvenido a RunConnect',
       languageTitle: 'Elige tu idioma',
@@ -366,6 +429,27 @@ export const translations: Record<Language, any> = {
     },
   },
   pt: {
+    reliability: {
+      title: "Avaliação de confiabilidade",
+      label: "Confiabilidade",
+      rate: "Taxa de confiabilidade",
+      veryReliable: "Muito confiável",
+      regular: "Regular",
+      occasional: "Ocasional",
+      unreliable: "Pouco confiável",
+      sessionsCreated: "Sessões criadas",
+      sessionsJoined: "Sessões participadas",
+      summary: "{{name}} participou de {{joined}} sessões e organizou {{created}}."
+    },
+    records: {
+      title: "Recordes pessoais",
+      noRecords: "Nenhum recorde registrado",
+      running: "Corrida",
+      cycling: "Ciclismo",
+      swimming: "Natação",
+      triathlon: "Triatlo",
+      walking: "Caminhada"
+    },
     onboarding: {
       title: 'Bem-vindo ao RunConnect',
       languageTitle: 'Escolha seu idioma',
@@ -484,6 +568,27 @@ export const translations: Record<Language, any> = {
     },
   },
   de: {
+    reliability: {
+      title: "Zuverlässigkeitsbewertung",
+      label: "Zuverlässigkeit",
+      rate: "Zuverlässigkeitsrate",
+      veryReliable: "Sehr zuverlässig",
+      regular: "Regelmäßig",
+      occasional: "Gelegentlich",
+      unreliable: "Unzuverlässig",
+      sessionsCreated: "Erstellte Sitzungen",
+      sessionsJoined: "Teilgenommene Sitzungen",
+      summary: "{{name}} hat an {{joined}} Sitzungen teilgenommen und {{created}} organisiert."
+    },
+    records: {
+      title: "Persönliche Rekorde",
+      noRecords: "Keine Rekorde erfasst",
+      running: "Laufen",
+      cycling: "Radfahren",
+      swimming: "Schwimmen",
+      triathlon: "Triathlon",
+      walking: "Gehen"
+    },
     onboarding: {
       title: 'Willkommen bei RunConnect',
       languageTitle: 'Wählen Sie Ihre Sprache',
@@ -602,6 +707,27 @@ export const translations: Record<Language, any> = {
     },
   },
   zh: {
+    reliability: {
+      title: "可靠性评级",
+      label: "可靠性",
+      rate: "可靠率",
+      veryReliable: "非常可靠",
+      regular: "常规",
+      occasional: "偶尔",
+      unreliable: "不可靠",
+      sessionsCreated: "创建的会话",
+      sessionsJoined: "参加的会话",
+      summary: "{{name}}参加了{{joined}}个会话并组织了{{created}}个。"
+    },
+    records: {
+      title: "个人记录",
+      noRecords: "没有记录",
+      running: "跑步",
+      cycling: "骑行",
+      swimming: "游泳",
+      triathlon: "铁人三项",
+      walking: "步行"
+    },
     onboarding: {
       title: '欢迎使用RunConnect',
       languageTitle: '选择您的语言',
@@ -720,6 +846,27 @@ export const translations: Record<Language, any> = {
     },
   },
   ar: {
+    reliability: {
+      title: "تصنيف الموثوقية",
+      label: "الموثوقية",
+      rate: "معدل الموثوقية",
+      veryReliable: "موثوق جداً",
+      regular: "منتظم",
+      occasional: "عرضي",
+      unreliable: "غير موثوق",
+      sessionsCreated: "الجلسات المنشأة",
+      sessionsJoined: "الجلسات المشارك فيها",
+      summary: "{{name}} شارك في {{joined}} جلسة ونظم {{created}}."
+    },
+    records: {
+      title: "الأرقام القياسية الشخصية",
+      noRecords: "لا توجد أرقام قياسية مسجلة",
+      running: "الجري",
+      cycling: "ركوب الدراجات",
+      swimming: "السباحة",
+      triathlon: "الترياثلون",
+      walking: "المشي"
+    },
     onboarding: {
       title: 'مرحباً بك في RunConnect',
       languageTitle: 'اختر لغتك',

@@ -26,6 +26,9 @@ import { ReportUserDialog } from "@/components/ReportUserDialog";
 import { SimpleAABDiagnostic } from "@/components/SimpleAABDiagnostic";
 import { UserActivityChart } from "@/components/UserActivityChart";
 import { ReliabilityBadge } from "@/components/ReliabilityBadge";
+import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
+import { PersonalRecords } from "@/components/PersonalRecords";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Profile {
   username: string;
@@ -94,8 +97,12 @@ const Profile = () => {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const [reliabilityRate, setReliabilityRate] = useState(0);
+  const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
+  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
+  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const { toast } = useToast();
   const { selectFromGallery, loading: cameraLoading } = useCamera();
+  const { t } = useLanguage();
   
 
   // Vérifier si on arrive avec un message d'erreur
@@ -253,14 +260,23 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from('user_stats')
-        .select('reliability_rate')
+        .select('reliability_rate, total_sessions_completed, total_sessions_joined')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') throw error;
       if (data) {
-        setReliabilityRate(data.reliability_rate || 0);
+        setReliabilityRate(data.reliability_rate || 100);
+        setTotalSessionsJoined(data.total_sessions_joined || 0);
       }
+
+      // Compter les sessions créées
+      const { count: createdCount } = await supabase
+        .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('organizer_id', user.id);
+      
+      setTotalSessionsCreated(createdCount || 0);
     } catch (error) {
       console.error('Error fetching reliability rate:', error);
     }
@@ -756,10 +772,13 @@ const Profile = () => {
               }
             })()}
             
-            {/* Reliability Badge */}
+            {/* Reliability Badge - Cliquable */}
             {!isViewingOtherUser && reliabilityRate > 0 && (
               <div className="mt-4 w-full px-4">
-                <ReliabilityBadge rate={reliabilityRate} />
+                <ReliabilityBadge 
+                  rate={reliabilityRate}
+                  onClick={() => setShowReliabilityDetails(true)}
+                />
               </div>
             )}
             
@@ -925,108 +944,15 @@ const Profile = () => {
           </Card>
         )}
 
-        {/* Records Section - For other users - Only show if has records */}
-        {isViewingOtherUser && (
-          (profile?.running_records && typeof profile.running_records === 'object' && Object.keys(profile.running_records).length > 0) ||
-          (profile?.cycling_records && typeof profile.cycling_records === 'object' && Object.keys(profile.cycling_records).length > 0) ||
-          (profile?.swimming_records && typeof profile.swimming_records === 'object' && Object.keys(profile.swimming_records).length > 0) ||
-          (profile?.triathlon_records && typeof profile.triathlon_records === 'object' && Object.keys(profile.triathlon_records).length > 0) ||
-          (profile?.walking_records && typeof profile.walking_records === 'object' && Object.keys(profile.walking_records).length > 0)
-        ) && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center">
-                <Crown className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Records</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Running Records */}
-              {profile?.running_records && typeof profile.running_records === 'object' && Object.keys(profile.running_records).length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    🏃‍♂️ Course à pied
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {Object.entries(profile.running_records).map(([distance, time]) => (
-                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
-                        <span>{distance}</span>
-                        <span className="font-medium">{String(time)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Cycling Records */}
-              {profile?.cycling_records && typeof profile.cycling_records === 'object' && Object.keys(profile.cycling_records).length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    🚴‍♂️ Cyclisme
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {Object.entries(profile.cycling_records).map(([distance, time]) => (
-                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
-                        <span>{distance}</span>
-                        <span className="font-medium">{String(time)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Swimming Records */}
-              {profile?.swimming_records && typeof profile.swimming_records === 'object' && Object.keys(profile.swimming_records).length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    🏊‍♂️ Natation
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {Object.entries(profile.swimming_records).map(([distance, time]) => (
-                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
-                        <span>{distance}</span>
-                        <span className="font-medium">{String(time)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Triathlon Records */}
-              {profile?.triathlon_records && typeof profile.triathlon_records === 'object' && Object.keys(profile.triathlon_records).length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    🏊‍♂️🚴‍♂️🏃‍♂️ Triathlon
-                  </h4>
-                  <div className="grid grid-cols-1 gap-2 text-xs">
-                    {Object.entries(profile.triathlon_records).map(([distance, time]) => (
-                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
-                        <span>{distance}</span>
-                        <span className="font-medium">{String(time)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Walking Records */}
-              {profile?.walking_records && typeof profile.walking_records === 'object' && Object.keys(profile.walking_records).length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    🚶‍♂️ Marche
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {Object.entries(profile.walking_records).map(([distance, time]) => (
-                      <div key={distance} className="flex justify-between bg-muted/50 p-2 rounded">
-                        <span>{distance}</span>
-                        <span className="font-medium">{String(time)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Records Section - For other users */}
+        {isViewingOtherUser && profile && (
+          <PersonalRecords records={{
+            running_records: profile.running_records,
+            cycling_records: profile.cycling_records,
+            swimming_records: profile.swimming_records,
+            triathlon_records: profile.triathlon_records,
+            walking_records: profile.walking_records
+          }} />
         )}
 
         {/* Activity Chart Section - Visible to all */}
