@@ -2103,8 +2103,53 @@ const Messages = () => {
             </div>
           </div>
 
+          {/* Glass Pills Filters - VisionOS Style */}
+          <div className="fixed top-[88px] left-0 right-0 z-40 px-4 pb-3 bg-gradient-to-b from-background via-background to-transparent">
+            <div className="max-w-md mx-auto">
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                <button
+                  onClick={() => setShowNewConversation(true)}
+                  className="flex-shrink-0 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 backdrop-blur-xl border active:scale-95
+                    bg-white/[0.07] border-white/[0.15] text-gray-300 shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-white/[0.12]"
+                >
+                  Utilisateurs
+                </button>
+                
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="flex-shrink-0 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 backdrop-blur-xl border active:scale-95
+                    bg-white/[0.07] border-white/[0.15] text-gray-300 shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-white/[0.12]"
+                >
+                  Clubs
+                </button>
+                
+                <button
+                  onClick={() => {
+                    // TODO: Add Strava filter logic
+                    toast({
+                      title: "Filtre Strava",
+                      description: "Affiche les amis Strava"
+                    });
+                  }}
+                  className="flex-shrink-0 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 backdrop-blur-xl border active:scale-95
+                    bg-white/[0.07] border-white/[0.15] text-gray-300 shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-white/[0.12]"
+                >
+                  Strava
+                </button>
+                
+                <button
+                  onClick={() => setShowContactsDialog(true)}
+                  className="flex-shrink-0 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 backdrop-blur-xl border active:scale-95
+                    bg-white/[0.07] border-white/[0.15] text-gray-300 shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-white/[0.12]"
+                >
+                  Contacts
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Scrollable Content - Conversations only */}
-          <div className="flex-1 overflow-y-auto pt-32 pb-24">
+          <div className="flex-1 overflow-y-auto pt-[156px] pb-24">
             {/* Conversations */}
             {conversations.length === 0 ? (
               <div className="text-center py-12 px-4">
