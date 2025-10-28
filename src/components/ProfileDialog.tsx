@@ -17,6 +17,8 @@ import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserActivityChart } from "@/components/UserActivityChart";
+import { ReliabilityBadge } from "@/components/ReliabilityBadge";
+import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 
 interface Profile {
   username: string;
@@ -60,6 +62,10 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
+  const [reliabilityRate, setReliabilityRate] = useState(100);
+  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
+  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [recordsData, setRecordsData] = useState<{
     walking: Record<string, string>;
     running: Record<string, string>;
@@ -78,6 +84,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
     if (user && open) {
       fetchProfile();
       fetchFollowCounts();
+      fetchReliabilityStats();
     }
   }, [user, open]);
 
@@ -94,6 +101,33 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       setFollowingCount(followingData || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  const fetchReliabilityStats = async () => {
+    if (!user) return;
+    try {
+      // Fetch reliability rate from user_stats
+      const { data: statsData } = await supabase
+        .from('user_stats')
+        .select('reliability_rate, total_sessions_joined')
+        .eq('user_id', user.id)
+        .single();
+
+      if (statsData) {
+        setReliabilityRate(Number(statsData.reliability_rate) || 100);
+        setTotalSessionsJoined(statsData.total_sessions_joined || 0);
+      }
+
+      // Fetch total sessions created
+      const { count: createdCount } = await supabase
+        .from('sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('organizer_id', user.id);
+
+      setTotalSessionsCreated(createdCount || 0);
+    } catch (error) {
+      console.error('Error fetching reliability stats:', error);
     }
   };
 
@@ -367,6 +401,15 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       <Crown className="h-5 w-5 text-yellow-500" />
                     )}
                   </div>
+
+                  {/* Reliability Badge */}
+                  <div className="w-full mb-3 px-4">
+                    <ReliabilityBadge 
+                      rate={reliabilityRate}
+                      onClick={() => setShowReliabilityDialog(true)}
+                    />
+                  </div>
+
                   <div className="flex gap-2 items-center mb-4 flex-wrap justify-center">
                     {profile?.is_admin && (
                       <Badge className="bg-red-100 text-red-800 border-red-200">
@@ -630,6 +673,16 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       <SettingsDialog 
         open={showSettingsDialog} 
         onOpenChange={(open) => setShowSettingsDialog(open)} 
+      />
+
+      {/* Reliability Details Dialog */}
+      <ReliabilityDetailsDialog
+        open={showReliabilityDialog}
+        onOpenChange={setShowReliabilityDialog}
+        userName={profile?.display_name || profile?.username || ''}
+        reliabilityRate={reliabilityRate}
+        totalSessionsCreated={totalSessionsCreated}
+        totalSessionsJoined={totalSessionsJoined}
       />
     </>
   );
