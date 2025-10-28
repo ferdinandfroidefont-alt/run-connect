@@ -63,6 +63,12 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
   }, [language, isLoaded]);
 
   const setLanguage = async (lang: Language) => {
+    console.log('🌍 Changement de langue:', language, '→', lang);
+    
+    // Sauvegarder immédiatement dans localStorage
+    localStorage.setItem('app-language', lang);
+    
+    // Mettre à jour l'état
     setLanguageState(lang);
     
     // Sauvegarder aussi dans la base de données
@@ -73,10 +79,16 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
           .from('profiles')
           .update({ preferred_language: lang } as any)
           .eq('user_id', user.id));
+        console.log('✅ Langue sauvegardée dans le profil');
       }
     } catch (error) {
-      console.error('Error saving language to profile:', error);
+      console.error('❌ Error saving language to profile:', error);
     }
+    
+    // Recharger la page pour appliquer les changements
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
   };
 
   const t = (key: string): string => {
