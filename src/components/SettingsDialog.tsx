@@ -373,7 +373,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                       <SelectTrigger className="w-[120px] h-8 text-xs border-border/50 bg-background/50">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999]" sideOffset={5}>
                         {Object.entries(languages).map(([code, { nativeName }]) => (
                           <SelectItem key={code} value={code}>{nativeName}</SelectItem>
                         ))}
