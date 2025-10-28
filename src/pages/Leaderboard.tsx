@@ -375,7 +375,7 @@ const Leaderboard = () => {
     const third = top3[2];
     
     return (
-      <div className="mb-8 pb-8 border-b">
+      <div className="mb-8 pb-8">
         <div className="flex items-end justify-center gap-4 mb-6">
           {/* 2ème place - Gauche */}
           {second && (
@@ -493,15 +493,20 @@ const Leaderboard = () => {
         <PodiumDisplay top3={top3} showSeasonal={showSeasonal} />
         
         {rest.map((item, index) => (
-          <Card 
+          <div 
             key={item.user_id} 
             className={`
-              ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-              hover-lift hover-glow btn-interactive animate-fade-in
+              rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
+              ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
             `}
-            style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+            style={{ 
+              animationDelay: `${(index + 3) * 0.1}s`,
+              background: 'rgba(255, 255, 255, 0.07)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+            }}
           >
-            <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 flex justify-center">
                   {getRankIcon(item.rank)}
@@ -562,8 +567,8 @@ const Leaderboard = () => {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -638,7 +643,7 @@ const Leaderboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="min-h-screen bg-[#0B0E13] p-4 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="max-w-md mx-auto">
           <div className="text-center py-4">
             <h1 className="text-2xl font-bold text-foreground">Classement</h1>
@@ -647,11 +652,18 @@ const Leaderboard = () => {
           {/* Animated skeleton placeholders */}
           <div className="space-y-4 animate-fade-in">
             {/* Rank System Card Skeleton */}
-            <Card className="animate-pulse">
-              <CardHeader>
+            <div 
+              className="animate-pulse rounded-xl p-6"
+              style={{
+                background: 'rgba(255, 255, 255, 0.07)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+              }}
+            >
+              <div className="mb-6">
                 <Skeleton className="h-6 w-[140px] mx-auto" />
-              </CardHeader>
-              <CardContent className="space-y-3">
+              </div>
+              <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="flex items-center justify-between">
@@ -663,11 +675,17 @@ const Leaderboard = () => {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Tabs Skeleton */}
-            <div className="flex h-10 items-center justify-center rounded-md bg-muted p-1">
+            <div 
+              className="flex h-10 items-center justify-center rounded-md p-1"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex-1 h-8 mx-1">
                   <Skeleton className="h-full w-full rounded-sm" />
@@ -686,13 +704,19 @@ const Leaderboard = () => {
   // Check if user is premium
   if (!subscriptionInfo?.subscribed) {
     return (
-      <div className="min-h-screen bg-background p-4 pb-20 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="min-h-screen bg-[#0B0E13] p-4 pb-20 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="max-w-md mx-auto">
           <div className="text-center py-8">
             <h1 className="text-2xl font-bold text-foreground mb-6">Classement</h1>
             
-            <Card className="border-2 border-yellow-500/20 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20">
-              <CardContent className="p-8 text-center space-y-6">
+            <div 
+              className="rounded-xl border-2 border-yellow-500/20 p-8 text-center space-y-6"
+              style={{
+                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(249, 115, 22, 0.1))',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+              }}
+            >
                 <div className="relative">
                   <Lock className="h-16 w-16 text-yellow-500 mx-auto" />
                   <Crown className="h-8 w-8 text-yellow-600 absolute -top-1 -right-1" />
@@ -725,8 +749,7 @@ const Leaderboard = () => {
                   <Crown className="h-4 w-4" />
                   Devenir Premium
                 </Button>
-              </CardContent>
-            </Card>
+            </div>
           </div>
         </div>
       </div>
@@ -734,7 +757,7 @@ const Leaderboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-20 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div className="min-h-screen bg-[#0B0E13] p-4 pb-20 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <div className="max-w-md mx-auto space-y-4">
 
 
@@ -779,32 +802,52 @@ const Leaderboard = () => {
                 <PodiumDisplay top3={seasonalLeaderboard.slice(0, 3)} showSeasonal />
               )}
               
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="seasonal" className="flex items-center gap-1">
+              <div 
+                className="grid w-full grid-cols-3 p-1 rounded-lg"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <TabsTrigger 
+                  value="seasonal" 
+                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
                   <TrendingUp className="h-4 w-4" />
                   <span className="hidden sm:inline">Saison</span>
                 </TabsTrigger>
-                <TabsTrigger value="global" className="flex items-center gap-1">
+                <TabsTrigger 
+                  value="global" 
+                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
                   <Globe className="h-4 w-4" />
                   <span className="hidden sm:inline">Global</span>
                 </TabsTrigger>
-                <TabsTrigger value="friends" className="flex items-center gap-1">
+                <TabsTrigger 
+                  value="friends" 
+                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
                   <Users className="h-4 w-4" />
                   <span className="hidden sm:inline">Amis</span>
                 </TabsTrigger>
-              </TabsList>
+              </div>
               
               <div className="space-y-2">
                 {seasonalLeaderboard.slice(3).map((item, index) => (
-                  <Card 
+                  <div 
                     key={item.user_id} 
                     className={`
-                      ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-                      hover-lift hover-glow btn-interactive animate-fade-in
+                      rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
+                      ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
                     `}
-                    style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+                    style={{ 
+                      animationDelay: `${(index + 3) * 0.1}s`,
+                      background: 'rgba(255, 255, 255, 0.07)',
+                      backdropFilter: 'blur(10px)',
+                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+                    }}
                   >
-                    <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 flex justify-center">
                           {getRankIcon(item.rank)}
@@ -837,8 +880,8 @@ const Leaderboard = () => {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
               <PaginationControls
@@ -865,32 +908,52 @@ const Leaderboard = () => {
                 <PodiumDisplay top3={leaderboard.slice(0, 3)} />
               )}
               
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="seasonal" className="flex items-center gap-1">
+              <div 
+                className="grid w-full grid-cols-3 p-1 rounded-lg"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <TabsTrigger 
+                  value="seasonal" 
+                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
                   <TrendingUp className="h-4 w-4" />
                   <span className="hidden sm:inline">Saison</span>
                 </TabsTrigger>
-                <TabsTrigger value="global" className="flex items-center gap-1">
+                <TabsTrigger 
+                  value="global" 
+                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
                   <Globe className="h-4 w-4" />
                   <span className="hidden sm:inline">Global</span>
                 </TabsTrigger>
-                <TabsTrigger value="friends" className="flex items-center gap-1">
+                <TabsTrigger 
+                  value="friends" 
+                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
                   <Users className="h-4 w-4" />
                   <span className="hidden sm:inline">Amis</span>
                 </TabsTrigger>
-              </TabsList>
+              </div>
               
               <div className="space-y-2">
                 {leaderboard.slice(3).map((item, index) => (
-                  <Card 
+                  <div 
                     key={item.user_id} 
                     className={`
-                      ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-                      hover-lift hover-glow btn-interactive animate-fade-in
+                      rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
+                      ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
                     `}
-                    style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+                    style={{ 
+                      animationDelay: `${(index + 3) * 0.1}s`,
+                      background: 'rgba(255, 255, 255, 0.07)',
+                      backdropFilter: 'blur(10px)',
+                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+                    }}
                   >
-                    <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 flex justify-center">
                           {getRankIcon(item.rank)}
@@ -926,8 +989,8 @@ const Leaderboard = () => {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
               <PaginationControls
@@ -954,32 +1017,52 @@ const Leaderboard = () => {
                 <>
                   <PodiumDisplay top3={friendsLeaderboard.slice(0, 3)} />
                   
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="seasonal" className="flex items-center gap-1">
+                  <div 
+                    className="grid w-full grid-cols-3 p-1 rounded-lg"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    <TabsTrigger 
+                      value="seasonal" 
+                      className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                    >
                       <TrendingUp className="h-4 w-4" />
                       <span className="hidden sm:inline">Saison</span>
                     </TabsTrigger>
-                    <TabsTrigger value="global" className="flex items-center gap-1">
+                    <TabsTrigger 
+                      value="global" 
+                      className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                    >
                       <Globe className="h-4 w-4" />
                       <span className="hidden sm:inline">Global</span>
                     </TabsTrigger>
-                    <TabsTrigger value="friends" className="flex items-center gap-1">
+                    <TabsTrigger 
+                      value="friends" 
+                      className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                    >
                       <Users className="h-4 w-4" />
                       <span className="hidden sm:inline">Amis</span>
                     </TabsTrigger>
-                  </TabsList>
+                  </div>
                   
                   <div className="space-y-2">
                     {friendsLeaderboard.slice(3).map((item, index) => (
-                      <Card 
+                      <div 
                         key={item.user_id} 
                         className={`
-                          ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-                          hover-lift hover-glow btn-interactive animate-fade-in
+                          rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
+                          ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
                         `}
-                        style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+                        style={{ 
+                          animationDelay: `${(index + 3) * 0.1}s`,
+                          background: 'rgba(255, 255, 255, 0.07)',
+                          backdropFilter: 'blur(10px)',
+                          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+                        }}
                       >
-                        <CardContent className="flex items-center justify-between p-4">
+                        <div className="flex items-center justify-between p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 flex justify-center">
                               {getRankIcon(item.rank)}
@@ -1015,8 +1098,8 @@ const Leaderboard = () => {
                               </div>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     ))}
                   </div>
                   <PaginationControls
@@ -1026,14 +1109,19 @@ const Leaderboard = () => {
                   />
                 </>
               ) : (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      Suivez des amis pour voir leur classement !
-                    </p>
-                  </CardContent>
-                </Card>
+                <div 
+                  className="rounded-xl p-8 text-center"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.07)',
+                    backdropFilter: 'blur(10px)',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+                  }}
+                >
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    Suivez des amis pour voir leur classement !
+                  </p>
+                </div>
               )}
             </div>
           </TabsContent>
