@@ -24,7 +24,7 @@ export const MessageFilterPills = ({ activeFilter }: MessageFilterPillsProps) =>
   ];
 
   return (
-    <div className="px-4 mt-6">
+    <div className="px-4 mt-8">
       <div className="glass-premium shadow-2xl rounded-2xl p-2">
         <div className="relative">
           {/* Effet lumineux subtil au fond */}
