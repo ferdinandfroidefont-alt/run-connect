@@ -24,8 +24,8 @@ export const MessageFilterPills = ({ activeFilter }: MessageFilterPillsProps) =>
   ];
 
   return (
-    <div className="sticky top-[72px] z-30 px-4 py-3 overflow-x-auto scrollbar-hide bg-background/80 backdrop-blur-xl">
-      <div className="flex gap-3 min-w-max pb-1">
+    <div className="px-4 py-3">
+      <div className="flex gap-2">
         {filters.map((filter, index) => {
           const isActive = activeFilter === filter.id;
           const Icon = filter.icon;
@@ -37,39 +37,36 @@ export const MessageFilterPills = ({ activeFilter }: MessageFilterPillsProps) =>
               style={{ 
                 animationDelay: `${index * 0.1}s`,
                 ...(isActive ? {
-                  background: 'linear-gradient(135deg, rgba(61, 139, 242, 0.25) 0%, rgba(108, 99, 255, 0.2) 100%)',
-                  backdropFilter: 'blur(20px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                  border: '1px solid rgba(61, 139, 242, 0.4)',
-                  boxShadow: '0 0 40px rgba(61, 139, 242, 0.6), 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                  textShadow: '0 0 20px rgba(61, 139, 242, 0.8)'
+                  background: 'rgba(61, 139, 242, 0.15)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4), 0 0 20px rgba(61, 139, 242, 0.3)'
                 } : {
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  backdropFilter: 'blur(20px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                  border: '1px solid rgba(255, 255, 255, 0.18)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  background: 'rgba(255, 255, 255, 0.07)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
                 })
               }}
               className={`
-                flex items-center gap-2 px-8 py-4 rounded-2xl min-w-[140px] whitespace-nowrap
+                flex-1 flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl whitespace-nowrap
                 transition-all duration-300 ease-out
-                hover:scale-[1.03] active:scale-[0.98]
+                hover:scale-[1.02] active:scale-[0.98]
                 animate-scale-in
                 ${isActive 
-                  ? 'text-white font-bold hover:shadow-[0_0_50px_rgba(61,139,242,0.7),0_8px_32px_rgba(0,0,0,0.5)]' 
-                  : 'text-white/70 font-semibold hover:shadow-[0_0_30px_rgba(61,139,242,0.3),0_8px_32px_rgba(0,0,0,0.4)]'
+                  ? 'text-white font-semibold' 
+                  : 'text-white/70 font-medium'
                 }
               `}
             >
               {Icon ? (
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4" />
               ) : filter.svgPath ? (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d={filter.svgPath} />
                 </svg>
               ) : null}
-              <span className="text-base">{filter.label}</span>
+              <span className="text-xs">{filter.label}</span>
             </button>
           );
         })}
