@@ -23,6 +23,7 @@ import { AvatarViewer } from "@/components/AvatarViewer";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useCamera } from "@/hooks/useCamera";
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
+import { MessageFilterPills } from "@/components/MessageFilterPills";
 import {
   MessageCircle, 
   Users, 
@@ -2039,261 +2040,174 @@ const Messages = () => {
       <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
       <div className="h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
-          {/* Fixed Header Only - Remonté légèrement */}
-          <div className="fixed top-4 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
-            <div className="max-w-md mx-auto w-full">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              {isSelectionMode && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={exitSelectionMode}
-                  className="mr-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {isSelectionMode 
-                    ? `${selectedConversations.size} sélectionné(s)` 
-                    : "Messages"
-                  }
-                </h1>
-                {!isSelectionMode && (
-                  <p className="text-muted-foreground text-sm">
-                    Restez en contact avec la communauté
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                {isSelectionMode ? (
+          {/* Instagram-style Header */}
+          <div className="sticky top-6 z-10 backdrop-blur-xl bg-background/95 px-4 py-4 flex items-center justify-between border-b border-border/5">
+            <h1 className="text-2xl font-bold">
+              {isSelectionMode 
+                ? `${selectedConversations.size} sélectionné(s)` 
+                : "Messages"
+              }
+            </h1>
+            <div className="flex items-center gap-2">
+              {isSelectionMode ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={exitSelectionMode}
+                    className="rounded-full h-10 w-10 hover:bg-white/10"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                   <Button
                     onClick={confirmBulkDelete}
-                    size="sm"
+                    size="icon"
                     variant="destructive"
                     disabled={selectedConversations.size === 0}
+                    className="rounded-full h-10 w-10"
                   >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Supprimer
-                  </Button>
-                ) : (
-                  <>
-                  <Button
-                    onClick={() => setShowNewConversation(true)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Message
-                  </Button>
-                  <Button
-                    onClick={() => setShowCreateGroup(true)}
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    <Users className="h-4 w-4 mr-1" />
-                    Club
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                 </>
-                )}
-              </div>
-            </div>
+              ) : (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setShowNewConversation(true)}
+                  className="rounded-full h-10 w-10 hover:bg-white/10"
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+              )}
             </div>
           </div>
 
-          {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 overflow-y-auto p-2 pt-32">
-            {/* Search Buttons */}
-            <Card>
-              <CardContent className="p-2">
-                <div className="grid grid-cols-4 gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=profiles')}
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="text-xs">Utilisateurs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=clubs')}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="text-xs">Clubs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=strava')}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                    </svg>
-                    <span className="text-xs">Strava</span>
-                  </Button>
+          {/* Glassmorphism Filter Pills */}
+          {!isSelectionMode && <MessageFilterPills />}
 
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=contacts')}
-                  >
-                    <Phone className="h-5 w-5" />
-                    <span className="text-xs">Contacts</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Conversations */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <MessageCircle className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Conversations</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {conversations.length === 0 ? (
-                  <div className="text-center py-8 px-4">
-                    <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">
-                      Aucune conversation pour le moment
-                    </p>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      Cliquez sur "Nouveau" pour démarrer une conversation
-                    </p>
-                  </div>
-                ) : (
-                    <div className="divide-y divide-border">
-                    {conversations.map((conversation) => (
+          {/* Conversations List - No borders */}
+          <ScrollArea className="flex-1 overflow-y-auto px-4 pb-4">
+            {conversations.length === 0 ? (
+              <div className="text-center text-muted-foreground py-12 px-4">
+                <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                <p className="text-base font-medium mb-1">Aucune conversation</p>
+                <p className="text-sm opacity-70">Commencez à discuter avec des membres</p>
+              </div>
+            ) : (
+              <div className="space-y-1 pt-2">
+                {conversations.map((conversation) => (
                    <div
-                     key={conversation.id}
-                     className={`flex items-center gap-3 p-4 hover:bg-muted cursor-pointer transition-colors ${
-                       selectedConversations.has(conversation.id) ? 'bg-primary/10' : ''
-                     }`}
-                     onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
-                     onTouchEnd={handleLongPressEnd}
-                     onTouchCancel={handleLongPressEnd}
-                     onContextMenu={(e) => {
-                       e.preventDefault();
-                       setConversationToDelete(conversation);
-                       confirmDeleteConversation(conversation);
-                     }}
-                   >
-                     {isSelectionMode && (
-                       <div className="flex items-center mr-2">
-                         <input
-                           type="checkbox"
-                           checked={selectedConversations.has(conversation.id)}
-                           onChange={() => toggleConversationSelection(conversation.id)}
-                           className="w-5 h-5 rounded border-2 border-primary"
-                           onClick={(e) => e.stopPropagation()}
-                         />
-                       </div>
-                     )}
-                     
-                     <div className="relative">
-                        <Avatar 
-                          className="h-12 w-12 cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isSelectionMode) {
-                                toggleConversationSelection(conversation.id);
-                              } else if (conversation.is_group) {
-                                setSelectedConversation(conversation);
-                                setGroupInfoData(conversation);
-                                setShowGroupInfo(true);
-                              } else if (conversation.other_participant) {
-                                handleAvatarClick(conversation.other_participant.avatar_url, conversation.other_participant.username || conversation.other_participant.display_name || "Utilisateur");
-                              }
-                            }}
-                       >
-                         {conversation.is_group ? (
-                           <>
-                             <AvatarImage src={conversation.group_avatar_url || ""} />
-                             <AvatarFallback>
-                               <Users className="h-6 w-6" />
-                             </AvatarFallback>
-                           </>
-                         ) : (
-                           <>
-                             <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                             <AvatarFallback>
-                               {(conversation.other_participant?.username || conversation.other_participant?.display_name || "U").charAt(0).toUpperCase()}
-                             </AvatarFallback>
-                           </>
-                         )}
-                       </Avatar>
-                       {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
-                     </div>
-                     <div 
-                       className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => {
-                          if (isSelectionMode) {
-                            toggleConversationSelection(conversation.id);
-                          } else {
-                            setSelectedConversation(conversation);
-                            loadMessages(conversation.id);
-                            // Marquer les messages comme lus automatiquement
-                            markMessagesAsReadOnOpen(conversation.id);
-                          }
-                        }}
-                     >
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-sm truncate">
-                          {conversation.is_group 
-                            ? conversation.group_name 
-                            : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
-                          }
-                        </p>
-                         <div className="flex items-center gap-2">
-                           {conversation.unread_count > 0 && (
-                             <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
-                               {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                             </Badge>
-                           )}
-                           <span className="text-xs text-muted-foreground">
-                             {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
-                           </span>
-                         </div>
+                      key={conversation.id}
+                      className={`
+                        flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer
+                        hover:bg-white/5 active:bg-white/10
+                        ${isSelectionMode ? 'cursor-pointer' : ''}
+                        ${selectedConversations.has(conversation.id) ? 'bg-white/10 ring-2 ring-primary/50' : ''}
+                        ${conversation.unread_count && conversation.unread_count > 0 ? 'bg-white/[0.03]' : ''}
+                      `}
+                      onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
+                      onTouchEnd={handleLongPressEnd}
+                      onTouchCancel={handleLongPressEnd}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setConversationToDelete(conversation);
+                        confirmDeleteConversation(conversation);
+                      }}
+                    >
+                      {isSelectionMode && (
+                        <div className="flex items-center mr-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedConversations.has(conversation.id)}
+                            onChange={() => toggleConversationSelection(conversation.id)}
+                            className="w-5 h-5 rounded border-2 border-primary"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="relative">
+                         <Avatar 
+                           className="h-12 w-12 cursor-pointer"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               if (isSelectionMode) {
+                                 toggleConversationSelection(conversation.id);
+                               } else if (conversation.is_group) {
+                                 setSelectedConversation(conversation);
+                                 setGroupInfoData(conversation);
+                                 setShowGroupInfo(true);
+                               } else if (conversation.other_participant) {
+                                 handleAvatarClick(conversation.other_participant.avatar_url, conversation.other_participant.username || conversation.other_participant.display_name || "Utilisateur");
+                               }
+                             }}
+                        >
+                          {conversation.is_group ? (
+                            <>
+                              <AvatarImage src={conversation.group_avatar_url || ""} />
+                              <AvatarFallback>
+                                <Users className="h-6 w-6" />
+                              </AvatarFallback>
+                            </>
+                          ) : (
+                            <>
+                              <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                              <AvatarFallback>
+                                {(conversation.other_participant?.username || conversation.other_participant?.display_name || "U").charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </>
+                          )}
+                        </Avatar>
+                        {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {conversation.is_group 
-                          ? `${conversation.group_members?.length || 0} membres`
-                          : `@${conversation.other_participant?.username || "utilisateur"}`
-                        }
-                      </p>
-                    </div>
-                  </div>
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                         onClick={() => {
+                           if (isSelectionMode) {
+                             toggleConversationSelection(conversation.id);
+                           } else {
+                             setSelectedConversation(conversation);
+                             loadMessages(conversation.id);
+                             // Marquer les messages comme lus automatiquement
+                             markMessagesAsReadOnOpen(conversation.id);
+                           }
+                         }}
+                      >
+                       <div className="flex items-center justify-between">
+                         <p className="font-medium text-sm truncate">
+                           {conversation.is_group 
+                             ? conversation.group_name 
+                             : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
+                           }
+                         </p>
+                          <div className="flex items-center gap-2">
+                            {conversation.unread_count > 0 && (
+                              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
+                            </span>
+                          </div>
+                       </div>
+                       <p className="text-xs text-muted-foreground">
+                         {conversation.is_group 
+                           ? `${conversation.group_members?.length || 0} membres`
+                           : `@${conversation.other_participant?.username || "utilisateur"}`
+                         }
+                       </p>
+                     </div>
+                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-            {/* Friend suggestions */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-3">
-                <Users className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Suggestions d'amis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FriendSuggestions compact />
-              </CardContent>
-            </Card>
-          </div>
+          </ScrollArea>
         </div>
+      </div>
 
-        {/* Create Club Dialog */}
-        <CreateClubDialog
+      {/* Create Club Dialog */}
+      <CreateClubDialog
           isOpen={showCreateGroup}
           onClose={() => setShowCreateGroup(false)}
           onGroupCreated={(groupId) => {
@@ -2365,9 +2279,10 @@ const Messages = () => {
           avatarUrl={selectedAvatarData?.url || null}
           username={selectedAvatarData?.username || "Utilisateur"}
         />
-      </div>
-    </>
-  );
+      </>
+    );
+  }
+
 };
 
 export default Messages;
