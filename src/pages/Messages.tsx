@@ -2075,7 +2075,7 @@ const Messages = () => {
                     size="icon"
                     variant="ghost"
                     onClick={() => setShowNewConversation(true)}
-                    className="rounded-full h-10 w-10 hover:bg-white/10"
+                    className="rounded-full h-11 w-11 backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] hover:bg-white/[0.12] hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)] active:scale-95 transition-all"
                   >
                     <MessageCircle className="h-5 w-5" />
                   </Button>
@@ -2083,7 +2083,7 @@ const Messages = () => {
                     size="icon"
                     variant="ghost"
                     onClick={() => setShowCreateGroup(true)}
-                    className="rounded-full h-10 w-10 hover:bg-white/10"
+                    className="rounded-full h-11 w-11 backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] hover:bg-white/[0.12] hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)] active:scale-95 transition-all"
                   >
                     <Users className="h-5 w-5" />
                   </Button>
@@ -2096,7 +2096,7 @@ const Messages = () => {
           {!isSelectionMode && <MessageFilterPills />}
 
           {/* Conversations List - No borders */}
-          <ScrollArea className="flex-1 overflow-y-auto px-4 pb-4">
+          <ScrollArea className="flex-1 overflow-y-auto px-4 pb-24 scroll-smooth">
             {conversations.length === 0 ? (
               <div className="text-center text-muted-foreground py-12 px-4">
                 <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-30" />
@@ -2104,20 +2104,26 @@ const Messages = () => {
                 <p className="text-sm opacity-70">Commencez à discuter avec des membres</p>
               </div>
             ) : (
-              <div className="space-y-1 pt-2">
-                {conversations.map((conversation) => (
-                   <div
-                      key={conversation.id}
-                      className={`
-                        flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer
-                        hover:bg-white/5 active:bg-white/10
-                        ${isSelectionMode ? 'cursor-pointer' : ''}
-                        ${selectedConversations.has(conversation.id) ? 'bg-white/10 ring-2 ring-primary/50' : ''}
-                        ${conversation.unread_count && conversation.unread_count > 0 ? 'bg-white/[0.03]' : ''}
-                      `}
-                      onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
-                      onTouchEnd={handleLongPressEnd}
-                      onTouchCancel={handleLongPressEnd}
+              <>
+                <div className="space-y-1 pt-2 animate-fade-in">
+                  {conversations.map((conversation, index) => (
+                     <div
+                        key={conversation.id}
+                        style={{ animationDelay: `${index * 0.05}s` }}
+                        className={`
+                          flex items-center gap-3 p-4 rounded-2xl 
+                          transition-all duration-300 cursor-pointer
+                          backdrop-blur-sm bg-white/[0.02]
+                          hover:bg-white/[0.06] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)]
+                          active:bg-white/[0.08] active:scale-[0.99]
+                          animate-fade-in
+                          ${isSelectionMode ? 'cursor-pointer' : ''}
+                          ${selectedConversations.has(conversation.id) ? 'bg-white/[0.08] ring-2 ring-primary/50' : ''}
+                          ${conversation.unread_count && conversation.unread_count > 0 ? 'bg-white/[0.05] ring-1 ring-primary/30' : ''}
+                        `}
+                        onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
+                        onTouchEnd={handleLongPressEnd}
+                        onTouchCancel={handleLongPressEnd}
                       onContextMenu={(e) => {
                         e.preventDefault();
                         setConversationToDelete(conversation);
@@ -2209,8 +2215,19 @@ const Messages = () => {
                        </p>
                      </div>
                    </div>
-                ))}
-              </div>
+                 ))}
+               </div>
+               
+               {/* Suggestions pour vous */}
+               {conversations.length > 0 && (
+                 <div className="mt-6 mb-4 animate-slide-up">
+                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2">
+                     Suggestions pour vous
+                   </h3>
+                   <FriendSuggestions compact={true} />
+                 </div>
+               )}
+             </>
             )}
           </ScrollArea>
         </div>
