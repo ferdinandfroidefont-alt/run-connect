@@ -2070,14 +2070,24 @@ const Messages = () => {
                   </Button>
                 </>
               ) : (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setShowNewConversation(true)}
-                  className="rounded-full h-10 w-10 hover:bg-white/10"
-                >
-                  <Plus className="h-5 w-5" />
-                </Button>
+                <>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setShowNewConversation(true)}
+                    className="rounded-full h-10 w-10 hover:bg-white/10"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setShowCreateGroup(true)}
+                    className="rounded-full h-10 w-10 hover:bg-white/10"
+                  >
+                    <Users className="h-5 w-5" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
