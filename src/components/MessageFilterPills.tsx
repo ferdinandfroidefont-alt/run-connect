@@ -24,52 +24,45 @@ export const MessageFilterPills = ({ activeFilter }: MessageFilterPillsProps) =>
   ];
 
   return (
-    <div className="px-4 py-3">
-      <div className="flex gap-2">
-        {filters.map((filter, index) => {
-          const isActive = activeFilter === filter.id;
-          const Icon = filter.icon;
+    <div className="px-4 mt-4">
+      <div className="glass-premium shadow-2xl rounded-2xl p-2">
+        <div className="relative">
+          {/* Effet lumineux subtil au fond */}
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
           
-          return (
-            <button
-              key={filter.id}
-              onClick={() => navigate(filter.path)}
-              style={{ 
-                animationDelay: `${index * 0.1}s`,
-                ...(isActive ? {
-                  background: 'rgba(61, 139, 242, 0.15)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4), 0 0 20px rgba(61, 139, 242, 0.3)'
-                } : {
-                  background: 'rgba(255, 255, 255, 0.07)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-                })
-              }}
-              className={`
-                flex-1 flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl whitespace-nowrap
-                transition-all duration-300 ease-out
-                hover:scale-[1.02] active:scale-[0.98]
-                animate-scale-in
-                ${isActive 
-                  ? 'text-white font-semibold' 
-                  : 'text-white/70 font-medium'
-                }
-              `}
-            >
-              {Icon ? (
-                <Icon className="h-4 w-4" />
-              ) : filter.svgPath ? (
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d={filter.svgPath} />
-                </svg>
-              ) : null}
-              <span className="text-xs">{filter.label}</span>
-            </button>
-          );
-        })}
+          <div className="grid grid-cols-4 gap-1">
+            {filters.map((filter, index) => {
+              const isActive = activeFilter === filter.id;
+              const Icon = filter.icon;
+              
+              return (
+                <button
+                  key={filter.id}
+                  onClick={() => navigate(filter.path)}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                  className={`
+                    flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full transition-all duration-300 animate-scale-in
+                    ${isActive 
+                      ? 'text-primary bg-primary/20 shadow-glow scale-105' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5 hover:scale-105'
+                    }
+                  `}
+                >
+                  <span className="text-xl mt-1">
+                    {Icon ? (
+                      <Icon className="h-5 w-5" />
+                    ) : filter.svgPath ? (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d={filter.svgPath} />
+                      </svg>
+                    ) : null}
+                  </span>
+                  <span className="text-xs font-medium mt-1">{filter.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
