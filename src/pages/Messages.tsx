@@ -1749,21 +1749,21 @@ const Messages = () => {
                              <div className={`flex justify-end mt-1 ${
                                isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
                              }`}>
-                                <div className="flex items-center">
-                                  {message.read_at ? (
-                                    <CheckCheck className="h-3 w-3 text-blue-500" />
-                                  ) : (
-                                    <Check className="h-3 w-3" />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                                 <div className="flex items-center">
+                                   {message.read_at ? (
+                                     <CheckCheck className="h-3 w-3 text-blue-500" />
+                                   ) : (
+                                     <Check className="h-3 w-3" />
+                                   )}
+                                 </div>
+                               </div>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
                   </div>
-                );
+                 );
               })}
               
               {/* Typing indicators */}
