@@ -134,14 +134,26 @@ Deno.serve(async (req) => {
     console.log('User agent:', userAgent);
     console.log('Is native app:', isNative);
 
-    // Return success page with automatic redirect
-    // ✅ FIXED: Use correct deep link scheme app.runconnect://
-    const redirectUrl = isNative 
-      ? `app.runconnect://auth/strava/success`
-      : `https://run-connect.lovable.app/profile`;
+    // Return success - different handling for native vs web
+    const deepLinkUrl = `app.runconnect://auth/strava/success`;
+    const webUrl = `https://run-connect.lovable.app/profile`;
 
-    console.log('Redirecting to:', redirectUrl);
+    console.log('User agent indicates native:', isNative);
+    
+    // For native apps: Direct HTTP redirect to deep link
+    if (isNative) {
+      console.log('Native app detected - redirecting to deep link:', deepLinkUrl);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          ...corsHeaders,
+          'Location': deepLinkUrl
+        }
+      });
+    }
 
+    // For web: HTML page with postMessage
+    console.log('Web browser detected - showing success page');
     return new Response(
       `
       <!DOCTYPE html>
@@ -150,7 +162,6 @@ Deno.serve(async (req) => {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>Strava Connected</title>
-          <meta http-equiv="refresh" content="0;url=${redirectUrl}">
         </head>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
           <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
@@ -159,25 +170,12 @@ Deno.serve(async (req) => {
             <p>Retour à RunConnect...</p>
           </div>
           <script>
-            // For native app - trigger redirect immediately
-            if (${isNative}) {
-              window.location.href = '${redirectUrl}';
-              // Close this window after redirect
-              setTimeout(() => {
-                try {
-                  window.close();
-                } catch (e) {
-                  console.log('Cannot close window:', e);
-                }
-              }, 500);
+            // For web - use postMessage to parent window
+            if (window.opener) {
+              window.opener.postMessage({ type: 'strava_auth_success' }, '*');
+              setTimeout(() => window.close(), 500);
             } else {
-              // For web - use postMessage to parent window
-              if (window.opener) {
-                window.opener.postMessage({ type: 'strava_auth_success' }, '*');
-                setTimeout(() => window.close(), 500);
-              } else {
-                window.location.href = '${redirectUrl}';
-              }
+              window.location.href = '${webUrl}';
             }
           </script>
         </body>
@@ -186,7 +184,7 @@ Deno.serve(async (req) => {
       { 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'text/html' 
+          'Content-Type': 'text/html; charset=utf-8'
         } 
       }
     );
