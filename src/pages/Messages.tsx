@@ -1576,7 +1576,7 @@ const Messages = () => {
           </div>
 
           {/* Messages - Scrollable area with top margin for fixed header - Ajusté pour nouveau header */}
-          <div className="pt-[72px] flex-1 overflow-y-auto min-h-0">
+          <div className="pt-[72px] flex-1 overflow-y-auto min-h-0 scrollbar-hide">
             <div className={`h-full px-4 pt-4 pb-4 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -2097,7 +2097,7 @@ const Messages = () => {
           </div>
 
           {/* Conversations List - No borders */}
-          <ScrollArea className="flex-1 overflow-y-auto pb-24 scroll-smooth" style={{
+          <ScrollArea className="flex-1 overflow-y-auto pb-24 scroll-smooth scrollbar-hide" style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'contain'
           }}>
