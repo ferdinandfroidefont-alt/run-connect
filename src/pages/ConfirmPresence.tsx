@@ -164,7 +164,7 @@ export default function ConfirmPresence() {
             variant="ghost"
             size="icon"
             onClick={() => navigate('/')}
-            className="bg-card/30 backdrop-blur-sm border border-border/50 hover:bg-muted/30"
+            className="glass-card hover:shadow-2xl transition-all"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -174,7 +174,7 @@ export default function ConfirmPresence() {
         </motion.div>
 
           {loading ? (
-            <div className="backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-12 flex items-center justify-center">
+            <div className="glass-premium rounded-xl p-12 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : !roleChoice ? (
@@ -182,7 +182,7 @@ export default function ConfirmPresence() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-8"
+            className="glass-premium rounded-xl p-8"
           >
             <p className="text-center text-muted-foreground mb-12 text-lg">
               {t('confirmPresence.selectRole')}
@@ -193,7 +193,7 @@ export default function ConfirmPresence() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleRoleChoice('creator')}
-                className="backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
+                className="glass-premium rounded-xl p-8 flex flex-col items-center gap-4 hover:shadow-2xl transition-all cursor-pointer"
               >
                 <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCheck className="h-10 w-10 text-primary" />
@@ -208,7 +208,7 @@ export default function ConfirmPresence() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleRoleChoice('participant')}
-                className="backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
+                className="glass-premium rounded-xl p-8 flex flex-col items-center gap-4 hover:shadow-2xl transition-all cursor-pointer"
               >
                 <div className="h-20 w-20 rounded-full bg-accent/10 flex items-center justify-center">
                   <Users className="h-10 w-10 text-accent" />
@@ -227,7 +227,7 @@ export default function ConfirmPresence() {
             animate={{ opacity: 1, y: 0 }}
           >
             {sessions.length === 0 ? (
-              <div className="backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-12 text-center">
+              <div className="glass-premium rounded-xl p-12 text-center">
                 <p className="text-xl font-semibold mb-2">{t('confirmPresence.noSessions')}</p>
                 <p className="text-muted-foreground">
                   {roleChoice === 'creator' 
@@ -236,7 +236,7 @@ export default function ConfirmPresence() {
                 </p>
               </div>
             ) : (
-              <div className="backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-6">
+              <div className="glass-premium rounded-xl p-6">
                 <h2 className="text-2xl font-bold mb-2">
                   {t('confirmPresence.selectSession')}
                 </h2>

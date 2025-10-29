@@ -359,7 +359,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4">
                   Paramètres généraux
                 </h3>
-                <div className="rounded-2xl bg-card/30 backdrop-blur-sm overflow-hidden">
+                <div className="glass-premium rounded-2xl overflow-hidden">
                   {/* Language Selector */}
                   <div className="flex items-center justify-between p-4 hover:bg-white/5 active:bg-white/10 transition-colors">
                     <div className="flex items-center gap-3 flex-1">
@@ -535,7 +535,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Notifications
                 </h3>
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+                <div className="glass-premium rounded-xl overflow-hidden">
                   {/* Notifications Push */}
                   <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
                     <div className="flex items-center gap-3 flex-1">
@@ -663,7 +663,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Connexions externes
                 </h3>
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+                <div className="glass-premium rounded-xl overflow-hidden">
                   <div className="p-4 space-y-6">
                     <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
                     <InstagramConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
@@ -678,7 +678,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Confidentialité & Légal
                 </h3>
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+                <div className="glass-premium rounded-xl overflow-hidden">
                   {/* Info text */}
                   <div className="p-4 bg-primary/5 border-b border-primary/20">
                     <p className="text-xs text-center text-muted-foreground">
@@ -912,7 +912,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Support
                 </h3>
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden">
+                <div className="glass-premium rounded-xl overflow-hidden">
                   <div className="p-4 text-center space-y-3">
                     <p className="text-sm text-muted-foreground">
                       Besoin d'aide ? Contactez notre équipe support
@@ -935,7 +935,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Actions
                 </h3>
-                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+                <div className="glass-premium rounded-xl overflow-hidden">
                   <button 
                     onClick={handleSignOut}
                     className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group"
