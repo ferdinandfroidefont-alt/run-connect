@@ -34,7 +34,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className={hideBottomNav ? "" : "pb-32"}>{children}</main>
+      <main className={hideBottomNav ? "" : "pb-40"}>{children}</main>
       {!hideBottomNav && <BottomNavigation />}
     </div>
   );
