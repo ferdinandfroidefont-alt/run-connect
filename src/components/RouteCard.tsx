@@ -194,7 +194,7 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
   }
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden">
       <CardContent className="p-0">
         {/* Mini carte */}
         <div className="relative h-48 bg-gray-100">

@@ -96,7 +96,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-2 bg-card rounded-lg border">
+      <div className="flex items-center gap-2 p-2 backdrop-blur-sm bg-white/[0.02] rounded-2xl border-0">
         <Users className="h-4 w-4" />
         <span className="text-sm">Chargement des clubs...</span>
       </div>
@@ -109,7 +109,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
         <PopoverTrigger asChild>
           <Button 
             variant="outline" 
-            className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
+            className="w-8 justify-center backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] hover:bg-white/[0.12] h-7 px-1"
           >
             <Users className="h-3 w-3" />
           </Button>
@@ -132,7 +132,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
+          className="w-8 justify-center backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] hover:bg-white/[0.12] h-7 px-1"
         >
           <Users className="h-3 w-3" />
         </Button>

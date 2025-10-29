@@ -435,6 +435,35 @@
 }
 
 /* ===================================
+   🎨 GLASSMORPHISME PREMIUM UNIFORME
+   Style Messages appliqué partout
+   =================================== */
+
+.glass-card-soft {
+  @apply backdrop-blur-sm bg-white/[0.02] rounded-2xl;
+  @apply hover:bg-white/[0.06] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)];
+  @apply transition-all duration-300 border-0;
+}
+
+.glass-button-float {
+  @apply backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] rounded-full;
+  @apply hover:bg-white/[0.12] hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)];
+  @apply active:scale-95 transition-all duration-200;
+}
+
+.glass-dialog {
+  @apply backdrop-blur-xl bg-card/95 border-border/50 rounded-2xl;
+  @apply shadow-[0_8px_30px_rgba(0,0,0,0.4)];
+}
+
+.glass-premium {
+  @apply backdrop-blur-xl bg-white/[0.08] rounded-2xl;
+  @apply border border-white/[0.15];
+  @apply shadow-[0_8px_30px_rgba(0,0,0,0.5)];
+  @apply transition-all duration-300;
+}
+
+/* ===================================
    ⌨️ ANDROID KEYBOARD HANDLING
    =================================== */
 
