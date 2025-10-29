@@ -348,8 +348,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
           <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
             <div className="space-y-4 pb-4 min-h-full">
               {/* Avatar Section */}
-              <Card>
-                <CardContent className="flex flex-col items-center py-6">
+              <div className="glass-premium rounded-xl p-6">
+                <div className="flex flex-col items-center">
                   <div className="relative mb-4">
                     <Avatar className="h-24 w-24">
                       <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
@@ -545,8 +545,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       onClick={() => setShowReliabilityDialog(true)}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Activity Chart */}
               {user?.id && (
@@ -557,14 +557,12 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
               )}
 
               {/* Informations personnelles */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <User className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Informations</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="glass-premium rounded-xl p-6">
+                <div className="flex items-center mb-4">
+                  <User className="h-5 w-5 text-primary mr-2" />
+                  <h3 className="text-lg font-semibold">Informations</h3>
+                </div>
+                <div className="space-y-4">
                   {isEditing ? (
                     <div className="space-y-4">
                       <div>
@@ -651,8 +649,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </ScrollArea>
         </DialogContent>

@@ -38,22 +38,20 @@ export const ReliabilityDetailsDialog = ({
 
         <div className="space-y-4">
           {/* Taux de fiabilité */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {reliabilityRate.toFixed(0)}%
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('reliability.rate')}
-                </p>
+          <div className="glass-premium rounded-xl p-6">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary mb-2">
+                {reliabilityRate.toFixed(0)}%
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-sm text-muted-foreground">
+                {t('reliability.rate')}
+              </p>
+            </div>
+          </div>
 
           {/* Stats détaillées */}
           <div className="space-y-3">
-            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
@@ -65,7 +63,7 @@ export const ReliabilityDetailsDialog = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Users className="h-6 w-6 text-primary" />
               </div>
@@ -77,7 +75,7 @@ export const ReliabilityDetailsDialog = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
               <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
                 <CheckCircle2 className="h-6 w-6 text-green-500" />
               </div>
@@ -89,7 +87,7 @@ export const ReliabilityDetailsDialog = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
               <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center">
                 <XCircle className="h-6 w-6 text-red-500" />
               </div>

@@ -272,8 +272,11 @@ export const FollowDialog = ({
         </div>
       ) : (
         users.map((userItem) => (
-          <Card key={userItem.user_id}>
-            <CardContent className="flex items-center justify-between p-4">
+          <div 
+            key={userItem.user_id}
+            className="glass-premium rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Avatar 
@@ -319,8 +322,8 @@ export const FollowDialog = ({
                     Supprimer
                   </Button>
                 )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))
        )}
      </div>

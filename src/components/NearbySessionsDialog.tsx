@@ -377,7 +377,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           </div>
 
           {/* Carrousel infini des sports */}
-          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden animate-fade-in">
+          <div className="glass-premium rounded-xl overflow-hidden animate-fade-in">
             <div className="p-4">
               <div 
                 ref={scrollContainerRef}
@@ -465,55 +465,51 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
               Filtres de recherche
             </h3>
             
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden">
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Distance maximale
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={selectedDistance}
-                      onChange={(e) => setSelectedDistance(e.target.value)}
-                      className="w-20 h-8 text-xs text-right border-border/50 bg-background/50"
-                      min="1"
-                      max="100"
-                    />
-                    <span className="text-xs text-muted-foreground">km</span>
-                  </div>
+            <div className="glass-premium rounded-xl p-4 space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Distance maximale
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={selectedDistance}
+                    onChange={(e) => setSelectedDistance(e.target.value)}
+                    className="w-20 h-8 text-xs text-right"
+                    min="1"
+                    max="100"
+                  />
+                  <span className="text-xs text-muted-foreground">km</span>
                 </div>
               </div>
               
-              <div className="p-4 bg-muted/20 border-t border-border/30">
-                <Button
-                  onClick={loadNearbySessions}
-                  disabled={loading}
-                  className="w-full rounded-full bg-primary hover:bg-primary/90 transition-all shadow-md hover:shadow-lg"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Recherche...
-                    </>
-                  ) : (
-                    'Appliquer les filtres'
-                  )}
-                </Button>
-              </div>
+              <Button
+                onClick={loadNearbySessions}
+                disabled={loading}
+                className="w-full rounded-full bg-primary hover:bg-primary/90 transition-all shadow-md hover:shadow-lg"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Recherche...
+                  </>
+                ) : (
+                  'Appliquer les filtres'
+                )}
+              </Button>
             </div>
           </div>
           {/* Résultats */}
           {loading ? (
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
+            <div className="glass-premium rounded-xl p-8">
               <div className="flex flex-col items-center justify-center space-y-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">Recherche des séances à proximité...</p>
               </div>
             </div>
           ) : sessions.length === 0 ? (
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
+            <div className="glass-premium rounded-xl p-8">
               <div className="flex flex-col items-center justify-center space-y-4 animate-fade-in">
                 <div className="text-6xl animate-bounce">🏃‍♂️💨</div>
                 <div className="text-center space-y-2">
@@ -534,9 +530,8 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
             </div>
           ) : (
             sessions.map((session) => (
-              <Card key={session.id} className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.01] animate-fade-in">
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
+              <div key={session.id} className="glass-premium rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-2xl animate-fade-in">
+                    <div className="space-y-3">
                         {/* Header */}
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
@@ -613,7 +608,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="pt-2 border-t flex gap-2">
+                        <div className="pt-2 flex gap-2">
                           <Button
                             onClick={() => joinSession(session)}
                             size="sm"
@@ -635,8 +630,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
                           </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
                 ))
               )}
             </div>
