@@ -66,7 +66,7 @@ export const RouteDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md backdrop-blur-xl bg-card/95 border-border/50">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

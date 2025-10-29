@@ -346,7 +346,7 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md backdrop-blur-xl bg-card/95 border-border/50">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />

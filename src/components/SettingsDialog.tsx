@@ -309,7 +309,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0">
+        <DialogContent className="max-w-md max-h-[80vh] p-0 backdrop-blur-xl bg-card/95 border-border/50">
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -1007,7 +1007,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
 
       {/* Conversation Themes Dialog */}
       <Dialog open={showConversationThemes} onOpenChange={setShowConversationThemes}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
+        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col backdrop-blur-xl bg-card/95 border-border/50">
           <DialogHeader className="p-6 pb-0 shrink-0">
             <DialogTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
               <MessageCircle className="h-6 w-6" />
