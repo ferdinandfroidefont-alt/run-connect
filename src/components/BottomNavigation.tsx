@@ -108,13 +108,9 @@ export const BottomNavigation = () => {
   }, [user]);
   return (
     <>
-      {/* Barre de navigation principale glassmorphic étendue */}
-      <nav className="fixed bottom-0 left-0 right-0 glass-premium shadow-2xl pb-safe z-50">
-        <div className="relative">
-          {/* Effet lumineux subtil au fond */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none" />
-          
-          <div className="grid grid-cols-5 items-center px-4 py-3">
+      {/* Barre de navigation principale */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg z-50">
+        <div className="grid grid-cols-5 items-center px-4 py-3">
           {/* Première colonne - Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
@@ -232,8 +228,7 @@ export const BottomNavigation = () => {
               );
             })}
           </div>
-        </div>
-        </div>
+          </div>
       </nav>
     </>
   );
