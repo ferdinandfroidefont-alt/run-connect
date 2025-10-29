@@ -2040,98 +2040,128 @@ const Messages = () => {
 
   return (
     <>
-      {/* Petite barre noire en haut uniquement pour Messages */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
-      <div className="h-screen bg-background flex flex-col">
+      <div className="h-screen bg-gradient-to-br from-[hsl(var(--royal-blue))] via-[hsl(var(--royal-blue))]/95 to-[hsl(var(--cyan-bright))]/90 flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
-          {/* Instagram-style Header */}
-          <div className="sticky top-6 z-10 backdrop-blur-xl bg-background/95 px-4 py-4 flex items-center justify-between border-b border-border/5">
-            <h1 className="text-2xl font-bold">
-              {isSelectionMode 
-                ? `${selectedConversations.size} sélectionné(s)` 
-                : "Messages"
-              }
-            </h1>
-            <div className="flex items-center gap-2">
-              {isSelectionMode ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={exitSelectionMode}
-                    className="rounded-full h-10 w-10 hover:bg-white/10"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    onClick={confirmBulkDelete}
-                    size="icon"
-                    variant="destructive"
-                    disabled={selectedConversations.size === 0}
-                    className="rounded-full h-10 w-10"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setShowNewConversation(true)}
-                    className="rounded-full h-11 w-11 backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] hover:bg-white/[0.12] hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)] active:scale-95 transition-all"
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setShowCreateGroup(true)}
-                    className="rounded-full h-11 w-11 backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] hover:bg-white/[0.12] hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)] active:scale-95 transition-all"
-                  >
-                    <Users className="h-5 w-5" />
-                  </Button>
-                </>
-              )}
+          {/* Premium Glassmorphic Header */}
+          <div className="relative pt-safe">
+            <div className="px-4 pt-6 pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="text-3xl font-['Poppins',sans-serif] font-semibold text-white tracking-tight">
+                  {isSelectionMode 
+                    ? `${selectedConversations.size} sélectionné(s)` 
+                    : "Messages"
+                  }
+                </h1>
+                <div className="flex items-center gap-3">
+                  {isSelectionMode ? (
+                    <>
+                      <button 
+                        onClick={exitSelectionMode}
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={confirmBulkDelete}
+                        disabled={selectedConversations.size === 0}
+                        className="p-3 rounded-full bg-red-500/80 backdrop-blur-xl border border-white/20 text-white hover:bg-red-600 transition-all duration-300 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => navigate('/search')}
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+                      >
+                        <Search className="h-5 w-5" />
+                      </button>
+                      <button 
+                        onClick={() => setShowNewConversation(true)}
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Conversations List - No borders */}
-          <ScrollArea className="flex-1 overflow-y-auto pb-24 scroll-smooth scrollbar-hide" style={{
+
+          {/* Scroll area with conversations */}
+          <ScrollArea className="flex-1 overflow-y-auto scroll-smooth scrollbar-hide bg-gradient-to-b from-transparent via-[hsl(var(--messages-dark-bg))]/60 to-[hsl(var(--messages-dark-bg))]" style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'contain'
           }}>
-            {/* Glassmorphism Filter Pills */}
+            {/* Premium Filter Pills */}
             {!isSelectionMode && (
-              <div className="mt-3">
+              <div className="mt-2">
                 <MessageFilterPills />
               </div>
             )}
 
-            <div className="px-4">
+            <div className="px-4 pb-safe">
               {conversations.length === 0 ? (
-              <div className="text-center text-muted-foreground py-12 px-4">
-                <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                <p className="text-base font-medium mb-1">Aucune conversation</p>
-                <p className="text-sm opacity-70">Commencez à discuter avec des membres</p>
+              <div className="text-center text-white/70 py-16 px-4">
+                <MessageCircle className="h-20 w-20 mx-auto mb-6 text-white/30" />
+                <p className="text-lg font-['Poppins',sans-serif] font-semibold mb-2 text-white">Aucune conversation</p>
+                <p className="text-sm text-white/60">Commencez à discuter avec des membres</p>
               </div>
             ) : (
               <>
-                <div className="space-y-1 pt-2 animate-fade-in">
+                {/* Selection mode banner */}
+                {isSelectionMode && (
+                  <div className="sticky top-0 z-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 mb-4 mt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setIsSelectionMode(false);
+                            setSelectedConversations(new Set());
+                          }}
+                          className="text-white hover:bg-white/10"
+                        >
+                          <X className="h-5 w-5" />
+                        </Button>
+                        <span className="text-white font-['Poppins',sans-serif] font-semibold">
+                          {selectedConversations.size} sélectionnée(s)
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowBulkDeleteDialog(true)}
+                        disabled={selectedConversations.size === 0}
+                        className="text-white hover:bg-white/10"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Conversation cards with premium design */}
+                <div className="space-y-3 pt-2 animate-fade-in">
                   {conversations.map((conversation, index) => (
                      <div
                         key={conversation.id}
                         style={{ animationDelay: `${index * 0.05}s` }}
                         className={`
-                          flex items-center gap-3 p-4 rounded-2xl 
+                          group relative flex items-center gap-4 p-4 rounded-[20px] 
                           transition-all duration-300 cursor-pointer
-                          backdrop-blur-sm bg-white/[0.02]
-                          hover:bg-white/[0.06] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)]
-                          active:bg-white/[0.08] active:scale-[0.99]
+                          backdrop-blur-xl bg-white/5 border border-white/10
+                          hover:bg-white/10 hover:shadow-[0_8px_32px_rgba(0,85,255,0.3)] hover:border-white/20 hover:-translate-y-1
+                          active:bg-white/15 active:scale-[0.98]
                           animate-fade-in
                           ${isSelectionMode ? 'cursor-pointer' : ''}
-                          ${selectedConversations.has(conversation.id) ? 'bg-white/[0.08] ring-2 ring-primary/50' : ''}
-                          ${conversation.unread_count && conversation.unread_count > 0 ? 'bg-white/[0.05] ring-1 ring-primary/30' : ''}
+                          ${selectedConversations.has(conversation.id) ? 'bg-white/15 ring-2 ring-[hsl(var(--gold))]/60 shadow-[0_0_20px_rgba(255,215,0,0.3)]' : ''}
+                          ${conversation.unread_count && conversation.unread_count > 0 ? 'bg-white/10 ring-1 ring-[hsl(var(--cyan-bright))]/50 shadow-[0_0_12px_rgba(0,208,255,0.2)]' : ''}
                         `}
                         onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
                         onTouchEnd={handleLongPressEnd}
@@ -2143,12 +2173,12 @@ const Messages = () => {
                       }}
                     >
                       {isSelectionMode && (
-                        <div className="flex items-center mr-2">
+                        <div className="flex items-center mr-1">
                           <input
                             type="checkbox"
                             checked={selectedConversations.has(conversation.id)}
                             onChange={() => toggleConversationSelection(conversation.id)}
-                            className="w-5 h-5 rounded border-2 border-primary"
+                            className="w-5 h-5 rounded border-2 border-white/30 bg-white/10 checked:bg-[hsl(var(--gold))] checked:border-[hsl(var(--gold))]"
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -2156,7 +2186,7 @@ const Messages = () => {
                       
                       <div className="relative">
                          <Avatar 
-                           className="h-12 w-12 cursor-pointer"
+                           className="h-14 w-14 cursor-pointer ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-300"
                              onClick={(e) => {
                                e.stopPropagation();
                                if (isSelectionMode) {
@@ -2173,20 +2203,24 @@ const Messages = () => {
                           {conversation.is_group ? (
                             <>
                               <AvatarImage src={conversation.group_avatar_url || ""} />
-                              <AvatarFallback>
-                                <Users className="h-6 w-6" />
+                              <AvatarFallback className="bg-gradient-to-br from-[hsl(var(--royal-blue))] to-[hsl(var(--cyan-bright))] text-white">
+                                <Users className="h-7 w-7" />
                               </AvatarFallback>
                             </>
                           ) : (
                             <>
                               <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                              <AvatarFallback>
+                              <AvatarFallback className="bg-gradient-to-br from-[hsl(var(--royal-blue))] to-[hsl(var(--cyan-bright))] text-white font-['Poppins',sans-serif] font-bold text-lg">
                                 {(conversation.other_participant?.username || conversation.other_participant?.display_name || "U").charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </>
                           )}
                         </Avatar>
-                        {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
+                        {!conversation.is_group && (
+                          <div className="absolute bottom-0 right-0">
+                            <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
+                          </div>
+                        )}
                       </div>
                       <div 
                         className="flex-1 min-w-0 cursor-pointer"
@@ -2201,40 +2235,51 @@ const Messages = () => {
                            }
                          }}
                       >
-                       <div className="flex items-center justify-between">
-                         <p className="font-medium text-sm truncate">
+                       <div className="flex items-center justify-between mb-1">
+                         <p className="font-['Poppins',sans-serif] font-semibold text-white text-base truncate">
                            {conversation.is_group 
                              ? conversation.group_name 
                              : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
                            }
                          </p>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                             {conversation.unread_count > 0 && (
-                              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                              <Badge 
+                                variant="default" 
+                                className="h-6 min-w-[24px] px-2 flex items-center justify-center text-xs font-bold bg-[hsl(var(--cyan-bright))] text-white border-0 shadow-[0_0_12px_rgba(0,208,255,0.5)] animate-pulse"
+                              >
                                 {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                               </Badge>
                             )}
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-white/50 font-medium">
                               {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
                             </span>
                           </div>
                        </div>
-                       <p className="text-xs text-muted-foreground">
-                         {conversation.is_group 
-                           ? `${conversation.group_members?.length || 0} membres`
-                           : `@${conversation.other_participant?.username || "utilisateur"}`
-                         }
-                       </p>
+                       <div className="flex items-center justify-between">
+                         <p className="text-sm text-white/60 truncate">
+                           {conversation.is_group 
+                             ? `${conversation.group_members?.length || 0} membres`
+                             : `@${conversation.other_participant?.username || "utilisateur"}`
+                           }
+                         </p>
+                         {conversation.last_message && (
+                           <p className="text-xs text-white/40 truncate ml-2 max-w-[120px]">
+                             {conversation.last_message.content?.substring(0, 30) || "Fichier partagé"}
+                           </p>
+                         )}
+                       </div>
                      </div>
                    </div>
                  ))}
                </div>
                
-               {/* Suggestions pour vous */}
+               {/* Premium Suggestions Section with Carousel */}
                {conversations.length > 0 && (
-                 <div className="mt-6 mb-4 animate-slide-up">
-                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2">
-                     Suggestions pour vous
+                 <div className="mt-8 mb-6 animate-slide-up">
+                   <h3 className="text-base font-['Poppins',sans-serif] font-semibold text-white/90 mb-4 px-1 flex items-center gap-2">
+                     <span className="w-1 h-5 bg-gradient-to-b from-[hsl(var(--gold))] to-[hsl(var(--cyan-bright))] rounded-full" />
+                     Suggestions
                    </h3>
                    <FriendSuggestions compact={true} />
                  </div>
