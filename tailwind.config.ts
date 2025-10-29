@@ -224,20 +224,12 @@ export default {
 					'100%': { transform: 'translateY(0)', opacity: '1' }
 				},
 				'glow-pulse': {
-					'0%, 100%': { 
-						boxShadow: 'var(--shadow-glow)'
-					},
-					'50%': { 
-						boxShadow: '0 0 40px 15px hsl(var(--primary) / 0.4)'
-					}
+					'0%, 100%': { boxShadow: '0 0 30px 10px hsl(211 100% 58% / 0.3)' },
+					'50%': { boxShadow: '0 0 40px 15px hsl(211 100% 58% / 0.5)' }
 				},
 				'glow-pulse-accent': {
-					'0%, 100%': { 
-						boxShadow: 'var(--shadow-glow-accent)'
-					},
-					'50%': { 
-						boxShadow: '0 0 40px 15px hsl(var(--accent) / 0.4)'
-					}
+					'0%, 100%': { boxShadow: '0 0 30px 10px hsl(247 85% 70% / 0.3)' },
+					'50%': { boxShadow: '0 0 40px 15px hsl(247 85% 70% / 0.5)' }
 				},
 				'bounce-subtle': {
 					'0%, 100%': { transform: 'translateY(0)' },

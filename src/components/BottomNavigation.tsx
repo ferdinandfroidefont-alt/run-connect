@@ -170,7 +170,7 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="btn-create-glow flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-gradient-to-br from-primary to-accent text-white rounded-full transition-all hover:shadow-glow hover:scale-110 active:scale-95 -translate-y-4 scale-110 shadow-xl shadow-primary/50 animate-glow-pulse"
+              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-gradient-to-br from-primary to-accent text-white rounded-full transition-all hover:shadow-glow hover:scale-110 active:scale-95 -translate-y-4 scale-110 shadow-xl shadow-primary/50 animate-glow-pulse"
             >
               <Plus size={20} />
               <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
