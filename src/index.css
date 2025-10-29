@@ -93,6 +93,86 @@
     --sidebar-ring: 211 100% 58%;
   }
 
+  .light {
+    /* Mode clair - Glassmorphisme bleu électrique */
+    --background: 210 40% 98%;  /* Blanc légèrement bleuté */
+    --foreground: 220 30% 20%;  /* Gris-bleu foncé (pas noir pur) */
+
+    --card: 210 40% 99%;  /* Carte très légèrement bleutée */
+    --card-foreground: 220 30% 20%;
+
+    --popover: 210 40% 100%;  /* Popover blanc bleuté pur */
+    --popover-foreground: 220 30% 20%;
+
+    /* Bleu électrique #007BFF */
+    --primary: 211 100% 50%;  /* Bleu électrique vif */
+    --primary-glow: 211 100% 60%;  /* Version lumineuse pour effets */
+    --primary-foreground: 0 0% 100%;  /* Blanc sur bleu */
+
+    /* Cyan clair électrique #33CCFF */
+    --accent: 190 100% 60%;  /* Cyan clair électrique */
+    --accent-glow: 190 100% 70%;
+    --accent-foreground: 220 30% 20%;
+
+    --secondary: 210 20% 90%;  /* Gris-bleu très clair */
+    --secondary-foreground: 220 30% 20%;
+
+    --muted: 210 20% 94%;  /* Fond muted encore plus clair */
+    --muted-foreground: 220 15% 40%;  /* Texte muted gris-bleu */
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 211 100% 70% / 0.12;  /* Bordures bleu électrique subtiles */
+    --input: 210 30% 96%;  /* Inputs gris-bleu très clair */
+    --ring: 211 100% 50%;
+
+    /* Dégradés doux : bleu roi → cyan clair */
+    --gradient-primary: linear-gradient(135deg, hsl(211 100% 50%) 0%, hsl(190 100% 60%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(190 100% 60%) 0%, hsl(211 100% 50%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 71% 45%) 100%);
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 72% 51%) 100%);
+    
+    /* Map controls pour mode clair */
+    --map-control-bg: 210 40% 99% / 0.9;
+    --map-control-border: 211 100% 70% / 0.15;
+    --map-control-shadow: 211 100% 50% / 0.15;
+    --map-control-hover: 210 20% 94%;
+    --map-control-active: 211 100% 50%;
+    --gradient-map: linear-gradient(135deg, hsl(211 100% 50%) 0%, hsl(190 100% 60%) 100%);
+    --gradient-control: linear-gradient(180deg, hsl(210 40% 99% / 0.9) 0%, hsl(210 40% 98%) 100%);
+    
+    /* Ombres grises très fines avec reflets bleus */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 123, 255, 0.08);
+    --shadow-sm: 0 2px 4px -2px rgba(0, 123, 255, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 123, 255, 0.12), 0 2px 4px -2px rgba(0, 123, 255, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 123, 255, 0.15), 0 4px 6px -4px rgba(0, 123, 255, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 123, 255, 0.2), 0 8px 10px -6px rgba(0, 123, 255, 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 123, 255, 0.25);
+    --shadow-glow: 0 0 30px 10px hsl(211 100% 50% / 0.25);  /* Glow bleu électrique */
+    --shadow-glow-accent: 0 0 30px 10px hsl(190 100% 60% / 0.25);  /* Glow cyan */
+    --shadow-map-control: 0 4px 20px rgba(0, 123, 255, 0.15);
+    --shadow-map-panel: 0 10px 30px rgba(0, 123, 255, 0.2);
+    
+    /* Glassmorphisme adapté au mode clair */
+    --glass-bg: hsl(210 40% 100% / 0.5);  /* Blanc bleuté avec 50% opacité */
+    --glass-border: hsl(211 100% 70% / 0.15);  /* Bordure bleu électrique subtile */
+    --glass-blur: 12px;  /* Blur légèrement plus fort */
+    --glass-bg-primary: hsl(210 40% 99% / 0.85);
+    --glass-bg-card: hsl(210 40% 100% / 0.5);
+    --glass-border-card: hsl(211 100% 70% / 0.15);
+    --glass-shadow: 0 4px 20px rgba(0, 123, 255, 0.15);  /* Ombre bleue douce */
+    
+    --sidebar-background: 210 40% 99%;
+    --sidebar-foreground: 220 30% 20%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 94%;
+    --sidebar-accent-foreground: 220 30% 20%;
+    --sidebar-border: 211 100% 70% / 0.12;
+    --sidebar-ring: 211 100% 50%;
+  }
+
   .dark {
     /* Mode sombre = thème par défaut */
     --background: 218 25% 5%;
@@ -306,12 +386,18 @@
 
   /* Glassmorphism utilities - Premium RunConnect */
   .glass-premium {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
     border-radius: 1rem;
+  }
+
+  /* Reflets bleus pour mode clair */
+  .light .glass-premium {
+    box-shadow: var(--glass-shadow),
+                inset 0 1px 0 0 hsl(211 100% 80% / 0.1); /* Reflet bleu en haut */
   }
 
   .glass-primary {
@@ -322,6 +408,8 @@
   }
   
   .glass-card {
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     background: var(--glass-bg-card);
     border: 1px solid var(--glass-border-card);
     border-radius: 16px;
@@ -330,22 +418,28 @@
 
   /* Floating glassmorphic button */
   .glass-floating {
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-floating:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 8px 30px hsl(var(--primary) / 0.3);
+  }
+
+  /* Effet glow bleu pour boutons actifs en mode clair */
+  .light .btn-create-glow,
+  .light .glass-floating:hover {
+    box-shadow: 0 0 20px 5px hsl(211 100% 50% / 0.3);
   }
   
   /* Fallback si backdrop-filter non supporté */
   @supports not (backdrop-filter: blur(10px)) {
-    .glass-primary, .glass-premium, .glass-floating {
+    .glass-primary, .glass-premium, .glass-floating, .glass-card {
       background: hsl(var(--card));
       border-color: hsl(var(--border));
     }
