@@ -686,60 +686,6 @@ const Leaderboard = () => {
     );
   }
 
-  // Check if user is premium
-  if (!subscriptionInfo?.subscribed) {
-    return (
-      <div className="min-h-screen bg-[#0B0E13] p-4 pb-20 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="max-w-md mx-auto">
-          <div className="text-center py-8">
-            <h1 className="text-2xl font-bold text-foreground mb-6">Classement</h1>
-            
-            <div 
-              className="rounded-xl border-2 border-yellow-500/20 p-8 text-center space-y-6"
-              style={{
-                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(249, 115, 22, 0.1))',
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-              }}
-            >
-                <div className="relative">
-                  <Lock className="h-16 w-16 text-yellow-500 mx-auto" />
-                  <Crown className="h-8 w-8 text-yellow-600 absolute -top-1 -right-1" />
-                </div>
-                
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-foreground">
-                    Fonctionnalité Premium
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Le classement est réservé aux membres Premium. 
-                    Découvrez votre rang et comparez-vous avec vos amis !
-                  </p>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>✨ Classement global et saisonnier</p>
-                    <p>🏆 Système de rangs avancé</p>
-                    <p>👥 Classement entre amis</p>
-                    <p>🚀 Badge premium</p>
-                  </div>
-                </div>
-                
-                <Button 
-                  onClick={() => navigate('/subscription')}
-                  className="w-full gap-2"
-                  size="lg"
-                >
-                  <Crown className="h-4 w-4" />
-                  Devenir Premium
-                </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div 
