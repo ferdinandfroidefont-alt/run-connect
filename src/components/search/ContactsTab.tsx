@@ -16,6 +16,8 @@ interface ContactSuggestion {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  is_friend?: boolean;
+  follow_status?: 'none' | 'pending' | 'accepted';
 }
 
 export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
@@ -136,6 +138,42 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
     }
 
     console.log('[ContactsTab] Total matches found:', results.length);
+
+    // Vérifier le statut d'amitié pour chaque contact trouvé
+    if (results.length > 0) {
+      const userIds = results.map(r => r.user_id);
+      
+      // Récupérer toutes les relations user_follows
+      const { data: followsData } = await supabase
+        .from('user_follows')
+        .select('following_id, status')
+        .eq('follower_id', user.id)
+        .in('following_id', userIds);
+
+      // Créer un map des statuts
+      const followStatusMap = new Map<string, string>();
+      followsData?.forEach(follow => {
+        followStatusMap.set(follow.following_id, follow.status);
+      });
+
+      // Ajouter le statut à chaque contact
+      const contactsWithStatus = results.map(contact => ({
+        ...contact,
+        follow_status: (followStatusMap.get(contact.user_id) || 'none') as 'none' | 'pending' | 'accepted',
+        is_friend: followStatusMap.get(contact.user_id) === 'accepted'
+      }));
+
+      // Trier: non-amis d'abord, puis par ordre alphabétique
+      return contactsWithStatus.sort((a, b) => {
+        if (a.is_friend !== b.is_friend) {
+          return a.is_friend ? 1 : -1; // Non-amis en premier
+        }
+        const nameA = (a.display_name || a.username || '').toLowerCase();
+        const nameB = (b.display_name || b.username || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+    }
+
     return results;
   };
 
@@ -347,12 +385,23 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
                     </p>
                   </div>
 
-                  <Button
-                    size="sm"
-                    onClick={() => sendFollowRequest(contact.user_id)}
-                  >
-                    Suivre
-                  </Button>
+                  {contact.follow_status === 'accepted' ? (
+                    <Badge variant="secondary" className="whitespace-nowrap">
+                      Déjà ami
+                    </Badge>
+                  ) : contact.follow_status === 'pending' ? (
+                    <Badge variant="outline" className="whitespace-nowrap">
+                      En attente
+                    </Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => sendFollowRequest(contact.user_id)}
+                      className="whitespace-nowrap"
+                    >
+                      Suivre
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

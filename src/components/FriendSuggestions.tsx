@@ -218,20 +218,46 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         return acc;
       }, []);
 
-      // Convert to friend suggestions format
-      const contactSuggestions = uniqueUsers.map(profile => ({
-        user_id: profile.user_id,
-        username: profile.username || profile.display_name || 'Utilisateur',
-        display_name: profile.display_name || profile.username || 'Utilisateur',
-        avatar_url: profile.avatar_url || '',
-        mutual_friends_count: 0,
-        mutual_friend_names: [],
-        source: 'contacts',
-        is_contact: true
-      }));
+      // Vérifier les relations d'amitié pour filtrer les contacts déjà amis
+      if (uniqueUsers.length > 0) {
+        const userIds = uniqueUsers.map((u: any) => u.user_id);
+        
+        // Récupérer toutes les relations user_follows
+        const { data: followsData } = await supabase
+          .from('user_follows')
+          .select('following_id, status')
+          .eq('follower_id', user!.id)
+          .in('following_id', userIds);
 
-      console.log('🔍 Contact suggestions found:', contactSuggestions.length, contactSuggestions);
-      return contactSuggestions;
+        // Créer un set des utilisateurs déjà amis ou en pending
+        const alreadyConnectedIds = new Set(
+          followsData?.map(f => f.following_id) || []
+        );
+
+        // Filtrer uniquement les contacts non encore connectés
+        const filteredUsers = uniqueUsers.filter(
+          (u: any) => !alreadyConnectedIds.has(u.user_id)
+        );
+
+        console.log('🔍 Filtered out', uniqueUsers.length - filteredUsers.length, 'already connected contacts');
+
+        // Convert to friend suggestions format
+        const contactSuggestions = filteredUsers.map((profile: any) => ({
+          user_id: profile.user_id,
+          username: profile.username || profile.display_name || 'Utilisateur',
+          display_name: profile.display_name || profile.username || 'Utilisateur',
+          avatar_url: profile.avatar_url || '',
+          mutual_friends_count: 0,
+          mutual_friend_names: [],
+          source: 'contacts',
+          is_contact: true
+        }));
+
+        console.log('🔍 Contact suggestions found (after filtering):', contactSuggestions.length, contactSuggestions);
+        return contactSuggestions;
+      }
+
+      return [];
     } catch (error) {
       console.error('Error finding contact suggestions:', error);
       return [];
