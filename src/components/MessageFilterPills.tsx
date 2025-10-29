@@ -30,7 +30,7 @@ export const MessageFilterPills = ({ activeFilter }: MessageFilterPillsProps) =>
           {/* Effet lumineux subtil au fond */}
           <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
           
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-4 gap-1 items-stretch" style={{ minHeight: '80px' }}>
             {filters.map((filter, index) => {
               const isActive = activeFilter === filter.id;
               const Icon = filter.icon;
@@ -41,7 +41,8 @@ export const MessageFilterPills = ({ activeFilter }: MessageFilterPillsProps) =>
                   onClick={() => navigate(filter.path)}
                   style={{ animationDelay: `${index * 0.1}s` }}
                   className={`
-                    flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full transition-all duration-300 animate-scale-in
+                    flex flex-col justify-center items-center gap-1 px-2 py-3 rounded-xl instant-button transition-all duration-300 animate-scale-in
+                    min-h-[72px] w-full
                     ${isActive 
                       ? 'text-primary bg-primary/20 shadow-glow scale-105' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-white/5 hover:scale-105'

@@ -422,9 +422,13 @@ const Messages = () => {
   // Long press handlers
   const handleLongPressStart = (conversation: Conversation) => {
     const timer = setTimeout(() => {
+      // Vibration haptique si disponible
+      if (navigator.vibrate) {
+        navigator.vibrate(50); // 50ms de vibration
+      }
       setIsSelectionMode(true);
       setSelectedConversations(new Set([conversation.id]));
-    }, 500); // 500ms for long press
+    }, 1000); // 1000ms (1 seconde) pour l'appui long
     setLongPressTimer(timer);
   };
 
@@ -2093,7 +2097,10 @@ const Messages = () => {
           </div>
 
           {/* Conversations List - No borders */}
-          <ScrollArea className="flex-1 overflow-y-auto pb-24 scroll-smooth">
+          <ScrollArea className="flex-1 overflow-y-auto pb-24 scroll-smooth" style={{
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain'
+          }}>
             {/* Glassmorphism Filter Pills */}
             {!isSelectionMode && (
               <div className="mt-3">
