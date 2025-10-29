@@ -339,7 +339,7 @@ export default function MySessions() {
   if (selectedSession) {
     return (
       <>
-      <div className="container mx-auto px-4 py-6 pb-24 bg-[#0B0E13] min-h-screen">
+      <div className="container mx-auto px-4 py-6 pb-24 bg-background min-h-screen">
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="outline"
@@ -372,14 +372,7 @@ export default function MySessions() {
           </div>
         </div>
 
-        <div 
-          className="rounded-xl p-6"
-          style={{
-            background: 'rgba(255, 255, 255, 0.07)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-          }}
-        >
+        <div className="rounded-xl p-6 glass-premium">
           <div className="mb-6">
             <div className="flex items-start gap-4">
               {selectedSession.image_url && (
@@ -473,16 +466,11 @@ export default function MySessions() {
 
   return (
     <>
-      {/* Petite barre noire en haut uniquement pour MySessions */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-[#0B0E13] z-50"></div>
-      <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col bg-[#0B0E13]">
+      {/* Petite barre en haut uniquement pour MySessions */}
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+      <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col bg-background">
         {/* Fixed Header Only */}
-        <div className="fixed top-6 left-0 right-0 flex-shrink-0 z-50 space-y-4 pb-4"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(10px)'
-          }}
-        >
+        <div className="fixed top-6 left-0 right-0 flex-shrink-0 z-50 space-y-4 pb-4 glass-premium">
           <div className="container mx-auto px-4 pt-4">
           <div className="flex items-center justify-center -mt-2">
             <Button

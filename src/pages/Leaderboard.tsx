@@ -628,7 +628,7 @@ const Leaderboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0E13] p-4 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="min-h-screen bg-background p-4 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="max-w-md mx-auto">
           <div className="text-center py-4">
             <h1 className="text-2xl font-bold text-foreground">Classement</h1>
@@ -689,7 +689,7 @@ const Leaderboard = () => {
 
   return (
     <div 
-      className="min-h-screen bg-[#0B0E13] p-4 pb-20 overflow-y-auto"
+      className="min-h-screen bg-background p-4 pb-20 overflow-y-auto"
       style={{
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain'

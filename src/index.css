@@ -94,83 +94,83 @@
   }
 
   .light {
-    /* Mode clair - Glassmorphisme bleu électrique */
-    --background: 210 40% 98%;  /* Blanc légèrement bleuté */
-    --foreground: 220 30% 20%;  /* Gris-bleu foncé (pas noir pur) */
+    /* Mode clair - Glassmorphisme bleu roi classique */
+    --background: 218 40% 98%;  /* Blanc légèrement bleuté */
+    --foreground: 225 25% 20%;  /* Gris-bleu foncé (pas noir pur) */
 
-    --card: 210 40% 99%;  /* Carte très légèrement bleutée */
-    --card-foreground: 220 30% 20%;
+    --card: 218 40% 99%;  /* Carte très légèrement bleutée */
+    --card-foreground: 225 25% 20%;
 
-    --popover: 210 40% 100%;  /* Popover blanc bleuté pur */
-    --popover-foreground: 220 30% 20%;
+    --popover: 218 40% 100%;  /* Popover blanc bleuté pur */
+    --popover-foreground: 225 25% 20%;
 
-    /* Bleu électrique #007BFF */
-    --primary: 211 100% 50%;  /* Bleu électrique vif */
-    --primary-glow: 211 100% 60%;  /* Version lumineuse pour effets */
+    /* Bleu roi classique #4169E1 */
+    --primary: 225 73% 57%;  /* Bleu roi classique */
+    --primary-glow: 225 73% 67%;  /* Version lumineuse pour effets */
     --primary-foreground: 0 0% 100%;  /* Blanc sur bleu */
 
-    /* Cyan clair électrique #33CCFF */
-    --accent: 190 100% 60%;  /* Cyan clair électrique */
-    --accent-glow: 190 100% 70%;
-    --accent-foreground: 220 30% 20%;
+    /* Bleu clair complémentaire */
+    --accent: 210 100% 65%;  /* Bleu clair pour accents */
+    --accent-glow: 210 100% 75%;
+    --accent-foreground: 225 25% 20%;
 
-    --secondary: 210 20% 90%;  /* Gris-bleu très clair */
-    --secondary-foreground: 220 30% 20%;
+    --secondary: 218 20% 90%;  /* Gris-bleu très clair */
+    --secondary-foreground: 225 25% 20%;
 
-    --muted: 210 20% 94%;  /* Fond muted encore plus clair */
-    --muted-foreground: 220 15% 40%;  /* Texte muted gris-bleu */
+    --muted: 218 20% 94%;  /* Fond muted encore plus clair */
+    --muted-foreground: 225 15% 40%;  /* Texte muted gris-bleu */
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 211 100% 70% / 0.12;  /* Bordures bleu électrique subtiles */
-    --input: 210 30% 96%;  /* Inputs gris-bleu très clair */
-    --ring: 211 100% 50%;
+    --border: 225 73% 75% / 0.12;  /* Bordures bleu roi subtiles */
+    --input: 218 30% 96%;  /* Inputs gris-bleu très clair */
+    --ring: 225 73% 57%;
 
-    /* Dégradés doux : bleu roi → cyan clair */
-    --gradient-primary: linear-gradient(135deg, hsl(211 100% 50%) 0%, hsl(190 100% 60%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(190 100% 60%) 0%, hsl(211 100% 50%) 100%);
+    /* Dégradés doux : bleu roi classique */
+    --gradient-primary: linear-gradient(135deg, hsl(225 73% 57%) 0%, hsl(210 100% 65%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(210 100% 65%) 0%, hsl(225 73% 57%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 71% 45%) 100%);
     --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 72% 51%) 100%);
     
     /* Map controls pour mode clair */
-    --map-control-bg: 210 40% 99% / 0.9;
-    --map-control-border: 211 100% 70% / 0.15;
-    --map-control-shadow: 211 100% 50% / 0.15;
-    --map-control-hover: 210 20% 94%;
-    --map-control-active: 211 100% 50%;
-    --gradient-map: linear-gradient(135deg, hsl(211 100% 50%) 0%, hsl(190 100% 60%) 100%);
-    --gradient-control: linear-gradient(180deg, hsl(210 40% 99% / 0.9) 0%, hsl(210 40% 98%) 100%);
+    --map-control-bg: 218 40% 99% / 0.9;
+    --map-control-border: 225 73% 75% / 0.15;
+    --map-control-shadow: 225 73% 57% / 0.15;
+    --map-control-hover: 218 20% 94%;
+    --map-control-active: 225 73% 57%;
+    --gradient-map: linear-gradient(135deg, hsl(225 73% 57%) 0%, hsl(210 100% 65%) 100%);
+    --gradient-control: linear-gradient(180deg, hsl(218 40% 99% / 0.9) 0%, hsl(218 40% 98%) 100%);
     
-    /* Ombres grises très fines avec reflets bleus */
-    --shadow-xs: 0 1px 2px 0 rgba(0, 123, 255, 0.08);
-    --shadow-sm: 0 2px 4px -2px rgba(0, 123, 255, 0.1);
-    --shadow-md: 0 4px 6px -1px rgba(0, 123, 255, 0.12), 0 2px 4px -2px rgba(0, 123, 255, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 123, 255, 0.15), 0 4px 6px -4px rgba(0, 123, 255, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 123, 255, 0.2), 0 8px 10px -6px rgba(0, 123, 255, 0.1);
-    --shadow-2xl: 0 25px 50px -12px rgba(0, 123, 255, 0.25);
-    --shadow-glow: 0 0 30px 10px hsl(211 100% 50% / 0.25);  /* Glow bleu électrique */
-    --shadow-glow-accent: 0 0 30px 10px hsl(190 100% 60% / 0.25);  /* Glow cyan */
-    --shadow-map-control: 0 4px 20px rgba(0, 123, 255, 0.15);
-    --shadow-map-panel: 0 10px 30px rgba(0, 123, 255, 0.2);
+    /* Ombres grises très fines avec reflets bleu roi */
+    --shadow-xs: 0 1px 2px 0 rgba(65, 105, 225, 0.08);
+    --shadow-sm: 0 2px 4px -2px rgba(65, 105, 225, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(65, 105, 225, 0.12), 0 2px 4px -2px rgba(65, 105, 225, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(65, 105, 225, 0.15), 0 4px 6px -4px rgba(65, 105, 225, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(65, 105, 225, 0.2), 0 8px 10px -6px rgba(65, 105, 225, 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgba(65, 105, 225, 0.25);
+    --shadow-glow: 0 0 30px 10px hsl(225 73% 57% / 0.25);  /* Glow bleu roi */
+    --shadow-glow-accent: 0 0 30px 10px hsl(210 100% 65% / 0.25);  /* Glow bleu clair */
+    --shadow-map-control: 0 4px 20px rgba(65, 105, 225, 0.15);
+    --shadow-map-panel: 0 10px 30px rgba(65, 105, 225, 0.2);
     
     /* Glassmorphisme adapté au mode clair */
-    --glass-bg: hsl(210 40% 100% / 0.5);  /* Blanc bleuté avec 50% opacité */
-    --glass-border: hsl(211 100% 70% / 0.15);  /* Bordure bleu électrique subtile */
+    --glass-bg: hsl(218 40% 100% / 0.5);  /* Blanc bleuté avec 50% opacité */
+    --glass-border: hsl(225 73% 75% / 0.15);  /* Bordure bleu roi subtile */
     --glass-blur: 12px;  /* Blur légèrement plus fort */
-    --glass-bg-primary: hsl(210 40% 99% / 0.85);
-    --glass-bg-card: hsl(210 40% 100% / 0.5);
-    --glass-border-card: hsl(211 100% 70% / 0.15);
-    --glass-shadow: 0 4px 20px rgba(0, 123, 255, 0.15);  /* Ombre bleue douce */
+    --glass-bg-primary: hsl(218 40% 99% / 0.85);
+    --glass-bg-card: hsl(218 40% 100% / 0.5);
+    --glass-border-card: hsl(225 73% 75% / 0.15);
+    --glass-shadow: 0 4px 20px rgba(65, 105, 225, 0.15);  /* Ombre bleue douce */
     
-    --sidebar-background: 210 40% 99%;
-    --sidebar-foreground: 220 30% 20%;
-    --sidebar-primary: 211 100% 50%;
+    --sidebar-background: 218 40% 99%;
+    --sidebar-foreground: 225 25% 20%;
+    --sidebar-primary: 225 73% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 20% 94%;
-    --sidebar-accent-foreground: 220 30% 20%;
-    --sidebar-border: 211 100% 70% / 0.12;
-    --sidebar-ring: 211 100% 50%;
+    --sidebar-accent: 218 20% 94%;
+    --sidebar-accent-foreground: 225 25% 20%;
+    --sidebar-border: 225 73% 75% / 0.12;
+    --sidebar-ring: 225 73% 57%;
   }
 
   .dark {
@@ -394,10 +394,10 @@
     border-radius: 1rem;
   }
 
-  /* Reflets bleus pour mode clair */
+  /* Reflets bleu roi pour mode clair */
   .light .glass-premium {
     box-shadow: var(--glass-shadow),
-                inset 0 1px 0 0 hsl(211 100% 80% / 0.1); /* Reflet bleu en haut */
+                inset 0 1px 0 0 hsl(225 73% 80% / 0.1); /* Reflet bleu roi en haut */
   }
 
   .glass-primary {
@@ -431,10 +431,10 @@
     box-shadow: 0 8px 30px hsl(var(--primary) / 0.3);
   }
 
-  /* Effet glow bleu pour boutons actifs en mode clair */
+  /* Effet glow bleu roi pour boutons actifs en mode clair */
   .light .btn-create-glow,
   .light .glass-floating:hover {
-    box-shadow: 0 0 20px 5px hsl(211 100% 50% / 0.3);
+    box-shadow: 0 0 20px 5px hsl(225 73% 57% / 0.3);
   }
   
   /* Fallback si backdrop-filter non supporté */
