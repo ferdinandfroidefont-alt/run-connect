@@ -29,14 +29,17 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   const [permissionPrompt, setPermissionPrompt] = useState(false);
 
   useEffect(() => {
-    console.log('[ContactsTab] State updated:', {
+    console.log('👥📊 [ContactsTab] State updated:', {
       isNative,
       hasPermission,
       contactsCount: deviceContacts?.length || 0,
+      suggestionsCount: contactSuggestions.length,
+      loading,
       permissionPrompt
     });
 
     if (isNative && hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0 && !loading) {
+      console.log('👥🔄 [ContactsTab] Conditions remplies - Chargement automatique des contacts');
       loadContactsFromApp();
     }
   }, [isNative, hasPermission, deviceContacts]);
@@ -44,9 +47,40 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   useEffect(() => {
     // Recharger automatiquement après autorisation
     if (hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0) {
+      console.log('👥🔄 [ContactsTab] Permission accordée - Rechargement des contacts');
       loadContactsFromApp();
     }
   }, [hasPermission]);
+
+  // ✅ ÉTAPE 2: Écouter l'événement contactsLoaded directement
+  useEffect(() => {
+    const handleContactsLoaded = (event: any) => {
+      console.log('👥🎉 [ContactsTab] Événement contactsLoaded reçu:', event.detail?.length || 0, 'contacts');
+      
+      // Forcer un rechargement immédiat des suggestions
+      if (hasPermission && deviceContacts && deviceContacts.length > 0) {
+        console.log('👥⚡ [ContactsTab] Déclenchement immédiat de loadContactsFromApp()');
+        loadContactsFromApp();
+      } else {
+        console.log('👥⏳ [ContactsTab] Retry dans 1s...');
+        // Retry après 1s si deviceContacts pas encore sync
+        setTimeout(() => {
+          if (hasPermission) {
+            loadContacts().then(() => {
+              console.log('👥✅ [ContactsTab] Contacts rechargés via loadContacts()');
+              loadContactsFromApp();
+            });
+          }
+        }, 1000);
+      }
+    };
+
+    window.addEventListener('contactsLoaded', handleContactsLoaded);
+    
+    return () => {
+      window.removeEventListener('contactsLoaded', handleContactsLoaded);
+    };
+  }, [hasPermission, deviceContacts]);
 
   const normalizePhone = (phone: string): string => {
     let normalized = phone.replace(/\D/g, '');
@@ -62,19 +96,26 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   const loadContactsFromApp = async () => {
     if (!deviceContacts || deviceContacts.length === 0) {
-      console.log('[ContactsTab] No device contacts available');
+      console.log('👥⚠️ [ContactsTab] Aucun contact device disponible');
       return;
     }
 
-    console.log('[ContactsTab] Loading contacts from app...', deviceContacts.length);
+    console.log('👥🔄 [ContactsTab] Chargement contacts depuis l\'app...', deviceContacts.length, 'contacts device');
     setLoading(true);
 
     try {
+      console.log('👥🔍 [ContactsTab] Appel findContactsInApp()...');
       const suggestions = await findContactsInApp(deviceContacts);
-      console.log('[ContactsTab] Found suggestions:', suggestions.length);
+      console.log('👥✅ [ContactsTab] Suggestions trouvées:', suggestions.length);
       setContactSuggestions(suggestions);
+      
+      if (suggestions.length > 0) {
+        console.log('👥🎉 [ContactsTab] Contacts affichés avec succès!');
+      } else {
+        console.log('👥📭 [ContactsTab] Aucune correspondance trouvée dans Supabase');
+      }
     } catch (error) {
-      console.error('[ContactsTab] Error loading contacts:', error);
+      console.error('👥❌ [ContactsTab] Erreur lors du chargement des contacts:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger vos contacts",
@@ -86,9 +127,12 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   };
 
   const findContactsInApp = async (contacts: any[]): Promise<ContactSuggestion[]> => {
-    if (!user) return [];
+    if (!user) {
+      console.log('👥❌ [findContactsInApp] Pas d\'utilisateur connecté');
+      return [];
+    }
 
-    console.log('[ContactsTab] Finding contacts in app from', contacts.length, 'device contacts');
+    console.log('👥🔍 [findContactsInApp] Recherche dans', contacts.length, 'contacts device');
 
     const allPhones: string[] = [];
     contacts.forEach(contact => {
@@ -104,14 +148,15 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
       }
     });
 
-    console.log('[ContactsTab] Extracted', allPhones.length, 'phone numbers');
+    console.log('👥📞 [findContactsInApp] Numéros extraits:', allPhones.length);
 
     if (allPhones.length === 0) {
+      console.log('👥⚠️ [findContactsInApp] Aucun numéro valide trouvé');
       return [];
     }
 
     const uniquePhones = [...new Set(allPhones)];
-    console.log('[ContactsTab] Unique phones:', uniquePhones.length);
+    console.log('👥📊 [findContactsInApp] Numéros uniques:', uniquePhones.length);
 
     const batchSize = 50;
     const results: ContactSuggestion[] = [];
@@ -178,37 +223,70 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   };
 
   const handleRequestContactsPermission = async () => {
-    console.log('[ContactsTab] Requesting contacts permission...');
+    console.log('👥🔐 [ContactsTab] Demande permission contacts...');
     setLoading(true);
     setPermissionPrompt(false);
 
     try {
-      await requestPermissions();
+      console.log('👥📢 [ContactsTab] Appel requestPermissions()...');
+      const granted = await requestPermissions();
+      console.log('👥📊 [ContactsTab] Résultat permission:', granted ? '✅ GRANTED' : '❌ DENIED');
       
-      // Attendre un peu pour que les permissions soient bien enregistrées
+      if (!granted) {
+        console.log('👥❌ [ContactsTab] Permission refusée - arrêt du processus');
+        toast({
+          title: "Permission refusée",
+          description: "Vous devez autoriser l'accès aux contacts pour continuer",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // ✅ ÉTAPE 2: Attendre 500ms pour que les permissions Android soient bien enregistrées
+      console.log('👥⏳ [ContactsTab] Attente 500ms pour sync permissions...');
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Forcer le rechargement des contacts depuis le device
-      await loadContacts();
+      console.log('👥📞 [ContactsTab] Appel loadContacts()...');
+      const loadedContacts = await loadContacts();
+      console.log('👥📊 [ContactsTab] Contacts chargés:', loadedContacts?.length || 0);
       
-      // Attendre que les contacts soient chargés
+      // ✅ Attendre que les contacts soient disponibles
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Puis charger les suggestions
-      if (deviceContacts && deviceContacts.length > 0) {
+      // Vérifier si on a bien des contacts
+      if (loadedContacts && loadedContacts.length > 0) {
+        console.log('👥✅ [ContactsTab] Contacts disponibles - Chargement des suggestions');
         await loadContactsFromApp();
       } else {
-        console.log('[ContactsTab] No contacts loaded yet, will retry...');
-        // Retry après 2s si pas de contacts
+        console.log('👥⚠️ [ContactsTab] Pas de contacts chargés - Retry dans 2s...');
+        
+        // ✅ RETRY: Attendre 2s supplémentaires et réessayer
         setTimeout(async () => {
-          await loadContacts();
-          if (deviceContacts && deviceContacts.length > 0) {
-            await loadContactsFromApp();
+          console.log('👥🔄 [ContactsTab] RETRY - Rechargement contacts...');
+          try {
+            const retryContacts = await loadContacts();
+            console.log('👥📊 [ContactsTab] RETRY - Contacts chargés:', retryContacts?.length || 0);
+            
+            if (retryContacts && retryContacts.length > 0) {
+              console.log('👥✅ [ContactsTab] RETRY SUCCESS - Chargement suggestions');
+              await loadContactsFromApp();
+            } else {
+              console.log('👥❌ [ContactsTab] RETRY FAILED - Aucun contact trouvé');
+            }
+          } catch (retryError) {
+            console.error('👥❌ [ContactsTab] RETRY ERROR:', retryError);
+          } finally {
+            setLoading(false);
           }
         }, 2000);
+        
+        return; // Ne pas mettre loading=false maintenant, on attend le retry
       }
+      
     } catch (error) {
-      console.error('[ContactsTab] Error requesting permission:', error);
+      console.error('👥❌ [ContactsTab] Erreur lors de la demande de permission:', error);
       toast({
         title: "Erreur",
         description: "Impossible de demander l'accès aux contacts",
