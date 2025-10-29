@@ -112,9 +112,9 @@ export const BottomNavigation = () => {
       <nav className="fixed bottom-0 left-0 right-0 glass-premium shadow-2xl pb-safe z-50">
         <div className="relative">
           {/* Effet lumineux subtil au fond */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none" />
           
-          <div className="grid grid-cols-5 items-center px-4 py-2">
+          <div className="grid grid-cols-5 items-center px-4 py-3 pb-6">
           {/* Première colonne - Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
