@@ -66,6 +66,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
+  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
+  const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
   const [recordsData, setRecordsData] = useState<{
     walking: Record<string, string>;
     running: Record<string, string>;
@@ -110,13 +112,15 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       // Fetch reliability rate from user_stats
       const { data: statsData } = await supabase
         .from('user_stats')
-        .select('reliability_rate, total_sessions_joined')
+        .select('reliability_rate, total_sessions_joined, total_sessions_completed, total_sessions_absent')
         .eq('user_id', user.id)
         .single();
 
       if (statsData) {
         setReliabilityRate(Number(statsData.reliability_rate) || 100);
         setTotalSessionsJoined(statsData.total_sessions_joined || 0);
+        setTotalSessionsCompleted(statsData.total_sessions_completed || 0);
+        setTotalSessionsAbsent(statsData.total_sessions_absent || 0);
       }
 
       // Fetch total sessions created
@@ -402,14 +406,6 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                     )}
                   </div>
 
-                  {/* Reliability Badge */}
-                  <div className="w-full mb-3 px-4">
-                    <ReliabilityBadge 
-                      rate={reliabilityRate}
-                      onClick={() => setShowReliabilityDialog(true)}
-                    />
-                  </div>
-
                   <div className="flex gap-2 items-center mb-4 flex-wrap justify-center">
                     {profile?.is_admin && (
                       <Badge className="bg-red-100 text-red-800 border-red-200">
@@ -540,6 +536,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       <p className="font-bold text-lg">{followingCount}</p>
                       <p className="text-sm text-muted-foreground">Abonnements</p>
                     </button>
+                  </div>
+
+                  {/* Reliability Badge */}
+                  <div className="w-full mt-3 px-4">
+                    <ReliabilityBadge 
+                      rate={reliabilityRate}
+                      onClick={() => setShowReliabilityDialog(true)}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -683,6 +687,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
         reliabilityRate={reliabilityRate}
         totalSessionsCreated={totalSessionsCreated}
         totalSessionsJoined={totalSessionsJoined}
+        totalSessionsCompleted={totalSessionsCompleted}
+        totalSessionsAbsent={totalSessionsAbsent}
       />
     </>
   );

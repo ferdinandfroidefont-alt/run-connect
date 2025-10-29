@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, CheckCircle2, Users } from "lucide-react";
+import { Calendar, CheckCircle2, Users, XCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ReliabilityDetailsDialogProps {
@@ -10,6 +10,8 @@ interface ReliabilityDetailsDialogProps {
   reliabilityRate: number;
   totalSessionsCreated: number;
   totalSessionsJoined: number;
+  totalSessionsCompleted: number;
+  totalSessionsAbsent: number;
 }
 
 export const ReliabilityDetailsDialog = ({
@@ -19,6 +21,8 @@ export const ReliabilityDetailsDialog = ({
   reliabilityRate,
   totalSessionsCreated,
   totalSessionsJoined,
+  totalSessionsCompleted,
+  totalSessionsAbsent,
 }: ReliabilityDetailsDialogProps) => {
   const { t } = useLanguage();
   
@@ -69,6 +73,30 @@ export const ReliabilityDetailsDialog = ({
                 <p className="text-2xl font-bold">{totalSessionsJoined}</p>
                 <p className="text-sm text-muted-foreground">
                   {t('reliability.sessionsJoined')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-2xl font-bold">{totalSessionsCompleted}</p>
+                <p className="text-sm text-muted-foreground">
+                  Séances venues
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+              <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                <XCircle className="h-6 w-6 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-2xl font-bold">{totalSessionsAbsent}</p>
+                <p className="text-sm text-muted-foreground">
+                  Séances pas venues
                 </p>
               </div>
             </div>
