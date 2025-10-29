@@ -410,38 +410,41 @@ const Leaderboard = () => {
     const third = top3[2];
     
     return (
-      <div className="mb-8 pb-8">
-        <div className="flex items-end justify-center gap-4 mb-6">
+      <div className="mb-2 pb-2">
+        <div className="flex items-end justify-center gap-2 mb-2">
           {/* 2ème place - Gauche */}
           {second && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <Avatar 
-                className={`h-16 w-16 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(second.user_rank)}`}
-                onClick={() => navigateToProfile(second.user_id)}
-              >
-                <AvatarImage src={second.profile?.avatar_url} />
-                <AvatarFallback className="text-lg font-bold">
-                  {second.profile?.username?.[0] || second.profile?.display_name?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center mb-2">
-                <p className="font-semibold text-sm truncate max-w-[80px]">
+              <div className="relative">
+                <div 
+                  className="absolute inset-0 rounded-full blur-lg opacity-40 animate-pulse"
+                  style={{ background: 'radial-gradient(circle, rgba(156,163,175,0.5) 0%, transparent 70%)' }}
+                />
+                <Avatar 
+                  className={`h-9 w-9 mb-1 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(second.user_rank)} relative z-10`}
+                  onClick={() => navigateToProfile(second.user_id)}
+                >
+                  <AvatarImage src={second.profile?.avatar_url} />
+                  <AvatarFallback className="text-xs font-bold">
+                    {second.profile?.username?.[0] || second.profile?.display_name?.[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="text-center mb-1">
+                <p className="font-semibold text-[10px] truncate max-w-[60px]">
                   {second.profile?.username}
                 </p>
-                <div className="flex justify-center my-1">
-                  {getRankBadge(second.user_rank)}
-                </div>
-                <p className="font-bold text-primary">
-                  {showSeasonal ? second.seasonal_points : second.total_points} pts
+                <p className="font-bold text-primary text-xs">
+                  {showSeasonal ? second.seasonal_points : second.total_points}
                 </p>
               </div>
               <div 
-                className="w-20 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-lg border-2 border-gray-500 flex flex-col items-center justify-start pt-2 cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '100px' }}
+                className="w-12 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-lg border border-gray-500 flex flex-col items-center justify-start pt-0.5 cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '35px' }}
                 onClick={() => navigateToProfile(second.user_id)}
               >
-                <Medal className="h-8 w-8 text-gray-100 mb-1" />
-                <span className="text-2xl font-bold text-white">2</span>
+                <Medal className="h-4 w-4 text-gray-100" />
+                <span className="text-sm font-bold text-white">2</span>
               </div>
             </div>
           )}
@@ -449,34 +452,37 @@ const Leaderboard = () => {
           {/* 1ère place - Centre */}
           {first && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <Crown className="h-10 w-10 text-yellow-500 mb-1 animate-pulse" />
-              <Avatar 
-                className={`h-20 w-20 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(first.user_rank)}`}
-                onClick={() => navigateToProfile(first.user_id)}
-              >
-                <AvatarImage src={first.profile?.avatar_url} />
-                <AvatarFallback className="text-xl font-bold">
-                  {first.profile?.username?.[0] || first.profile?.display_name?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center mb-2">
-                <p className="font-bold text-base truncate max-w-[90px]">
+              <Crown className="h-5 w-5 text-yellow-500 mb-0.5 animate-pulse" />
+              <div className="relative">
+                <div 
+                  className="absolute inset-0 rounded-full blur-lg opacity-40 animate-pulse"
+                  style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.5) 0%, transparent 70%)' }}
+                />
+                <Avatar 
+                  className={`h-11 w-11 mb-1 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(first.user_rank)} relative z-10`}
+                  onClick={() => navigateToProfile(first.user_id)}
+                >
+                  <AvatarImage src={first.profile?.avatar_url} />
+                  <AvatarFallback className="text-sm font-bold">
+                    {first.profile?.username?.[0] || first.profile?.display_name?.[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="text-center mb-1">
+                <p className="font-bold text-[11px] truncate max-w-[70px]">
                   {first.profile?.username}
                 </p>
-                <div className="flex justify-center my-1">
-                  {getRankBadge(first.user_rank)}
-                </div>
-                <p className="font-bold text-primary text-lg">
-                  {showSeasonal ? first.seasonal_points : first.total_points} pts
+                <p className="font-bold text-primary text-sm">
+                  {showSeasonal ? first.seasonal_points : first.total_points}
                 </p>
               </div>
               <div 
-                className="w-24 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-t-lg border-2 border-yellow-700 shadow-lg shadow-yellow-500/50 flex flex-col items-center justify-start pt-2 cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '140px' }}
+                className="w-14 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-t-lg border border-yellow-700 shadow-lg shadow-yellow-500/50 flex flex-col items-center justify-start pt-0.5 cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '48px' }}
                 onClick={() => navigateToProfile(first.user_id)}
               >
-                <Trophy className="h-10 w-10 text-yellow-100 mb-1" />
-                <span className="text-3xl font-bold text-white">1</span>
+                <Trophy className="h-5 w-5 text-yellow-100" />
+                <span className="text-base font-bold text-white">1</span>
               </div>
             </div>
           )}
@@ -484,33 +490,36 @@ const Leaderboard = () => {
           {/* 3ème place - Droite */}
           {third && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <Avatar 
-                className={`h-16 w-16 mb-2 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(third.user_rank)}`}
-                onClick={() => navigateToProfile(third.user_id)}
-              >
-                <AvatarImage src={third.profile?.avatar_url} />
-                <AvatarFallback className="text-lg font-bold">
-                  {third.profile?.username?.[0] || third.profile?.display_name?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center mb-2">
-                <p className="font-semibold text-sm truncate max-w-[80px]">
+              <div className="relative">
+                <div 
+                  className="absolute inset-0 rounded-full blur-lg opacity-40 animate-pulse"
+                  style={{ background: 'radial-gradient(circle, rgba(217,119,6,0.5) 0%, transparent 70%)' }}
+                />
+                <Avatar 
+                  className={`h-9 w-9 mb-1 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(third.user_rank)} relative z-10`}
+                  onClick={() => navigateToProfile(third.user_id)}
+                >
+                  <AvatarImage src={third.profile?.avatar_url} />
+                  <AvatarFallback className="text-xs font-bold">
+                    {third.profile?.username?.[0] || third.profile?.display_name?.[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="text-center mb-1">
+                <p className="font-semibold text-[10px] truncate max-w-[60px]">
                   {third.profile?.username}
                 </p>
-                <div className="flex justify-center my-1">
-                  {getRankBadge(third.user_rank)}
-                </div>
-                <p className="font-bold text-primary">
-                  {showSeasonal ? third.seasonal_points : third.total_points} pts
+                <p className="font-bold text-primary text-xs">
+                  {showSeasonal ? third.seasonal_points : third.total_points}
                 </p>
               </div>
               <div 
-                className="w-20 bg-gradient-to-b from-amber-500 to-amber-700 rounded-t-lg border-2 border-amber-800 flex flex-col items-center justify-start pt-2 cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '80px' }}
+                className="w-12 bg-gradient-to-b from-amber-500 to-amber-700 rounded-t-lg border border-amber-800 flex flex-col items-center justify-start pt-0.5 cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '28px' }}
                 onClick={() => navigateToProfile(third.user_id)}
               >
-                <Medal className="h-8 w-8 text-amber-100 mb-1" />
-                <span className="text-2xl font-bold text-white">3</span>
+                <Medal className="h-4 w-4 text-amber-100" />
+                <span className="text-sm font-bold text-white">3</span>
               </div>
             </div>
           )}
@@ -533,38 +542,35 @@ const Leaderboard = () => {
     return (
       <div 
         className={`
-          rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
-          ${highlight ? 'ring-2 ring-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]' : ''}
-          ${item.user_id === user?.id && !highlight ? 'ring-2 ring-primary' : ''}
+          rounded-lg transition-all duration-300 hover:shadow-xl
+          ${highlight ? 'ring-1 ring-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.25)]' : ''}
+          ${item.user_id === user?.id && !highlight ? 'ring-1 ring-primary/50' : ''}
         `}
         style={{ 
-          background: 'rgba(255, 255, 255, 0.07)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(8px)',
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
         }}
       >
-        <div className={`flex items-center justify-between ${compact ? 'p-3' : 'p-4'}`}>
-          <div className="flex items-center gap-3">
-            <div className="w-6 flex justify-center">
+        <div className="flex items-center justify-between p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-5 flex justify-center">
               {getRankIcon(item.rank)}
             </div>
             <Avatar 
-              className={`${compact ? 'h-10 w-10' : 'h-14 w-14'} cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
+              className="h-8 w-8 cursor-pointer hover:opacity-80 transition-all"
               onClick={() => navigateToProfile(item.user_id)}
             >
               <AvatarImage src={item.profile?.avatar_url} />
-              <AvatarFallback className={`${compact ? 'text-sm' : 'text-lg'} font-bold`}>
+              <AvatarFallback className="text-xs font-bold">
                 {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className={`font-medium ${compact ? 'text-sm' : 'text-base'}`}>
+              <p className="font-medium text-xs">
                 {item.profile?.username || item.profile?.display_name}
               </p>
-              <div className="flex items-center gap-1 my-0.5">
-                {getRankBadge(item.user_rank)}
-              </div>
-              <p className={`font-bold text-primary ${compact ? 'text-sm' : 'text-base'}`}>
+              <p className="font-bold text-primary text-xs">
                 {showSeasonal ? item.seasonal_points : item.total_points} pts
               </p>
             </div>
@@ -581,11 +587,11 @@ const Leaderboard = () => {
     const currentUserItem = currentUserIndex >= 10 ? data[currentUserIndex] : null;
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <PodiumDisplay top3={top3} showSeasonal={showSeasonal} />
         
         {/* TOP 10 (positions 4 à 10) */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {top10.map((item) => (
             <UserCard key={item.user_id} item={item} showSeasonal={showSeasonal} compact={true} />
           ))}
@@ -594,10 +600,10 @@ const Leaderboard = () => {
         {/* Séparateur si l'utilisateur n'est pas dans le TOP 10 */}
         {currentUserItem && (
           <>
-            <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground text-sm">
-              <div className="h-px bg-border/30 flex-1" />
+            <div className="flex items-center justify-center gap-2 py-1 text-muted-foreground text-xs">
+              <div className="h-px bg-border/20 flex-1" />
               <span>…</span>
-              <div className="h-px bg-border/30 flex-1" />
+              <div className="h-px bg-border/20 flex-1" />
             </div>
             
             {/* Position de l'utilisateur */}
@@ -608,10 +614,10 @@ const Leaderboard = () => {
               highlight={true}
             />
             
-            <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground text-sm">
-              <div className="h-px bg-border/30 flex-1" />
+            <div className="flex items-center justify-center gap-2 py-1 text-muted-foreground text-xs">
+              <div className="h-px bg-border/20 flex-1" />
               <span>…</span>
-              <div className="h-px bg-border/30 flex-1" />
+              <div className="h-px bg-border/20 flex-1" />
             </div>
           </>
         )}
@@ -743,54 +749,54 @@ const Leaderboard = () => {
         overscrollBehavior: 'contain'
       }}
     >
-      <div className="max-w-md mx-auto space-y-4">
+      <div className="max-w-md mx-auto space-y-2">
 
 
         {/* Leaderboard Tabs */}
         <Tabs defaultValue="seasonal" className="w-full">
           {userRank && (
             <div 
-              className="text-center mb-3 rounded-full px-4 py-1 inline-block mx-auto"
+              className="text-center mb-2 rounded-full px-3 py-0.5 inline-block mx-auto"
               style={{
                 background: 'rgba(255, 255, 255, 0.05)',
                 backdropFilter: 'blur(10px)'
               }}
             >
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-[10px]">
                 Votre rang: #{userRank}
               </Badge>
             </div>
           )}
 
-          <TabsContent value="seasonal" className="mt-4">
-            <div className="flex flex-col gap-4">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-semibold flex items-center justify-center gap-2 text-primary">
-                  <TrendingUp className="h-5 w-5" />
+          <TabsContent value="seasonal" className="mt-2">
+            <div className="flex flex-col gap-2">
+              <div className="text-center space-y-0.5">
+                <h2 className="text-base font-semibold flex items-center justify-center gap-1 text-primary">
+                  <TrendingUp className="h-4 w-4" />
                   Classement Saison {seasonDates.number}
                 </h2>
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span>
                     {seasonDates.start.toLocaleDateString('fr-FR', { 
                       day: 'numeric', 
-                      month: 'long' 
+                      month: 'short' 
                     })} - {seasonDates.end.toLocaleDateString('fr-FR', { 
                       day: 'numeric', 
-                      month: 'long',
+                      month: 'short',
                       year: 'numeric' 
                     })}
                   </span>
                 </div>
-                <div className="text-center mt-1">
-                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs px-2 py-0.5">
-                    🎁 Codes promo à gagner sur sites sportifs pour les 3 premiers
+                <div className="text-center">
+                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-[9px] px-1.5 py-0">
+                    🎁 Codes promo pour le top 3
                   </Badge>
                 </div>
               </div>
               
               <TabsList
-                className="grid w-full grid-cols-3"
+                className="grid w-full grid-cols-3 h-8"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
                   backdropFilter: 'blur(10px)'
@@ -798,304 +804,48 @@ const Leaderboard = () => {
               >
                 <TabsTrigger 
                   value="seasonal" 
-                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  className="flex items-center gap-1 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_15px_rgba(6,182,212,0.25)]"
                 >
-                  <TrendingUp className="h-4 w-4" />
+                  <TrendingUp className="h-3 w-3" />
                   <span className="hidden sm:inline">Saison</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="global" 
-                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  className="flex items-center gap-1 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_15px_rgba(6,182,212,0.25)]"
                 >
-                  <Globe className="h-4 w-4" />
+                  <Globe className="h-3 w-3" />
                   <span className="hidden sm:inline">Global</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="friends" 
-                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  className="flex items-center gap-1 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_15px_rgba(6,182,212,0.25)]"
                 >
-                  <Users className="h-4 w-4" />
+                  <Users className="h-3 w-3" />
                   <span className="hidden sm:inline">Amis</span>
                 </TabsTrigger>
               </TabsList>
               
-              <div className="space-y-2">
-                {seasonalLeaderboard.slice(3).map((item, index) => (
-                  <div 
-                    key={item.user_id} 
-                    className={`
-                      rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
-                      ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
-                    `}
-                    style={{ 
-                      animationDelay: `${(index + 3) * 0.1}s`,
-                      background: 'rgba(255, 255, 255, 0.07)',
-                      backdropFilter: 'blur(10px)',
-                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-                    }}
-                  >
-                    <div className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 flex justify-center">
-                          {getRankIcon(item.rank)}
-                        </div>
-                        <Avatar 
-                          className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
-                          onClick={() => navigateToProfile(item.user_id)}
-                        >
-                          <AvatarImage src={item.profile?.avatar_url} />
-                          <AvatarFallback className="text-lg font-bold">
-                            {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">
-                              {item.profile?.username || item.profile?.display_name}
-                            </p>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            @{item.profile?.username}
-                          </p>
-                          <div className="my-1">
-                            {getRankBadge(item.user_rank)}
-                          </div>
-                          <div className="mt-1">
-                            <p className="font-bold text-primary">
-                              {item.seasonal_points} pts
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {seasonalLeaderboard.length > 0 && (
+                <LeaderboardList data={seasonalLeaderboard} showSeasonal />
+              )}
             </div>
           </TabsContent>
 
-          <TabsContent value="global" className="mt-4">
-            <div className="flex flex-col gap-4">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold flex items-center justify-center gap-2 text-primary">
-                  <Globe className="h-6 w-6" />
-                  Classement Global
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Tous les points accumulés depuis le début
-                </p>
-              </div>
-              
-              {leaderboard.length > 0 && (
-                <PodiumDisplay top3={leaderboard.slice(0, 3)} />
-              )}
-              
-              <TabsList 
-                className="grid w-full grid-cols-3"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)'
-                }}
-              >
-                <TabsTrigger 
-                  value="seasonal" 
-                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="hidden sm:inline">Saison</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="global" 
-                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                >
-                  <Globe className="h-4 w-4" />
-                  <span className="hidden sm:inline">Global</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="friends" 
-                  className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                >
-                  <Users className="h-4 w-4" />
-                  <span className="hidden sm:inline">Amis</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <div className="space-y-2">
-                {leaderboard.slice(3).map((item, index) => (
-                  <div 
-                    key={item.user_id} 
-                    className={`
-                      rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
-                      ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
-                    `}
-                    style={{ 
-                      animationDelay: `${(index + 3) * 0.1}s`,
-                      background: 'rgba(255, 255, 255, 0.07)',
-                      backdropFilter: 'blur(10px)',
-                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-                    }}
-                  >
-                    <div className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 flex justify-center">
-                          {getRankIcon(item.rank)}
-                        </div>
-                        <Avatar 
-                          className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
-                          onClick={() => navigateToProfile(item.user_id)}
-                        >
-                          <AvatarImage src={item.profile?.avatar_url} />
-                          <AvatarFallback className="text-lg font-bold">
-                            {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">
-                              {item.profile?.username || item.profile?.display_name}
-                            </p>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            @{item.profile?.username}
-                          </p>
-                          <div className="my-1">
-                            {getRankBadge(item.user_rank)}
-                          </div>
-                          <div className="mt-1">
-                            <p className="font-bold text-primary">
-                              {item.total_points} pts
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              +{item.seasonal_points} cette saison
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <TabsContent value="global" className="mt-2">
+            {leaderboard.length > 0 && (
+              <LeaderboardList data={leaderboard} showSeasonal={false} />
+            )}
           </TabsContent>
 
-
-          <TabsContent value="friends" className="mt-4">
-            <div className="flex flex-col gap-4">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold flex items-center justify-center gap-2 text-primary">
-                  <Users className="h-6 w-6" />
-                  Classement des Amis
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Comparez vos performances avec vos amis
-                </p>
+          <TabsContent value="friends" className="mt-2">
+            {friendsLeaderboard.length > 0 ? (
+              <LeaderboardList data={friendsLeaderboard} showSeasonal={false} />
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Aucun ami dans votre liste</p>
               </div>
-              {friendsLeaderboard.length > 0 ? (
-                <>
-                  <PodiumDisplay top3={friendsLeaderboard.slice(0, 3)} />
-                  
-                  <TabsList 
-                    className="grid w-full grid-cols-3"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  >
-                    <TabsTrigger 
-                      value="seasonal" 
-                      className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="hidden sm:inline">Saison</span>
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="global" 
-                      className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                    >
-                      <Globe className="h-4 w-4" />
-                      <span className="hidden sm:inline">Global</span>
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="friends" 
-                      className="flex items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                    >
-                      <Users className="h-4 w-4" />
-                      <span className="hidden sm:inline">Amis</span>
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <div className="space-y-2">
-                    {friendsLeaderboard.slice(3).map((item, index) => (
-                      <div 
-                        key={item.user_id} 
-                        className={`
-                          rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
-                          ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
-                        `}
-                        style={{ 
-                          animationDelay: `${(index + 3) * 0.1}s`,
-                          background: 'rgba(255, 255, 255, 0.07)',
-                          backdropFilter: 'blur(10px)',
-                          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-                        }}
-                      >
-                        <div className="flex items-center justify-between p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 flex justify-center">
-                              {getRankIcon(item.rank)}
-                            </div>
-                            <Avatar 
-                              className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
-                              onClick={() => navigateToProfile(item.user_id)}
-                            >
-                              <AvatarImage src={item.profile?.avatar_url} />
-                              <AvatarFallback className="text-lg font-bold">
-                                {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">
-                                  {item.profile?.username || item.profile?.display_name}
-                                </p>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                @{item.profile?.username}
-                              </p>
-                              <div className="my-1">
-                                {getRankBadge(item.user_rank)}
-                              </div>
-                              <div className="mt-1">
-                                <p className="font-bold text-primary">
-                                  {item.total_points} pts
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  +{item.seasonal_points} cette saison
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div 
-                  className="rounded-xl p-8 text-center"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.07)',
-                    backdropFilter: 'blur(10px)',
-                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-                  }}
-                >
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Suivez des amis pour voir leur classement !
-                  </p>
-                </div>
-              )}
-            </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
