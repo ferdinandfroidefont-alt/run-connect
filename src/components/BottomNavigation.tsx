@@ -117,7 +117,7 @@ export const BottomNavigation = () => {
       </nav>
       
       {/* Barre de navigation principale flottante glassmorphic premium */}
-      <nav className="fixed bottom-6 left-4 right-4 glass-premium shadow-2xl rounded-2xl z-50 mx-auto max-w-md">
+      <nav className="fixed bottom-1 left-0 right-0 glass-premium shadow-2xl rounded-2xl z-50 mx-auto max-w-md">
         <div className="relative">
           {/* Effet lumineux subtil au fond */}
           <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
