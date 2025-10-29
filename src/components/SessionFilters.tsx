@@ -72,7 +72,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
         <Button
           onClick={() => setIsOpen(!isOpen)}
           variant="outline"
-          className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.15] hover:bg-white/[0.12] shadow-[0_8px_20px_rgba(0,0,0,0.4)] h-7 w-8 px-1"
+          className="bg-card/90 backdrop-blur-sm shadow-map-control h-7 w-8 px-1"
         >
           <Filter className="h-3 w-3" />
           {activeFiltersCount > 0 && (
@@ -85,7 +85,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
 
       {/* Filters Panel */}
       {isOpen && (
-        <Card className="absolute top-12 right-0 z-20 w-80">
+        <Card className="absolute top-12 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Filtres</h3>
@@ -130,7 +130,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
                 </div>
               </div>
 
-              <div className="h-px bg-white/[0.05] my-3" />
+              <Separator />
 
               {/* Session Types */}
               <div>

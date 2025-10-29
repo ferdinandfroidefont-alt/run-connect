@@ -542,10 +542,15 @@ const Leaderboard = () => {
     return (
       <div 
         className={`
-          backdrop-blur-sm bg-white/[0.02] rounded-2xl hover:bg-white/[0.06] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)] active:scale-[0.99] transition-all duration-300
-          ${highlight ? 'ring-2 ring-primary/30' : ''}
-          ${item.user_id === user?.id && !highlight ? 'ring-2 ring-primary/30' : ''}
+          rounded-lg transition-all duration-300 hover:shadow-xl
+          ${highlight ? 'ring-1 ring-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.25)]' : ''}
+          ${item.user_id === user?.id && !highlight ? 'ring-1 ring-primary/50' : ''}
         `}
+        style={{ 
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(8px)',
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
+        }}
       >
         <div className="flex items-center justify-between p-2">
           <div className="flex items-center gap-2">
@@ -633,7 +638,12 @@ const Leaderboard = () => {
           <div className="space-y-4 animate-fade-in">
             {/* Rank System Card Skeleton */}
             <div 
-              className="animate-pulse backdrop-blur-xl bg-white/[0.08] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.4)] p-6"
+              className="animate-pulse rounded-xl p-6"
+              style={{
+                background: 'rgba(255, 255, 255, 0.07)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+              }}
             >
               <div className="mb-6">
                 <Skeleton className="h-6 w-[140px] mx-auto" />
@@ -655,7 +665,11 @@ const Leaderboard = () => {
 
             {/* Tabs Skeleton */}
             <div 
-              className="flex h-10 items-center justify-center rounded-md p-1 backdrop-blur-sm bg-white/[0.02]"
+              className="flex h-10 items-center justify-center rounded-md p-1"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)'
+              }}
             >
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex-1 h-8 mx-1">
@@ -681,7 +695,12 @@ const Leaderboard = () => {
             <h1 className="text-2xl font-bold text-foreground mb-6">Classement</h1>
             
             <div 
-              className="backdrop-blur-xl bg-white/[0.08] rounded-2xl border border-white/[0.15] shadow-[0_8px_30px_rgba(0,0,0,0.5)] p-8 text-center space-y-6"
+              className="rounded-xl border-2 border-yellow-500/20 p-8 text-center space-y-6"
+              style={{
+                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(249, 115, 22, 0.1))',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+              }}
             >
                 <div className="relative">
                   <Lock className="h-16 w-16 text-yellow-500 mx-auto" />
@@ -737,7 +756,11 @@ const Leaderboard = () => {
         <Tabs defaultValue="seasonal" className="w-full">
           {userRank && (
             <div 
-              className="backdrop-blur-sm bg-white/[0.02] rounded-2xl px-3 py-0.5 inline-block mx-auto"
+              className="text-center mb-2 rounded-full px-3 py-0.5 inline-block mx-auto"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)'
+              }}
             >
               <Badge variant="secondary" className="text-[10px]">
                 Votre rang: #{userRank}
@@ -773,7 +796,11 @@ const Leaderboard = () => {
               </div>
               
               <TabsList
-                className="grid w-full grid-cols-3 h-8 backdrop-blur-sm bg-white/[0.02]"
+                className="grid w-full grid-cols-3 h-8"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)'
+                }}
               >
                 <TabsTrigger 
                   value="seasonal" 
