@@ -43,13 +43,6 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
   
-  // Pagination states
-  const [globalPage, setGlobalPage] = useState(1);
-  const [seasonalPage, setSeasonalPage] = useState(1);
-  const [friendsPage, setFriendsPage] = useState(1);
-  const [totalGlobalUsers, setTotalGlobalUsers] = useState(0);
-  const [totalSeasonalUsers, setTotalSeasonalUsers] = useState(0);
-  const [totalFriendsUsers, setTotalFriendsUsers] = useState(0);
   
   const navigate = useNavigate();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
@@ -58,14 +51,14 @@ const Leaderboard = () => {
   const { getEquippedItems, userPoints } = useWardrobe();
   const equippedItems = getEquippedItems();
 
-  const USERS_PER_PAGE = 50;
+  const USERS_PER_PAGE = 10; // Charger uniquement le TOP 10
 
   useEffect(() => {
     if (user) {
       fetchLeaderboards();
       loadAvatarModel();
     }
-  }, [user, globalPage, seasonalPage, friendsPage]);
+  }, [user]);
 
   const loadAvatarModel = async () => {
     if (!user) return;
@@ -83,18 +76,10 @@ const Leaderboard = () => {
 
   const fetchLeaderboards = async () => {
     try {
-      // Get total count of all users first
-      const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
-      const totalCount = totalCountData || 0;
-
-      setTotalGlobalUsers(totalCount);
-      setTotalSeasonalUsers(totalCount);
-
-      // Fetch global leaderboard with pagination using new function
-      const globalOffset = (globalPage - 1) * USERS_PER_PAGE;
+      // Fetch global leaderboard TOP 10 + user position
       const { data: globalData, error: globalError } = await supabase.rpc('get_complete_leaderboard', {
         limit_count: USERS_PER_PAGE,
-        offset_count: globalOffset,
+        offset_count: 0,
         order_by_column: 'total_points'
       });
 
@@ -111,15 +96,21 @@ const Leaderboard = () => {
         currentUserProfile = currentProfile;
       }
 
-      const globalLeaderboard = globalData?.map((item, index) => {
-        // Use the data directly from the function since it includes profile info
+      // Get all users to find current user's position
+      const { data: allUsersData } = await supabase.rpc('get_complete_leaderboard', {
+        limit_count: 10000,
+        offset_count: 0,
+        order_by_column: 'total_points'
+      });
+
+      const currentUserIndex = allUsersData?.findIndex(u => u.user_id === user?.id);
+      let globalLeaderboard = globalData?.map((item, index) => {
         let profile = {
           username: item.username,
           display_name: item.display_name,
           avatar_url: item.avatar_url
         };
         
-        // If this is the current user and no profile was found, use their own profile
         if (!profile.username && item.user_id === user?.id && currentUserProfile) {
           profile = currentUserProfile;
         }
@@ -134,23 +125,47 @@ const Leaderboard = () => {
             display_name: 'Unknown User',
             avatar_url: ''
           },
-          rank: globalOffset + index + 1, // Adjust rank for pagination
+          rank: index + 1,
           user_rank: getUserRank(item.total_points)
         };
       }) || [];
+
+      // Add current user if not in TOP 10
+      if (user && currentUserIndex !== undefined && currentUserIndex >= 10 && allUsersData) {
+        const userItem = allUsersData[currentUserIndex];
+        globalLeaderboard.push({
+          user_id: userItem.user_id,
+          total_points: userItem.total_points,
+          weekly_points: userItem.weekly_points,
+          seasonal_points: userItem.seasonal_points,
+          profile: {
+            username: userItem.username,
+            display_name: userItem.display_name,
+            avatar_url: userItem.avatar_url
+          },
+          rank: currentUserIndex + 1,
+          user_rank: getUserRank(userItem.total_points)
+        });
+      }
 
       setLeaderboard(globalLeaderboard);
 
-      // Create seasonal leaderboard with pagination using new function
-      const seasonalOffset = (seasonalPage - 1) * USERS_PER_PAGE;
+      // Create seasonal leaderboard TOP 10 + user position
       const { data: seasonalData } = await supabase.rpc('get_complete_leaderboard', {
         limit_count: USERS_PER_PAGE,
-        offset_count: seasonalOffset,
+        offset_count: 0,
         order_by_column: 'seasonal_points'
       });
 
-      const seasonalLeaderboard = seasonalData?.map((item, index) => {
-        // Use the data directly from the function since it includes profile info
+      // Get all seasonal users to find current user's position
+      const { data: allSeasonalData } = await supabase.rpc('get_complete_leaderboard', {
+        limit_count: 10000,
+        offset_count: 0,
+        order_by_column: 'seasonal_points'
+      });
+
+      const seasonalUserIndex = allSeasonalData?.findIndex(u => u.user_id === user?.id);
+      let seasonalLeaderboard = seasonalData?.map((item, index) => {
         let profile = {
           username: item.username,
           display_name: item.display_name,
@@ -171,23 +186,34 @@ const Leaderboard = () => {
             display_name: 'Unknown User',
             avatar_url: ''
           },
-          rank: seasonalOffset + index + 1, // Adjust rank for pagination
+          rank: index + 1,
           user_rank: getUserRank(item.total_points)
         };
       }) || [];
 
+      // Add current user if not in TOP 10
+      if (user && seasonalUserIndex !== undefined && seasonalUserIndex >= 10 && allSeasonalData) {
+        const userItem = allSeasonalData[seasonalUserIndex];
+        seasonalLeaderboard.push({
+          user_id: userItem.user_id,
+          total_points: userItem.total_points,
+          weekly_points: userItem.weekly_points,
+          seasonal_points: userItem.seasonal_points,
+          profile: {
+            username: userItem.username,
+            display_name: userItem.display_name,
+            avatar_url: userItem.avatar_url
+          },
+          rank: seasonalUserIndex + 1,
+          user_rank: getUserRank(userItem.total_points)
+        });
+      }
+
       setSeasonalLeaderboard(seasonalLeaderboard);
 
-      // Find user's rank in global leaderboard using complete leaderboard
-      if (user) {
-        const { data: allUsersData } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: 10000, // Get a large number to find user's position
-          offset_count: 0,
-          order_by_column: 'total_points'
-        });
-        
-        const currentUserRank = allUsersData?.findIndex(u => u.user_id === user.id);
-        setUserRank(currentUserRank !== undefined && currentUserRank >= 0 ? currentUserRank + 1 : null);
+      // Set user's rank
+      if (user && currentUserIndex !== undefined && currentUserIndex >= 0) {
+        setUserRank(currentUserIndex + 1);
       }
 
       // Fetch friends leaderboard
@@ -199,24 +225,21 @@ const Leaderboard = () => {
           .eq('status', 'accepted');
 
         const friendIds = friendsFollowData?.map(f => f.following_id) || [];
-        setTotalFriendsUsers(friendIds.length);
         
         if (friendIds.length > 0) {
-          const friendsOffset = (friendsPage - 1) * USERS_PER_PAGE;
-          
-          // Get all friends profiles first
+          // Get all friends profiles
           const { data: friendsProfiles } = await supabase
             .from('profiles')
             .select('user_id, username, display_name, avatar_url')
             .in('user_id', friendIds);
 
-          // Get scores for friends (LEFT JOIN will include friends with no scores)
+          // Get scores for friends
           const { data: friendsScores } = await supabase
             .from('user_scores')
             .select('user_id, total_points, weekly_points, seasonal_points')
             .in('user_id', friendIds);
 
-          // Combine profiles and scores, including friends with no scores (0 points)
+          // Combine profiles and scores
           const friendsData = friendsProfiles?.map(profile => {
             const scores = friendsScores?.find(s => s.user_id === profile.user_id);
             return {
@@ -229,14 +252,26 @@ const Leaderboard = () => {
             };
           }) || [];
 
-          // Sort by total points and apply pagination
+          // Sort by total points and take TOP 10
           const sortedFriendsData = friendsData.sort((a, b) => b.total_points - a.total_points);
-          const paginatedFriendsData = sortedFriendsData.slice(friendsOffset, friendsOffset + USERS_PER_PAGE);
+          const top10Friends = sortedFriendsData.slice(0, USERS_PER_PAGE);
 
-          const friendsLeaderboard = paginatedFriendsData.map((item, index) => ({
+          // Find current user in friends list
+          const userIndexInFriends = sortedFriendsData.findIndex(f => f.user_id === user?.id);
+          
+          let friendsLeaderboard = top10Friends.map((item, index) => ({
             ...item,
-            rank: friendsOffset + index + 1
+            rank: index + 1
           }));
+
+          // Add current user if not in TOP 10
+          if (userIndexInFriends >= 10) {
+            const userItem = sortedFriendsData[userIndexInFriends];
+            friendsLeaderboard.push({
+              ...userItem,
+              rank: userIndexInFriends + 1
+            });
+          }
 
           setFriendsLeaderboard(friendsLeaderboard);
         }
@@ -484,162 +519,106 @@ const Leaderboard = () => {
     );
   };
 
+  const UserCard = ({ 
+    item, 
+    showSeasonal, 
+    compact = false,
+    highlight = false 
+  }: { 
+    item: LeaderboardUser; 
+    showSeasonal?: boolean; 
+    compact?: boolean;
+    highlight?: boolean;
+  }) => {
+    return (
+      <div 
+        className={`
+          rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
+          ${highlight ? 'ring-2 ring-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]' : ''}
+          ${item.user_id === user?.id && !highlight ? 'ring-2 ring-primary' : ''}
+        `}
+        style={{ 
+          background: 'rgba(255, 255, 255, 0.07)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+        }}
+      >
+        <div className={`flex items-center justify-between ${compact ? 'p-3' : 'p-4'}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-6 flex justify-center">
+              {getRankIcon(item.rank)}
+            </div>
+            <Avatar 
+              className={`${compact ? 'h-10 w-10' : 'h-14 w-14'} cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
+              onClick={() => navigateToProfile(item.user_id)}
+            >
+              <AvatarImage src={item.profile?.avatar_url} />
+              <AvatarFallback className={`${compact ? 'text-sm' : 'text-lg'} font-bold`}>
+                {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <p className={`font-medium ${compact ? 'text-sm' : 'text-base'}`}>
+                {item.profile?.username || item.profile?.display_name}
+              </p>
+              <div className="flex items-center gap-1 my-0.5">
+                {getRankBadge(item.user_rank)}
+              </div>
+              <p className={`font-bold text-primary ${compact ? 'text-sm' : 'text-base'}`}>
+                {showSeasonal ? item.seasonal_points : item.total_points} pts
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const LeaderboardList = ({ data, showSeasonal = false }: { data: LeaderboardUser[], showSeasonal?: boolean }) => {
     const top3 = data.slice(0, 3);
-    const rest = data.slice(3);
+    const top10 = data.slice(3, 10); // Positions 4 à 10
+    const currentUserIndex = data.findIndex(item => item.user_id === user?.id);
+    const currentUserItem = currentUserIndex >= 10 ? data[currentUserIndex] : null;
     
     return (
       <div className="space-y-2">
         <PodiumDisplay top3={top3} showSeasonal={showSeasonal} />
         
-        {rest.map((item, index) => (
-          <div 
-            key={item.user_id} 
-            className={`
-              rounded-xl transition-all duration-300 hover:shadow-2xl animate-fade-in
-              ${item.user_id === user?.id ? 'ring-2 ring-primary' : ''}
-            `}
-            style={{ 
-              animationDelay: `${(index + 3) * 0.1}s`,
-              background: 'rgba(255, 255, 255, 0.07)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
-            }}
-          >
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 flex justify-center">
-                  {getRankIcon(item.rank)}
-                </div>
-                <Avatar 
-                  className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
-                  onClick={() => navigateToProfile(item.user_id)}
-                >
-                  <AvatarImage src={item.profile?.avatar_url} />
-                  <AvatarFallback className="text-lg font-bold">
-                    {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">
-                      {item.profile?.username || item.profile?.display_name}
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    @{item.profile?.username}
-                  </p>
-                  <div className="flex items-center gap-2 my-1">
-                    {getRankBadge(item.user_rank)}
-                    {item.user_stats?.reliability_rate && item.user_stats.reliability_rate >= 90 && (
-                      <Badge variant="secondary" className="text-xs">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        GPS validé
-                      </Badge>
-                    )}
-                    {item.user_stats?.reliability_rate && item.user_stats.reliability_rate >= 95 && (
-                      <Badge variant="default" className="text-xs">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Fiable
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="mt-1">
-                    <p className="font-bold text-primary">
-                      {showSeasonal ? item.seasonal_points : item.total_points} pts
-                    </p>
-                    {!showSeasonal && (
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          +{item.seasonal_points} cette saison
-                        </p>
-                        <div className="relative w-full h-2 bg-muted rounded-full overflow-hidden mt-1">
-                          <div 
-                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
-                            style={{ width: `${((item.total_points % 50) / 50) * 100}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {item.total_points % 50}/50 pts avant le prochain rang
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const PaginationControls = ({ 
-    currentPage, 
-    totalItems, 
-    onPageChange 
-  }: { 
-    currentPage: number; 
-    totalItems: number; 
-    onPageChange: (page: number) => void;
-  }) => {
-    const totalPages = Math.ceil(totalItems / USERS_PER_PAGE);
-    
-    if (totalPages <= 1) return null;
-
-    return (
-      <div className="flex items-center justify-center gap-2 mt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="btn-interactive"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Précédent
-        </Button>
-        
-        <div className="flex items-center gap-1">
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
-            
-            return (
-              <Button
-                key={pageNum}
-                variant={currentPage === pageNum ? "default" : "outline"}
-                size="sm"
-                className="w-8 h-8 p-0 btn-interactive"
-                onClick={() => onPageChange(pageNum)}
-              >
-                {pageNum}
-              </Button>
-            );
-          })}
+        {/* TOP 10 (positions 4 à 10) */}
+        <div className="space-y-2">
+          {top10.map((item) => (
+            <UserCard key={item.user_id} item={item} showSeasonal={showSeasonal} compact={true} />
+          ))}
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="btn-interactive"
-        >
-          Suivant
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        
+        {/* Séparateur si l'utilisateur n'est pas dans le TOP 10 */}
+        {currentUserItem && (
+          <>
+            <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground text-sm">
+              <div className="h-px bg-border/30 flex-1" />
+              <span>…</span>
+              <div className="h-px bg-border/30 flex-1" />
+            </div>
+            
+            {/* Position de l'utilisateur */}
+            <UserCard 
+              item={currentUserItem} 
+              showSeasonal={showSeasonal} 
+              compact={true}
+              highlight={true}
+            />
+            
+            <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground text-sm">
+              <div className="h-px bg-border/30 flex-1" />
+              <span>…</span>
+              <div className="h-px bg-border/30 flex-1" />
+            </div>
+          </>
+        )}
       </div>
     );
   };
+
 
   if (loading) {
     return (
@@ -757,15 +736,27 @@ const Leaderboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E13] p-4 pb-20 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div 
+      className="min-h-screen bg-[#0B0E13] p-4 pb-20 overflow-y-auto"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain'
+      }}
+    >
       <div className="max-w-md mx-auto space-y-4">
 
 
         {/* Leaderboard Tabs */}
         <Tabs defaultValue="seasonal" className="w-full">
           {userRank && (
-            <div className="text-center mb-4">
-              <Badge variant="secondary">
+            <div 
+              className="text-center mb-3 rounded-full px-4 py-1 inline-block mx-auto"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <Badge variant="secondary" className="text-xs">
                 Votre rang: #{userRank}
               </Badge>
             </div>
@@ -773,13 +764,13 @@ const Leaderboard = () => {
 
           <TabsContent value="seasonal" className="mt-4">
             <div className="flex flex-col gap-4">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold flex items-center justify-center gap-2 text-primary">
-                  <TrendingUp className="h-6 w-6" />
+              <div className="text-center space-y-1">
+                <h2 className="text-xl font-semibold flex items-center justify-center gap-2 text-primary">
+                  <TrendingUp className="h-5 w-5" />
                   Classement Saison {seasonDates.number}
                 </h2>
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
                   <span>
                     {seasonDates.start.toLocaleDateString('fr-FR', { 
                       day: 'numeric', 
@@ -791,18 +782,14 @@ const Leaderboard = () => {
                     })}
                   </span>
                 </div>
-                <div className="text-center mt-2">
-                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 px-3 py-1">
+                <div className="text-center mt-1">
+                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs px-2 py-0.5">
                     🎁 Codes promo à gagner sur sites sportifs pour les 3 premiers
                   </Badge>
                 </div>
               </div>
               
-              {seasonalLeaderboard.length > 0 && (
-                <PodiumDisplay top3={seasonalLeaderboard.slice(0, 3)} showSeasonal />
-              )}
-              
-              <TabsList 
+              <TabsList
                 className="grid w-full grid-cols-3"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -884,11 +871,6 @@ const Leaderboard = () => {
                   </div>
                 ))}
               </div>
-              <PaginationControls
-                currentPage={seasonalPage}
-                totalItems={totalSeasonalUsers}
-                onPageChange={setSeasonalPage}
-              />
             </div>
           </TabsContent>
 
@@ -993,11 +975,6 @@ const Leaderboard = () => {
                   </div>
                 ))}
               </div>
-              <PaginationControls
-                currentPage={globalPage}
-                totalItems={totalGlobalUsers}
-                onPageChange={setGlobalPage}
-              />
             </div>
           </TabsContent>
 
@@ -1102,11 +1079,6 @@ const Leaderboard = () => {
                       </div>
                     ))}
                   </div>
-                  <PaginationControls
-                    currentPage={friendsPage}
-                    totalItems={totalFriendsUsers}
-                    onPageChange={setFriendsPage}
-                  />
                 </>
               ) : (
                 <div 
