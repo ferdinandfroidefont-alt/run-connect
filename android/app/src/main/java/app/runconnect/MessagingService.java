@@ -127,7 +127,7 @@ public class MessagingService extends FirebaseMessagingService {
         
         // ✅ MODIFIÉ: Notification plus riche
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title != null ? title : "RunConnect")
             .setContentText(body != null ? body : "Nouvelle notification")
             .setStyle(new NotificationCompat.BigTextStyle().bigText(body)) // ← Texte long

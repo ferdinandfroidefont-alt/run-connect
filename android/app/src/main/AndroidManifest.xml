@@ -115,16 +115,6 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
-        
-        <!-- 🔔 Service Capacitor par défaut (réactivé pour compatibilité) -->
-        <service
-            android:name="com.getcapacitor.plugin.pushnotifications.MessagingService"
-            android:exported="false"
-            android:enabled="true">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
