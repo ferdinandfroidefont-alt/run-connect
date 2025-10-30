@@ -103,8 +103,10 @@ async function getFirebaseAccessToken(serviceAccount: FirebaseServiceAccount): P
   try {
     console.log('🔑 Creating Firebase JWT...');
     const jwt = await createFirebaseJWT(serviceAccount);
+    console.log('✅ JWT created, length:', jwt.length);
+    console.log('📋 JWT preview:', jwt.substring(0, 50) + '...');
     
-    console.log('🔑 Requesting Firebase access token...');
+    console.log('🔑 Requesting Firebase access token from OAuth2...');
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -119,11 +121,16 @@ async function getFirebaseAccessToken(serviceAccount: FirebaseServiceAccount): P
     const tokenData = await response.json();
 
     if (!response.ok) {
-      console.error('❌ Token request failed:', tokenData);
+      console.error('❌ OAuth2 token request failed');
+      console.error('📋 Status:', response.status, response.statusText);
+      console.error('📋 Response:', JSON.stringify(tokenData, null, 2));
       throw new Error(`Token request failed: ${JSON.stringify(tokenData)}`);
     }
 
     console.log('✅ Firebase access token obtained');
+    console.log('📋 Token length:', tokenData.access_token?.length || 0);
+    console.log('📋 Token type:', tokenData.token_type);
+    console.log('📋 Expires in:', tokenData.expires_in, 'seconds');
     return tokenData.access_token;
   } catch (error) {
     console.error('❌ Error getting Firebase access token:', error);
@@ -192,11 +199,26 @@ async function sendFCMNotification(
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error('❌ FCM send failed:', {
-        status: response.status,
-        data: responseData,
-        attempt: retryCount + 1
-      });
+      console.error('❌ FCM send failed');
+      console.error('📋 Status:', response.status, response.statusText);
+      console.error('📋 Response Data:', JSON.stringify(responseData, null, 2));
+      console.error('📋 Token preview:', token.substring(0, 30) + '...');
+      console.error('📋 Project ID:', projectId);
+      console.error('📋 Attempt:', retryCount + 1, '/', maxRetries);
+      
+      // Log du payload FCM envoyé (pour debug)
+      console.error('📋 FCM Payload sent:', JSON.stringify({
+        message: {
+          token: token.substring(0, 30) + '...',
+          notification: { title, body },
+          android: {
+            priority: 'high',
+            notification: {
+              channel_id: 'runconnect_channel'
+            }
+          }
+        }
+      }, null, 2));
       
       // Retry logic for transient errors (5xx, network issues)
       if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
@@ -262,9 +284,17 @@ serve(async (req) => {
     let serviceAccount: FirebaseServiceAccount;
     try {
       serviceAccount = JSON.parse(firebaseServiceAccountJson);
-      console.log('✅ Firebase service account loaded for project:', serviceAccount.project_id);
+      console.log('✅ Firebase service account loaded');
+      console.log('📋 Project ID:', serviceAccount.project_id);
+      console.log('📋 Client Email:', serviceAccount.client_email);
+      console.log('📋 Private Key ID:', serviceAccount.private_key_id);
+      console.log('📋 Private Key present:', !!serviceAccount.private_key);
+      console.log('📋 Private Key length:', serviceAccount.private_key?.length || 0);
+      console.log('📋 Private Key starts with:', serviceAccount.private_key?.substring(0, 30) + '...');
     } catch (error) {
       console.error('❌ Invalid Firebase service account JSON:', error);
+      console.error('📋 Raw JSON length:', firebaseServiceAccountJson?.length || 0);
+      console.error('📋 JSON preview:', firebaseServiceAccountJson?.substring(0, 100) + '...');
       return new Response(
         JSON.stringify({ error: 'Invalid Firebase service account configuration' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -353,8 +383,8 @@ serve(async (req) => {
       )
     }
 
-    // 7. Send FCM push notification
-    console.log('📱 Sending FCM push notification...')
+    // 7. Get Firebase access token and send FCM push notification
+    console.log('🔐 Getting Firebase access token...');
     
     // Customize notification content based on type
     let finalTitle = title;
@@ -405,6 +435,15 @@ serve(async (req) => {
     
     try {
       const accessToken = await getFirebaseAccessToken(serviceAccount);
+      console.log('✅ Access token obtained, length:', accessToken.length);
+      
+      console.log('🚀 Sending FCM notification...');
+      console.log('📋 Project ID:', serviceAccount.project_id);
+      console.log('📋 Token preview:', profile.push_token.substring(0, 30) + '...');
+      console.log('📋 Channel ID: runconnect_channel');
+      console.log('📋 Title:', finalTitle);
+      console.log('📋 Body preview:', finalBody.substring(0, 50) + '...');
+      
       const fcmSuccess = await sendFCMNotification(
         accessToken,
         serviceAccount.project_id,
@@ -413,6 +452,8 @@ serve(async (req) => {
         finalBody,
         fcmData
       );
+      
+      console.log('📊 FCM Result:', fcmSuccess ? '✅ SUCCESS' : '❌ FAILED');
 
       // Log notification attempt
       if (notificationId) {
