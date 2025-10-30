@@ -39,15 +39,28 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
-        Log.d(TAG, "📬 [WebView AAB] Notification reçue: " + remoteMessage.getData());
+        Log.d(TAG, "📬 [WebView AAB] Notification reçue");
+        Log.d(TAG, "  - Notification payload: " + (remoteMessage.getNotification() != null));
+        Log.d(TAG, "  - Data payload: " + remoteMessage.getData().size() + " keys");
 
         String title = "RunConnect";
         String body = "Nouvelle notification";
 
+        // Priorité 1 : notification payload (envoi via console Firebase)
         if (remoteMessage.getNotification() != null) {
             title = remoteMessage.getNotification().getTitle();
             body = remoteMessage.getNotification().getBody();
+            Log.d(TAG, "  ✅ Notification payload détecté");
+        } 
+        // Priorité 2 : data payload (envoi via API FCM)
+        else if (remoteMessage.getData().size() > 0) {
+            title = remoteMessage.getData().getOrDefault("title", "RunConnect");
+            body = remoteMessage.getData().getOrDefault("body", "Nouvelle notification");
+            Log.d(TAG, "  ✅ Data payload détecté");
         }
+
+        Log.d(TAG, "  📝 Titre: " + title);
+        Log.d(TAG, "  💬 Body: " + body);
 
         showNotification(title, body);
     }
