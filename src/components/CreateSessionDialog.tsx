@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdMob } from "@/hooks/useAdMob";
 import { supabase } from "@/integrations/supabase/client";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
   const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [locationSearch, setLocationSearch] = useState("");
@@ -445,7 +447,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         imageUrl = await uploadImage(selectedImage);
       }
 
-      const { error } = await supabase
+      const { data: sessionData, error } = await supabase
         .from('sessions')
         .insert([{
           organizer_id: user.id,
@@ -470,9 +472,44 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           image_url: imageUrl,
           route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null,
           club_id: formData.club_id
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Send notifications to friends if it's a friends-only session
+      if (formData.friends_only && sessionData) {
+        try {
+          // Get user's followers (friends)
+          const { data: followers } = await supabase
+            .from('user_follows')
+            .select('follower_id')
+            .eq('following_id', user.id)
+            .eq('status', 'accepted');
+
+          // Send notification to each friend
+          if (followers && followers.length > 0) {
+            for (const follower of followers) {
+              await sendPushNotification(
+                follower.follower_id,
+                'Nouvelle séance d\'ami',
+                `${user.email?.split('@')[0] || 'Un ami'} a créé une séance: ${formData.title}`,
+                'friend_session',
+                {
+                  organizer_name: user.email?.split('@')[0] || 'Un ami',
+                  session_title: formData.title,
+                  session_id: sessionData.id,
+                  activity_type: formData.activity_type,
+                  scheduled_at: formData.scheduled_at
+                }
+              );
+            }
+          }
+        } catch (notifError) {
+          console.error('Error sending notifications to friends:', notifError);
+        }
+      }
 
       toast({ title: "Séance créée avec succès !" });
       

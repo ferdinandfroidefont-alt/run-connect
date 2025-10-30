@@ -131,14 +131,16 @@ async function getFirebaseAccessToken(serviceAccount: FirebaseServiceAccount): P
   }
 }
 
-// Send FCM notification
+// Send FCM notification with retry
 async function sendFCMNotification(
   accessToken: string, 
   projectId: string, 
   token: string, 
   title: string, 
   body: string, 
-  data?: any
+  data?: any,
+  retryCount: number = 0,
+  maxRetries: number = 3
 ): Promise<boolean> {
   try {
     const fcmPayload = {
@@ -195,8 +197,18 @@ async function sendFCMNotification(
     if (!response.ok) {
       console.error('❌ FCM send failed:', {
         status: response.status,
-        data: responseData
+        data: responseData,
+        attempt: retryCount + 1
       });
+      
+      // Retry logic for transient errors (5xx, network issues)
+      if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
+        console.log(`🔄 Retrying FCM send in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
+      }
+      
       return false;
     }
 
@@ -204,6 +216,15 @@ async function sendFCMNotification(
     return true;
   } catch (error) {
     console.error('❌ FCM send error:', error);
+    
+    // Retry on network errors
+    if (retryCount < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+      console.log(`🔄 Retrying FCM send after error in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
+    }
+    
     return false;
   }
 }
@@ -341,7 +362,7 @@ serve(async (req) => {
     // Customize notification content based on type
     let finalTitle = title;
     let finalBody = body;
-    let notificationData = { ...data, type: type || 'info' };
+    let fcmData = { ...data, type: type || 'info' };
 
     // Handle different notification types with enhanced messaging
     if (type && data) {
@@ -393,7 +414,7 @@ serve(async (req) => {
         profile.push_token,
         finalTitle,
         finalBody,
-        notificationData
+        fcmData
       );
 
       // Log notification attempt

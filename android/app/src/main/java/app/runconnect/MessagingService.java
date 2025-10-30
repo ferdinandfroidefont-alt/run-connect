@@ -17,6 +17,8 @@ import com.google.firebase.messaging.RemoteMessage;
 public class MessagingService extends FirebaseMessagingService {
     private static final String TAG = "RunConnect-FCM";
     private static final String CHANNEL_ID = "high_importance_channel";
+    private static final String GROUP_KEY = "runconnect_group";
+    private static int notificationCounter = 0;
 
     /**
      * Appelé quand un nouveau token FCM est généré ou mis à jour
@@ -125,7 +127,10 @@ public class MessagingService extends FirebaseMessagingService {
             flags
         );
         
-        // ✅ MODIFIÉ: Notification plus riche
+        // Increment counter for grouping
+        notificationCounter++;
+        
+        // ✅ MODIFIÉ: Notification plus riche avec groupement
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title != null ? title : "RunConnect")
@@ -137,7 +142,8 @@ public class MessagingService extends FirebaseMessagingService {
             .setContentIntent(pendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // ← Affichage écran verrouillé
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setColor(0xFF3B82F6); // ← Couleur primaire (bleu)
+            .setColor(0xFF3B82F6) // ← Couleur primaire (bleu)
+            .setGroup(GROUP_KEY); // ← Groupement des notifications
         
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         
@@ -146,9 +152,31 @@ public class MessagingService extends FirebaseMessagingService {
             notificationManager.notify(notificationId, notificationBuilder.build());
             
             Log.d(TAG, "✅ [FCM] Notification affichée (ID: " + notificationId + ")");
+            
+            // Create summary notification if we have multiple notifications
+            if (notificationCounter > 1) {
+                createSummaryNotification(notificationManager);
+            }
         } else {
             Log.e(TAG, "❌ [FCM] NotificationManager non disponible");
         }
+    }
+
+    /**
+     * Crée une notification récapitulative pour grouper plusieurs notifications
+     */
+    private void createSummaryNotification(NotificationManager notificationManager) {
+        NotificationCompat.Builder summaryBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("RunConnect")
+            .setContentText(notificationCounter + " nouvelles notifications")
+            .setGroup(GROUP_KEY)
+            .setGroupSummary(true)
+            .setAutoCancel(true)
+            .setColor(0xFF3B82F6);
+        
+        notificationManager.notify(0, summaryBuilder.build());
+        Log.d(TAG, "✅ [FCM] Notification récapitulative créée (" + notificationCounter + " notifications)");
     }
 
     /**

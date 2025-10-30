@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { OnlineStatus } from "./OnlineStatus";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,6 +52,7 @@ export const FollowDialog = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+  const { sendPushNotification } = useSendNotification();
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,7 +224,7 @@ export const FollowDialog = ({
       // Remove from followers list and update UI immediately
       setFollowers(prev => prev.filter(u => u.user_id !== followerUserId));
       
-      // Send notification to the removed follower
+      // Send notification to the removed follower (database + push)
       await supabase
         .from('notifications')
         .insert({
@@ -232,6 +234,15 @@ export const FollowDialog = ({
           message: `${user.email} a supprimé votre abonnement`,
           data: { removed_by: user.id }
         });
+
+      // Send push notification
+      await sendPushNotification(
+        followerUserId,
+        'Abonné supprimé',
+        `${user.email?.split('@')[0] || 'Un utilisateur'} a supprimé votre abonnement`,
+        'follower_removed',
+        { removed_by: user.id }
+      );
       
       // Trigger a refresh of follow data to update counts
       setTimeout(() => {

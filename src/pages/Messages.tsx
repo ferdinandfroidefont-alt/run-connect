@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useTransition } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,6 +115,7 @@ const Messages = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { getThemeClasses } = useConversationTheme();
   const { setHideBottomNav } = useAppContext();
+  const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -605,13 +607,15 @@ const Messages = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      const { data: newMessageData, error } = await supabase
         .from('messages')
         .insert([{
           conversation_id: selectedConversation.id,
           sender_id: user.id,
           content: newMessage.trim()
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -620,6 +624,45 @@ const Messages = () => {
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', selectedConversation.id);
+
+      // Send push notification to recipient(s)
+      if (selectedConversation.is_group) {
+        // For group chats, notify all members except sender
+        const members = selectedConversation.group_members || [];
+        for (const member of members) {
+          if (member.user_id !== user.id) {
+            await sendPushNotification(
+              member.user_id,
+              selectedConversation.group_name || 'Message de groupe',
+              newMessage.trim().substring(0, 100),
+              'message',
+              {
+                sender_name: user.email?.split('@')[0] || 'Quelqu\'un',
+                message_preview: newMessage.trim(),
+                conversation_id: selectedConversation.id,
+                group_name: selectedConversation.group_name
+              }
+            );
+          }
+        }
+      } else {
+        // For direct messages, notify the other participant
+        const recipientId = selectedConversation.participant_1 === user.id
+          ? selectedConversation.participant_2
+          : selectedConversation.participant_1;
+        
+        await sendPushNotification(
+          recipientId,
+          'Nouveau message',
+          newMessage.trim().substring(0, 100),
+          'message',
+          {
+            sender_name: user.email?.split('@')[0] || 'Quelqu\'un',
+            message_preview: newMessage.trim(),
+            conversation_id: selectedConversation.id
+          }
+        );
+      }
 
       setNewMessage("");
       loadMessages(selectedConversation.id);
