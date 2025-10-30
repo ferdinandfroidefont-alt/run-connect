@@ -35,11 +35,12 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
+    public static MainActivity instance;
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
     private static final int REQ_MICROPHONE = 1004;
-    private WebView webView;
+    public WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
     
     // URL configurée depuis BuildConfig (modifié par le workflow)
@@ -60,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance = this;
         
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
@@ -85,6 +87,16 @@ public class MainActivity extends AppCompatActivity {
         s.setAllowFileAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setGeolocationEnabled(true);
+        
+        // ✅ ACTIVER LES SERVICE WORKERS POUR FIREBASE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            android.webkit.ServiceWorkerController swController = android.webkit.ServiceWorkerController.getInstance();
+            android.webkit.ServiceWorkerWebSettings swSettings = swController.getServiceWorkerWebSettings();
+            swSettings.setAllowContentAccess(true);
+            swSettings.setAllowFileAccess(true);
+            swSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            Log.d(TAG, "✅ Service Worker activé pour Firebase");
+        }
         
         // ✅ Configuration explicite du localStorage path
         String databasePath = getApplicationContext().getDir("database", Context.MODE_PRIVATE).getPath();
@@ -253,6 +265,61 @@ public class MainActivity extends AppCompatActivity {
 
         webView.loadUrl(START_URL);
         setContentView(webView);
+
+        // ✅ INITIALISATION FIREBASE CLOUD MESSAGING
+        try {
+            Log.d(TAG, "🔔 Initialisation Firebase Cloud Messaging...");
+            
+            // Créer le canal de notification (obligatoire Android 8+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                    "runconnect_channel",
+                    "RunConnect Notifications",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Notifications des messages, sessions et activités");
+                channel.enableVibration(true);
+                channel.enableLights(true);
+                channel.setLightColor(Color.CYAN);
+                channel.setShowBadge(true);
+                
+                NotificationManager manager = getSystemService(NotificationManager.class);
+                if (manager != null) {
+                    manager.createNotificationChannel(channel);
+                    Log.d(TAG, "✅ Canal de notification créé");
+                }
+            }
+            
+            // Récupérer le token FCM
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "❌ Impossible d'obtenir le token FCM", task.getException());
+                        return;
+                    }
+                    String token = task.getResult();
+                    Log.d(TAG, "✅ Token FCM reçu : " + token);
+
+                    // Injecter dans la WebView
+                    String jsCode = "window.fcmToken = '" + token + "';" +
+                        "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "' } }));";
+                    webView.post(() -> webView.evaluateJavascript(jsCode, null));
+                });
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur initialisation FCM:", e);
+        }
+
+        // ✅ DEMANDER LA PERMISSION NOTIFICATIONS (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                
+                Log.d(TAG, "📱 Demande permission POST_NOTIFICATIONS...");
+                ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
+                    9999);
+            }
+        }
 
         // Repassage en hardware après 1s
         webView.postDelayed(() -> {
