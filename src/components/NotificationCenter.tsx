@@ -106,6 +106,22 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
             );
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Notification deleted:', payload);
+            const deletedNotification = payload.old as Notification;
+            setNotifications(prev => 
+              prev.filter(n => n.id !== deletedNotification.id)
+            );
+          }
+        )
         .subscribe();
 
       return () => {
