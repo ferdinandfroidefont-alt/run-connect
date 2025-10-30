@@ -108,8 +108,14 @@ export const BottomNavigation = () => {
   }, [user]);
   return (
     <>
-      {/* Barre de navigation principale */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg z-50">
+      {/* Barre de navigation principale - Style Premium Bleu Roi/Cyan */}
+      <nav 
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 shadow-lg"
+        style={{
+          background: 'linear-gradient(180deg, hsl(220 25% 6%) 0%, hsl(220 25% 8%) 100%)',
+          backdropFilter: 'blur(12px)'
+        }}
+      >
         <div className="grid grid-cols-5 items-center px-4 py-3">
           {/* Première colonne - Carte */}
           <div className="flex justify-center">
@@ -166,7 +172,10 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-gradient-to-br from-primary to-accent text-white rounded-full transition-all hover:shadow-glow hover:scale-110 active:scale-95 -translate-y-4 scale-110 shadow-xl shadow-primary/50 animate-glow-pulse"
+              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 text-white rounded-full transition-all hover:shadow-glow hover:scale-110 active:scale-95 -translate-y-4 scale-110 shadow-xl shadow-primary/50 animate-glow-pulse"
+              style={{
+                background: 'linear-gradient(135deg, hsl(217 100% 50%) 0%, hsl(191 100% 50%) 100%)'
+              }}
             >
               <Plus size={20} />
               <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>

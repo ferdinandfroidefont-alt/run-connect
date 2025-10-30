@@ -24,13 +24,19 @@ export const SearchHeader = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-10 glass-card px-4 py-4 flex items-center gap-3 mt-6">
+    <header 
+      className="sticky top-0 z-10 px-4 py-4 flex items-center gap-3 border-b border-white/10"
+      style={{
+        background: 'linear-gradient(135deg, hsl(217 100% 50%) 0%, hsl(191 100% 50%) 100%)',
+        backdropFilter: 'blur(12px)'
+      }}
+    >
       {/* Flèche retour */}
       <Button
         variant="ghost"
         size="icon"
         onClick={onBack}
-        className="shrink-0"
+        className="shrink-0 text-white hover:bg-white/10"
         aria-label="Retour"
       >
         <ArrowLeft className="h-5 w-5" />
@@ -38,13 +44,13 @@ export const SearchHeader = ({
 
       {/* Champ de recherche */}
       <div className="flex-1 relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70" />
         <Input
           ref={inputRef}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={placeholder}
-          className="pl-10 glass-card border-0 bg-background/50 h-10"
+          className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60 h-10"
         />
       </div>
     </header>
