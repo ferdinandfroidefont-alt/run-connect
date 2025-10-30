@@ -530,29 +530,56 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                   Notifications
                 </h3>
                 <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-                  {/* Notifications Push */}
+                  {/* Notifications Push - Toggle principal */}
                   <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
                     <div className="flex items-center gap-3 flex-1">
                       <Smartphone className="h-5 w-5 text-muted-foreground" />
                       <div className="flex-1">
                         <label className="text-sm font-medium">Notifications push</label>
                         <p className="text-xs text-muted-foreground">
-                          {isRegistered ? "✓ Activées" : "Autoriser les notifications"}
+                          {profile?.notifications_enabled ? "Activées" : "Désactivées"}
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant={isRegistered ? "ghost" : "default"}
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={handleNotificationToggle}
-                      disabled={isRegistered}
-                    >
-                      {isRegistered ? '✓ Activées' : 'Activer'}
-                    </Button>
+                    <Switch
+                      checked={profile?.notifications_enabled === true}
+                      onCheckedChange={(checked) => updatePrivacySettings('notifications_enabled', checked)}
+                    />
                   </div>
 
-                  {isRegistered && (
+                  {/* Bandeau d'info si notifications désactivées */}
+                  {profile?.notifications_enabled === false && (
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400">
+                      <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                        ⚠️ Notifications désactivées. Les préférences ci-dessous sont inactives.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Permissions système Android */}
+                  {!isRegistered && isNative && profile?.notifications_enabled === true && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1">
+                          <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <div className="flex-1">
+                            <label className="text-sm font-medium text-blue-800 dark:text-blue-200">Autoriser les notifications système</label>
+                            <p className="text-xs text-blue-600 dark:text-blue-300">Activez les permissions Android</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-8 text-xs bg-blue-600 hover:bg-blue-700"
+                          onClick={handleNotificationToggle}
+                        >
+                          Autoriser
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {profile?.notifications_enabled === true && (
                     <div className="p-4 bg-muted/20">
                       <p className="text-xs text-muted-foreground">
                         ✓ Les préférences ci-dessous contrôlent quelles notifications vous recevez.
@@ -561,7 +588,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                   )}
 
                   {/* Test notification */}
-                  {isRegistered && (
+                  {profile?.notifications_enabled === true && (
                     <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
                       <div className="flex items-center gap-3 flex-1">
                         <Bug className="h-5 w-5 text-muted-foreground" />
@@ -593,7 +620,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                     <Switch
                       checked={profile?.notif_follow_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_follow_request', checked)}
-                      disabled={!isRegistered}
+                      disabled={profile?.notifications_enabled !== true}
                     />
                   </div>
 
@@ -609,7 +636,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                     <Switch
                       checked={profile?.notif_message === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_message', checked)}
-                      disabled={!isRegistered}
+                      disabled={profile?.notifications_enabled !== true}
                     />
                   </div>
 
@@ -625,7 +652,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                     <Switch
                       checked={profile?.notif_session_request === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_session_request', checked)}
-                      disabled={!isRegistered}
+                      disabled={profile?.notifications_enabled !== true}
                     />
                   </div>
 
@@ -644,7 +671,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                     <Switch
                       checked={profile?.notif_friend_session === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_friend_session', checked)}
-                      disabled={!isRegistered || !profile?.is_premium}
+                      disabled={profile?.notifications_enabled !== true || !profile?.is_premium}
                     />
                   </div>
                 </div>
