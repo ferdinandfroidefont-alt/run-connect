@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, CheckCircle2, Users, XCircle } from "lucide-react";
+import { Calendar, CheckCircle2, Users } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ReliabilityDetailsDialogProps {
@@ -10,8 +10,6 @@ interface ReliabilityDetailsDialogProps {
   reliabilityRate: number;
   totalSessionsCreated: number;
   totalSessionsJoined: number;
-  totalSessionsCompleted: number;
-  totalSessionsAbsent: number;
 }
 
 export const ReliabilityDetailsDialog = ({
@@ -21,8 +19,6 @@ export const ReliabilityDetailsDialog = ({
   reliabilityRate,
   totalSessionsCreated,
   totalSessionsJoined,
-  totalSessionsCompleted,
-  totalSessionsAbsent,
 }: ReliabilityDetailsDialogProps) => {
   const { t } = useLanguage();
   
@@ -38,20 +34,22 @@ export const ReliabilityDetailsDialog = ({
 
         <div className="space-y-4">
           {/* Taux de fiabilité */}
-          <div className="glass-premium rounded-xl p-6">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">
-                {reliabilityRate.toFixed(0)}%
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-4xl font-bold text-primary mb-2">
+                  {reliabilityRate.toFixed(0)}%
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('reliability.rate')}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {t('reliability.rate')}
-              </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Stats détaillées */}
           <div className="space-y-3">
-            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
+            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
@@ -63,7 +61,7 @@ export const ReliabilityDetailsDialog = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
+            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Users className="h-6 w-6 text-primary" />
               </div>
@@ -71,30 +69,6 @@ export const ReliabilityDetailsDialog = ({
                 <p className="text-2xl font-bold">{totalSessionsJoined}</p>
                 <p className="text-sm text-muted-foreground">
                   {t('reliability.sessionsJoined')}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
-              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-green-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-2xl font-bold">{totalSessionsCompleted}</p>
-                <p className="text-sm text-muted-foreground">
-                  Séances venues
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 glass-premium rounded-xl transition-all duration-300 hover:shadow-2xl">
-              <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                <XCircle className="h-6 w-6 text-red-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-2xl font-bold">{totalSessionsAbsent}</p>
-                <p className="text-sm text-muted-foreground">
-                  Séances pas venues
                 </p>
               </div>
             </div>

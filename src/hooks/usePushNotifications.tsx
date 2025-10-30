@@ -587,36 +587,6 @@ export const usePushNotifications = () => {
     }
   }, [user, toast]);
 
-  // 🔥 NOUVEAU LISTENER : Token FCM injecté par Android
-  useEffect(() => {
-    if (!isNative) return;
-
-    const handleFCMToken = (event: any) => {
-      const fcmToken = event.detail?.token;
-      if (fcmToken) {
-        console.log('🔥 [FCM] Token reçu depuis Android:', fcmToken.substring(0, 30) + '...');
-        setToken(fcmToken);
-        setIsRegistered(true);
-        
-        // Sauvegarder immédiatement en base
-        if (user?.id) {
-          savePushToken(fcmToken);
-        } else {
-          setPendingToken(fcmToken);
-        }
-      }
-    };
-
-    window.addEventListener('fcmTokenReady', handleFCMToken);
-    
-    // Vérifier si le token a déjà été injecté
-    if ((window as any).fcmToken) {
-      handleFCMToken({ detail: { token: (window as any).fcmToken } });
-    }
-
-    return () => window.removeEventListener('fcmTokenReady', handleFCMToken);
-  }, [isNative, user, savePushToken]);
-
   // Ref pour tracker si les listeners sont configurés
   const listenersConfigured = useCallback(() => {
     return (window as any).__pushListenersConfigured === true;

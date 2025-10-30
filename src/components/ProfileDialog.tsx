@@ -66,8 +66,6 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
-  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
-  const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
   const [recordsData, setRecordsData] = useState<{
     walking: Record<string, string>;
     running: Record<string, string>;
@@ -112,15 +110,13 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
       // Fetch reliability rate from user_stats
       const { data: statsData } = await supabase
         .from('user_stats')
-        .select('reliability_rate, total_sessions_joined, total_sessions_completed, total_sessions_absent')
+        .select('reliability_rate, total_sessions_joined')
         .eq('user_id', user.id)
         .single();
 
       if (statsData) {
         setReliabilityRate(Number(statsData.reliability_rate) || 100);
         setTotalSessionsJoined(statsData.total_sessions_joined || 0);
-        setTotalSessionsCompleted(statsData.total_sessions_completed || 0);
-        setTotalSessionsAbsent(statsData.total_sessions_absent || 0);
       }
 
       // Fetch total sessions created
@@ -348,8 +344,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
           <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
             <div className="space-y-4 pb-4 min-h-full">
               {/* Avatar Section */}
-              <div className="glass-premium rounded-xl p-6">
-                <div className="flex flex-col items-center">
+              <Card>
+                <CardContent className="flex flex-col items-center py-6">
                   <div className="relative mb-4">
                     <Avatar className="h-24 w-24">
                       <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
@@ -404,6 +400,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                     {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                       <Crown className="h-5 w-5 text-yellow-500" />
                     )}
+                  </div>
+
+                  {/* Reliability Badge */}
+                  <div className="w-full mb-3 px-4">
+                    <ReliabilityBadge 
+                      rate={reliabilityRate}
+                      onClick={() => setShowReliabilityDialog(true)}
+                    />
                   </div>
 
                   <div className="flex gap-2 items-center mb-4 flex-wrap justify-center">
@@ -537,16 +541,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       <p className="text-sm text-muted-foreground">Abonnements</p>
                     </button>
                   </div>
-
-                  {/* Reliability Badge */}
-                  <div className="w-full mt-3 px-4">
-                    <ReliabilityBadge 
-                      rate={reliabilityRate}
-                      onClick={() => setShowReliabilityDialog(true)}
-                    />
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
               {/* Activity Chart */}
               {user?.id && (
@@ -557,12 +553,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
               )}
 
               {/* Informations personnelles */}
-              <div className="glass-premium rounded-xl p-6">
-                <div className="flex items-center mb-4">
-                  <User className="h-5 w-5 text-primary mr-2" />
-                  <h3 className="text-lg font-semibold">Informations</h3>
-                </div>
-                <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center">
+                    <User className="h-5 w-5 text-primary mr-2" />
+                    <CardTitle className="text-lg">Informations</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   {isEditing ? (
                     <div className="space-y-4">
                       <div>
@@ -649,8 +647,8 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       </Button>
                     </div>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           </ScrollArea>
         </DialogContent>
@@ -685,8 +683,6 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
         reliabilityRate={reliabilityRate}
         totalSessionsCreated={totalSessionsCreated}
         totalSessionsJoined={totalSessionsJoined}
-        totalSessionsCompleted={totalSessionsCompleted}
-        totalSessionsAbsent={totalSessionsAbsent}
       />
     </>
   );

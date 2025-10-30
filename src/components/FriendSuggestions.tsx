@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { UserPlus, Users, X, Smartphone, Shield, Phone } from "lucide-react";
+import { UserPlus, Users, X, Smartphone, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -218,46 +218,20 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         return acc;
       }, []);
 
-      // Vérifier les relations d'amitié pour filtrer les contacts déjà amis
-      if (uniqueUsers.length > 0) {
-        const userIds = uniqueUsers.map((u: any) => u.user_id);
-        
-        // Récupérer toutes les relations user_follows
-        const { data: followsData } = await supabase
-          .from('user_follows')
-          .select('following_id, status')
-          .eq('follower_id', user!.id)
-          .in('following_id', userIds);
+      // Convert to friend suggestions format
+      const contactSuggestions = uniqueUsers.map(profile => ({
+        user_id: profile.user_id,
+        username: profile.username || profile.display_name || 'Utilisateur',
+        display_name: profile.display_name || profile.username || 'Utilisateur',
+        avatar_url: profile.avatar_url || '',
+        mutual_friends_count: 0,
+        mutual_friend_names: [],
+        source: 'contacts',
+        is_contact: true
+      }));
 
-        // Créer un set des utilisateurs déjà amis ou en pending
-        const alreadyConnectedIds = new Set(
-          followsData?.map(f => f.following_id) || []
-        );
-
-        // Filtrer uniquement les contacts non encore connectés
-        const filteredUsers = uniqueUsers.filter(
-          (u: any) => !alreadyConnectedIds.has(u.user_id)
-        );
-
-        console.log('🔍 Filtered out', uniqueUsers.length - filteredUsers.length, 'already connected contacts');
-
-        // Convert to friend suggestions format
-        const contactSuggestions = filteredUsers.map((profile: any) => ({
-          user_id: profile.user_id,
-          username: profile.username || profile.display_name || 'Utilisateur',
-          display_name: profile.display_name || profile.username || 'Utilisateur',
-          avatar_url: profile.avatar_url || '',
-          mutual_friends_count: 0,
-          mutual_friend_names: [],
-          source: 'contacts',
-          is_contact: true
-        }));
-
-        console.log('🔍 Contact suggestions found (after filtering):', contactSuggestions.length, contactSuggestions);
-        return contactSuggestions;
-      }
-
-      return [];
+      console.log('🔍 Contact suggestions found:', contactSuggestions.length, contactSuggestions);
+      return contactSuggestions;
     } catch (error) {
       console.error('Error finding contact suggestions:', error);
       return [];
@@ -330,8 +304,8 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   const visibleSuggestions = suggestions.filter(s => !dismissedSuggestions.has(s.user_id));
 
   if (loading) {
-    return compact ? null : (
-      <Card className="max-w-md mx-auto">
+    return (
+      <Card className={compact ? "" : "max-w-md mx-auto"}>
         <CardContent className="p-6 text-center">
           <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2 animate-pulse" />
           <p className="text-sm text-muted-foreground">Recherche de suggestions...</p>
@@ -342,53 +316,6 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
 
   if (visibleSuggestions.length === 0 && !showContactsPermission) {
     return null;
-  }
-
-  if (compact) {
-    return (
-      <div className="overflow-x-auto scrollbar-hide -mx-2">
-        <div className="flex gap-3 px-2 pb-2">
-          {visibleSuggestions.slice(0, 10).map((suggestion) => (
-            <div
-              key={suggestion.user_id}
-              className="flex-shrink-0 w-[140px] backdrop-blur-xl bg-white/[0.08] border border-white/[0.18] rounded-2xl p-4 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:bg-white/[0.10] transition-all duration-300"
-            >
-              <div className="relative mb-3">
-                <Avatar 
-                  className="h-16 w-16 mx-auto ring-2 ring-primary/20 cursor-pointer"
-                  onClick={() => navigateToProfile(suggestion.user_id)}
-                >
-                  <AvatarImage src={suggestion.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-lg font-semibold">
-                    {suggestion.display_name?.[0]?.toUpperCase() || '?'}
-                  </AvatarFallback>
-                </Avatar>
-                {suggestion.source === 'contacts' && (
-                  <div className="absolute -top-1 -right-1 bg-gradient-to-br from-cyan-500 to-violet-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium shadow-lg">
-                    <Phone className="h-2.5 w-2.5" />
-                  </div>
-                )}
-              </div>
-              
-              <p className="text-sm font-medium text-center truncate text-white mb-0.5">
-                {suggestion.display_name}
-              </p>
-              <p className="text-xs text-muted-foreground text-center truncate mb-3">
-                @{suggestion.username}
-              </p>
-              
-              <Button
-                size="sm"
-                className="w-full bg-primary/80 hover:bg-primary shadow-[0_4px_15px_rgba(61,139,242,0.4)] hover:shadow-[0_6px_20px_rgba(61,139,242,0.6)] transition-all"
-                onClick={() => sendFollowRequest(suggestion.user_id)}
-              >
-                Suivre
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
   }
 
   // Show contacts permission prompt

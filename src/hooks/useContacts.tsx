@@ -55,26 +55,17 @@ export const useContacts = () => {
 
   useEffect(() => {
     const initNativeStatus = async () => {
-      // ✅ ÉTAPE 1: Vérification immédiate de AndroidBridge (synchrone)
+      // Vérifier immédiatement si AndroidBridge existe
       const hasAndroidBridge = !!(window as any).AndroidBridge;
       const forceNative = (window as any).CapacitorForceNative === true;
       
-      console.log('👥🔍 [CONTACTS] Init native status - AndroidBridge:', hasAndroidBridge, 'ForceNative:', forceNative);
+      console.log('👥 Init native status - AndroidBridge:', hasAndroidBridge, 'ForceNative:', forceNative);
       
-      // ✅ Si AndroidBridge existe, on force isNative=true immédiatement
-      if (hasAndroidBridge) {
-        console.log('👥✅ [CONTACTS] AndroidBridge détecté - Mode natif activé immédiatement');
-        setIsNative(true);
-        checkPermissions();
-      } else if (forceNative) {
-        console.log('👥✅ [CONTACTS] ForceNative activé - Mode natif');
+      if (hasAndroidBridge || forceNative) {
         setIsNative(true);
         checkPermissions();
       } else {
-        // Fallback: attendre nativeManager
-        console.log('👥⏳ [CONTACTS] Attente nativeManager...');
         const native = await nativeManager.ensureNativeStatus();
-        console.log('👥📊 [CONTACTS] nativeManager résultat:', native);
         setIsNative(native);
         if (native) {
           checkPermissions();
@@ -84,16 +75,9 @@ export const useContacts = () => {
     
     initNativeStatus();
 
-    // ✅ Écouter l'injection complète d'Android
-    const handleAndroidReady = (event: any) => {
-      console.log('👥🎉 [CONTACTS] Événement androidInjectionComplete reçu');
-      setIsNative(true);
-      checkPermissions();
-    };
-
     // Écouter l'événement native ready depuis main.tsx
     const handleNativeReady = (event: any) => {
-      console.log('👥🎉 [CONTACTS] Événement capacitorNativeReady reçu:', event.detail);
+      console.log('👥 Événement capacitorNativeReady reçu:', event.detail);
       if (event.detail?.isNative) {
         setIsNative(true);
         checkPermissions();
@@ -102,20 +86,18 @@ export const useContacts = () => {
 
     // Écouter les mises à jour de permissions depuis Android
     const handlePermissionUpdate = (event: any) => {
-      console.log('👥📢 [CONTACTS] Événement androidPermissionsUpdated reçu:', event.detail);
+      console.log('👥 Événement androidPermissionsUpdated reçu:', event.detail);
       if (event.detail?.contacts) {
         const granted = event.detail.contacts === 'granted';
-        console.log('👥🔐 [CONTACTS] Permission contacts mise à jour depuis Android:', granted ? '✅ GRANTED' : '❌ DENIED');
+        console.log('👥 Permission contacts mise à jour depuis Android:', granted);
         setHasPermission(granted);
       }
     };
 
-    window.addEventListener('androidInjectionComplete', handleAndroidReady);
     window.addEventListener('capacitorNativeReady', handleNativeReady);
     window.addEventListener('androidPermissionsUpdated', handlePermissionUpdate);
     
     return () => {
-      window.removeEventListener('androidInjectionComplete', handleAndroidReady);
       window.removeEventListener('capacitorNativeReady', handleNativeReady);
       window.removeEventListener('androidPermissionsUpdated', handlePermissionUpdate);
     };

@@ -1402,19 +1402,16 @@ export const InteractiveMap = ({
               <button
                 onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
                 className={cn(
-                  "flex items-center justify-center gap-1 rounded-md transition-all shadow-md border px-2 h-7",
+                  "flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7",
                   filters.friends_only
-                    ? "bg-primary text-primary-foreground border-primary w-auto"
-                    : "bg-card text-foreground border-border hover:bg-muted w-8"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-foreground border-border hover:bg-muted"
                 )}
               >
                 <div className="flex items-center gap-0.5">
                   <PersonStanding size={12} />
                   <Bike size={12} />
                 </div>
-                {filters.friends_only && (
-                  <span className="text-[10px] font-medium whitespace-nowrap">Amis uniquement</span>
-                )}
               </button>
               
               {/* Club Selector positioned directly under "Amis uniquement" */}
@@ -1499,9 +1496,19 @@ export const InteractiveMap = ({
           {/* Nearby Sessions Button */}
           <Button 
             variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
-            onClick={() => setShowNearbySessionsDialog(true)}
-            title="Séances à proximité"
+            className={`shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto ${
+              subscriptionInfo?.subscribed 
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-primary" 
+                : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
+            }`}
+            onClick={() => {
+              if (subscriptionInfo?.subscribed) {
+                setShowNearbySessionsDialog(true);
+              } else {
+                window.location.href = '/subscription';
+              }
+            }}
+            title={subscriptionInfo?.subscribed ? "Séances à proximité" : "Séances à proximité (Premium requis)"}
           >
             <div className="text-sm">📍🏃</div>
             <div className="text-xs leading-tight">Séances à proximité</div>

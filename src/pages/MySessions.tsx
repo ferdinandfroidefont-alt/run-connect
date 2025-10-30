@@ -339,7 +339,7 @@ export default function MySessions() {
   if (selectedSession) {
     return (
       <>
-      <div className="container mx-auto px-4 py-6 pb-24 bg-background min-h-screen">
+      <div className="container mx-auto px-4 py-6 pb-24">
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="outline"
@@ -372,8 +372,8 @@ export default function MySessions() {
           </div>
         </div>
 
-        <div className="rounded-xl p-6 glass-premium">
-          <div className="mb-6">
+        <Card>
+          <CardHeader>
             <div className="flex items-start gap-4">
               {selectedSession.image_url && (
                 <img 
@@ -403,8 +403,8 @@ export default function MySessions() {
                 </div>
               </div>
             </div>
-          </div>
-          <div className="pt-0">
+          </CardHeader>
+          <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
               {selectedSession.description}
             </p>
@@ -445,8 +445,8 @@ export default function MySessions() {
                 <p className="text-sm text-muted-foreground">Aucun participant inscrit pour le moment.</p>
               )}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
         
         <EditSessionDialog
           isOpen={isEditSessionDialogOpen}
@@ -466,56 +466,52 @@ export default function MySessions() {
 
   return (
     <>
-      <div className="min-h-screen pb-24" style={{ fontFamily: 'Poppins, sans-serif' }}>
-        {/* Header Premium Glassmorphique */}
-        <div 
-          className="fixed top-0 left-0 right-0 z-50 glass-premium border-b border-white/10"
-          style={{ 
-            background: 'linear-gradient(135deg, hsl(217 100% 50%) 0%, hsl(191 100% 50%) 100%)',
-            backdropFilter: 'blur(12px)'
-          }}
-        >
-          <div className="container mx-auto px-4 py-6">
-            <h1 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              Mes Activités
-            </h1>
-            
-            {/* Boutons de navigation */}
-            <div className="flex items-center gap-2 mb-3">
+      {/* Petite barre noire en haut uniquement pour MySessions */}
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+      <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
+        {/* Fixed Header Only */}
+        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
+          <div className="container mx-auto px-4 pt-4">
+          <div className="flex items-center justify-center -mt-2">
+            <Button
+              onClick={() => {
+                console.log('🚀 "Créer un itinéraire" clicked - navigating to route creation');
+                navigate('/route-create');
+              }}
+              size="sm"
+              className="gap-2"
+            >
+              <Route className="h-4 w-4" />
+              Créer un itinéraire
+            </Button>
+          </div>
+          <div className="flex items-center justify-center mt-3">
+            <div className="flex gap-2">
               <Button
                 onClick={() => setCurrentView('sessions')}
-                variant={currentView === 'sessions' ? 'secondary' : 'ghost'}
+                variant={currentView === 'sessions' ? 'default' : 'outline'}
                 size="sm"
-                className={`gap-2 ${currentView === 'sessions' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10'}`}
+                className="gap-2"
               >
                 <Users className="h-4 w-4" />
                 Mes Séances
               </Button>
               <Button
                 onClick={() => setCurrentView('routes')}
-                variant={currentView === 'routes' ? 'secondary' : 'ghost'}
+                variant={currentView === 'routes' ? 'default' : 'outline'}
                 size="sm"
-                className={`gap-2 ${currentView === 'routes' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10'}`}
+                className="gap-2"
               >
                 <Route className="h-4 w-4" />
                 Mes Itinéraires
               </Button>
             </div>
-
-            {/* Bouton créer itinéraire */}
-            <Button
-              onClick={() => navigate('/route-create')}
-              size="sm"
-              className="gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20"
-            >
-              <Route className="h-4 w-4" />
-              Créer un itinéraire
-            </Button>
+          </div>
           </div>
         </div>
 
       {/* Scrollable Content Area */}
-      <div className="container mx-auto px-4 pt-48 pb-8">
+      <div className="flex-1 overflow-y-auto pt-32" style={{height: 'calc(100vh - 12rem)'}}>
         {currentView === 'sessions' ? (
           // Sessions View
           loading ? (
@@ -526,11 +522,12 @@ export default function MySessions() {
           ) : filteredSessions.length > 0 ? (
             <div className="space-y-2">
               {filteredSessions.slice(0, 6).map((session) => (
-                 <div 
+                <Card 
                   key={session.id} 
-                  className="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-xl glass-card border border-white/10"
+                  className="cursor-pointer hover:shadow-sm transition-shadow"
                   onClick={() => handleSessionClick(session)}
                 >
+                  <CardContent className="p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex gap-2 flex-1 min-w-0">
                         {session.image_url && (
@@ -564,7 +561,8 @@ export default function MySessions() {
                         <Badge variant="outline" className="text-xs px-1 py-0">Créateur</Badge>
                       </div>
                     </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
               {filteredSessions.length > 6 && (
                 <div className="text-center py-2">

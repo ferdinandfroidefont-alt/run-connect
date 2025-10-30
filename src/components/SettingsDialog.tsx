@@ -309,7 +309,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0 backdrop-blur-xl bg-card/95 border-border/50">
+        <DialogContent className="max-w-md max-h-[80vh] p-0">
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -321,58 +321,56 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[90vh] p-0 flex flex-col backdrop-blur-xl bg-background/95 border-0">
-          {/* Header Instagram-style */}
-          <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/5">
-            <div className="flex items-center gap-3 px-4 py-4">
+        <DialogContent className="max-w-md max-h-[90vh] p-0 flex flex-col backdrop-blur-xl bg-background/95 border-border/50">
+          {/* Header avec flèche retour et recherche */}
+          <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
+            <div className="flex items-center gap-3 p-4">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-full hover:bg-white/10"
+                className="h-9 w-9 rounded-full hover:bg-muted/50"
                 onClick={() => onOpenChange(false)}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h2 className="text-2xl font-bold">Paramètres</h2>
+              <h2 className="text-lg font-semibold">Paramètres</h2>
             </div>
             
-            {/* Barre de recherche Instagram-style */}
+            {/* Barre de recherche */}
             <div className="px-4 pb-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher"
+                  placeholder="Rechercher dans les paramètres"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-muted/50 border-0 rounded-xl h-11 focus-visible:ring-0"
+                  className="pl-10 bg-muted/30 border-border/50 focus-visible:ring-primary/50"
                 />
               </div>
             </div>
           </div>
           
           <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="px-4 pb-6 space-y-6">
+            <div className="px-4 pb-6 space-y-8">
               
               {/* Section: Paramètres généraux */}
               {showGeneralSettings && (
-              <div className="space-y-2 animate-fade-in">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              <div className="space-y-3 animate-fade-in">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Paramètres généraux
                 </h3>
-                <div className="glass-premium rounded-2xl overflow-hidden">
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   {/* Language Selector */}
-                  <div className="flex items-center justify-between p-4 hover:bg-white/5 active:bg-white/10 transition-colors">
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Languages className="h-4 w-4 text-primary" />
-                      </div>
+                      <Languages className="h-5 w-5 text-muted-foreground" />
                       <div className="flex-1">
-                        <div className="text-sm font-medium">Langue</div>
-                        <div className="text-xs text-muted-foreground">Choisir la langue de l'application</div>
+                        <label className="text-sm font-medium">Langue</label>
+                        <p className="text-xs text-muted-foreground">Choisir la langue de l'application</p>
                       </div>
                     </div>
                     <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                      <SelectTrigger className="w-[120px] h-8 text-xs border-0 bg-muted/50 rounded-lg">
+                      <SelectTrigger className="w-[120px] h-8 text-xs border-border/50 bg-background/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="z-[9999]" sideOffset={5}>
@@ -382,18 +380,14 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Séparateur subtil */}
-                  <div className="h-px bg-white/5 mx-4" />
 
                   {/* Theme Toggle */}
-                  <div className="flex items-center justify-between p-4 hover:bg-white/5 active:bg-white/10 transition-colors">
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        {theme === 'dark' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
-                      </div>
+                      {theme === 'dark' ? <Moon className="h-5 w-5 text-muted-foreground" /> : <Sun className="h-5 w-5 text-muted-foreground" />}
                       <div className="flex-1">
-                        <div className="text-sm font-medium">Mode {theme === 'dark' ? 'sombre' : 'clair'}</div>
-                        <div className="text-xs text-muted-foreground">Basculer entre thème clair et sombre</div>
+                        <label className="text-sm font-medium">Mode {theme === 'dark' ? 'sombre' : 'clair'}</label>
+                        <p className="text-xs text-muted-foreground">Basculer entre thème clair et sombre</p>
                       </div>
                     </div>
                     <Switch
@@ -535,7 +529,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Notifications
                 </h3>
-                <div className="glass-premium rounded-xl overflow-hidden">
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   {/* Notifications Push */}
                   <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
                     <div className="flex items-center gap-3 flex-1">
@@ -663,7 +657,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Connexions externes
                 </h3>
-                <div className="glass-premium rounded-xl overflow-hidden">
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   <div className="p-4 space-y-6">
                     <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
                     <InstagramConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
@@ -678,7 +672,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Confidentialité & Légal
                 </h3>
-                <div className="glass-premium rounded-xl overflow-hidden">
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   {/* Info text */}
                   <div className="p-4 bg-primary/5 border-b border-primary/20">
                     <p className="text-xs text-center text-muted-foreground">
@@ -912,7 +906,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Support
                 </h3>
-                <div className="glass-premium rounded-xl overflow-hidden">
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden">
                   <div className="p-4 text-center space-y-3">
                     <p className="text-sm text-muted-foreground">
                       Besoin d'aide ? Contactez notre équipe support
@@ -935,7 +929,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Actions
                 </h3>
-                <div className="glass-premium rounded-xl overflow-hidden">
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   <button 
                     onClick={handleSignOut}
                     className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group"
@@ -1007,7 +1001,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
 
       {/* Conversation Themes Dialog */}
       <Dialog open={showConversationThemes} onOpenChange={setShowConversationThemes}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col backdrop-blur-xl bg-card/95 border-border/50">
+        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
           <DialogHeader className="p-6 pb-0 shrink-0">
             <DialogTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
               <MessageCircle className="h-6 w-6" />

@@ -16,8 +16,6 @@ interface ContactSuggestion {
   username: string;
   display_name: string;
   avatar_url: string | null;
-  is_friend?: boolean;
-  follow_status?: 'none' | 'pending' | 'accepted';
 }
 
 export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
@@ -29,17 +27,14 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   const [permissionPrompt, setPermissionPrompt] = useState(false);
 
   useEffect(() => {
-    console.log('👥📊 [ContactsTab] State updated:', {
+    console.log('[ContactsTab] State updated:', {
       isNative,
       hasPermission,
       contactsCount: deviceContacts?.length || 0,
-      suggestionsCount: contactSuggestions.length,
-      loading,
       permissionPrompt
     });
 
     if (isNative && hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0 && !loading) {
-      console.log('👥🔄 [ContactsTab] Conditions remplies - Chargement automatique des contacts');
       loadContactsFromApp();
     }
   }, [isNative, hasPermission, deviceContacts]);
@@ -47,40 +42,9 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   useEffect(() => {
     // Recharger automatiquement après autorisation
     if (hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0) {
-      console.log('👥🔄 [ContactsTab] Permission accordée - Rechargement des contacts');
       loadContactsFromApp();
     }
   }, [hasPermission]);
-
-  // ✅ ÉTAPE 2: Écouter l'événement contactsLoaded directement
-  useEffect(() => {
-    const handleContactsLoaded = (event: any) => {
-      console.log('👥🎉 [ContactsTab] Événement contactsLoaded reçu:', event.detail?.length || 0, 'contacts');
-      
-      // Forcer un rechargement immédiat des suggestions
-      if (hasPermission && deviceContacts && deviceContacts.length > 0) {
-        console.log('👥⚡ [ContactsTab] Déclenchement immédiat de loadContactsFromApp()');
-        loadContactsFromApp();
-      } else {
-        console.log('👥⏳ [ContactsTab] Retry dans 1s...');
-        // Retry après 1s si deviceContacts pas encore sync
-        setTimeout(() => {
-          if (hasPermission) {
-            loadContacts().then(() => {
-              console.log('👥✅ [ContactsTab] Contacts rechargés via loadContacts()');
-              loadContactsFromApp();
-            });
-          }
-        }, 1000);
-      }
-    };
-
-    window.addEventListener('contactsLoaded', handleContactsLoaded);
-    
-    return () => {
-      window.removeEventListener('contactsLoaded', handleContactsLoaded);
-    };
-  }, [hasPermission, deviceContacts]);
 
   const normalizePhone = (phone: string): string => {
     let normalized = phone.replace(/\D/g, '');
@@ -96,26 +60,19 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   const loadContactsFromApp = async () => {
     if (!deviceContacts || deviceContacts.length === 0) {
-      console.log('👥⚠️ [ContactsTab] Aucun contact device disponible');
+      console.log('[ContactsTab] No device contacts available');
       return;
     }
 
-    console.log('👥🔄 [ContactsTab] Chargement contacts depuis l\'app...', deviceContacts.length, 'contacts device');
+    console.log('[ContactsTab] Loading contacts from app...', deviceContacts.length);
     setLoading(true);
 
     try {
-      console.log('👥🔍 [ContactsTab] Appel findContactsInApp()...');
       const suggestions = await findContactsInApp(deviceContacts);
-      console.log('👥✅ [ContactsTab] Suggestions trouvées:', suggestions.length);
+      console.log('[ContactsTab] Found suggestions:', suggestions.length);
       setContactSuggestions(suggestions);
-      
-      if (suggestions.length > 0) {
-        console.log('👥🎉 [ContactsTab] Contacts affichés avec succès!');
-      } else {
-        console.log('👥📭 [ContactsTab] Aucune correspondance trouvée dans Supabase');
-      }
     } catch (error) {
-      console.error('👥❌ [ContactsTab] Erreur lors du chargement des contacts:', error);
+      console.error('[ContactsTab] Error loading contacts:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger vos contacts",
@@ -127,12 +84,9 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   };
 
   const findContactsInApp = async (contacts: any[]): Promise<ContactSuggestion[]> => {
-    if (!user) {
-      console.log('👥❌ [findContactsInApp] Pas d\'utilisateur connecté');
-      return [];
-    }
+    if (!user) return [];
 
-    console.log('👥🔍 [findContactsInApp] Recherche dans', contacts.length, 'contacts device');
+    console.log('[ContactsTab] Finding contacts in app from', contacts.length, 'device contacts');
 
     const allPhones: string[] = [];
     contacts.forEach(contact => {
@@ -148,15 +102,14 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
       }
     });
 
-    console.log('👥📞 [findContactsInApp] Numéros extraits:', allPhones.length);
+    console.log('[ContactsTab] Extracted', allPhones.length, 'phone numbers');
 
     if (allPhones.length === 0) {
-      console.log('👥⚠️ [findContactsInApp] Aucun numéro valide trouvé');
       return [];
     }
 
     const uniquePhones = [...new Set(allPhones)];
-    console.log('👥📊 [findContactsInApp] Numéros uniques:', uniquePhones.length);
+    console.log('[ContactsTab] Unique phones:', uniquePhones.length);
 
     const batchSize = 50;
     const results: ContactSuggestion[] = [];
@@ -183,110 +136,41 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
     }
 
     console.log('[ContactsTab] Total matches found:', results.length);
-
-    // Vérifier le statut d'amitié pour chaque contact trouvé
-    if (results.length > 0) {
-      const userIds = results.map(r => r.user_id);
-      
-      // Récupérer toutes les relations user_follows
-      const { data: followsData } = await supabase
-        .from('user_follows')
-        .select('following_id, status')
-        .eq('follower_id', user.id)
-        .in('following_id', userIds);
-
-      // Créer un map des statuts
-      const followStatusMap = new Map<string, string>();
-      followsData?.forEach(follow => {
-        followStatusMap.set(follow.following_id, follow.status);
-      });
-
-      // Ajouter le statut à chaque contact
-      const contactsWithStatus = results.map(contact => ({
-        ...contact,
-        follow_status: (followStatusMap.get(contact.user_id) || 'none') as 'none' | 'pending' | 'accepted',
-        is_friend: followStatusMap.get(contact.user_id) === 'accepted'
-      }));
-
-      // Trier: non-amis d'abord, puis par ordre alphabétique
-      return contactsWithStatus.sort((a, b) => {
-        if (a.is_friend !== b.is_friend) {
-          return a.is_friend ? 1 : -1; // Non-amis en premier
-        }
-        const nameA = (a.display_name || a.username || '').toLowerCase();
-        const nameB = (b.display_name || b.username || '').toLowerCase();
-        return nameA.localeCompare(nameB);
-      });
-    }
-
     return results;
   };
 
   const handleRequestContactsPermission = async () => {
-    console.log('👥🔐 [ContactsTab] Demande permission contacts...');
+    console.log('[ContactsTab] Requesting contacts permission...');
     setLoading(true);
     setPermissionPrompt(false);
 
     try {
-      console.log('👥📢 [ContactsTab] Appel requestPermissions()...');
-      const granted = await requestPermissions();
-      console.log('👥📊 [ContactsTab] Résultat permission:', granted ? '✅ GRANTED' : '❌ DENIED');
+      await requestPermissions();
       
-      if (!granted) {
-        console.log('👥❌ [ContactsTab] Permission refusée - arrêt du processus');
-        toast({
-          title: "Permission refusée",
-          description: "Vous devez autoriser l'accès aux contacts pour continuer",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-      
-      // ✅ ÉTAPE 2: Attendre 500ms pour que les permissions Android soient bien enregistrées
-      console.log('👥⏳ [ContactsTab] Attente 500ms pour sync permissions...');
+      // Attendre un peu pour que les permissions soient bien enregistrées
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Forcer le rechargement des contacts depuis le device
-      console.log('👥📞 [ContactsTab] Appel loadContacts()...');
-      const loadedContacts = await loadContacts();
-      console.log('👥📊 [ContactsTab] Contacts chargés:', loadedContacts?.length || 0);
+      await loadContacts();
       
-      // ✅ Attendre que les contacts soient disponibles
+      // Attendre que les contacts soient chargés
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Vérifier si on a bien des contacts
-      if (loadedContacts && loadedContacts.length > 0) {
-        console.log('👥✅ [ContactsTab] Contacts disponibles - Chargement des suggestions');
+      // Puis charger les suggestions
+      if (deviceContacts && deviceContacts.length > 0) {
         await loadContactsFromApp();
       } else {
-        console.log('👥⚠️ [ContactsTab] Pas de contacts chargés - Retry dans 2s...');
-        
-        // ✅ RETRY: Attendre 2s supplémentaires et réessayer
+        console.log('[ContactsTab] No contacts loaded yet, will retry...');
+        // Retry après 2s si pas de contacts
         setTimeout(async () => {
-          console.log('👥🔄 [ContactsTab] RETRY - Rechargement contacts...');
-          try {
-            const retryContacts = await loadContacts();
-            console.log('👥📊 [ContactsTab] RETRY - Contacts chargés:', retryContacts?.length || 0);
-            
-            if (retryContacts && retryContacts.length > 0) {
-              console.log('👥✅ [ContactsTab] RETRY SUCCESS - Chargement suggestions');
-              await loadContactsFromApp();
-            } else {
-              console.log('👥❌ [ContactsTab] RETRY FAILED - Aucun contact trouvé');
-            }
-          } catch (retryError) {
-            console.error('👥❌ [ContactsTab] RETRY ERROR:', retryError);
-          } finally {
-            setLoading(false);
+          await loadContacts();
+          if (deviceContacts && deviceContacts.length > 0) {
+            await loadContactsFromApp();
           }
         }, 2000);
-        
-        return; // Ne pas mettre loading=false maintenant, on attend le retry
       }
-      
     } catch (error) {
-      console.error('👥❌ [ContactsTab] Erreur lors de la demande de permission:', error);
+      console.error('[ContactsTab] Error requesting permission:', error);
       toast({
         title: "Erreur",
         description: "Impossible de demander l'accès aux contacts",
@@ -463,23 +347,12 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
                     </p>
                   </div>
 
-                  {contact.follow_status === 'accepted' ? (
-                    <Badge variant="secondary" className="whitespace-nowrap">
-                      Déjà ami
-                    </Badge>
-                  ) : contact.follow_status === 'pending' ? (
-                    <Badge variant="outline" className="whitespace-nowrap">
-                      En attente
-                    </Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => sendFollowRequest(contact.user_id)}
-                      className="whitespace-nowrap"
-                    >
-                      Suivre
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => sendFollowRequest(contact.user_id)}
+                  >
+                    Suivre
+                  </Button>
                 </div>
               </CardContent>
             </Card>

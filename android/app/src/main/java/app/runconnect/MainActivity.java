@@ -126,7 +126,6 @@ public class MainActivity extends AppCompatActivity {
         
         // Stocker l'instance pour accès depuis MessagingService
         instance = this;
-        MainActivityHolder.setInstance(this);
         
         // Handle deep link if activity was started with one
         handleIntent(getIntent());
@@ -176,27 +175,6 @@ public class MainActivity extends AppCompatActivity {
         
         // ✅ Créer le canal de notification au démarrage
         createNotificationChannelAtStartup();
-        
-        // ✅ Initialisation Firebase Cloud Messaging
-        try {
-            Log.d(TAG, "🔔 Initialisation Firebase Cloud Messaging...");
-            FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "❌ Impossible d'obtenir le token FCM", task.getException());
-                        return;
-                    }
-                    String token = task.getResult();
-                    Log.d(TAG, "✅ Token FCM Android : " + token);
-
-                    // 🔥 Injecter dans la WebView
-                    String jsCode = "window.fcmToken = '" + token + "';" +
-                        "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "' } }));";
-                    webView.post(() -> webView.evaluateJavascript(jsCode, null));
-                });
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Erreur initialisation FCM:", e);
-        }
         
         // ✅ Ajouter l'interface JavaScript AndroidBridge
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
@@ -965,20 +943,20 @@ public class MainActivity extends AppCompatActivity {
     private void createNotificationChannelAtStartup() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
-                "runconnect_default",
+                "high_importance_channel",
                 "Notifications RunConnect",
                 NotificationManager.IMPORTANCE_HIGH
             );
             channel.setDescription("Notifications importantes de RunConnect");
             channel.enableVibration(true);
             channel.enableLights(true);
-            channel.setLightColor(Color.CYAN);
+            channel.setLightColor(Color.BLUE);
             channel.setShowBadge(true);
             
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
-                Log.d(TAG, "✅ [NOTIF CHANNEL] Canal créé au démarrage: runconnect_default");
+                Log.d(TAG, "✅ [NOTIF CHANNEL] Canal créé au démarrage");
             }
         }
     }
