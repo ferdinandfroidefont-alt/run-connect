@@ -1411,34 +1411,29 @@ const Messages = () => {
   if (selectedConversation) {
     return (
       <>
-        <div className="min-h-screen bg-background">
+        {/* Premium Conversation View - Noir profond avec dégradé bleu */}
+        <div className="min-h-screen bg-gradient-to-b from-[#000714] via-[#001133] to-[#000714]">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
-          {/* Top Bar - Fixed - Remonté légèrement */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
           
-          {/* Header - Fixed - Remonté et plus compact */}
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
+          {/* Premium Header avec glassmorphisme */}
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-4 backdrop-blur-xl bg-gradient-to-r from-[hsl(var(--royal-blue))]/20 via-[hsl(var(--royal-blue))]/15 to-[hsl(var(--cyan-bright))]/20 border-b border-white/10 shadow-[0_4px_24px_rgba(0,85,255,0.15)] z-50">
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setSelectedConversation(null)}
+                className="p-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
               >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+                <ArrowLeft className="h-5 w-5" />
+              </button>
               
               {selectedConversation.is_group ? (
                 <>
                    <Avatar 
-                     className="h-8 w-8 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-primary/50 transition-all duration-200 glass-card border border-white/20"
+                     className="h-12 w-12 cursor-pointer ring-2 ring-[hsl(var(--royal-blue))]/40 hover:ring-[hsl(var(--royal-blue))] transition-all duration-300 shadow-[0_0_20px_rgba(0,85,255,0.4)]"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('🔍 Club avatar clicked - redirecting to club settings');
-                      // Fermer la conversation et ouvrir les paramètres du club
                       const clubData = selectedConversation;
-                      setSelectedConversation(null); // Ferme la conversation
-                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
+                      setSelectedConversation(null);
                       setTimeout(() => {
                         setGroupInfoData(clubData);
                         setShowGroupInfo(true);
@@ -1446,29 +1441,28 @@ const Messages = () => {
                     }}
                   >
                     <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                    <AvatarFallback>
-                      <Users className="h-4 w-4" />
+                    <AvatarFallback className="bg-gradient-to-br from-[hsl(var(--royal-blue))] to-[hsl(var(--cyan-bright))] text-white">
+                      <Users className="h-6 w-6" />
                     </AvatarFallback>
                   </Avatar>
                   <div 
-                    className="cursor-pointer hover:opacity-80 hover:bg-muted/30 rounded p-1 -m-1 transition-all duration-200"
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('🔍 Club name clicked - redirecting to club settings');
-                      // Fermer la conversation et ouvrir les paramètres du club
                       const clubData = selectedConversation;
-                      setSelectedConversation(null); // Ferme la conversation
-                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
+                      setSelectedConversation(null);
                       setTimeout(() => {
                         setGroupInfoData(clubData);
                         setShowGroupInfo(true);
                       }, 100);
                     }}
                   >
-                    <p className="font-medium text-sm">{selectedConversation.group_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedConversation.group_members?.length || 0} membres • Cliquez pour voir
+                    <p className="font-['Poppins',sans-serif] font-semibold text-white text-base">
+                      {selectedConversation.group_name}
+                    </p>
+                    <p className="text-xs text-white/60">
+                      {selectedConversation.group_members?.length || 0} membres
                     </p>
                   </div>
                 </>
@@ -1476,45 +1470,48 @@ const Messages = () => {
                 <>
                    <div className="relative">
                      <Avatar 
-                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all glass-card border border-white/20"
+                       className="h-12 w-12 cursor-pointer ring-2 ring-[hsl(var(--royal-blue))]/40 hover:ring-[hsl(var(--royal-blue))] transition-all duration-300 shadow-[0_0_20px_rgba(0,85,255,0.4)]"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        // Navigation directe vers la page profil
                         navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                       }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-gradient-to-br from-[hsl(var(--royal-blue))] to-[hsl(var(--cyan-bright))] text-white font-['Poppins',sans-serif] font-bold text-lg">
                         {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} />
+                    <div className="absolute -bottom-0.5 -right-0.5">
+                      <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} className="ring-2 ring-[#000714]" />
+                    </div>
                   </div>
                   <div 
                     className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Navigation directe vers la page profil
                       navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                     }}
                   >
-                    <p className="font-medium text-sm">
+                    <p className="font-['Poppins',sans-serif] font-semibold text-white text-base">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
+                    </p>
+                    <p className="text-xs text-white/60">
+                      @{selectedConversation.other_participant?.username}
                     </p>
                   </div>
                 </>
               )}
             </div>
 
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
+                  <button className="p-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 transition-all duration-300">
+                    <MoreVertical className="h-5 w-5" />
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-sm">
+                <DropdownMenuContent align="end" className="w-56 backdrop-blur-xl bg-[#001133]/95 border border-white/10 text-white">
                   {!selectedConversation.is_group && (
                     <DropdownMenuItem 
                       onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
@@ -1575,9 +1572,14 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Messages - Scrollable area with top margin for fixed header - Ajusté pour nouveau header */}
-          <div className="pt-[72px] flex-1 overflow-y-auto min-h-0 scrollbar-hide">
-            <div className={`h-full px-4 pt-4 pb-4 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
+          {/* Messages - Zone de messages avec arrière-plan dégradé animé */}
+          <div className="pt-[80px] flex-1 overflow-y-auto min-h-0 scrollbar-hide">
+            <div className="h-full px-4 pt-6 pb-4 space-y-3 relative">
+              {/* Subtle animated background effect */}
+              <div className="fixed inset-0 pointer-events-none opacity-30">
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[hsl(var(--royal-blue))]/5 via-transparent to-[hsl(var(--cyan-bright))]/5 animate-pulse"></div>
+              </div>
+              
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1603,7 +1605,7 @@ const Messages = () => {
                     )}
                     
                     <div
-                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group animate-fade-in`}
                       onMouseEnter={() => setVisibleTimestamps(prev => new Set(prev).add(message.id))}
                       onMouseLeave={() => setVisibleTimestamps(prev => {
                         const newSet = new Set(prev);
@@ -1612,34 +1614,36 @@ const Messages = () => {
                       })}
                       onClick={toggleTimestamp}
                     >
-                      <div className={`max-w-[70%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
+                      <div className={`max-w-[75%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
                         {!isOwnMessage && (
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="relative">
                                 <Avatar 
-                                  className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                  className="h-8 w-8 cursor-pointer ring-2 ring-white/20 hover:ring-[hsl(var(--cyan-bright))] transition-all duration-300 shadow-[0_0_12px_rgba(0,208,255,0.3)]"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleAvatarClick(message.sender.avatar_url, message.sender.username || message.sender.display_name || "Utilisateur");
                                   }}
                                 >
                                 <AvatarImage src={message.sender.avatar_url || ""} />
-                                <AvatarFallback>
+                                <AvatarFallback className="bg-gradient-to-br from-[hsl(var(--royal-blue))] to-[hsl(var(--cyan-bright))] text-white font-bold">
                                   {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <OnlineStatus userId={message.sender.user_id} className="w-2 h-2" />
+                              <div className="absolute -bottom-0.5 -right-0.5">
+                                <OnlineStatus userId={message.sender.user_id} className="w-3 h-3 ring-2 ring-[#000714]" />
+                              </div>
                             </div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs font-['Poppins',sans-serif] font-medium text-white/70">
                               {message.sender.username || message.sender.display_name}
                             </span>
                           </div>
                         )}
                         
-                        {/* Individual timestamp - appears on hover/click */}
+                        {/* Premium timestamp avec effet glass */}
                         {showIndividualTime && (
-                          <div className={`absolute -bottom-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
-                            <div className="bg-background/90 border text-foreground text-xs px-2 py-1 rounded backdrop-blur-sm shadow-sm">
+                          <div className={`absolute -bottom-7 ${isOwnMessage ? 'right-0' : 'left-0'} z-10 animate-scale-in`}>
+                            <div className="backdrop-blur-xl bg-white/10 border border-white/20 text-white text-xs px-3 py-1.5 rounded-full shadow-lg">
                               {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
                             </div>
                           </div>
@@ -1647,37 +1651,38 @@ const Messages = () => {
                         
                          <div className="relative group">
                            <div
-                             className={`rounded-2xl p-3.5 transition-all duration-200 ${
+                             className={`rounded-[20px] p-4 transition-all duration-300 backdrop-blur-xl border ${
                                isOwnMessage
-                                 ? getThemeClasses().ownMessage
-                                 : getThemeClasses().otherMessage
-                             } ${showIndividualTime ? 'shadow-2xl scale-[1.02]' : ''}`}
+                                 ? 'bg-gradient-to-br from-[#005CFF]/90 to-[#002B80]/90 text-white border-white/20 shadow-[0_8px_24px_rgba(0,85,255,0.4)] hover:shadow-[0_12px_32px_rgba(0,85,255,0.6)]'
+                                 : 'bg-[#1A1F3C]/80 text-white/90 border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.3)] hover:bg-[#1A1F3C]/90'
+                             } ${showIndividualTime ? 'scale-[1.02] shadow-2xl' : ''} ${isOnlyEmojis(message.content || '') ? 'bg-transparent border-none shadow-none p-2' : ''}`}
                            >
-                            {/* Delete button for own messages (only if not deleted) */}
+                            {/* Premium delete button with glow effect */}
                             {isOwnMessage && !message.deleted_at && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                              <button
+                                className="absolute -top-2 -right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-red-500/50 flex items-center justify-center"
                                 onClick={() => {
                                   if (confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
                                     handleDeleteMessage(message.id);
                                   }
                                 }}
                               >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
                             )}
 
-                            {/* Show deleted message */}
+                            {/* Deleted message with premium style */}
                             {message.deleted_at ? (
-                              <p className="text-sm italic text-muted-foreground">Message supprimé</p>
+                              <p className="text-sm italic text-white/40 flex items-center gap-2">
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Message supprimé
+                              </p>
                             ) : (
                               <>
-                                {/* Session sharing */}
+                                {/* Premium session sharing card */}
                                 {message.message_type === 'session' && message.session && (
                                   <div 
-                                    className="mb-2 p-3 bg-background/50 rounded border cursor-pointer hover:bg-background/70 transition-colors"
+                                    className="mb-3 p-4 backdrop-blur-xl bg-white/5 rounded-[16px] border border-white/10 cursor-pointer hover:bg-white/10 hover:border-white/20 transition-all duration-300 shadow-lg"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleSessionClick(message.session);
@@ -1707,28 +1712,32 @@ const Messages = () => {
                                   </div>
                                 )}
 
-                                {/* File attachment */}
+                                {/* Premium file attachments */}
                                 {message.file_url && (
-                                  <div className="mb-2">
+                                  <div className="mb-3">
                                      {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
-                                       <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-background/30 backdrop-blur-sm border border-border/20 shadow-md">
-                                         <Mic className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                                       <div className="flex items-center gap-3 px-4 py-3 rounded-full backdrop-blur-xl bg-white/5 border border-white/10 shadow-lg hover:bg-white/10 transition-all duration-300">
+                                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[hsl(var(--royal-blue))] to-[hsl(var(--cyan-bright))] flex items-center justify-center shadow-[0_0_16px_rgba(0,208,255,0.4)]">
+                                           <Mic className="h-5 w-5 text-white" />
+                                         </div>
                                          <audio 
                                            controls 
                                            src={message.file_url}
-                                           className="max-w-full audio-player-glass"
-                                           style={{ height: '28px', width: '160px' }}
+                                           className="flex-1 audio-player-glass"
+                                           style={{ height: '32px', maxWidth: '200px' }}
                                          />
                                        </div>
                                      ) : message.file_type?.startsWith('image/') ? (
-                                       <img 
-                                         src={message.file_url} 
-                                         alt=""
-                                         className="max-w-full h-auto rounded-2xl shadow-lg backdrop-blur-sm border border-white/10"
-                                         style={{ maxHeight: '200px' }}
-                                       />
+                                       <div className="relative group/image">
+                                         <img 
+                                           src={message.file_url} 
+                                           alt=""
+                                           className="max-w-full h-auto rounded-[16px] shadow-[0_8px_24px_rgba(0,0,0,0.3)] border border-white/10 hover:scale-[1.02] transition-transform duration-300"
+                                           style={{ maxHeight: '280px' }}
+                                         />
+                                       </div>
                                     ) : (
-                                      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                                      <div className="flex items-center gap-3 p-3 backdrop-blur-xl bg-white/5 rounded-[16px] border border-white/10 hover:bg-white/10 transition-all duration-300">
                                         <Paperclip className="h-4 w-4" />
                                         <span className="text-sm truncate">{message.file_name}</span>
                                       </div>
@@ -1847,21 +1856,21 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Message input - Sticky at bottom (follows keyboard) - Descendu légèrement */}
+          {/* Premium Message Input Bar - Glassmorphic avec halos lumineux */}
           <div 
-            className="sticky bottom-0 w-full p-3 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+            className="sticky bottom-0 w-full p-4 backdrop-blur-xl bg-gradient-to-t from-[#001133]/95 via-[#000714]/90 to-transparent border-t border-white/10 z-40 keyboard-input-container shadow-[0_-4px_24px_rgba(0,85,255,0.15)]"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
           >
-            {/* Emoji Picker */}
+            {/* Premium Emoji Picker */}
             {showEmojiPicker && (
               <div 
                 ref={emojiPickerRef}
-                className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
+                className="absolute bottom-full mb-3 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
               >
-                <div className="glass-primary backdrop-blur-xl rounded-2xl p-2 shadow-2xl border border-border/30">
+                <div className="backdrop-blur-xl bg-[#001133]/95 rounded-[20px] p-3 shadow-[0_8px_32px_rgba(0,85,255,0.3)] border border-white/10">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
-                    theme={Theme.AUTO}
+                    theme={Theme.DARK}
                     width={320}
                     height={400}
                     searchPlaceHolder="Rechercher un emoji..."
@@ -1871,11 +1880,11 @@ const Messages = () => {
               </div>
             )}
             
-            <div className="glass-primary backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-border/30">
+            <div className="backdrop-blur-xl bg-white/5 rounded-[20px] p-3 shadow-lg border border-white/10">
             {uploadProgress && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg mb-2">
-                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm text-muted-foreground">{uploadProgress}</span>
+              <div className="flex items-center gap-3 px-4 py-3 backdrop-blur-xl bg-[hsl(var(--cyan-bright))]/10 rounded-[16px] mb-3 border border-[hsl(var(--cyan-bright))]/20 shadow-[0_0_16px_rgba(0,208,255,0.2)]">
+                <div className="w-4 h-4 border-2 border-[hsl(var(--cyan-bright))] border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-white font-['Poppins',sans-serif] font-medium">{uploadProgress}</span>
               </div>
             )}
               <div className="flex gap-2">
@@ -1902,18 +1911,14 @@ const Messages = () => {
                       className="hidden"
                       disabled={isLoading}
                     />
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
                       disabled={isLoading}
+                      className="p-3 rounded-full backdrop-blur-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-[hsl(var(--royal-blue))]/40 hover:shadow-[0_0_16px_rgba(0,85,255,0.3)] transition-all duration-300 disabled:opacity-50"
                     >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                      <Paperclip className="h-5 w-5" />
+                    </button>
+                    <button
                       onClick={async () => {
                         console.log('🖼️ Bouton Image cliqué');
                         try {
@@ -1943,22 +1948,20 @@ const Messages = () => {
                           });
                         }
                       }}
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
                       disabled={isLoading}
+                      className="p-3 rounded-full backdrop-blur-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-[hsl(var(--royal-blue))]/40 hover:shadow-[0_0_16px_rgba(0,85,255,0.3)] transition-all duration-300 disabled:opacity-50"
                     >
-                      <Image className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                      <Image className="h-5 w-5" />
+                    </button>
+                    <button
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`px-3 glass-card border-border/40 hover:bg-background/60 transition-all duration-200 ${
-                        showEmojiPicker ? 'bg-primary/20 border-primary/40 shadow-lg shadow-primary/20' : ''
-                      }`}
                       disabled={isLoading}
+                      className={`p-3 rounded-full backdrop-blur-xl bg-white/5 border border-white/10 text-white transition-all duration-300 disabled:opacity-50 ${
+                        showEmojiPicker ? 'bg-[hsl(var(--gold))]/20 border-[hsl(var(--gold))]/40 shadow-[0_0_16px_rgba(255,215,0,0.4)]' : 'hover:bg-white/10 hover:border-[hsl(var(--gold))]/30 hover:shadow-[0_0_12px_rgba(255,215,0,0.2)]'
+                      }`}
                     >
-                      <Smile className="h-4 w-4" />
-                    </Button>
+                      <Smile className="h-5 w-5" />
+                    </button>
                     <Input
                       placeholder="Tapez votre message..."
                       value={newMessage}
@@ -1967,56 +1970,50 @@ const Messages = () => {
                         handleTyping();
                       }}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 glass-card border-border/40 focus:border-primary/60 bg-background/40"
+                      className="flex-1 backdrop-blur-xl bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:border-[hsl(var(--royal-blue))]/60 focus:shadow-[0_0_16px_rgba(0,85,255,0.2)] rounded-[16px] px-4 font-['Poppins',sans-serif] transition-all duration-300"
                     />
-                    <Button
+                    <button
                       onClick={sendMessage}
                       disabled={loading || !newMessage.trim()}
-                      size="sm"
-                      className="px-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-primary/50 transition-all duration-200"
+                      className="p-3 rounded-full bg-gradient-to-br from-[hsl(var(--royal-blue))] to-[hsl(var(--cyan-bright))] text-white hover:shadow-[0_0_20px_rgba(0,85,255,0.6)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                    <Button
+                      <Send className="h-5 w-5" />
+                    </button>
+                    <button
                       onClick={handleVoiceRecording}
                       disabled={loading}
-                      size="sm"
-                      variant="outline"
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      className="p-3 rounded-full backdrop-blur-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-[hsl(var(--royal-blue))]/40 hover:shadow-[0_0_16px_rgba(0,85,255,0.3)] transition-all duration-300 disabled:opacity-50"
                     >
-                      <Mic className="h-4 w-4" />
-                    </Button>
+                      <Mic className="h-5 w-5" />
+                    </button>
                   </>
                 )}
                 
                 {isRecording && (
                   <>
-                    <div className="flex-1 flex items-center gap-3 glass-card bg-red-500/20 border border-red-500/50 rounded-xl px-4 py-2 backdrop-blur-md shadow-lg">
+                    <div className="flex-1 flex items-center gap-4 backdrop-blur-xl bg-red-500/20 border border-red-500/40 rounded-[16px] px-5 py-3 shadow-[0_0_24px_rgba(239,68,68,0.3)]">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-sm font-medium text-red-500">
+                      <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.6)]" />
+                      <span className="text-base font-['Poppins',sans-serif] font-semibold text-red-500">
                         {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
                       </span>
                     </div>
-                    <span className="text-sm text-muted-foreground flex-1">
+                    <span className="text-sm text-white/70 flex-1 font-['Poppins',sans-serif] font-medium">
                       Enregistrement en cours...
                     </span>
                   </div>
-                  <Button
+                  <button
                     onClick={cancelRecording}
-                    size="sm"
-                    variant="outline"
-                    className="px-3"
+                    className="p-3 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 text-white hover:bg-red-500/20 hover:border-red-500/40 transition-all duration-300"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <Button
+                    <X className="h-5 w-5" />
+                  </button>
+                  <button
                     onClick={handleVoiceRecording}
-                    size="sm"
-                    className="px-3 bg-red-500 hover:bg-red-600"
+                    className="p-3 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.6)] transition-all duration-300"
                   >
-                    <Square className="h-4 w-4" />
-                  </Button>
+                    <Square className="h-5 w-5 fill-white" />
+                  </button>
                   </>
                 )}
               </div>
