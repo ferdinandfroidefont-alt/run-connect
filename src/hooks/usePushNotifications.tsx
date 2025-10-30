@@ -475,7 +475,21 @@ export const usePushNotifications = () => {
     }
 
     try {
-      const platform = Capacitor.getPlatform();
+      // Détecter la vraie plateforme (correction WebView Android)
+      let platform = Capacitor.getPlatform();
+      
+      // 🤖 CORRECTION CRITIQUE: Détecter Android WebView explicitement
+      if (platform === 'web' && (typeof (window as any).AndroidBridge !== 'undefined' || typeof (window as any).fcmToken !== 'undefined' || typeof (window as any).fcmTokenPlatform !== 'undefined')) {
+        platform = 'android';
+        console.log('🤖 [FCM] WebView Android détectée, plateforme corrigée: android (était: web)');
+      }
+      
+      // Si window.fcmTokenPlatform existe (injecté par MainActivity), utiliser cette valeur
+      if (typeof (window as any).fcmTokenPlatform === 'string') {
+        platform = (window as any).fcmTokenPlatform;
+        console.log('🤖 [FCM] Plateforme forcée via fcmTokenPlatform:', platform);
+      }
+      
       const tokenType = platform === 'ios' ? 'APNs' : 'FCM';
       const platformEmoji = platform === 'ios' ? '🍎' : '🤖';
       
@@ -492,7 +506,7 @@ export const usePushNotifications = () => {
         return;
       }
       
-      console.log(`${platformEmoji} [${platform.toUpperCase()}] Sauvegarde token ${tokenType}:`, pushToken.substring(0, 30) + '...');
+      console.log(`${platformEmoji} [${platform.toUpperCase()}] Sauvegarde token ${tokenType}:`, pushToken.substring(0, 30) + '...', `(plateforme: ${platform})`);
       
       const { error } = await supabase
         .from('profiles')

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "220304658307",
+    "project_id": "run-connect-55803",
+    "storage_bucket": "run-connect-55803.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:220304658307:android:6868873058d3622b7830b6",
+        "android_client_info": {
+          "package_name": "app.runconnect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.runconnect",
+            "certificate_hash": "90d3d23a5661fc29c62379f1d3c100f2d4622216"
+          }
+        },
+        {
+          "client_id": "220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCdaAenptM120ejyA0UVPQILW7dSYCQCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

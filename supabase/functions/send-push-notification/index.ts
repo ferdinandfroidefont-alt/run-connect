@@ -154,16 +154,13 @@ async function sendFCMNotification(
           Object.entries(data).map(([k, v]) => [k, String(v)])
         ) : {},
         android: {
+          priority: 'high',
           notification: {
             icon: 'ic_notification',
             color: '#007AFF',
             sound: 'default',
-            channel_id: 'runconnect_channel',
-            priority: 'high',
-            notification_priority: 'PRIORITY_HIGH',
-            visibility: 'PUBLIC'
-          },
-          priority: 'high'
+            channel_id: 'runconnect_channel'
+          }
         },
         apns: {
           payload: {

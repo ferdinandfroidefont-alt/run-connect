@@ -300,10 +300,11 @@ public class MainActivity extends AppCompatActivity {
                     String token = task.getResult();
                     Log.d(TAG, "✅ Token FCM reçu : " + token);
 
-                    // Injecter dans la WebView
-                    String jsCode = "window.fcmToken = '" + token + "';" +
-                        "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "' } }));";
-                    webView.post(() -> webView.evaluateJavascript(jsCode, null));
+                // Injecter dans la WebView avec plateforme Android explicite
+                String jsCode = "window.fcmToken = '" + token + "';" +
+                    "window.fcmTokenPlatform = 'android';" +
+                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
+                webView.post(() -> webView.evaluateJavascript(jsCode, null));
                 });
         } catch (Exception e) {
             Log.e(TAG, "❌ Erreur initialisation FCM:", e);
