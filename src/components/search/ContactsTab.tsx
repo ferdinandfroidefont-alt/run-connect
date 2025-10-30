@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Phone, Smartphone, AlertCircle } from 'lucide-react';
+import { Phone, Smartphone, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,12 +10,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Capacitor } from '@capacitor/core';
+import { normalizePhoneVariants } from '@/lib/phoneNormalization';
 
 interface ContactSuggestion {
   user_id: string;
   username: string;
   display_name: string;
   avatar_url: string | null;
+  phone?: string;
 }
 
 export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
@@ -24,7 +26,10 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   const { isNative, hasPermission, requestPermissions, contacts: deviceContacts, loadContacts } = useContacts();
   const [loading, setLoading] = useState(false);
   const [contactSuggestions, setContactSuggestions] = useState<ContactSuggestion[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<ContactSuggestion[]>([]);
   const [permissionPrompt, setPermissionPrompt] = useState(false);
+  const [hideFriends, setHideFriends] = useState(false);
+  const [friendsMap, setFriendsMap] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     console.log('[ContactsTab] State updated:', {
@@ -46,17 +51,57 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
     }
   }, [hasPermission]);
 
-  const normalizePhone = (phone: string): string => {
-    let normalized = phone.replace(/\D/g, '');
-    if (normalized.startsWith('33')) {
-      normalized = '0' + normalized.substring(2);
-    } else if (normalized.startsWith('+33')) {
-      normalized = '0' + normalized.substring(3);
-    } else if (normalized.length === 9 && !normalized.startsWith('0')) {
-      normalized = '0' + normalized;
+  // Charger la liste des amis pour le filtrage
+  useEffect(() => {
+    if (user && contactSuggestions.length > 0) {
+      loadFriendsStatus();
     }
-    return normalized;
+  }, [contactSuggestions, user]);
+
+  // Filtrer contacts selon recherche + toggle amis
+  useEffect(() => {
+    let filtered = contactSuggestions;
+    
+    // Filtre 1 : Recherche par query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(contact => 
+        contact.display_name?.toLowerCase().includes(q) ||
+        contact.username?.toLowerCase().includes(q)
+      );
+    }
+    
+    // Filtre 2 : Masquer amis si toggle activé
+    if (hideFriends) {
+      filtered = filtered.filter(contact => !friendsMap.has(contact.user_id));
+    }
+    
+    console.info('[ContactsTab] Filtered:', {
+      total: contactSuggestions.length,
+      filtered: filtered.length,
+      query: searchQuery,
+      hideFriends
+    });
+    
+    setFilteredContacts(filtered);
+  }, [contactSuggestions, searchQuery, hideFriends, friendsMap]);
+
+  const loadFriendsStatus = async () => {
+    if (!user) return;
+    
+    const userIds = contactSuggestions.map(c => c.user_id);
+    
+    const { data } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', user.id)
+      .eq('status', 'accepted')
+      .in('following_id', userIds);
+    
+    const friendIds = new Set(data?.map(f => f.following_id) || []);
+    setFriendsMap(friendIds);
   };
+
 
   const loadContactsFromApp = async () => {
     if (!deviceContacts || deviceContacts.length === 0) {
@@ -70,7 +115,16 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
     try {
       const suggestions = await findContactsInApp(deviceContacts);
       console.log('[ContactsTab] Found suggestions:', suggestions.length);
-      setContactSuggestions(suggestions);
+      
+      // Trier par statut ami (amis en premier) puis nom
+      const sorted = suggestions.sort((a, b) => {
+        const aIsFriend = friendsMap.has(a.user_id) ? 1 : 0;
+        const bIsFriend = friendsMap.has(b.user_id) ? 1 : 0;
+        if (aIsFriend !== bIsFriend) return bIsFriend - aIsFriend;
+        return (a.display_name || a.username).localeCompare(b.display_name || b.username);
+      });
+      
+      setContactSuggestions(sorted);
     } catch (error) {
       console.error('[ContactsTab] Error loading contacts:', error);
       toast({
@@ -88,39 +142,42 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
 
     console.log('[ContactsTab] Finding contacts in app from', contacts.length, 'device contacts');
 
-    const allPhones: string[] = [];
+    // Extraire TOUTES les variantes de numéros
+    const allPhoneVariants: string[] = [];
     contacts.forEach(contact => {
       if (contact.phoneNumbers && Array.isArray(contact.phoneNumbers)) {
         contact.phoneNumbers.forEach((phoneObj: any) => {
           if (phoneObj.number) {
-            const normalized = normalizePhone(phoneObj.number);
-            if (normalized.length >= 10) {
-              allPhones.push(normalized);
-            }
+            const variants = normalizePhoneVariants(phoneObj.number);
+            allPhoneVariants.push(...variants);
           }
         });
       }
     });
 
-    console.log('[ContactsTab] Extracted', allPhones.length, 'phone numbers');
+    console.log('[ContactsTab] Extracted', allPhoneVariants.length, 'phone variants (all formats)');
 
-    if (allPhones.length === 0) {
+    if (allPhoneVariants.length === 0) {
       return [];
     }
 
-    const uniquePhones = [...new Set(allPhones)];
+    const uniquePhones = [...new Set(allPhoneVariants)];
     console.log('[ContactsTab] Unique phones:', uniquePhones.length);
 
+    // Recherche par batch avec .or() pour gérer variantes
     const batchSize = 50;
     const results: ContactSuggestion[] = [];
 
     for (let i = 0; i < uniquePhones.length; i += batchSize) {
       const batch = uniquePhones.slice(i, i + batchSize);
+      
+      // Construire query OR pour matching multi-format
+      const phoneQuery = batch.map(p => `phone.eq.${p}`).join(',');
 
       const { data, error } = await supabase
         .from('profiles')
         .select('user_id, username, display_name, avatar_url, phone')
-        .in('phone', batch)
+        .or(phoneQuery)
         .neq('user_id', user.id)
         .limit(50);
 
@@ -135,8 +192,23 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
       }
     }
 
-    console.log('[ContactsTab] Total matches found:', results.length);
-    return results;
+    // Dédupliquer par user_id
+    const uniqueResults = Array.from(
+      new Map(results.map(r => [r.user_id, r])).values()
+    );
+    
+    console.info('[ContactsTab] Match summary:', {
+      deviceContacts: contacts.length,
+      phoneVariantsTotal: allPhoneVariants.length,
+      uniquePhones: uniquePhones.length,
+      matchesFound: uniqueResults.length,
+      sampleMatches: uniqueResults.slice(0, 3).map(r => ({
+        user: r.username,
+        phone: r.phone
+      }))
+    });
+
+    return uniqueResults;
   };
 
   const handleRequestContactsPermission = async () => {
@@ -311,53 +383,82 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   // Has permission - show results
   return (
     <div className="p-4 space-y-3">
-      {contactSuggestions.length === 0 ? (
+      {/* Toggle "Masquer mes amis" */}
+      {contactSuggestions.length > 0 && (
+        <div className="glass-card p-3 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">
+              {filteredContacts.length} contact{filteredContacts.length > 1 ? 's' : ''} trouvé{filteredContacts.length > 1 ? 's' : ''}
+            </p>
+            {searchQuery && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Recherche : "{searchQuery}"
+              </p>
+            )}
+          </div>
+          <Button
+            variant={hideFriends ? "default" : "outline"}
+            size="sm"
+            onClick={() => setHideFriends(!hideFriends)}
+            className="text-xs"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            {hideFriends ? "Voir amis" : "Masquer amis"}
+          </Button>
+        </div>
+      )}
+
+      {/* Utiliser filteredContacts au lieu de contactSuggestions */}
+      {filteredContacts.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <Phone className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Aucun contact trouvé</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {searchQuery ? "Aucun résultat" : "Aucun contact trouvé"}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Aucun de vos contacts n'utilise encore RunConnect
+            {searchQuery 
+              ? `Aucun contact ne correspond à "${searchQuery}"`
+              : "Aucun de vos contacts n'utilise encore RunConnect"
+            }
           </p>
         </div>
       ) : (
-        <>
-          <div className="glass-card p-3 mb-2">
-            <p className="text-sm text-muted-foreground">
-              {contactSuggestions.length} contact{contactSuggestions.length > 1 ? 's' : ''} trouvé{contactSuggestions.length > 1 ? 's' : ''} sur RunConnect
-            </p>
-          </div>
-
-          {contactSuggestions.map((contact) => (
-            <Card key={contact.user_id} className="glass-card">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={contact.avatar_url || undefined} />
-                    <AvatarFallback>
-                      {(contact.display_name || contact.username || 'U').charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
+        filteredContacts.map((contact) => (
+          <Card key={contact.user_id} className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={contact.avatar_url || undefined} />
+                  <AvatarFallback>
+                    {(contact.display_name || contact.username || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
                     <p className="font-medium truncate">
                       {contact.display_name || contact.username}
                     </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      @{contact.username}
-                    </p>
+                    {friendsMap.has(contact.user_id) && (
+                      <Badge variant="secondary" className="text-xs">Ami</Badge>
+                    )}
                   </div>
-
-                  <Button
-                    size="sm"
-                    onClick={() => sendFollowRequest(contact.user_id)}
-                  >
-                    Suivre
-                  </Button>
+                  <p className="text-sm text-muted-foreground truncate">
+                    @{contact.username}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </>
+
+                <Button
+                  size="sm"
+                  onClick={() => sendFollowRequest(contact.user_id)}
+                  disabled={friendsMap.has(contact.user_id)}
+                >
+                  {friendsMap.has(contact.user_id) ? "Ami" : "Suivre"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
       )}
     </div>
   );
