@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2, Bug, Languages, ArrowLeft, Search, ChevronRight, Info } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Key, Bell, Shield, FileText, Mail, Trash2, Users, Share2, Smartphone, Play, MessageCircle, Palette, Gift, Loader2, Bug, Languages, ArrowLeft, Search, ChevronRight, Info, CheckCircle, UserCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +39,9 @@ interface Profile {
   notif_message?: boolean;
   notif_session_request?: boolean;
   notif_friend_session?: boolean;
+  notif_club_invitation?: boolean;
+  notif_session_accepted?: boolean;
+  notif_presence_confirmed?: boolean;
   is_premium?: boolean;
   strava_connected?: boolean;
   strava_verified_at?: string;
@@ -672,6 +675,54 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                       checked={profile?.notif_friend_session === true}
                       onCheckedChange={(checked) => updatePrivacySettings('notif_friend_session', checked)}
                       disabled={profile?.notifications_enabled !== true || !profile?.is_premium}
+                    />
+                  </div>
+
+                  {/* Invitations de club */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Invitations de club</label>
+                        <p className="text-xs text-muted-foreground">Quand on vous invite à rejoindre un club</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.notif_club_invitation === true}
+                      onCheckedChange={(checked) => updatePrivacySettings('notif_club_invitation', checked)}
+                      disabled={profile?.notifications_enabled !== true}
+                    />
+                  </div>
+
+                  {/* Acceptation de session */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Participants à vos sessions</label>
+                        <p className="text-xs text-muted-foreground">Quand quelqu'un rejoint votre session</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.notif_session_accepted === true}
+                      onCheckedChange={(checked) => updatePrivacySettings('notif_session_accepted', checked)}
+                      disabled={profile?.notifications_enabled !== true}
+                    />
+                  </div>
+
+                  {/* Confirmation de présence */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <UserCheck className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Confirmation de présence</label>
+                        <p className="text-xs text-muted-foreground">Quand l'organisateur confirme votre présence</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={profile?.notif_presence_confirmed === true}
+                      onCheckedChange={(checked) => updatePrivacySettings('notif_presence_confirmed', checked)}
+                      disabled={profile?.notifications_enabled !== true}
                     />
                   </div>
                 </div>

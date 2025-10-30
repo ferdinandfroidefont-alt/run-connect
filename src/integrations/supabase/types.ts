@@ -378,9 +378,12 @@ export type Database = {
           is_premium: boolean | null
           is_private: boolean | null
           last_seen: string | null
+          notif_club_invitation: boolean | null
           notif_follow_request: boolean | null
           notif_friend_session: boolean | null
           notif_message: boolean | null
+          notif_presence_confirmed: boolean | null
+          notif_session_accepted: boolean | null
           notif_session_request: boolean | null
           notifications_enabled: boolean | null
           onboarding_completed: boolean | null
@@ -427,9 +430,12 @@ export type Database = {
           is_premium?: boolean | null
           is_private?: boolean | null
           last_seen?: string | null
+          notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null
+          notif_presence_confirmed?: boolean | null
+          notif_session_accepted?: boolean | null
           notif_session_request?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
@@ -476,9 +482,12 @@ export type Database = {
           is_premium?: boolean | null
           is_private?: boolean | null
           last_seen?: string | null
+          notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null
+          notif_presence_confirmed?: boolean | null
+          notif_session_accepted?: boolean | null
           notif_session_request?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null

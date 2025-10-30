@@ -304,7 +304,7 @@ serve(async (req) => {
     // 2. Get user profile and push token
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('push_token, notifications_enabled, notif_message, notif_session_request, notif_follow_request, notif_friend_session')
+      .select('push_token, notifications_enabled, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
       .eq('user_id', user_id)
       .single()
 
@@ -336,6 +336,12 @@ serve(async (req) => {
           return profile.notif_follow_request === true
         case 'friend_session':
           return profile.notif_friend_session === true
+        case 'club_invitation':
+          return profile.notif_club_invitation === true
+        case 'session_accepted':
+          return profile.notif_session_accepted === true
+        case 'presence_confirmed':
+          return profile.notif_presence_confirmed === true
         default:
           return true // Default enabled for other types
       }
@@ -425,6 +431,11 @@ serve(async (req) => {
         case 'session_accepted':
           finalTitle = 'Session acceptée';
           finalBody = `${data.participant_name || 'Quelqu\'un'} a rejoint votre session: ${data.session_title || 'Session'}`;
+          break;
+          
+        case 'presence_confirmed':
+          finalTitle = 'Présence confirmée';
+          finalBody = `${data.organizer_name || 'L\'organisateur'} a confirmé votre présence à: ${data.session_title || 'Session'}`;
           break;
           
         default:
