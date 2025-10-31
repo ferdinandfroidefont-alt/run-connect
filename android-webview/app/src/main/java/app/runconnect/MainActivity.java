@@ -33,6 +33,13 @@ import androidx.core.view.WindowCompat;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
     public static MainActivity instance;
@@ -182,6 +189,10 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+
+        // ✅ AJOUTER L'INTERFACE JAVASCRIPT ANDROIDBRIDGE
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
+        Log.d(TAG, "✅ AndroidBridge interface ajoutée à la WebView");
 
         // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
@@ -341,6 +352,77 @@ public class MainActivity extends AppCompatActivity {
                 filePathCallback = null;
             }
     );
+
+    // ✅ GOOGLE SIGN-IN LAUNCHER
+    private final ActivityResultLauncher<Intent> googleSignInLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(result.getData());
+                    try {
+                        GoogleSignInAccount account = task.getResult(ApiException.class);
+                        String idToken = account.getIdToken();
+                        String email = account.getEmail();
+                        String displayName = account.getDisplayName() != null ? account.getDisplayName() : "";
+                        
+                        Log.d(TAG, "✅ Google Sign-In réussi: " + email);
+                        
+                        // Envoyer les données à la WebView via JavaScript
+                        String js = String.format(
+                            "window.dispatchEvent(new CustomEvent('googleSignInSuccess', {detail: {idToken:'%s', email:'%s', displayName:'%s'}}));",
+                            idToken, email, displayName
+                        );
+                        webView.post(() -> webView.evaluateJavascript(js, null));
+                    } catch (ApiException e) {
+                        Log.e(TAG, "❌ Google Sign-In error: " + e.getMessage());
+                        String errorJs = "window.dispatchEvent(new CustomEvent('googleSignInError', {detail: '" + 
+                                        e.getMessage().replace("'", "\\'") + "'}));";
+                        webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                    }
+                } else {
+                    Log.w(TAG, "⚠️ Google Sign-In annulé");
+                    String cancelJs = "window.dispatchEvent(new CustomEvent('googleSignInError', {detail: 'User canceled'}));";
+                    webView.post(() -> webView.evaluateJavascript(cancelJs, null));
+                }
+            }
+    );
+
+    // ✅ ANDROIDBRIDGE - Interface JavaScript pour Google Sign-In natif
+    private class AndroidBridge {
+        @android.webkit.JavascriptInterface
+        public void googleSignIn() {
+            Log.d(TAG, "🔥 AndroidBridge.googleSignIn() appelé");
+            runOnUiThread(() -> {
+                GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken("220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com")
+                    .requestEmail()
+                    .build();
+                
+                GoogleSignInClient client = GoogleSignIn.getClient(MainActivity.this, gso);
+                Intent signInIntent = client.getSignInIntent();
+                googleSignInLauncher.launch(signInIntent);
+                Log.d(TAG, "🔥 Google Sign-In Intent lancé");
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void googleSignOut() {
+            Log.d(TAG, "🔥 AndroidBridge.googleSignOut() appelé");
+            runOnUiThread(() -> {
+                GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken("220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com")
+                    .requestEmail()
+                    .build();
+                
+                GoogleSignInClient client = GoogleSignIn.getClient(MainActivity.this, gso);
+                client.signOut().addOnCompleteListener(task -> {
+                    Log.d(TAG, "✅ Google Sign-Out réussi");
+                    String js = "window.dispatchEvent(new CustomEvent('googleSignOutSuccess'));";
+                    webView.post(() -> webView.evaluateJavascript(js, null));
+                });
+            });
+        }
+    }
 
     @Override
     public void onBackPressed() {
