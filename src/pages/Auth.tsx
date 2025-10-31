@@ -137,12 +137,27 @@ const Auth = () => {
         }
       }
       
-      // ❌ Pas de fallback web : Google Sign-In uniquement sur Android natif
-      toast({
-        title: "Non disponible",
-        description: "La connexion Google n'est disponible que sur l'application mobile Android",
-        variant: "destructive",
+      // Fallback : Web OAuth standard (pour WebView et navigateurs)
+      console.log('🌐 Utilisation OAuth web standard');
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
       });
+
+      if (error) {
+        console.error('❌ OAuth web error:', error);
+        throw error;
+      }
+
+      console.log('✅ OAuth popup opened');
+      // La suite se fait via callback OAuth automatique
       return;
       
     } catch (error: any) {
