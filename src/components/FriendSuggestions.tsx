@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useContacts } from "@/hooks/useContacts";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
+import { normalizePhoneVariants } from "@/lib/phoneNormalization";
 
 interface FriendSuggestion {
   user_id: string;
@@ -37,9 +38,11 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   const [loading, setLoading] = useState(true);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   const [showContactsPermission, setShowContactsPermission] = useState(false);
+  const [friendsMap, setFriendsMap] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
+      loadFriendsStatus();
       fetchSuggestions();
       // Check if we should show contacts permission prompt
       if (isNative && !hasPermission) {
@@ -47,6 +50,20 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
       }
     }
   }, [user, isNative, hasPermission]);
+
+  const loadFriendsStatus = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', user.id)
+      .eq('status', 'accepted');
+    
+    const friendIds = new Set(data?.map(f => f.following_id) || []);
+    console.log('🔍 Friends loaded:', friendIds.size, 'amis existants');
+    setFriendsMap(friendIds);
+  };
 
   const fetchSuggestions = async () => {
     if (!user) return;
@@ -134,22 +151,9 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         
         contact.phoneNumbers?.forEach((phone: any) => {
           if (phone.number) {
-            console.log('  📱 Phone found:', phone.number);
-            // Clean phone number (remove spaces, dashes, etc.) and try multiple formats
-            const cleanNumber = phone.number.replace(/[\s\-\(\)\+]/g, '');
-            phoneNumbers.push(cleanNumber);
-            
-            // Add variations (with/without country code)
-            if (cleanNumber.startsWith('33') && cleanNumber.length >= 11) {
-              const national = '0' + cleanNumber.substring(2);
-              phoneNumbers.push(national);
-              console.log('  📱 Added national format:', national);
-            }
-            if (cleanNumber.startsWith('0') && cleanNumber.length === 10) {
-              const international = '33' + cleanNumber.substring(1);
-              phoneNumbers.push(international);
-              console.log('  📱 Added international format:', international);
-            }
+            const variants = normalizePhoneVariants(phone.number);
+            phoneNumbers.push(...variants);
+            console.log('  📱 Phone variants:', variants);
           }
         });
         
@@ -174,15 +178,26 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
       // Find users with matching phone numbers, emails, or similar names
       let matchingUsers: any[] = [];
       
-      // Recherche par téléphone
+      // Recherche par téléphone (batch avec .or() multi-format)
       if (phoneNumbers.length > 0) {
-        const { data: phoneMatches } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url, phone')
-          .neq('user_id', user!.id)
-          .or(`phone.in.(${phoneNumbers.map(p => `"${p}"`).join(',')})`);
-        
-        if (phoneMatches) matchingUsers.push(...phoneMatches);
+        const uniquePhones = [...new Set(phoneNumbers)];
+        const batchSize = 50;
+        let phoneMatches: any[] = [];
+
+        for (let i = 0; i < uniquePhones.length; i += batchSize) {
+          const batch = uniquePhones.slice(i, i + batchSize);
+          const phoneQuery = batch.map(p => `phone.eq.${p}`).join(',');
+
+          const { data } = await supabase
+            .from('profiles')
+            .select('user_id, username, display_name, avatar_url, phone')
+            .neq('user_id', user!.id)
+            .or(phoneQuery);
+
+          if (data) phoneMatches.push(...data);
+        }
+
+        matchingUsers.push(...phoneMatches);
       }
 
       // Recherche par nom similaire (matching approximatif)
@@ -230,8 +245,18 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         is_contact: true
       }));
 
-      console.log('🔍 Contact suggestions found:', contactSuggestions.length, contactSuggestions);
-      return contactSuggestions;
+      // Filtrer les contacts déjà amis
+      const filteredSuggestions = contactSuggestions.filter(
+        suggestion => !friendsMap.has(suggestion.user_id)
+      );
+
+      console.log('🔍 Contact suggestions filtered:', {
+        total: contactSuggestions.length,
+        alreadyFriends: contactSuggestions.length - filteredSuggestions.length,
+        toSuggest: filteredSuggestions.length
+      });
+
+      return filteredSuggestions;
     } catch (error) {
       console.error('Error finding contact suggestions:', error);
       return [];
