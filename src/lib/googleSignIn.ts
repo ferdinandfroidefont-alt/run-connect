@@ -10,21 +10,14 @@ export interface GoogleSignInResult {
 }
 
 /**
- * Vérifie si Google Sign-In natif est disponible (attend max 3s que AndroidBridge soit chargé)
+ * Vérifie si Google Sign-In natif est disponible
+ * ✅ DÉSACTIVÉ pour les WebView Google Play - utilise OAuth web standard
  */
 export const isNativeGoogleSignInAvailable = async (): Promise<boolean> => {
-  if (typeof window === 'undefined') return false;
-  
-  // Attendre max 3 secondes que AndroidBridge soit chargé
-  for (let i = 0; i < 30; i++) {
-    if (typeof window.AndroidBridge?.googleSignIn === 'function') {
-      console.log('🔥 AndroidBridge.googleSignIn détecté après', i * 100, 'ms');
-      return true;
-    }
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  
-  console.log('🔥 AndroidBridge.googleSignIn NON disponible après 3s');
+  // ✅ TOUJOURS retourner false pour les WebView
+  // Les WebView doivent utiliser OAuth web standard de Supabase
+  // Cela évite l'erreur "SHA-1 mismatch" et utilise le flow OAuth déjà configuré
+  console.log('🔥 Native Google Sign-In désactivé - utilisation OAuth web');
   return false;
 };
 
