@@ -148,7 +148,7 @@ async function sendFCMNotification(
   data?: any,
   retryCount: number = 0,
   maxRetries: number = 3
-): Promise<boolean> {
+): Promise<boolean | { unregistered: boolean; token: string }> {
   try {
     const fcmPayload = {
       message: {
@@ -199,7 +199,7 @@ async function sendFCMNotification(
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error('❌ FCM send failed');
+      console.error('❌ [FCM] Send failed');
       console.error('📋 Status:', response.status, response.statusText);
       console.error('📋 Response Data:', JSON.stringify(responseData, null, 2));
       console.error('📋 Token preview:', token.substring(0, 30) + '...');
@@ -219,6 +219,13 @@ async function sendFCMNotification(
           }
         }
       }, null, 2));
+      
+      // 🔥 DETECT UNREGISTERED TOKEN (404 error)
+      if (response.status === 404 && responseData?.error?.details?.[0]?.errorCode === 'UNREGISTERED') {
+        console.error('🗑️ [FCM] Token UNREGISTERED → Marking for cleanup');
+        // Return a special object to signal token cleanup is needed
+        return { unregistered: true, token };
+      }
       
       // Retry logic for transient errors (5xx, network issues)
       if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
@@ -316,16 +323,16 @@ serve(async (req) => {
       )
     }
 
-    // 3. Check if notifications are enabled
+    // 3. Check if notifications are enabled FIRST (before DB insert)
     if (!profile.notifications_enabled) {
-      console.log('⚠️ Notifications disabled for user')
+      console.log('⚠️ [PREF] notifications_enabled = false → Skip notification')
       return new Response(
-        JSON.stringify({ message: 'Notifications désactivées pour cet utilisateur' }),
+        JSON.stringify({ message: 'Notifications désactivées pour cet utilisateur', skipped: true }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // 4. Check notification preferences by type
+    // 4. Check notification preferences by type BEFORE creating notification
     const checkPreference = (notificationType: string): boolean => {
       switch (notificationType) {
         case 'message':
@@ -348,14 +355,14 @@ serve(async (req) => {
     }
 
     if (type && !checkPreference(type)) {
-      console.log(`⚠️ Notifications ${type} disabled for user`)
+      console.log(`⚠️ [PREF] notif_${type} = false → Skip notification`)
       return new Response(
-        JSON.stringify({ message: `Notifications ${type} désactivées` }),
+        JSON.stringify({ message: `Notifications ${type} désactivées`, skipped: true }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // 5. Create notification record in database
+    // 5. Create notification record in database (only if preferences allow it)
     const { data: notificationData, error: notifError } = await supabaseClient
       .from('notifications')
       .insert({
@@ -370,20 +377,25 @@ serve(async (req) => {
 
     let notificationId: string | null = null;
     if (notifError) {
-      console.error('❌ Error creating notification in database:', notifError)
-      // Continue with push notification anyway
+      console.error('❌ [DB] Error creating notification:', notifError)
+      return new Response(
+        JSON.stringify({ error: 'Erreur lors de la création de la notification en base' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     } else {
       notificationId = notificationData?.id;
-      console.log('✅ Notification saved to database with ID:', notificationId)
+      console.log('✅ [DB] Notification saved with ID:', notificationId)
     }
 
     // 6. If no push token, return early
     if (!profile.push_token) {
-      console.log('⚠️ No push token found, database notification only')
+      console.log('⚠️ [TOKEN] No push_token → Database notification only')
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: 'Notification créée en base (pas de push token)' 
+          message: 'Notification créée en base (pas de push token)',
+          notification_id: notificationId,
+          db_only: true
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -455,7 +467,7 @@ serve(async (req) => {
       console.log('📋 Title:', finalTitle);
       console.log('📋 Body preview:', finalBody.substring(0, 50) + '...');
       
-      const fcmSuccess = await sendFCMNotification(
+      const fcmResult = await sendFCMNotification(
         accessToken,
         serviceAccount.project_id,
         profile.push_token,
@@ -464,7 +476,49 @@ serve(async (req) => {
         fcmData
       );
       
-      console.log('📊 FCM Result:', fcmSuccess ? '✅ SUCCESS' : '❌ FAILED');
+      // 🔥 Handle UNREGISTERED token cleanup
+      if (typeof fcmResult === 'object' && fcmResult.unregistered) {
+        console.log('🗑️ [CLEANUP] Removing invalid push_token from database');
+        try {
+          await supabaseClient
+            .from('profiles')
+            .update({ push_token: null, push_token_updated_at: null })
+            .eq('user_id', user_id);
+          console.log('✅ [CLEANUP] Invalid token removed from database');
+        } catch (cleanupErr) {
+          console.error('❌ [CLEANUP] Failed to remove invalid token:', cleanupErr);
+        }
+        
+        // Log the failed attempt
+        if (notificationId) {
+          try {
+            await supabaseClient
+              .from('notification_logs')
+              .insert({
+                notification_id: notificationId,
+                user_id,
+                push_token: profile.push_token,
+                fcm_success: false,
+                fcm_error: 'UNREGISTERED - Token cleaned from database',
+                fcm_response: { error: 'UNREGISTERED', type, title: finalTitle }
+              });
+          } catch (logErr) {
+            console.error('❌ Failed to log notification:', logErr);
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: 'Token FCM invalide, nettoyé de la base',
+            token_cleaned: true
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const fcmSuccess = typeof fcmResult === 'boolean' ? fcmResult : false;
+      console.log('📊 [FCM] Result:', fcmSuccess ? '✅ SUCCESS' : '❌ FAILED');
 
       // Log notification attempt
       if (notificationId) {
@@ -479,9 +533,9 @@ serve(async (req) => {
               fcm_error: fcmSuccess ? null : 'FCM send failed',
               fcm_response: { type, title: finalTitle, body: finalBody }
             });
-          console.log('✅ Notification logged');
+          console.log('✅ [LOG] Notification logged');
         } catch (logErr) {
-          console.error('❌ Failed to log notification:', logErr);
+          console.error('❌ [LOG] Failed to log notification:', logErr);
         }
       }
 

@@ -26,6 +26,9 @@ export const usePushNotifications = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // 🔥 Track if token needs renewal
+  const [tokenNeedsRenewal, setTokenNeedsRenewal] = useState(false);
+  
   // 🔥 FONCTION HELPER pour réévaluer isNative dynamiquement
   const checkIsNative = () => (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform() || typeof (window as any).AndroidBridge !== 'undefined';
   
@@ -740,6 +743,75 @@ export const usePushNotifications = () => {
     };
   }, [isNative, savePushToken]);
 
+  // 🔥 NOUVEAU: Vérifier l'âge du token et forcer le renouvellement si nécessaire
+  useEffect(() => {
+    if (!user?.id || !isNative) return;
+
+    const checkTokenAge = async () => {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('push_token, push_token_updated_at')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile) return;
+
+        // Si pas de token, pas de vérification nécessaire
+        if (!profile.push_token) {
+          console.log('⚠️ [TOKEN AGE] Aucun token en base');
+          return;
+        }
+
+        // Si pas de date de mise à jour, considérer le token comme ancien
+        if (!profile.push_token_updated_at) {
+          console.log('⚠️ [TOKEN AGE] Token sans date de mise à jour, considéré comme ancien');
+          setTokenNeedsRenewal(true);
+          return;
+        }
+
+        // Calculer l'âge du token
+        const tokenDate = new Date(profile.push_token_updated_at);
+        const now = new Date();
+        const ageInDays = Math.floor((now.getTime() - tokenDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        console.log(`📅 [TOKEN AGE] Token vieux de ${ageInDays} jours`);
+
+        // Si le token a plus de 60 jours, forcer le renouvellement
+        if (ageInDays > 60) {
+          console.log('🔄 [TOKEN AGE] Token > 60 jours, renouvellement nécessaire');
+          setTokenNeedsRenewal(true);
+          
+          // Forcer le renouvellement si les permissions sont accordées
+          const permStatus = await PushNotifications.checkPermissions();
+          if (permStatus.receive === 'granted') {
+            console.log('✅ [TOKEN AGE] Permissions accordées, lancement renouvellement...');
+            try {
+              await PushNotifications.register();
+              console.log('✅ [TOKEN AGE] PushNotifications.register() appelé pour renouvellement');
+              setTokenNeedsRenewal(false);
+            } catch (error) {
+              console.error('❌ [TOKEN AGE] Erreur lors du renouvellement:', error);
+            }
+          }
+        } else {
+          console.log('✅ [TOKEN AGE] Token récent, pas de renouvellement nécessaire');
+          setTokenNeedsRenewal(false);
+        }
+      } catch (error) {
+        console.error('❌ [TOKEN AGE] Erreur vérification âge token:', error);
+      }
+    };
+
+    // Vérifier immédiatement au montage
+    checkTokenAge();
+
+    // Revérifier toutes les 24h
+    const interval = setInterval(checkTokenAge, 24 * 60 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user, isNative]);
+
   // Configuration au montage
   useEffect(() => {
     if (!user) return;
@@ -938,6 +1010,7 @@ export const usePushNotifications = () => {
     isSupported,
     setupPushListeners,
     checkPermissionStatus,
-    forceNativeNotificationCheck // ✅ Exposer pour usage externe
+    forceNativeNotificationCheck, // ✅ Exposer pour usage externe
+    tokenNeedsRenewal // 🔥 Expose si le token a besoin d'être renouvelé
   };
 };
