@@ -188,9 +188,6 @@ jobs:
           
           # ✅ Copier le VRAI AndroidManifest.xml complet (avec Firebase)
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
-          
-          # ✅ Copier google-services.json pour Firebase
-          cp android/app/google-services.json android-webview/app/google-services.json
 
           # ✅ Créer styles.xml
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
