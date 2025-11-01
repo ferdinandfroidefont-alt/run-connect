@@ -262,12 +262,18 @@ serve(async (req) => {
   }
 
   try {
+    // 🆕 LOG D'ENTRÉE (AVANT TOUT)
+    console.log('🚀 [ENTRY] Edge function called');
+    console.log('🔐 [AUTH] Authorization header present:', !!req.headers.get('authorization'));
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     const { user_id, title, body, data, type }: NotificationPayload = await req.json()
+    
+    console.log('📦 [PAYLOAD] Received:', { user_id, title, body, type })
 
     if (!user_id || !title || !body) {
       return new Response(

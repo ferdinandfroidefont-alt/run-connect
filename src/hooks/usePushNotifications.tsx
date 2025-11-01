@@ -575,7 +575,21 @@ export const usePushNotifications = () => {
     try {
       console.log('🧪 Test notification...');
       
-      const { error } = await supabase.functions.invoke('send-push-notification', {
+      // Vérifier la session AVANT l'appel
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 Session active:', !!session);
+      console.log('🔐 Access token présent:', !!session?.access_token);
+      
+      if (!session) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour tester les notifications",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: user.id,
           title: 'Test RunConnect',
@@ -586,14 +600,18 @@ export const usePushNotifications = () => {
       });
 
       if (error) {
-        console.error('❌ Erreur test notification:', error);
+        console.error('❌ Erreur test notification:', {
+          message: error.message,
+          status: error.status,
+          details: error
+        });
         toast({
           title: "Erreur test",
-          description: "Impossible d'envoyer la notification de test",
+          description: `Impossible d'envoyer la notification de test: ${error.message}`,
           variant: "destructive"
         });
       } else {
-        console.log('✅ Test notification envoyé');
+        console.log('✅ Test notification envoyé, réponse:', data);
         toast({
           title: "Test envoyé",
           description: "Notification de test envoyée avec succès!"
@@ -811,6 +829,54 @@ export const usePushNotifications = () => {
 
     return () => clearInterval(interval);
   }, [user, isNative]);
+
+  // 🆕 Synchronisation token Firebase avec DB au démarrage
+  useEffect(() => {
+    if (!isNative || !isRegistered || !user) return;
+
+    const syncFirebaseToken = async () => {
+      try {
+        console.log('🔄 [TOKEN_SYNC] Checking token synchronization...');
+        
+        // Ajouter un listener pour récupérer le token actuel
+        const listener = await PushNotifications.addListener('registration', (token) => {
+          console.log('🔄 [TOKEN_SYNC] Current Firebase token:', token.value);
+          
+          // Comparer avec le token en base
+          const checkAndUpdate = async () => {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('push_token')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (profile && profile.push_token !== token.value) {
+              console.log('⚠️ [TOKEN_SYNC] Token mismatch detected! Updating...');
+              console.log('  DB token:', profile.push_token);
+              console.log('  Firebase token:', token.value);
+              await savePushToken(token.value);
+            } else {
+              console.log('✅ [TOKEN_SYNC] Tokens are synchronized');
+            }
+          };
+          
+          checkAndUpdate();
+        });
+        
+        // Forcer la récupération du token actuel
+        await PushNotifications.register();
+        
+        // Cleanup
+        return () => {
+          listener.remove();
+        };
+      } catch (error) {
+        console.error('❌ [TOKEN_SYNC] Error:', error);
+      }
+    };
+
+    syncFirebaseToken();
+  }, [isNative, isRegistered, user, savePushToken]);
 
   // Configuration au montage
   useEffect(() => {
