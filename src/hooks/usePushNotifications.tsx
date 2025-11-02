@@ -588,8 +588,22 @@ export const usePushNotifications = () => {
         });
         return;
       }
+
+      if (!session?.access_token) {
+        console.error('❌ Pas de token JWT disponible');
+        toast({
+          title: "Erreur JWT",
+          description: "Impossible d'authentifier la requête",
+          variant: "destructive"
+        });
+        return;
+      }
       
+      console.log('🔑 Appel Edge Function avec JWT');
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: {
           user_id: user.id,
           title: 'Test RunConnect',

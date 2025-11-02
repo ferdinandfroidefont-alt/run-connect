@@ -365,7 +365,10 @@ public class MainActivity extends AppCompatActivity {
                         String email = account.getEmail();
                         String displayName = account.getDisplayName() != null ? account.getDisplayName() : "";
                         
-                        Log.d(TAG, "✅ Google Sign-In réussi: " + email);
+                        Log.d(TAG, "🔥✅ Google Sign-In réussi");
+                        Log.d(TAG, "📧 Email: " + email);
+                        Log.d(TAG, "👤 Display Name: " + displayName);
+                        Log.d(TAG, "🎫 ID Token (premiers 50 char): " + idToken.substring(0, Math.min(50, idToken.length())) + "...");
                         
                         // Envoyer les données à la WebView via JavaScript
                         String js = String.format(
@@ -394,7 +397,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔥 AndroidBridge.googleSignIn() appelé");
             runOnUiThread(() -> {
                 GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken("220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com")  // ✅ Web Client ID (type 3)
+                    .requestIdToken("220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com")  // ✅ Android OAuth Client ID (lié au SHA-1)
                     .requestEmail()
                     .build();
                 
@@ -410,7 +413,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔥 AndroidBridge.googleSignOut() appelé");
             runOnUiThread(() -> {
                 GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken("220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com")  // ✅ Web Client ID (type 3)
+                    .requestIdToken("220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com")  // ✅ Android OAuth Client ID (lié au SHA-1)
                     .requestEmail()
                     .build();
                 
