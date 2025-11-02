@@ -40,7 +40,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.send-push-notification]
-verify_jwt = true
+verify_jwt = false  # ⚠️ TEMPORAIRE: Test sans JWT pour identifier le problème
 
 [functions.strava-connect]
 verify_jwt = true
