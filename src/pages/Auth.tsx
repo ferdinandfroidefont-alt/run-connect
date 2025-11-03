@@ -85,18 +85,34 @@ const Auth = () => {
           
           console.log('🔥✅ Firebase ID Token reçu');
           
-          // Étape 2: Envoyer le token à Supabase via signInWithIdToken
-          const { data: { user, session }, error } = await supabase.auth.signInWithIdToken({
-            provider: 'google',
-            token: idToken,
+          // Étape 2: Appeler la Edge Function qui valide Firebase et crée la session Supabase
+          const { data, error } = await supabase.functions.invoke('firebase-auth', {
+            body: { idToken }
           });
           
           if (error) {
-            console.error('❌ Supabase signInWithIdToken error:', error);
+            console.error('❌ Firebase auth Edge Function error:', error);
             throw error;
           }
+
+          if (!data?.session) {
+            throw new Error('No session returned from Firebase auth');
+          }
+
+          // Étape 3: Définir la session dans le client Supabase
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+
+          if (sessionError) {
+            console.error('❌ Error setting Supabase session:', sessionError);
+            throw sessionError;
+          }
           
-          console.log('✅ Supabase session created:', { user: user?.email });
+          console.log('✅ Supabase session created:', { user: data.user?.email });
+          
+          const user = data.user;
           
           // Étape 3: Vérifier si le profil existe
           if (user) {
