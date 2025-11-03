@@ -73,10 +73,72 @@ const Auth = () => {
     try {
       setIsLoading(true);
       
-      // 🔥 CORRECTION SHA-1: Forcer l'utilisation du Web OAuth flow
-      // Car Supabase ne reconnaît pas directement les Firebase ID Tokens Android
-      // Le Web OAuth n'est PAS lié à un SHA-1 spécifique et fonctionne nativement avec Supabase
-      console.log('🌐 Utilisation Web OAuth flow (compatible Supabase, pas de SHA-1 requis)');
+      // 🔥 Vérifier si Google Sign-In natif est disponible (attend 3s max)
+      const isNativeAvailable = await isNativeGoogleSignInAvailable();
+      
+      if (isNativeAvailable) {
+        console.log('🔥 [FIREBASE AUTH] Google Sign-In natif Android détecté');
+        
+        try {
+          // Étape 1: Obtenir le token Firebase depuis le plugin natif
+          const { idToken, email, displayName } = await googleSignIn();
+          
+          console.log('🔥✅ Firebase ID Token reçu');
+          
+          // Étape 2: Envoyer le token à Supabase via signInWithIdToken
+          const { data: { user, session }, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: idToken,
+          });
+          
+          if (error) {
+            console.error('❌ Supabase signInWithIdToken error:', error);
+            throw error;
+          }
+          
+          console.log('✅ Supabase session created:', { user: user?.email });
+          
+          // Étape 3: Vérifier si le profil existe
+          if (user) {
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('id, username')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            
+            if (!existingProfile) {
+              setNewUserId(user.id);
+              setShowProfileSetup(true);
+            } else {
+              window.location.href = '/';
+            }
+          }
+          
+          return;
+        } catch (nativeError: any) {
+          console.error('🔥❌ Native Google Sign-In failed:', nativeError);
+          
+          let errorMessage = nativeError.message || "Erreur lors de l'authentification Google";
+          
+          // Ajouter des conseils de débogage
+          if (errorMessage.includes("User canceled")) {
+            errorMessage += "\n\n⚠️ Si vous avez sélectionné un compte, vérifiez:\n" +
+                           "1. SHA-1 certificate dans Firebase Console\n" +
+                           "2. Configuration OAuth Google Cloud\n" +
+                           "Consultez les logs Logcat pour plus de détails.";
+          }
+          
+          toast({
+            title: "Erreur Google Sign-In",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      // Fallback : Web OAuth standard (pour WebView et navigateurs)
+      console.log('🌐 Utilisation OAuth web standard');
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

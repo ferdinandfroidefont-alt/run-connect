@@ -575,23 +575,22 @@ export const usePushNotifications = () => {
     try {
       console.log('🧪 Test notification...');
       
-      // 🔥 CORRECTION: Rafraîchir la session pour obtenir un token valide
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-      console.log('🔐 Session rafraîchie:', !!session);
+      // Vérifier la session AVANT l'appel
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 Session active:', !!session);
       console.log('🔐 Access token présent:', !!session?.access_token);
       
-      if (sessionError || !session) {
-        console.error('❌ Erreur refresh session:', sessionError);
+      if (!session) {
         toast({
-          title: "Erreur session",
-          description: "Impossible de rafraîchir votre session",
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour tester les notifications",
           variant: "destructive"
         });
         return;
       }
 
       if (!session?.access_token) {
-        console.error('❌ Pas de token JWT disponible après refresh');
+        console.error('❌ Pas de token JWT disponible');
         toast({
           title: "Erreur JWT",
           description: "Impossible d'authentifier la requête",
@@ -600,14 +599,7 @@ export const usePushNotifications = () => {
         return;
       }
       
-      // 🔥 LOGS DÉTAILLÉS pour déboguer la Edge Function
       console.log('🔑 Appel Edge Function avec JWT');
-      console.log('📋 Supabase URL:', (supabase as any).supabaseUrl || 'https://dbptgehpknjsoisirviz.supabase.co');
-      console.log('📋 Function name: send-push-notification');
-      console.log('📋 User ID:', user.id);
-      console.log('📋 JWT présent:', !!session.access_token);
-      console.log('📋 JWT preview (50 chars):', session.access_token.substring(0, 50) + '...');
-      
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -619,15 +611,6 @@ export const usePushNotifications = () => {
           type: 'test',
           data: { test: true }
         }
-      });
-
-      // 🔥 LOG DÉTAILLÉ de la réponse
-      console.log('📋 Response received:', { 
-        hasData: !!data, 
-        hasError: !!error,
-        errorMessage: error?.message,
-        errorStatus: error?.status,
-        dataContent: data 
       });
 
       if (error) {
