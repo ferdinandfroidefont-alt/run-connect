@@ -621,14 +621,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 </div>
 
                 {/* Reliability Badge - Visible pour tous les profils */}
-                {reliabilityRate > 0 && (
-                  <div className="mb-4 w-full px-4">
-                    <ReliabilityBadge 
-                      rate={reliabilityRate}
-                      onClick={() => setShowReliabilityDetails(true)}
-                    />
-                  </div>
-                )}
+                <div className="mb-4 w-full px-4">
+                  <ReliabilityBadge 
+                    rate={reliabilityRate}
+                    onClick={() => setShowReliabilityDetails(true)}
+                  />
+                </div>
 
                 {!isOwnProfile && user && (
                   <Button

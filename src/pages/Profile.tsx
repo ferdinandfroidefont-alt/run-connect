@@ -799,14 +799,12 @@ const Profile = () => {
             </div>
 
             {/* Reliability Badge - Visible pour tous les profils */}
-            {reliabilityRate > 0 && (
-              <div className="mt-4 w-full px-4">
-                <ReliabilityBadge 
-                  rate={reliabilityRate}
-                  onClick={() => setShowReliabilityDetails(true)}
-                />
-              </div>
-            )}
+            <div className="mt-4 w-full px-4">
+              <ReliabilityBadge 
+                rate={reliabilityRate}
+                onClick={() => setShowReliabilityDetails(true)}
+              />
+            </div>
 
             {/* Bouton de signalement - Seulement pour les autres utilisateurs */}
             {isViewingOtherUser && (
