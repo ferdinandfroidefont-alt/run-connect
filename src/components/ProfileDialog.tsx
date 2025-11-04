@@ -404,14 +404,6 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                     )}
                   </div>
 
-                  {/* Reliability Badge */}
-                  <div className="w-full mb-3 px-4">
-                    <ReliabilityBadge 
-                      rate={reliabilityRate}
-                      onClick={() => setShowReliabilityDialog(true)}
-                    />
-                  </div>
-
                   <div className="flex gap-2 items-center mb-4 flex-wrap justify-center">
                     {profile?.is_admin && (
                       <Badge className="bg-red-100 text-red-800 border-red-200">
@@ -542,6 +534,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                       <p className="font-bold text-lg">{followingCount}</p>
                       <p className="text-sm text-muted-foreground">Abonnements</p>
                     </button>
+                  </div>
+
+                  {/* Reliability Badge */}
+                  <div className="w-full mt-4 px-4">
+                    <ReliabilityBadge 
+                      rate={reliabilityRate}
+                      onClick={() => setShowReliabilityDialog(true)}
+                    />
                   </div>
                 </CardContent>
               </Card>
