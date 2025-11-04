@@ -150,9 +150,9 @@ const Profile = () => {
       }
       
       fetchFollowCounts();
+      fetchReliabilityRate(); // Fetch for all profiles
       if (!isViewingOtherUser) {
         fetchUserRoutes();
-        fetchReliabilityRate();
       } else {
         fetchCommonClubs();
         // Fetch connection history only for creator
@@ -255,13 +255,14 @@ const Profile = () => {
   };
 
   const fetchReliabilityRate = async () => {
-    if (!user) return;
+    const targetUserId = viewingUserId || user?.id;
+    if (!targetUserId) return;
 
     try {
       const { data, error } = await supabase
         .from('user_stats')
         .select('reliability_rate, total_sessions_completed, total_sessions_joined')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
@@ -274,7 +275,7 @@ const Profile = () => {
       const { count: createdCount } = await supabase
         .from('sessions')
         .select('id', { count: 'exact', head: true })
-        .eq('organizer_id', user.id);
+        .eq('organizer_id', targetUserId);
       
       setTotalSessionsCreated(createdCount || 0);
     } catch (error) {
@@ -772,17 +773,7 @@ const Profile = () => {
               }
             })()}
             
-            {/* Reliability Badge - Cliquable */}
-            {!isViewingOtherUser && reliabilityRate > 0 && (
-              <div className="mt-4 w-full px-4">
-                <ReliabilityBadge 
-                  rate={reliabilityRate}
-                  onClick={() => setShowReliabilityDetails(true)}
-                />
-              </div>
-            )}
-            
-            <div className="flex gap-4 mt-2">
+            <div className="flex gap-4 mt-4">
               <button
                 onClick={() => {
                   setFollowDialogType('followers');
@@ -804,6 +795,16 @@ const Profile = () => {
                 <p className="text-sm text-muted-foreground">Abonnements</p>
               </button>
             </div>
+
+            {/* Reliability Badge - Visible pour tous les profils */}
+            {reliabilityRate > 0 && (
+              <div className="mt-4 w-full px-4">
+                <ReliabilityBadge 
+                  rate={reliabilityRate}
+                  onClick={() => setShowReliabilityDetails(true)}
+                />
+              </div>
+            )}
 
             {/* Bouton de signalement - Seulement pour les autres utilisateurs */}
             {isViewingOtherUser && (
@@ -1165,6 +1166,16 @@ const Profile = () => {
           onClose={() => setShowReportDialog(false)}
           reportedUserId={viewingUserId || ""}
           reportedUsername={profile?.username || ""}
+        />
+
+        {/* Reliability Details Dialog - Pour tous les profils */}
+        <ReliabilityDetailsDialog
+          open={showReliabilityDetails}
+          onOpenChange={setShowReliabilityDetails}
+          userName={profile?.username || profile?.display_name || ''}
+          reliabilityRate={reliabilityRate}
+          totalSessionsCreated={totalSessionsCreated}
+          totalSessionsJoined={totalSessionsJoined}
         />
 
         {/* Image Crop Editor */}
