@@ -100,6 +100,7 @@ const Profile = () => {
   const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
+  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
   const { toast } = useToast();
   const { selectFromGallery, loading: cameraLoading } = useCamera();
   const { t } = useLanguage();
@@ -269,6 +270,7 @@ const Profile = () => {
       if (data) {
         setReliabilityRate(data.reliability_rate || 100);
         setTotalSessionsJoined(data.total_sessions_joined || 0);
+        setTotalSessionsCompleted(data.total_sessions_completed || 0);
       }
 
       // Compter les sessions créées
@@ -1176,6 +1178,7 @@ const Profile = () => {
           reliabilityRate={reliabilityRate}
           totalSessionsCreated={totalSessionsCreated}
           totalSessionsJoined={totalSessionsJoined}
+          totalSessionsCompleted={totalSessionsCompleted}
         />
 
         {/* Image Crop Editor */}

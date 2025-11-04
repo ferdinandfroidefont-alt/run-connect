@@ -10,6 +10,7 @@ interface ReliabilityDetailsDialogProps {
   reliabilityRate: number;
   totalSessionsCreated: number;
   totalSessionsJoined: number;
+  totalSessionsCompleted: number;
 }
 
 export const ReliabilityDetailsDialog = ({
@@ -19,8 +20,10 @@ export const ReliabilityDetailsDialog = ({
   reliabilityRate,
   totalSessionsCreated,
   totalSessionsJoined,
+  totalSessionsCompleted,
 }: ReliabilityDetailsDialogProps) => {
   const { t } = useLanguage();
+  const sessionsNotAttended = totalSessionsJoined - totalSessionsCompleted;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,19 +59,31 @@ export const ReliabilityDetailsDialog = ({
               <div className="flex-1">
                 <p className="text-2xl font-bold">{totalSessionsCreated}</p>
                 <p className="text-sm text-muted-foreground">
-                  {t('reliability.sessionsCreated')}
+                  Séances créées
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div className="flex-1">
-                <p className="text-2xl font-bold">{totalSessionsJoined}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t('reliability.sessionsJoined')}
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">{totalSessionsCompleted}</p>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  Séances venues
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
+              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                <Users className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-2xl font-bold text-red-700 dark:text-red-300">{sessionsNotAttended}</p>
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  Séances pas venues
                 </p>
               </div>
             </div>

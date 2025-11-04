@@ -14,6 +14,8 @@ import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2, Fla
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ReliabilityBadge } from "./ReliabilityBadge";
+import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 
 interface Profile {
   user_id: string;
@@ -60,6 +62,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
+  const [reliabilityRate, setReliabilityRate] = useState(0);
+  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
+  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
+  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
+  const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
 
   // If user is viewing their own profile, show a simplified version or redirect
   const isOwnProfile = userId === user?.id;
@@ -67,12 +74,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   useEffect(() => {
     if (userId) {
       fetchProfile();
+      fetchFollowCounts();
+      fetchReliabilityRate();
       if (!isOwnProfile) {
         checkFollowStatus();
         checkFriendStatus();
         checkBlockedStatus();
       }
-      fetchFollowCounts();
       // Fetch connection history only for creator after profile is loaded
       if (user?.email === 'ferdinand.froidefont@gmail.com' && !isOwnProfile) {
         setTimeout(() => fetchConnectionHistory(), 100);
@@ -231,6 +239,35 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       setFollowingCount(followingData?.length || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  const fetchReliabilityRate = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_stats')
+        .select('reliability_rate, total_sessions_completed, total_sessions_joined')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) {
+        setReliabilityRate(data.reliability_rate || 100);
+        setTotalSessionsJoined(data.total_sessions_joined || 0);
+        setTotalSessionsCompleted(data.total_sessions_completed || 0);
+      }
+
+      // Compter les sessions créées
+      const { count: createdCount } = await supabase
+        .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('organizer_id', userId);
+      
+      setTotalSessionsCreated(createdCount || 0);
+    } catch (error) {
+      console.error('Error fetching reliability rate:', error);
     }
   };
 
@@ -583,6 +620,16 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </div>
                 </div>
 
+                {/* Reliability Badge - Visible pour tous les profils */}
+                {reliabilityRate > 0 && (
+                  <div className="mb-4 w-full px-4">
+                    <ReliabilityBadge 
+                      rate={reliabilityRate}
+                      onClick={() => setShowReliabilityDetails(true)}
+                    />
+                  </div>
+                )}
+
                 {!isOwnProfile && user && (
                   <Button
                     onClick={handleFollowToggle}
@@ -799,6 +846,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           reportedUsername={profile.username}
         />
       )}
+
+      {/* Reliability Details Dialog */}
+      <ReliabilityDetailsDialog
+        open={showReliabilityDetails}
+        onOpenChange={setShowReliabilityDetails}
+        userName={profile?.username || profile?.display_name || ''}
+        reliabilityRate={reliabilityRate}
+        totalSessionsCreated={totalSessionsCreated}
+        totalSessionsJoined={totalSessionsJoined}
+        totalSessionsCompleted={totalSessionsCompleted}
+      />
     </Dialog>
   );
 };
