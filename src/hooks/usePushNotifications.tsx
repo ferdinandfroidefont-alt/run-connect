@@ -422,9 +422,10 @@ export const usePushNotifications = () => {
           });
         }
       } catch (error) {
+        console.error('❌ [TEST] Erreur lors de checkPermissions():', error);
         toast({
           title: "Token FCM manquant",
-          description: "Activez d'abord les notifications",
+          description: "Le token Firebase n'est pas disponible. Relancez l'app ou vérifiez les logs Firebase.",
           variant: "destructive"
         });
       }
