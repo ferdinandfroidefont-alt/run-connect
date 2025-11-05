@@ -40,6 +40,11 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.FirebaseMessaging;
+
+import androidx.core.app.NotificationCompat;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
     public static MainActivity instance;
@@ -72,6 +77,38 @@ public class MainActivity extends AppCompatActivity {
         
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
+        
+        // 🔥 INITIALISER FIREBASE (CRITIQUE POUR FCM)
+        try {
+            FirebaseApp.initializeApp(this);
+            Log.d(TAG, "🔥 Firebase initialisé avec succès");
+            
+            // 🔥 Récupérer le token FCM immédiatement
+            FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.e(TAG, "❌ Échec récupération token FCM", task.getException());
+                        return;
+                    }
+                    
+                    String token = task.getResult();
+                    Log.d(TAG, "🔥 Token FCM récupéré: " + (token != null ? token.substring(0, Math.min(30, token.length())) + "..." : "null"));
+                    
+                    if (token != null && webView != null) {
+                        // Injecter dans la WebView
+                        webView.post(() -> {
+                            String jsCode = "window.fcmToken = '" + token + "';" +
+                                "window.fcmTokenPlatform = 'android';" +
+                                "console.log('🔥 [FCM] Token injecté:', window.fcmToken.substring(0, 30) + '...');" +
+                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
+                            webView.evaluateJavascript(jsCode, null);
+                            Log.d(TAG, "✅ Token FCM injecté dans WebView");
+                        });
+                    }
+                });
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
+        }
 
         // Full screen immersif + transparent
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
@@ -455,6 +492,37 @@ public class MainActivity extends AppCompatActivity {
                     webView.post(() -> webView.evaluateJavascript(jsEvent, null));
                 }
             });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public String getFCMToken() {
+            Log.d(TAG, "📱 [AndroidBridge] getFCMToken() appelé depuis JavaScript");
+            
+            // Récupérer le token Firebase de manière asynchrone
+            runOnUiThread(() -> {
+                try {
+                    FirebaseMessaging.getInstance().getToken()
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful() && task.getResult() != null) {
+                                String token = task.getResult();
+                                Log.d(TAG, "✅ [AndroidBridge] Token FCM fourni: " + token.substring(0, Math.min(30, token.length())) + "...");
+                                
+                                // Injecter dans WebView
+                                String jsCode = "window.fcmToken = '" + token + "';" +
+                                    "window.fcmTokenPlatform = 'android';" +
+                                    "console.log('🔥 [AndroidBridge] Token réinjecté:', window.fcmToken.substring(0, 30) + '...');" +
+                                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
+                                webView.post(() -> webView.evaluateJavascript(jsCode, null));
+                            } else {
+                                Log.e(TAG, "❌ [AndroidBridge] Échec récupération token FCM", task.getException());
+                            }
+                        });
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ [AndroidBridge] Erreur getFCMToken:", e);
+                }
+            });
+            
+            return "requesting"; // Indique que la demande est en cours
         }
     }
 

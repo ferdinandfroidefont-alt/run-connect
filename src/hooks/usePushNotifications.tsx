@@ -529,6 +529,16 @@ export const usePushNotifications = () => {
 
     console.log('🎧 [LISTENERS] Configuration listeners push natifs...');
     
+    // 🔥 Demander le token FCM via AndroidBridge si disponible
+    if (typeof (window as any).AndroidBridge?.getFCMToken === 'function') {
+      console.log('🔥 [PUSH] Demande token FCM via AndroidBridge...');
+      try {
+        (window as any).AndroidBridge.getFCMToken();
+      } catch (error) {
+        console.error('❌ [PUSH] Erreur appel AndroidBridge.getFCMToken():', error);
+      }
+    }
+    
     try {
       // Succès d'enregistrement
       await PushNotifications.addListener('registration', async (token) => {
