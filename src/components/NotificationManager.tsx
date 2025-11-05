@@ -219,16 +219,17 @@ export const NotificationManager = () => {
       <CardContent className="space-y-4">
         {!permissionStatus.granted ? (
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Activez les notifications pour recevoir les alertes de RunConnect en temps réel.
-            </p>
+            <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-2">
+                📱 Demande automatique au démarrage
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Les notifications vous sont demandées automatiquement au premier lancement de l'application. 
+                Si vous avez refusé, désinstallez et réinstallez l'app, ou activez manuellement les notifications dans les paramètres Android.
+              </p>
+            </div>
             
             <div className="flex gap-2 flex-wrap">
-              <Button onClick={requestPermissions} className="flex-1 gap-2">
-                <Bell className="h-4 w-4" />
-                Activer les notifications
-              </Button>
-              
               <Button 
                 variant="outline" 
                 onClick={handleRefreshStatus} 
@@ -236,13 +237,27 @@ export const NotificationManager = () => {
                 className="gap-2"
               >
                 <Settings className="h-4 w-4" />
-                {refreshing ? 'Vérif...' : 'Vérifier'}
+                {refreshing ? 'Vérif...' : 'Vérifier le statut'}
               </Button>
+              
+              {isNative && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const plugin = (window as any).CapacitorCustomPlugins?.PermissionsPlugin;
+                    if (plugin) {
+                      plugin.openAppSettings();
+                    } else if (typeof (window as any).AndroidBridge?.openAppSettings === 'function') {
+                      (window as any).AndroidBridge.openAppSettings();
+                    }
+                  }}
+                  className="gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Paramètres Android
+                </Button>
+              )}
             </div>
-            
-            <p className="text-xs text-muted-foreground mt-2">
-              💡 Si vous avez déjà activé les notifications dans les paramètres du téléphone, cliquez sur "Vérifier".
-            </p>
           </div>
         ) : (
           <div className="space-y-2">

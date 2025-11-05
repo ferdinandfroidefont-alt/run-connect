@@ -201,115 +201,17 @@ export const usePushNotifications = () => {
     }
   };
 
-  // Plugin natif (Android et iOS) avec compatibilité toutes versions
-  const requestNativeNotifications = async (): Promise<boolean> => {
-    const platform = Capacitor.getPlatform();
-    console.log(`🔔 Demande permissions notifications ${platform}...`);
-    
-    // iOS : demande native directe via PushNotifications
-    if (platform === 'ios') {
-      console.log('📱 iOS détecté : demande permission native Apple');
-      try {
-        const permResult = await PushNotifications.requestPermissions();
-        
-        if (permResult.receive === 'granted') {
-          console.log('✅ Permission iOS accordée');
-          await PushNotifications.register();
-          console.log('✅ PushNotifications.register() appelé (iOS)');
-          
-          // Attendre 1 seconde pour laisser Firebase générer le token
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // Vérifier si un token a été généré et sauvegardé
-          if (user?.id) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('push_token')
-              .eq('user_id', user.id)
-              .single();
-
-            if (profile?.push_token) {
-              console.log('✅ Token FCM confirmé en base:', profile.push_token.substring(0, 30) + '...');
-            } else {
-              console.warn('⚠️ PushNotifications.register() appelé mais aucun token en base après 1s');
-              console.warn('⚠️ Vérifiez les logs Firebase dans les logs iOS');
-            }
-          }
-          
-          toast({
-            title: "Notifications activées !",
-            description: "Vous recevrez les notifications de RunConnect"
-          });
-          return true;
-        } else {
-          console.warn('❌ Permission iOS refusée');
-          return false;
-        }
-      } catch (error) {
-        console.error('❌ Erreur permission iOS:', error);
-        return false;
-      }
-    }
-    
-    // Android : Appel direct AndroidBridge (MÊME CODE QUE useMultiplatformPermissions)
-    console.log('🤖 [ANDROID] Demande permission notifications via AndroidBridge...');
-    try {
-      // @ts-ignore - AndroidBridge natif
-      if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
-        console.log('✅ [ANDROID] AndroidBridge trouvé, appel requestNotificationPermissions()');
-        
-        // Créer une Promise pour gérer le callback asynchrone
-        const notificationPromise = new Promise<boolean>((resolve) => {
-          // Timeout de sécurité
-          const timeout = setTimeout(() => {
-            console.log('⏱️ [ANDROID] Timeout permission notifications');
-            resolve(false);
-          }, 30000); // 30 secondes max
-          
-          // Écouter le résultat
-          const handler = (event: any) => {
-            clearTimeout(timeout);
-            const granted = event.detail?.granted === true;
-            console.log('📱 [ANDROID] Résultat popup notifications:', granted ? 'ACCORDÉ ✅' : 'REFUSÉ ❌');
-            window.removeEventListener('androidPermissionsUpdated', handler);
-            resolve(granted);
-          };
-          
-          window.addEventListener('androidPermissionsUpdated', handler);
-        });
-        
-        // Déclencher la demande de permission (POPUP ANDROID SYSTÈME)
-        window.AndroidBridge.requestNotificationPermissions();
-        
-        // Attendre le résultat
-        const granted = await notificationPromise;
-        
-        if (granted) {
-          console.log('✅ [ANDROID] Permission notifications accordée');
-          toast({
-            title: "Notifications activées !",
-            description: "Vous recevrez les notifications de RunConnect"
-          });
-          return true;
-        } else {
-          console.log('❌ [ANDROID] Permission notifications refusée');
-          return false;
-        }
-      } else {
-        console.error('❌ [ANDROID] AndroidBridge.requestNotificationPermissions non trouvé !');
-        return false;
-      }
-    } catch (error) {
-      console.error('❌ [ANDROID] Erreur permission notifications:', error);
-      return false;
-    }
-  };
 
   const requestPermissions = async (): Promise<boolean> => {
-    console.log('🔔 Demande permissions notifications...');
+    console.log('🔔 [REQUEST] Vérification permissions notifications...');
     
     if (!isNative) {
       console.log('❌ Mode web détecté, notifications non supportées');
+      toast({
+        title: "Non supporté",
+        description: "Les notifications nécessitent l'application mobile",
+        variant: "destructive"
+      });
       return false;
     }
     
@@ -327,155 +229,49 @@ export const usePushNotifications = () => {
     }
     
     try {
-      // 🎯 Vérifier d'abord l'état Android injecté
+      // 🎯 Vérifier l'état Android injecté
       const androidState = window.androidPermissions?.notifications;
       
       if (androidState === 'granted') {
-        console.log('✅ Notifications déjà accordées selon Android');
+        console.log('✅ [REQUEST] Permissions déjà accordées');
         
-        // ✅ NOUVEAU: Vérifier si un token existe en base
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('push_token')
-          .eq('user_id', user?.id)
-          .single();
+        // Vérifier si un token existe en base
+        const hasToken = await ensureTokenRegistered();
         
-        if (!profile?.push_token) {
-          console.log('🔥 Token manquant - le système l\'enregistrera automatiquement');
+        if (hasToken) {
+          toast({
+            title: "Notifications activées",
+            description: "Vos notifications sont déjà configurées"
+          });
+        } else {
+          toast({
+            title: "Notifications activées",
+            description: "Token Firebase en cours de génération...",
+            variant: "default"
+          });
         }
         
         await checkPermissionStatus();
+        return true;
+      } else {
+        console.log('⚠️ [REQUEST] Permissions non accordées');
+        console.log('💡 [REQUEST] Les notifications sont demandées automatiquement au démarrage de l\'app');
         
         toast({
-          title: "Notifications déjà activées",
-          description: "Vos notifications sont déjà configurées"
-        });
-        return true;
-      }
-      
-      // ✅ MODIFIÉ: Toujours utiliser le plugin Android natif
-      console.log('🤖 Demande permission via AndroidBridge...');
-      
-      if (typeof window.AndroidBridge?.requestNotificationPermissions === 'function') {
-        console.log('✅ AndroidBridge trouvé');
-        
-        // Créer une Promise pour gérer le callback
-        const notificationPromise = new Promise<boolean>((resolve) => {
-          const timeout = setTimeout(() => {
-            console.log('⏱️ Timeout permission notifications');
-            resolve(false);
-          }, 30000);
-          
-          const handleGranted = () => {
-            clearTimeout(timeout);
-            console.log('✅ [ANDROID] Permission POST_NOTIFICATIONS accordée');
-            window.removeEventListener('androidNotificationPermissionGranted', handleGranted);
-            window.removeEventListener('androidNotificationPermissionDenied', handleDenied);
-            resolve(true);
-          };
-          
-          const handleDenied = () => {
-            clearTimeout(timeout);
-            console.log('❌ [ANDROID] Permission POST_NOTIFICATIONS refusée');
-            window.removeEventListener('androidNotificationPermissionGranted', handleGranted);
-            window.removeEventListener('androidNotificationPermissionDenied', handleDenied);
-            
-            toast({
-              title: "Permission refusée",
-              description: "Vous devez autoriser les notifications dans les paramètres Android",
-              variant: "destructive"
-            });
-            
-            resolve(false);
-          };
-          
-          window.addEventListener('androidNotificationPermissionGranted', handleGranted);
-          window.addEventListener('androidNotificationPermissionDenied', handleDenied);
+          title: "Permission manquante",
+          description: "Les notifications sont demandées au démarrage de l'app. Réinstallez l'app si nécessaire.",
+          variant: "default"
         });
         
-        // 🔥 DÉCLENCHER LA POPUP ANDROID
-        window.AndroidBridge.requestNotificationPermissions();
-        
-        // Attendre le résultat
-        const granted = await notificationPromise;
-        
-        if (granted) {
-          console.log('✅ Permission accordée, enregistrement FCM...');
-          
-          // ✅ Setup listeners d'abord
-          if (!listenersConfigured()) {
-            await setupPushListeners();
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-          
-          // ✅ CRITIQUE : Appel explicite à register()
-          try {
-            await PushNotifications.register();
-            console.log('✅ [FCM] PushNotifications.register() appelé');
-          } catch (error) {
-            console.error('❌ [FCM] Erreur lors de register():', error);
-          }
-          
-          // ✅ ATTENDRE LE TOKEN FIREBASE (max 5 secondes)
-          const tokenReceived = await new Promise<boolean>((resolve) => {
-            let tokenCheckCount = 0;
-            const maxChecks = 10; // 10 × 500ms = 5 secondes
-            
-            const checkToken = async () => {
-              tokenCheckCount++;
-              
-              // Vérifier si un token existe en base
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('push_token')
-                .eq('user_id', user?.id)
-                .single();
-              
-              if (profile?.push_token) {
-                console.log('✅ Token Firebase confirmé en base:', profile.push_token.substring(0, 30) + '...');
-                setToken(profile.push_token);
-                resolve(true);
-              } else if (tokenCheckCount >= maxChecks) {
-                console.warn('⏱️ Timeout: Token Firebase non reçu après 5 secondes');
-                resolve(false);
-              } else {
-                setTimeout(checkToken, 500);
-              }
-            };
-            
-            checkToken();
-          });
-          
-          if (tokenReceived) {
-            toast({
-              title: "Notifications activées !",
-              description: "Vous recevrez les notifications de RunConnect"
-            });
-          } else {
-            toast({
-              title: "Notifications activées",
-              description: "Token Firebase en attente...",
-              variant: "default"
-            });
-          }
-          
-          return tokenReceived;
-        } else {
-          console.log('❌ Permission refusée');
-          
-          toast({
-            title: "Permission refusée",
-            description: "Activez les notifications dans Paramètres > Applications > RunConnect",
-            variant: "destructive"
-          });
-          return false;
-        }
-      } else {
-        console.error('❌ AndroidBridge non disponible !');
         return false;
       }
     } catch (error) {
-      console.error('❌ Erreur demande permissions:', error);
+      console.error('❌ [REQUEST] Erreur:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de vérifier les permissions",
+        variant: "destructive"
+      });
       return false;
     }
   };
@@ -592,12 +388,7 @@ export const usePushNotifications = () => {
       return;
     }
 
-    // 🔥 Re-vérifier isNative au moment du clic
-    const currentlyNative = (window as any).CapacitorForceNative === true || 
-                            Capacitor.isNativePlatform() || 
-                            typeof (window as any).AndroidBridge !== 'undefined';
-
-    if (!currentlyNative) {
+    if (!isNative) {
       console.log('❌ [TEST] Mode web détecté');
       console.log('📱 [TEST] CapacitorForceNative:', (window as any).CapacitorForceNative);
       console.log('📱 [TEST] AndroidBridge:', typeof (window as any).AndroidBridge);
@@ -613,11 +404,30 @@ export const usePushNotifications = () => {
 
     // Vérifier si on a un token FCM
     if (!token || token.length < 50) {
-      toast({
-        title: "Token FCM manquant",
-        description: "Activez d'abord les notifications dans les paramètres",
-        variant: "destructive"
-      });
+      // Diagnostic précis
+      try {
+        const perms = await PushNotifications.checkPermissions();
+        
+        if (perms.receive !== 'granted') {
+          toast({
+            title: "Permissions manquantes",
+            description: "Acceptez d'abord la demande de notifications Android au démarrage de l'app",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Token Firebase manquant",
+            description: "Firebase n'a pas généré de token. Vérifiez google-services.json et les logs.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Token FCM manquant",
+          description: "Activez d'abord les notifications",
+          variant: "destructive"
+        });
+      }
       return;
     }
 
@@ -803,6 +613,80 @@ export const usePushNotifications = () => {
       console.error('❌ [LISTENERS] Erreur configuration listeners:', error);
     }
   }, [isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
+
+  // Centraliser la logique d'enregistrement du token FCM
+  const ensureTokenRegistered = useCallback(async (): Promise<boolean> => {
+    // Éviter les appels simultanés
+    if ((window as any).__fcmRegistering) {
+      console.log('⚠️ [FCM] Enregistrement déjà en cours, skip');
+      return false;
+    }
+    
+    try {
+      (window as any).__fcmRegistering = true;
+      console.log('🔥 [FCM] Vérification token...');
+      
+      // Vérifier token en base
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('push_token')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (profile?.push_token) {
+        console.log('✅ [FCM] Token déjà en base:', profile.push_token.substring(0, 30) + '...');
+        setToken(profile.push_token);
+        return true;
+      }
+      
+      console.log('🔄 [FCM] Token manquant, appel PushNotifications.register()...');
+      
+      // Setup listeners si pas déjà fait
+      if (!listenersConfigured()) {
+        await setupPushListeners();
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Appeler register()
+      await PushNotifications.register();
+      console.log('✅ [FCM] PushNotifications.register() appelé');
+      
+      // Attendre le token (max 5s)
+      const tokenReceived = await new Promise<boolean>((resolve) => {
+        let tokenCheckCount = 0;
+        const maxChecks = 10; // 10 × 500ms = 5 secondes
+        
+        const checkToken = async () => {
+          tokenCheckCount++;
+          
+          const { data: updatedProfile } = await supabase
+            .from('profiles')
+            .select('push_token')
+            .eq('user_id', user?.id)
+            .single();
+          
+          if (updatedProfile?.push_token) {
+            console.log('✅ [FCM] Token reçu:', updatedProfile.push_token.substring(0, 30) + '...');
+            setToken(updatedProfile.push_token);
+            resolve(true);
+          } else if (tokenCheckCount >= maxChecks) {
+            console.warn('⏱️ [FCM] Timeout: Token non reçu après 5 secondes');
+            resolve(false);
+          } else {
+            setTimeout(checkToken, 500);
+          }
+        };
+        
+        checkToken();
+      });
+      
+      return tokenReceived;
+      
+    } finally {
+      (window as any).__fcmRegistering = false;
+    }
+  }, [user, listenersConfigured, setupPushListeners]);
+
 
   // 🔥 SAUVEGARDER LE TOKEN EN ATTENTE DÈS QUE USER EST DÉFINI
   useEffect(() => {

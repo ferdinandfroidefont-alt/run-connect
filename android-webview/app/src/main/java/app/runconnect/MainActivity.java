@@ -411,35 +411,48 @@ public class MainActivity extends AppCompatActivity {
         }
         
         @android.webkit.JavascriptInterface
-        public void requestNotificationPermissions() {
-            Log.d(TAG, "🔔 AndroidBridge.requestNotificationPermissions() appelé");
+        public void sendTestNotification(String title, String message) {
+            Log.d(TAG, "🔔 [TEST] Envoi notification test locale...");
             
             runOnUiThread(() -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    // Vérifier si la permission est déjà accordée
-                    if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS) 
-                        == PackageManager.PERMISSION_GRANTED) {
+                try {
+                    NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    if (manager != null) {
+                        // Créer le canal si nécessaire
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            NotificationChannel channel = new NotificationChannel(
+                                "runconnect_channel",
+                                "RunConnect Notifications",
+                                NotificationManager.IMPORTANCE_HIGH
+                            );
+                            channel.setDescription("Notifications importantes de RunConnect");
+                            channel.enableVibration(true);
+                            channel.enableLights(true);
+                            manager.createNotificationChannel(channel);
+                        }
                         
-                        Log.d(TAG, "✅ Permission POST_NOTIFICATIONS déjà accordée");
+                        // Créer la notification
+                        NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, "runconnect_channel")
+                            .setSmallIcon(android.R.drawable.ic_dialog_info)
+                            .setContentTitle(title)
+                            .setContentText(message)
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setAutoCancel(true);
                         
-                        // Dispatcher l'événement de succès
-                        String jsSuccess = "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));";
-                        webView.post(() -> webView.evaluateJavascript(jsSuccess, null));
+                        manager.notify((int) System.currentTimeMillis(), builder.build());
                         
-                        return;
+                        // Dispatcher événement de succès
+                        String jsEvent = "window.dispatchEvent(new CustomEvent('testNotificationSent', { detail: { success: true } }));";
+                        webView.post(() -> webView.evaluateJavascript(jsEvent, null));
+                        
+                        Log.d(TAG, "✅ [TEST] Notification test envoyée");
                     }
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ [TEST] Erreur envoi notification test:", e);
                     
-                    // Demander la permission
-                    Log.d(TAG, "📱 Demande permission POST_NOTIFICATIONS via popup...");
-                    ActivityCompat.requestPermissions(MainActivity.this, 
-                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
-                        8888); // Code de requête unique pour les notifications
-                } else {
-                    // Android < 13 : pas besoin de permission POST_NOTIFICATIONS
-                    Log.d(TAG, "ℹ️ Android < 13, permission POST_NOTIFICATIONS non requise");
-                    
-                    String jsSuccess = "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));";
-                    webView.post(() -> webView.evaluateJavascript(jsSuccess, null));
+                    // Dispatcher événement d'erreur
+                    String jsEvent = "window.dispatchEvent(new CustomEvent('testNotificationSent', { detail: { success: false } }));";
+                    webView.post(() -> webView.evaluateJavascript(jsEvent, null));
                 }
             });
         }
@@ -473,21 +486,6 @@ public class MainActivity extends AppCompatActivity {
             return; // Ne pas traiter avec le code générique ci-dessous
         }
         
-        // 🔔 TRAITEMENT SPÉCIAL POUR LE CODE 8888 (notifications via AndroidBridge)
-        if (requestCode == 8888) {
-            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-            
-            Log.d(TAG, "📱 Résultat permission POST_NOTIFICATIONS: " + (granted ? "ACCORDÉE ✅" : "REFUSÉE ❌"));
-            
-            // Dispatcher l'événement JavaScript correspondant
-            String jsEvent = granted 
-                ? "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));"
-                : "window.dispatchEvent(new CustomEvent('androidNotificationPermissionDenied'));";
-            
-            webView.post(() -> webView.evaluateJavascript(jsEvent, null));
-            
-            return; // Ne pas traiter avec le code générique ci-dessous
-        }
         
         // 📱 CODE GÉNÉRIQUE POUR LES AUTRES PERMISSIONS (location, camera, etc.)
         StringBuilder resultJson = new StringBuilder("{");
