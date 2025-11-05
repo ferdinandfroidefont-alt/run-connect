@@ -277,11 +277,8 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl(START_URL);
         setContentView(webView);
 
-        // ✅ INITIALISATION FIREBASE CLOUD MESSAGING
+        // ✅ CRÉATION DU CANAL DE NOTIFICATION (obligatoire Android 8+)
         try {
-            Log.d(TAG, "🔔 Initialisation Firebase Cloud Messaging...");
-            
-            // Créer le canal de notification (obligatoire Android 8+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationChannel channel = new NotificationChannel(
                     "runconnect_channel",
@@ -300,25 +297,8 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "✅ Canal de notification créé");
                 }
             }
-            
-            // Récupérer le token FCM
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "❌ Impossible d'obtenir le token FCM", task.getException());
-                        return;
-                    }
-                    String token = task.getResult();
-                    Log.d(TAG, "✅ Token FCM reçu : " + token);
-
-                // Injecter dans la WebView avec plateforme Android explicite
-                String jsCode = "window.fcmToken = '" + token + "';" +
-                    "window.fcmTokenPlatform = 'android';" +
-                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
-                webView.post(() -> webView.evaluateJavascript(jsCode, null));
-                });
         } catch (Exception e) {
-            Log.e(TAG, "❌ Erreur initialisation FCM:", e);
+            Log.e(TAG, "❌ Erreur création canal notification:", e);
         }
 
         // ✅ DEMANDER LA PERMISSION NOTIFICATIONS (Android 13+)

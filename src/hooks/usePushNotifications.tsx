@@ -29,12 +29,40 @@ export const usePushNotifications = () => {
   // 🔥 Track if token needs renewal
   const [tokenNeedsRenewal, setTokenNeedsRenewal] = useState(false);
   
-  // 🔥 FONCTION HELPER pour réévaluer isNative dynamiquement
-  const checkIsNative = () => (window as any).CapacitorForceNative === true || Capacitor.isNativePlatform() || typeof (window as any).AndroidBridge !== 'undefined';
+  // 🔥 DÉTECTION NATIVE RÉACTIVE (useState pour re-render quand AndroidBridge arrive)
+  const [isNative, setIsNative] = useState(() => {
+    return (window as any).CapacitorForceNative === true || 
+           Capacitor.isNativePlatform() || 
+           typeof (window as any).AndroidBridge !== 'undefined';
+  });
   
-  // DÉTECTION NATIVE UNIFIÉE - utilise le même flag que useMultiplatformPermissions
-  const isNative = checkIsNative();
   const isSupported = isNative || ('Notification' in window);
+  
+  // 🔄 Re-vérifier isNative dynamiquement pendant les 5 premières secondes
+  useEffect(() => {
+    const recheckNative = () => {
+      const nativeNow = (window as any).CapacitorForceNative === true || 
+                        Capacitor.isNativePlatform() || 
+                        typeof (window as any).AndroidBridge !== 'undefined';
+      
+      if (nativeNow !== isNative) {
+        console.log('🔄 [NATIVE] Détection mise à jour:', isNative, '→', nativeNow);
+        setIsNative(nativeNow);
+      }
+    };
+
+    // Vérifier toutes les 500ms pendant les 5 premières secondes
+    const interval = setInterval(recheckNative, 500);
+    setTimeout(() => clearInterval(interval), 5000);
+
+    // Écouter l'événement capacitorNativeReady
+    window.addEventListener('capacitorNativeReady', recheckNative);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('capacitorNativeReady', recheckNative);
+    };
+  }, [isNative]);
   
   // Détection de la plateforme iOS
   const isIOS = () => {
@@ -59,30 +87,7 @@ export const usePushNotifications = () => {
           });
           setIsRegistered(granted);
           
-          // 🔥 SI permission accordée, vérifier si un token existe en base
-          if (granted && user?.id) {
-            setTimeout(async () => {
-              try {
-                // Vérifier dans la base si un token existe déjà
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('push_token')
-                  .eq('user_id', user.id)
-                  .single();
-
-                if (!profile?.push_token) {
-                  console.log('🔥 [NOTIF CHECK] Aucun token en base, enregistrement Firebase...');
-                  await PushNotifications.register();
-                  console.log('✅ [NOTIF CHECK] PushNotifications.register() appelé avec succès');
-                } else {
-                  console.log('✅ [NOTIF CHECK] Token déjà présent en base:', profile.push_token.substring(0, 30) + '...');
-                  setToken(profile.push_token); // Synchroniser l'état React
-                }
-              } catch (error) {
-                console.error('❌ [NOTIF CHECK] Erreur lors du check token:', error);
-              }
-            }, 500); // 500ms delay pour laisser les listeners se mettre en place
-          }
+          // Permission accordée, mais on ne force PAS le register() ici
           
           // Cross-vérification avec Capacitor pour logger les divergences
           try {
@@ -151,14 +156,7 @@ export const usePushNotifications = () => {
           .single();
 
         if (!profile?.push_token) {
-          console.log('🔥 [NATIVE CHECK] Aucun token en base, enregistrement Firebase...');
-          
-          // Configuration listeners puis enregistrement FCM
-          console.log('🔔 [NATIVE] Configuration listeners puis enregistrement FCM...');
-          await setupPushListeners();
-          await new Promise(resolve => setTimeout(resolve, 100));
-          await PushNotifications.register();
-          console.log('✅ [NATIVE CHECK] PushNotifications.register() appelé');
+          console.log('🔥 [NATIVE CHECK] Aucun token en base - le système l\'enregistrera automatiquement');
         } else {
           console.log('✅ [NATIVE CHECK] Token déjà présent en base:', profile.push_token.substring(0, 30) + '...');
           setToken(profile.push_token);
@@ -343,9 +341,7 @@ export const usePushNotifications = () => {
           .single();
         
         if (!profile?.push_token) {
-          console.log('🔥 Token manquant, enregistrement Firebase...');
-          await setupPushListeners();
-          await PushNotifications.register();
+          console.log('🔥 Token manquant - le système l\'enregistrera automatiquement');
         }
         
         await checkPermissionStatus();
@@ -580,8 +576,17 @@ export const usePushNotifications = () => {
       return;
     }
 
-    // Vérifier si on est sur mobile natif
-    if (!isNative) {
+    // 🔥 Re-vérifier isNative au moment du clic
+    const currentlyNative = (window as any).CapacitorForceNative === true || 
+                            Capacitor.isNativePlatform() || 
+                            typeof (window as any).AndroidBridge !== 'undefined';
+
+    if (!currentlyNative) {
+      console.log('❌ [TEST] Mode web détecté');
+      console.log('📱 [TEST] CapacitorForceNative:', (window as any).CapacitorForceNative);
+      console.log('📱 [TEST] AndroidBridge:', typeof (window as any).AndroidBridge);
+      console.log('📱 [TEST] Platform:', Capacitor.getPlatform());
+      
       toast({
         title: "Mode Web détecté",
         description: "Les notifications push nécessitent l'application Android ou iOS",
@@ -791,108 +796,33 @@ export const usePushNotifications = () => {
     }
   }, [user, pendingToken, savePushToken]);
 
-  // 🔥 ÉCOUTER LE TOKEN FCM INJECTÉ PAR MAINACTIVITY
+  // 🔥 FALLBACK: Vérifier window.fcmToken (au cas où MainActivity l'aurait injecté avant React)
   useEffect(() => {
     if (!isNative) return;
 
-    const handleFCMTokenFromNative = (event: any) => {
-      const nativeToken = event.detail?.token;
-      if (nativeToken) {
-        console.log('🔥🔥🔥 [FCM EVENT] Token FCM reçu de MainActivity !');
-        console.log('🔥 [FCM EVENT] Token:', nativeToken.substring(0, 30) + '...');
+    const checkWindowToken = () => {
+      if ((window as any).fcmToken && !(window as any).fcmTokenChecked) {
+        console.log('🔥 [WINDOW] Token trouvé dans window.fcmToken');
+        const existingToken = (window as any).fcmToken;
         
-        setToken(nativeToken);
+        setToken(existingToken);
         setIsRegistered(true);
+        savePushToken(existingToken);
         
-        // Sauvegarder immédiatement (ou mettre en attente si user pas défini)
-        savePushToken(nativeToken);
+        (window as any).fcmTokenChecked = true; // Flag pour éviter de re-sauvegarder
       }
     };
 
-    window.addEventListener('fcmTokenReady', handleFCMTokenFromNative);
+    // Vérifier immédiatement
+    checkWindowToken();
     
-    // Vérifier si un token est déjà disponible dans window
-    if ((window as any).fcmToken) {
-      console.log('🔥 [FCM CHECK] Token déjà disponible dans window.fcmToken');
-      const existingToken = (window as any).fcmToken;
-      setToken(existingToken);
-      setIsRegistered(true);
-      savePushToken(existingToken);
-    }
-
-    return () => {
-      window.removeEventListener('fcmTokenReady', handleFCMTokenFromNative);
-    };
-  }, [isNative, savePushToken]);
-
-  // 🔥 NOUVEAU: Vérifier l'âge du token et forcer le renouvellement si nécessaire
-  useEffect(() => {
-    if (!user?.id || !isNative) return;
-
-    const checkTokenAge = async () => {
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('push_token, push_token_updated_at')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!profile) return;
-
-        // Si pas de token, pas de vérification nécessaire
-        if (!profile.push_token) {
-          console.log('⚠️ [TOKEN AGE] Aucun token en base');
-          return;
-        }
-
-        // Si pas de date de mise à jour, considérer le token comme ancien
-        if (!profile.push_token_updated_at) {
-          console.log('⚠️ [TOKEN AGE] Token sans date de mise à jour, considéré comme ancien');
-          setTokenNeedsRenewal(true);
-          return;
-        }
-
-        // Calculer l'âge du token
-        const tokenDate = new Date(profile.push_token_updated_at);
-        const now = new Date();
-        const ageInDays = Math.floor((now.getTime() - tokenDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        console.log(`📅 [TOKEN AGE] Token vieux de ${ageInDays} jours`);
-
-        // Si le token a plus de 60 jours, forcer le renouvellement
-        if (ageInDays > 60) {
-          console.log('🔄 [TOKEN AGE] Token > 60 jours, renouvellement nécessaire');
-          setTokenNeedsRenewal(true);
-          
-          // Forcer le renouvellement si les permissions sont accordées
-          const permStatus = await PushNotifications.checkPermissions();
-          if (permStatus.receive === 'granted') {
-            console.log('✅ [TOKEN AGE] Permissions accordées, lancement renouvellement...');
-            try {
-              await PushNotifications.register();
-              console.log('✅ [TOKEN AGE] PushNotifications.register() appelé pour renouvellement');
-              setTokenNeedsRenewal(false);
-            } catch (error) {
-              console.error('❌ [TOKEN AGE] Erreur lors du renouvellement:', error);
-            }
-          }
-        } else {
-          console.log('✅ [TOKEN AGE] Token récent, pas de renouvellement nécessaire');
-          setTokenNeedsRenewal(false);
-        }
-      } catch (error) {
-        console.error('❌ [TOKEN AGE] Erreur vérification âge token:', error);
-      }
-    };
-
-    // Vérifier immédiatement au montage
-    checkTokenAge();
-
-    // Revérifier toutes les 24h
-    const interval = setInterval(checkTokenAge, 24 * 60 * 60 * 1000);
+    // Vérifier toutes les 500ms pendant 10 secondes (au cas où MainActivity est lente)
+    const interval = setInterval(checkWindowToken, 500);
+    setTimeout(() => clearInterval(interval), 10000);
 
     return () => clearInterval(interval);
-  }, [user, isNative]);
+  }, [isNative, savePushToken]);
+
 
   // Configuration au montage
   useEffect(() => {
@@ -900,6 +830,10 @@ export const usePushNotifications = () => {
 
     const initializePushNotifications = async () => {
       console.log('🚀 [INIT] Initialisation système de notifications...');
+      console.log('📱 [INIT] isNative:', isNative);
+      console.log('📱 [INIT] CapacitorForceNative:', (window as any).CapacitorForceNative);
+      console.log('📱 [INIT] AndroidBridge:', typeof (window as any).AndroidBridge);
+      console.log('📱 [INIT] Capacitor.getPlatform():', Capacitor.getPlatform());
       
       // 🔥 VÉRIFIER FLAG GLOBAL
       if ((window as any).__pushNotificationSystemInitialized) {
@@ -1052,57 +986,6 @@ export const usePushNotifications = () => {
     };
   }, [user, isNative, setupPushListeners, checkPermissionStatus, toast]);
 
-  // 🔥 NOUVEAU: Vérification périodique de l'état Android
-  useEffect(() => {
-    if (!isNative || !user) return;
-
-    // Vérifier toutes les 5 secondes si l'app est active
-    const intervalId = setInterval(async () => {
-      try {
-        // Vérifier l'état réel via Capacitor
-        const status = await PushNotifications.checkPermissions();
-        
-        // Comparer avec l'état actuel
-        const currentlyGranted = permissionStatus.granted;
-        const actuallyGranted = status.receive === 'granted';
-        
-        if (currentlyGranted !== actuallyGranted) {
-          console.log('🔄 [SYNC] État notifications changé:', {
-            avant: currentlyGranted,
-            maintenant: actuallyGranted
-          });
-          
-          // Mettre à jour l'état React
-          setPermissionStatus({
-            granted: actuallyGranted,
-            denied: status.receive === 'denied',
-            prompt: status.receive === 'prompt'
-          });
-          
-          setIsRegistered(actuallyGranted);
-          
-          // Si désactivé dans les paramètres, supprimer le token
-          if (!actuallyGranted && user?.id) {
-            await supabase
-              .from('profiles')
-              .update({ push_token: null })
-              .eq('user_id', user.id);
-            
-            setToken(null);
-            
-            toast({
-              title: "Notifications désactivées",
-              description: "Les notifications ont été désactivées dans les paramètres"
-            });
-          }
-        }
-      } catch (error) {
-        console.error('❌ Erreur sync notifications:', error);
-      }
-    }, 5000); // Vérification toutes les 5 secondes
-
-    return () => clearInterval(intervalId);
-  }, [isNative, user, permissionStatus.granted, toast]);
 
   return {
     isRegistered,
