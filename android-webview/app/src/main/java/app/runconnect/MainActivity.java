@@ -301,17 +301,6 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "❌ Erreur création canal notification:", e);
         }
 
-        // ✅ DEMANDER LA PERMISSION NOTIFICATIONS (Android 13+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
-                != PackageManager.PERMISSION_GRANTED) {
-                
-                Log.d(TAG, "📱 Demande permission POST_NOTIFICATIONS...");
-                ActivityCompat.requestPermissions(this, 
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
-                    9999);
-            }
-        }
 
         // Repassage en hardware après 1s
         webView.postDelayed(() -> {
@@ -405,6 +394,40 @@ public class MainActivity extends AppCompatActivity {
                 });
             });
         }
+        
+        @android.webkit.JavascriptInterface
+        public void requestNotificationPermissions() {
+            Log.d(TAG, "🔔 AndroidBridge.requestNotificationPermissions() appelé");
+            
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Vérifier si la permission est déjà accordée
+                    if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS) 
+                        == PackageManager.PERMISSION_GRANTED) {
+                        
+                        Log.d(TAG, "✅ Permission POST_NOTIFICATIONS déjà accordée");
+                        
+                        // Dispatcher l'événement de succès
+                        String jsSuccess = "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));";
+                        webView.post(() -> webView.evaluateJavascript(jsSuccess, null));
+                        
+                        return;
+                    }
+                    
+                    // Demander la permission
+                    Log.d(TAG, "📱 Demande permission POST_NOTIFICATIONS via popup...");
+                    ActivityCompat.requestPermissions(MainActivity.this, 
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
+                        8888); // Code de requête unique pour les notifications
+                } else {
+                    // Android < 13 : pas besoin de permission POST_NOTIFICATIONS
+                    Log.d(TAG, "ℹ️ Android < 13, permission POST_NOTIFICATIONS non requise");
+                    
+                    String jsSuccess = "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));";
+                    webView.post(() -> webView.evaluateJavascript(jsSuccess, null));
+                }
+            });
+        }
     }
 
     @Override
@@ -420,6 +443,23 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @androidx.annotation.NonNull String[] permissions, @androidx.annotation.NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         
+        // 🔔 TRAITEMENT SPÉCIAL POUR LE CODE 8888 (notifications via AndroidBridge)
+        if (requestCode == 8888) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            
+            Log.d(TAG, "📱 Résultat permission POST_NOTIFICATIONS: " + (granted ? "ACCORDÉE ✅" : "REFUSÉE ❌"));
+            
+            // Dispatcher l'événement JavaScript correspondant
+            String jsEvent = granted 
+                ? "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));"
+                : "window.dispatchEvent(new CustomEvent('androidNotificationPermissionDenied'));";
+            
+            webView.post(() -> webView.evaluateJavascript(jsEvent, null));
+            
+            return; // Ne pas traiter avec le code générique ci-dessous
+        }
+        
+        // 📱 CODE GÉNÉRIQUE POUR LES AUTRES PERMISSIONS (location, camera, etc.)
         StringBuilder resultJson = new StringBuilder("{");
         for (int i = 0; i < permissions.length; i++) {
             String permission = permissions[i];

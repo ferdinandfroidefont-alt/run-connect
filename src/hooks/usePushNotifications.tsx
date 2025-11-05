@@ -366,15 +366,31 @@ export const usePushNotifications = () => {
             resolve(false);
           }, 30000);
           
-          const handler = (event: any) => {
+          const handleGranted = () => {
             clearTimeout(timeout);
-            const granted = event.detail?.granted === true;
-            console.log('📱 Résultat popup notifications:', granted ? 'ACCORDÉ ✅' : 'REFUSÉ ❌');
-            window.removeEventListener('androidPermissionsUpdated', handler);
-            resolve(granted);
+            console.log('✅ [ANDROID] Permission POST_NOTIFICATIONS accordée');
+            window.removeEventListener('androidNotificationPermissionGranted', handleGranted);
+            window.removeEventListener('androidNotificationPermissionDenied', handleDenied);
+            resolve(true);
           };
           
-          window.addEventListener('androidPermissionsUpdated', handler);
+          const handleDenied = () => {
+            clearTimeout(timeout);
+            console.log('❌ [ANDROID] Permission POST_NOTIFICATIONS refusée');
+            window.removeEventListener('androidNotificationPermissionGranted', handleGranted);
+            window.removeEventListener('androidNotificationPermissionDenied', handleDenied);
+            
+            toast({
+              title: "Permission refusée",
+              description: "Vous devez autoriser les notifications dans les paramètres Android",
+              variant: "destructive"
+            });
+            
+            resolve(false);
+          };
+          
+          window.addEventListener('androidNotificationPermissionGranted', handleGranted);
+          window.addEventListener('androidNotificationPermissionDenied', handleDenied);
         });
         
         // 🔥 DÉCLENCHER LA POPUP ANDROID
