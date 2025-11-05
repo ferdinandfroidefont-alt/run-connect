@@ -77,38 +77,6 @@ public class MainActivity extends AppCompatActivity {
         
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
-        
-        // 🔥 INITIALISER FIREBASE (CRITIQUE POUR FCM)
-        try {
-            FirebaseApp.initializeApp(this);
-            Log.d(TAG, "🔥 Firebase initialisé avec succès");
-            
-            // 🔥 Récupérer le token FCM immédiatement
-            FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.e(TAG, "❌ Échec récupération token FCM", task.getException());
-                        return;
-                    }
-                    
-                    String token = task.getResult();
-                    Log.d(TAG, "🔥 Token FCM récupéré: " + (token != null ? token.substring(0, Math.min(30, token.length())) + "..." : "null"));
-                    
-                    if (token != null && webView != null) {
-                        // Injecter dans la WebView
-                        webView.post(() -> {
-                            String jsCode = "window.fcmToken = '" + token + "';" +
-                                "window.fcmTokenPlatform = 'android';" +
-                                "console.log('🔥 [FCM] Token injecté:', window.fcmToken.substring(0, 30) + '...');" +
-                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
-                            webView.evaluateJavascript(jsCode, null);
-                            Log.d(TAG, "✅ Token FCM injecté dans WebView");
-                        });
-                    }
-                });
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
-        }
 
         // Full screen immersif + transparent
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
@@ -230,6 +198,40 @@ public class MainActivity extends AppCompatActivity {
         // ✅ AJOUTER L'INTERFACE JAVASCRIPT ANDROIDBRIDGE
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         Log.d(TAG, "✅ AndroidBridge interface ajoutée à la WebView");
+
+        // 🔥 INITIALISER FIREBASE (APRÈS WebView)
+        try {
+            FirebaseApp.initializeApp(this);
+            Log.d(TAG, "🔥 Firebase initialisé avec succès");
+            
+            // 🔥 Récupérer le token FCM immédiatement
+            FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.e(TAG, "❌ Échec récupération token FCM", task.getException());
+                        return;
+                    }
+                    
+                    String token = task.getResult();
+                    Log.d(TAG, "🔥 Token FCM récupéré: " + (token != null ? token.substring(0, Math.min(30, token.length())) + "..." : "null"));
+                    
+                    if (token != null) {
+                        // ✅ WebView existe maintenant, on peut injecter
+                        webView.post(() -> {
+                            String jsCode = "window.fcmToken = '" + token + "';" +
+                                "window.fcmTokenPlatform = 'android';" +
+                                "console.log('🔥 [FCM] Token injecté:', window.fcmToken.substring(0, 30) + '...');" +
+                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
+                            webView.evaluateJavascript(jsCode, null);
+                            Log.d(TAG, "✅ Token FCM injecté dans WebView");
+                        });
+                    } else {
+                        Log.e(TAG, "❌ Token FCM est null");
+                    }
+                });
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
+        }
 
         // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
