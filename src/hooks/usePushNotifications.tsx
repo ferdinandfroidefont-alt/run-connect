@@ -570,27 +570,43 @@ export const usePushNotifications = () => {
 
   // Test de notification
   const testNotification = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.error('❌ [TEST] No user session');
+      toast({
+        title: "Erreur",
+        description: "Vous devez être connecté pour tester les notifications",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Vérifier si on est sur mobile natif
+    if (!isNative) {
+      toast({
+        title: "Mode Web détecté",
+        description: "Les notifications push nécessitent l'application Android ou iOS",
+        variant: "default"
+      });
+      return;
+    }
+
+    // Vérifier si on a un token FCM
+    if (!token || token.length < 50) {
+      toast({
+        title: "Token FCM manquant",
+        description: "Activez d'abord les notifications dans les paramètres",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
-      console.log('🧪 Test notification...');
+      console.log('🧪 [TEST] Sending test notification...');
       
-      // Vérifier la session AVANT l'appel
+      // Vérifier la session
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔐 Session active:', !!session);
-      console.log('🔐 Access token présent:', !!session?.access_token);
-      
-      if (!session) {
-        toast({
-          title: "Erreur d'authentification",
-          description: "Vous devez être connecté pour tester les notifications",
-          variant: "destructive"
-        });
-        return;
-      }
-
       if (!session?.access_token) {
-        console.error('❌ Pas de token JWT disponible');
+        console.error('❌ [TEST] No JWT token');
         toast({
           title: "Erreur JWT",
           description: "Impossible d'authentifier la requête",
@@ -598,8 +614,7 @@ export const usePushNotifications = () => {
         });
         return;
       }
-      
-      console.log('🔑 Appel Edge Function avec JWT');
+
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -614,27 +629,53 @@ export const usePushNotifications = () => {
       });
 
       if (error) {
-        console.error('❌ Erreur test notification:', {
-          message: error.message,
-          status: error.status,
-          details: error
-        });
+        console.error('❌ [TEST] Edge function error:', error);
+        
+        // Diagnostic plus précis
+        if (error.message?.includes('non-2xx')) {
+          toast({
+            title: "Erreur serveur",
+            description: "La fonction d'envoi a échoué. Vérifiez les logs Supabase.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Erreur test",
+            description: error.message || "Erreur inconnue",
+            variant: "destructive"
+          });
+        }
+        return;
+      }
+
+      // Vérifier le résultat
+      if (data?.web_only) {
         toast({
-          title: "Erreur test",
-          description: `Impossible d'envoyer la notification de test: ${error.message}`,
-          variant: "destructive"
+          title: "Mode Web",
+          description: "Les notifications nécessitent l'app Android/iOS installée",
+          variant: "default"
+        });
+      } else if (data?.fcm_sent) {
+        toast({
+          title: "✅ Notification envoyée !",
+          description: "Vérifiez votre barre de notification Android",
         });
       } else {
-        console.log('✅ Test notification envoyé, réponse:', data);
         toast({
-          title: "Test envoyé",
-          description: "Notification de test envoyée avec succès!"
+          title: "Notification créée",
+          description: "Enregistrée en base mais non envoyée (token invalide ?)",
+          variant: "default"
         });
       }
-    } catch (error) {
-      console.error('❌ Exception test notification:', error);
+    } catch (error: any) {
+      console.error('❌ [TEST] Exception:', error);
+      toast({
+        title: "Erreur test",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive"
+      });
     }
-  }, [user, toast]);
+  }, [user, toast, isNative, token]);
 
   // Ref pour tracker si les listeners sont configurés
   const listenersConfigured = useCallback(() => {

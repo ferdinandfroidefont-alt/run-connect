@@ -368,7 +368,22 @@ serve(async (req) => {
       )
     }
 
-    // 5. Create notification record in database (only if preferences allow it)
+    // 5. Vérifier si c'est un appareil mobile avec push_token AVANT l'INSERT
+    const hasPushToken = profile.push_token && profile.push_token.length > 50;
+
+    if (!hasPushToken) {
+      console.log('⚠️ [TOKEN] No valid push_token → Skipping notification (web browser or no FCM registration)')
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          message: 'Pas de token FCM (navigateur web ou notifications non activées)',
+          web_only: true
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // 6. Create notification record ONLY if we have a push token
     const { data: notificationData, error: notifError } = await supabaseClient
       .from('notifications')
       .insert({
@@ -391,20 +406,6 @@ serve(async (req) => {
     } else {
       notificationId = notificationData?.id;
       console.log('✅ [DB] Notification saved with ID:', notificationId)
-    }
-
-    // 6. If no push token, return early
-    if (!profile.push_token) {
-      console.log('⚠️ [TOKEN] No push_token → Database notification only')
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          message: 'Notification créée en base (pas de push token)',
-          notification_id: notificationId,
-          db_only: true
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
     }
 
     // 7. Get Firebase access token and send FCM push notification
