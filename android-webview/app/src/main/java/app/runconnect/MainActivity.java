@@ -301,6 +301,21 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "❌ Erreur création canal notification:", e);
         }
 
+        // ✅ DEMANDER LA PERMISSION NOTIFICATIONS AU DÉMARRAGE (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                
+                Log.d(TAG, "📱 [STARTUP] Demande permission POST_NOTIFICATIONS au démarrage...");
+                ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
+                    9999); // Code de requête pour demande auto au démarrage
+            } else {
+                Log.d(TAG, "✅ [STARTUP] Permission POST_NOTIFICATIONS déjà accordée");
+            }
+        } else {
+            Log.d(TAG, "ℹ️ [STARTUP] Android < 13, permission POST_NOTIFICATIONS non requise");
+        }
 
         // Repassage en hardware après 1s
         webView.postDelayed(() -> {
@@ -442,6 +457,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @androidx.annotation.NonNull String[] permissions, @androidx.annotation.NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        // 🔔 TRAITEMENT SPÉCIAL POUR LE CODE 9999 (demande auto au démarrage)
+        if (requestCode == 9999) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            
+            Log.d(TAG, "📱 [STARTUP] Permission POST_NOTIFICATIONS: " + (granted ? "ACCORDÉE ✅" : "REFUSÉE ❌"));
+            
+            if (granted) {
+                // Dispatcher événement JavaScript pour initialiser FCM
+                String jsEvent = "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));";
+                webView.post(() -> webView.evaluateJavascript(jsEvent, null));
+            }
+            
+            return; // Ne pas traiter avec le code générique ci-dessous
+        }
         
         // 🔔 TRAITEMENT SPÉCIAL POUR LE CODE 8888 (notifications via AndroidBridge)
         if (requestCode == 8888) {
