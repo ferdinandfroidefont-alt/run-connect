@@ -408,7 +408,9 @@ serve(async (req) => {
     }
 
     // 7. Get Firebase access token and send FCM push notification
-    console.log('🔐 Getting Firebase access token...');
+    console.log('🔐 [AUTH] Getting Firebase access token...');
+    console.log('📋 [AUTH] Project ID:', serviceAccount.project_id);
+    console.log('📋 [AUTH] Client email:', serviceAccount.client_email);
     
     // Customize notification content based on type
     let finalTitle = title;
@@ -463,16 +465,21 @@ serve(async (req) => {
     }
     
     try {
+      console.log('1️⃣ [FCM] Génération du JWT Firebase...');
       const accessToken = await getFirebaseAccessToken(serviceAccount);
-      console.log('✅ Access token obtained, length:', accessToken.length);
+      console.log('✅ [FCM] Access token obtenu, longueur:', accessToken.length);
+      console.log('📋 [FCM] Token preview:', accessToken.substring(0, 50) + '...');
       
-      console.log('🚀 Sending FCM notification...');
-      console.log('📋 Project ID:', serviceAccount.project_id);
-      console.log('📋 Token preview:', profile.push_token.substring(0, 30) + '...');
-      console.log('📋 Channel ID: runconnect_channel');
-      console.log('📋 Title:', finalTitle);
-      console.log('📋 Body preview:', finalBody.substring(0, 50) + '...');
+      console.log('2️⃣ [FCM] Envoi de la notification...');
+      console.log('📋 [FCM] Project ID:', serviceAccount.project_id);
+      console.log('📋 [FCM] Push token (user):', profile.push_token.substring(0, 30) + '...');
+      console.log('📋 [FCM] Full token length:', profile.push_token.length);
+      console.log('📋 [FCM] Channel ID: runconnect_channel');
+      console.log('📋 [FCM] Title:', finalTitle);
+      console.log('📋 [FCM] Body preview:', finalBody.substring(0, 100));
+      console.log('📋 [FCM] Data:', JSON.stringify(fcmData));
       
+      console.log('3️⃣ [FCM] Appel API FCM...');
       const fcmResult = await sendFCMNotification(
         accessToken,
         serviceAccount.project_id,
@@ -558,7 +565,11 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } catch (fcmError) {
-      console.error('❌ FCM error:', fcmError);
+      console.error('❌ [FCM ERROR] Exception lors de l\'envoi FCM');
+      console.error('📋 [FCM ERROR] Error type:', typeof fcmError);
+      console.error('📋 [FCM ERROR] Error message:', fcmError instanceof Error ? fcmError.message : String(fcmError));
+      console.error('📋 [FCM ERROR] Full error:', fcmError);
+      console.error('📋 [FCM ERROR] Stack trace:', fcmError instanceof Error ? fcmError.stack : 'N/A');
       
       // Log the error
       if (notificationId) {
@@ -591,9 +602,18 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('❌ General error:', error)
+    console.error('❌ [GENERAL ERROR] Exception globale dans la fonction');
+    console.error('📋 [GENERAL ERROR] Error type:', typeof error);
+    console.error('📋 [GENERAL ERROR] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('📋 [GENERAL ERROR] Full error:', error);
+    console.error('📋 [GENERAL ERROR] Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    
     return new Response(
-      JSON.stringify({ error: 'Erreur serveur interne', details: String(error) }),
+      JSON.stringify({ 
+        error: 'Erreur serveur interne', 
+        details: error instanceof Error ? error.message : String(error),
+        type: typeof error
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

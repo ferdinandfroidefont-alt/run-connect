@@ -643,11 +643,18 @@ export const usePushNotifications = () => {
 
   // Configuration des listeners (DOIT être appelé AVANT register())
   const setupPushListeners = useCallback(async () => {
-    if (!isNative || (window as any).__pushListenersConfigured) {
+    // 🔥 FLAG GLOBAL pour éviter la double configuration
+    if (!isNative) {
+      console.log('⚠️ [LISTENERS] Mode web, pas de configuration nécessaire');
+      return;
+    }
+    
+    if ((window as any).__pushNotificationSystemInitialized) {
+      console.log('⚠️ [LISTENERS] Listeners déjà configurés, skip');
       return;
     }
 
-    console.log('🎧 Configuration listeners push natifs...');
+    console.log('🎧 [LISTENERS] Configuration listeners push natifs...');
     
     try {
       // Succès d'enregistrement
@@ -726,10 +733,12 @@ export const usePushNotifications = () => {
         handleNotificationTap(notification.notification);
       });
 
+      // 🔥 FLAG GLOBAL UNIQUE
+      (window as any).__pushNotificationSystemInitialized = true;
       (window as any).__pushListenersConfigured = true;
-      console.log('✅ Listeners push configurés');
+      console.log('✅ [LISTENERS] Listeners push configurés avec succès');
     } catch (error) {
-      console.error('❌ Erreur configuration listeners:', error);
+      console.error('❌ [LISTENERS] Erreur configuration listeners:', error);
     }
   }, [isNative, savePushToken, handleNotificationTap, checkPermissionStatus, toast]);
 
@@ -844,75 +853,39 @@ export const usePushNotifications = () => {
     return () => clearInterval(interval);
   }, [user, isNative]);
 
-  // 🆕 Synchronisation token Firebase avec DB au démarrage
-  useEffect(() => {
-    if (!isNative || !isRegistered || !user) return;
-
-    const syncFirebaseToken = async () => {
-      try {
-        console.log('🔄 [TOKEN_SYNC] Checking token synchronization...');
-        
-        // Ajouter un listener pour récupérer le token actuel
-        const listener = await PushNotifications.addListener('registration', (token) => {
-          console.log('🔄 [TOKEN_SYNC] Current Firebase token:', token.value);
-          
-          // Comparer avec le token en base
-          const checkAndUpdate = async () => {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('push_token')
-              .eq('user_id', user.id)
-              .single();
-            
-            if (profile && profile.push_token !== token.value) {
-              console.log('⚠️ [TOKEN_SYNC] Token mismatch detected! Updating...');
-              console.log('  DB token:', profile.push_token);
-              console.log('  Firebase token:', token.value);
-              await savePushToken(token.value);
-            } else {
-              console.log('✅ [TOKEN_SYNC] Tokens are synchronized');
-            }
-          };
-          
-          checkAndUpdate();
-        });
-        
-        // Forcer la récupération du token actuel
-        await PushNotifications.register();
-        
-        // Cleanup
-        return () => {
-          listener.remove();
-        };
-      } catch (error) {
-        console.error('❌ [TOKEN_SYNC] Error:', error);
-      }
-    };
-
-    syncFirebaseToken();
-  }, [isNative, isRegistered, user, savePushToken]);
-
   // Configuration au montage
   useEffect(() => {
     if (!user) return;
 
     const initializePushNotifications = async () => {
+      console.log('🚀 [INIT] Initialisation système de notifications...');
+      
+      // 🔥 VÉRIFIER FLAG GLOBAL
+      if ((window as any).__pushNotificationSystemInitialized) {
+        console.log('⚠️ [INIT] Système déjà initialisé, skip');
+        return;
+      }
+      
       // ✅ Vérifier le statut au montage (SANS auto-register)
+      console.log('1️⃣ [INIT] Vérification du statut des permissions...');
       await checkPermissionStatus();
 
       // Configurer les listeners natifs immédiatement
       if (isNative) {
+        console.log('2️⃣ [INIT] Configuration des listeners...');
         await setupPushListeners();
         
         // 🎯 MODIFIÉ: Ne PAS forcer l'enregistrement automatiquement
         try {
+          console.log('3️⃣ [INIT] Vérification des permissions Capacitor...');
           const status = await PushNotifications.checkPermissions();
-          console.log('📱 Statut permissions au démarrage:', status);
+          console.log('📱 [INIT] Statut permissions:', status.receive);
           
           if (status.receive === 'granted') {
-            console.log('✅ Permissions déjà accordées');
+            console.log('✅ [INIT] Permissions déjà accordées');
             
             // ✅ NOUVEAU: Vérifier si un token existe en base
+            console.log('4️⃣ [INIT] Vérification du token en base...');
             const { data: profile } = await supabase
               .from('profiles')
               .select('push_token')
@@ -920,22 +893,32 @@ export const usePushNotifications = () => {
               .single();
             
             if (profile?.push_token) {
-              console.log('✅ Token existant trouvé:', profile.push_token.substring(0, 20) + '...');
+              console.log('✅ [INIT] Token existant trouvé:', profile.push_token.substring(0, 20) + '...');
               setToken(profile.push_token);
               setIsRegistered(true);
             } else {
-              console.log('⚠️ Permissions OK mais pas de token');
-              // ❌ NE PAS appeler PushNotifications.register() automatiquement
-              // L'utilisateur doit cliquer explicitement sur "Activer"
+              console.log('⚠️ [INIT] Permissions OK mais pas de token en base');
+              console.log('ℹ️ [INIT] Appel PushNotifications.register() pour obtenir le token...');
+              // 🔥 APPELER register() POUR OBTENIR LE TOKEN
+              try {
+                await PushNotifications.register();
+                console.log('✅ [INIT] PushNotifications.register() appelé avec succès');
+              } catch (registerError) {
+                console.error('❌ [INIT] Erreur lors de register():', registerError);
+              }
               setIsRegistered(false);
             }
           } else {
-            console.log('ℹ️ Permissions non accordées');
+            console.log('ℹ️ [INIT] Permissions non accordées');
             setIsRegistered(false);
           }
+          
+          console.log('✅ [INIT] Initialisation terminée avec succès');
         } catch (error) {
-          console.error('❌ Erreur initialisation push:', error);
+          console.error('❌ [INIT] Erreur initialisation push:', error);
         }
+      } else {
+        console.log('ℹ️ [INIT] Mode web, pas de configuration native');
       }
     };
 
