@@ -707,7 +707,43 @@ export const usePushNotifications = () => {
     }
   }, [user, pendingToken, savePushToken]);
 
+  // 🔥 LISTENER POUR fcmTokenReady (dispatché par MainActivity)
+  useEffect(() => {
+    if (!isNative) return;
+
+    const handleFcmTokenReady = (event: Event) => {
+      const customEvent = event as CustomEvent<{ token: string; platform: string }>;
+      const token = customEvent.detail?.token;
+      
+      if (token) {
+        console.log('🔥🔥🔥 [FCM_TOKEN_READY] Token reçu via événement fcmTokenReady:', token.substring(0, 30) + '...');
+        console.log('📱 [FCM_TOKEN_READY] Plateforme:', customEvent.detail?.platform || 'unknown');
+        
+        setToken(token);
+        setIsRegistered(true);
+        savePushToken(token);
+        
+        toast({
+          title: "Notifications activées ✅",
+          description: "Vous recevrez désormais les notifications push",
+        });
+      } else {
+        console.error('❌ [FCM_TOKEN_READY] Événement reçu mais token manquant !');
+      }
+    };
+
+    console.log('🎧 [FCM_TOKEN_READY] Ajout du listener pour fcmTokenReady...');
+    window.addEventListener('fcmTokenReady', handleFcmTokenReady);
+
+    return () => {
+      console.log('🧹 [FCM_TOKEN_READY] Nettoyage du listener fcmTokenReady');
+      window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
+    };
+  }, [isNative, savePushToken, toast]);
+
   // 🔥 FALLBACK: Vérifier window.fcmToken (au cas où MainActivity l'aurait injecté avant React)
+  // ⚠️ DÉSACTIVÉ: Le listener fcmTokenReady ci-dessus est plus fiable et immédiat
+  /*
   useEffect(() => {
     if (!isNative) return;
 
@@ -733,6 +769,7 @@ export const usePushNotifications = () => {
 
     return () => clearInterval(interval);
   }, [isNative, savePushToken]);
+  */
 
 
   // Configuration au montage

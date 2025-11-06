@@ -218,12 +218,15 @@ public class MainActivity extends AppCompatActivity {
                     if (token != null) {
                         // ✅ WebView existe maintenant, on peut injecter
                         webView.post(() -> {
-                            String jsCode = "window.fcmToken = '" + token + "';" +
+                            String jsCode = "console.log('🔥 [NATIVE] Début injection token FCM...');" +
+                                "window.fcmToken = '" + token + "';" +
                                 "window.fcmTokenPlatform = 'android';" +
                                 "console.log('🔥 [FCM] Token injecté:', window.fcmToken.substring(0, 30) + '...');" +
-                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
-                            webView.evaluateJavascript(jsCode, null);
-                            Log.d(TAG, "✅ Token FCM injecté dans WebView");
+                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
+                                "console.log('🔥 [FCM] Événement fcmTokenReady dispatché');";
+                            webView.evaluateJavascript(jsCode, result -> {
+                                Log.d(TAG, "✅ Token FCM injecté dans WebView, résultat evaluateJavascript: " + result);
+                            });
                         });
                     } else {
                         Log.e(TAG, "❌ Token FCM est null");
