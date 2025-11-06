@@ -199,45 +199,65 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         Log.d(TAG, "✅ AndroidBridge interface ajoutée à la WebView");
 
-        // 🔥 INITIALISER FIREBASE (APRÈS WebView)
+        // 🔥 INITIALISER FIREBASE (sans injecter le token tout de suite)
         try {
             FirebaseApp.initializeApp(this);
             Log.d(TAG, "🔥 Firebase initialisé avec succès");
             
-            // 🔥 Récupérer le token FCM immédiatement
-            FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.e(TAG, "❌ Échec récupération token FCM", task.getException());
-                        return;
-                    }
-                    
-                    String token = task.getResult();
-                    Log.d(TAG, "🔥 Token FCM récupéré: " + (token != null ? token.substring(0, Math.min(30, token.length())) + "..." : "null"));
-                    
-                    if (token != null) {
-                        // ✅ WebView existe maintenant, on peut injecter
-                        webView.post(() -> {
-                            String jsCode = "console.log('🔥 [NATIVE] Début injection token FCM...');" +
-                                "window.fcmToken = '" + token + "';" +
-                                "window.fcmTokenPlatform = 'android';" +
-                                "console.log('🔥 [FCM] Token injecté:', window.fcmToken.substring(0, 30) + '...');" +
-                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
-                                "console.log('🔥 [FCM] Événement fcmTokenReady dispatché');";
-                            webView.evaluateJavascript(jsCode, result -> {
-                                Log.d(TAG, "✅ Token FCM injecté dans WebView, résultat evaluateJavascript: " + result);
-                            });
-                        });
-                    } else {
-                        Log.e(TAG, "❌ Token FCM est null");
-                    }
-                });
+            // ✅ Récupérer token depuis SharedPreferences (backup)
+            try {
+                android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                String savedToken = prefs.getString("fcm_token", null);
+                
+                if (savedToken != null && !savedToken.isEmpty()) {
+                    Log.d(TAG, "🔥 Token FCM récupéré depuis SharedPreferences: " + savedToken.substring(0, 30) + "...");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "❌ Erreur lecture SharedPreferences:", e);
+            }
         } catch (Exception e) {
             Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
         }
 
         // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                
+                // ✅ INJECTER LE TOKEN SEULEMENT UNE FOIS QUE LA PAGE EST CHARGÉE
+                if (url.contains("run-connect.lovable.app") || url.contains("lovableproject.com")) {
+                    Log.d(TAG, "🔥 [PAGE_LOADED] Page principale chargée, injection token FCM...");
+                    
+                    // Vérifier si Firebase est déjà initialisé
+                    try {
+                        FirebaseMessaging.getInstance().getToken()
+                            .addOnCompleteListener(task -> {
+                                if (task.isSuccessful() && task.getResult() != null) {
+                                    String token = task.getResult();
+                                    Log.d(TAG, "🔥 [PAGE_LOADED] Token FCM récupéré: " + token.substring(0, 30) + "...");
+                                    
+                                    // Sauvegarder dans SharedPreferences
+                                    try {
+                                        android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                                        prefs.edit().putString("fcm_token", token).apply();
+                                        Log.d(TAG, "✅ Token sauvegardé dans SharedPreferences");
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "❌ Erreur sauvegarde SharedPreferences:", e);
+                                    }
+                                    
+                                    // Injecter dans WebView avec retry automatique
+                                    injectTokenIntoWebView(token, 0);
+                                } else {
+                                    Log.e(TAG, "❌ [PAGE_LOADED] Échec récupération token FCM");
+                                }
+                            });
+                    } catch (Exception e) {
+                        Log.e(TAG, "❌ [PAGE_LOADED] Erreur:", e);
+                    }
+                }
+            }
+            
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -363,6 +383,40 @@ public class MainActivity extends AppCompatActivity {
         webView.postDelayed(() -> {
             try { webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null); } catch (Throwable ignored) {}
         }, 1000);
+    }
+
+    // ✅ MÉTHODE HELPER POUR INJECTER LE TOKEN AVEC RETRY AUTOMATIQUE
+    private void injectTokenIntoWebView(String token, int retryCount) {
+        if (retryCount >= 3) {
+            Log.e(TAG, "❌ Échec injection token après 3 tentatives");
+            return;
+        }
+        
+        String jsCode = "try {" +
+            "  console.log('🔥 [NATIVE] Début injection token FCM (tentative " + (retryCount + 1) + ")');" +
+            "  window.fcmToken = '" + token + "';" +
+            "  window.fcmTokenPlatform = 'android';" +
+            "  console.log('🔥 [FCM] Token injecté:', window.fcmToken.substring(0, 30) + '...');" +
+            "  window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
+            "  console.log('🔥 [FCM] Événement fcmTokenReady dispatché');" +
+            "  'SUCCESS';" +
+            "} catch(e) {" +
+            "  console.error('❌ [NATIVE] Erreur injection:', e);" +
+            "  'ERROR:' + e.message;" +
+            "}";
+        
+        webView.post(() -> {
+            webView.evaluateJavascript(jsCode, result -> {
+                Log.d(TAG, "📋 [INJECT] Résultat JavaScript: " + result);
+                
+                if (result != null && result.contains("SUCCESS")) {
+                    Log.d(TAG, "✅ [INJECT] Token injecté avec succès");
+                } else {
+                    Log.e(TAG, "❌ [INJECT] Échec injection, retry dans 1s...");
+                    webView.postDelayed(() -> injectTokenIntoWebView(token, retryCount + 1), 1000);
+                }
+            });
+        });
     }
 
     // File Chooser Launcher

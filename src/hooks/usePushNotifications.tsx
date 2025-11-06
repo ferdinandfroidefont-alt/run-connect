@@ -741,13 +741,25 @@ export const usePushNotifications = () => {
     };
   }, [isNative, savePushToken, toast]);
 
-  // 🔥 FALLBACK: Vérifier window.fcmToken (au cas où MainActivity l'aurait injecté avant React)
-  // ⚠️ DÉSACTIVÉ: Le listener fcmTokenReady ci-dessus est plus fiable et immédiat
-  /*
+  // 🔥 FALLBACK: Vérifier window.fcmToken ET window.__fcmTokenBuffer
   useEffect(() => {
     if (!isNative) return;
 
     const checkWindowToken = () => {
+      // Priorité 1: Buffer global (capturé avant React)
+      if ((window as any).__fcmTokenBuffer && !(window as any).__fcmTokenBufferChecked) {
+        console.log('🔥 [BUFFER] Token trouvé dans __fcmTokenBuffer (capturé avant React)');
+        const bufferedToken = (window as any).__fcmTokenBuffer;
+        
+        setToken(bufferedToken);
+        setIsRegistered(true);
+        savePushToken(bufferedToken);
+        
+        (window as any).__fcmTokenBufferChecked = true;
+        return;
+      }
+      
+      // Priorité 2: window.fcmToken direct
       if ((window as any).fcmToken && !(window as any).fcmTokenChecked) {
         console.log('🔥 [WINDOW] Token trouvé dans window.fcmToken');
         const existingToken = (window as any).fcmToken;
@@ -756,20 +768,29 @@ export const usePushNotifications = () => {
         setIsRegistered(true);
         savePushToken(existingToken);
         
-        (window as any).fcmTokenChecked = true; // Flag pour éviter de re-sauvegarder
+        (window as any).fcmTokenChecked = true;
       }
     };
 
     // Vérifier immédiatement
     checkWindowToken();
     
-    // Vérifier toutes les 500ms pendant 10 secondes (au cas où MainActivity est lente)
+    // Vérifier toutes les 500ms pendant 15 secondes (30 tentatives)
     const interval = setInterval(checkWindowToken, 500);
-    setTimeout(() => clearInterval(interval), 10000);
+    setTimeout(() => {
+      clearInterval(interval);
+      
+      // Si après 15s on n'a toujours pas de token, logger l'état
+      if (!token) {
+        console.error('❌ [POLLING] Aucun token détecté après 15 secondes');
+        console.error('📋 [POLLING] window.fcmToken:', (window as any).fcmToken);
+        console.error('📋 [POLLING] window.__fcmTokenBuffer:', (window as any).__fcmTokenBuffer);
+        console.error('📋 [POLLING] AndroidBridge disponible:', typeof (window as any).AndroidBridge);
+      }
+    }, 15000);
 
     return () => clearInterval(interval);
-  }, [isNative, savePushToken]);
-  */
+  }, [isNative, savePushToken, token]);
 
 
   // Configuration au montage

@@ -25,6 +25,19 @@
 
   <body>
     <div id="root"></div>
+    
+    <!-- 🔥 LISTENER GLOBAL FCM - AVANT REACT -->
+    <script>
+      console.log('🔥 [GLOBAL] Listener fcmTokenReady installé AVANT React');
+      window.__fcmTokenBuffer = null;
+      
+      window.addEventListener('fcmTokenReady', (e) => {
+        console.log('🔥 [GLOBAL] Événement fcmTokenReady capturé:', e.detail?.token?.substring(0, 30) + '...');
+        window.__fcmTokenBuffer = e.detail?.token;
+        window.__fcmTokenPlatform = e.detail?.platform || 'unknown';
+      });
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

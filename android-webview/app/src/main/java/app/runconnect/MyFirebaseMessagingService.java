@@ -21,18 +21,30 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         super.onNewToken(token);
         Log.d(TAG, "🔥 [WebView AAB] Nouveau token FCM: " + token);
         
-        // Injecter dans la WebView si disponible
+        // Sauvegarder dans SharedPreferences (backup permanent)
         try {
-            String jsCode = "window.fcmToken = '" + token + "';" +
-                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "' } }));";
-            
-            if (MainActivity.instance != null && MainActivity.instance.webView != null) {
+            android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", android.content.Context.MODE_PRIVATE);
+            prefs.edit().putString("fcm_token", token).apply();
+            Log.d(TAG, "✅ Token sauvegardé dans SharedPreferences");
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur sauvegarde SharedPreferences:", e);
+        }
+        
+        // Injecter dans la WebView si MainActivity existe
+        if (MainActivity.instance != null && MainActivity.instance.webView != null) {
+            try {
+                String jsCode = "window.fcmToken = '" + token + "';" +
+                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
+                
                 MainActivity.instance.webView.post(() -> 
                     MainActivity.instance.webView.evaluateJavascript(jsCode, null)
                 );
+                Log.d(TAG, "✅ Token injecté dans WebView via onNewToken");
+            } catch (Exception e) {
+                Log.e(TAG, "❌ Erreur injection token:", e);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Erreur injection token:", e);
+        } else {
+            Log.w(TAG, "⚠️ MainActivity non disponible, token sauvegardé dans SharedPreferences uniquement");
         }
     }
 
