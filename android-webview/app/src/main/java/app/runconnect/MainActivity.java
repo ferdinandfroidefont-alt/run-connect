@@ -219,6 +219,11 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
         }
 
+        // 🔥 NOUVEAU : Démarrer le retry automatique du token après 2 secondes
+        new android.os.Handler(getMainLooper()).postDelayed(() -> {
+            startTokenInjectionRetry(0);
+        }, 2000); // Attendre 2 secondes que React soit monté
+
         // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -631,6 +636,74 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "✅ Résultats permissions injectés dans JavaScript");
             });
         }
+    }
+
+    // 🔥 MÉTHODE DE RETRY AGRESSIVE POUR L'INJECTION DU TOKEN
+    private void startTokenInjectionRetry(int attemptNumber) {
+        if (attemptNumber >= 30) {
+            Log.e(TAG, "❌ [TOKEN_RETRY] Abandon après 30 tentatives");
+            return;
+        }
+        
+        Log.d(TAG, "🔁 [TOKEN_RETRY] Tentative " + (attemptNumber + 1) + "/30...");
+        
+        // Vérifier si le token a déjà été reçu côté JavaScript
+        String checkJs = "typeof window.__fcmTokenReceived !== 'undefined' && window.__fcmTokenReceived === true";
+        
+        webView.post(() -> {
+            webView.evaluateJavascript(checkJs, result -> {
+                Log.d(TAG, "📋 [TOKEN_RETRY] Token déjà reçu ? " + result);
+                
+                if ("true".equals(result)) {
+                    Log.d(TAG, "✅ [TOKEN_RETRY] Token déjà reçu côté JavaScript, arrêt du retry");
+                    return;
+                }
+                
+                // Token pas encore reçu, on réessaye l'injection
+                Log.d(TAG, "🔄 [TOKEN_RETRY] Token non reçu, nouvelle injection...");
+                
+                FirebaseMessaging.getInstance().getToken()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful() && task.getResult() != null) {
+                            String token = task.getResult();
+                            Log.d(TAG, "🔥 [TOKEN_RETRY] Token Firebase récupéré: " + token.substring(0, 30) + "...");
+                            
+                            // Injection FORCÉE avec confirmation
+                            String jsCode = 
+                                "try {" +
+                                "  console.log('🔥 [RETRY " + (attemptNumber + 1) + "] Injection token FCM');" +
+                                "  window.fcmToken = '" + token + "';" +
+                                "  window.fcmTokenPlatform = 'android';" +
+                                "  window.dispatchEvent(new CustomEvent('fcmTokenReady', { " +
+                                "    detail: { token: '" + token + "', platform: 'android', attempt: " + (attemptNumber + 1) + " }" +
+                                "  }));" +
+                                "  console.log('✅ [RETRY " + (attemptNumber + 1) + "] Événement fcmTokenReady dispatché');" +
+                                "  'INJECTED';" +
+                                "} catch(e) {" +
+                                "  console.error('❌ [RETRY] Erreur:', e);" +
+                                "  'ERROR';" +
+                                "}";
+                            
+                            webView.post(() -> {
+                                webView.evaluateJavascript(jsCode, injectResult -> {
+                                    Log.d(TAG, "📋 [TOKEN_RETRY] Résultat injection: " + injectResult);
+                                    
+                                    // Retry dans 1 seconde
+                                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                                        startTokenInjectionRetry(attemptNumber + 1);
+                                    }, 1000);
+                                });
+                            });
+                        } else {
+                            Log.e(TAG, "❌ [TOKEN_RETRY] Échec récupération token");
+                            // Retry dans 1 seconde
+                            new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                                startTokenInjectionRetry(attemptNumber + 1);
+                            }, 1000);
+                        }
+                    });
+            });
+        });
     }
 
     // ✅ AJOUT : Gestion du deep link OAuth (Google -> App)

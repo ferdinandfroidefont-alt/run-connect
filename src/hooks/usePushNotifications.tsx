@@ -707,17 +707,22 @@ export const usePushNotifications = () => {
     }
   }, [user, pendingToken, savePushToken]);
 
-  // 🔥 LISTENER POUR fcmTokenReady (dispatché par MainActivity)
+  // 🔥 LISTENER POUR fcmTokenReady (dispatché par MainActivity avec retry automatique)
   useEffect(() => {
     if (!isNative) return;
 
     const handleFcmTokenReady = (event: Event) => {
-      const customEvent = event as CustomEvent<{ token: string; platform: string }>;
+      const customEvent = event as CustomEvent<{ token: string; platform: string; attempt?: number }>;
       const token = customEvent.detail?.token;
       
-      if (token) {
-        console.log('🔥🔥🔥 [FCM_TOKEN_READY] Token reçu via événement fcmTokenReady:', token.substring(0, 30) + '...');
+      if (token && !(window as any).__fcmTokenReceived) {
+        const attempt = customEvent.detail?.attempt || 1;
+        console.log(`🔥🔥🔥 [FCM_TOKEN_READY] Token reçu (tentative ${attempt}):`, token.substring(0, 30) + '...');
         console.log('📱 [FCM_TOKEN_READY] Plateforme:', customEvent.detail?.platform || 'unknown');
+        
+        // ✅ CONFIRMER LA RÉCEPTION (arrête le retry côté Android)
+        (window as any).__fcmTokenReceived = true;
+        console.log('✅ [FCM_TOKEN_READY] Réception confirmée, retry Android arrêté');
         
         setToken(token);
         setIsRegistered(true);
@@ -725,25 +730,17 @@ export const usePushNotifications = () => {
         
         toast({
           title: "Notifications activées ✅",
-          description: "Vous recevrez désormais les notifications push",
+          description: `Token reçu après ${attempt} tentative(s)`,
         });
+      } else if ((window as any).__fcmTokenReceived) {
+        console.log('ℹ️ [FCM_TOKEN_READY] Token déjà reçu, événement ignoré');
       } else {
         console.error('❌ [FCM_TOKEN_READY] Événement reçu mais token manquant !');
       }
     };
 
-    console.log('🎧 [FCM_TOKEN_READY] Ajout du listener pour fcmTokenReady...');
+    console.log('🎧 [FCM_TOKEN_READY] Installation listener fcmTokenReady...');
     window.addEventListener('fcmTokenReady', handleFcmTokenReady);
-
-    // 🔥 NOUVEAU : Demander le token APRÈS que le listener soit installé
-    if (typeof (window as any).AndroidBridge?.getFCMToken === 'function') {
-      console.log('📱 [FCM_TOKEN_READY] Appel AndroidBridge.getFCMToken() pour récupérer le token...');
-      setTimeout(() => {
-        (window as any).AndroidBridge.getFCMToken();
-      }, 500); // Petit délai pour s'assurer que le listener est bien en place
-    } else {
-      console.warn('⚠️ [FCM_TOKEN_READY] AndroidBridge.getFCMToken() non disponible (probablement sur web)');
-    }
 
     return () => {
       console.log('🧹 [FCM_TOKEN_READY] Nettoyage du listener fcmTokenReady');
@@ -751,56 +748,6 @@ export const usePushNotifications = () => {
     };
   }, [isNative, savePushToken, toast]);
 
-  // 🔥 FALLBACK: Vérifier window.fcmToken ET window.__fcmTokenBuffer
-  useEffect(() => {
-    if (!isNative) return;
-
-    const checkWindowToken = () => {
-      // Priorité 1: Buffer global (capturé avant React)
-      if ((window as any).__fcmTokenBuffer && !(window as any).__fcmTokenBufferChecked) {
-        console.log('🔥 [BUFFER] Token trouvé dans __fcmTokenBuffer (capturé avant React)');
-        const bufferedToken = (window as any).__fcmTokenBuffer;
-        
-        setToken(bufferedToken);
-        setIsRegistered(true);
-        savePushToken(bufferedToken);
-        
-        (window as any).__fcmTokenBufferChecked = true;
-        return;
-      }
-      
-      // Priorité 2: window.fcmToken direct
-      if ((window as any).fcmToken && !(window as any).fcmTokenChecked) {
-        console.log('🔥 [WINDOW] Token trouvé dans window.fcmToken');
-        const existingToken = (window as any).fcmToken;
-        
-        setToken(existingToken);
-        setIsRegistered(true);
-        savePushToken(existingToken);
-        
-        (window as any).fcmTokenChecked = true;
-      }
-    };
-
-    // Vérifier immédiatement
-    checkWindowToken();
-    
-    // Vérifier toutes les 500ms pendant 15 secondes (30 tentatives)
-    const interval = setInterval(checkWindowToken, 500);
-    setTimeout(() => {
-      clearInterval(interval);
-      
-      // Si après 15s on n'a toujours pas de token, logger l'état
-      if (!token) {
-        console.error('❌ [POLLING] Aucun token détecté après 15 secondes');
-        console.error('📋 [POLLING] window.fcmToken:', (window as any).fcmToken);
-        console.error('📋 [POLLING] window.__fcmTokenBuffer:', (window as any).__fcmTokenBuffer);
-        console.error('📋 [POLLING] AndroidBridge disponible:', typeof (window as any).AndroidBridge);
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [isNative, savePushToken, token]);
 
 
   // Configuration au montage

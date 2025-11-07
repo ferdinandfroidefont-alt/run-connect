@@ -26,9 +26,10 @@
   <body>
     <div id="root"></div>
     
-    <!-- 🔥 LISTENER GLOBAL FCM - AVANT REACT -->
+    <!-- 🔥 LISTENER GLOBAL FCM - AVANT REACT (Fallback) -->
     <script>
-      console.log('🔥 [GLOBAL] Listener fcmTokenReady installé AVANT React');
+      console.log('🔥 [GLOBAL] Listener fcmTokenReady installé (fallback)');
+      window.__fcmTokenReceived = false;
       window.__fcmTokenBuffer = null;
       
       window.addEventListener('fcmTokenReady', (e) => {
