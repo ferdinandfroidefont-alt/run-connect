@@ -225,36 +225,10 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 
-                // ✅ INJECTER LE TOKEN SEULEMENT UNE FOIS QUE LA PAGE EST CHARGÉE
+                // ✅ Ne PAS injecter le token automatiquement ici (trop tôt, React pas encore monté)
                 if (url.contains("run-connect.lovable.app") || url.contains("lovableproject.com")) {
-                    Log.d(TAG, "🔥 [PAGE_LOADED] Page principale chargée, injection token FCM...");
-                    
-                    // Vérifier si Firebase est déjà initialisé
-                    try {
-                        FirebaseMessaging.getInstance().getToken()
-                            .addOnCompleteListener(task -> {
-                                if (task.isSuccessful() && task.getResult() != null) {
-                                    String token = task.getResult();
-                                    Log.d(TAG, "🔥 [PAGE_LOADED] Token FCM récupéré: " + token.substring(0, 30) + "...");
-                                    
-                                    // Sauvegarder dans SharedPreferences
-                                    try {
-                                        android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
-                                        prefs.edit().putString("fcm_token", token).apply();
-                                        Log.d(TAG, "✅ Token sauvegardé dans SharedPreferences");
-                                    } catch (Exception e) {
-                                        Log.e(TAG, "❌ Erreur sauvegarde SharedPreferences:", e);
-                                    }
-                                    
-                                    // Injecter dans WebView avec retry automatique
-                                    injectTokenIntoWebView(token, 0);
-                                } else {
-                                    Log.e(TAG, "❌ [PAGE_LOADED] Échec récupération token FCM");
-                                }
-                            });
-                    } catch (Exception e) {
-                        Log.e(TAG, "❌ [PAGE_LOADED] Erreur:", e);
-                    }
+                    Log.d(TAG, "🔥 [PAGE_LOADED] Page principale chargée");
+                    Log.d(TAG, "ℹ️ [PAGE_LOADED] Le token sera récupéré via AndroidBridge.getFCMToken() appelé depuis React");
                 }
             }
             
@@ -564,13 +538,15 @@ public class MainActivity extends AppCompatActivity {
                         .addOnCompleteListener(task -> {
                             if (task.isSuccessful() && task.getResult() != null) {
                                 String token = task.getResult();
-                                Log.d(TAG, "✅ [AndroidBridge] Token FCM fourni: " + token.substring(0, Math.min(30, token.length())) + "...");
+                                Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token FCM fourni: " + token.substring(0, Math.min(30, token.length())) + "...");
+                                Log.d(TAG, "🔥 [AndroidBridge.getFCMToken] Injection token dans WebView + dispatch événement fcmTokenReady");
                                 
                                 // Injecter dans WebView
                                 String jsCode = "window.fcmToken = '" + token + "';" +
                                     "window.fcmTokenPlatform = 'android';" +
                                     "console.log('🔥 [AndroidBridge] Token réinjecté:', window.fcmToken.substring(0, 30) + '...');" +
-                                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
+                                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
+                                    "console.log('🔥 [FCM] Événement fcmTokenReady dispatché');";
                                 webView.post(() -> webView.evaluateJavascript(jsCode, null));
                             } else {
                                 Log.e(TAG, "❌ [AndroidBridge] Échec récupération token FCM", task.getException());

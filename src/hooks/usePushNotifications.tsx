@@ -735,6 +735,16 @@ export const usePushNotifications = () => {
     console.log('🎧 [FCM_TOKEN_READY] Ajout du listener pour fcmTokenReady...');
     window.addEventListener('fcmTokenReady', handleFcmTokenReady);
 
+    // 🔥 NOUVEAU : Demander le token APRÈS que le listener soit installé
+    if (typeof (window as any).AndroidBridge?.getFCMToken === 'function') {
+      console.log('📱 [FCM_TOKEN_READY] Appel AndroidBridge.getFCMToken() pour récupérer le token...');
+      setTimeout(() => {
+        (window as any).AndroidBridge.getFCMToken();
+      }, 500); // Petit délai pour s'assurer que le listener est bien en place
+    } else {
+      console.warn('⚠️ [FCM_TOKEN_READY] AndroidBridge.getFCMToken() non disponible (probablement sur web)');
+    }
+
     return () => {
       console.log('🧹 [FCM_TOKEN_READY] Nettoyage du listener fcmTokenReady');
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
