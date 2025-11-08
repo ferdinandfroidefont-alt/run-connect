@@ -263,13 +263,31 @@ public class MainActivity extends AppCompatActivity {
         // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                Log.d(TAG, "📄 Page loading started: " + url);
+                
+                // Injecter les flags dès le début du chargement
+                injectAABFlags(view);
+                injectPermissionsState(view);
+                injectDeviceInfo(view);
+            }
+            
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 
-                // ✅ Ne PAS injecter le token automatiquement ici (trop tôt, React pas encore monté)
+                // ✅ Injection retardée pour s'assurer que React est monté
                 if (url.contains("run-connect.lovable.app") || url.contains("lovableproject.com")) {
                     Log.d(TAG, "🔥 [PAGE_LOADED] Page principale chargée");
-                    Log.d(TAG, "ℹ️ [PAGE_LOADED] Le token sera récupéré via AndroidBridge.getFCMToken() appelé depuis React");
+                    
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        injectAABFlags(view);
+                        injectPermissionsState(view);
+                        injectDeviceInfo(view);
+                        verifyInjection(view);
+                        Log.d(TAG, "✅ [PAGE_LOADED] Flags injectés avec delay de 500ms");
+                    }, 500);
                 }
             }
             
@@ -353,6 +371,15 @@ public class MainActivity extends AppCompatActivity {
 
         webView.loadUrl(START_URL);
         setContentView(webView);
+        
+        // 🔥 NIVEAU 10: Injection initiale des flags au démarrage
+        new android.os.Handler(getMainLooper()).postDelayed(() -> {
+            injectAABFlags(webView);
+            injectPermissionsState(webView);
+            injectDeviceInfo(webView);
+            verifyInjection(webView);
+            Log.d(TAG, "✅ [STARTUP] Injection initiale des flags effectuée");
+        }, 1000);
 
         // ✅ CRÉATION DU CANAL DE NOTIFICATION (obligatoire Android 8+)
         try {
@@ -877,6 +904,161 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // 🔥 NIVEAU 10: Méthodes d'injection des flags natifs
+    private void injectAABFlags(WebView view) {
+        Log.d(TAG, "🚀 Injection des flags AAB");
+        
+        String jsCode = "window.CapacitorForceNative = true; " +
+                       "window.isAABBuild = true; " +
+                       "window.AndroidNativeEnvironment = true; " +
+                       "window.capacitorReady = true; " +
+                       "console.log('🚀 Flags AAB injectés:', {CapacitorForceNative: window.CapacitorForceNative, isAABBuild: window.isAABBuild, AndroidNativeEnvironment: window.AndroidNativeEnvironment, capacitorReady: window.capacitorReady});";
+        
+        view.evaluateJavascript(jsCode, null);
+    }
+    
+    private void injectPermissionsState(WebView view) {
+        boolean hasLocation = hasLocationPermission();
+        boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        boolean hasContacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+        boolean hasStorage = hasStoragePermission();
+        
+        // Vérifier les permissions notifications (Android 13+)
+        boolean hasNotifications = true; // Par défaut accordé pour Android < 13
+        boolean notificationsPermanentlyDenied = false;
+        if (Build.VERSION.SDK_INT >= 33) {
+            hasNotifications = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            notificationsPermanentlyDenied = !hasNotifications && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS);
+        }
+        
+        // Détecter si les permissions ont été refusées définitivement
+        boolean locationPermanentlyDenied = !hasLocation && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        boolean cameraPermanentlyDenied = !hasCamera && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA);
+        boolean contactsPermanentlyDenied = !hasContacts && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS);
+        
+        // Pour le stockage, vérifier selon la version Android
+        boolean storagePermanentlyDenied;
+        if (Build.VERSION.SDK_INT >= 33) {
+            storagePermanentlyDenied = !hasStorage && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_MEDIA_IMAGES);
+        } else {
+            storagePermanentlyDenied = !hasStorage && !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+        
+        Log.d(TAG, "🚀 Injection état permissions - Location: " + hasLocation + " (permanent: " + locationPermanentlyDenied + "), Camera: " + hasCamera + ", Storage: " + hasStorage + " (permanent: " + storagePermanentlyDenied + "), Contacts: " + hasContacts + " (permanent: " + contactsPermanentlyDenied + "), Notifications: " + hasNotifications + " (permanent: " + notificationsPermanentlyDenied + ")");
+        
+        String jsCode = "window.androidPermissions = {" +
+                       "location: '" + (hasLocation ? "granted" : "denied") + "', " +
+                       "locationPermanentlyDenied: " + locationPermanentlyDenied + ", " +
+                       "camera: '" + (hasCamera ? "granted" : "denied") + "', " +
+                       "cameraPermanentlyDenied: " + cameraPermanentlyDenied + ", " +
+                       "storage: '" + (hasStorage ? "granted" : "denied") + "', " +
+                       "storagePermanentlyDenied: " + storagePermanentlyDenied + ", " +
+                       "contacts: '" + (hasContacts ? "granted" : "denied") + "', " +
+                       "contactsPermanentlyDenied: " + contactsPermanentlyDenied + ", " +
+                       "notifications: '" + (hasNotifications ? "granted" : "denied") + "', " +
+                       "notificationsPermanentlyDenied: " + notificationsPermanentlyDenied + ", " +
+                       "timestamp: " + System.currentTimeMillis() + "}; " +
+                       "console.log('🔐 Permissions Android injectées:', window.androidPermissions);";
+        
+        view.evaluateJavascript(jsCode, null);
+    }
+
+    private void injectDeviceInfo(WebView view) {
+        String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER : "unknown";
+        String model = Build.MODEL != null ? Build.MODEL : "unknown";
+        String version = Build.VERSION.RELEASE != null ? Build.VERSION.RELEASE : "unknown";
+        int sdkInt = Build.VERSION.SDK_INT;
+        
+        // Détection étendue des fabricants
+        boolean isMIUI = manufacturer.toLowerCase().contains("xiaomi") || manufacturer.toLowerCase().contains("redmi") || manufacturer.toLowerCase().contains("poco");
+        boolean isSamsung = manufacturer.toLowerCase().contains("samsung");
+        boolean isOnePlus = manufacturer.toLowerCase().contains("oneplus");
+        boolean isOppo = manufacturer.toLowerCase().contains("oppo");
+        boolean isVivo = manufacturer.toLowerCase().contains("vivo");
+        boolean isHuawei = manufacturer.toLowerCase().contains("huawei") || manufacturer.toLowerCase().contains("honor");
+        
+        String deviceScript = String.format(
+            "window.AndroidDeviceInfo = {" +
+            "  manufacturer: '%s'," +
+            "  model: '%s'," +
+            "  version: '%s'," +
+            "  sdkInt: %d," +
+            "  isMIUI: %s," +
+            "  isSamsung: %s," +
+            "  isOnePlus: %s," +
+            "  isOppo: %s," +
+            "  isVivo: %s," +
+            "  isHuawei: %s," +
+            "  needsSpecialHandling: %s" +
+            "};",
+            manufacturer.toLowerCase(), 
+            model.toLowerCase(), 
+            version,
+            sdkInt,
+            isMIUI ? "true" : "false",
+            isSamsung ? "true" : "false",
+            isOnePlus ? "true" : "false",
+            isOppo ? "true" : "false",
+            isVivo ? "true" : "false",
+            isHuawei ? "true" : "false",
+            (isMIUI || isSamsung || isOnePlus || isOppo || isVivo || isHuawei) ? "true" : "false"
+        );
+        
+        Log.d(TAG, "📱 Injection info périphérique étendue: " + deviceScript);
+        view.evaluateJavascript(deviceScript, null);
+    }
+
+    private void verifyInjection(WebView view) {
+        String verificationScript = 
+            "console.log('🔍 Vérification injection:', {" +
+            "  CapacitorForceNative: window.CapacitorForceNative," +
+            "  isAABBuild: window.isAABBuild," +
+            "  AndroidDeviceInfo: window.AndroidDeviceInfo," +
+            "  androidPermissions: window.androidPermissions" +
+            "});";
+            
+        view.evaluateJavascript(verificationScript, null);
+    }
+    
+    // 🔥 NIVEAU 10: Méthodes utilitaires de vérification des permissions
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+    
+    private boolean hasStoragePermission() {
+        boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        
+        if (Build.VERSION.SDK_INT >= 33) {
+            // Android 13+ - Vérifier READ_MEDIA_IMAGES
+            boolean hasMediaImages = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
+            return hasCamera && hasMediaImages;
+        } else {
+            // Android 6-12 - Vérifier READ_EXTERNAL_STORAGE
+            boolean hasStorage = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+            return hasCamera && hasStorage;
+        }
+    }
+    
+    private boolean hasContactsPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+    }
+    
+    // 🔥 NIVEAU 10: Réinjection des permissions au retour dans l'app
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) {
+            injectPermissionsState(webView);
+            // Notifier JavaScript
+            webView.evaluateJavascript(
+                "window.dispatchEvent(new Event('androidPermissionsUpdated'));",
+                null
+            );
+            Log.d(TAG, "🔄 [onResume] Permissions réinjectées");
+        }
+    }
+    
     // ✅ AJOUT : Gestion du deep link OAuth (Google -> App)
     @Override
     protected void onNewIntent(Intent intent) {
