@@ -88,13 +88,17 @@ serve(async (req) => {
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     let supabaseUser = existingUsers?.users.find(u => u.email === tokenInfo.email);
 
+    // Générer un mot de passe temporaire sécurisé
+    const tempPassword = crypto.randomUUID();
+
     if (!supabaseUser) {
       console.log('👤 [FIREBASE AUTH] Creating new Supabase user for:', tokenInfo.email);
       
-      // Créer un nouvel utilisateur
+      // Créer un nouvel utilisateur avec un mot de passe
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: tokenInfo.email,
         email_confirm: true,
+        password: tempPassword,
         user_metadata: {
           full_name: tokenInfo.name || '',
           avatar_url: tokenInfo.picture || '',
@@ -112,45 +116,57 @@ serve(async (req) => {
       console.log('✅ [FIREBASE AUTH] User created with ID:', supabaseUser?.id);
     } else {
       console.log('✅ [FIREBASE AUTH] Existing user found with ID:', supabaseUser.id);
+      
+      // Utilisateur existant : mettre à jour le mot de passe
+      console.log('🔄 [FIREBASE AUTH] Updating user password for session');
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        supabaseUser.id,
+        { password: tempPassword }
+      );
+      
+      if (updateError) {
+        console.error('❌ [FIREBASE AUTH] Error updating user password:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ [FIREBASE AUTH] User password updated');
     }
 
     if (!supabaseUser) {
       throw new Error('Failed to create or retrieve user');
     }
 
-    // 3. Générer une session Supabase pour cet utilisateur
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+    // 3. Générer une session Supabase en se connectant avec le mot de passe temporaire
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    console.log('🔐 [FIREBASE AUTH] Signing in with temporary password');
+    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
       email: tokenInfo.email,
+      password: tempPassword,
     });
 
-    if (sessionError) {
-      console.error('❌ [FIREBASE AUTH] Error generating session:', sessionError);
-      throw sessionError;
+    if (signInError || !signInData.session) {
+      console.error('❌ [FIREBASE AUTH] Error signing in:', signInError);
+      throw signInError || new Error('Failed to create session');
     }
 
-    console.log('✅ [FIREBASE AUTH] Session generated successfully');
-
-    // Extraire les tokens de l'URL générée
-    const url = new URL(sessionData.properties.action_link);
-    const accessToken = url.searchParams.get('access_token');
-    const refreshToken = url.searchParams.get('refresh_token');
-
-    if (!accessToken || !refreshToken) {
-      console.error('❌ [FIREBASE AUTH] Missing tokens in generated link');
-      throw new Error('Failed to generate session tokens');
-    }
+    console.log('✅ [FIREBASE AUTH] Session created successfully with valid tokens');
+    console.log('🎫 [FIREBASE AUTH] Access token length:', signInData.session.access_token.length);
+    console.log('🎫 [FIREBASE AUTH] Refresh token length:', signInData.session.refresh_token.length);
 
     return new Response(
       JSON.stringify({
         user: {
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          user_metadata: supabaseUser.user_metadata
+          id: signInData.user.id,
+          email: signInData.user.email,
+          user_metadata: signInData.user.user_metadata
         },
         session: {
-          access_token: accessToken,
-          refresh_token: refreshToken,
+          access_token: signInData.session.access_token,
+          refresh_token: signInData.session.refresh_token,
         },
       }),
       { 
