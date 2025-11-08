@@ -14,23 +14,36 @@ serve(async (req) => {
   try {
     console.log('🚀 [FIREBASE AUTH] Edge function called');
     
-    const { idToken } = await req.json();
+    const body = await req.json();
+    const { idToken } = body;
+
+    console.log('📦 [FIREBASE AUTH] Request body received:', { hasToken: !!idToken });
 
     if (!idToken) {
+      console.error('❌ [FIREBASE AUTH] Missing idToken in request body');
       throw new Error('Missing Firebase ID Token');
     }
 
-    console.log('🎫 [FIREBASE AUTH] Firebase ID Token received (length:', idToken.length, ')');
+    console.log('🎫 [FIREBASE AUTH] Token length:', idToken.length);
+    console.log('🎫 [FIREBASE AUTH] Token preview:', idToken.substring(0, 50) + '...');
 
     // 1. Vérifier le Firebase ID Token avec Firebase API
-    const firebaseServiceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON') || '{}');
-    
-    if (!firebaseServiceAccount.project_id) {
-      console.error('❌ [FIREBASE AUTH] FIREBASE_SERVICE_ACCOUNT_JSON not configured');
+    const firebaseServiceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
+    console.log('🔐 [FIREBASE AUTH] Service account exists:', !!firebaseServiceAccountRaw);
+
+    if (!firebaseServiceAccountRaw) {
+      console.error('❌ [FIREBASE AUTH] FIREBASE_SERVICE_ACCOUNT_JSON env var not found');
       throw new Error('Firebase service account not configured');
     }
 
-    console.log('🔑 [FIREBASE AUTH] Using Firebase project:', firebaseServiceAccount.project_id);
+    const firebaseServiceAccount = JSON.parse(firebaseServiceAccountRaw);
+    console.log('🔐 [FIREBASE AUTH] Service account parsed successfully');
+    console.log('🔑 [FIREBASE AUTH] Project ID:', firebaseServiceAccount.project_id);
+
+    if (!firebaseServiceAccount.project_id) {
+      console.error('❌ [FIREBASE AUTH] project_id missing in service account JSON');
+      throw new Error('Firebase service account missing project_id');
+    }
 
     // Vérifier le token avec Google's token verification endpoint
     const verifyResponse = await fetch(
@@ -39,8 +52,21 @@ serve(async (req) => {
 
     if (!verifyResponse.ok) {
       const errorText = await verifyResponse.text();
-      console.error('❌ [FIREBASE AUTH] Token verification failed:', errorText);
-      throw new Error('Invalid Firebase ID Token');
+      console.error('❌ [FIREBASE AUTH] Token verification failed');
+      console.error('❌ [FIREBASE AUTH] Status:', verifyResponse.status);
+      console.error('❌ [FIREBASE AUTH] Response:', errorText);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid Firebase ID Token',
+          details: errorText,
+          status: verifyResponse.status
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: 401 
+        }
+      );
     }
 
     const tokenInfo = await verifyResponse.json();

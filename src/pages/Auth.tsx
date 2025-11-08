@@ -92,7 +92,14 @@ const Auth = () => {
           
           if (error) {
             console.error('❌ Firebase auth Edge Function error:', error);
-            throw error;
+            console.error('❌ Error details:', JSON.stringify(error, null, 2));
+            
+            toast({
+              title: "Erreur Google Sign-In",
+              description: `Edge function error: ${error.message || 'Unknown error'}. Veuillez réessayer ou utiliser l'authentification par email.`,
+              variant: "destructive",
+            });
+            return;
           }
 
           if (!data?.session) {
