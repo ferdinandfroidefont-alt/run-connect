@@ -646,19 +646,28 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         
-        Log.d(TAG, "🔍 [LISTENER_WAIT] Vérification " + (checkAttempt + 1) + "/30 - React listener prêt ?");
+        // ✅ NOUVEAU : Vérifier que la WebView est bien attachée
+        if (webView == null) {
+            Log.w(TAG, "⏳ [SYNC] WebView pas encore attachée, retry dans 500ms...");
+            new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                waitForReactListenerReady(checkAttempt + 1);
+            }, 500);
+            return;
+        }
+        
+        Log.d(TAG, "🔍 [SYNC] Vérification React listener (" + (checkAttempt + 1) + "/30)...");
         
         String checkJs = "typeof window.__fcmListenerReady !== 'undefined' && window.__fcmListenerReady === true";
         
         webView.post(() -> {
             webView.evaluateJavascript(checkJs, result -> {
-                Log.d(TAG, "📋 [LISTENER_WAIT] Résultat: " + result);
+                Log.d(TAG, "📋 [SYNC] Résultat: " + result);
                 
                 if ("true".equals(result)) {
-                    Log.d(TAG, "✅ [LISTENER_WAIT] React listener prêt ! Démarrage du retry token FCM...");
+                    Log.d(TAG, "🟢 [SYNC] WebView attachée et React listener prêt - démarrage injection token FCM");
                     startTokenInjectionRetry(0);
                 } else {
-                    Log.d(TAG, "⏳ [LISTENER_WAIT] React pas encore prêt, nouvelle vérification dans 500ms...");
+                    Log.d(TAG, "⏳ [SYNC] React pas encore prêt, nouvelle vérification dans 500ms...");
                     // Revérifier dans 500ms
                     new android.os.Handler(getMainLooper()).postDelayed(() -> {
                         waitForReactListenerReady(checkAttempt + 1);
