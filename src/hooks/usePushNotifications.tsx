@@ -29,6 +29,9 @@ export const usePushNotifications = () => {
   // 🔥 Track if token needs renewal
   const [tokenNeedsRenewal, setTokenNeedsRenewal] = useState(false);
   
+  // 🔥 NIVEAU 8: Track if token is being saved to database
+  const [tokenSaving, setTokenSaving] = useState(false);
+  
   // 🔥 DÉTECTION NATIVE RÉACTIVE (useState pour re-render quand AndroidBridge arrive)
   const [isNative, setIsNative] = useState(() => {
     return (window as any).CapacitorForceNative === true || 
@@ -285,6 +288,9 @@ export const usePushNotifications = () => {
       return;
     }
 
+    // 🔥 NIVEAU 8: Signaler début de sauvegarde
+    setTokenSaving(true);
+
     try {
       // Détecter la vraie plateforme (correction WebView Android)
       let platform = Capacitor.getPlatform();
@@ -336,14 +342,33 @@ export const usePushNotifications = () => {
           variant: "destructive"
         });
         throw error;
-      } else {
-        console.log(`✅ [${platform.toUpperCase()}] Token ${tokenType} sauvegardé avec succès dans Supabase (plateforme: ${platform})`);
+      }
+      
+      // 🔥 NIVEAU 8: VÉRIFICATION - Token vraiment dans la base ?
+      const { data: verification } = await supabase
+        .from('profiles')
+        .select('push_token')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (verification?.push_token === pushToken) {
+        console.log('✅✅✅ [FCM] Token CONFIRMÉ dans la base !');
         setToken(pushToken);
         setIsRegistered(true);
         setPendingToken(null);
+      } else {
+        console.error('❌ [FCM] ERREUR: Token pas trouvé dans la base après update !');
+        setToken('');
+        setIsRegistered(false);
+        throw new Error('Token non sauvegardé');
       }
     } catch (error) {
       console.error('❌ Exception sauvegarde token:', error);
+      setToken('');
+      setIsRegistered(false);
+    } finally {
+      // 🔥 NIVEAU 8: Signaler fin de sauvegarde
+      setTokenSaving(false);
     }
   }, [user, toast]);
 
@@ -388,6 +413,16 @@ export const usePushNotifications = () => {
       return;
     }
 
+    // 🔥 NIVEAU 8: Vérifier si sauvegarde en cours
+    if (tokenSaving) {
+      toast({
+        title: "Sauvegarde en cours...",
+        description: "Le token est en cours de sauvegarde. Réessayez dans 2 secondes.",
+        variant: "default"
+      });
+      return;
+    }
+
     if (!isNative) {
       console.log('❌ [TEST] Mode web détecté');
       console.log('📱 [TEST] CapacitorForceNative:', (window as any).CapacitorForceNative);
@@ -402,8 +437,11 @@ export const usePushNotifications = () => {
       return;
     }
 
+    // 🔥 NIVEAU 8: Vérifier window.fcmToken ET variable d'état
+    const fcmToken = (window as any).fcmToken || token;
+    
     // Vérifier si on a un token FCM
-    if (!token || token.length < 50) {
+    if (!fcmToken || fcmToken.length < 50) {
       // Diagnostic précis
       try {
         const perms = await PushNotifications.checkPermissions();
@@ -429,6 +467,36 @@ export const usePushNotifications = () => {
           variant: "destructive"
         });
       }
+      return;
+    }
+
+    // 🔥 NIVEAU 8: Vérifier que le token est VRAIMENT dans la base
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('push_token')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!profile?.push_token) {
+        console.error('❌ [TEST] Token pas trouvé dans la base !');
+        toast({
+          title: "Token non sauvegardé",
+          description: "Le token FCM n'est pas dans la base. Relancez l'app.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('✅ [TEST] Token confirmé dans la base:', profile.push_token.substring(0, 30) + '...');
+      
+    } catch (error) {
+      console.error('❌ [TEST] Erreur vérification token:', error);
+      toast({
+        title: "Erreur vérification",
+        description: "Impossible de vérifier le token dans la base",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -1007,6 +1075,7 @@ export const usePushNotifications = () => {
     setupPushListeners,
     checkPermissionStatus,
     forceNativeNotificationCheck, // ✅ Exposer pour usage externe
-    tokenNeedsRenewal // 🔥 Expose si le token a besoin d'être renouvelé
+    tokenNeedsRenewal, // 🔥 Expose si le token a besoin d'être renouvelé
+    tokenSaving // 🔥 NIVEAU 8: Exposer l'état de sauvegarde
   };
 };

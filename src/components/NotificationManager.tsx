@@ -22,7 +22,8 @@ export const NotificationManager = () => {
     isNative, 
     isSupported,
     setupPushListeners,
-    checkPermissionStatus // Nouveau : forcer le recheck
+    checkPermissionStatus, // Nouveau : forcer le recheck
+    tokenSaving // 🔥 NIVEAU 8: État de sauvegarde du token
   } = usePushNotifications();
   const { deviceInfo } = useDeviceDetection();
   const { user } = useAuth();
@@ -271,9 +272,14 @@ export const NotificationManager = () => {
               </div>
             )}
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" onClick={testNotification} className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={testNotification} 
+                disabled={!isRegistered || tokenSaving}
+                className="gap-2"
+              >
                 <TestTube className="h-4 w-4" />
-                Tester
+                {tokenSaving ? "Sauvegarde..." : "Tester"}
               </Button>
               <TestLocalNotificationButton />
               <Button 
