@@ -739,8 +739,12 @@ export const usePushNotifications = () => {
       }
     };
 
-    console.log('🎧 [FCM_TOKEN_READY] Installation listener fcmTokenReady...');
-    window.addEventListener('fcmTokenReady', handleFcmTokenReady);
+  console.log('🎧 [FCM_TOKEN_READY] Installation listener fcmTokenReady...');
+  window.addEventListener('fcmTokenReady', handleFcmTokenReady);
+  
+  // 🔥 NOUVEAU : Signaler à Android que le listener est prêt
+  (window as any).__fcmListenerReady = true;
+  console.log('✅ [FCM_LISTENER_READY] Signal envoyé à Android - Listener prêt !');
 
     return () => {
       console.log('🧹 [FCM_TOKEN_READY] Nettoyage du listener fcmTokenReady');

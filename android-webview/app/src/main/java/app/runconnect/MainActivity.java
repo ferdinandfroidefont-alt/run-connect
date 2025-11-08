@@ -219,10 +219,10 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
         }
 
-        // 🔥 NOUVEAU : Démarrer le retry automatique du token après 2 secondes
+        // 🔥 NOUVEAU : Attendre que React signale que le listener est prêt
         new android.os.Handler(getMainLooper()).postDelayed(() -> {
-            startTokenInjectionRetry(0);
-        }, 2000); // Attendre 2 secondes que React soit monté
+            waitForReactListenerReady(0);
+        }, 1000); // Commencer à vérifier après 1 seconde
 
         // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
@@ -636,6 +636,36 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "✅ Résultats permissions injectés dans JavaScript");
             });
         }
+    }
+
+    // 🔥 ATTENDRE QUE REACT SIGNALE QUE LE LISTENER EST PRÊT
+    private void waitForReactListenerReady(int checkAttempt) {
+        if (checkAttempt >= 30) {
+            Log.e(TAG, "❌ [LISTENER_WAIT] React listener pas prêt après 15 secondes, démarrage forcé du retry");
+            startTokenInjectionRetry(0);
+            return;
+        }
+        
+        Log.d(TAG, "🔍 [LISTENER_WAIT] Vérification " + (checkAttempt + 1) + "/30 - React listener prêt ?");
+        
+        String checkJs = "typeof window.__fcmListenerReady !== 'undefined' && window.__fcmListenerReady === true";
+        
+        webView.post(() -> {
+            webView.evaluateJavascript(checkJs, result -> {
+                Log.d(TAG, "📋 [LISTENER_WAIT] Résultat: " + result);
+                
+                if ("true".equals(result)) {
+                    Log.d(TAG, "✅ [LISTENER_WAIT] React listener prêt ! Démarrage du retry token FCM...");
+                    startTokenInjectionRetry(0);
+                } else {
+                    Log.d(TAG, "⏳ [LISTENER_WAIT] React pas encore prêt, nouvelle vérification dans 500ms...");
+                    // Revérifier dans 500ms
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        waitForReactListenerReady(checkAttempt + 1);
+                    }, 500);
+                }
+            });
+        });
     }
 
     // 🔥 MÉTHODE DE RETRY AGRESSIVE POUR L'INJECTION DU TOKEN
