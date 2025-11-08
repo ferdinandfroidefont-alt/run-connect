@@ -774,6 +774,39 @@ export const usePushNotifications = () => {
       }
     }, 8000);
   }
+  
+  // 🔥 DIAGNOSTIC : Vérifier les erreurs FCM injectées par Android
+  setTimeout(() => {
+    const fcmError = (window as any).fcmError;
+    const fcmErrorCode = (window as any).fcmErrorCode;
+    const fcmErrorMessage = (window as any).fcmErrorMessage;
+    const fcmErrorDetails = (window as any).fcmErrorDetails;
+    
+    if (fcmError) {
+      console.error('🚨 [FCM_DIAGNOSTIC] Erreur détectée:', fcmError);
+      
+      let errorTitle = "Erreur notifications";
+      let errorDescription = "Impossible d'initialiser les notifications push.";
+      
+      if (fcmError === 'PLAY_SERVICES_UNAVAILABLE') {
+        errorTitle = "Google Play Services manquant";
+        errorDescription = `Code erreur: ${fcmErrorCode}. FCM nécessite Google Play Services.`;
+      } else if (fcmError === 'FIREBASE_INIT_FAILED') {
+        errorTitle = "Erreur initialisation Firebase";
+        errorDescription = fcmErrorMessage || "Erreur inconnue lors de l'initialisation.";
+      } else if (fcmError === 'FIREBASE_TOKEN_FAILED') {
+        errorTitle = "Échec récupération token";
+        errorDescription = fcmErrorDetails || "Firebase n'a pas pu générer le token.";
+      }
+      
+      toast({
+        title: errorTitle,
+        description: errorDescription,
+        variant: "destructive",
+        duration: 10000
+      });
+    }
+  }, 3000); // Vérifier après 3 secondes (laisser le temps à Android d'injecter l'erreur)
 
     return () => {
       console.log('🧹 [FCM_TOKEN_READY] Nettoyage du listener fcmTokenReady');

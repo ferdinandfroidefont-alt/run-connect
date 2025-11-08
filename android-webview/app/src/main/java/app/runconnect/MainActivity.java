@@ -42,6 +42,8 @@ import com.google.android.gms.tasks.Task;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.ConnectionResult;
 
 import androidx.core.app.NotificationCompat;
 
@@ -199,24 +201,58 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         Log.d(TAG, "✅ AndroidBridge interface ajoutée à la WebView");
 
-        // 🔥 INITIALISER FIREBASE (sans injecter le token tout de suite)
+        // 🔥 VÉRIFIER GOOGLE PLAY SERVICES AVANT FIREBASE
         try {
+            GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+            int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
+            
+            if (resultCode != ConnectionResult.SUCCESS) {
+                Log.e(TAG, "❌ Google Play Services non disponible (code: " + resultCode + ")");
+                Log.e(TAG, "❌ FCM ne fonctionnera PAS sur cet appareil !");
+                
+                // Injecter l'erreur dans JavaScript
+                String errorJs = "window.fcmError = 'PLAY_SERVICES_UNAVAILABLE';" +
+                                "window.fcmErrorCode = " + resultCode + ";" +
+                                "console.error('❌ Google Play Services indisponible, code:', " + resultCode + ");";
+                
+                new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                    if (webView != null) {
+                        webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                    }
+                }, 2000);
+                
+                // Ne PAS continuer l'initialisation Firebase
+                return;
+            }
+            
+            Log.d(TAG, "✅ Google Play Services disponible");
+            
+            // Initialiser Firebase
             FirebaseApp.initializeApp(this);
             Log.d(TAG, "🔥 Firebase initialisé avec succès");
             
-            // ✅ Récupérer token depuis SharedPreferences (backup)
-            try {
-                android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
-                String savedToken = prefs.getString("fcm_token", null);
-                
-                if (savedToken != null && !savedToken.isEmpty()) {
-                    Log.d(TAG, "🔥 Token FCM récupéré depuis SharedPreferences: " + savedToken.substring(0, 30) + "...");
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "❌ Erreur lecture SharedPreferences:", e);
+            // Vérifier le token sauvegardé
+            android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+            String savedToken = prefs.getString("fcm_token", null);
+            
+            if (savedToken != null && !savedToken.isEmpty()) {
+                Log.d(TAG, "🔥 Token FCM récupéré depuis SharedPreferences: " + savedToken.substring(0, 30) + "...");
+            } else {
+                Log.w(TAG, "⚠️ Aucun token FCM sauvegardé, il sera généré par Firebase");
             }
         } catch (Exception e) {
             Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
+            
+            // Injecter l'erreur dans JavaScript
+            String errorJs = "window.fcmError = 'FIREBASE_INIT_FAILED';" +
+                            "window.fcmErrorMessage = '" + e.getMessage() + "';" +
+                            "console.error('❌ Erreur init Firebase:', '" + e.getMessage() + "');";
+            
+            new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                if (webView != null) {
+                    webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                }
+            }, 2000);
         }
 
         // 🔥 NOUVEAU : Attendre que React signale que le listener est prêt
@@ -564,6 +600,12 @@ public class MainActivity extends AppCompatActivity {
             
             return "requesting"; // Indique que la demande est en cours
         }
+        
+        @android.webkit.JavascriptInterface
+        public void onFCMTokenInjected(String token) {
+            Log.d(TAG, "✅ [CALLBACK] React confirme réception token: " + token.substring(0, 30) + "...");
+            // Cette méthode permet à React de confirmer immédiatement qu'il a bien reçu le token
+        }
     }
 
     @Override
@@ -725,10 +767,27 @@ public class MainActivity extends AppCompatActivity {
                                 Log.d(TAG, "🔥 [TOKEN_RETRY] Token Firebase récupéré: " + freshToken.substring(0, 30) + "...");
                                 injectTokenIntoWebView(freshToken, attemptNumber, false);
                             } else {
-                                Log.e(TAG, "❌ [TOKEN_RETRY] Échec récupération token Firebase, retry dans 1s...");
+                                // ✅ NOUVEAU : Logger l'exception réelle
+                                Exception exception = task.getException();
+                                if (exception != null) {
+                                    Log.e(TAG, "❌ [TOKEN_RETRY] Erreur Firebase détaillée:", exception);
+                                    Log.e(TAG, "  → Type: " + exception.getClass().getSimpleName());
+                                    Log.e(TAG, "  → Message: " + exception.getMessage());
+                                } else {
+                                    Log.e(TAG, "❌ [TOKEN_RETRY] Échec Firebase sans exception (task.getResult() == null)");
+                                }
+                                
+                                // Injecter l'erreur dans JavaScript pour diagnostic
+                                String errorJs = "window.fcmError = 'FIREBASE_TOKEN_FAILED';" +
+                                               "window.fcmErrorDetails = '" + (exception != null ? exception.getMessage() : "Unknown") + "';" +
+                                               "console.error('❌ Firebase getToken() échoué:', '" + (exception != null ? exception.getMessage() : "Unknown") + "');";
+                                
+                                webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                                
+                                // Retry après 2 secondes (pas 1s pour éviter le spam)
                                 new android.os.Handler(getMainLooper()).postDelayed(() -> {
                                     startTokenInjectionRetry(attemptNumber + 1);
-                                }, 1000);
+                                }, 2000);
                             }
                         });
                 } else {
@@ -753,17 +812,20 @@ public class MainActivity extends AppCompatActivity {
             "    detail: { token: '" + token + "', platform: 'android', attempt: " + (attemptNumber + 1) + ", restored: " + isRestored + " }" +
             "  }));" +
             "  console.log('✅ [RETRY " + (attemptNumber + 1) + "] Événement fcmTokenReady dispatché');" +
+            // ✅ NOUVEAU : Callback immédiat vers Android
+            "  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.onFCMTokenInjected) {" +
+            "    AndroidBridge.onFCMTokenInjected('" + token + "');" +
+            "  }" +
             "  'INJECTED';" +
             "} catch(e) {" +
             "  console.error('❌ [RETRY] Erreur:', e);" +
-            "  'ERROR';" +
+            "  'ERROR:' + e.message;" +
             "}";
         
         webView.post(() -> {
             webView.evaluateJavascript(jsCode, injectResult -> {
                 Log.d(TAG, "📋 [TOKEN_INJECT] Résultat injection: " + injectResult);
                 
-                // Retry dans 1 seconde si l'injection a échoué
                 if (!"\"INJECTED\"".equals(injectResult)) {
                     Log.w(TAG, "⚠️ [TOKEN_INJECT] Injection ratée, retry dans 1s...");
                     new android.os.Handler(getMainLooper()).postDelayed(() -> {
@@ -771,10 +833,8 @@ public class MainActivity extends AppCompatActivity {
                     }, 1000);
                 } else {
                     Log.d(TAG, "✅ [TOKEN_INJECT] Token injecté avec succès !");
-                    // Continuer le retry pour s'assurer que React a bien reçu le token
-                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
-                        startTokenInjectionRetry(attemptNumber + 1);
-                    }, 1000);
+                    // ✅ NE PAS RETRY IMMÉDIATEMENT, attendre confirmation React
+                    // Le checkJs dans startTokenInjectionRetry() vérifiera si React a confirmé la réception
                 }
             });
         });
