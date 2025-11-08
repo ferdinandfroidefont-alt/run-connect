@@ -281,6 +281,10 @@ export const usePushNotifications = () => {
 
   // Sauvegarder le token push
   const savePushToken = useCallback(async (pushToken: string) => {
+    console.log('💾 [SAVE] savePushToken appelé');
+    console.log('💾 [SAVE] user:', user ? user.id : 'undefined');
+    console.log('💾 [SAVE] pushToken:', pushToken.substring(0, 30) + '...');
+    
     if (!user) {
       console.log('⏳ [FCM] User non défini, token en attente:', pushToken.substring(0, 30) + '...');
       setPendingToken(pushToken);
@@ -786,6 +790,7 @@ export const usePushNotifications = () => {
       if (token && !(window as any).__fcmTokenReceived) {
         const attempt = customEvent.detail?.attempt || 1;
         console.log(`🔥🔥🔥 [FCM_TOKEN_READY] Token reçu (tentative ${attempt}):`, token.substring(0, 30) + '...');
+        console.log('👤 [FCM_TOKEN_READY] user:', user ? user.id : 'undefined');
         console.log('📱 [FCM_TOKEN_READY] Plateforme:', customEvent.detail?.platform || 'unknown');
         
         // ✅ NIVEAU 7 : Diagnostic après réception événement
