@@ -720,6 +720,23 @@ export const usePushNotifications = () => {
         console.log(`🔥🔥🔥 [FCM_TOKEN_READY] Token reçu (tentative ${attempt}):`, token.substring(0, 30) + '...');
         console.log('📱 [FCM_TOKEN_READY] Plateforme:', customEvent.detail?.platform || 'unknown');
         
+        // ✅ NIVEAU 7 : Diagnostic après réception événement
+        setTimeout(() => {
+          const fcmToken = (window as any).fcmToken;
+          if (!fcmToken) {
+            console.error('❌ [DIAGNOSTIC] window.fcmToken est vide 1s après fcmTokenReady !');
+            console.log('🔁 [DIAGNOSTIC] Tentative récupération via AndroidBridge...');
+            
+            // Tenter de récupérer via AndroidBridge
+            if ((window as any).AndroidBridge?.getFCMToken) {
+              const bridgeToken = (window as any).AndroidBridge.getFCMToken();
+              console.log('📱 [DIAGNOSTIC] AndroidBridge.getFCMToken() retourne:', bridgeToken?.substring(0, 30));
+            }
+          } else {
+            console.log('✅ [DIAGNOSTIC] window.fcmToken existe:', fcmToken.substring(0, 30) + '...');
+          }
+        }, 1000);
+        
         // ✅ CONFIRMER LA RÉCEPTION (arrête le retry côté Android)
         (window as any).__fcmTokenReceived = true;
         console.log('✅ [FCM_TOKEN_READY] Réception confirmée, retry Android arrêté');

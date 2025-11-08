@@ -572,15 +572,36 @@ public class MainActivity extends AppCompatActivity {
         public String getFCMToken() {
             Log.d(TAG, "📱 [AndroidBridge] getFCMToken() appelé depuis JavaScript");
             
-            // Récupérer le token Firebase de manière asynchrone
+            // ✅ NIVEAU 7 : Vérifier d'abord SharedPreferences pour un token déjà sauvegardé
+            try {
+                android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                String savedToken = prefs.getString("fcm_token", null);
+                
+                if (savedToken != null && !savedToken.isEmpty()) {
+                    Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token trouvé dans SharedPreferences: " + savedToken.substring(0, 30) + "...");
+                    return savedToken; // Retour synchrone
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "❌ [AndroidBridge] Erreur lecture SharedPreferences:", e);
+            }
+            
+            // Si pas de token sauvegardé, récupérer de manière asynchrone via Firebase
             runOnUiThread(() -> {
                 try {
                     FirebaseMessaging.getInstance().getToken()
                         .addOnCompleteListener(task -> {
                             if (task.isSuccessful() && task.getResult() != null) {
                                 String token = task.getResult();
-                                Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token FCM fourni: " + token.substring(0, Math.min(30, token.length())) + "...");
-                                Log.d(TAG, "🔥 [AndroidBridge.getFCMToken] Injection token dans WebView + dispatch événement fcmTokenReady");
+                                Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token FCM récupéré via Firebase: " + token.substring(0, Math.min(30, token.length())) + "...");
+                                
+                                // Sauvegarder dans SharedPreferences
+                                try {
+                                    android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                                    prefs.edit().putString("fcm_token", token).apply();
+                                    Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token sauvegardé dans SharedPreferences");
+                                } catch (Exception e) {
+                                    Log.e(TAG, "❌ [AndroidBridge.getFCMToken] Erreur sauvegarde:", e);
+                                }
                                 
                                 // Injecter dans WebView
                                 String jsCode = "window.fcmToken = '" + token + "';" +
@@ -598,7 +619,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
             
-            return "requesting"; // Indique que la demande est en cours
+            return "requesting"; // Indique que la demande est en cours (async)
         }
         
         @android.webkit.JavascriptInterface
@@ -832,9 +853,25 @@ public class MainActivity extends AppCompatActivity {
                         startTokenInjectionRetry(attemptNumber + 1);
                     }, 1000);
                 } else {
-                    Log.d(TAG, "✅ [TOKEN_INJECT] Token injecté avec succès !");
-                    // ✅ NE PAS RETRY IMMÉDIATEMENT, attendre confirmation React
-                    // Le checkJs dans startTokenInjectionRetry() vérifiera si React a confirmé la réception
+                    Log.d(TAG, "✅ [TOKEN_INJECT] Token injecté avec succès, vérification réception React dans 500ms...");
+                    
+                    // ✅ NIVEAU 7 : Après injection, attendre 500ms puis vérifier si React a confirmé
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        String checkConfirmJs = "typeof window.__fcmTokenReceived !== 'undefined' && window.__fcmTokenReceived === true";
+                        
+                        webView.post(() -> {
+                            webView.evaluateJavascript(checkConfirmJs, confirmResult -> {
+                                Log.d(TAG, "📋 [TOKEN_INJECT] React a confirmé ? " + confirmResult);
+                                
+                                if (!"true".equals(confirmResult)) {
+                                    Log.w(TAG, "⚠️ [TOKEN_INJECT] React n'a pas confirmé la réception, retry...");
+                                    startTokenInjectionRetry(attemptNumber + 1);
+                                } else {
+                                    Log.d(TAG, "🎉 [TOKEN_INJECT] React a confirmé la réception du token, arrêt du retry");
+                                }
+                            });
+                        });
+                    }, 500);
                 }
             });
         });

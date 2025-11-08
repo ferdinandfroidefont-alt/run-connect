@@ -30,16 +30,32 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Log.e(TAG, "❌ Erreur sauvegarde SharedPreferences:", e);
         }
         
-        // Injecter dans la WebView si MainActivity existe
+        // ✅ NIVEAU 7 : Vérifier si React est prêt AVANT d'injecter
         if (MainActivity.instance != null && MainActivity.instance.webView != null) {
             try {
-                String jsCode = "window.fcmToken = '" + token + "';" +
-                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));";
+                // Vérifier si React listener est prêt
+                String checkJs = "typeof window.__fcmListenerReady !== 'undefined' && window.__fcmListenerReady === true";
                 
-                MainActivity.instance.webView.post(() -> 
-                    MainActivity.instance.webView.evaluateJavascript(jsCode, null)
-                );
-                Log.d(TAG, "✅ Token injecté dans WebView via onNewToken");
+                MainActivity.instance.webView.post(() -> {
+                    MainActivity.instance.webView.evaluateJavascript(checkJs, result -> {
+                        Log.d(TAG, "📋 [onNewToken] React listener prêt ? " + result);
+                        
+                        if ("true".equals(result)) {
+                            // React est prêt, on peut injecter
+                            String jsCode = "window.fcmToken = '" + token + "';" +
+                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
+                                "console.log('✅ [onNewToken] Token injecté et événement dispatché');";
+                            
+                            MainActivity.instance.webView.post(() -> 
+                                MainActivity.instance.webView.evaluateJavascript(jsCode, null)
+                            );
+                            Log.d(TAG, "✅ Token injecté dans WebView via onNewToken (React prêt)");
+                        } else {
+                            // React pas prêt, on laisse MainActivity le faire via retry
+                            Log.w(TAG, "⚠️ React listener pas prêt, token sauvegardé dans SharedPreferences, MainActivity le restaurera");
+                        }
+                    });
+                });
             } catch (Exception e) {
                 Log.e(TAG, "❌ Erreur injection token:", e);
             }
