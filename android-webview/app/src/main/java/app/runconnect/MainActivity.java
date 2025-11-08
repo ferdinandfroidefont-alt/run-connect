@@ -654,6 +654,20 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "✅ [CALLBACK] React confirme réception token: " + token.substring(0, 30) + "...");
             // Cette méthode permet à React de confirmer immédiatement qu'il a bien reçu le token
         }
+        
+        /**
+         * 🆕 NIVEAU 11 : Sauvegarde user_id pour permettre à MyFirebaseMessagingService
+         * de mettre à jour Supabase directement
+         */
+        @android.webkit.JavascriptInterface
+        public void saveUserIdForFCM(String userId) {
+            Log.d(TAG, "💾 [AndroidBridge] Sauvegarde user_id pour FCM: " + userId);
+            
+            android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+            prefs.edit().putString("user_id", userId).apply();
+            
+            Log.d(TAG, "✅ [AndroidBridge] user_id sauvegardé dans SharedPreferences");
+        }
     }
 
     @Override

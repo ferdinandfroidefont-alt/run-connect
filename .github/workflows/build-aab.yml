@@ -93,8 +93,8 @@ jobs:
               applicationId "app.runconnect"
               minSdk 24
               targetSdk 35
-              versionCode 149
-              versionName "1.3"
+              versionCode 150
+              versionName "1.5.0"
               
               buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
               buildConfigField "boolean", "IS_AAB_BUILD", "true"

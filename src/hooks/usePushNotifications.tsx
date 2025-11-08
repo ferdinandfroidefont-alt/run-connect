@@ -360,6 +360,16 @@ export const usePushNotifications = () => {
         setToken(pushToken);
         setIsRegistered(true);
         setPendingToken(null);
+        
+        // 🆕 NIVEAU 11 : Sauvegarder user_id dans SharedPreferences pour Android natif
+        if ((window as any).AndroidBridge) {
+          try {
+            (window as any).AndroidBridge.saveUserIdForFCM(user.id);
+            console.log('✅ [FCM] user_id sauvegardé pour Android natif');
+          } catch (e) {
+            console.error('❌ [FCM] Erreur sauvegarde user_id:', e);
+          }
+        }
       } else {
         console.error('❌ [FCM] ERREUR: Token pas trouvé dans la base après update !');
         setToken('');
