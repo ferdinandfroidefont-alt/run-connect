@@ -9,16 +9,14 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.util.Log;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
-import android.webkit.ValueCallback;
-import android.webkit.PermissionRequest;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.ValueCallback;
 import android.content.Intent;
 import android.provider.ContactsContract;
 import android.database.Cursor;
@@ -26,68 +24,42 @@ import android.content.ContentResolver;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
-import android.os.Message;
-import android.util.Base64;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import androidx.annotation.NonNull;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
+
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.ConnectionResult;
+
+import androidx.core.app.NotificationCompat;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "RunConnect";
+    public static MainActivity instance;
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
-    private static final int REQ_CAMERA = 1004; // 📹 Code pour caméra
-    private static final int REQ_MICROPHONE = 1005; // 🎤 Code pour microphone
-    private static final int REQ_NOTIFICATIONS = 1006; // ✅ Code unique pour notifications
-    private static final int FILE_CHOOSER_REQUEST_CODE = 3000; // 🖼️ Code pour file chooser
-    private static final int GOOGLE_SIGN_IN_REQUEST_CODE = 9001; // 🔐 Code pour Google Sign-In
-    private ValueCallback<Uri[]> filePathCallback; // 🖼️ Callback pour récupérer l'URI du fichier
+    private static final int REQ_MICROPHONE = 1004;
+    private static final int REQ_NOTIFICATIONS = 9999;
     public WebView webView;
-    public static MainActivity instance;
+    private ValueCallback<Uri[]> filePathCallback;
+    
+    // URL configurée depuis BuildConfig (modifié par le workflow)
     private final String START_URL = "https://run-connect.lovable.app";
-    private GoogleSignInClient mGoogleSignInClient; // 🔥 Client Google Sign-In
-    
-    // Cache mémoire pour les contacts (évite relecture à chaque appel)
-    private static class ContactsCache {
-        private String cachedData = null;
-        private long lastUpdateTime = 0;
-        private static final long CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-        
-        public boolean isValid() {
-            return cachedData != null && (System.currentTimeMillis() - lastUpdateTime) < CACHE_DURATION;
-        }
-        
-        public void update(String data) {
-            this.cachedData = data;
-            this.lastUpdateTime = System.currentTimeMillis();
-        }
-        
-        public String getData() {
-            return cachedData;
-        }
-        
-        public void invalidate() {
-            cachedData = null;
-            lastUpdateTime = 0;
-        }
-    }
-    
-    private final ContactsCache contactsCache = new ContactsCache();
 
     /**
      * Vérifie si Chrome est installé sur l'appareil
@@ -101,258 +73,310 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * 🔥 CORRECTION #2: Vérifier la disponibilité de Google Play Services
-     */
-    private boolean checkGooglePlayServices() {
-        com.google.android.gms.common.GoogleApiAvailability availability = 
-            com.google.android.gms.common.GoogleApiAvailability.getInstance();
-        int resultCode = availability.isGooglePlayServicesAvailable(this);
-        
-        if (resultCode != com.google.android.gms.common.ConnectionResult.SUCCESS) {
-            Log.e(TAG, "❌ Google Play Services indisponible (code: " + resultCode + ")");
-            if (availability.isUserResolvableError(resultCode)) {
-                availability.getErrorDialog(this, resultCode, 9000).show();
-            }
-            return false;
-        }
-        Log.d(TAG, "✅ Google Play Services disponible");
-        return true;
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // Stocker l'instance pour accès depuis MessagingService
         instance = this;
-        
-        // Handle deep link if activity was started with one
-        handleIntent(getIntent());
         
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
-        
-        // 🔥 Initialiser Google Sign-In Client
-        try {
-            String webClientId = getString(R.string.default_web_client_id);
-            Log.d(TAG, "🔑 Initializing Google Sign-In with Web Client ID");
-            
-            // 🔥 CORRECTION #1: Ajouter requestServerAuthCode pour un token complet
-            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(webClientId)
-                .requestServerAuthCode(webClientId)  // ✅ AJOUTÉ
-                .requestEmail()
-                .requestProfile()
-                .build();
-            
-            mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-            Log.d(TAG, "✅ Google Sign-In Client initialized successfully");
-            
-            // 🔥 CORRECTION #3: Vérifier Google Play Services au démarrage
-            if (!checkGooglePlayServices()) {
-                Log.e(TAG, "⚠️ Google Sign-In peut ne pas fonctionner correctement");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Error initializing Google Sign-In: " + e.getMessage());
-        }
 
-        // ✅ Full screen immersif + transparent
+        // Full screen immersif + transparent
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         if (Build.VERSION.SDK_INT >= 21) {
             getWindow().setStatusBarColor(Color.TRANSPARENT);
             getWindow().setNavigationBarColor(Color.TRANSPARENT);
-            getWindow().getDecorView().setSystemUiVisibility(
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            );
         }
 
-        // ✅ WebView setup
+        // WebView setup
         webView = new WebView(this);
-        
-        // ✅ Créer le canal de notification au démarrage
-        createNotificationChannelAtStartup();
-        
-        // ✅ Ajouter l'interface JavaScript AndroidBridge
-        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
+        webView.setLayerType(WebView.LAYER_TYPE_SOFTWARE, null);
         
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setSupportMultipleWindows(true);
+        s.setDomStorageEnabled(true);  // ✅ DOM Storage (sessionStorage)
+        s.setDatabaseEnabled(true);     // ✅ Enable Web SQL Database for localStorage
+        s.setSupportMultipleWindows(true); // ✅ Support des popups OAuth
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         s.setAllowFileAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setGeolocationEnabled(true);
         
-        // ✅ MODE CACHE : Utiliser le cache si pas de connexion
+        // ✅ ACTIVER LES SERVICE WORKERS POUR FIREBASE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            android.webkit.ServiceWorkerController swController = android.webkit.ServiceWorkerController.getInstance();
+            android.webkit.ServiceWorkerWebSettings swSettings = swController.getServiceWorkerWebSettings();
+            swSettings.setAllowContentAccess(true);
+            swSettings.setAllowFileAccess(true);
+            swSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            Log.d(TAG, "✅ Service Worker activé pour Firebase");
+        }
+        
+        // ✅ Configuration explicite du localStorage path
+        String databasePath = getApplicationContext().getDir("database", Context.MODE_PRIVATE).getPath();
+        s.setDatabasePath(databasePath);
+        
+        // MODE CACHE : Utiliser le cache si pas de connexion
         s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         
-        Log.d(TAG, "🌐 WebView configured with geolocation enabled");
+        if (Build.VERSION.SDK_INT >= 21) {
+            s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+        }
+        
         Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
+        Log.d(TAG, "💾 LocalStorage database path: " + databasePath);
 
-        // ✅ Géolocalisation sans blocage (Android < 12)
-        String dir = this.getApplicationContext().getDir("geolocation", Context.MODE_PRIVATE).getPath();
-        s.setGeolocationDatabasePath(dir);
+        // Cookies
+        android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
+        cm.setAcceptCookie(true);
+        if (Build.VERSION.SDK_INT >= 21) cm.setAcceptThirdPartyCookies(webView, true);
 
-        // ✅ Autoriser la géolocalisation sans popup + Gérer les popups OAuth + File Chooser
+        // WebChromeClient avec géoloc + file picker
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 Log.d(TAG, "📍 Geolocation permission requested for: " + origin);
-                callback.invoke(origin, true, false); // toujours autoriser
+                callback.invoke(origin, true, false);
             }
-            
+
             @Override
-            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-                Log.d(TAG, "🪟 onCreateWindow appelé - Bloqué (utilise Chrome Custom Tabs)");
-                return false; // Bloquer les popups, on gère via Custom Tabs
-            }
-            
-            // 🖼️ GÉRER L'OUVERTURE DE FICHIERS / GALERIE
-            @Override
-            public boolean onShowFileChooser(
-                WebView webView,
-                ValueCallback<Uri[]> filePathCallback,
-                FileChooserParams fileChooserParams
-            ) {
-                Log.d(TAG, "🖼️ [FILE CHOOSER] onShowFileChooser appelé");
-                
-                // Si un callback existe déjà, l'annuler
-                if (MainActivity.this.filePathCallback != null) {
-                    MainActivity.this.filePathCallback.onReceiveValue(null);
-                }
-                
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
                 MainActivity.this.filePathCallback = filePathCallback;
-                
+                Intent intent = fileChooserParams.createIntent();
                 try {
-                    // Créer un Intent pour ouvrir la galerie
-                    Intent intent = new Intent(Intent.ACTION_PICK);
-                    intent.setType("image/*");
-                    intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png", "image/jpg"});
-                    
-                    Log.d(TAG, "🖼️ [FILE CHOOSER] Lancement Intent.ACTION_PICK");
-                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
-                    return true;
-                    
+                    fileChooserLauncher.launch(intent);
                 } catch (Exception e) {
-                    Log.e(TAG, "🖼️❌ [FILE CHOOSER] Erreur ouverture galerie", e);
-                    MainActivity.this.filePathCallback = null;
+                    filePathCallback.onReceiveValue(null);
                     return false;
                 }
+                return true;
             }
-            
-            /**
-             * 🎤 GÉRER LES PERMISSIONS WEBVIEW (MICROPHONE, CAMÉRA)
-             */
-            @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                Log.d(TAG, "🎤 [PERMISSION REQUEST] Demande de permission WebView");
-                
-                if (request.getResources() == null || request.getResources().length == 0) {
-                    Log.w(TAG, "🎤⚠️ [PERMISSION REQUEST] Aucune ressource demandée");
-                    request.deny();
-                    return;
-                }
 
-                for (String resource : request.getResources()) {
-                    Log.d(TAG, "🎤 [PERMISSION REQUEST] Ressource demandée: " + resource);
-                    
-                    // Gérer le microphone
-                    if (resource.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
-                        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) 
-                            == PackageManager.PERMISSION_GRANTED) {
-                            Log.d(TAG, "🎤✅ [PERMISSION REQUEST] Permission RECORD_AUDIO accordée, autorisation WebView");
-                            request.grant(request.getResources());
-                            return;
-                        } else {
-                            Log.d(TAG, "🎤⚠️ [PERMISSION REQUEST] Permission RECORD_AUDIO manquante, demande popup Android");
-                            ActivityCompat.requestPermissions(
-                                MainActivity.this,
-                                new String[]{Manifest.permission.RECORD_AUDIO},
-                                REQ_MICROPHONE
-                            );
-                            request.deny();
-                            return;
-                        }
-                    }
-                    
-                    // Gérer la caméra
-                    if (resource.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) {
-                        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) 
-                            == PackageManager.PERMISSION_GRANTED) {
-                            Log.d(TAG, "📹✅ [PERMISSION REQUEST] Permission CAMERA accordée, autorisation WebView");
-                            request.grant(request.getResources());
-                            return;
-                        } else {
-                            Log.d(TAG, "📹⚠️ [PERMISSION REQUEST] Permission CAMERA manquante, demande popup Android");
-                            ActivityCompat.requestPermissions(
-                                MainActivity.this,
-                                new String[]{Manifest.permission.CAMERA},
-                                REQ_CAMERA
-                            );
-                            request.deny();
-                            return;
-                        }
-                    }
-                }
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                Log.d(TAG, "🪟 onCreateWindow appelé - Gestion popup OAuth dans WebView");
                 
-                Log.w(TAG, "⚠️ [PERMISSION REQUEST] Ressource non gérée, refus");
-                request.deny();
+                // Créer une nouvelle WebView pour la popup OAuth
+                WebView newWebView = new WebView(MainActivity.this);
+                WebSettings settings = newWebView.getSettings();
+                settings.setJavaScriptEnabled(true);
+                settings.setDomStorageEnabled(true);
+                settings.setSupportMultipleWindows(false);
+                settings.setGeolocationEnabled(true);
+                
+                // Réutiliser le même WebChromeClient
+                newWebView.setWebChromeClient(this);
+                
+                // Réutiliser le même WebViewClient pour intercepter les redirections
+                newWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                        String url = request.getUrl().toString();
+                        Log.d(TAG, "🔗 [POPUP] URL interceptée: " + url);
+                        
+                        // Si c'est un callback OAuth, charger dans la WebView PRINCIPALE
+                        if (url.startsWith("app.runconnect://") || url.contains("auth/callback") || url.contains("oauth/callback")) {
+                            Log.d(TAG, "✅ Callback OAuth détecté dans popup, chargement dans WebView principale");
+                            MainActivity.this.webView.loadUrl(url);
+                            // Fermer la popup
+                            view.destroy();
+                            return true;
+                        }
+                        
+                        // Charger dans la popup
+                        return false;
+                    }
+                });
+                
+                // Transporter la nouvelle WebView
+                ((WebView.WebViewTransport) resultMsg.obj).setWebView(newWebView);
+                resultMsg.sendToTarget();
+                
+                Log.d(TAG, "✅ Popup WebView créée avec succès");
+                return true;
             }
         });
 
-        // ✅ Gérer deep links et lifecycle des pages
+        // ✅ AJOUTER L'INTERFACE JAVASCRIPT ANDROIDBRIDGE
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
+        Log.d(TAG, "✅ AndroidBridge interface ajoutée à la WebView");
+        
+        // 🔥 NIVEAU 16: Bridge JavaScript pour recevoir le user_id depuis React
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void saveUserId(String userId) {
+                Log.d(TAG, "💾 [BRIDGE] Réception user_id depuis React: " + userId);
+                
+                getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+                    .edit()
+                    .putString("user_id", userId)
+                    .apply();
+                
+                Log.d(TAG, "✅ [BRIDGE] user_id sauvegardé dans SharedPreferences");
+                
+                // 🔥 NOUVEAU : Forcer la récupération du token FCM APRÈS l'authentification
+                if (userId != null && !userId.isEmpty()) {
+                    forceFetchFCMToken();
+                }
+            }
+        }, "AndroidUserBridge");
+        Log.d(TAG, "✅ AndroidUserBridge interface ajoutée à la WebView");
+
+        // 🔥 VÉRIFIER GOOGLE PLAY SERVICES AVANT FIREBASE
+        try {
+            GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+            int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
+            
+            if (resultCode != ConnectionResult.SUCCESS) {
+                Log.e(TAG, "❌ Google Play Services non disponible (code: " + resultCode + ")");
+                Log.e(TAG, "❌ FCM ne fonctionnera PAS sur cet appareil !");
+                
+                // Injecter l'erreur dans JavaScript
+                String errorJs = "window.fcmError = 'PLAY_SERVICES_UNAVAILABLE';" +
+                                "window.fcmErrorCode = " + resultCode + ";" +
+                                "console.error('❌ Google Play Services indisponible, code:', " + resultCode + ");";
+                
+                new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                    if (webView != null) {
+                        webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                    }
+                }, 2000);
+                
+                // Ne PAS continuer l'initialisation Firebase
+                return;
+            }
+            
+            Log.d(TAG, "✅ Google Play Services disponible");
+            
+            // Initialiser Firebase
+            FirebaseApp.initializeApp(this);
+            Log.d(TAG, "🔥 Firebase initialisé avec succès");
+            
+            // Vérifier le token sauvegardé
+            android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+            String savedToken = prefs.getString("fcm_token", null);
+            
+            if (savedToken != null && !savedToken.isEmpty()) {
+                Log.d(TAG, "🔥 Token FCM récupéré depuis SharedPreferences: " + savedToken.substring(0, 30) + "...");
+            } else {
+                Log.w(TAG, "⚠️ Aucun token FCM sauvegardé, il sera généré par Firebase");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur initialisation Firebase:", e);
+            
+            // Injecter l'erreur dans JavaScript
+            String errorJs = "window.fcmError = 'FIREBASE_INIT_FAILED';" +
+                            "window.fcmErrorMessage = '" + e.getMessage() + "';" +
+                            "console.error('❌ Erreur init Firebase:', '" + e.getMessage() + "');";
+            
+            new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                if (webView != null) {
+                    webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                }
+            }, 2000);
+        }
+
+        // 🔥 NOUVEAU : Attendre que React signale que le listener est prêt
+        new android.os.Handler(getMainLooper()).postDelayed(() -> {
+            waitForReactListenerReady(0);
+        }, 1000); // Commencer à vérifier après 1 seconde
+
+        // WebViewClient AVEC CUSTOM TABS POUR GOOGLE OAUTH
         webView.setWebViewClient(new WebViewClient() {
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                Log.d(TAG, "🔗 URL interceptée: " + url);
-
-                // ✅ LOG DE DEBUG : Vérifier qu'aucune URL OAuth Google n'est interceptée
-                if (url.contains("accounts.google.com")) {
-                    Log.e(TAG, "❌❌❌ URL GOOGLE OAUTH INTERCEPTÉE - NE DEVRAIT JAMAIS ARRIVER AVEC FIREBASE AUTH NATIF !");
-                }
-
-
-                // ✅ Si callback OAuth (app.runconnect://), charger dans la WebView
-                if (url.startsWith("app.runconnect://") || url.startsWith("runconnect://")) {
-                    Log.d(TAG, "✅ Callback OAuth détecté: " + url);
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                Log.d(TAG, "📄 Page loading started: " + url);
+                
+                // Injecter les flags dès le début du chargement
+                injectAABFlags(view);
+                injectPermissionsState(view);
+                injectDeviceInfo(view);
+            }
+            
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                
+                // ✅ Injection retardée pour s'assurer que React est monté
+                if (url.contains("run-connect.lovable.app") || url.contains("lovableproject.com")) {
+                    Log.d(TAG, "🔥 [PAGE_LOADED] Page principale chargée");
                     
-                    try {
-                        // Convertir app.runconnect://auth/callback vers https://run-connect.lovable.app/auth/callback
-                        String webUrl = url.replace("app.runconnect://", START_URL + "/")
-                                           .replace("runconnect://", START_URL + "/");
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        injectAABFlags(view);
+                        injectPermissionsState(view);
+                        injectDeviceInfo(view);
+                        verifyInjection(view);
                         
-                        Log.d(TAG, "🔄 Redirection vers: " + webUrl);
-                        view.loadUrl(webUrl);
+                        // 🔥 NIVEAU 15: Injecter le token FCM si disponible en cache
+                        String cachedToken = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+                            .getString("fcm_token", null);
                         
-                        return true;
-                    } catch (Exception e) {
-                        Log.e(TAG, "❌ Erreur ouverture callback OAuth: " + e.getMessage());
-                        handleDeepLink(url);
-                        return true;
-                    }
+                        if (cachedToken != null) {
+                            Log.d(TAG, "🔥 [FCM] Token trouvé en cache, injection dans WebView");
+                            injectFCMTokenIntoWebView(cachedToken);
+                        }
+                        
+                        Log.d(TAG, "✅ [PAGE_LOADED] Flags injectés avec delay de 500ms");
+                    }, 500);
                 }
-
-                // ✅ Si lien externe (http/https), ouvrir dans le navigateur
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    if (!url.contains("run-connect.lovable.app") && 
-                        !url.contains("lovableproject.com") &&
-                        !url.contains("supabase.co") &&
-                        !url.contains("accounts.google.com")) {
-                        Log.d(TAG, "🌐 Lien externe détecté, ouverture dans le navigateur");
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        startActivity(intent);
-                        return true;
-                    }
+            }
+            
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                String url = uri.toString();
+                String host = uri.getHost() != null ? uri.getHost() : "";
+                
+                Log.d(TAG, "🔗 shouldOverrideUrlLoading: " + url);
+                
+                // 1. INTERCEPTER LE CALLBACK OAUTH (app.runconnect://)
+                if (url.startsWith("app.runconnect://auth") ||
+                    url.startsWith("app.runconnect://oauth") ||
+                    url.contains("auth/callback")) {
+                    Log.d(TAG, "✅ Deep link OAuth intercepté : " + url);
+                    view.loadUrl(url);
+                    return true;
                 }
-
-                // ✅ Charger dans la WebView par défaut
+                
+                // 2. GARDER GOOGLE OAUTH DANS LA WEBVIEW (pas Custom Tabs)
+                if (host.contains("accounts.google.com") || 
+                    (url.contains("oauth") && host.contains("google")) ||
+                    host.contains("googleapis.com")) {
+                    
+                    Log.d(TAG, "🔐 Chargement OAuth Google DANS la WebView : " + url);
+                    view.loadUrl(url); // ✅ RESTER DANS LA WEBVIEW
+                    return false; // false = géré par la WebView
+                }
+                
+                // 3. Ouvrir Strava en EXTERNE (navigateur)
+                if (host.contains("strava.com")) {
+                    Log.d(TAG, "🚴 Ouverture Strava dans navigateur externe : " + url);
+                    Intent i = new Intent(Intent.ACTION_VIEW, uri);
+                    startActivity(i);
+                    return true;
+                }
+                
+                // 4. Intercepter Supabase/Firebase DANS la WebView
+                if (host.contains("supabase.co") || host.contains("firebaseapp.com")) {
+                    Log.d(TAG, "✅ URL Supabase/Firebase chargée dans WebView : " + url);
+                    view.loadUrl(url);
+                    return false;
+                }
+                
+                // 6. Ouvrir les liens externes dans le navigateur
+                if (!host.contains("run-connect.lovable.app") &&
+                    !host.contains("app.runconnect") &&
+                    !host.isEmpty()) {
+                    Log.d(TAG, "🌐 Lien externe, ouverture navigateur : " + url);
+                    Intent i = new Intent(Intent.ACTION_VIEW, uri);
+                    startActivity(i);
+                    return true;
+                }
+                
+                // 7. Tous les autres liens restent dans la WebView
+                Log.d(TAG, "🔄 Chargement dans WebView : " + url);
                 return false;
             }
             
@@ -360,7 +384,6 @@ public class MainActivity extends AppCompatActivity {
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 Log.e(TAG, "❌ Erreur réseau: " + description + " (code: " + errorCode + ")");
                 
-                // Afficher la page offline uniquement pour les erreurs réseau
                 if (errorCode == WebViewClient.ERROR_HOST_LOOKUP || 
                     errorCode == WebViewClient.ERROR_CONNECT || 
                     errorCode == WebViewClient.ERROR_TIMEOUT) {
@@ -376,454 +399,562 @@ public class MainActivity extends AppCompatActivity {
                     onReceivedError(view, error.getErrorCode(), error.getDescription().toString(), request.getUrl().toString());
                 }
             }
-            
-            @Override
-            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
-                super.onPageStarted(view, url, favicon);
-                Log.d(TAG, "📄 Page loading started: " + url);
-                
-                // Injecter les flags dès le début du chargement
-                injectAABFlags(view);
-                injectPermissionsState(view);
-                injectDeviceInfo(view);
-            }
-            
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                Log.d(TAG, "📦 Page terminée - injection flags AAB avec délai");
-                // Délai pour s'assurer que la page est prête
-                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                    injectAABFlags(view);
-                    injectPermissionsState(view);
-                    injectDeviceInfo(view);
-                    
-                    // Vérification que l'injection a réussi après 500ms
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        verifyInjection(view);
-                    }, 500);
-                }, 1000); // Délai augmenté à 1000ms
-                
-                // Notifier JavaScript que l'injection est terminée
-                view.evaluateJavascript("window.androidInjectionComplete = true; console.log('🚀 Android injection completed');", null);
-            }
         });
 
-
-        // ✅ RÉACTIVÉ - Demande automatique de permissions au démarrage
-        // Affiche les pop-ups Android natives dès le premier lancement
-        if (!hasLocationPermission()) {
-            Log.d(TAG, "🔐 Requesting location permissions...");
-            ActivityCompat.requestPermissions(this,
-                    new String[]{
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                    },
-                    REQ_LOCATION);
-        } else {
-            Log.d(TAG, "✅ Location permissions already granted");
-        }
-
-        if (!hasStoragePermission()) {
-            Log.d(TAG, "🔐 Requesting storage permissions...");
-            String[] storagePermissions;
-            if (Build.VERSION.SDK_INT >= 33) {
-                storagePermissions = new String[]{
-                    Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
-                    Manifest.permission.CAMERA
-                };
-            } else {
-                storagePermissions = new String[]{
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.CAMERA
-                };
-            }
-            ActivityCompat.requestPermissions(this, storagePermissions, REQ_STORAGE);
-        } else {
-            Log.d(TAG, "✅ Storage permissions already granted");
-        }
-
-        if (!hasContactsPermission()) {
-            Log.d(TAG, "🔐 Requesting contacts permissions...");
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_CONTACTS},
-                    REQ_CONTACTS);
-        } else {
-            Log.d(TAG, "✅ Contacts permissions already granted");
-        }
-
-        if (Build.VERSION.SDK_INT >= 23 && 
-            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "🔐 Requesting microphone permissions...");
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.RECORD_AUDIO},
-                    1004);
-        } else {
-            Log.d(TAG, "✅ Microphone permissions already granted");
-        }
-
-        // ✅ Créer le canal de notification pour Firebase
-        createNotificationChannels();
-        
-        // 🔥 INITIALISER FIREBASE ET RÉCUPÉRER LE TOKEN FCM
-        initializeFirebaseMessaging();
-        
-        // ✅ Vérifier si notifications déjà autorisées au démarrage
-        checkNotificationPermissionAtStartup();
-        
-        // ✅ Charger le site
-        Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
         setContentView(webView);
         
-        // Injecter immédiatement après le chargement de l'URL avec délai
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            Log.d(TAG, "🔄 Injection initiale forcée au démarrage");
+        // 🔥 NIVEAU 10: Injection initiale des flags au démarrage
+        new android.os.Handler(getMainLooper()).postDelayed(() -> {
             injectAABFlags(webView);
             injectPermissionsState(webView);
             injectDeviceInfo(webView);
             verifyInjection(webView);
-        }, 1000); // ✅ Réduit à 1s pour que AndroidBridge soit disponible plus rapidement
-        
-        Log.d(TAG, "🎯 MainActivity setup complete");
-    }
-    
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "🔄 onResume - Réinjection état permissions");
-        
-        if (webView != null) {
-            // Réinjecter l'état des permissions au retour de l'app
-            injectPermissionsState(webView);
-            
-            // Notifier JavaScript que les permissions ont été mises à jour
-            webView.evaluateJavascript(
-                "console.log('🔄 [ONRESUME] Avant dispatch event:', window.androidPermissions); " +
-                "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', {detail: window.androidPermissions})); " +
-                "console.log('🔄 [ONRESUME] Après dispatch event');",
-                null
-            );
-        }
-    }
-    
-    /**
-     * 🔥 HANDLE NEW INTENT - Pour gérer les deep links Strava
-     */
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        Log.d(TAG, "🔗 onNewIntent appelé");
-        setIntent(intent);
-        handleIntent(intent);
-    }
-    
-    /**
-     * 🔥 HANDLE INTENT - Gérer les deep links (Strava, etc.)
-     */
-    private void handleIntent(Intent intent) {
-        if (intent == null) {
-            Log.d(TAG, "🔗 Intent null, aucun deep link");
-            return;
-        }
-        
-        Uri data = intent.getData();
-        if (data == null) {
-            Log.d(TAG, "🔗 Pas de données dans l'intent");
-            return;
-        }
-        
-        String deepLink = data.toString();
-        Log.d(TAG, "🔗 Deep link reçu: " + deepLink);
-        
-        // Vérifier si c'est un callback Strava
-        if (deepLink.contains("strava/success")) {
-            Log.d(TAG, "✅ Callback Strava détecté !");
-            
-            // Injecter un événement JavaScript pour notifier l'app web
-            if (webView != null) {
-                webView.post(() -> {
-                    String script = "window.dispatchEvent(new CustomEvent('stravaAuthSuccess', { detail: { success: true } }));";
-                    webView.evaluateJavascript(script, value -> {
-                        Log.d(TAG, "✅ Événement stravaAuthSuccess injecté dans la WebView");
-                    });
-                    
-                    // Rediriger vers la page de profil
-                    webView.loadUrl(START_URL + "/profile");
-                });
-            }
-            
-            return;
-        }
-        
-        // Gérer d'autres deep links si nécessaire
-        Log.d(TAG, "🔗 Deep link non géré: " + deepLink);
-    }
-    
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.d(TAG, "📸 onActivityResult called - requestCode: " + requestCode + ", resultCode: " + resultCode);
-        
-        // 🖼️ GÉRER LE RÉSULTAT DU FILE CHOOSER
-        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
-            Log.d(TAG, "🖼️ [FILE CHOOSER] onActivityResult - requestCode=" + requestCode + ", resultCode=" + resultCode);
-            
-            if (filePathCallback == null) {
-                Log.w(TAG, "🖼️⚠️ [FILE CHOOSER] filePathCallback est null");
-                return;
-            }
-            
-            Uri[] results = null;
-            
-            // Vérifier si l'utilisateur a sélectionné un fichier
-            if (resultCode == RESULT_OK && data != null) {
-                String dataString = data.getDataString();
+            Log.d(TAG, "✅ [STARTUP] Injection initiale des flags effectuée");
+        }, 1000);
+
+        // ✅ CRÉATION DU CANAL DE NOTIFICATION (obligatoire Android 8+)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                    "runconnect_channel",
+                    "RunConnect Notifications",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Notifications des messages, sessions et activités");
+                channel.enableVibration(true);
+                channel.enableLights(true);
+                channel.setLightColor(Color.CYAN);
+                channel.setShowBadge(true);
                 
-                if (dataString != null) {
-                    results = new Uri[]{Uri.parse(dataString)};
-                    Log.d(TAG, "🖼️✅ [FILE CHOOSER] Fichier sélectionné: " + dataString);
-                } else {
-                    Log.w(TAG, "🖼️⚠️ [FILE CHOOSER] dataString est null");
+                NotificationManager manager = getSystemService(NotificationManager.class);
+                if (manager != null) {
+                    manager.createNotificationChannel(channel);
+                    Log.d(TAG, "✅ Canal de notification créé");
                 }
-            } else if (resultCode == RESULT_CANCELED) {
-                Log.d(TAG, "🖼️ℹ️ [FILE CHOOSER] Sélection annulée par l'utilisateur");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur création canal notification:", e);
+        }
+
+        // ✅ DEMANDER LA PERMISSION NOTIFICATIONS AU DÉMARRAGE (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                
+                Log.d(TAG, "📱 [STARTUP] Demande permission POST_NOTIFICATIONS au démarrage...");
+                ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
+                    REQ_NOTIFICATIONS);
             } else {
-                Log.w(TAG, "🖼️⚠️ [FILE CHOOSER] Résultat inattendu: " + resultCode);
+                Log.d(TAG, "✅ [STARTUP] Permission POST_NOTIFICATIONS déjà accordée");
             }
-            
-            // Toujours appeler onReceiveValue, même si results est null
-            filePathCallback.onReceiveValue(results);
-            filePathCallback = null;
+        } else {
+            Log.d(TAG, "ℹ️ [STARTUP] Android < 13, permission POST_NOTIFICATIONS non requise");
+        }
+
+        // 🔥 NIVEAU 16: Ne PAS forcer le token au démarrage
+        // Le token sera récupéré après que React envoie le user_id via AndroidUserBridge.saveUserId()
+        Log.d(TAG, "ℹ️ [STARTUP] En attente du user_id depuis React...");
+
+        // Repassage en hardware après 1s
+        webView.postDelayed(() -> {
+            try { webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null); } catch (Throwable ignored) {}
+        }, 1000);
+    }
+
+    // ✅ MÉTHODE HELPER POUR INJECTER LE TOKEN AVEC RETRY AUTOMATIQUE
+    private void injectTokenIntoWebView(String token, int retryCount) {
+        if (retryCount >= 3) {
+            Log.e(TAG, "❌ Échec injection token après 3 tentatives");
             return;
         }
         
-        // 🔥 GÉRER LE RÉSULTAT GOOGLE SIGN-IN
-        if (requestCode == GOOGLE_SIGN_IN_REQUEST_CODE) {
-            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] onActivityResult");
-            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] resultCode=" + resultCode + " (OK=" + RESULT_OK + ", CANCELED=" + RESULT_CANCELED + ")");
-            Log.d(TAG, "🔥 [GOOGLE SIGN-IN] data=" + (data != null ? data.toString() : "null"));
-            
-            // 🔥 CORRECTION #6: Améliorer les logs RESULT_CANCELED
-            if (resultCode == RESULT_CANCELED) {
-                Log.e(TAG, "❌ [GOOGLE SIGN-IN] RESULT_CANCELED détecté");
-                Log.e(TAG, "❌ [GOOGLE SIGN-IN] Cause possible:");
-                Log.e(TAG, "❌   1. SHA-1 certificate hash incorrect dans Firebase Console");
-                Log.e(TAG, "❌   2. Client OAuth Android non configuré dans Google Cloud Console");
-                Log.e(TAG, "❌   3. Web Client ID manquant dans strings.xml");
-                Log.e(TAG, "❌   4. Google Play Services obsolète ou non disponible");
-                
-                // ✅ NOUVEAU : Essayer d'extraire l'erreur détaillée
-                if (data != null) {
-                    Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-                    try {
-                        task.getResult(ApiException.class);
-                    } catch (ApiException e) {
-                        Log.e(TAG, "❌ RESULT_CANCELED avec ApiException StatusCode: " + e.getStatusCode());
-                        Log.e(TAG, "❌ ApiException Message: " + e.getMessage());
-                        
-                        // Si StatusCode 10 → SHA-1 incorrect
-                        if (e.getStatusCode() == 10) {
-                            Log.e(TAG, "❌❌❌ CAUSE CONFIRMÉE : SHA-1 NE CORRESPOND PAS");
-                            notifyGoogleSignInError("SHA-1 certificate mismatch - Vérifier Firebase Console");
-                            return;
-                        }
-                    }
-                }
-                
-                notifyGoogleSignInError("User canceled (voir logs Logcat pour déboguer)");
-                return;
-            }
-            
-            if (resultCode != RESULT_OK) {
-                Log.e(TAG, "❌ [GOOGLE SIGN-IN] resultCode inattendu: " + resultCode);
-                notifyGoogleSignInError("Unexpected result code: " + resultCode);
-                return;
-            }
-            
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                String idToken = account.getIdToken();
-                String email = account.getEmail();
-                String displayName = account.getDisplayName();
-                
-                Log.d(TAG, "🔥✅ Google Sign-In réussi - Email: " + email);
-                Log.d(TAG, "🔥✅ ID Token présent: " + (idToken != null));
-                
-                if (idToken == null) {
-                    Log.e(TAG, "❌ No ID Token received from Google");
-                    Log.e(TAG, "❌ Web Client ID utilisé: " + getString(R.string.default_web_client_id));
-                    notifyGoogleSignInError("No ID Token (vérifier Web Client ID dans Firebase)");
-                } else {
-                    notifyGoogleSignInSuccess(idToken, email, displayName);
-                }
-            } catch (ApiException e) {
-                int statusCode = e.getStatusCode();
-                Log.e(TAG, "❌ Google Sign-In failed with ApiException");
-                Log.e(TAG, "❌ Status Code: " + statusCode);
-                Log.e(TAG, "❌ Message: " + e.getMessage());
-                
-                String errorMessage;
-                if (statusCode == 10) {
-                    errorMessage = "Erreur de configuration (SHA-1 ou OAuth Client)";
-                    Log.e(TAG, "❌ SHA-1 actuel du keystore ne correspond PAS à Firebase/Google Cloud");
-                    Log.e(TAG, "❌ Vérifier:");
-                    Log.e(TAG, "❌   1. Certificat Play App Signing dans Play Console");
-                    Log.e(TAG, "❌   2. SHA-1 enregistré dans Firebase Console");
-                    Log.e(TAG, "❌   3. Client OAuth Android dans Google Cloud Console");
-                    
-                    // 🔥 CORRECTION #5: Nettoyer le cache après erreur
-                    mGoogleSignInClient.signOut();
-                } else if (statusCode == 12501) {
-                    errorMessage = "User canceled (ApiException)";
-                } else if (statusCode == 12500) {
-                    errorMessage = "Sign-in configuration error";
-                    // 🔥 CORRECTION #5: Nettoyer le cache après erreur
-                    mGoogleSignInClient.signOut();
-                } else {
-                    errorMessage = "Sign-in failed (code " + statusCode + ")";
-                }
-                
-                notifyGoogleSignInError(errorMessage);
-            }
-            return;
-        }
+        String jsCode = "try {" +
+            "  console.log('🔥 [NATIVE] Début injection token FCM (tentative " + (retryCount + 1) + ")');" +
+            "  window.fcmToken = '" + token + "';" +
+            "  window.fcmTokenPlatform = 'android';" +
+            "  console.log('🔥 [FCM] Token injecté:', window.fcmToken.substring(0, 30) + '...');" +
+            "  window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
+            "  console.log('🔥 [FCM] Événement fcmTokenReady dispatché');" +
+            "  'SUCCESS';" +
+            "} catch(e) {" +
+            "  console.error('❌ [NATIVE] Erreur injection:', e);" +
+            "  'ERROR:' + e.message;" +
+            "}";
         
-        // Les autres résultats sont automatiquement transmis au plugin Capacitor
-    }
-
-    
-    private void createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                "high_importance_channel",
-                "Notifications RunConnect",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Notifications importantes de RunConnect");
-            channel.enableVibration(true);
-            channel.enableLights(true);
-            channel.setShowBadge(true);
-            
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-                Log.d(TAG, "🔔 Notification channel created: high_importance_channel");
-            }
-        }
-    }
-    
-    /**
-     * 🔥 INITIALISER FIREBASE MESSAGING ET RÉCUPÉRER LE TOKEN FCM
-     */
-    private void initializeFirebaseMessaging() {
-        Log.d(TAG, "🔥 [FIREBASE INIT] Initialisation Firebase Cloud Messaging...");
-        
-        // Récupérer le token FCM existant
-        FirebaseMessaging.getInstance().getToken()
-            .addOnCompleteListener(new OnCompleteListener<String>() {
-                @Override
-                public void onComplete(@NonNull Task<String> task) {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "❌ [FIREBASE INIT] Échec récupération token FCM", task.getException());
-                        return;
-                    }
-
-                    // Récupérer le token
-                    String token = task.getResult();
-                    Log.d(TAG, "🔥🔥🔥 [FIREBASE INIT] TOKEN FCM RÉCUPÉRÉ !");
-                    Log.d(TAG, "🔥 [FIREBASE INIT] Token: " + token);
-                    
-                    // Injecter le token dans JavaScript
-                    injectFCMToken(webView, token);
+        webView.post(() -> {
+            webView.evaluateJavascript(jsCode, result -> {
+                Log.d(TAG, "📋 [INJECT] Résultat JavaScript: " + result);
+                
+                if (result != null && result.contains("SUCCESS")) {
+                    Log.d(TAG, "✅ [INJECT] Token injecté avec succès");
+                } else {
+                    Log.e(TAG, "❌ [INJECT] Échec injection, retry dans 1s...");
+                    webView.postDelayed(() -> injectTokenIntoWebView(token, retryCount + 1), 1000);
                 }
             });
-        
-        // Écouter les mises à jour du token
-        Log.d(TAG, "🔥 [FIREBASE INIT] Configuration listener token refresh...");
-        // Note: Le listener onNewToken dans MessagingService gérera les nouveaux tokens
+        });
     }
-    
-    /**
-     * 🔥 VÉRIFIER SI NOTIFICATIONS DÉJÀ AUTORISÉES AU DÉMARRAGE
-     */
-    private void checkNotificationPermissionAtStartup() {
-        if (Build.VERSION.SDK_INT >= 33) {
-            boolean hasNotificationPermission = ContextCompat.checkSelfPermission(this, 
-                Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
-            
-            if (hasNotificationPermission) {
-                Log.d(TAG, "✅ [NOTIF CHECK] Notifications déjà autorisées au démarrage");
+
+    // File Chooser Launcher
+    private final ActivityResultLauncher<Intent> fileChooserLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (filePathCallback == null) return;
+                Uri[] results = null;
+                if (result.getResultCode() == android.app.Activity.RESULT_OK && result.getData() != null) {
+                    results = new Uri[]{result.getData().getData()};
+                }
+                filePathCallback.onReceiveValue(results);
+                filePathCallback = null;
+            }
+    );
+
+    // ✅ GOOGLE SIGN-IN LAUNCHER
+    private final ActivityResultLauncher<Intent> googleSignInLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(result.getData());
+                    try {
+                        GoogleSignInAccount account = task.getResult(ApiException.class);
+                        String idToken = account.getIdToken();
+                        String email = account.getEmail();
+                        String displayName = account.getDisplayName() != null ? account.getDisplayName() : "";
+                        
+                        Log.d(TAG, "🔥✅ Google Sign-In réussi");
+                        Log.d(TAG, "📧 Email: " + email);
+                        Log.d(TAG, "👤 Display Name: " + displayName);
+                        Log.d(TAG, "🎫 ID Token (premiers 50 char): " + idToken.substring(0, Math.min(50, idToken.length())) + "...");
+                        
+                        // Envoyer les données à la WebView via JavaScript
+                        String js = String.format(
+                            "window.dispatchEvent(new CustomEvent('googleSignInSuccess', {detail: {idToken:'%s', email:'%s', displayName:'%s'}}));",
+                            idToken, email, displayName
+                        );
+                        webView.post(() -> webView.evaluateJavascript(js, null));
+                    } catch (ApiException e) {
+                        Log.e(TAG, "❌ Google Sign-In error: " + e.getMessage());
+                        String errorJs = "window.dispatchEvent(new CustomEvent('googleSignInError', {detail: '" + 
+                                        e.getMessage().replace("'", "\\'") + "'}));";
+                        webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                    }
+                } else {
+                    Log.w(TAG, "⚠️ Google Sign-In annulé");
+                    String cancelJs = "window.dispatchEvent(new CustomEvent('googleSignInError', {detail: 'User canceled'}));";
+                    webView.post(() -> webView.evaluateJavascript(cancelJs, null));
+                }
+            }
+    );
+
+    // ✅ ANDROIDBRIDGE - Interface JavaScript pour Google Sign-In natif
+    private class AndroidBridge {
+        @android.webkit.JavascriptInterface
+        public void googleSignIn() {
+            Log.d(TAG, "🔥 AndroidBridge.googleSignIn() appelé");
+            runOnUiThread(() -> {
+                GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken("220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com")  // ✅ Android OAuth Client ID (lié au SHA-1)
+                    .requestEmail()
+                    .build();
                 
-                // Récupérer immédiatement le token FCM
-                FirebaseMessaging.getInstance().getToken()
-                    .addOnCompleteListener(new OnCompleteListener<String>() {
-                        @Override
-                        public void onComplete(@NonNull Task<String> task) {
+                GoogleSignInClient client = GoogleSignIn.getClient(MainActivity.this, gso);
+                Intent signInIntent = client.getSignInIntent();
+                googleSignInLauncher.launch(signInIntent);
+                Log.d(TAG, "🔥 Google Sign-In Intent lancé");
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void googleSignOut() {
+            Log.d(TAG, "🔥 AndroidBridge.googleSignOut() appelé");
+            runOnUiThread(() -> {
+                GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken("220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com")  // ✅ Android OAuth Client ID (lié au SHA-1)
+                    .requestEmail()
+                    .build();
+                
+                GoogleSignInClient client = GoogleSignIn.getClient(MainActivity.this, gso);
+                client.signOut().addOnCompleteListener(task -> {
+                    Log.d(TAG, "✅ Google Sign-Out réussi");
+                    String js = "window.dispatchEvent(new CustomEvent('googleSignOutSuccess'));";
+                    webView.post(() -> webView.evaluateJavascript(js, null));
+                });
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void sendTestNotification(String title, String message) {
+            Log.d(TAG, "🔔 [TEST] Envoi notification test locale...");
+            
+            runOnUiThread(() -> {
+                try {
+                    NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    if (manager != null) {
+                        // Créer le canal si nécessaire
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            NotificationChannel channel = new NotificationChannel(
+                                "runconnect_channel",
+                                "RunConnect Notifications",
+                                NotificationManager.IMPORTANCE_HIGH
+                            );
+                            channel.setDescription("Notifications importantes de RunConnect");
+                            channel.enableVibration(true);
+                            channel.enableLights(true);
+                            manager.createNotificationChannel(channel);
+                        }
+                        
+                        // Créer la notification
+                        NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, "runconnect_channel")
+                            .setSmallIcon(android.R.drawable.ic_dialog_info)
+                            .setContentTitle(title)
+                            .setContentText(message)
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setAutoCancel(true);
+                        
+                        manager.notify((int) System.currentTimeMillis(), builder.build());
+                        
+                        // Dispatcher événement de succès
+                        String jsEvent = "window.dispatchEvent(new CustomEvent('testNotificationSent', { detail: { success: true } }));";
+                        webView.post(() -> webView.evaluateJavascript(jsEvent, null));
+                        
+                        Log.d(TAG, "✅ [TEST] Notification test envoyée");
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ [TEST] Erreur envoi notification test:", e);
+                    
+                    // Dispatcher événement d'erreur
+                    String jsEvent = "window.dispatchEvent(new CustomEvent('testNotificationSent', { detail: { success: false } }));";
+                    webView.post(() -> webView.evaluateJavascript(jsEvent, null));
+                }
+            });
+        }
+        
+        @android.webkit.JavascriptInterface
+        public String getFCMToken() {
+            Log.d(TAG, "📱 [AndroidBridge] getFCMToken() appelé depuis JavaScript");
+            
+            // ✅ NIVEAU 7 : Vérifier d'abord SharedPreferences pour un token déjà sauvegardé
+            try {
+                android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                String savedToken = prefs.getString("fcm_token", null);
+                
+                if (savedToken != null && !savedToken.isEmpty()) {
+                    Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token trouvé dans SharedPreferences: " + savedToken.substring(0, 30) + "...");
+                    return savedToken; // Retour synchrone
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "❌ [AndroidBridge] Erreur lecture SharedPreferences:", e);
+            }
+            
+            // Si pas de token sauvegardé, récupérer de manière asynchrone via Firebase
+            runOnUiThread(() -> {
+                try {
+                    FirebaseMessaging.getInstance().getToken()
+                        .addOnCompleteListener(task -> {
                             if (task.isSuccessful() && task.getResult() != null) {
                                 String token = task.getResult();
-                                Log.d(TAG, "🔥 [NOTIF CHECK] Token FCM au démarrage: " + token);
-                                injectFCMToken(webView, token);
+                                Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token FCM récupéré via Firebase: " + token.substring(0, Math.min(30, token.length())) + "...");
+                                
+                                // Sauvegarder dans SharedPreferences
+                                try {
+                                    android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                                    prefs.edit().putString("fcm_token", token).apply();
+                                    Log.d(TAG, "✅ [AndroidBridge.getFCMToken] Token sauvegardé dans SharedPreferences");
+                                } catch (Exception e) {
+                                    Log.e(TAG, "❌ [AndroidBridge.getFCMToken] Erreur sauvegarde:", e);
+                                }
+                                
+                                // Injecter dans WebView
+                                String jsCode = "window.fcmToken = '" + token + "';" +
+                                    "window.fcmTokenPlatform = 'android';" +
+                                    "console.log('🔥 [AndroidBridge] Token réinjecté:', window.fcmToken.substring(0, 30) + '...');" +
+                                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
+                                    "console.log('🔥 [FCM] Événement fcmTokenReady dispatché');";
+                                webView.post(() -> webView.evaluateJavascript(jsCode, null));
                             } else {
-                                Log.w(TAG, "⚠️ [NOTIF CHECK] Échec récupération token au démarrage");
+                                Log.e(TAG, "❌ [AndroidBridge] Échec récupération token FCM", task.getException());
                             }
-                        }
-                    });
-            } else {
-                Log.d(TAG, "ℹ️ [NOTIF CHECK] Notifications non autorisées au démarrage");
-            }
-        } else {
-            Log.d(TAG, "ℹ️ [NOTIF CHECK] Android < 13, pas de vérification POST_NOTIFICATIONS");
+                        });
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ [AndroidBridge] Erreur getFCMToken:", e);
+                }
+            });
+            
+            return "requesting"; // Indique que la demande est en cours (async)
+        }
+        
+        @android.webkit.JavascriptInterface
+        public void onFCMTokenInjected(String token) {
+            Log.d(TAG, "✅ [CALLBACK] React confirme réception token: " + token.substring(0, 30) + "...");
+            // Cette méthode permet à React de confirmer immédiatement qu'il a bien reçu le token
+        }
+        
+        /**
+         * 🆕 NIVEAU 11 : Sauvegarde user_id pour permettre à MyFirebaseMessagingService
+         * de mettre à jour Supabase directement
+         */
+        @android.webkit.JavascriptInterface
+        public void saveUserIdForFCM(String userId) {
+            Log.d(TAG, "💾 [AndroidBridge] Sauvegarde user_id pour FCM: " + userId);
+            
+            android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+            prefs.edit().putString("user_id", userId).apply();
+            
+            Log.d(TAG, "✅ [AndroidBridge] user_id sauvegardé dans SharedPreferences");
         }
     }
-    
-    /**
-     * 🔥 INJECTER LE TOKEN FCM DANS JAVASCRIPT
-     */
-    public void injectFCMToken(WebView view, String token) {
-        if (view == null || token == null) {
-            Log.w(TAG, "⚠️ [FCM INJECT] WebView ou token null, injection impossible");
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @androidx.annotation.NonNull String[] permissions, @androidx.annotation.NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        // 🔔 TRAITEMENT SPÉCIAL POUR LE CODE 9999 (demande auto au démarrage)
+        if (requestCode == 9999) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            
+            Log.d(TAG, "📱 [STARTUP] Permission POST_NOTIFICATIONS: " + (granted ? "ACCORDÉE ✅" : "REFUSÉE ❌"));
+            
+            if (granted) {
+                // Dispatcher événement JavaScript pour initialiser FCM
+                String jsEvent = "window.dispatchEvent(new CustomEvent('androidNotificationPermissionGranted'));";
+                webView.post(() -> webView.evaluateJavascript(jsEvent, null));
+            }
+            
+            return; // Ne pas traiter avec le code générique ci-dessous
+        }
+        
+        
+        // 📱 CODE GÉNÉRIQUE POUR LES AUTRES PERMISSIONS (location, camera, etc.)
+        StringBuilder resultJson = new StringBuilder("{");
+        for (int i = 0; i < permissions.length; i++) {
+            String permission = permissions[i];
+            boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
+            
+            // Mapper les permissions Android vers des noms simples
+            String permName = "unknown";
+            if (permission.equals(Manifest.permission.ACCESS_FINE_LOCATION) || 
+                permission.equals(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                permName = "location";
+            } else if (permission.equals(Manifest.permission.CAMERA)) {
+                permName = "camera";
+            } else if (permission.equals(Manifest.permission.READ_CONTACTS)) {
+                permName = "contacts";
+            } else if (permission.equals(Manifest.permission.POST_NOTIFICATIONS)) {
+                permName = "notifications";
+            } else if (permission.equals(Manifest.permission.READ_EXTERNAL_STORAGE) || 
+                       permission.equals(Manifest.permission.READ_MEDIA_IMAGES)) {
+                permName = "storage";
+            } else if (permission.equals(Manifest.permission.RECORD_AUDIO)) {
+                permName = "microphone";
+            }
+            
+            if (i > 0) resultJson.append(",");
+            resultJson.append("\"").append(permName).append("\":").append(granted);
+            
+            Log.d(TAG, "📱 Permission " + permission + " → " + (granted ? "ACCORDÉE ✅" : "REFUSÉE ❌"));
+        }
+        resultJson.append("}");
+        
+        // Injecter les résultats dans JavaScript
+        final String jsCode = "window.androidPermissions = " + resultJson.toString() + ";" +
+                             "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: window.androidPermissions }));";
+        
+        if (webView != null) {
+            webView.post(() -> {
+                webView.evaluateJavascript(jsCode, null);
+                Log.d(TAG, "✅ Résultats permissions injectés dans JavaScript");
+            });
+        }
+    }
+
+    // 🔥 ATTENDRE QUE REACT SIGNALE QUE LE LISTENER EST PRÊT
+    private void waitForReactListenerReady(int checkAttempt) {
+        if (checkAttempt >= 30) {
+            Log.e(TAG, "❌ [LISTENER_WAIT] React listener pas prêt après 15 secondes, démarrage forcé du retry");
+            startTokenInjectionRetry(0);
             return;
         }
         
-        String jsCode = String.format(
-            "window.fcmToken = '%s'; " +
-            "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
-            "console.log('🔥 [MainActivity] Token FCM injecté:', '%s');",
-            token, token, token.substring(0, 30) + "..."
-        );
+        // ✅ NOUVEAU : Vérifier que la WebView est bien attachée
+        if (webView == null) {
+            Log.w(TAG, "⏳ [SYNC] WebView pas encore attachée, retry dans 500ms...");
+            new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                waitForReactListenerReady(checkAttempt + 1);
+            }, 500);
+            return;
+        }
         
-        view.post(() -> {
-            view.evaluateJavascript(jsCode, null);
-            Log.d(TAG, "✅ [FCM INJECT] Token FCM injecté dans JavaScript");
+        Log.d(TAG, "🔍 [SYNC] Vérification React listener (" + (checkAttempt + 1) + "/30)...");
+        
+        String checkJs = "typeof window.__fcmListenerReady !== 'undefined' && window.__fcmListenerReady === true";
+        
+        webView.post(() -> {
+            webView.evaluateJavascript(checkJs, result -> {
+                Log.d(TAG, "📋 [SYNC] Résultat: " + result);
+                
+                if ("true".equals(result)) {
+                    Log.d(TAG, "🟢 [SYNC] WebView attachée et React listener prêt - démarrage injection token FCM");
+                    startTokenInjectionRetry(0);
+                } else {
+                    Log.d(TAG, "⏳ [SYNC] React pas encore prêt, nouvelle vérification dans 500ms...");
+                    // Revérifier dans 500ms
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        waitForReactListenerReady(checkAttempt + 1);
+                    }, 500);
+                }
+            });
         });
     }
-    
-    private boolean hasLocationPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-    }
-    
-    private boolean hasStoragePermission() {
-        boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
-        
-        if (Build.VERSION.SDK_INT >= 33) {
-            // Android 13+ - Vérifier READ_MEDIA_IMAGES
-            boolean hasMediaImages = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
-            return hasCamera && hasMediaImages;
-        } else {
-            // Android 6-12 - Vérifier READ_EXTERNAL_STORAGE
-            boolean hasStorage = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-            return hasCamera && hasStorage;
+
+    // 🔥 MÉTHODE DE RETRY AGRESSIVE POUR L'INJECTION DU TOKEN
+    private void startTokenInjectionRetry(int attemptNumber) {
+        if (attemptNumber >= 30) {
+            Log.e(TAG, "❌ [TOKEN_RETRY] Abandon après 30 tentatives");
+            return;
         }
+        
+        Log.d(TAG, "🔁 [TOKEN_RETRY] Tentative " + (attemptNumber + 1) + "/30...");
+        
+        // Vérifier si le token a déjà été reçu côté JavaScript
+        String checkJs = "typeof window.__fcmTokenReceived !== 'undefined' && window.__fcmTokenReceived === true";
+        
+        webView.post(() -> {
+            webView.evaluateJavascript(checkJs, result -> {
+                Log.d(TAG, "📋 [TOKEN_RETRY] Token déjà reçu ? " + result);
+                
+                if ("true".equals(result)) {
+                    Log.d(TAG, "✅ [TOKEN_RETRY] Token déjà reçu côté JavaScript, arrêt du retry");
+                    return;
+                }
+                
+                // 🔥 NOUVEAU : Prioriser SharedPreferences pour restaurer un token sauvegardé
+                String token = null;
+                boolean isRestoredToken = false;
+                
+                try {
+                    android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                    token = prefs.getString("fcm_token", null);
+                    
+                    if (token != null && !token.isEmpty()) {
+                        Log.d(TAG, "✅ [TOKEN_RETRY] Token FCM restauré depuis SharedPreferences: " + token.substring(0, 30) + "...");
+                        isRestoredToken = true;
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ [TOKEN_RETRY] Erreur lecture SharedPreferences:", e);
+                }
+                
+                // Si pas de token sauvegardé, on essaye de le récupérer via Firebase
+                if (token == null || token.isEmpty()) {
+                    Log.d(TAG, "🔄 [TOKEN_RETRY] Aucun token sauvegardé, récupération via Firebase...");
+                    
+                    FirebaseMessaging.getInstance().getToken()
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful() && task.getResult() != null) {
+                                String freshToken = task.getResult();
+                                Log.d(TAG, "🔥 [TOKEN_RETRY] Token Firebase récupéré: " + freshToken.substring(0, 30) + "...");
+                                injectTokenIntoWebView(freshToken, attemptNumber, false);
+                            } else {
+                                // ✅ NOUVEAU : Logger l'exception réelle
+                                Exception exception = task.getException();
+                                if (exception != null) {
+                                    Log.e(TAG, "❌ [TOKEN_RETRY] Erreur Firebase détaillée:", exception);
+                                    Log.e(TAG, "  → Type: " + exception.getClass().getSimpleName());
+                                    Log.e(TAG, "  → Message: " + exception.getMessage());
+                                } else {
+                                    Log.e(TAG, "❌ [TOKEN_RETRY] Échec Firebase sans exception (task.getResult() == null)");
+                                }
+                                
+                                // Injecter l'erreur dans JavaScript pour diagnostic
+                                String errorJs = "window.fcmError = 'FIREBASE_TOKEN_FAILED';" +
+                                               "window.fcmErrorDetails = '" + (exception != null ? exception.getMessage() : "Unknown") + "';" +
+                                               "console.error('❌ Firebase getToken() échoué:', '" + (exception != null ? exception.getMessage() : "Unknown") + "');";
+                                
+                                webView.post(() -> webView.evaluateJavascript(errorJs, null));
+                                
+                                // Retry après 2 secondes (pas 1s pour éviter le spam)
+                                new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                                    startTokenInjectionRetry(attemptNumber + 1);
+                                }, 2000);
+                            }
+                        });
+                } else {
+                    // On a un token sauvegardé, on l'injecte directement
+                    injectTokenIntoWebView(token, attemptNumber, isRestoredToken);
+                }
+            });
+        });
     }
-    
-    private boolean hasContactsPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+
+    // 🔥 NOUVELLE MÉTHODE : Injecter le token dans la WebView
+    private void injectTokenIntoWebView(String token, int attemptNumber, boolean isRestored) {
+        String source = isRestored ? "SharedPreferences" : "Firebase";
+        Log.d(TAG, "💉 [TOKEN_INJECT] Injection token depuis " + source + ": " + token.substring(0, 30) + "...");
+        
+        String jsCode = 
+            "try {" +
+            "  console.log('🔥 [RETRY " + (attemptNumber + 1) + "] Injection token FCM (source: " + source + ")');" +
+            "  window.fcmToken = '" + token + "';" +
+            "  window.fcmTokenPlatform = 'android';" +
+            "  window.dispatchEvent(new CustomEvent('fcmTokenReady', { " +
+            "    detail: { token: '" + token + "', platform: 'android', attempt: " + (attemptNumber + 1) + ", restored: " + isRestored + " }" +
+            "  }));" +
+            "  console.log('✅ [RETRY " + (attemptNumber + 1) + "] Événement fcmTokenReady dispatché');" +
+            // ✅ NOUVEAU : Callback immédiat vers Android
+            "  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.onFCMTokenInjected) {" +
+            "    AndroidBridge.onFCMTokenInjected('" + token + "');" +
+            "  }" +
+            "  'INJECTED';" +
+            "} catch(e) {" +
+            "  console.error('❌ [RETRY] Erreur:', e);" +
+            "  'ERROR:' + e.message;" +
+            "}";
+        
+        webView.post(() -> {
+            webView.evaluateJavascript(jsCode, injectResult -> {
+                Log.d(TAG, "📋 [TOKEN_INJECT] Résultat injection: " + injectResult);
+                
+                if (!"\"INJECTED\"".equals(injectResult)) {
+                    Log.w(TAG, "⚠️ [TOKEN_INJECT] Injection ratée, retry dans 1s...");
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        startTokenInjectionRetry(attemptNumber + 1);
+                    }, 1000);
+                } else {
+                    Log.d(TAG, "✅ [TOKEN_INJECT] Token injecté avec succès, vérification réception React dans 500ms...");
+                    
+                    // ✅ NIVEAU 7 : Après injection, attendre 500ms puis vérifier si React a confirmé
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        String checkConfirmJs = "typeof window.__fcmTokenReceived !== 'undefined' && window.__fcmTokenReceived === true";
+                        
+                        webView.post(() -> {
+                            webView.evaluateJavascript(checkConfirmJs, confirmResult -> {
+                                Log.d(TAG, "📋 [TOKEN_INJECT] React a confirmé ? " + confirmResult);
+                                
+                                if (!"true".equals(confirmResult)) {
+                                    Log.w(TAG, "⚠️ [TOKEN_INJECT] React n'a pas confirmé la réception, retry...");
+                                    startTokenInjectionRetry(attemptNumber + 1);
+                                } else {
+                                    Log.d(TAG, "🎉 [TOKEN_INJECT] React a confirmé la réception du token, arrêt du retry");
+                                }
+                            });
+                        });
+                    }, 500);
+                }
+            });
+        });
     }
-    
+
+    // 🔥 NIVEAU 10: Méthodes d'injection des flags natifs
     private void injectAABFlags(WebView view) {
         Log.d(TAG, "🚀 Injection des flags AAB");
         
@@ -939,762 +1070,135 @@ public class MainActivity extends AppCompatActivity {
         view.evaluateJavascript(verificationScript, null);
     }
     
-    // ✅ NOUVELLE MÉTHODE: Créer le canal de notification au démarrage
-    private void createNotificationChannelAtStartup() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                "high_importance_channel",
-                "Notifications RunConnect",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Notifications importantes de RunConnect");
-            channel.enableVibration(true);
-            channel.enableLights(true);
-            channel.setLightColor(Color.BLUE);
-            channel.setShowBadge(true);
-            
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-                Log.d(TAG, "✅ [NOTIF CHANNEL] Canal créé au démarrage");
-            }
+    // 🔥 NIVEAU 10: Méthodes utilitaires de vérification des permissions
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+    
+    private boolean hasStoragePermission() {
+        boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        
+        if (Build.VERSION.SDK_INT >= 33) {
+            // Android 13+ - Vérifier READ_MEDIA_IMAGES
+            boolean hasMediaImages = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
+            return hasCamera && hasMediaImages;
+        } else {
+            // Android 6-12 - Vérifier READ_EXTERNAL_STORAGE
+            boolean hasStorage = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+            return hasCamera && hasStorage;
         }
     }
     
-    // ✅ NOUVELLE MÉTHODE: Vérifier et enregistrer Firebase si nécessaire
-    private void checkAndRegisterFirebase() {
-        Log.d(TAG, "🔥 [FCM] Vérification enregistrement Firebase...");
-        
-        // Vérifier si un token existe déjà dans SharedPreferences
-        String existingToken = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-            .getString("fcm_token", null);
-        
-        if (existingToken != null && !existingToken.isEmpty()) {
-            Log.d(TAG, "🔥 [FCM] Token existant trouvé: " + existingToken.substring(0, 30) + "...");
-            
-            // Réinjecter dans la WebView
-            webView.evaluateJavascript(
-                String.format(
-                    "window.fcmToken = '%s'; " +
-                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
-                    "console.log('🔥 [FCM] Token réinjecté:', '%s');",
-                    existingToken, existingToken, existingToken.substring(0, 30) + "..."
-                ),
-                null
-            );
-        } else {
-            Log.d(TAG, "🔥 [FCM] Aucun token, demande à Firebase...");
-            
-            // Demander un nouveau token à Firebase
-            FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(new OnCompleteListener<String>() {
-                    @Override
-                    public void onComplete(@NonNull Task<String> task) {
-                        if (!task.isSuccessful()) {
-                            Log.e(TAG, "❌ [FCM] Échec récupération token", task.getException());
-                            return;
-                        }
-                        
-                        String token = task.getResult();
-                        Log.d(TAG, "✅ [FCM] Nouveau token reçu: " + token.substring(0, 30) + "...");
-                        
-                        // Sauvegarder dans SharedPreferences
-                        getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                            .edit()
-                            .putString("fcm_token", token)
-                            .apply();
-                        
-                        // Injecter dans WebView
-                        runOnUiThread(() -> {
-                            webView.evaluateJavascript(
-                                String.format(
-                                    "window.fcmToken = '%s'; " +
-                                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
-                                    "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
-                                    "console.log('🔥 [FCM] Nouveau token injecté:', '%s');",
-                                    token, token, token, token.substring(0, 30) + "..."
-                                ),
-                                null
-                            );
-                        });
-                    }
-                });
-        }
+    private boolean hasContactsPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
     }
-
-    private void handleDeepLink(String url) {
-        try {
-            Log.d(TAG, "🔗 Traitement du deep link: " + url);
-            
-            // Extraire les paramètres de l'URL
-            Uri uri = Uri.parse(url);
-            String fragment = uri.getFragment(); // Récupère la partie après #
-            
-            if (fragment != null && !fragment.isEmpty()) {
-                // Construire le JavaScript pour traiter la callback OAuth
-                String jsCode = String.format(
-                    "if (window.handleOAuthCallback) {" +
-                    "  window.handleOAuthCallback('%s');" +
-                    "} else {" +
-                    "  window.location.hash = '%s';" +
-                    "  console.log('🔗 OAuth callback reçu:', '%s');" +
-                    "}",
-                    fragment, fragment, fragment
-                );
-                
-                webView.evaluateJavascript(jsCode, null);
-                Log.d(TAG, "✅ Deep link traité avec succès");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Erreur traitement deep link", e);
-        }
-    }
-
-    // ✅ Autoriser retour arrière dans la WebView
+    
+    // 🔥 NIVEAU 10: Réinjection des permissions au retour dans l'app
     @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    // ✅ Gestion du retour d'autorisation
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        
-        Log.d(TAG, "🚀 onRequestPermissionsResult: " + requestCode + " - " + java.util.Arrays.toString(permissions));
-        
-        // Analyser les résultats
-        boolean allGranted = true;
-        for (int i = 0; i < permissions.length; i++) {
-            String permission = permissions[i];
-            int result = grantResults[i];
-            boolean granted = result == PackageManager.PERMISSION_GRANTED;
-            boolean shouldShow = ActivityCompat.shouldShowRequestPermissionRationale(this, permission);
-            
-            if (!granted) {
-                allGranted = false;
-            }
-            
-            Log.d(TAG, "🚀 Permission " + permission + ": granted=" + granted + ", shouldShow=" + shouldShow);
-        }
-        
-        // Mettre à jour l'état des permissions dans le WebView
+    protected void onResume() {
+        super.onResume();
         if (webView != null) {
             injectPermissionsState(webView);
-            injectDeviceInfo(webView);
-            
-            // Notifier JavaScript du changement de permissions
-            webView.evaluateJavascript("window.androidPermissionsUpdated = true; " +
-                                     "if (window.onAndroidPermissionsChanged) { window.onAndroidPermissionsChanged(window.androidPermissions); } " +
-                                     "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: window.androidPermissions })); " +
-                                     "console.log('🚀 Permissions updated, triggering callbacks');", null);
-            
-            // ✅ CRITIQUE: Notifier le résultat via le callback JavaScript après 200ms
-            final boolean finalResult = allGranted;
-            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                // Déterminer le type de permission pour logger
-                String permissionType = "unknown";
-                if (requestCode == REQ_CONTACTS) {
-                    permissionType = "contacts";
-                } else if (requestCode == REQ_LOCATION) {
-                    permissionType = "location";
-                } else if (requestCode == REQ_STORAGE) {
-                    permissionType = "storage";
-                } else if (requestCode == REQ_NOTIFICATIONS) {
-                    permissionType = "notifications";
-                }
-                
-                Log.d(TAG, "✅ Callback JavaScript pour " + permissionType + ": " + (finalResult ? "GRANTED" : "DENIED"));
-                
-                // ✅ CRITIQUE: Si notifications accordées, forcer enregistrement Firebase
-                if (requestCode == REQ_NOTIFICATIONS && finalResult) {
-                    Log.d(TAG, "✅ [NOTIF] Permission accordée, enregistrement Firebase...");
-                    checkAndRegisterFirebase();
-                }
-                
-                notifyJavaScriptPermissionResult(finalResult);
-            }, 200);
-        }
-    }
-
-    // ✅ Interface JavaScript pour les permissions natives
-    private class AndroidBridge {
-        @android.webkit.JavascriptInterface
-        public void requestContactsPermission() {
-            Log.d(TAG, "👥 AndroidBridge: demande permission contacts depuis JavaScript");
-            
-            runOnUiThread(() -> {
-                if (hasContactsPermission()) {
-                    Log.d(TAG, "👥 Permission contacts déjà accordée");
-                    injectPermissionsState(webView);
-                    notifyJavaScriptPermissionResult(true);
-                } else {
-                    Log.d(TAG, "👥 Demande permission contacts à l'utilisateur");
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{Manifest.permission.READ_CONTACTS},
-                            REQ_CONTACTS);
-                }
-            });
-        }
-        
-        @android.webkit.JavascriptInterface
-        public void requestLocationPermission() {
-            Log.d(TAG, "📍 AndroidBridge: demande permission localisation depuis JavaScript");
-            
-            runOnUiThread(() -> {
-                if (hasLocationPermission()) {
-                    Log.d(TAG, "📍 Permission localisation déjà accordée");
-                    injectPermissionsState(webView);
-                    notifyJavaScriptPermissionResult(true);
-                } else {
-                    Log.d(TAG, "📍 Demande permission localisation à l'utilisateur");
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            },
-                            REQ_LOCATION);
-                }
-            });
-        }
-        
-        @android.webkit.JavascriptInterface
-        public void requestStoragePermission() {
-            Log.d(TAG, "📸 AndroidBridge: demande permission stockage depuis JavaScript");
-            
-            runOnUiThread(() -> {
-                if (hasStoragePermission()) {
-                    Log.d(TAG, "📸 Permission stockage déjà accordée");
-                    injectPermissionsState(webView);
-                    notifyJavaScriptPermissionResult(true);
-                } else {
-                    Log.d(TAG, "📸 Demande permission stockage à l'utilisateur");
-                    String[] storagePermissions;
-                    if (Build.VERSION.SDK_INT >= 33) {
-                        storagePermissions = new String[]{
-                            Manifest.permission.READ_MEDIA_IMAGES,
-                            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
-                            Manifest.permission.CAMERA
-                        };
-                    } else {
-                        storagePermissions = new String[]{
-                            Manifest.permission.READ_EXTERNAL_STORAGE,
-                            Manifest.permission.CAMERA
-                        };
-                    }
-                ActivityCompat.requestPermissions(MainActivity.this, storagePermissions, REQ_STORAGE);
-                }
-            });
-        }
-        
-        // ✅ SOLUTION 3: Méthode directe pour demander permission notifications
-        @android.webkit.JavascriptInterface
-        public void requestNotificationPermissions() {
-            Log.d(TAG, "🔔 AndroidBridge: demande permission notifications depuis JavaScript");
-            
-            runOnUiThread(() -> {
-                // Créer le canal dès maintenant
-                createNotificationChannelAtStartup();
-                
-                // Vérifier si Android 13+ (POST_NOTIFICATIONS requis)
-                if (Build.VERSION.SDK_INT >= 33) {
-                    int notificationPermission = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS);
-                    
-                    if (notificationPermission == PackageManager.PERMISSION_GRANTED) {
-                        Log.d(TAG, "🔔 Permission notifications déjà accordée");
-                        injectPermissionsState(webView);
-                        
-                        // ✅ CRITIQUE: Forcer l'enregistrement Firebase si pas encore fait
-                        checkAndRegisterFirebase();
-                        
-                        notifyJavaScriptPermissionResult(true);
-                    } else if (!ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)) {
-                        // Permission refusée définitivement
-                        boolean wasRequested = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                            .getBoolean("notification_permission_requested", false);
-                        
-                        if (wasRequested) {
-                            // Déjà demandé et refusé → Rediriger vers paramètres
-                            Log.d(TAG, "🔔 Permission refusée définitivement, ouverture paramètres...");
-                            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                            Uri uri = Uri.fromParts("package", getPackageName(), null);
-                            intent.setData(uri);
-                            startActivity(intent);
-                            notifyJavaScriptPermissionResult(false);
-                        } else {
-                            // Première demande
-                            Log.d(TAG, "🔔 Première demande popup POST_NOTIFICATIONS");
-                            getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                                .edit()
-                                .putBoolean("notification_permission_requested", true)
-                                .apply();
-                            
-                            ActivityCompat.requestPermissions(MainActivity.this,
-                                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                                    REQ_NOTIFICATIONS);
-                        }
-                    } else {
-                        Log.d(TAG, "🔔 Demande popup système POST_NOTIFICATIONS pour Android 13+");
-                        ActivityCompat.requestPermissions(MainActivity.this,
-                                new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                                REQ_NOTIFICATIONS);
-                    }
-                } else {
-                    // Android < 13: vérifier l'état réel
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                        boolean areEnabled = notificationManager.areNotificationsEnabled();
-                        Log.d(TAG, "🔔 Android < 13: notifications " + (areEnabled ? "activées" : "désactivées"));
-                        
-                        if (!areEnabled) {
-                            // Rediriger vers paramètres pour Android 10-12
-                            Log.d(TAG, "🔔 Redirection vers paramètres pour activer notifications");
-                            Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-                            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
-                            startActivity(intent);
-                            notifyJavaScriptPermissionResult(false);
-                        } else {
-                            // Notifications activées, forcer enregistrement Firebase
-                            checkAndRegisterFirebase();
-                            notifyJavaScriptPermissionResult(true);
-                        }
-                    } else {
-                        Log.d(TAG, "🔔 Android < 8: notifications toujours autorisées");
-                        checkAndRegisterFirebase();
-                        notifyJavaScriptPermissionResult(true);
-                    }
-                }
-            });
-        }
-        
-        @android.webkit.JavascriptInterface
-        public void sendTestNotification(String title, String body) {
-            Log.d(TAG, "🔔 [TEST] Envoi notification test locale");
-            
-            runOnUiThread(() -> {
-                // Créer le canal si nécessaire
-                createNotificationChannelAtStartup();
-                
-                // Créer l'intent pour ouvrir l'app
-                Intent intent = new Intent(MainActivity.this, MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                
-                int flags = android.app.PendingIntent.FLAG_ONE_SHOT;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    flags |= android.app.PendingIntent.FLAG_IMMUTABLE;
-                } else {
-                    flags |= android.app.PendingIntent.FLAG_UPDATE_CURRENT;
-                }
-                
-                android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(
-                    MainActivity.this, 
-                    0, 
-                    intent, 
-                    flags
-                );
-                
-                // Créer la notification
-                androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(MainActivity.this, "high_importance_channel")
-                    .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentTitle(title != null ? title : "Test RunConnect")
-                    .setContentText(body != null ? body : "Ceci est une notification test")
-                    .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
-                    .setAutoCancel(true)
-                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
-                    .setDefaults(androidx.core.app.NotificationCompat.DEFAULT_ALL)
-                    .setContentIntent(pendingIntent)
-                    .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
-                    .setCategory(androidx.core.app.NotificationCompat.CATEGORY_MESSAGE)
-                    .setColor(0xFF3B82F6);
-                
-                NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-                
-                if (notificationManager != null) {
-                    int notificationId = (int) System.currentTimeMillis();
-                    notificationManager.notify(notificationId, builder.build());
-                    
-                    Log.d(TAG, "✅ [TEST] Notification test affichée (ID: " + notificationId + ")");
-                    
-                    // Notifier JavaScript
-                    webView.evaluateJavascript(
-                        "window.dispatchEvent(new CustomEvent('testNotificationSent', {detail: {success: true}})); " +
-                        "console.log('✅ [TEST] Notification test envoyée');",
-                        null
-                    );
-                } else {
-                    Log.e(TAG, "❌ [TEST] NotificationManager non disponible");
-                    webView.evaluateJavascript(
-                        "window.dispatchEvent(new CustomEvent('testNotificationSent', {detail: {success: false}}));",
-                        null
-                    );
-                }
-            });
-        }
-        
-        @android.webkit.JavascriptInterface
-        public void openSettings() {
-            runOnUiThread(() -> {
-                Log.d(TAG, "🔧 Ouverture des paramètres de l'application");
-                try {
-                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                    Uri uri = Uri.fromParts("package", getPackageName(), null);
-                    intent.setData(uri);
-                    startActivity(intent);
-                } catch (Exception e) {
-                    Log.e(TAG, "❌ Erreur ouverture paramètres: " + e.getMessage());
-                    // Fallback: ouvrir les paramètres généraux
-                    Intent intent = new Intent(Settings.ACTION_SETTINGS);
-                    startActivity(intent);
-                }
-            });
-        }
-        
-        @android.webkit.JavascriptInterface
-        public boolean hasGooglePlayServices() {
-            try {
-                com.google.android.gms.common.GoogleApiAvailability availability = 
-                    com.google.android.gms.common.GoogleApiAvailability.getInstance();
-                int resultCode = availability.isGooglePlayServicesAvailable(MainActivity.this);
-                boolean available = resultCode == com.google.android.gms.common.ConnectionResult.SUCCESS;
-                Log.d(TAG, "🔍 Google Play Services: " + (available ? "disponibles ✅" : "NON disponibles ❌"));
-                return available;
-            } catch (Exception e) {
-                Log.e(TAG, "❌ Erreur vérification Google Play Services:", e);
-                return false;
-            }
-        }
-        
-        @android.webkit.JavascriptInterface
-        public void getContacts() {
-            Log.d(TAG, "👥 AndroidBridge: récupération contacts (asynchrone)");
-            
-            // Vérifier permission
-            if (!hasContactsPermission()) {
-                Log.d(TAG, "👥❌ Permission contacts refusée");
-                notifyContactsResult("{\"error\": \"Permission denied\"}");
-                return;
-            }
-            
-            // ✅ Vérifier le cache d'abord (instantané)
-            if (contactsCache.isValid()) {
-                Log.d(TAG, "👥⚡ Utilisation cache contacts");
-                notifyContactsResult(contactsCache.getData());
-                return;
-            }
-            
-            // ✅ LANCER LA RÉCUPÉRATION EN ARRIÈRE-PLAN (NON-BLOQUANT)
-            new Thread(() -> {
-                long startTime = System.currentTimeMillis();
-                Log.d(TAG, "👥🔄 Début récupération contacts en background thread");
-                
-                try {
-                    String result = fetchContactsSync();
-                    long elapsed = System.currentTimeMillis() - startTime;
-                    Log.d(TAG, "👥✅ Contacts chargés en " + elapsed + " ms");
-                    
-                    // ✅ Mettre à jour le cache
-                    contactsCache.update(result);
-                    
-                    // ✅ Notifier JavaScript sur le UI thread
-                    notifyContactsResult(result);
-                    
-                } catch (Exception e) {
-                    Log.e(TAG, "👥❌ Erreur récupération contacts", e);
-                    notifyContactsResult("{\"error\": \"" + e.getMessage() + "\"}");
-                }
-            }).start();
-        }
-
-        // Méthode synchrone appelée uniquement dans le thread background
-        private String fetchContactsSync() throws Exception {
-            JSONArray contactsArray = new JSONArray();
-            ContentResolver cr = getContentResolver();
-            Cursor cursor = null;
-            
-            try {
-                // ✅ OPTIMISATION: Utiliser une projection limitée
-                String[] projection = new String[]{
-                    ContactsContract.Contacts._ID,
-                    ContactsContract.Contacts.DISPLAY_NAME,
-                    ContactsContract.Contacts.HAS_PHONE_NUMBER
-                };
-                
-                cursor = cr.query(
-                    ContactsContract.Contacts.CONTENT_URI,
-                    projection,
-                    null,
-                    null,
-                    ContactsContract.Contacts.DISPLAY_NAME + " ASC"
-                );
-                
-                if (cursor == null) {
-                    Log.w(TAG, "👥⚠️ Cursor contacts est null");
-                    return "[]"; // Retourner tableau vide au lieu d'une exception
-                }
-                
-                if (!cursor.moveToFirst()) {
-                    Log.d(TAG, "👥 Aucun contact trouvé");
-                    return "[]";
-                }
-                
-                int idIndex = cursor.getColumnIndex(ContactsContract.Contacts._ID);
-                int nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME);
-                int hasPhoneIndex = cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER);
-                
-                // Vérifier que les colonnes existent
-                if (idIndex < 0 || nameIndex < 0 || hasPhoneIndex < 0) {
-                    Log.e(TAG, "👥❌ Colonnes contacts invalides");
-                    return "[]";
-                }
-                
-                do {
-                    try {
-                        String contactId = cursor.getString(idIndex);
-                        String displayName = cursor.getString(nameIndex);
-                        
-                        JSONObject contact = new JSONObject();
-                        contact.put("contactId", contactId);
-                        contact.put("displayName", displayName != null ? displayName : "");
-                        
-                        // ✅ Récupérer téléphones
-                        JSONArray phoneArray = new JSONArray();
-                        if (cursor.getInt(hasPhoneIndex) > 0) {
-                            Cursor phoneCursor = null;
-                            try {
-                                phoneCursor = cr.query(
-                                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                                    new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER},
-                                    ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
-                                    new String[]{contactId},
-                                    null
-                                );
-                                
-                                if (phoneCursor != null) {
-                                    while (phoneCursor.moveToNext()) {
-                                        String phoneNumber = phoneCursor.getString(0);
-                                        if (phoneNumber != null && !phoneNumber.isEmpty()) {
-                                            JSONObject phone = new JSONObject();
-                                            phone.put("number", phoneNumber);
-                                            phoneArray.put(phone);
-                                        }
-                                    }
-                                }
-                            } catch (Exception e) {
-                                Log.w(TAG, "👥⚠️ Erreur lecture téléphone contact " + contactId, e);
-                            } finally {
-                                if (phoneCursor != null) {
-                                    phoneCursor.close();
-                                }
-                            }
-                        }
-                        contact.put("phoneNumbers", phoneArray);
-                        
-                        // ✅ Récupérer emails
-                        JSONArray emailArray = new JSONArray();
-                        Cursor emailCursor = null;
-                        try {
-                            emailCursor = cr.query(
-                                ContactsContract.CommonDataKinds.Email.CONTENT_URI,
-                                new String[]{ContactsContract.CommonDataKinds.Email.ADDRESS},
-                                ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?",
-                                new String[]{contactId},
-                                null
-                            );
-                            
-                            if (emailCursor != null) {
-                                while (emailCursor.moveToNext()) {
-                                    String emailAddress = emailCursor.getString(0);
-                                    if (emailAddress != null && !emailAddress.isEmpty()) {
-                                        JSONObject emailObj = new JSONObject();
-                                        emailObj.put("address", emailAddress);
-                                        emailArray.put(emailObj);
-                                    }
-                                }
-                            }
-                        } catch (Exception e) {
-                            Log.w(TAG, "👥⚠️ Erreur lecture email contact " + contactId, e);
-                        } finally {
-                            if (emailCursor != null) {
-                                emailCursor.close();
-                            }
-                        }
-                        contact.put("emails", emailArray);
-                        
-                        contactsArray.put(contact);
-                        
-                    } catch (Exception e) {
-                        // Si un contact pose problème, continuer avec les autres
-                        Log.w(TAG, "👥⚠️ Erreur traitement d'un contact, on continue...", e);
-                    }
-                } while (cursor.moveToNext());
-                
-                Log.d(TAG, "👥✅ " + contactsArray.length() + " contacts récupérés avec succès");
-                return contactsArray.toString();
-                
-            } catch (SecurityException e) {
-                Log.e(TAG, "👥❌ Permission refusée pour accéder aux contacts", e);
-                throw new Exception("Permission refusée");
-            } catch (Exception e) {
-                Log.e(TAG, "👥❌ Erreur globale récupération contacts", e);
-                throw new Exception("Erreur lecture contacts: " + e.getMessage());
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
-            }
-        }
-
-        // Méthode pour notifier JavaScript depuis n'importe quel thread
-        private void notifyContactsResult(String result) {
-            runOnUiThread(() -> {
-                if (webView != null) {
-                    try {
-                        // ✅ Encoder en Base64 pour éviter tout problème d'échappement
-                        String base64Result = Base64.encodeToString(
-                            result.getBytes("UTF-8"), 
-                            Base64.NO_WRAP
-                        );
-                        
-                        String jsCode = "window.dispatchEvent(new CustomEvent('contactsLoaded', { detail: atob('" + base64Result + "') }));";
-                        webView.evaluateJavascript(jsCode, null);
-                        Log.d(TAG, "👥✅ Résultat contacts envoyé au JavaScript (Base64)");
-                    } catch (Exception e) {
-                        Log.e(TAG, "👥❌ Erreur encodage résultat contacts", e);
-                        String errorJson = "{\"error\": \"Erreur encodage données\"}";
-                        String jsCode = "window.dispatchEvent(new CustomEvent('contactsLoaded', { detail: '" + errorJson + "' }));";
-                        webView.evaluateJavascript(jsCode, null);
-                    }
-                }
-            });
-        }
-
-        @android.webkit.JavascriptInterface
-        public void invalidateContactsCache() {
-            Log.d(TAG, "👥🗑️ Cache contacts invalidé");
-            contactsCache.invalidate();
-        }
-        
-        /**
-         * 🔥 GOOGLE SIGN-IN: Lancer la connexion Google native
-         * 🔥 CORRECTION #3 et #7: Vérifier Play Services + Forcer sélection compte
-         */
-        @android.webkit.JavascriptInterface
-        public void googleSignIn() {
-            Log.d(TAG, "🔥 AndroidBridge: Google Sign-In demandé depuis JavaScript");
-            
-            runOnUiThread(() -> {
-                if (mGoogleSignInClient == null) {
-                    Log.e(TAG, "❌ GoogleSignInClient not initialized");
-                    notifyGoogleSignInError("GoogleSignInClient not initialized");
-                    return;
-                }
-                
-                // 🔥 CORRECTION #3: Vérifier Google Play Services avant de continuer
-                if (!checkGooglePlayServices()) {
-                    notifyGoogleSignInError("Google Play Services unavailable");
-                    return;
-                }
-                
-                // 🔥 CORRECTION #3: Vérifier et nettoyer le cache de compte existant
-                GoogleSignInAccount existingAccount = GoogleSignIn.getLastSignedInAccount(MainActivity.this);
-                if (existingAccount != null) {
-                    Log.d(TAG, "🔥 Compte Google déjà connecté détecté, déconnexion préventive");
-                }
-                
-                // ✅ FORCER SIGN-OUT avant sign-in pour éviter les conflits
-                Log.d(TAG, "🔥 Nettoyage cache + lancement Sign-In");
-                mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
-                    try {
-                        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                        // Le sign-out ci-dessus suffit à forcer le choix de compte
-                        startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE);
-                        Log.d(TAG, "🚀 Google Sign-In Intent lancé");
-                    } catch (Exception e) {
-                        Log.e(TAG, "❌ Error launching Google Sign-In", e);
-                        notifyGoogleSignInError("Error launching sign-in: " + e.getMessage());
-                    }
-                });
-            });
-        }
-        
-        /**
-         * 🔥 GOOGLE SIGN-OUT: Déconnexion Google
-         */
-        @android.webkit.JavascriptInterface
-        public void googleSignOut() {
-            Log.d(TAG, "🚪 AndroidBridge: Google Sign-Out demandé depuis JavaScript");
-            
-            runOnUiThread(() -> {
-                if (mGoogleSignInClient == null) {
-                    Log.e(TAG, "❌ GoogleSignInClient not initialized");
-                    return;
-                }
-                
-                mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Log.d(TAG, "✅ Google Sign-Out réussi");
-                        webView.evaluateJavascript(
-                            "window.dispatchEvent(new CustomEvent('googleSignOutSuccess'));", 
-                            null
-                        );
-                    } else {
-                        Log.e(TAG, "❌ Google Sign-Out échoué");
-                    }
-                });
-            });
-        }
-    }
-    
-    private void notifyJavaScriptPermissionResult(boolean granted) {
-        if (webView != null) {
-            String jsCode = String.format(
-                "window.dispatchEvent(new CustomEvent('androidPermissionsUpdated', { detail: { granted: %s } }));",
-                granted ? "true" : "false"
+            // Notifier JavaScript
+            webView.evaluateJavascript(
+                "window.dispatchEvent(new Event('androidPermissionsUpdated'));",
+                null
             );
-            webView.evaluateJavascript(jsCode, null);
-            Log.d(TAG, "✅ Événement androidPermissionsUpdated envoyé avec granted=" + granted);
+            Log.d(TAG, "🔄 [onResume] Permissions réinjectées");
         }
     }
     
     /**
-     * 🔥 Notifier JavaScript du résultat Google Sign-In
+     * 🔥 NIVEAU 15: Force la récupération du token FCM au démarrage
      */
-    private void notifyGoogleSignInSuccess(String idToken, String email, String displayName) {
-        if (webView != null) {
-            runOnUiThread(() -> {
-                try {
-                    JSONObject result = new JSONObject();
-                    result.put("idToken", idToken);
-                    result.put("email", email != null ? email : "");
-                    result.put("displayName", displayName != null ? displayName : "");
-                    
-                    String base64Result = Base64.encodeToString(
-                        result.toString().getBytes("UTF-8"),
-                        Base64.NO_WRAP
-                    );
-                    
-                    String jsCode = "window.dispatchEvent(new CustomEvent('googleSignInSuccess', { detail: JSON.parse(atob('" + base64Result + "')) }));";
-                    webView.evaluateJavascript(jsCode, null);
-                    Log.d(TAG, "🔥✅ Google Sign-In success event dispatched");
-                } catch (Exception e) {
-                    Log.e(TAG, "❌ Error encoding Google Sign-In result", e);
-                    notifyGoogleSignInError("Error encoding result");
-                }
-            });
+    private void forceFetchFCMToken() {
+        Log.d(TAG, "🔥 [FCM] Force fetch token au démarrage...");
+        
+        // Vérifier si les permissions POST_NOTIFICATIONS sont accordées (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                Log.w(TAG, "⚠️ [FCM] Permission POST_NOTIFICATIONS manquante, elle sera demandée");
+                // Ne pas continuer, la permission sera demandée par le code existant
+                return;
+            }
         }
+        
+        // Forcer Firebase à récupérer le token
+        FirebaseMessaging.getInstance().getToken()
+            .addOnCompleteListener(task -> {
+                if (!task.isSuccessful()) {
+                    Log.e(TAG, "❌ [FCM] Échec récupération token:", task.getException());
+                    
+                    // Détail de l'erreur
+                    if (task.getException() != null) {
+                        Log.e(TAG, "❌ [FCM] Raison: " + task.getException().getMessage());
+                    }
+                    
+                    // Vérifier Google Play Services
+                    GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+                    int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
+                    if (resultCode != ConnectionResult.SUCCESS) {
+                        Log.e(TAG, "❌ [FCM] Google Play Services requis pour FCM (code: " + resultCode + ")");
+                    }
+                    
+                    return;
+                }
+
+                // Token récupéré avec succès
+                String token = task.getResult();
+                Log.d(TAG, "✅✅✅ [FCM] TOKEN RÉCUPÉRÉ AU DÉMARRAGE !");
+                Log.d(TAG, "🔥 [FCM] Token: " + token);
+                Log.d(TAG, "🔥 [FCM] Longueur: " + token.length() + " caractères");
+                
+                // Sauvegarder dans SharedPreferences
+                getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+                    .edit()
+                    .putString("fcm_token", token)
+                    .apply();
+                
+                // Injecter immédiatement dans la WebView
+                injectFCMTokenIntoWebView(token);
+            });
+    }
+
+    /**
+     * 🔥 NIVEAU 15: Injecter le token FCM dans la WebView
+     */
+    private void injectFCMTokenIntoWebView(String token) {
+        if (webView == null) {
+            Log.w(TAG, "⚠️ [FCM] WebView non disponible, token sauvegardé dans SharedPreferences");
+            return;
+        }
+        
+        String jsCode = String.format(
+            "window.fcmToken = '%s'; " +
+            "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s', platform: 'android'}})); " +
+            "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
+            "console.log('🔥 [MainActivity] Token FCM injecté:', '%s');",
+            token, token, token, token.substring(0, 30) + "..."
+        );
+        
+        runOnUiThread(() -> {
+            webView.evaluateJavascript(jsCode, null);
+            Log.d(TAG, "✅ [FCM] Token injecté dans WebView depuis MainActivity");
+        });
     }
     
-    private void notifyGoogleSignInError(String error) {
-        if (webView != null) {
-            runOnUiThread(() -> {
-                String jsCode = "window.dispatchEvent(new CustomEvent('googleSignInError', { detail: '" + error.replace("'", "\\'") + "' }));";
-                webView.evaluateJavascript(jsCode, null);
-                Log.d(TAG, "🔥❌ Google Sign-In error event dispatched: " + error);
-            });
+    // ✅ AJOUT : Gestion du deep link OAuth (Google -> App)
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+
+        Uri data = intent != null ? intent.getData() : null;
+        if (data != null && data.toString().startsWith("app.runconnect://")) {
+            Log.d(TAG, "🔗 Deep link OAuth reçu via onNewIntent: " + data.toString());
+            String webUrl = data.toString()
+                .replace("app.runconnect://", START_URL + "/")
+                .replace("runconnect://", START_URL + "/");
+            webView.loadUrl(webUrl);
         }
     }
 }
