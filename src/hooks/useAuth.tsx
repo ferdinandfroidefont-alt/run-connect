@@ -84,6 +84,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
         
+        // 🔥 NIVEAU 16: Envoyer le user_id à Android pour sauvegarder le token FCM
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('✅ [AUTH] Utilisateur connecté:', session.user.id);
+          
+          if (typeof (window as any).AndroidUserBridge?.saveUserId === 'function') {
+            console.log('📤 [AUTH] Envoi user_id à Android:', session.user.id);
+            (window as any).AndroidUserBridge.saveUserId(session.user.id);
+          } else {
+            console.log('ℹ️ [AUTH] AndroidUserBridge non disponible (web browser)');
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Supprimer le user_id d'Android
+          if (typeof (window as any).AndroidUserBridge?.saveUserId === 'function') {
+            console.log('📤 [AUTH] Suppression user_id d\'Android');
+            (window as any).AndroidUserBridge.saveUserId('');
+          }
+        }
+        
         // Force premium status for ferdinand.froidefont@gmail.com
         if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
           console.log('🔍 ADMIN USER: Forcing premium access');
@@ -118,6 +136,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // 🔥 NIVEAU 16: Envoyer le user_id à Android si déjà connecté
+      if (session?.user) {
+        console.log('✅ [INIT] Session existante trouvée:', session.user.id);
+        
+        if (typeof (window as any).AndroidUserBridge?.saveUserId === 'function') {
+          console.log('📤 [INIT] Envoi user_id à Android:', session.user.id);
+          (window as any).AndroidUserBridge.saveUserId(session.user.id);
+        }
+      }
       
       // Force premium status for ferdinand.froidefont@gmail.com
       if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {

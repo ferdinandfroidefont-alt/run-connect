@@ -201,6 +201,27 @@ public class MainActivity extends AppCompatActivity {
         // ✅ AJOUTER L'INTERFACE JAVASCRIPT ANDROIDBRIDGE
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         Log.d(TAG, "✅ AndroidBridge interface ajoutée à la WebView");
+        
+        // 🔥 NIVEAU 16: Bridge JavaScript pour recevoir le user_id depuis React
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void saveUserId(String userId) {
+                Log.d(TAG, "💾 [BRIDGE] Réception user_id depuis React: " + userId);
+                
+                getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
+                    .edit()
+                    .putString("user_id", userId)
+                    .apply();
+                
+                Log.d(TAG, "✅ [BRIDGE] user_id sauvegardé dans SharedPreferences");
+                
+                // 🔥 NOUVEAU : Forcer la récupération du token FCM APRÈS l'authentification
+                if (userId != null && !userId.isEmpty()) {
+                    forceFetchFCMToken();
+                }
+            }
+        }, "AndroidUserBridge");
+        Log.d(TAG, "✅ AndroidUserBridge interface ajoutée à la WebView");
 
         // 🔥 VÉRIFIER GOOGLE PLAY SERVICES AVANT FIREBASE
         try {
@@ -432,8 +453,9 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "ℹ️ [STARTUP] Android < 13, permission POST_NOTIFICATIONS non requise");
         }
 
-        // 🔥 NIVEAU 15: Forcer la récupération du token FCM au démarrage
-        forceFetchFCMToken();
+        // 🔥 NIVEAU 16: Ne PAS forcer le token au démarrage
+        // Le token sera récupéré après que React envoie le user_id via AndroidUserBridge.saveUserId()
+        Log.d(TAG, "ℹ️ [STARTUP] En attente du user_id depuis React...");
 
         // Repassage en hardware après 1s
         webView.postDelayed(() -> {

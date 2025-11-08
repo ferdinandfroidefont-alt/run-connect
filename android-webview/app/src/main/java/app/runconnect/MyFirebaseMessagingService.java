@@ -154,34 +154,44 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
     
     /**
-     * 🆕 NIVEAU 11 : Sauvegarde le token FCM directement dans Supabase via l'API REST
-     * Indépendant de React pour éviter les race conditions
+     * 🆕 NIVEAU 16 : Sauvegarde le token FCM dans Supabase avec retry automatique
      */
     private void savePushTokenToSupabase(String token) {
-        // Exécuter dans un thread séparé pour éviter NetworkOnMainThreadException
+        savePushTokenToSupabase(token, 0);
+    }
+
+    private void savePushTokenToSupabase(String token, int retryCount) {
+        if (retryCount >= 3) {
+            Log.e(TAG, "❌ [SUPABASE] Échec après 3 tentatives");
+            return;
+        }
+        
         new Thread(() -> {
             try {
-                Log.d(TAG, "💾 [SUPABASE] Début sauvegarde token...");
+                Log.d(TAG, "💾 [SUPABASE] Tentative " + (retryCount + 1) + "/3...");
                 
-                // 1. Récupérer le user_id depuis SharedPreferences
                 android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
                 String userId = prefs.getString("user_id", null);
                 
                 if (userId == null || userId.isEmpty()) {
-                    Log.w(TAG, "⚠️ [SUPABASE] user_id non trouvé dans SharedPreferences, sauvegarde impossible");
+                    Log.w(TAG, "⚠️ [SUPABASE] user_id non disponible, retry dans 5s...");
+                    
+                    // Retry après 5 secondes
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        savePushTokenToSupabase(token, retryCount + 1);
+                    }, 5000);
                     return;
                 }
                 
                 Log.d(TAG, "👤 [SUPABASE] user_id: " + userId);
                 
-                // 2. Préparer la requête PATCH vers Supabase
+                // Requête PATCH vers Supabase
                 String supabaseUrl = "https://dbptgehpknjsoisirviz.supabase.co";
                 String apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRicHRnZWhwa25qc29pc2lydml6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NjIxNDUsImV4cCI6MjA3MDIzODE0NX0.D1uw0ui_auBAi-dvodv6j2a9x3lvMnY69cDa9Wupjcs";
                 
                 URL url = new URL(supabaseUrl + "/rest/v1/profiles?user_id=eq." + userId);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 
-                // 3. Configurer la requête
                 conn.setRequestMethod("PATCH");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setRequestProperty("apikey", apiKey);
@@ -189,7 +199,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 conn.setRequestProperty("Prefer", "return=minimal");
                 conn.setDoOutput(true);
                 
-                // 4. Construire le JSON body
                 JSONObject json = new JSONObject();
                 json.put("push_token", token);
                 json.put("push_token_platform", "android");
@@ -198,29 +207,35 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String jsonBody = json.toString();
                 Log.d(TAG, "📤 [SUPABASE] Envoi: " + jsonBody);
                 
-                // 5. Envoyer la requête
                 OutputStream os = conn.getOutputStream();
                 os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
                 os.flush();
                 os.close();
                 
-                // 6. Vérifier la réponse
                 int responseCode = conn.getResponseCode();
                 Log.d(TAG, "📥 [SUPABASE] Response code: " + responseCode);
                 
                 if (responseCode == 200 || responseCode == 204) {
-                    Log.d(TAG, "✅ [SUPABASE] Token FCM sauvegardé avec succès !");
-                    
-                    // Sauvegarder la date de mise à jour dans SharedPreferences
+                    Log.d(TAG, "✅✅✅ [SUPABASE] Token FCM sauvegardé dans la base de données !");
                     prefs.edit().putLong("fcm_token_updated_at", System.currentTimeMillis()).apply();
                 } else {
                     Log.e(TAG, "❌ [SUPABASE] Erreur HTTP: " + responseCode);
+                    
+                    // Retry après 5 secondes
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        savePushTokenToSupabase(token, retryCount + 1);
+                    }, 5000);
                 }
                 
                 conn.disconnect();
                 
             } catch (Exception e) {
-                Log.e(TAG, "❌ [SUPABASE] Exception lors de la sauvegarde:", e);
+                Log.e(TAG, "❌ [SUPABASE] Exception:", e);
+                
+                // Retry après 5 secondes
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    savePushTokenToSupabase(token, retryCount + 1);
+                }, 5000);
             }
         }).start();
     }
