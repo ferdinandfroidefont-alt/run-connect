@@ -324,7 +324,12 @@ serve(async (req) => {
     if (profileError || !profile) {
       console.log('❌ User profile not found:', profileError)
       return new Response(
-        JSON.stringify({ error: 'Utilisateur non trouvé' }),
+        JSON.stringify({ 
+          error: 'Utilisateur non trouvé',
+          stage: 'PROFILE_FETCH',
+          reason: 'Le profil utilisateur n\'existe pas dans la base de données',
+          push_token: null
+        }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -333,7 +338,13 @@ serve(async (req) => {
     if (!profile.notifications_enabled) {
       console.log('⚠️ [PREF] notifications_enabled = false → Skip notification')
       return new Response(
-        JSON.stringify({ message: 'Notifications désactivées pour cet utilisateur', skipped: true }),
+        JSON.stringify({ 
+          message: 'Notifications désactivées pour cet utilisateur', 
+          skipped: true,
+          stage: 'PREFS_DISABLED',
+          reason: 'Les notifications sont désactivées dans les préférences utilisateur',
+          push_token: profile.push_token || null
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -363,7 +374,13 @@ serve(async (req) => {
     if (type && !checkPreference(type)) {
       console.log(`⚠️ [PREF] notif_${type} = false → Skip notification`)
       return new Response(
-        JSON.stringify({ message: `Notifications ${type} désactivées`, skipped: true }),
+        JSON.stringify({ 
+          message: `Notifications ${type} désactivées`, 
+          skipped: true,
+          stage: 'PREFS_DISABLED',
+          reason: `Les notifications de type '${type}' sont désactivées dans les préférences utilisateur`,
+          push_token: profile.push_token || null
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -377,7 +394,10 @@ serve(async (req) => {
         JSON.stringify({ 
           success: false,
           message: 'Pas de token FCM (navigateur web ou notifications non activées)',
-          web_only: true
+          web_only: true,
+          stage: 'TOKEN_CHECK',
+          reason: 'Aucun token FCM trouvé. L\'app n\'est peut-être pas installée, ou Firebase n\'a pas généré de token.',
+          push_token: profile.push_token || null
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -400,7 +420,12 @@ serve(async (req) => {
     if (notifError) {
       console.error('❌ [DB] Error creating notification:', notifError)
       return new Response(
-        JSON.stringify({ error: 'Erreur lors de la création de la notification en base' }),
+        JSON.stringify({ 
+          error: 'Erreur lors de la création de la notification en base',
+          stage: 'DB_INSERT',
+          reason: 'Échec de l\'insertion de la notification dans la base de données',
+          push_token: profile.push_token || null
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } else {
@@ -525,7 +550,10 @@ serve(async (req) => {
           JSON.stringify({ 
             success: false, 
             message: 'Token FCM invalide, nettoyé de la base',
-            token_cleaned: true
+            token_cleaned: true,
+            stage: 'FCM_UNREGISTERED',
+            reason: 'Token UNREGISTERED supprimé (app désinstallée ou token expiré)',
+            push_token: profile.push_token
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -561,7 +589,10 @@ serve(async (req) => {
           token_preview: profile.push_token.substring(0, 20) + '...',
           type,
           preferences_checked: true,
-          project_id: serviceAccount.project_id
+          project_id: serviceAccount.project_id,
+          stage: fcmSuccess ? 'FCM_SEND' : 'FCM_FAILED',
+          reason: fcmSuccess ? 'Notification FCM envoyée avec succès' : 'Échec de l\'envoi FCM',
+          push_token: profile.push_token
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -596,7 +627,10 @@ serve(async (req) => {
           message: 'Notification créée en base, erreur envoi push',
           fcm_sent: false,
           fcm_error: String(fcmError),
-          type
+          type,
+          stage: 'FCM_EXCEPTION',
+          reason: `Exception lors de l'envoi FCM: ${fcmError instanceof Error ? fcmError.message : String(fcmError)}`,
+          push_token: profile.push_token
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -613,7 +647,10 @@ serve(async (req) => {
       JSON.stringify({ 
         error: 'Erreur serveur interne', 
         details: error instanceof Error ? error.message : String(error),
-        type: typeof error
+        type: typeof error,
+        stage: 'GENERAL_ERROR',
+        reason: `Exception globale: ${error instanceof Error ? error.message : String(error)}`,
+        push_token: null
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
