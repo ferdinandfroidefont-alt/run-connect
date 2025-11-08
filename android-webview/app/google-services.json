@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.runconnect",
+            "certificate_hash": "90d3d23a5661fc29c62379f1d3c100f2d4622216"
+          }
+        },
+        {
           "client_id": "220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com",
           "client_type": 3
         }
