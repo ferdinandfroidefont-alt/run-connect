@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com",
+          "client_id": "220304658307-7e5d8moka9orthot1ign2lksb6h0ncne.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "app.runconnect",
-            "certificate_hash": "90d3d23a5661fc29c62379f1d3c100f2d4622216"
+            "certificate_hash": "ae0e357fd63de5424384170d90fdd4725caa60c3"
           }
         },
         {
