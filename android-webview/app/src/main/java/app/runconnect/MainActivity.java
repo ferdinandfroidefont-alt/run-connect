@@ -698,49 +698,84 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 
-                // Token pas encore reçu, on réessaye l'injection
-                Log.d(TAG, "🔄 [TOKEN_RETRY] Token non reçu, nouvelle injection...");
+                // 🔥 NOUVEAU : Prioriser SharedPreferences pour restaurer un token sauvegardé
+                String token = null;
+                boolean isRestoredToken = false;
                 
-                FirebaseMessaging.getInstance().getToken()
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful() && task.getResult() != null) {
-                            String token = task.getResult();
-                            Log.d(TAG, "🔥 [TOKEN_RETRY] Token Firebase récupéré: " + token.substring(0, 30) + "...");
-                            
-                            // Injection FORCÉE avec confirmation
-                            String jsCode = 
-                                "try {" +
-                                "  console.log('🔥 [RETRY " + (attemptNumber + 1) + "] Injection token FCM');" +
-                                "  window.fcmToken = '" + token + "';" +
-                                "  window.fcmTokenPlatform = 'android';" +
-                                "  window.dispatchEvent(new CustomEvent('fcmTokenReady', { " +
-                                "    detail: { token: '" + token + "', platform: 'android', attempt: " + (attemptNumber + 1) + " }" +
-                                "  }));" +
-                                "  console.log('✅ [RETRY " + (attemptNumber + 1) + "] Événement fcmTokenReady dispatché');" +
-                                "  'INJECTED';" +
-                                "} catch(e) {" +
-                                "  console.error('❌ [RETRY] Erreur:', e);" +
-                                "  'ERROR';" +
-                                "}";
-                            
-                            webView.post(() -> {
-                                webView.evaluateJavascript(jsCode, injectResult -> {
-                                    Log.d(TAG, "📋 [TOKEN_RETRY] Résultat injection: " + injectResult);
-                                    
-                                    // Retry dans 1 seconde
-                                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
-                                        startTokenInjectionRetry(attemptNumber + 1);
-                                    }, 1000);
-                                });
-                            });
-                        } else {
-                            Log.e(TAG, "❌ [TOKEN_RETRY] Échec récupération token");
-                            // Retry dans 1 seconde
-                            new android.os.Handler(getMainLooper()).postDelayed(() -> {
-                                startTokenInjectionRetry(attemptNumber + 1);
-                            }, 1000);
-                        }
-                    });
+                try {
+                    android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                    token = prefs.getString("fcm_token", null);
+                    
+                    if (token != null && !token.isEmpty()) {
+                        Log.d(TAG, "✅ [TOKEN_RETRY] Token FCM restauré depuis SharedPreferences: " + token.substring(0, 30) + "...");
+                        isRestoredToken = true;
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ [TOKEN_RETRY] Erreur lecture SharedPreferences:", e);
+                }
+                
+                // Si pas de token sauvegardé, on essaye de le récupérer via Firebase
+                if (token == null || token.isEmpty()) {
+                    Log.d(TAG, "🔄 [TOKEN_RETRY] Aucun token sauvegardé, récupération via Firebase...");
+                    
+                    FirebaseMessaging.getInstance().getToken()
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful() && task.getResult() != null) {
+                                String freshToken = task.getResult();
+                                Log.d(TAG, "🔥 [TOKEN_RETRY] Token Firebase récupéré: " + freshToken.substring(0, 30) + "...");
+                                injectTokenIntoWebView(freshToken, attemptNumber, false);
+                            } else {
+                                Log.e(TAG, "❌ [TOKEN_RETRY] Échec récupération token Firebase, retry dans 1s...");
+                                new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                                    startTokenInjectionRetry(attemptNumber + 1);
+                                }, 1000);
+                            }
+                        });
+                } else {
+                    // On a un token sauvegardé, on l'injecte directement
+                    injectTokenIntoWebView(token, attemptNumber, isRestoredToken);
+                }
+            });
+        });
+    }
+
+    // 🔥 NOUVELLE MÉTHODE : Injecter le token dans la WebView
+    private void injectTokenIntoWebView(String token, int attemptNumber, boolean isRestored) {
+        String source = isRestored ? "SharedPreferences" : "Firebase";
+        Log.d(TAG, "💉 [TOKEN_INJECT] Injection token depuis " + source + ": " + token.substring(0, 30) + "...");
+        
+        String jsCode = 
+            "try {" +
+            "  console.log('🔥 [RETRY " + (attemptNumber + 1) + "] Injection token FCM (source: " + source + ")');" +
+            "  window.fcmToken = '" + token + "';" +
+            "  window.fcmTokenPlatform = 'android';" +
+            "  window.dispatchEvent(new CustomEvent('fcmTokenReady', { " +
+            "    detail: { token: '" + token + "', platform: 'android', attempt: " + (attemptNumber + 1) + ", restored: " + isRestored + " }" +
+            "  }));" +
+            "  console.log('✅ [RETRY " + (attemptNumber + 1) + "] Événement fcmTokenReady dispatché');" +
+            "  'INJECTED';" +
+            "} catch(e) {" +
+            "  console.error('❌ [RETRY] Erreur:', e);" +
+            "  'ERROR';" +
+            "}";
+        
+        webView.post(() -> {
+            webView.evaluateJavascript(jsCode, injectResult -> {
+                Log.d(TAG, "📋 [TOKEN_INJECT] Résultat injection: " + injectResult);
+                
+                // Retry dans 1 seconde si l'injection a échoué
+                if (!"\"INJECTED\"".equals(injectResult)) {
+                    Log.w(TAG, "⚠️ [TOKEN_INJECT] Injection ratée, retry dans 1s...");
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        startTokenInjectionRetry(attemptNumber + 1);
+                    }, 1000);
+                } else {
+                    Log.d(TAG, "✅ [TOKEN_INJECT] Token injecté avec succès !");
+                    // Continuer le retry pour s'assurer que React a bien reçu le token
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                        startTokenInjectionRetry(attemptNumber + 1);
+                    }, 1000);
+                }
             });
         });
     }
