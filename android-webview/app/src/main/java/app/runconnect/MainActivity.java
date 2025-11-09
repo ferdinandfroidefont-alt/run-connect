@@ -54,7 +54,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_STORAGE = 1002;
     private static final int REQ_CONTACTS = 1003;
     private static final int REQ_MICROPHONE = 1004;
-    private static final int REQ_NOTIFICATIONS = 9999;
     public WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
     
@@ -287,16 +286,6 @@ public class MainActivity extends AppCompatActivity {
                         injectPermissionsState(view);
                         injectDeviceInfo(view);
                         verifyInjection(view);
-                        
-                        // 🔥 NIVEAU 15: Injecter le token FCM si disponible en cache
-                        String cachedToken = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                            .getString("fcm_token", null);
-                        
-                        if (cachedToken != null) {
-                            Log.d(TAG, "🔥 [FCM] Token trouvé en cache, injection dans WebView");
-                            injectFCMTokenIntoWebView(cachedToken);
-                        }
-                        
                         Log.d(TAG, "✅ [PAGE_LOADED] Flags injectés avec delay de 500ms");
                     }, 500);
                 }
@@ -424,16 +413,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "📱 [STARTUP] Demande permission POST_NOTIFICATIONS au démarrage...");
                 ActivityCompat.requestPermissions(this, 
                     new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
-                    REQ_NOTIFICATIONS);
+                    9999); // Code de requête pour demande auto au démarrage
             } else {
                 Log.d(TAG, "✅ [STARTUP] Permission POST_NOTIFICATIONS déjà accordée");
             }
         } else {
             Log.d(TAG, "ℹ️ [STARTUP] Android < 13, permission POST_NOTIFICATIONS non requise");
         }
-
-        // 🔥 NIVEAU 15: Forcer la récupération du token FCM au démarrage
-        forceFetchFCMToken();
 
         // Repassage en hardware après 1s
         webView.postDelayed(() -> {
@@ -1085,83 +1071,6 @@ public class MainActivity extends AppCompatActivity {
             );
             Log.d(TAG, "🔄 [onResume] Permissions réinjectées");
         }
-    }
-    
-    /**
-     * 🔥 NIVEAU 15: Force la récupération du token FCM au démarrage
-     */
-    private void forceFetchFCMToken() {
-        Log.d(TAG, "🔥 [FCM] Force fetch token au démarrage...");
-        
-        // Vérifier si les permissions POST_NOTIFICATIONS sont accordées (Android 13+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
-                != PackageManager.PERMISSION_GRANTED) {
-                Log.w(TAG, "⚠️ [FCM] Permission POST_NOTIFICATIONS manquante, elle sera demandée");
-                // Ne pas continuer, la permission sera demandée par le code existant
-                return;
-            }
-        }
-        
-        // Forcer Firebase à récupérer le token
-        FirebaseMessaging.getInstance().getToken()
-            .addOnCompleteListener(task -> {
-                if (!task.isSuccessful()) {
-                    Log.e(TAG, "❌ [FCM] Échec récupération token:", task.getException());
-                    
-                    // Détail de l'erreur
-                    if (task.getException() != null) {
-                        Log.e(TAG, "❌ [FCM] Raison: " + task.getException().getMessage());
-                    }
-                    
-                    // Vérifier Google Play Services
-                    GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-                    int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
-                    if (resultCode != ConnectionResult.SUCCESS) {
-                        Log.e(TAG, "❌ [FCM] Google Play Services requis pour FCM (code: " + resultCode + ")");
-                    }
-                    
-                    return;
-                }
-
-                // Token récupéré avec succès
-                String token = task.getResult();
-                Log.d(TAG, "✅✅✅ [FCM] TOKEN RÉCUPÉRÉ AU DÉMARRAGE !");
-                Log.d(TAG, "🔥 [FCM] Token: " + token);
-                Log.d(TAG, "🔥 [FCM] Longueur: " + token.length() + " caractères");
-                
-                // Sauvegarder dans SharedPreferences
-                getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                    .edit()
-                    .putString("fcm_token", token)
-                    .apply();
-                
-                // Injecter immédiatement dans la WebView
-                injectFCMTokenIntoWebView(token);
-            });
-    }
-
-    /**
-     * 🔥 NIVEAU 15: Injecter le token FCM dans la WebView
-     */
-    private void injectFCMTokenIntoWebView(String token) {
-        if (webView == null) {
-            Log.w(TAG, "⚠️ [FCM] WebView non disponible, token sauvegardé dans SharedPreferences");
-            return;
-        }
-        
-        String jsCode = String.format(
-            "window.fcmToken = '%s'; " +
-            "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s', platform: 'android'}})); " +
-            "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
-            "console.log('🔥 [MainActivity] Token FCM injecté:', '%s');",
-            token, token, token, token.substring(0, 30) + "..."
-        );
-        
-        runOnUiThread(() -> {
-            webView.evaluateJavascript(jsCode, null);
-            Log.d(TAG, "✅ [FCM] Token injecté dans WebView depuis MainActivity");
-        });
     }
     
     // ✅ AJOUT : Gestion du deep link OAuth (Google -> App)
