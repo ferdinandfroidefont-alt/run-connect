@@ -3,202 +3,240 @@ package app.runconnect;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Build;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import org.json.JSONObject;
 
-/**
- * Service personnalisé pour Firebase Cloud Messaging
- * Gère la réception des tokens FCM et des notifications push
- */
 public class MessagingService extends FirebaseMessagingService {
-    private static final String TAG = "RunConnect-FCM";
-    private static final String CHANNEL_ID = "high_importance_channel";
-    private static final String GROUP_KEY = "runconnect_group";
-    private static int notificationCounter = 0;
+    private static final String TAG = "RunConnectFCM";
+    private static final String CHANNEL_ID = "runconnect_channel";
 
-    /**
-     * Appelé quand un nouveau token FCM est généré ou mis à jour
-     */
     @Override
     public void onNewToken(String token) {
         super.onNewToken(token);
+        Log.d(TAG, "🔥 [WebView AAB] Nouveau token FCM: " + token);
         
-        Log.d(TAG, "🔥🔥🔥 [FCM] NOUVEAU TOKEN REÇU !");
-        Log.d(TAG, "🔥 [FCM] Token: " + token);
-        
-        // Créer le canal de notification si nécessaire
-        createNotificationChannel();
-        
-        // Envoyer le token à JavaScript via l'événement window
+        // Sauvegarder dans SharedPreferences (backup permanent)
         try {
-        // Injecter le token dans window pour que React puisse le récupérer
-            String jsCode = String.format(
-                "window.fcmToken = '%s'; " +
-                "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
-                "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
-                "console.log('🔥 [FCM Service] Token injecté dans window:', '%s');",
-                token, token, token, token.substring(0, 30) + "..."
-            );
-            
-            Log.d(TAG, "✅ [FCM] Token prêt à être injecté dans JavaScript");
-            
-            // Stocker le token globalement pour qu'il soit accessible
-            if (MainActivity.instance != null && MainActivity.instance.webView != null) {
-                MainActivity.instance.runOnUiThread(() -> {
-                    MainActivity.instance.webView.evaluateJavascript(jsCode, null);
-                    Log.d(TAG, "✅ [FCM] Token injecté dans WebView");
-                });
-            } else {
-                Log.w(TAG, "⚠️ [FCM] MainActivity ou WebView non disponible, token stocké temporairement");
-                // Stocker dans SharedPreferences pour récupération ultérieure
-                getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                    .edit()
-                    .putString("fcm_token", token)
-                    .apply();
-            }
+            android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", android.content.Context.MODE_PRIVATE);
+            prefs.edit().putString("fcm_token", token).apply();
+            Log.d(TAG, "✅ Token sauvegardé dans SharedPreferences");
         } catch (Exception e) {
-            Log.e(TAG, "❌ [FCM] Erreur injection token:", e);
+            Log.e(TAG, "❌ Erreur sauvegarde SharedPreferences:", e);
         }
         
-        // Envoyer au serveur via Capacitor PushNotifications plugin
-        // Le plugin Capacitor s'occupera de dispatcher l'événement 'registration'
+        // 🆕 NIVEAU 11 : Sauvegarder directement dans Supabase
+        savePushTokenToSupabase(token);
+        
+        // ✅ NIVEAU 7 : Vérifier si React est prêt AVANT d'injecter
+        if (MainActivity.instance != null && MainActivity.instance.webView != null) {
+            try {
+                // Vérifier si React listener est prêt
+                String checkJs = "typeof window.__fcmListenerReady !== 'undefined' && window.__fcmListenerReady === true";
+                
+                MainActivity.instance.webView.post(() -> {
+                    MainActivity.instance.webView.evaluateJavascript(checkJs, result -> {
+                        Log.d(TAG, "📋 [onNewToken] React listener prêt ? " + result);
+                        
+                        if ("true".equals(result)) {
+                            // React est prêt, on peut injecter
+                            String jsCode = "window.fcmToken = '" + token + "';" +
+                                "window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: { token: '" + token + "', platform: 'android' } }));" +
+                                "console.log('✅ [onNewToken] Token injecté et événement dispatché');";
+                            
+                            MainActivity.instance.webView.post(() -> 
+                                MainActivity.instance.webView.evaluateJavascript(jsCode, null)
+                            );
+                            Log.d(TAG, "✅ Token injecté dans WebView via onNewToken (React prêt)");
+                        } else {
+                            // React pas prêt, on laisse MainActivity le faire via retry
+                            Log.w(TAG, "⚠️ React listener pas prêt, token sauvegardé dans SharedPreferences, MainActivity le restaurera");
+                        }
+                    });
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "❌ Erreur injection token:", e);
+            }
+        } else {
+            Log.w(TAG, "⚠️ MainActivity non disponible, token sauvegardé dans SharedPreferences uniquement");
+        }
     }
 
-    /**
-     * Appelé quand une notification est reçue pendant que l'app est au premier plan
-     */
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
-        
-        Log.d(TAG, "📱 [FCM] Message reçu de: " + remoteMessage.getFrom());
-        
-        // Vérifier si le message contient une notification
+        Log.d(TAG, "📬 [WebView AAB] Notification reçue");
+        Log.d(TAG, "  - Notification payload: " + (remoteMessage.getNotification() != null));
+        Log.d(TAG, "  - Data payload: " + remoteMessage.getData().size() + " keys");
+
+        String title = "RunConnect";
+        String body = "Nouvelle notification";
+
+        // Priorité 1 : notification payload (envoi via console Firebase)
         if (remoteMessage.getNotification() != null) {
-            String title = remoteMessage.getNotification().getTitle();
-            String body = remoteMessage.getNotification().getBody();
-            
-            Log.d(TAG, "📬 [FCM] Notification reçue:");
-            Log.d(TAG, "  📝 Titre: " + title);
-            Log.d(TAG, "  💬 Body: " + body);
-            
-            // Afficher la notification
-            showNotification(title, body, remoteMessage.getData());
+            title = remoteMessage.getNotification().getTitle();
+            body = remoteMessage.getNotification().getBody();
+            Log.d(TAG, "  ✅ Notification payload détecté");
+        } 
+        // Priorité 2 : data payload (envoi via API FCM)
+        else if (remoteMessage.getData().size() > 0) {
+            title = remoteMessage.getData().getOrDefault("title", "RunConnect");
+            body = remoteMessage.getData().getOrDefault("body", "Nouvelle notification");
+            Log.d(TAG, "  ✅ Data payload détecté");
         }
-        
-        // Vérifier si le message contient des données
-        if (remoteMessage.getData().size() > 0) {
-            Log.d(TAG, "📦 [FCM] Données reçues: " + remoteMessage.getData());
-        }
+
+        Log.d(TAG, "  📝 Titre: " + title);
+        Log.d(TAG, "  💬 Body: " + body);
+
+        showNotification(title, body);
     }
 
-    /**
-     * Affiche une notification système
-     */
-    private void showNotification(String title, String body, java.util.Map<String, String> data) {
-        // Créer le canal de notification
+    private void showNotification(String title, String body) {
         createNotificationChannel();
-        
-        // Intent pour ouvrir l'app quand on clique sur la notification
+
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         
-        // Ajouter les données à l'intent
-        for (java.util.Map.Entry<String, String> entry : data.entrySet()) {
-            intent.putExtra(entry.getKey(), entry.getValue());
-        }
-        
-        // ✅ MODIFIÉ: FLAG_IMMUTABLE pour Android 12+
         int flags = PendingIntent.FLAG_ONE_SHOT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             flags |= PendingIntent.FLAG_IMMUTABLE;
-        } else {
-            flags |= PendingIntent.FLAG_UPDATE_CURRENT;
         }
         
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 
-            0, 
-            intent, 
-            flags
-        );
-        
-        // Increment counter for grouping
-        notificationCounter++;
-        
-        // ✅ MODIFIÉ: Notification plus riche avec groupement
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, flags);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle(title != null ? title : "RunConnect")
-            .setContentText(body != null ? body : "Nouvelle notification")
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(body)) // ← Texte long
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
+            .setColor(Color.parseColor("#3B82F6"))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL) // ← Son + vibration + LED
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setContentIntent(pendingIntent)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // ← Affichage écran verrouillé
-            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setColor(0xFF3B82F6) // ← Couleur primaire (bleu)
-            .setGroup(GROUP_KEY); // ← Groupement des notifications
-        
-        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        
-        if (notificationManager != null) {
-            int notificationId = (int) System.currentTimeMillis();
-            notificationManager.notify(notificationId, notificationBuilder.build());
-            
-            Log.d(TAG, "✅ [FCM] Notification affichée (ID: " + notificationId + ")");
-            
-            // Create summary notification if we have multiple notifications
-            if (notificationCounter > 1) {
-                createSummaryNotification(notificationManager);
-            }
-        } else {
-            Log.e(TAG, "❌ [FCM] NotificationManager non disponible");
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify((int) System.currentTimeMillis(), builder.build());
+            Log.d(TAG, "✅ [WebView AAB] Notification système affichée");
         }
     }
 
-    /**
-     * Crée une notification récapitulative pour grouper plusieurs notifications
-     */
-    private void createSummaryNotification(NotificationManager notificationManager) {
-        NotificationCompat.Builder summaryBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("RunConnect")
-            .setContentText(notificationCounter + " nouvelles notifications")
-            .setGroup(GROUP_KEY)
-            .setGroupSummary(true)
-            .setAutoCancel(true)
-            .setColor(0xFF3B82F6);
-        
-        notificationManager.notify(0, summaryBuilder.build());
-        Log.d(TAG, "✅ [FCM] Notification récapitulative créée (" + notificationCounter + " notifications)");
-    }
-
-    /**
-     * Crée le canal de notification pour Android O+
-     */
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "Notifications RunConnect",
+                "RunConnect Notifications",
                 NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Notifications importantes de RunConnect");
+            channel.setDescription("Notifications des messages, sessions et activités");
             channel.enableVibration(true);
             channel.enableLights(true);
+            channel.setLightColor(Color.CYAN);
             channel.setShowBadge(true);
             
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
-                Log.d(TAG, "✅ [FCM] Canal de notification créé: " + CHANNEL_ID);
             }
         }
+    }
+    
+    /**
+     * 🆕 NIVEAU 16 : Sauvegarde le token FCM dans Supabase avec retry automatique
+     */
+    private void savePushTokenToSupabase(String token) {
+        savePushTokenToSupabase(token, 0);
+    }
+
+    private void savePushTokenToSupabase(String token, int retryCount) {
+        if (retryCount >= 3) {
+            Log.e(TAG, "❌ [SUPABASE] Échec après 3 tentatives");
+            return;
+        }
+        
+        new Thread(() -> {
+            try {
+                Log.d(TAG, "💾 [SUPABASE] Tentative " + (retryCount + 1) + "/3...");
+                
+                android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
+                String userId = prefs.getString("user_id", null);
+                
+                if (userId == null || userId.isEmpty()) {
+                    Log.w(TAG, "⚠️ [SUPABASE] user_id non disponible, retry dans 5s...");
+                    
+                    // Retry après 5 secondes
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        savePushTokenToSupabase(token, retryCount + 1);
+                    }, 5000);
+                    return;
+                }
+                
+                Log.d(TAG, "👤 [SUPABASE] user_id: " + userId);
+                
+                // Requête PATCH vers Supabase
+                String supabaseUrl = "https://dbptgehpknjsoisirviz.supabase.co";
+                String apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRicHRnZWhwa25qc29pc2lydml6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NjIxNDUsImV4cCI6MjA3MDIzODE0NX0.D1uw0ui_auBAi-dvodv6j2a9x3lvMnY69cDa9Wupjcs";
+                
+                URL url = new URL(supabaseUrl + "/rest/v1/profiles?user_id=eq." + userId);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                
+                conn.setRequestMethod("PATCH");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("apikey", apiKey);
+                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+                conn.setRequestProperty("Prefer", "return=minimal");
+                conn.setDoOutput(true);
+                
+                JSONObject json = new JSONObject();
+                json.put("push_token", token);
+                json.put("push_token_platform", "android");
+                json.put("push_token_updated_at", "now()");
+                
+                String jsonBody = json.toString();
+                Log.d(TAG, "📤 [SUPABASE] Envoi: " + jsonBody);
+                
+                OutputStream os = conn.getOutputStream();
+                os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+                os.close();
+                
+                int responseCode = conn.getResponseCode();
+                Log.d(TAG, "📥 [SUPABASE] Response code: " + responseCode);
+                
+                if (responseCode == 200 || responseCode == 204) {
+                    Log.d(TAG, "✅✅✅ [SUPABASE] Token FCM sauvegardé dans la base de données !");
+                    prefs.edit().putLong("fcm_token_updated_at", System.currentTimeMillis()).apply();
+                } else {
+                    Log.e(TAG, "❌ [SUPABASE] Erreur HTTP: " + responseCode);
+                    
+                    // Retry après 5 secondes
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        savePushTokenToSupabase(token, retryCount + 1);
+                    }, 5000);
+                }
+                
+                conn.disconnect();
+                
+            } catch (Exception e) {
+                Log.e(TAG, "❌ [SUPABASE] Exception:", e);
+                
+                // Retry après 5 secondes
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    savePushTokenToSupabase(token, retryCount + 1);
+                }, 5000);
+            }
+        }).start();
     }
 }
