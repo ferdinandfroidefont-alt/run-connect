@@ -84,7 +84,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        
         // Force premium status for ferdinand.froidefont@gmail.com
         if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
           console.log('🔍 ADMIN USER: Forcing premium access');
@@ -119,7 +118,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
       
       // Force premium status for ferdinand.froidefont@gmail.com
       if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
