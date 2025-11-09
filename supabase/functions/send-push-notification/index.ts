@@ -166,7 +166,7 @@ async function sendFCMNotification(
             icon: 'ic_notification',
             color: '#007AFF',
             sound: 'default',
-            channel_id: 'runconnect_channel'
+            channel_id: 'high_importance_channel'
           }
         },
         apns: {

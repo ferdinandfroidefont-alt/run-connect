@@ -119,6 +119,58 @@ export const NotificationManager = () => {
     }
   };
 
+  // Forcer la régénération du token FCM
+  const forceRefreshToken = async () => {
+    if (!isNative) {
+      toast({ 
+        title: "Mobile requis", 
+        description: "Disponible uniquement sur Android/iOS",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setDiagnosing(true);
+    try {
+      console.log('🔄 [TOKEN] Forcing PushNotifications.register()...');
+      await PushNotifications.register();
+      
+      toast({ 
+        title: "Génération en cours…", 
+        description: "Le token sera mis à jour automatiquement." 
+      });
+      
+      // Attendre 1.5s puis recharger le token
+      setTimeout(async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('push_token')
+          .eq('user_id', user!.id)
+          .single();
+        
+        setCurrentToken(data?.push_token ?? null);
+        
+        toast({
+          title: data?.push_token ? "Token récupéré ✅" : "Token introuvable",
+          description: data?.push_token
+            ? data.push_token.slice(0, 40) + "…"
+            : "Vérifie les permissions ou redémarre l'app",
+          variant: data?.push_token ? "default" : "destructive"
+        });
+        
+        setDiagnosing(false);
+      }, 1500);
+    } catch (err) {
+      console.error('❌ [TOKEN] Error forcing register:', err);
+      setDiagnosing(false);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de régénérer le token", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   // Diagnostic complet des notifications
   const diagnoseNotifications = async () => {
     if (!user) return;
@@ -337,6 +389,14 @@ export const NotificationManager = () => {
               >
                 <Stethoscope className="h-4 w-4" />
                 {diagnosing ? 'Diagnostic...' : 'Diagnostic'}
+              </Button>
+              <Button 
+                onClick={forceRefreshToken} 
+                disabled={diagnosing || !isNative}
+                className="gap-2"
+              >
+                <Bell className="h-4 w-4" />
+                {diagnosing ? 'Génération…' : 'Régénérer le token'}
               </Button>
               <Button 
                 variant="outline" 
