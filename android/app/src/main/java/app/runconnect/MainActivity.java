@@ -202,26 +202,6 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         Log.d(TAG, "✅ AndroidBridge interface ajoutée à la WebView");
         
-        // 🔥 NIVEAU 16: Bridge JavaScript pour recevoir le user_id depuis React
-        webView.addJavascriptInterface(new Object() {
-            @android.webkit.JavascriptInterface
-            public void saveUserId(String userId) {
-                Log.d(TAG, "💾 [BRIDGE] Réception user_id depuis React: " + userId);
-                
-                getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                    .edit()
-                    .putString("user_id", userId)
-                    .apply();
-                
-                Log.d(TAG, "✅ [BRIDGE] user_id sauvegardé dans SharedPreferences");
-                
-                // 🔥 NOUVEAU : Forcer la récupération du token FCM APRÈS l'authentification
-                if (userId != null && !userId.isEmpty()) {
-                    forceFetchFCMToken();
-                }
-            }
-        }, "AndroidUserBridge");
-        Log.d(TAG, "✅ AndroidUserBridge interface ajoutée à la WebView");
 
         // 🔥 VÉRIFIER GOOGLE PLAY SERVICES AVANT FIREBASE
         try {
@@ -555,7 +535,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔥 AndroidBridge.googleSignIn() appelé");
             runOnUiThread(() -> {
                 GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken("220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com")  // ✅ Android OAuth Client ID (lié au SHA-1)
+                    .requestIdToken("220304658307-7e5d8moka9orthot1ign2lksb6h0ncne.apps.googleusercontent.com")  // ✅ Client ID correct correspondant au SHA-1
                     .requestEmail()
                     .build();
                 
@@ -571,7 +551,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "🔥 AndroidBridge.googleSignOut() appelé");
             runOnUiThread(() -> {
                 GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken("220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com")  // ✅ Android OAuth Client ID (lié au SHA-1)
+                    .requestIdToken("220304658307-7e5d8moka9orthot1ign2lksb6h0ncne.apps.googleusercontent.com")  // ✅ Client ID correct correspondant au SHA-1
                     .requestEmail()
                     .build();
                 
@@ -1109,82 +1089,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     
-    /**
-     * 🔥 NIVEAU 15: Force la récupération du token FCM au démarrage
-     */
-    private void forceFetchFCMToken() {
-        Log.d(TAG, "🔥 [FCM] Force fetch token au démarrage...");
-        
-        // Vérifier si les permissions POST_NOTIFICATIONS sont accordées (Android 13+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
-                != PackageManager.PERMISSION_GRANTED) {
-                Log.w(TAG, "⚠️ [FCM] Permission POST_NOTIFICATIONS manquante, elle sera demandée");
-                // Ne pas continuer, la permission sera demandée par le code existant
-                return;
-            }
-        }
-        
-        // Forcer Firebase à récupérer le token
-        FirebaseMessaging.getInstance().getToken()
-            .addOnCompleteListener(task -> {
-                if (!task.isSuccessful()) {
-                    Log.e(TAG, "❌ [FCM] Échec récupération token:", task.getException());
-                    
-                    // Détail de l'erreur
-                    if (task.getException() != null) {
-                        Log.e(TAG, "❌ [FCM] Raison: " + task.getException().getMessage());
-                    }
-                    
-                    // Vérifier Google Play Services
-                    GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-                    int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
-                    if (resultCode != ConnectionResult.SUCCESS) {
-                        Log.e(TAG, "❌ [FCM] Google Play Services requis pour FCM (code: " + resultCode + ")");
-                    }
-                    
-                    return;
-                }
 
-                // Token récupéré avec succès
-                String token = task.getResult();
-                Log.d(TAG, "✅✅✅ [FCM] TOKEN RÉCUPÉRÉ AU DÉMARRAGE !");
-                Log.d(TAG, "🔥 [FCM] Token: " + token);
-                Log.d(TAG, "🔥 [FCM] Longueur: " + token.length() + " caractères");
-                
-                // Sauvegarder dans SharedPreferences
-                getSharedPreferences("RunConnectPrefs", MODE_PRIVATE)
-                    .edit()
-                    .putString("fcm_token", token)
-                    .apply();
-                
-                // Injecter immédiatement dans la WebView
-                injectFCMTokenIntoWebView(token);
-            });
-    }
-
-    /**
-     * 🔥 NIVEAU 15: Injecter le token FCM dans la WebView
-     */
-    private void injectFCMTokenIntoWebView(String token) {
-        if (webView == null) {
-            Log.w(TAG, "⚠️ [FCM] WebView non disponible, token sauvegardé dans SharedPreferences");
-            return;
-        }
-        
-        String jsCode = String.format(
-            "window.fcmToken = '%s'; " +
-            "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s', platform: 'android'}})); " +
-            "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
-            "console.log('🔥 [MainActivity] Token FCM injecté:', '%s');",
-            token, token, token, token.substring(0, 30) + "..."
-        );
-        
-        runOnUiThread(() -> {
-            webView.evaluateJavascript(jsCode, null);
-            Log.d(TAG, "✅ [FCM] Token injecté dans WebView depuis MainActivity");
-        });
-    }
     
     // ✅ AJOUT : Gestion du deep link OAuth (Google -> App)
     @Override

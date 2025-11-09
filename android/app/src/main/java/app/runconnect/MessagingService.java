@@ -35,8 +35,8 @@ public class MessagingService extends FirebaseMessagingService {
             Log.e(TAG, "❌ Erreur sauvegarde SharedPreferences:", e);
         }
         
-        // 🆕 NIVEAU 11 : Sauvegarder directement dans Supabase
-        savePushTokenToSupabase(token);
+        // Token sauvegardé uniquement localement
+        Log.d(TAG, "ℹ️ [FCM] Token sauvegardé localement uniquement (Supabase désactivé temporairement)");
         
         // ✅ NIVEAU 7 : Vérifier si React est prêt AVANT d'injecter
         if (MainActivity.instance != null && MainActivity.instance.webView != null) {
@@ -153,90 +153,4 @@ public class MessagingService extends FirebaseMessagingService {
         }
     }
     
-    /**
-     * 🆕 NIVEAU 16 : Sauvegarde le token FCM dans Supabase avec retry automatique
-     */
-    private void savePushTokenToSupabase(String token) {
-        savePushTokenToSupabase(token, 0);
-    }
-
-    private void savePushTokenToSupabase(String token, int retryCount) {
-        if (retryCount >= 3) {
-            Log.e(TAG, "❌ [SUPABASE] Échec après 3 tentatives");
-            return;
-        }
-        
-        new Thread(() -> {
-            try {
-                Log.d(TAG, "💾 [SUPABASE] Tentative " + (retryCount + 1) + "/3...");
-                
-                android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
-                String userId = prefs.getString("user_id", null);
-                
-                if (userId == null || userId.isEmpty()) {
-                    Log.w(TAG, "⚠️ [SUPABASE] user_id non disponible, retry dans 5s...");
-                    
-                    // Retry après 5 secondes
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        savePushTokenToSupabase(token, retryCount + 1);
-                    }, 5000);
-                    return;
-                }
-                
-                Log.d(TAG, "👤 [SUPABASE] user_id: " + userId);
-                
-                // Requête PATCH vers Supabase
-                String supabaseUrl = "https://dbptgehpknjsoisirviz.supabase.co";
-                String apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRicHRnZWhwa25qc29pc2lydml6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NjIxNDUsImV4cCI6MjA3MDIzODE0NX0.D1uw0ui_auBAi-dvodv6j2a9x3lvMnY69cDa9Wupjcs";
-                
-                URL url = new URL(supabaseUrl + "/rest/v1/profiles?user_id=eq." + userId);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                
-                conn.setRequestMethod("PATCH");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setRequestProperty("apikey", apiKey);
-                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-                conn.setRequestProperty("Prefer", "return=minimal");
-                conn.setDoOutput(true);
-                
-                JSONObject json = new JSONObject();
-                json.put("push_token", token);
-                json.put("push_token_platform", "android");
-                json.put("push_token_updated_at", "now()");
-                
-                String jsonBody = json.toString();
-                Log.d(TAG, "📤 [SUPABASE] Envoi: " + jsonBody);
-                
-                OutputStream os = conn.getOutputStream();
-                os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
-                os.flush();
-                os.close();
-                
-                int responseCode = conn.getResponseCode();
-                Log.d(TAG, "📥 [SUPABASE] Response code: " + responseCode);
-                
-                if (responseCode == 200 || responseCode == 204) {
-                    Log.d(TAG, "✅✅✅ [SUPABASE] Token FCM sauvegardé dans la base de données !");
-                    prefs.edit().putLong("fcm_token_updated_at", System.currentTimeMillis()).apply();
-                } else {
-                    Log.e(TAG, "❌ [SUPABASE] Erreur HTTP: " + responseCode);
-                    
-                    // Retry après 5 secondes
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        savePushTokenToSupabase(token, retryCount + 1);
-                    }, 5000);
-                }
-                
-                conn.disconnect();
-                
-            } catch (Exception e) {
-                Log.e(TAG, "❌ [SUPABASE] Exception:", e);
-                
-                // Retry après 5 secondes
-                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                    savePushTokenToSupabase(token, retryCount + 1);
-                }, 5000);
-            }
-        }).start();
-    }
 }
