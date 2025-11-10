@@ -789,6 +789,37 @@ export const usePushNotifications = () => {
     }
   }, [user, pendingToken, savePushToken]);
 
+  // 🔥 NIVEAU 21 : Sauvegarder le token après connexion
+  useEffect(() => {
+    const handleUserAuthenticated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ token: string; userId: string }>;
+      const { token, userId } = customEvent.detail;
+      
+      console.log('🔥 [USER_AUTH] Utilisateur authentifié avec token FCM en attente');
+      console.log('🔥 [USER_AUTH] User ID:', userId);
+      console.log('🔥 [USER_AUTH] Token:', token.substring(0, 30) + '...');
+      
+      if (user && user.id === userId) {
+        console.log('✅ [USER_AUTH] Sauvegarde du token immédiatement...');
+        savePushToken(token);
+      } else {
+        console.log('⏳ [USER_AUTH] User pas encore synchronisé, réessai dans 1s...');
+        setTimeout(() => {
+          if (user) {
+            console.log('✅ [USER_AUTH] User maintenant disponible, sauvegarde du token...');
+            savePushToken(token);
+          }
+        }, 1000);
+      }
+    };
+    
+    window.addEventListener('userAuthenticatedWithFCMToken', handleUserAuthenticated);
+    
+    return () => {
+      window.removeEventListener('userAuthenticatedWithFCMToken', handleUserAuthenticated);
+    };
+  }, [user, savePushToken]);
+
   // 🔥 LISTENER POUR fcmTokenReady (dispatché par MainActivity avec retry automatique)
   useEffect(() => {
     if (!isNative) return;

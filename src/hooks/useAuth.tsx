@@ -84,6 +84,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
         
+        // 🔥 NIVEAU 21 : Sauvegarder le token FCM en attente après connexion
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Attendre 500ms pour laisser React se stabiliser
+          setTimeout(() => {
+            const fcmToken = (window as any).fcmToken;
+            if (fcmToken) {
+              console.log('🔥 [AUTH] Token FCM détecté après connexion, sauvegarde immédiate...');
+              
+              // Dispatch un événement pour que usePushNotifications sauvegarde le token
+              window.dispatchEvent(new CustomEvent('userAuthenticatedWithFCMToken', {
+                detail: { token: fcmToken, userId: session.user.id }
+              }));
+            }
+          }, 500);
+        }
+        
         // Force premium status for ferdinand.froidefont@gmail.com
         if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
           console.log('🔍 ADMIN USER: Forcing premium access');
