@@ -176,6 +176,9 @@ public class MainActivity extends AppCompatActivity {
         // ✅ Créer le canal de notification au démarrage
         createNotificationChannelAtStartup();
         
+        // 🔥 NIVEAU 20: Forcer la génération du token FCM au démarrage
+        forceFCMTokenGeneration();
+        
         // ✅ Ajouter l'interface JavaScript AndroidBridge
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         
@@ -1696,5 +1699,72 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "🔥❌ Google Sign-In error event dispatched: " + error);
             });
         }
+    }
+    
+    /**
+     * 🔥 NIVEAU 20: Force Firebase à générer un token FCM au démarrage
+     * Sans cette étape, Firebase ne génère jamais de token automatiquement
+     */
+    private void forceFCMTokenGeneration() {
+        Log.d(TAG, "🔥 [FCM-GEN] Démarrage génération token FCM...");
+        
+        // Vérifier que Google Play Services est disponible
+        com.google.android.gms.common.GoogleApiAvailability availability = 
+            com.google.android.gms.common.GoogleApiAvailability.getInstance();
+        int resultCode = availability.isGooglePlayServicesAvailable(this);
+        
+        if (resultCode != com.google.android.gms.common.ConnectionResult.SUCCESS) {
+            Log.e(TAG, "❌ [FCM-GEN] Google Play Services indisponible (code: " + resultCode + ")");
+            return;
+        }
+        
+        // Demander explicitement le token à Firebase
+        FirebaseMessaging.getInstance().getToken()
+            .addOnCompleteListener(new OnCompleteListener<String>() {
+                @Override
+                public void onComplete(@NonNull Task<String> task) {
+                    if (!task.isSuccessful()) {
+                        Log.e(TAG, "❌ [FCM-GEN] Échec génération token:", task.getException());
+                        return;
+                    }
+                    
+                    String token = task.getResult();
+                    if (token != null && !token.isEmpty()) {
+                        Log.d(TAG, "✅✅✅ [FCM-GEN] TOKEN GÉNÉRÉ: " + token.substring(0, 40) + "...");
+                        
+                        // Injecter immédiatement dans la WebView
+                        injectFCMTokenIntoWebView(token);
+                    } else {
+                        Log.e(TAG, "❌ [FCM-GEN] Token vide ou null");
+                    }
+                }
+            });
+    }
+
+    /**
+     * 🔥 NIVEAU 20: Injecte le token FCM dans la WebView pour que React puisse le récupérer
+     */
+    private void injectFCMTokenIntoWebView(final String token) {
+        if (webView == null) {
+            Log.e(TAG, "❌ [FCM-INJECT] WebView null");
+            return;
+        }
+        
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                String jsCode = String.format(
+                    "window.fcmToken = '%s'; " +
+                    "window.fcmTokenPlatform = 'android'; " +
+                    "window.dispatchEvent(new CustomEvent('fcmTokenReady', {detail: {token: '%s'}})); " +
+                    "window.dispatchEvent(new CustomEvent('pushNotificationRegistration', {detail: {value: {token: '%s'}}})); " +
+                    "console.log('🔥✅ [MainActivity] Token FCM injecté:', '%s');",
+                    token, token, token, token.substring(0, 40) + "..."
+                );
+                
+                webView.evaluateJavascript(jsCode, null);
+                Log.d(TAG, "✅ [FCM-INJECT] Token injecté dans WebView");
+            }
+        });
     }
 }
