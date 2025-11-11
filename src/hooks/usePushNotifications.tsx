@@ -286,11 +286,18 @@ export const usePushNotifications = () => {
     console.log('💾 [SAVE] pushToken:', pushToken.substring(0, 30) + '...');
     
     if (!user) {
-      console.log('⏳ [FCM] User non défini, token en attente:', pushToken.substring(0, 30) + '...');
+      console.log('⏳ [SAVE_TOKEN] User non défini, token en attente:', pushToken.substring(0, 30) + '...');
+      console.log('📊 [SAVE_TOKEN] État actuel - user:', user ? 'exists' : 'null', '| pendingToken:', pendingToken ? 'exists' : 'null');
       setPendingToken(pushToken);
       setToken(pushToken);
       return;
     }
+
+    // 🔥 NIVEAU 23: Logs détaillés avant UPDATE
+    console.log('💾 [SAVE_TOKEN] ========== DÉBUT SAUVEGARDE TOKEN ==========');
+    console.log('💾 [SAVE_TOKEN] user.id:', user.id);
+    console.log('💾 [SAVE_TOKEN] token:', pushToken.substring(0, 40) + '...');
+    console.log('💾 [SAVE_TOKEN] token longueur:', pushToken.length);
 
     // 🔥 NIVEAU 8: Signaler début de sauvegarde
     setTokenSaving(true);
@@ -339,14 +346,20 @@ export const usePushNotifications = () => {
         .eq('user_id', user.id);
       
       if (error) {
-        console.error(`❌ [${platform.toUpperCase()}] Erreur sauvegarde token ${tokenType}:`, error);
+        console.error(`❌ [SAVE_TOKEN] ========== ERREUR UPDATE SUPABASE ==========`);
+        console.error(`❌ [SAVE_TOKEN] Error code:`, error.code);
+        console.error(`❌ [SAVE_TOKEN] Error message:`, error.message);
+        console.error(`❌ [SAVE_TOKEN] Error details:`, error.details);
+        console.error(`❌ [SAVE_TOKEN] Error hint:`, error.hint);
         toast({
           title: "Erreur sauvegarde",
-          description: "Le token n'a pas pu être enregistré. Réessayez.",
+          description: `${error.message} (code: ${error.code})`,
           variant: "destructive"
         });
         throw error;
       }
+
+      console.log('✅ [SAVE_TOKEN] UPDATE réussi, vérification en cours...');
       
       // 🔥 NIVEAU 8: VÉRIFICATION - Token vraiment dans la base ?
       const { data: verification } = await supabase
@@ -819,6 +832,74 @@ export const usePushNotifications = () => {
       window.removeEventListener('userAuthenticatedWithFCMToken', handleUserAuthenticated);
     };
   }, [user, savePushToken]);
+
+  // 🔥 NIVEAU 23 : Récupération garantie du token FCM même si l'événement est manqué
+  useEffect(() => {
+    if (!user || !isNative) return;
+
+    const ensureFCMTokenSaved = async () => {
+      console.log('🔍 [ENSURE_FCM] Vérification token FCM...');
+      
+      // 1. Vérifier si un token existe déjà en base
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('push_token, push_token_platform')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (profile?.push_token) {
+          console.log('✅ [ENSURE_FCM] Token déjà en base:', profile.push_token.substring(0, 30) + '...');
+          setToken(profile.push_token);
+          setIsRegistered(true);
+          return;
+        }
+        
+        console.log('⚠️ [ENSURE_FCM] Pas de token en base, vérification window.fcmToken...');
+        
+        // 2. Si pas de token en base, vérifier window.fcmToken
+        const windowToken = (window as any).fcmToken;
+        if (windowToken && typeof windowToken === 'string' && windowToken.length > 50) {
+          console.log('🔥 [ENSURE_FCM] Token trouvé dans window.fcmToken !');
+          console.log('🔥 [ENSURE_FCM] Token:', windowToken.substring(0, 30) + '...');
+          console.log('📱 [ENSURE_FCM] Plateforme:', (window as any).fcmTokenPlatform || 'android');
+          
+          // 3. Sauvegarder immédiatement
+          await savePushToken(windowToken);
+          
+          toast({
+            title: "Token FCM récupéré ✅",
+            description: "Notifications activées avec succès",
+          });
+        } else {
+          console.log('⏳ [ENSURE_FCM] window.fcmToken pas encore disponible, retry dans 2s...');
+          
+          // 4. Retry après 2 secondes (Firebase peut être lent)
+          setTimeout(async () => {
+            const retryToken = (window as any).fcmToken;
+            if (retryToken && typeof retryToken === 'string' && retryToken.length > 50) {
+              console.log('🔥 [ENSURE_FCM_RETRY] Token trouvé au retry !');
+              await savePushToken(retryToken);
+              
+              toast({
+                title: "Token FCM récupéré ✅",
+                description: "Notifications activées (retry réussi)",
+              });
+            } else {
+              console.log('❌ [ENSURE_FCM_RETRY] Toujours pas de token, vérifier Firebase/Play Services');
+            }
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('❌ [ENSURE_FCM] Erreur:', error);
+      }
+    };
+    
+    // Exécuter 1 seconde après que user soit disponible (laisser le temps à Firebase)
+    const timer = setTimeout(ensureFCMTokenSaved, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [user, isNative, savePushToken, toast]);
 
   // 🔥 LISTENER POUR fcmTokenReady (dispatché par MainActivity avec retry automatique)
   useEffect(() => {

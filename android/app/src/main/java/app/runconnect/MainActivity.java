@@ -402,12 +402,22 @@ public class MainActivity extends AppCompatActivity {
                     injectPermissionsState(view);
                     injectDeviceInfo(view);
                     
-                    // 🔥 NIVEAU 22 : Réinjecter le token FCM s'il existe
+                    // 🔥 NIVEAU 23 : Réinjecter le token FCM + retry automatique
                     if (cachedFCMToken != null && !cachedFCMToken.isEmpty()) {
                         Log.d(TAG, "🔥 [PAGE-FINISHED] Réinjection du token FCM: " + cachedFCMToken.substring(0, 40) + "...");
                         injectFCMTokenIntoWebView(cachedFCMToken);
                     } else {
-                        Log.d(TAG, "⏳ [PAGE-FINISHED] Token FCM pas encore disponible");
+                        Log.d(TAG, "⏳ [PAGE-FINISHED] Token FCM pas encore disponible, retry dans 2s...");
+                        
+                        // Retry après 2 secondes (Firebase peut être lent)
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                            if (cachedFCMToken != null && !cachedFCMToken.isEmpty()) {
+                                Log.d(TAG, "🔥 [RETRY] Token disponible au retry, injection...");
+                                injectFCMTokenIntoWebView(cachedFCMToken);
+                            } else {
+                                Log.e(TAG, "❌ [RETRY] Token toujours null après 2s - problème Firebase");
+                            }
+                        }, 2000);
                     }
                     
                     // Vérification que l'injection a réussi après 500ms
