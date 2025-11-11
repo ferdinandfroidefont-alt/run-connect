@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private final ContactsCache contactsCache = new ContactsCache();
+    private String cachedFCMToken = null; // 🔥 NIVEAU 22 : Stocker le token pour injection différée
 
     /**
      * Vérifie si Chrome est installé sur l'appareil
@@ -400,6 +401,14 @@ public class MainActivity extends AppCompatActivity {
                     injectAABFlags(view);
                     injectPermissionsState(view);
                     injectDeviceInfo(view);
+                    
+                    // 🔥 NIVEAU 22 : Réinjecter le token FCM s'il existe
+                    if (cachedFCMToken != null && !cachedFCMToken.isEmpty()) {
+                        Log.d(TAG, "🔥 [PAGE-FINISHED] Réinjection du token FCM: " + cachedFCMToken.substring(0, 40) + "...");
+                        injectFCMTokenIntoWebView(cachedFCMToken);
+                    } else {
+                        Log.d(TAG, "⏳ [PAGE-FINISHED] Token FCM pas encore disponible");
+                    }
                     
                     // Vérification que l'injection a réussi après 500ms
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
@@ -1732,7 +1741,10 @@ public class MainActivity extends AppCompatActivity {
                     if (token != null && !token.isEmpty()) {
                         Log.d(TAG, "✅✅✅ [FCM-GEN] TOKEN GÉNÉRÉ: " + token.substring(0, 40) + "...");
                         
-                        // Injecter immédiatement dans la WebView
+                        // 🔥 NIVEAU 22 : Stocker le token pour injection différée
+                        cachedFCMToken = token;
+                        
+                        // Injecter immédiatement dans la WebView (si elle est déjà prête)
                         injectFCMTokenIntoWebView(token);
                     } else {
                         Log.e(TAG, "❌ [FCM-GEN] Token vide ou null");
