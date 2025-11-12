@@ -5,31 +5,56 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { AuthProvider } from "@/hooks/useAuth";
 
-// ✅ DÉTECTION NATIVE ULTRA-FIABLE (AVANT le render)
+// ✅ NIVEAU 28: DÉTECTION NATIVE ULTRA-RENFORCÉE (AVANT le render)
 const detectNativeImmediately = () => {
   const userAgent = navigator.userAgent;
   const protocol = window.location.protocol.toLowerCase();
   
-  // ✅ VÉRIFICATIONS MULTIPLES
+  // ✅ CRITÈRE 1: Protocole natif
   const isFileProtocol = protocol === 'file:' || protocol === 'capacitor:' || protocol === 'ionic:';
+  
+  // ✅ CRITÈRE 2: User Agent Android + WebView
   const isAndroid = /Android/i.test(userAgent);
-  const hasWebView = /wv/.test(userAgent); // WebView Android
+  const hasWebView = /wv/.test(userAgent);
   
-  // ✅ SI au moins 1 indicateur => NATIF
-  const isNative = isAndroid && (isFileProtocol || hasWebView || (window as any).AndroidBridge);
+  // ✅ CRITÈRE 3: AndroidBridge disponible (injecté par MainActivity)
+  const hasAndroidBridge = !!(window as any).AndroidBridge;
   
-  console.log('🔥 DÉTECTION NATIVE SYNCHRONE:', {
-    userAgent,
-    protocol,
+  // ✅ CRITÈRE 4: Flag injecté par Android (peut arriver en retard)
+  const hasForceFlag = !!(window as any).CapacitorForceNative;
+  
+  // ✅ CRITÈRE 5: Vérifier l'absence de scrollbar (signe de WebView native fullscreen)
+  const isFullscreen = window.innerWidth === screen.width || window.outerWidth === screen.width;
+  
+  // ✅ CRITÈRE 6: Capacitor déjà chargé
+  const hasCapacitor = !!(window as any).Capacitor;
+  
+  // ✅ SI AU MOINS 2 CRITÈRES SUR 6 => NATIF (ou AndroidBridge seul suffit)
+  const criteriaCount = [
     isFileProtocol,
-    isAndroid,
+    isAndroid && hasWebView,
+    hasAndroidBridge,
+    hasForceFlag,
+    isAndroid && isFullscreen,
+    hasCapacitor
+  ].filter(Boolean).length;
+  
+  const isNative = criteriaCount >= 2 || hasAndroidBridge; // AndroidBridge est un critère fort
+  
+  console.log('🔥 NIVEAU 28 - DÉTECTION NATIVE RENFORCÉE:', {
+    criteriaCount: `${criteriaCount}/6`,
+    isFileProtocol,
     hasWebView,
-    hasAndroidBridge: !!(window as any).AndroidBridge,
+    hasAndroidBridge,
+    hasForceFlag,
+    isFullscreen,
+    hasCapacitor,
     '🎯 RÉSULTAT': isNative ? '✅ NATIF' : '❌ WEB'
   });
   
   if (isNative) {
     (window as any).CapacitorForceNative = true;
+    (window as any).nativeModeActivated = true;
     console.log('✅✅✅ FLAG NATIF DÉFINI - Permissions seront demandées !');
     
     // 🔥 DISPATCHER UN ÉVÉNEMENT POUR NOTIFIER LES HOOKS
@@ -45,6 +70,21 @@ const detectNativeImmediately = () => {
 
 // ✅ EXÉCUTER LA DÉTECTION **AVANT** LE RENDER
 const isNative = detectNativeImmediately();
+
+// ✅ NIVEAU 28: RETRY MECHANISM pour les cas limites
+if (!isNative) {
+  setTimeout(() => {
+    if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
+      console.log('🔥 CORRECTION: AndroidBridge détecté en retard, activation mode natif');
+      (window as any).CapacitorForceNative = true;
+      (window as any).nativeModeActivated = true;
+      
+      // Recharger la page pour appliquer le mode natif
+      console.log('🔄 Rechargement de la page pour activer le mode natif...');
+      window.location.reload();
+    }
+  }, 500);
+}
 
 // ✅ Initialisation async en arrière-plan (pour plugins, etc.)
 const initializeCapacitorPlugins = async () => {
@@ -88,4 +128,8 @@ createRoot(document.getElementById("root")!).render(
       </LanguageProvider>
     </UserProfileProvider>
   </AuthProvider>
-)
+);
+
+// ✅ NIVEAU 28: Marquer que React est chargé
+(window as any).reactAlreadyLoaded = true;
+console.log('✅ React chargé - reactAlreadyLoaded défini');

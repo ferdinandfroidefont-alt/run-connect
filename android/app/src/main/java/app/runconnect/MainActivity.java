@@ -494,6 +494,10 @@ public class MainActivity extends AppCompatActivity {
         // ✅ Vérifier si notifications déjà autorisées au démarrage
         checkNotificationPermissionAtStartup();
         
+        // 🔥 NIVEAU 28: Injecter les flags AVANT le chargement de l'URL
+        Log.d(TAG, "🔥 [NIVEAU 28] Injection précoce des flags AAB AVANT loadUrl");
+        injectAABFlags(webView);
+        
         // ✅ Charger le site
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
@@ -849,11 +853,21 @@ public class MainActivity extends AppCompatActivity {
     private void injectAABFlags(WebView view) {
         Log.d(TAG, "🚀 Injection des flags AAB");
         
+        // 🔥 NIVEAU 28: Auto-reload intelligent si React déjà chargé
         String jsCode = "window.CapacitorForceNative = true; " +
                        "window.isAABBuild = true; " +
                        "window.AndroidNativeEnvironment = true; " +
                        "window.capacitorReady = true; " +
-                       "console.log('🚀 Flags AAB injectés:', {CapacitorForceNative: window.CapacitorForceNative, isAABBuild: window.isAABBuild, AndroidNativeEnvironment: window.AndroidNativeEnvironment, capacitorReady: window.capacitorReady});";
+                       "console.log('🚀 [NIVEAU 28] Flags AAB injectés:', {" +
+                       "  CapacitorForceNative: window.CapacitorForceNative, " +
+                       "  isAABBuild: window.isAABBuild, " +
+                       "  AndroidNativeEnvironment: window.AndroidNativeEnvironment, " +
+                       "  capacitorReady: window.capacitorReady" +
+                       "}); " +
+                       "if (window.reactAlreadyLoaded && !window.nativeModeActivated) {" +
+                       "  console.log('🔥 CORRECTION TARDIVE: React déjà chargé, reload nécessaire');" +
+                       "  window.location.reload();" +
+                       "}";
         
         view.evaluateJavascript(jsCode, null);
     }
