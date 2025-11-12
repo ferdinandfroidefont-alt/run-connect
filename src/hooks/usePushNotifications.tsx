@@ -299,6 +299,25 @@ export const usePushNotifications = () => {
     console.log('💾 [SAVE_TOKEN] token:', pushToken.substring(0, 40) + '...');
     console.log('💾 [SAVE_TOKEN] token longueur:', pushToken.length);
 
+    // 🔥 NIVEAU 25: Vérifier que la session Supabase est prête
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !sessionData?.session?.user) {
+      console.error('❌ [SAVE_TOKEN] Session Supabase non disponible !');
+      console.error('❌ [SAVE_TOKEN] sessionError:', sessionError);
+      console.error('❌ [SAVE_TOKEN] session:', sessionData?.session ? 'exists' : 'null');
+      
+      // Retry après 2 secondes
+      console.log('⏳ [SAVE_TOKEN] Retry dans 2s (attente session Supabase)...');
+      setTimeout(() => {
+        console.log('🔁 [SAVE_TOKEN_RETRY] Nouvelle tentative après délai session...');
+        savePushToken(pushToken);
+      }, 2000);
+      return;
+    }
+
+    console.log('✅ [SAVE_TOKEN] Session Supabase confirmée, auth.uid():', sessionData.session.user.id);
+
     // 🔥 NIVEAU 8: Signaler début de sauvegarde
     setTokenSaving(true);
 
@@ -345,12 +364,33 @@ export const usePushNotifications = () => {
         })
         .eq('user_id', user.id);
       
+      console.log('💾 [SAVE_TOKEN] UPDATE envoyé, attente réponse...');
+      
       if (error) {
         console.error(`❌ [SAVE_TOKEN] ========== ERREUR UPDATE SUPABASE ==========`);
         console.error(`❌ [SAVE_TOKEN] Error code:`, error.code);
         console.error(`❌ [SAVE_TOKEN] Error message:`, error.message);
         console.error(`❌ [SAVE_TOKEN] Error details:`, error.details);
         console.error(`❌ [SAVE_TOKEN] Error hint:`, error.hint);
+        
+        // 🔥 NIVEAU 25: Si erreur RLS, afficher un message clair
+        if (error.code === '42501' || error.message.includes('row-level security')) {
+          console.error(`❌ [SAVE_TOKEN] ⚠️ ERREUR RLS: auth.uid() ne correspond pas à user_id`);
+          console.error(`❌ [SAVE_TOKEN] Cela signifie que la session Supabase n'est pas encore prête`);
+          
+          toast({
+            title: "Session non prête",
+            description: "Retry automatique dans 2s...",
+          });
+          
+          // Retry après 2 secondes
+          setTimeout(() => {
+            console.log('🔁 [SAVE_TOKEN_RLS_RETRY] Retry après erreur RLS...');
+            savePushToken(pushToken);
+          }, 2000);
+          return;
+        }
+        
         toast({
           title: "Erreur sauvegarde",
           description: `${error.message} (code: ${error.code})`,
@@ -358,6 +398,8 @@ export const usePushNotifications = () => {
         });
         throw error;
       }
+      
+      console.log('✅ [SAVE_TOKEN] UPDATE réussi (pas d\'erreur retournée)');
 
       console.log('✅ [SAVE_TOKEN] UPDATE réussi, vérification en cours...');
       
@@ -895,8 +937,8 @@ export const usePushNotifications = () => {
       }
     };
     
-    // Exécuter 1 seconde après que user soit disponible (laisser le temps à Firebase)
-    const timer = setTimeout(ensureFCMTokenSaved, 1000);
+    // 🔥 NIVEAU 25: Exécuter 3 secondes après que user soit disponible (attendre session Supabase)
+    const timer = setTimeout(ensureFCMTokenSaved, 3000);
     
     return () => clearTimeout(timer);
   }, [user, isNative, savePushToken, toast]);
