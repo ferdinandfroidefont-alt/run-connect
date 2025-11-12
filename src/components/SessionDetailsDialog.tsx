@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const { validatePresence, validating: validatingGPS } = useGPSValidation();
+  const { sendPushNotification } = useSendNotification();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
@@ -186,6 +188,21 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         }]);
 
       if (notificationError) throw notificationError;
+
+      // Envoyer notification push
+      await sendPushNotification(
+        session.organizer_id,
+        'Nouvelle demande de participation',
+        `${profile?.username || profile?.display_name || 'Quelqu\'un'} souhaite rejoindre votre séance "${session.title}"`,
+        'session_request',
+        {
+          session_id: session.id,
+          request_user_id: user.id,
+          session_title: session.title,
+          requester_name: profile?.username || profile?.display_name || 'Utilisateur',
+          requester_avatar: profile?.avatar_url
+        }
+      );
 
       setHasRequested(true);
       toast({ title: "Demande envoyée !", description: "Le créateur va recevoir votre demande" });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { useSendNotification } from '@/hooks/useSendNotification';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,7 @@ export const CreatorValidationView = ({ session, onComplete }: CreatorValidation
   const [totalPoints, setTotalPoints] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const { toast } = useToast();
+  const { sendPushNotification } = useSendNotification();
 
   useEffect(() => {
     loadParticipants();
@@ -134,6 +136,32 @@ export const CreatorValidationView = ({ session, onComplete }: CreatorValidation
 
         await supabase.rpc('calculate_and_award_points', { participant_id: participantId });
         await supabase.rpc('check_and_award_badges', { user_id_param: participant.user_id });
+
+        // Créer notification dans la base
+        await supabase
+          .from('notifications')
+          .insert([{
+            user_id: participant.user_id,
+            title: 'Présence confirmée',
+            message: `Votre présence à "${session.title}" a été confirmée par l'organisateur`,
+            type: 'presence_confirmed',
+            data: {
+              session_id: session.id,
+              session_title: session.title
+            }
+          }]);
+
+        // Envoyer notification push
+        await sendPushNotification(
+          participant.user_id,
+          'Présence confirmée',
+          `Votre présence à "${session.title}" a été confirmée par l'organisateur`,
+          'presence_confirmed',
+          {
+            session_id: session.id,
+            session_title: session.title
+          }
+        );
       }
 
       await supabase.functions.invoke('award-organizer-points', {

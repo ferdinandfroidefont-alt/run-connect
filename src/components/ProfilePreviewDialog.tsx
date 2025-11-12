@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ interface ProfilePreviewDialogProps {
 export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendPushNotification } = useSendNotification();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -384,6 +386,27 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             }]);
 
           if (error) throw error;
+
+          // Envoyer notification push
+          const { data: followerProfile } = await supabase
+            .from('profiles')
+            .select('display_name, username, avatar_url')
+            .eq('user_id', user.id)
+            .single();
+
+          if (followerProfile) {
+            await sendPushNotification(
+              userId,
+              'Nouvelle demande de suivi',
+              `${followerProfile.display_name || followerProfile.username} souhaite vous suivre`,
+              'follow_request',
+              {
+                follower_id: user.id,
+                follower_name: followerProfile.display_name || followerProfile.username,
+                follower_avatar: followerProfile.avatar_url
+              }
+            );
+          }
 
           setFollowRequestSent(true);
           toast({ title: "Demande de suivi envoyée" });

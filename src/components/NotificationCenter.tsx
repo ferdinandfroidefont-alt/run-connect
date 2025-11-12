@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import {
   Sheet,
   SheetContent,
@@ -38,6 +39,7 @@ interface NotificationCenterProps {
 export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendPushNotification } = useSendNotification();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -273,6 +275,18 @@ export const NotificationCenter = ({ onSessionUpdated }: NotificationCenterProps
         }]);
 
       if (notificationError) console.error('Error creating notification:', notificationError);
+
+      // Envoyer notification push
+      await sendPushNotification(
+        request_user_id,
+        'Demande acceptée !',
+        `Votre demande pour rejoindre "${notification.data.session_title}" a été acceptée`,
+        'session_accepted',
+        {
+          session_id,
+          session_title: notification.data.session_title
+        }
+      );
 
       toast({ title: "Demande acceptée", description: "L'utilisateur a été ajouté à la séance" });
       onSessionUpdated?.();

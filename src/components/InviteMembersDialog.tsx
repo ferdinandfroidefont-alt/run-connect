@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ interface InviteMembersDialogProps {
 export const InviteMembersDialog = ({ open, onOpenChange, clubId, onMemberInvited }: InviteMembersDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendPushNotification } = useSendNotification();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
@@ -98,6 +100,37 @@ export const InviteMembersDialog = ({ open, onOpenChange, clubId, onMemberInvite
         });
 
       if (error) throw error;
+
+      // Récupérer les infos du club
+      const { data: clubData } = await supabase
+        .from('conversations')
+        .select('group_name')
+        .eq('id', clubId)
+        .single();
+
+      // Récupérer les infos de l'inviteur
+      const { data: inviterProfile } = await supabase
+        .from('profiles')
+        .select('display_name, username, avatar_url')
+        .eq('user_id', user.id)
+        .single();
+
+      // Envoyer notification push
+      if (clubData && inviterProfile) {
+        await sendPushNotification(
+          profile.user_id,
+          'Invitation à rejoindre un club',
+          `${inviterProfile.display_name || inviterProfile.username} vous invite à rejoindre le club "${clubData.group_name || 'Club'}"`,
+          'club_invitation',
+          {
+            club_id: clubId,
+            inviter_id: user.id,
+            inviter_name: inviterProfile.display_name || inviterProfile.username,
+            inviter_avatar: inviterProfile.avatar_url,
+            club_name: clubData.group_name
+          }
+        );
+      }
 
       setInvitedUsers(prev => new Set(prev).add(profile.user_id));
       onMemberInvited?.(profile.user_id);
