@@ -10,7 +10,7 @@ import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, BellOff, TestTube, Settings, Smartphone, Globe, Stethoscope, Copy } from 'lucide-react';
+import { Bell, BellOff, TestTube, Settings, Smartphone, Globe } from 'lucide-react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { useSendNotification } from '@/hooks/useSendNotification';
 
@@ -33,53 +33,8 @@ export const NotificationManager = () => {
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentToken, setCurrentToken] = useState<string | null>(null);
-  const [tokenLoading, setTokenLoading] = useState(true);
 
   const isMIUIDevice = deviceInfo?.isMIUI;
-
-  // 🔥 NIVEAU 14: Récupérer le token FCM actuel en temps réel
-  useEffect(() => {
-    const fetchToken = async () => {
-      if (!user?.id) return;
-      
-      try {
-        setTokenLoading(true);
-        const { data } = await supabase
-          .from('profiles')
-          .select('push_token, push_token_platform')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        setCurrentToken(data?.push_token || null);
-      } catch (error) {
-        console.error('Error fetching token:', error);
-        setCurrentToken(null);
-      } finally {
-        setTokenLoading(false);
-      }
-    };
-
-    fetchToken();
-    
-    // Rafraîchir toutes les 5 secondes (pour détecter l'arrivée du token)
-    const interval = setInterval(fetchToken, 5000);
-    return () => clearInterval(interval);
-  }, [user?.id]);
-
-  // 🔥 NIVEAU 14: Écouter l'événement fcmTokenReady depuis Android
-  useEffect(() => {
-    const handleTokenReady = (event: any) => {
-      console.log('✅ [DIAGNOSTIC] Token FCM reçu:', event.detail.token);
-      setCurrentToken(event.detail.token);
-    };
-
-    window.addEventListener('fcmTokenReady', handleTokenReady);
-    
-    return () => {
-      window.removeEventListener('fcmTokenReady', handleTokenReady);
-    };
-  }, []);
 
   // Forcer le rafraîchissement du statut
   const handleRefreshStatus = async () => {
@@ -147,8 +102,6 @@ export const NotificationManager = () => {
           .select('push_token')
           .eq('user_id', user!.id)
           .single();
-        
-        setCurrentToken(data?.push_token ?? null);
         
         toast({
           title: data?.push_token ? "Token récupéré ✅" : "Token introuvable",
@@ -387,7 +340,7 @@ export const NotificationManager = () => {
                 disabled={diagnosing}
                 className="gap-2"
               >
-                <Stethoscope className="h-4 w-4" />
+                <TestTube className="h-4 w-4" />
                 {diagnosing ? 'Diagnostic...' : 'Diagnostic'}
               </Button>
               <Button 
@@ -432,111 +385,6 @@ export const NotificationManager = () => {
             )}
           </div>
         )}
-
-        {/* 🧠 Diagnostic Ultra-Précis FCM */}
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Stethoscope className="h-5 w-5" />
-              🧠 Diagnostic Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Token actuel */}
-            <div className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Token FCM actuel :</p>
-              {tokenLoading ? (
-                <p className="text-xs text-muted-foreground">Chargement...</p>
-              ) : currentToken ? (
-                <>
-                  <p className="text-xs text-green-600 dark:text-green-400 font-mono break-all">
-                    ✅ {currentToken}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Longueur : {currentToken.length} caractères
-                  </p>
-                </>
-              ) : (
-                <p className="text-xs text-red-600 dark:text-red-400 font-semibold">
-                  ❌ Token FCM : null
-                </p>
-              )}
-            </div>
-
-            {/* Dernière erreur */}
-            {lastPushError && (
-              <div className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Dernière analyse :</p>
-                <div className="space-y-1">
-                  <p className="text-xs">
-                    <span className="font-medium">Stage :</span>{' '}
-                    <span className="font-mono text-foreground">{lastPushError.stage}</span>
-                  </p>
-                  <p className="text-xs">
-                    <span className="font-medium">Raison :</span>{' '}
-                    <span className="text-foreground">{lastPushError.reason}</span>
-                  </p>
-                  {lastPushError.token !== null && (
-                    <p className="text-xs">
-                      <span className="font-medium">Token :</span>{' '}
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {lastPushError.token.substring(0, 30)}...
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Cas spécial WebView Android */}
-            {isNative && !currentToken && (
-              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3">
-                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                  ⚠️ Aucun token FCM détecté (valeur null dans la WebView Android)
-                </p>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  Firebase n'a pas encore généré de token. Vérifiez :
-                </p>
-                <ul className="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-4 list-disc space-y-1">
-                  <li>Google Play Services installé</li>
-                  <li>google-services.json configuré</li>
-                  <li>Permissions POST_NOTIFICATIONS accordées</li>
-                  <li>Logs Android : <code className="text-[10px]">adb logcat | grep RunConnectFCM</code></li>
-                </ul>
-              </div>
-            )}
-
-            {/* Plateforme */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {getPlatformIcon()}
-              <span>Plateforme : {getPlatformLabel()}</span>
-            </div>
-
-            {/* Bouton copier logs */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs gap-2"
-              onClick={() => {
-                const logs = JSON.stringify({
-                  token: currentToken,
-                  lastError: lastPushError,
-                  platform: isNative ? 'Android/iOS' : 'Web',
-                  timestamp: new Date().toISOString()
-                }, null, 2);
-                
-                navigator.clipboard.writeText(logs);
-                toast({
-                  title: "Logs copiés",
-                  description: "Les informations de diagnostic ont été copiées dans le presse-papier"
-                });
-              }}
-            >
-              <Copy className="h-3 w-3" />
-              Copier les logs de diagnostic
-            </Button>
-          </CardContent>
-        </Card>
 
         {/* Guide MIUI spécialisé */}
         {deviceInfo.isRedmiNote9 && (

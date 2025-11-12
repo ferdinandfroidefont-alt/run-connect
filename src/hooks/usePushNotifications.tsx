@@ -981,11 +981,6 @@ export const usePushNotifications = () => {
         setToken(token);
         setIsRegistered(true);
         savePushToken(token);
-        
-        toast({
-          title: "Notifications activées ✅",
-          description: `Token reçu après ${attempt} tentative(s)`,
-        });
       } else if ((window as any).__fcmTokenReceived) {
         console.log('ℹ️ [FCM_TOKEN_READY] Token déjà reçu, événement ignoré');
       } else {
@@ -1002,32 +997,6 @@ export const usePushNotifications = () => {
   
   // ✅ Dispatch événement pour confirmation
   document.dispatchEvent(new CustomEvent('ReactListenerReady'));
-  
-  // ✅ Diagnostic visuel (temporaire - 8 secondes)
-  if (!document.getElementById('fcm-diagnostic')) {
-    const diag = document.createElement('div');
-    diag.id = 'fcm-diagnostic';
-    diag.style.cssText = `
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      background: rgba(0, 200, 0, 0.2);
-      padding: 6px 10px;
-      border: 1px solid green;
-      border-radius: 8px;
-      font-size: 12px;
-      z-index: 9999;
-      font-family: monospace;
-    `;
-    diag.textContent = '✅ React listener prêt (FCM)';
-    document.body.appendChild(diag);
-    
-    setTimeout(() => {
-      if (diag.parentNode) {
-        diag.remove();
-      }
-    }, 8000);
-  }
   
   // 🔥 DIAGNOSTIC : Vérifier les erreurs FCM injectées par Android
   setTimeout(() => {
