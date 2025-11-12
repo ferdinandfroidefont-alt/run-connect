@@ -31,18 +31,42 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   const [hideFriends, setHideFriends] = useState(false);
   const [friendsMap, setFriendsMap] = useState<Set<string>>(new Set());
 
+  // 🔥 DÉTECTION ROBUSTE: Vérifier AndroidBridge directement + retry
   useEffect(() => {
-    console.log('[ContactsTab] State updated:', {
+    const hasAndroidBridge = !!(window as any).AndroidBridge;
+    const actuallyNative = isNative || hasAndroidBridge;
+    
+    console.log('[ContactsTab] État détaillé:', {
       isNative,
+      hasAndroidBridge,
+      actuallyNative,
       hasPermission,
       contactsCount: deviceContacts?.length || 0,
-      permissionPrompt
+      suggestionsCount: contactSuggestions.length,
+      loading
     });
 
-    if (isNative && hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0 && !loading) {
+    // ✅ Charger si native (via hook OU AndroidBridge direct) + permission + contacts disponibles
+    if (actuallyNative && hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0 && !loading) {
+      console.log('[ContactsTab] 🚀 Chargement automatique déclenché');
       loadContactsFromApp();
     }
   }, [isNative, hasPermission, deviceContacts]);
+
+  // 🔥 RETRY MECHANISM: Écouter l'événement native ready pour re-vérifier
+  useEffect(() => {
+    const handleNativeReady = (event: any) => {
+      console.log('[ContactsTab] 🎯 Native ready event reçu:', event.detail);
+      // Force reload si on a les permissions mais pas encore chargé
+      if (hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0) {
+        console.log('[ContactsTab] 🔄 Retry chargement après native ready');
+        loadContactsFromApp();
+      }
+    };
+
+    window.addEventListener('capacitorNativeReady', handleNativeReady);
+    return () => window.removeEventListener('capacitorNativeReady', handleNativeReady);
+  }, [hasPermission, deviceContacts, contactSuggestions]);
 
   useEffect(() => {
     // Recharger automatiquement après autorisation
@@ -292,8 +316,13 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
     }
   };
 
+  // 🔥 DÉTECTION ROBUSTE: Vérifier AndroidBridge directement en plus de isNative
+  const hasAndroidBridge = !!(window as any).AndroidBridge;
+  const actuallyNative = isNative || hasAndroidBridge;
+
   // Not native - show message
-  if (!isNative) {
+  if (!actuallyNative) {
+    console.log('[ContactsTab] ⚠️ Non-native détecté - isNative:', isNative, 'AndroidBridge:', hasAndroidBridge);
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
         <Smartphone className="h-16 w-16 text-muted-foreground mb-4" />
