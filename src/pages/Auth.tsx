@@ -24,9 +24,41 @@ const Auth = () => {
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [newUserId, setNewUserId] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    // 🧹 NOUVEAU: Nettoyer les sessions expirées au chargement
+    const cleanExpiredSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const expiresAt = session.expires_at;
+          const now = Math.floor(Date.now() / 1000);
+          
+          // Si la session a expiré depuis plus de 1 jour (86400 secondes)
+          if (expiresAt && expiresAt < now - 86400) {
+            console.log('🧹 Session expirée détectée (>24h), nettoyage automatique...');
+            await supabase.auth.signOut({ scope: 'global' });
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log('✅ Cache nettoyé automatiquement, prêt pour nouvelle connexion');
+            toast({
+              title: "Session expirée nettoyée",
+              description: "Votre ancienne session a été supprimée. Vous pouvez vous reconnecter.",
+            });
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erreur nettoyage session expirée:', error);
+      }
+    };
+    
+    cleanExpiredSession();
+    
     // Vérifier si c'est une réinitialisation de mot de passe
     const urlParams = new URLSearchParams(window.location.search);
     const isReset = urlParams.get('reset') === 'true';
@@ -352,14 +384,26 @@ const Auth = () => {
         console.log('🔍 Email trouvé pour username:', emailToUse);
       }
 
+      // 🔍 Logs détaillés pour debug
       console.log('🔐 Tentative de connexion avec email:', emailToUse);
+      console.log('🔐 Longueur du mot de passe:', password.length, 'caractères');
+      
+      // Vérifier la session actuelle avant connexion
+      const { data: currentSession } = await supabase.auth.getSession();
+      console.log('🔐 Session actuelle avant connexion:', currentSession.session ? 'Existe (expirée?)' : 'Aucune');
+      
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse,
         password,
       });
       
       if (error) {
-        console.error('🔐 Erreur auth:', error);
+        console.error('🔐 Erreur auth complète:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          code: (error as any).code
+        });
         throw error;
       }
       
@@ -372,7 +416,12 @@ const Auth = () => {
       
       // Gestion spécifique des erreurs d'authentification
       if (error.message.includes('Invalid login credentials')) {
-        errorMessage = 'Email ou mot de passe incorrect. Vérifiez vos informations.';
+        errorMessage = `❌ Email/username ou mot de passe incorrect.
+
+💡 Vérifications :
+• Utilisez le bouton 👁️ pour voir votre mot de passe
+• Essayez avec votre email au lieu du username
+• Si problème persiste, cliquez sur "Nettoyer le cache" ci-dessous`;
       } else if (error.message.includes('Email not confirmed')) {
         errorMessage = 'Votre email n\'est pas encore confirmé. Vérifiez votre boîte mail.';
       } else if (error.message.includes('User not found')) {
@@ -387,6 +436,7 @@ const Auth = () => {
         title: "Connexion échouée",
         description: errorMessage,
         variant: "destructive",
+        duration: 8000, // 🔥 Toast plus long pour lire le message détaillé
       });
     } finally {
       setIsLoading(false);
@@ -529,14 +579,25 @@ const Auth = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    type="password"
+                    type={showNewPassword ? "text" : "password"}
                     placeholder="Nouveau mot de passe"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     required
                     minLength={6}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
               
@@ -544,14 +605,25 @@ const Auth = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirmer le mot de passe"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     required
                     minLength={6}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -682,14 +754,25 @@ const Auth = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Mot de passe (min. 6 caractères)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     required
                     minLength={6}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -799,6 +882,31 @@ const Auth = () => {
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Se connecter
                 </Button>
+                
+                {/* 🧹 Bouton de nettoyage de cache visible */}
+                <div className="mt-4 text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      try {
+                        await supabase.auth.signOut({ scope: 'global' });
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        toast({
+                          title: "Cache nettoyé ✅",
+                          description: "Session supprimée. Réessayez de vous connecter.",
+                        });
+                      } catch (error) {
+                        console.error('Erreur nettoyage:', error);
+                      }
+                    }}
+                  >
+                    🧹 Problème de connexion ? Nettoyer le cache
+                  </Button>
+                </div>
               </form>
             </div>
           )}
