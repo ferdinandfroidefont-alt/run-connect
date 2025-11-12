@@ -388,9 +388,28 @@ const Auth = () => {
       console.log('🔐 Tentative de connexion avec email:', emailToUse);
       console.log('🔐 Longueur du mot de passe:', password.length, 'caractères');
       
+      // Hash partiel du mot de passe pour debug (sans exposer le vrai mot de passe)
+      const passwordHash = btoa(password).substring(0, 8);
+      console.log('🔐 Hash partiel du mot de passe:', passwordHash);
+      
       // Vérifier la session actuelle avant connexion
       const { data: currentSession } = await supabase.auth.getSession();
       console.log('🔐 Session actuelle avant connexion:', currentSession.session ? 'Existe (expirée?)' : 'Aucune');
+      
+      // 🔍 Vérifier que l'utilisateur existe bien dans auth.users
+      const { data: userCheck, error: checkError } = await supabase.rpc('check_user_exists', { 
+        email_param: emailToUse 
+      }) as { data: { exists: boolean; email_confirmed: boolean } | null; error: any };
+
+      console.log('🔍 Vérification utilisateur:', userCheck);
+
+      if (checkError) {
+        console.error('❌ Erreur vérification utilisateur:', checkError);
+      } else if (userCheck && !userCheck.exists) {
+        throw new Error('❌ Compte introuvable. Ce compte a peut-être été supprimé ou l\'email est incorrect.');
+      } else if (userCheck && !userCheck.email_confirmed) {
+        throw new Error('⚠️ Email non confirmé. Vérifie ta boîte mail pour confirmer ton compte avant de te connecter.');
+      }
       
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse,
@@ -870,6 +889,45 @@ const Auth = () => {
                         <Eye className="h-4 w-4" />
                       )}
                     </button>
+                  </div>
+                  
+                  {/* 🔑 Bouton mot de passe oublié */}
+                  <div className="text-right">
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      onClick={async () => {
+                        const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
+                        if (!emailToUse) {
+                          toast({
+                            title: "Email requis",
+                            description: "Veuillez entrer votre email (pas votre pseudonyme) pour réinitialiser le mot de passe",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        try {
+                          const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
+                            redirectTo: `${window.location.origin}/auth?reset=true`,
+                          });
+                          if (error) throw error;
+                          toast({
+                            title: "Email envoyé ✅",
+                            description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe",
+                          });
+                        } catch (error: any) {
+                          toast({
+                            title: "Erreur",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      className="text-xs p-0 h-auto"
+                    >
+                      🔑 Mot de passe oublié ?
+                    </Button>
                   </div>
                 </div>
 

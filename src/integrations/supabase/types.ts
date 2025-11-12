@@ -1049,6 +1049,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_user_exists: { Args: { email_param: string }; Returns: Json }
       cleanup_audit_logs: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
       decline_club_invitation: {
