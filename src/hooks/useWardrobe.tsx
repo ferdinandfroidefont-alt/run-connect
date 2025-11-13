@@ -127,8 +127,6 @@ export const useWardrobe = () => {
           item_type: item.type,
           is_equipped: false
         });
-        
-        toast.success(`🎉 Nouveau vêtement débloqué: ${item.name}!`);
       }
       
       if (itemsToUnlock.length > 0) {
@@ -158,7 +156,6 @@ export const useWardrobe = () => {
         .eq('item_id', itemId);
       
       fetchWardrobe();
-      toast.success('Vêtement équipé !');
     } catch (error) {
       console.error('Error equipping item:', error);
       toast.error('Erreur lors de l\'équipement');
