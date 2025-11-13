@@ -31,27 +31,37 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   const [hideFriends, setHideFriends] = useState(false);
   const [friendsMap, setFriendsMap] = useState<Set<string>>(new Set());
 
-  // 🔥 DÉTECTION ROBUSTE: Vérifier AndroidBridge directement + retry
+  // 🔥 PLAN NIVEAU 31 - FORCER LE CHARGEMENT DES CONTACTS DU TÉLÉPHONE
   useEffect(() => {
     const hasAndroidBridge = !!(window as any).AndroidBridge;
     const actuallyNative = isNative || hasAndroidBridge;
     
-    console.log('[ContactsTab] État détaillé:', {
+    console.log('[ContactsTab NIVEAU 31] 🔍 État détaillé:', {
       isNative,
       hasAndroidBridge,
       actuallyNative,
       hasPermission,
-      contactsCount: deviceContacts?.length || 0,
+      deviceContactsCount: deviceContacts?.length || 0,
       suggestionsCount: contactSuggestions.length,
       loading
     });
 
-    // ✅ Charger si native (via hook OU AndroidBridge direct) + permission + contacts disponibles
+    // 🚀 ÉTAPE 1: Forcer le chargement des contacts du téléphone si vide
+    if (actuallyNative && hasPermission && (!deviceContacts || deviceContacts.length === 0) && !loading) {
+      console.log('[ContactsTab NIVEAU 31] 🔥 FORCER LOADCONTACTS() - deviceContacts est vide!');
+      setLoading(true);
+      loadContacts().finally(() => {
+        console.log('[ContactsTab NIVEAU 31] ✅ loadContacts() terminé');
+        setLoading(false);
+      });
+    }
+    
+    // 🚀 ÉTAPE 2: Charger suggestions si contacts du téléphone disponibles
     if (actuallyNative && hasPermission && deviceContacts && deviceContacts.length > 0 && contactSuggestions.length === 0 && !loading) {
-      console.log('[ContactsTab] 🚀 Chargement automatique déclenché');
+      console.log('[ContactsTab NIVEAU 31] 🚀 Chargement suggestions avec', deviceContacts.length, 'contacts téléphone');
       loadContactsFromApp();
     }
-  }, [isNative, hasPermission, deviceContacts]);
+  }, [isNative, hasPermission, deviceContacts, loading]);
 
   // 🔥 RETRY MECHANISM: Écouter l'événement native ready pour re-vérifier
   useEffect(() => {
@@ -129,16 +139,22 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   const loadContactsFromApp = async () => {
     if (!deviceContacts || deviceContacts.length === 0) {
-      console.log('[ContactsTab] No device contacts available');
+      console.log('[ContactsTab NIVEAU 31] ❌ No device contacts available');
       return;
     }
 
-    console.log('[ContactsTab] Loading contacts from app...', deviceContacts.length);
+    console.log('[ContactsTab NIVEAU 31] 🚀 Loading contacts from app...', {
+      deviceContactsCount: deviceContacts.length,
+      sampleContact: deviceContacts[0]
+    });
     setLoading(true);
 
     try {
       const suggestions = await findContactsInApp(deviceContacts);
-      console.log('[ContactsTab] Found suggestions:', suggestions.length);
+      console.log('[ContactsTab NIVEAU 31] ✅ Found suggestions:', {
+        total: suggestions.length,
+        sampleSuggestion: suggestions[0]
+      });
       
       // Trier par statut ami (amis en premier) puis nom
       const sorted = suggestions.sort((a, b) => {
@@ -149,8 +165,13 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
       });
       
       setContactSuggestions(sorted);
+      
+      toast({
+        title: "Contacts synchronisés",
+        description: `${sorted.length} contact(s) trouvé(s) sur l'application`,
+      });
     } catch (error) {
-      console.error('[ContactsTab] Error loading contacts:', error);
+      console.error('[ContactsTab NIVEAU 31] ❌ Error loading contacts:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger vos contacts",
@@ -162,38 +183,70 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   };
 
   const findContactsInApp = async (contacts: any[]): Promise<ContactSuggestion[]> => {
-    if (!user) return [];
+    if (!user) {
+      console.log('[ContactsTab NIVEAU 31] ❌ No user - aborting');
+      return [];
+    }
 
-    console.log('[ContactsTab] Finding contacts in app from', contacts.length, 'device contacts');
+    console.log('[ContactsTab NIVEAU 31] 🔍 Finding contacts in app from', contacts.length, 'device contacts');
 
     // Extraire TOUTES les variantes de numéros
     const allPhoneVariants: string[] = [];
-    contacts.forEach(contact => {
+    let contactsWithPhones = 0;
+    
+    contacts.forEach((contact, index) => {
       if (contact.phoneNumbers && Array.isArray(contact.phoneNumbers)) {
         contact.phoneNumbers.forEach((phoneObj: any) => {
           if (phoneObj.number) {
-            const variants = normalizePhoneVariants(phoneObj.number);
+            const rawNumber = phoneObj.number;
+            const variants = normalizePhoneVariants(rawNumber);
+            
+            if (index < 3) { // Log premiers contacts pour debug
+              console.log('[ContactsTab NIVEAU 31] 📱 Contact example:', {
+                name: contact.name,
+                rawNumber,
+                variants
+              });
+            }
+            
             allPhoneVariants.push(...variants);
+            contactsWithPhones++;
           }
         });
       }
     });
 
-    console.log('[ContactsTab] Extracted', allPhoneVariants.length, 'phone variants (all formats)');
+    console.log('[ContactsTab NIVEAU 31] 📊 Extraction summary:', {
+      totalContacts: contacts.length,
+      contactsWithPhones,
+      totalVariants: allPhoneVariants.length,
+      sampleVariants: allPhoneVariants.slice(0, 5)
+    });
 
     if (allPhoneVariants.length === 0) {
+      console.log('[ContactsTab NIVEAU 31] ⚠️ No phone numbers extracted!');
       return [];
     }
 
     const uniquePhones = [...new Set(allPhoneVariants)];
-    console.log('[ContactsTab] Unique phones:', uniquePhones.length);
+    console.log('[ContactsTab NIVEAU 31] 🔢 Unique phones:', {
+      count: uniquePhones.length,
+      samples: uniquePhones.slice(0, 5)
+    });
 
     // Recherche par batch avec .or() pour gérer variantes
     const batchSize = 50;
     const results: ContactSuggestion[] = [];
+    let totalBatches = Math.ceil(uniquePhones.length / batchSize);
 
     for (let i = 0; i < uniquePhones.length; i += batchSize) {
       const batch = uniquePhones.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      
+      console.log(`[ContactsTab NIVEAU 31] 🔄 Batch ${batchNumber}/${totalBatches}:`, {
+        batchSize: batch.length,
+        samples: batch.slice(0, 3)
+      });
       
       // Construire query OR pour matching multi-format
       const phoneQuery = batch.map(p => `phone.eq.${p}`).join(',');
@@ -206,13 +259,18 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
         .limit(50);
 
       if (error) {
-        console.error('[ContactsTab] Error fetching batch:', error);
+        console.error(`[ContactsTab NIVEAU 31] ❌ Error batch ${batchNumber}:`, error);
         continue;
       }
 
-      if (data) {
-        console.log('[ContactsTab] Batch found:', data.length, 'matches');
+      if (data && data.length > 0) {
+        console.log(`[ContactsTab NIVEAU 31] ✅ Batch ${batchNumber} found:`, {
+          matches: data.length,
+          users: data.map(d => ({ username: d.username, phone: d.phone }))
+        });
         results.push(...data);
+      } else {
+        console.log(`[ContactsTab NIVEAU 31] ⚠️ Batch ${batchNumber}: no matches`);
       }
     }
 
