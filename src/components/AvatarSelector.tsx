@@ -66,7 +66,6 @@ export const AvatarSelector = ({
 
       if (error) throw error;
 
-      toast.success('Avatar sélectionné avec succès ! 🎉');
       onAvatarSelected?.(selectedAvatarId);
       onOpenChange(false);
     } catch (error) {

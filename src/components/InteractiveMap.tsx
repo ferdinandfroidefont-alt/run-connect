@@ -792,7 +792,6 @@ export const InteractiveMap = ({
               setUserLocation(position);
               map.current?.setCenter(position);
               map.current?.setZoom(14);
-              toast.success("Position détectée !");
               console.log("✅ Carte centrée sur position utilisateur:", position);
             } else {
               console.log("❌ Position null reçue");
@@ -823,15 +822,12 @@ export const InteractiveMap = ({
                   onClick: openLocationSettings
                 }
               });
-            } else {
-              toast.info(`${errorMessage}, centré sur Paris`);
             }
             
             // Don't set default location for marker display
             console.log("🗺️ Pas de position disponible, pas de marqueur");
           });
 
-        toast.success("Carte Google Maps prête !");
       } catch (error) {
         console.error('Erreur lors du chargement de Google Maps:', error);
         toast.error("Erreur lors du chargement de la carte");
@@ -1255,7 +1251,6 @@ export const InteractiveMap = ({
       if (position) {
         map.current.setCenter(position);
         map.current.setZoom(16);
-        toast.success("Vous êtes ici !");
       } else {
         toast.error("Impossible de vous localiser");
       }
@@ -1272,10 +1267,8 @@ export const InteractiveMap = ({
     const currentType = map.current.getMapTypeId();
     if (currentType === 'satellite') {
       map.current.setMapTypeId('roadmap');
-      toast.info("Vue 2D activée");
     } else {
       map.current.setMapTypeId('satellite');
-      toast.info("Vue satellite activée");
     }
   };
 
@@ -1293,7 +1286,6 @@ export const InteractiveMap = ({
     
     setPresetLocation({ lat: latLng.lat(), lng: latLng.lng() });
     setIsCreateDialogOpen(true);
-    toast.success("Double-cliquez ou appuyez longuement pour créer une séance ici !");
   };
 
   return (

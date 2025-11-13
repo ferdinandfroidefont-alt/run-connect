@@ -108,7 +108,6 @@ export const RouteCreation = () => {
           addWaypoint(event.latLng);
         });
 
-        toast.success("Mode création de parcours activé !");
       } catch (error) {
         console.error('Erreur lors du chargement de la carte:', error);
         toast.error("Erreur lors du chargement de la carte");
@@ -131,7 +130,6 @@ export const RouteCreation = () => {
         strokeWeight: 4,
         map: map.current,
       });
-      toast.success("Point de départ défini");
     } else if (waypoints.current.length >= 2) {
       // Points suivants - tracer l'itinéraire
       await createDirectionsRoute();
@@ -186,7 +184,6 @@ export const RouteCreation = () => {
       await updateElevationProfile();
       calculateRouteStats();
       
-      toast.success("Point ajouté !");
     } catch (error) {
       console.error('Erreur lors de la création de l\'itinéraire:', error);
       toast.error("Impossible de tracer l'itinéraire");
@@ -260,7 +257,6 @@ export const RouteCreation = () => {
       setRouteElevations([]);
       setTotalDistance(0);
       setTotalElevationGain(0);
-      toast.info("Parcours effacé");
     } else if (waypoints.current.length === 1) {
       if (routePath.current) {
         routePath.current.setMap(null);
@@ -273,7 +269,6 @@ export const RouteCreation = () => {
         strokeWeight: 4,
         map: map.current,
       });
-      toast.info("Point retiré");
     } else {
       createDirectionsRoute();
     }
@@ -289,7 +284,6 @@ export const RouteCreation = () => {
     setRouteElevations([]);
     setTotalDistance(0);
     setTotalElevationGain(0);
-    toast.info("Parcours effacé");
   };
 
   const handleRecenter = async () => {
@@ -298,7 +292,6 @@ export const RouteCreation = () => {
       if (position) {
         map.current?.setCenter(position);
         map.current?.setZoom(14);
-        toast.success("Carte recentrée");
       }
     } catch {
       toast.error("Position non disponible");
