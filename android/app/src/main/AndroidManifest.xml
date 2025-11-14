@@ -51,6 +51,19 @@
         android:requestLegacyExternalStorage="true"
         android:theme="@style/AppTheme.NoActionBarFull">
 
+        <!-- 🚀 SPLASH SCREEN ACTIVITY -->
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/SplashTheme"
+            android:screenOrientation="portrait">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- 🧠 ACTIVITÉ PRINCIPALE -->
         <activity
             android:name=".MainActivity"
@@ -63,7 +76,6 @@
             
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
             <!-- 🔐 Deep Link OAuth -->
