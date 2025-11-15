@@ -2,32 +2,64 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/colorPrimary"
+    android:gravity="center">
 
-    <!-- Image de fond du splash -->
+    <!-- Texte "Bienvenue sur" -->
+    <TextView
+        android:id="@+id/welcome_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@+id/app_name"
+        android:layout_marginBottom="10dp"
+        android:text="Bienvenue sur"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:textStyle="normal"
+        android:fontFamily="sans-serif-light" />
+
+    <!-- Texte "RUNCONNECT" (plus grand) -->
+    <TextView
+        android:id="@+id/app_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@+id/app_logo"
+        android:layout_marginBottom="50dp"
+        android:text="RUNCONNECT"
+        android:textColor="@android:color/white"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.1" />
+
+    <!-- Logo de l'application -->
     <ImageView
-        android:id="@+id/splash_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:src="@drawable/_602af4b9_1961_4089_93d2_d4e95efb46e0"
-        android:scaleType="centerCrop"
-        android:contentDescription="Splash screen" />
+        android:id="@+id/app_logo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_centerInParent="true"
+        android:src="@mipmap/ic_launcher"
+        android:contentDescription="Logo RunConnect" />
 
-    <!-- Container pour la ProgressBar et le TextView -->
-    <RelativeLayout
+    <!-- Container pour la ProgressBar -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="80dp"
-        android:paddingLeft="40dp"
-        android:paddingRight="40dp">
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingLeft="80dp"
+        android:paddingRight="80dp">
 
-        <!-- ProgressBar horizontale -->
+        <!-- ProgressBar horizontale (60% largeur écran via padding) -->
         <ProgressBar
             android:id="@+id/progress_bar"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="20dp"
+            android:layout_height="8dp"
             android:max="100"
             android:progress="0"
             android:progressDrawable="@drawable/progress_bar_custom"
@@ -38,15 +70,12 @@
             android:id="@+id/progress_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
+            android:layout_marginTop="10dp"
             android:text="0%"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:shadowColor="#000000"
-            android:shadowDx="1"
-            android:shadowDy="1"
-            android:shadowRadius="2" />
-    </RelativeLayout>
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="normal"
+            android:fontFamily="sans-serif-light" />
+    </LinearLayout>
 
 </RelativeLayout>

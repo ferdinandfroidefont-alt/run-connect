@@ -1,13 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android" android:opacity="opaque">
-    <!-- Fond blanc -->
-    <item android:drawable="@color/white"/>
-    
-    <!-- Image centrée en plein écran -->
-    <item>
-        <bitmap
-            android:src="@drawable/_602af4b9_1961_4089_93d2_d4e95efb46e0"
-            android:gravity="center"
-            android:scaleType="centerCrop"/>
-    </item>
+    <!-- Fond bleu RunConnect -->
+    <item android:drawable="@color/colorPrimary"/>
 </layer-list>
