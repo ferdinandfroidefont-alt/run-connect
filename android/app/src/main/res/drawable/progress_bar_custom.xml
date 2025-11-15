@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     
-    <!-- Background de la barre (transparent ou légèrement gris) -->
+    <!-- Background de la barre (blanc semi-transparent) -->
     <item android:id="@android:id/background">
         <shape>
-            <corners android:radius="10dp" />
+            <corners android:radius="12dp" />
             <solid android:color="#33FFFFFF" />
         </shape>
     </item>
     
-    <!-- Progression de la barre (bleu clair) -->
+    <!-- Progression de la barre (blanc pur) -->
     <item android:id="@android:id/progress">
         <clip>
             <shape>
-                <corners android:radius="10dp" />
-                <solid android:color="@color/progressBarBlue" />
+                <corners android:radius="12dp" />
+                <solid android:color="@android:color/white" />
             </shape>
         </clip>
     </item>
