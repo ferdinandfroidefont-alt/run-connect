@@ -177,7 +177,7 @@ jobs:
           
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
-          cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
+          cat > android-webview/app/src/main/res/values/styles.xml << 'EOF'
 <resources xmlns:tools="http://schemas.android.com/tools">
 
   <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
