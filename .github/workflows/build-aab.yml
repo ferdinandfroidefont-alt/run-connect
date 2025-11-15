@@ -36,125 +36,125 @@ jobs:
           mkdir -p android-webview/app/src/main/res/drawable
 
           cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories { 
-              google()
-              mavenCentral()
-              maven { url 'https://jitpack.io' }
-            }
-          }
-          rootProject.name = "RunConnect"
-          include(":app")
-          EOF
+pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories { 
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+  }
+}
+rootProject.name = "RunConnect"
+include(":app")
+EOF
 
           cat > android-webview/build.gradle <<'EOF'
-          buildscript {
-            repositories {
-              google()
-              mavenCentral()
-            }
-            dependencies {
-              classpath 'com.android.tools.build:gradle:8.6.0'
-              classpath 'com.google.gms:google-services:4.4.0'
-            }
-          }
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:8.6.0'
+    classpath 'com.google.gms:google-services:4.4.0'
+  }
+}
 
-          plugins { id 'com.android.application' version '8.6.0' apply false }
-          EOF
+plugins { id 'com.android.application' version '8.6.0' apply false }
+EOF
 
           cat > android-webview/app/build.gradle <<'EOF'
-          plugins { 
-            id 'com.android.application'
-            id 'com.google.gms.google-services'
-          }
+plugins { 
+  id 'com.android.application'
+  id 'com.google.gms.google-services'
+}
 
-          android {
-            namespace "app.runconnect"
-            compileSdk 35
+android {
+  namespace "app.runconnect"
+  compileSdk 35
 
-            signingConfigs {
-              release {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-              debug {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-            }
+  signingConfigs {
+    release {
+      storeFile file("${rootDir}/keystore.jks")
+      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+      keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
+      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+    }
+    debug {
+      storeFile file("${rootDir}/keystore.jks")
+      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+      keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
+      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+    }
+  }
 
-            defaultConfig {
-              applicationId "app.runconnect"
-              minSdk 24
-              targetSdk 35
-              versionCode 163
-              versionName "1.5.0"
-              
-              buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
-              buildConfigField "boolean", "IS_AAB_BUILD", "true"
-            }
+  defaultConfig {
+    applicationId "app.runconnect"
+    minSdk 24
+    targetSdk 35
+    versionCode 163
+    versionName "1.5.0"
+    
+    buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
+    buildConfigField "boolean", "IS_AAB_BUILD", "true"
+  }
 
-            buildTypes {
-              release {
-                minifyEnabled false
-                proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                signingConfig signingConfigs.release
-              }
-              debug {
-                signingConfig signingConfigs.debug
-              }
-            }
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      signingConfig signingConfigs.release
+    }
+    debug {
+      signingConfig signingConfigs.debug
+    }
+  }
 
-            compileOptions {
-              sourceCompatibility JavaVersion.VERSION_17
-              targetCompatibility JavaVersion.VERSION_17
-            }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
 
-            buildFeatures {
-              buildConfig true
-            }
-          }
+  buildFeatures {
+    buildConfig true
+  }
+}
 
-          dependencies {
-            implementation 'androidx.appcompat:appcompat:1.7.0'
-            implementation 'com.google.android.material:material:1.12.0'
-            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.core:core:1.13.1'
-            implementation 'androidx.activity:activity:1.9.2'
-            implementation 'androidx.webkit:webkit:1.11.0'
-            
-            implementation platform('com.google.firebase:firebase-bom:32.7.0')
-            implementation 'com.google.firebase:firebase-messaging'
-            implementation 'com.google.firebase:firebase-analytics'
-            
-            implementation 'com.google.android.gms:play-services-auth:21.0.0'
-            
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'com.capacitorjs:core:6.1.2'
-          }
-          EOF
+dependencies {
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+  implementation 'com.google.android.material:material:1.12.0'
+  implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+  implementation 'androidx.browser:browser:1.8.0'
+  implementation 'androidx.core:core:1.13.1'
+  implementation 'androidx.activity:activity:1.9.2'
+  implementation 'androidx.webkit:webkit:1.11.0'
+  
+  implementation platform('com.google.firebase:firebase-bom:32.7.0')
+  implementation 'com.google.firebase:firebase-messaging'
+  implementation 'com.google.firebase:firebase-analytics'
+  
+  implementation 'com.google.android.gms:play-services-auth:21.0.0'
+  
+  implementation 'androidx.browser:browser:1.8.0'
+  implementation 'com.capacitorjs:core:6.1.2'
+}
+EOF
 
           mkdir -p android-webview/gradle/wrapper
           cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          EOF
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+EOF
 
           cat > android-webview/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
+org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+EOF
 
           cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
           
@@ -177,6 +177,7 @@ jobs:
           
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
+          # 🔥 styles.xml FIXÉ (SANS INDENTATION)
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
 <resources xmlns:tools="http://schemas.android.com/tools">
 
@@ -192,7 +193,7 @@ jobs:
     <item name="android:windowFullscreen">true</item>
   </style>
 
-  <!-- 🔥 SplashTheme ajouté -->
+  <!-- Thème Splash -->
   <style name="SplashTheme" parent="AppTheme.NoActionBarLaunch">
     <item name="android:windowBackground">@drawable/splash_runconnect</item>
   </style>
@@ -201,21 +202,21 @@ jobs:
 EOF
 
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-            <string name="app_name">RunConnect</string>
-            <string name="title_activity_main">RunConnect</string>
-            <string name="package_name">app.runconnect</string>
-            <string name="custom_url_scheme">app.runconnect</string>
-            <string name="default_web_client_id">220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com</string>
-          </resources>
-          EOF
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">RunConnect</string>
+  <string name="title_activity_main">RunConnect</string>
+  <string name="package_name">app.runconnect</string>
+  <string name="custom_url_scheme">app.runconnect</string>
+  <string name="default_web_client_id">220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com</string>
+</resources>
+EOF
 
           cat > android-webview/app/src/main/res/xml/file_paths.xml <<'EOF'
-          <paths xmlns:android="http://schemas.android.com/apk/res/android">
-              <external-path name="external_files" path="." />
-          </paths>
-          EOF
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-path name="external_files" path="." />
+</paths>
+EOF
 
           mkdir -p android-webview/app/src/main/res/mipmap-mdpi
           mkdir -p android-webview/app/src/main/res/mipmap-hdpi
@@ -223,7 +224,6 @@ EOF
           mkdir -p android-webview/app/src/main/res/mipmap-xxhdpi
           mkdir -p android-webview/app/src/main/res/mipmap-xxxhdpi
 
-          # 🟦 COPIE ICÔNE (corrigé)
           ICON_SOURCE="android/app/src/main/res/drawable/602AF4B9-1961-4089-93D2-D4E95EFB46E0.PNG"
 
           cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-mdpi/ic_launcher.png
