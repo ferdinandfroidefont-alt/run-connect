@@ -36,131 +36,131 @@ jobs:
           mkdir -p android-webview/app/src/main/res/drawable
 
           cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories { 
-              google()
-              mavenCentral()
-              maven { url 'https://jitpack.io' }
-            }
-          }
-          rootProject.name = "RunConnect"
-          include(":app")
-          EOF
+pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+  }
+}
+rootProject.name = "RunConnect"
+include(":app")
+EOF
 
           cat > android-webview/build.gradle <<'EOF'
-          buildscript {
-            repositories {
-              google()
-              mavenCentral()
-            }
-            dependencies {
-              classpath 'com.android.tools.build:gradle:8.6.0'
-              classpath 'com.google.gms:google-services:4.4.0'
-            }
-          }
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:8.6.0'
+    classpath 'com.google.gms:google-services:4.4.0'
+  }
+}
 
-          plugins { id 'com.android.application' version '8.6.0' apply false }
-          EOF
+plugins { id 'com.android.application' version '8.6.0' apply false }
+EOF
 
           cat > android-webview/app/build.gradle <<'EOF'
-          plugins { 
-            id 'com.android.application'
-            id 'com.google.gms.google-services'
-          }
+plugins {
+  id 'com.android.application'
+  id 'com.google.gms.google-services'
+}
 
-          android {
-            namespace "app.runconnect"
-            compileSdk 35
+android {
+  namespace "app.runconnect"
+  compileSdk 35
 
-            signingConfigs {
-              release {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-              debug {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-            }
+  signingConfigs {
+    release {
+      storeFile file("${rootDir}/keystore.jks")
+      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+      keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
+      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+    }
+    debug {
+      storeFile file("${rootDir}/keystore.jks")
+      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+      keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
+      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+    }
+  }
 
-            defaultConfig {
-              applicationId "app.runconnect"
-              minSdk 24
-              targetSdk 35
-              versionCode 163
-              versionName "1.5.0"
-              
-              buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
-              buildConfigField "boolean", "IS_AAB_BUILD", "true"
-            }
+  defaultConfig {
+    applicationId "app.runconnect"
+    minSdk 24
+    targetSdk 35
+    versionCode 163
+    versionName "1.5.0"
 
-            buildTypes {
-              release {
-                minifyEnabled false
-                proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                signingConfig signingConfigs.release
-              }
-              debug {
-                signingConfig signingConfigs.debug
-              }
-            }
+    buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
+    buildConfigField "boolean", "IS_AAB_BUILD", "true"
+  }
 
-            compileOptions {
-              sourceCompatibility JavaVersion.VERSION_17
-              targetCompatibility JavaVersion.VERSION_17
-            }
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      signingConfig signingConfigs.release
+    }
+    debug {
+      signingConfig signingConfigs.debug
+    }
+  }
 
-            buildFeatures {
-              buildConfig true
-            }
-          }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
 
-          dependencies {
-            implementation 'androidx.appcompat:appcompat:1.7.0'
-            implementation 'com.google.android.material:material:1.12.0'
-            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.core:core:1.13.1'
-            implementation 'androidx.activity:activity:1.9.2'
-            implementation 'androidx.webkit:webkit:1.11.0'
-            
-            implementation platform('com.google.firebase:firebase-bom:32.7.0')
-            implementation 'com.google.firebase:firebase-messaging'
-            implementation 'com.google.firebase:firebase-analytics'
-            
-            implementation 'com.google.android.gms:play-services-auth:21.0.0'
-            
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'com.capacitorjs:core:6.1.2'
-          }
-          EOF
+  buildFeatures {
+    buildConfig true
+  }
+}
+
+dependencies {
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+  implementation 'com.google.android.material:material:1.12.0'
+  implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+  implementation 'androidx.browser:browser:1.8.0'
+  implementation 'androidx.core:core:1.13.1'
+  implementation 'androidx.activity:activity:1.9.2'
+  implementation 'androidx.webkit:webkit:1.11.0'
+
+  implementation platform('com.google.firebase:firebase-bom:32.7.0')
+  implementation 'com.google.firebase:firebase-messaging'
+  implementation 'com.google.firebase:firebase-analytics'
+
+  implementation 'com.google.android.gms:play-services-auth:21.0.0'
+
+  implementation 'androidx.browser:browser:1.8.0'
+  implementation 'com.capacitorjs:core:6.1.2'
+}
+EOF
 
           mkdir -p android-webview/gradle/wrapper
           cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          EOF
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+EOF
 
           cat > android-webview/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
+org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+EOF
 
           cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
-          
+
           sed -i 's|private final String START_URL = System.getProperty.*|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
-          
+
           if grep -q "setSupportMultipleWindows" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
             echo "setSupportMultipleWindows détecté"
           else
@@ -174,27 +174,27 @@ jobs:
             echo "ERREUR: onCreateWindow manquant dans MainActivity.java"
             exit 1
           fi
-          
+
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
-          cat > android-webview/app/src/main/res/values/styles.xml << 'EOF'
+          cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-<style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-<item name="android:windowFullscreen">true</item>
-<item name="android:windowTranslucentStatus">true</item>
-<item name="android:windowTranslucentNavigation">true</item>
-<item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
-</style>
+  <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+    <item name="android:windowFullscreen">true</item>
+    <item name="android:windowTranslucentStatus">true</item>
+    <item name="android:windowTranslucentNavigation">true</item>
+    <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
+  </style>
 
-<style name="AppTheme.NoActionBarLaunch" parent="AppTheme" />
-<style name="AppTheme.NoActionBarFull" parent="AppTheme">
-<item name="android:windowFullscreen">true</item>
-</style>
+  <style name="AppTheme.NoActionBarLaunch" parent="AppTheme" />
+  <style name="AppTheme.NoActionBarFull" parent="AppTheme">
+    <item name="android:windowFullscreen">true</item>
+  </style>
 
-<style name="SplashTheme" parent="AppTheme.NoActionBarLaunch">
-<item name="android:windowBackground">@drawable/splash_runconnect</item>
-</style>
+  <style name="SplashTheme" parent="AppTheme.NoActionBarLaunch">
+    <item name="android:windowBackground">@android:color/white</item>
+  </style>
 
 </resources>
 EOF
