@@ -130,23 +130,17 @@ jobs:
             implementation 'androidx.activity:activity:1.9.2'
             implementation 'androidx.webkit:webkit:1.11.0'
             
-            // Firebase dependencies
             implementation platform('com.google.firebase:firebase-bom:32.7.0')
             implementation 'com.google.firebase:firebase-messaging'
             implementation 'com.google.firebase:firebase-analytics'
             
-            // Google Sign-In pour authentification native
             implementation 'com.google.android.gms:play-services-auth:21.0.0'
             
-            // Chrome Custom Tabs pour OAuth Google sécurisé
             implementation 'androidx.browser:browser:1.8.0'
-            
-            // Capacitor Core (pour PermissionsPlugin) - version 6.1.2 (dernière stable de Capacitor 6)
             implementation 'com.capacitorjs:core:6.1.2'
           }
           EOF
 
-          # 🎯 Créer gradle-wrapper.properties
           mkdir -p android-webview/gradle/wrapper
           cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
           distributionBase=GRADLE_USER_HOME
@@ -162,15 +156,11 @@ jobs:
           android.enableJetifier=true
           EOF
 
-          # ✅ Copier TOUS les fichiers Java (MainActivity + PermissionsPlugin)
           cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
           
-          # 🔧 Modifier START_URL dynamiquement dans le MainActivity (support des 3 formats)
           sed -i 's|private final String START_URL = System.getProperty.*|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           
-          # 🔍 Vérifier que Custom Tabs est bien présent dans le code
-          # 🔍 Vérifier que setSupportMultipleWindows est présent
           if grep -q "setSupportMultipleWindows" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
             echo "✅ setSupportMultipleWindows détecté"
           else
@@ -178,7 +168,6 @@ jobs:
             sed -i '/setDomStorageEnabled(true);/a \        s.setSupportMultipleWindows(true);' android-webview/app/src/main/java/app/runconnect/MainActivity.java
           fi
 
-          # 🔍 Vérifier que onCreateWindow est présent
           if grep -q "onCreateWindow" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
             echo "✅ onCreateWindow détecté"
           else
@@ -186,10 +175,8 @@ jobs:
             exit 1
           fi
           
-          # ✅ Copier le VRAI AndroidManifest.xml complet (avec Firebase)
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
-          # ✅ Créer styles.xml
           cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
             <resources xmlns:tools="http://schemas.android.com/tools">
               <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
@@ -205,7 +192,6 @@ jobs:
             </resources>
           EOF
 
-          # ✅ Créer strings.xml avec Android Client ID pour Google Sign-In
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -213,37 +199,36 @@ jobs:
             <string name="title_activity_main">RunConnect</string>
             <string name="package_name">app.runconnect</string>
             <string name="custom_url_scheme">app.runconnect</string>
-            
-            <!-- 🔑 Firebase Google Sign-In Android Client ID (Type 1) -->
             <string name="default_web_client_id">220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com</string>
           </resources>
           EOF
 
-          # ✅ Créer file_paths.xml
           cat > android-webview/app/src/main/res/xml/file_paths.xml <<'EOF'
           <paths xmlns:android="http://schemas.android.com/apk/res/android">
               <external-path name="external_files" path="." />
           </paths>
           EOF
 
-          # ✅ Copier l'icône personnalisée RunConnect
           mkdir -p android-webview/app/src/main/res/mipmap-mdpi
           mkdir -p android-webview/app/src/main/res/mipmap-hdpi
           mkdir -p android-webview/app/src/main/res/mipmap-xhdpi
           mkdir -p android-webview/app/src/main/res/mipmap-xxhdpi
           mkdir -p android-webview/app/src/main/res/mipmap-xxxhdpi
-          
-          # Copier l'icône personnalisée RunConnect dans toutes les résolutions
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp assets/appicon.png android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
+          # 🟦 **COPIE ICÔNE — VERSION CORRIGÉE**
+          ICON_SOURCE="android/app/src/main/res/drawable/602AF4B9-1961-4089-93D2-D4E95EFB46E0.PNG"
+
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
       - name: 🔐 Restaurer le keystore
         working-directory: android-webview
