@@ -213,26 +213,30 @@ jobs:
           </paths>
           EOF
 
+          # 📱 Copier toutes les icônes mipmap depuis les vraies icônes de l'app
+          echo "📱 Copie des icônes officielles depuis mipmap..."
           mkdir -p android-webview/app/src/main/res/mipmap-mdpi
           mkdir -p android-webview/app/src/main/res/mipmap-hdpi
           mkdir -p android-webview/app/src/main/res/mipmap-xhdpi
           mkdir -p android-webview/app/src/main/res/mipmap-xxhdpi
           mkdir -p android-webview/app/src/main/res/mipmap-xxxhdpi
 
-          # 🟦 **COPIE ICÔNE — VERSION CORRIGÉE**
-          ICON_SOURCE="android/app/src/main/res/drawable/602AF4B9-1961-4089-93D2-D4E95EFB46E0.PNG"
-
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp "$ICON_SOURCE" android-webview/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-mdpi/
+          cp android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-mdpi/
+          
+          cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-hdpi/
+          cp android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-hdpi/
+          
+          cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-xhdpi/
+          cp android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-xhdpi/
+          
+          cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-xxhdpi/
+          cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-xxhdpi/
+          
+          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-xxxhdpi/
+          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-xxxhdpi/
+          
+          echo "✅ Icônes officielles copiées avec succès"
 
       - name: 🔐 Restaurer le keystore
         working-directory: android-webview
