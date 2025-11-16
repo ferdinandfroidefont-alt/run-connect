@@ -173,6 +173,8 @@ public class MainActivity extends AppCompatActivity {
 
         // ✅ WebView setup
         webView = new WebView(this);
+        // Fond bleu pendant le chargement pour éviter l'écran blanc
+        webView.setBackgroundColor(0xFF6366F1); // Couleur colorPrimary
         
         // ✅ Créer le canal de notification au démarrage
         createNotificationChannelAtStartup();
@@ -396,6 +398,8 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 Log.d(TAG, "📦 Page terminée - injection flags AAB avec délai");
+                // Retirer le fond bleu une fois la page chargée
+                view.setBackgroundColor(Color.TRANSPARENT);
                 // Délai pour s'assurer que la page est prête
                 new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                     injectAABFlags(view);

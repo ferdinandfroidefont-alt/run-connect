@@ -8,7 +8,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class SplashActivity extends Activity {
-    private static final int SPLASH_DURATION = 1000; // 1 seconde
+    private static final int SPLASH_DURATION = 2500; // 2,5 secondes
     private static final int UPDATE_INTERVAL = 10; // Mise à jour toutes les 10ms
     
     private ProgressBar progressBar;
@@ -62,6 +62,13 @@ public class SplashActivity extends Activity {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                }
+                
+                // Attendre 300ms après 100% pour une transition fluide
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
                 
                 // Une fois terminé, lancer MainActivity avec fade
