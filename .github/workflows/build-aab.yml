@@ -177,20 +177,24 @@ jobs:
           
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
-          cat > android-webview/app/src/main/res/values/styles.xml <<'EOF'
-            <resources xmlns:tools="http://schemas.android.com/tools">
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                <item name="android:windowFullscreen">true</item>
-                <item name="android:windowTranslucentStatus">true</item>
-                <item name="android:windowTranslucentNavigation">true</item>
-                <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
-              </style>
-              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme"/>
-              <style name="AppTheme.NoActionBarFull" parent="AppTheme">
-                <item name="android:windowFullscreen">true</item>
-              </style>
-            </resources>
-          EOF
+          echo "📁 Copie des ressources du splash screen..."
+          
+          # Copier styles.xml complet (contient SplashTheme)
+          cp android/app/src/main/res/values/styles.xml android-webview/app/src/main/res/values/styles.xml
+          
+          # Copier colors.xml (colorPrimary, progressBarBlue, etc.)
+          cp android/app/src/main/res/values/colors.xml android-webview/app/src/main/res/values/colors.xml
+          
+          # Copier les drawables du splash
+          mkdir -p android-webview/app/src/main/res/drawable
+          cp android/app/src/main/res/drawable/splash_background.xml android-webview/app/src/main/res/drawable/
+          cp android/app/src/main/res/drawable/progress_bar_custom.xml android-webview/app/src/main/res/drawable/
+          
+          # Copier le layout du splash
+          mkdir -p android-webview/app/src/main/res/layout
+          cp android/app/src/main/res/layout/activity_splash.xml android-webview/app/src/main/res/layout/
+          
+          echo "✅ Ressources du splash screen copiées avec succès"
 
           cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
