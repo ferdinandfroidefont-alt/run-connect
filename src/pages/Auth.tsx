@@ -388,29 +388,6 @@ const Auth = () => {
       console.log('🔐 Tentative de connexion avec email:', emailToUse);
       console.log('🔐 Longueur du mot de passe:', password.length, 'caractères');
       
-      // Hash partiel du mot de passe pour debug (sans exposer le vrai mot de passe)
-      const passwordHash = btoa(password).substring(0, 8);
-      console.log('🔐 Hash partiel du mot de passe:', passwordHash);
-      
-      // Vérifier la session actuelle avant connexion
-      const { data: currentSession } = await supabase.auth.getSession();
-      console.log('🔐 Session actuelle avant connexion:', currentSession.session ? 'Existe (expirée?)' : 'Aucune');
-      
-      // 🔍 Vérifier que l'utilisateur existe bien dans auth.users
-      const { data: userCheck, error: checkError } = await supabase.rpc('check_user_exists', { 
-        email_param: emailToUse 
-      }) as { data: { exists: boolean; email_confirmed: boolean } | null; error: any };
-
-      console.log('🔍 Vérification utilisateur:', userCheck);
-
-      if (checkError) {
-        console.error('❌ Erreur vérification utilisateur:', checkError);
-      } else if (userCheck && !userCheck.exists) {
-        throw new Error('❌ Compte introuvable. Ce compte a peut-être été supprimé ou l\'email est incorrect.');
-      } else if (userCheck && !userCheck.email_confirmed) {
-        throw new Error('⚠️ Email non confirmé. Vérifie ta boîte mail pour confirmer ton compte avant de te connecter.');
-      }
-      
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse,
         password,
