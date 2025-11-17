@@ -386,11 +386,15 @@ const Auth = () => {
 
       // 🔍 Logs détaillés pour debug
       console.log('🔐 Tentative de connexion avec email:', emailToUse);
-      console.log('🔐 Longueur du mot de passe:', password.length, 'caractères');
+      console.log('🔐 Longueur exacte du mot de passe:', password.length, 'caractères');
+      console.log('🔐 Hash partiel (debug):', btoa(password.trim()).substring(0, 12));
+      console.log('🔐 Premier caractère code:', password.charCodeAt(0));
+      console.log('🔐 Dernier caractère code:', password.charCodeAt(password.length - 1));
+      console.log('🔐 Contient espaces début/fin:', password !== password.trim());
       
       const { error } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password,
+        email: emailToUse.trim(),
+        password: password.trim(),
       });
       
       if (error) {
@@ -414,10 +418,11 @@ const Auth = () => {
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = `❌ Email/username ou mot de passe incorrect.
 
-💡 Vérifications :
-• Utilisez le bouton 👁️ pour voir votre mot de passe
-• Essayez avec votre email au lieu du username
-• Si problème persiste, cliquez sur "Nettoyer le cache" ci-dessous`;
+🔑 Solutions possibles :
+• Clique sur "Mot de passe oublié ?" ci-dessous pour réinitialiser
+• Utilise "Continuer avec Google" (ton compte y est peut-être lié)
+• Vérifie qu'il n'y a pas d'espaces avant/après le mot de passe
+• Essaie avec ton email au lieu du username`;
       } else if (error.message.includes('Email not confirmed')) {
         errorMessage = 'Votre email n\'est pas encore confirmé. Vérifiez votre boîte mail.';
       } else if (error.message.includes('User not found')) {
