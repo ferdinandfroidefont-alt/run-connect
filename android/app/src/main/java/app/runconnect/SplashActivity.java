@@ -20,6 +20,29 @@ public class SplashActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        // 🎯 FULLSCREEN IMMERSIF (masquer status bar + navigation bar)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            // Android 11+ (API 30+)
+            getWindow().setDecorFitsSystemWindows(false);
+            getWindow().getInsetsController().hide(
+                android.view.WindowInsets.Type.statusBars() | 
+                android.view.WindowInsets.Type.navigationBars()
+            );
+            getWindow().getInsetsController().setSystemBarsBehavior(
+                android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            );
+        } else {
+            // Android 10 et inférieur
+            getWindow().getDecorView().setSystemUiVisibility(
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            );
+        }
+        
         // Charger le layout
         setContentView(R.layout.activity_splash);
         
@@ -35,49 +58,53 @@ public class SplashActivity extends Activity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                // Calculer l'incrément pour atteindre 100% en 1 seconde
                 int totalSteps = SPLASH_DURATION / UPDATE_INTERVAL;
                 int increment = 100 / totalSteps;
                 
                 while (progressStatus < 100) {
                     progressStatus += increment;
                     
-                    // S'assurer de ne pas dépasser 100
                     if (progressStatus > 100) {
                         progressStatus = 100;
                     }
                     
-                    // Mettre à jour l'UI sur le thread principal
+                    // ✅ Utiliser final pour accès depuis inner class
+                    final int currentProgress = progressStatus;
+                    
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
-                            progressBar.setProgress(progressStatus);
-                            progressText.setText(progressStatus + "%");
+                            try {
+                                progressBar.setProgress(currentProgress);
+                                progressText.setText(currentProgress + "%");
+                            } catch (Exception e) {
+                                android.util.Log.e("SplashActivity", "Erreur update progress: " + e.getMessage());
+                            }
                         }
                     });
                     
-                    // Attendre avant la prochaine mise à jour
                     try {
                         Thread.sleep(UPDATE_INTERVAL);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        android.util.Log.e("SplashActivity", "Thread interrompu", e);
+                        break;
                     }
                 }
                 
-                // Attendre 300ms après 100% pour une transition fluide
+                // Attendre 300ms après 100%
                 try {
                     Thread.sleep(300);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
                 
-                // Une fois terminé, lancer MainActivity avec fade
+                // Lancer MainActivity
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
                         Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
                         startActivity(intent);
+                        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
                         finish();
                     }
                 });
