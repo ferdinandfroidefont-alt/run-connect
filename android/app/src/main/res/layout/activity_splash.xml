@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_above="@+id/app_logo"
-        android:layout_marginBottom="60dp"
+        android:layout_marginBottom="70dp"
         android:text="RUNCONNECT"
         android:textColor="@android:color/white"
         android:textSize="28sp"
@@ -36,11 +36,11 @@
         android:fontFamily="sans-serif-medium"
         android:letterSpacing="0.1" />
 
-    <!-- Logo de l'application -->
+    <!-- Logo de l'application (AGRANDI) -->
     <ImageView
         android:id="@+id/app_logo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
         android:layout_centerInParent="true"
         android:src="@mipmap/ic_launcher"
         android:scaleType="fitCenter"
@@ -57,7 +57,7 @@
         android:paddingLeft="80dp"
         android:paddingRight="80dp">
 
-        <!-- ProgressBar horizontale (60% largeur écran via padding) -->
+        <!-- ProgressBar horizontale (SIMPLIFIÉE, sans drawable custom) -->
         <ProgressBar
             android:id="@+id/progress_bar"
             style="?android:attr/progressBarStyleHorizontal"
@@ -65,8 +65,9 @@
             android:layout_height="8dp"
             android:max="100"
             android:progress="0"
-            android:progressDrawable="@drawable/progress_bar_custom"
-            android:indeterminate="false" />
+            android:indeterminate="false"
+            android:progressTint="@android:color/white"
+            android:progressBackgroundTint="#33FFFFFF" />
 
         <!-- TextView pour afficher le pourcentage -->
         <TextView
