@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 🌐 WebView (en dessous) -->
+    <WebView
+        android:id="@+id/webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- 🎨 Splash Overlay (par-dessus, masqué après chargement) -->
+    <RelativeLayout
+        android:id="@+id/splash_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/colorPrimary"
+        android:gravity="center"
+        android:fitsSystemWindows="false"
+        android:visibility="visible">
+
+        <TextView
+            android:id="@+id/welcome_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_above="@+id/app_name"
+            android:layout_marginTop="40dp"
+            android:layout_marginBottom="10dp"
+            android:text="Bienvenue sur"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="normal"
+            android:fontFamily="sans-serif-light" />
+
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_above="@+id/app_logo"
+            android:layout_marginBottom="70dp"
+            android:text="RUNCONNECT"
+            android:textColor="@android:color/white"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.1" />
+
+        <ImageView
+            android:id="@+id/app_logo"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_centerInParent="true"
+            android:src="@mipmap/ic_launcher"
+            android:scaleType="fitCenter"
+            android:contentDescription="Logo RunConnect" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="80dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingLeft="80dp"
+            android:paddingRight="80dp">
+
+            <ProgressBar
+                android:id="@+id/splash_progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:max="100"
+                android:progress="0"
+                android:indeterminate="false"
+                android:progressTint="@android:color/white"
+                android:progressBackgroundTint="#33FFFFFF" />
+
+            <TextView
+                android:id="@+id/splash_progress_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="0%"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="normal"
+                android:fontFamily="sans-serif-light" />
+        </LinearLayout>
+
+    </RelativeLayout>
+
+</FrameLayout>
