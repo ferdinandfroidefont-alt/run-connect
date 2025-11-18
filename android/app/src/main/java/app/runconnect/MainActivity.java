@@ -28,6 +28,9 @@ import org.json.JSONObject;
 import org.json.JSONException;
 import android.os.Message;
 import android.util.Base64;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -89,6 +92,11 @@ public class MainActivity extends AppCompatActivity {
     
     private final ContactsCache contactsCache = new ContactsCache();
     private String cachedFCMToken = null; // 🔥 NIVEAU 22 : Stocker le token pour injection différée
+    
+    // 🎨 Références pour le splash overlay
+    private RelativeLayout splashOverlay;
+    private ProgressBar splashProgressBar;
+    private TextView splashProgressText;
 
     /**
      * Vérifie si Chrome est installé sur l'appareil
@@ -124,6 +132,30 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // 🎯 FULLSCREEN IMMERSIF (masquer status bar + navigation bar)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            getWindow().getInsetsController().hide(
+                android.view.WindowInsets.Type.statusBars() | 
+                android.view.WindowInsets.Type.navigationBars()
+            );
+            getWindow().getInsetsController().setSystemBarsBehavior(
+                android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            );
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            );
+        }
+        
+        // Charger le nouveau layout avec splash intégré
+        setContentView(R.layout.activity_main);
         
         // Stocker l'instance pour accès depuis MessagingService
         instance = this;
@@ -171,10 +203,14 @@ public class MainActivity extends AppCompatActivity {
             );
         }
 
-        // ✅ WebView setup
-        webView = new WebView(this);
+        // ✅ Récupérer les références des vues
+        webView = findViewById(R.id.webview);
+        splashOverlay = findViewById(R.id.splash_overlay);
+        splashProgressBar = findViewById(R.id.splash_progress_bar);
+        splashProgressText = findViewById(R.id.splash_progress_text);
+        
         // Fond bleu pendant le chargement pour éviter l'écran blanc
-        webView.setBackgroundColor(0xFF6366F1); // Couleur colorPrimary
+        webView.setBackgroundColor(0xFF5B7CFF); // Couleur colorPrimary (corrigée)
         
         // ✅ Créer le canal de notification au démarrage
         createNotificationChannelAtStartup();
@@ -211,6 +247,31 @@ public class MainActivity extends AppCompatActivity {
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 Log.d(TAG, "📍 Geolocation permission requested for: " + origin);
                 callback.invoke(origin, true, false); // toujours autoriser
+            }
+            
+            // 🎯 NOUVEAU : Connecter la progression réelle de la WebView au splash
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                Log.d(TAG, "🔄 WebView loading progress: " + newProgress + "%");
+                
+                // Mettre à jour le splash si visible
+                if (splashOverlay != null && splashOverlay.getVisibility() == android.view.View.VISIBLE) {
+                    splashProgressBar.setProgress(newProgress);
+                    splashProgressText.setText(newProgress + "%");
+                    
+                    // Masquer le splash quand la page est complètement chargée
+                    if (newProgress >= 100) {
+                        Log.d(TAG, "✅ WebView loaded, hiding splash overlay");
+                        
+                        // Attendre 300ms pour une transition fluide
+                        new android.os.Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                splashOverlay.setVisibility(android.view.View.GONE);
+                            }
+                        }, 300);
+                    }
+                }
             }
             
             @Override
@@ -505,7 +566,6 @@ public class MainActivity extends AppCompatActivity {
         // ✅ Charger le site
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
-        setContentView(webView);
         
         // Injecter immédiatement après le chargement de l'URL avec délai
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
