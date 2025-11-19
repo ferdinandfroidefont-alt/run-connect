@@ -31,6 +31,10 @@ import android.util.Base64;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.LinearLayout;
+import android.widget.ImageView;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -97,6 +101,13 @@ public class MainActivity extends AppCompatActivity {
     private RelativeLayout splashOverlay;
     private ProgressBar splashProgressBar;
     private TextView splashProgressText;
+    
+    // 🎬 Animations du splash
+    private Animation logoAnimation;
+    private Animation welcomeTextAnimation;
+    private Animation titleAnimation;
+    private Animation progressAnimation;
+    private Animation shimmerAnimation;
 
     /**
      * Vérifie si Chrome est installé sur l'appareil
@@ -212,6 +223,36 @@ public class MainActivity extends AppCompatActivity {
         // Fond bleu pendant le chargement pour éviter l'écran blanc
         webView.setBackgroundColor(0xFF5B7CFF); // Couleur colorPrimary (corrigée)
         
+        // 🎬 Charger les animations
+        logoAnimation = AnimationUtils.loadAnimation(this, R.anim.pulse_animation);
+        welcomeTextAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in_text);
+        titleAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in_title);
+        progressAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in_progress);
+        shimmerAnimation = AnimationUtils.loadAnimation(this, R.anim.shimmer_animation);
+
+        // 🎬 Démarrer les animations
+        ImageView appLogo = findViewById(R.id.app_logo);
+        TextView welcomeText = findViewById(R.id.welcome_text);
+        TextView appName = findViewById(R.id.app_name);
+        LinearLayout progressLayout = (LinearLayout) splashProgressBar.getParent();
+
+        // Animation du logo (pulse continu)
+        appLogo.startAnimation(logoAnimation);
+
+        // Animation des textes (fade-in séquentiel)
+        welcomeText.setAlpha(0f); // Commencer invisible
+        appName.setAlpha(0f);
+        progressLayout.setAlpha(0f);
+
+        welcomeText.startAnimation(welcomeTextAnimation);
+        appName.startAnimation(titleAnimation);
+        progressLayout.startAnimation(progressAnimation);
+
+        // Animation shimmer sur la barre de progression
+        splashProgressBar.startAnimation(shimmerAnimation);
+
+        Log.d(TAG, "🎬 Animations du splash démarrées");
+        
         // ✅ Créer le canal de notification au démarrage
         createNotificationChannelAtStartup();
         
@@ -262,6 +303,15 @@ public class MainActivity extends AppCompatActivity {
                     // Masquer le splash quand la page est complètement chargée
                     if (newProgress >= 100) {
                         Log.d(TAG, "✅ WebView loaded, hiding splash overlay");
+                        
+                        // 🎬 ARRÊTER toutes les animations avant de masquer le splash
+                        ImageView appLogo = findViewById(R.id.app_logo);
+                        if (appLogo != null && logoAnimation != null) {
+                            appLogo.clearAnimation();
+                        }
+                        if (splashProgressBar != null && shimmerAnimation != null) {
+                            splashProgressBar.clearAnimation();
+                        }
                         
                         // Attendre 300ms pour une transition fluide
                         new android.os.Handler().postDelayed(new Runnable() {

@@ -90,7 +90,7 @@
                 android:max="100"
                 android:progress="0"
                 android:indeterminate="false"
-                android:progressDrawable="@drawable/splash_progress_bar" />
+                android:progressDrawable="@drawable/shimmer_progress_bar" />
 
             <TextView
                 android:id="@+id/splash_progress_text"
