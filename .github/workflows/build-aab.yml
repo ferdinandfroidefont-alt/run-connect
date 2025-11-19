@@ -189,10 +189,22 @@ jobs:
           mkdir -p android-webview/app/src/main/res/drawable
           cp android/app/src/main/res/drawable/splash_background.xml android-webview/app/src/main/res/drawable/
           cp android/app/src/main/res/drawable/progress_bar_custom.xml android-webview/app/src/main/res/drawable/
+          cp android/app/src/main/res/drawable/splash_gradient.xml android-webview/app/src/main/res/drawable/
+          cp android/app/src/main/res/drawable/shimmer_progress_bar.xml android-webview/app/src/main/res/drawable/
+          cp android/app/src/main/res/drawable/logo_glow.xml android-webview/app/src/main/res/drawable/
           
-          # Copier le layout du splash
+          # Copier les layouts du splash
           mkdir -p android-webview/app/src/main/res/layout
           cp android/app/src/main/res/layout/activity_splash.xml android-webview/app/src/main/res/layout/
+          cp android/app/src/main/res/layout/activity_main.xml android-webview/app/src/main/res/layout/
+          
+          # Copier les animations du splash
+          mkdir -p android-webview/app/src/main/res/anim
+          cp android/app/src/main/res/anim/pulse_animation.xml android-webview/app/src/main/res/anim/
+          cp android/app/src/main/res/anim/fade_in_text.xml android-webview/app/src/main/res/anim/
+          cp android/app/src/main/res/anim/fade_in_title.xml android-webview/app/src/main/res/anim/
+          cp android/app/src/main/res/anim/fade_in_progress.xml android-webview/app/src/main/res/anim/
+          cp android/app/src/main/res/anim/shimmer_animation.xml android-webview/app/src/main/res/anim/
           
           echo "✅ Ressources du splash screen copiées avec succès"
 
