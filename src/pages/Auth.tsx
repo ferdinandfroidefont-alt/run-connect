@@ -247,7 +247,7 @@ const Auth = () => {
         // For signup, use password-based registration
         const { error } = await supabase.auth.signUp({
           email,
-          password,
+          password: password.trim(),
           options: {
             emailRedirectTo: `${window.location.origin}/`,
           },
@@ -394,7 +394,7 @@ const Auth = () => {
       
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse.trim(),
-        password: password.trim(),
+        password: password,
       });
       
       if (error) {
