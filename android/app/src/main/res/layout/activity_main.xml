@@ -60,16 +60,18 @@
                 android:layout_gravity="center"
                 android:background="@drawable/logo_glow" />
             
-            <!-- Logo par-dessus -->
+            <!-- Logo par-dessus (qualité maximale) -->
             <ImageView
                 android:id="@+id/app_logo"
-                android:layout_width="160dp"
-                android:layout_height="160dp"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
                 android:layout_gravity="center"
                 android:src="@mipmap/ic_launcher"
                 android:scaleType="fitCenter"
                 android:contentDescription="Logo RunConnect"
-                android:elevation="4dp" />
+                android:elevation="4dp"
+                android:filterBitmap="true"
+                android:adjustViewBounds="true" />
         </FrameLayout>
 
         <LinearLayout
