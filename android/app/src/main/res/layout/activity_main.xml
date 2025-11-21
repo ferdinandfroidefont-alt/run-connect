@@ -70,7 +70,6 @@
                 android:scaleType="fitCenter"
                 android:contentDescription="Logo RunConnect"
                 android:elevation="4dp"
-                android:filterBitmap="true"
                 android:adjustViewBounds="true" />
         </FrameLayout>
 
