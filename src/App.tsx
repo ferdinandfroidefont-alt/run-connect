@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,7 +7,6 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
-import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MySessions from "./pages/MySessions";
@@ -29,18 +27,6 @@ import { AndroidTestPage } from "./components/AndroidTestPage";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Listener global pour PASSWORD_RECOVERY
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('🔐 PASSWORD_RECOVERY global détecté, redirection vers /auth');
-        window.location.href = '/auth?reset=true';
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
