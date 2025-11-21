@@ -58,21 +58,10 @@ const Auth = () => {
     };
     
     cleanExpiredSession();
-
-    // Écouter l'événement PASSWORD_RECOVERY pour le flow PKCE
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('🔐 PASSWORD_RECOVERY détecté, affichage du formulaire');
-        setAuthStep('reset');
-        // Nettoyer l'URL pour éviter de retraiter le code
-        window.history.replaceState({}, '', '/auth');
-      }
-    });
     
-    // Vérifier si c'est une réinitialisation de mot de passe
+    // Vérifier si c'est une réinitialisation de mot de passe (paramètre venant d'App.tsx)
     const urlParams = new URLSearchParams(window.location.search);
-    const hasRecoveryCode = urlParams.has('code'); // Nouveau format PKCE
-    const isReset = urlParams.get('type') === 'recovery' || hasRecoveryCode;
+    const isReset = urlParams.get('reset') === 'true';
     
     // Détecter les erreurs Supabase (lien expiré, accès refusé, etc.)
     const error = urlParams.get('error');
@@ -126,8 +115,6 @@ const Auth = () => {
         window.location.href = '/';
       }
     });
-
-    return () => subscription.unsubscribe();
   }, [toast]);
 
   const handleGoogleAuth = async () => {
