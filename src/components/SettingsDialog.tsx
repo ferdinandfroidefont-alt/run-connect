@@ -149,7 +149,9 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
     setIsChangingPassword(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
+        redirectTo: window.AndroidBridge 
+          ? 'app.runconnect://auth?reset=true'
+          : `${window.location.origin}/auth?reset=true`,
       });
 
       if (error) throw error;
