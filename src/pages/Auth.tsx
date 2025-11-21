@@ -63,6 +63,21 @@ const Auth = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const isReset = urlParams.get('type') === 'recovery';
     
+    // Détecter les erreurs Supabase (lien expiré, accès refusé, etc.)
+    const error = urlParams.get('error');
+    const errorCode = urlParams.get('error_code');
+    
+    if (error && errorCode === 'otp_expired') {
+      toast({
+        variant: "destructive",
+        title: "⏰ Lien expiré",
+        description: "Ce lien de réinitialisation a expiré. Demandez-en un nouveau ci-dessous.",
+      });
+      // Nettoyer l'URL pour éviter de réafficher l'erreur
+      window.history.replaceState({}, '', '/auth');
+      return;
+    }
+    
     if (isReset) {
       setAuthStep('reset');
       return;
