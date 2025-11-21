@@ -59,9 +59,9 @@ const Auth = () => {
     
     cleanExpiredSession();
     
-    // Vérifier si c'est une réinitialisation de mot de passe (paramètre venant d'App.tsx)
+    // Vérifier si c'est une réinitialisation de mot de passe (détection directe du code PKCE)
     const urlParams = new URLSearchParams(window.location.search);
-    const isReset = urlParams.get('reset') === 'true';
+    const isReset = urlParams.get('reset') === 'true' || urlParams.has('code');
     
     // Détecter les erreurs Supabase (lien expiré, accès refusé, etc.)
     const error = urlParams.get('error');
