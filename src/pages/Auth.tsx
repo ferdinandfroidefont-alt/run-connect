@@ -61,7 +61,7 @@ const Auth = () => {
     
     // Vérifier si c'est une réinitialisation de mot de passe
     const urlParams = new URLSearchParams(window.location.search);
-    const isReset = urlParams.get('reset') === 'true';
+    const isReset = urlParams.get('type') === 'recovery';
     
     if (isReset) {
       setAuthStep('reset');
