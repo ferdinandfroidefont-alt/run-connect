@@ -17,7 +17,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
-import { generateRunConnectMarkerSVG, svgToDataUrl } from '@/lib/map-marker-generator';
+import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -599,12 +599,16 @@ export const InteractiveMap = ({
       return markerCache.current.get(organizerId)!;
     }
 
-    // Generate new RunConnect SVG marker
+    // Generate new RunConnect SVG marker with base64 image
     const profileImageUrl = session.profiles.avatar_url || '/placeholder.svg';
     console.log('🖼️ Generating SVG marker with profile image:', profileImageUrl);
     
     try {
-      const svg = generateRunConnectMarkerSVG(profileImageUrl, 48);
+      // Convert image to base64 first
+      const base64Image = await imageUrlToBase64(profileImageUrl);
+      console.log('📸 Image converted to base64, length:', base64Image.length);
+      
+      const svg = generateRunConnectMarkerSVG(base64Image, 48);
       const dataUrl = svgToDataUrl(svg);
       
       // Cache the generated marker

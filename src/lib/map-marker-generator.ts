@@ -1,4 +1,24 @@
 /**
+ * Converts an image URL to base64 data URL
+ */
+export const imageUrlToBase64 = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Failed to convert image to base64:', error);
+    // Return a default placeholder if image fails to load
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iI0UwRTBFMCIvPjxwYXRoIGQ9Ik0xMiAxMkM5LjI0IDEyIDcgOS43NiA3IDdDNyA0LjI0IDkuMjQgMiAxMiAyQzE0Ljc2IDIgMTcgNC4yNCAxNyA3QzE3IDkuNzYgMTQuNzYgMTIgMTIgMTJaTTEyIDE0QzE2LjQyIDE0IDIwIDE1Ljc5IDIwIDE4VjIwSDRWMThDNCAxNS43OSA3LjU4IDE0IDEyIDE0WiIgZmlsbD0iIzk5OTk5OSIvPjwvc3ZnPg==';
+  }
+};
+
+/**
  * Generates a custom RunConnect map marker as SVG string
  * with pin shape, gradient, glow effect, and circular profile photo
  */
