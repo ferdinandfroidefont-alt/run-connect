@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Filter } from "lucide-react";
 import { useState } from "react";
+import { ClubSelector } from "./ClubSelector";
 
 interface Filter {
   activity_types: string[];
@@ -65,6 +66,22 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
 
   const activeFiltersCount = filters.activity_types.length + filters.session_types.length;
 
+  const getActiveFilterLabel = () => {
+    const labels = [];
+    
+    if (filters.friends_only) {
+      labels.push("Amis uniquement");
+    }
+    
+    if (filters.selected_club_id) {
+      labels.push("Clubs sélectionnés");
+    }
+    
+    return labels.join(" • ");
+  };
+
+  const activeFilterLabel = getActiveFilterLabel();
+
   return (
     <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control`}>
       {/* Header cliquable - toujours visible */}
@@ -94,7 +111,16 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
           </>
         ) : (
           <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 mt-0.5" />
+            <Filter className="h-4 w-4 mt-0.5" />
+            
+            {/* Texte descriptif si filtres avancés actifs */}
+            {activeFilterLabel && (
+              <span className="text-xs font-medium text-foreground">
+                {activeFilterLabel}
+              </span>
+            )}
+            
+            {/* Badge nombre de filtres (types activité + types sortie) */}
             {activeFiltersCount > 0 && (
               <Badge variant="secondary" className="h-5 px-1 text-xs">
                 {activeFiltersCount}
@@ -147,6 +173,29 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
                   </Button>
                 ))}
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Filtres avancés */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Filtres avancés</h4>
+              
+              {/* Bouton Amis uniquement */}
+              <Button
+                onClick={() => onFiltersChange({ ...filters, friends_only: !filters.friends_only })}
+                variant={filters.friends_only ? "default" : "outline"}
+                size="sm"
+                className="justify-start text-xs h-8 w-full mb-2"
+              >
+                👥 Amis uniquement
+              </Button>
+              
+              {/* Club Selector */}
+              <ClubSelector
+                selectedClubId={filters.selected_club_id}
+                onClubSelect={(clubId) => onFiltersChange({ ...filters, selected_club_id: clubId })}
+              />
             </div>
           </div>
         </CardContent>
