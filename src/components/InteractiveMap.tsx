@@ -86,55 +86,57 @@ interface InteractiveMapProps {
   highlightSessionId?: string;
 }
 
-// Custom HTML Marker class for animated markers
-class HTMLMarker extends google.maps.OverlayView {
-  private position: google.maps.LatLng;
-  private content: HTMLDivElement;
-  private onClick: () => void;
+// Factory function to create HTMLMarker class when Google Maps is loaded
+const createHTMLMarkerClass = () => {
+  return class HTMLMarker extends google.maps.OverlayView {
+    private position: google.maps.LatLng;
+    private content: HTMLDivElement;
+    private onClick: () => void;
 
-  constructor(position: google.maps.LatLng, content: HTMLDivElement, onClick: () => void) {
-    super();
-    this.position = position;
-    this.content = content;
-    this.onClick = onClick;
-    
-    // Add click listener
-    this.content.addEventListener('click', this.onClick);
-  }
-
-  onAdd() {
-    const panes = this.getPanes();
-    if (panes) {
-      panes.overlayMouseTarget.appendChild(this.content);
+    constructor(position: google.maps.LatLng, content: HTMLDivElement, onClick: () => void) {
+      super();
+      this.position = position;
+      this.content = content;
+      this.onClick = onClick;
+      
+      // Add click listener
+      this.content.addEventListener('click', this.onClick);
     }
-  }
 
-  draw() {
-    const overlayProjection = this.getProjection();
-    if (overlayProjection) {
-      const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-      if (pos) {
-        this.content.style.left = pos.x + 'px';
-        this.content.style.top = pos.y + 'px';
+    onAdd() {
+      const panes = this.getPanes();
+      if (panes) {
+        panes.overlayMouseTarget.appendChild(this.content);
       }
     }
-  }
 
-  onRemove() {
-    if (this.content && this.content.parentElement) {
-      this.content.removeEventListener('click', this.onClick);
-      this.content.parentElement.removeChild(this.content);
+    draw() {
+      const overlayProjection = this.getProjection();
+      if (overlayProjection) {
+        const pos = overlayProjection.fromLatLngToDivPixel(this.position);
+        if (pos) {
+          this.content.style.left = pos.x + 'px';
+          this.content.style.top = pos.y + 'px';
+        }
+      }
     }
-  }
 
-  getPosition() {
-    return this.position;
-  }
-  
-  setVisible(visible: boolean) {
-    this.content.style.display = visible ? 'block' : 'none';
-  }
-}
+    onRemove() {
+      if (this.content && this.content.parentElement) {
+        this.content.removeEventListener('click', this.onClick);
+        this.content.parentElement.removeChild(this.content);
+      }
+    }
+
+    getPosition() {
+      return this.position;
+    }
+    
+    setVisible(visible: boolean) {
+      this.content.style.display = visible ? 'block' : 'none';
+    }
+  };
+};
 
 export const InteractiveMap = ({
   initialLat, 
@@ -160,7 +162,7 @@ export const InteractiveMap = ({
   
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
-  const markers = useRef<(google.maps.Marker | HTMLMarker)[]>([]);
+  const markers = useRef<any[]>([]);
   const sessionPolylines = useRef<google.maps.Polyline[]>([]);
   const userLocationMarker = useRef<google.maps.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -452,7 +454,8 @@ export const InteractiveMap = ({
     markers.current.forEach(marker => {
       if (marker instanceof google.maps.Marker) {
         marker.setMap(null);
-      } else if (marker instanceof HTMLMarker) {
+      } else if (marker.setMap) {
+        // Custom HTML marker
         marker.setMap(null);
       }
     });
@@ -498,6 +501,8 @@ export const InteractiveMap = ({
         
         if (isNewSession) {
           // Create HTML marker with pulse animation for new sessions
+          const HTMLMarkerClass = createHTMLMarkerClass();
+          
           const markerDiv = document.createElement('div');
           markerDiv.style.position = 'absolute';
           markerDiv.style.transform = 'translate(-50%, -100%)';
@@ -512,7 +517,7 @@ export const InteractiveMap = ({
           markerDiv.appendChild(img);
           
           const position = new google.maps.LatLng(Number(session.location_lat), Number(session.location_lng));
-          const htmlMarker = new HTMLMarker(position, markerDiv, () => {
+          const htmlMarker = new HTMLMarkerClass(position, markerDiv, () => {
             setSelectedSession(session);
           });
           
