@@ -223,36 +223,6 @@ public class MainActivity extends AppCompatActivity {
         // Fond bleu pendant le chargement pour éviter l'écran blanc
         webView.setBackgroundColor(0xFF5B7CFF); // Couleur colorPrimary (corrigée)
         
-        // 🎬 Charger les animations
-        logoAnimation = AnimationUtils.loadAnimation(this, R.anim.pulse_animation);
-        welcomeTextAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in_text);
-        titleAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in_title);
-        progressAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in_progress);
-        shimmerAnimation = AnimationUtils.loadAnimation(this, R.anim.shimmer_animation);
-
-        // 🎬 Démarrer les animations
-        ImageView appLogo = findViewById(R.id.app_logo);
-        TextView welcomeText = findViewById(R.id.welcome_text);
-        TextView appName = findViewById(R.id.app_name);
-        LinearLayout progressLayout = (LinearLayout) splashProgressBar.getParent();
-
-        // Animation du logo (pulse continu)
-        appLogo.startAnimation(logoAnimation);
-
-        // Animation des textes (fade-in séquentiel)
-        welcomeText.setAlpha(0f); // Commencer invisible
-        appName.setAlpha(0f);
-        progressLayout.setAlpha(0f);
-
-        welcomeText.startAnimation(welcomeTextAnimation);
-        appName.startAnimation(titleAnimation);
-        progressLayout.startAnimation(progressAnimation);
-
-        // Animation shimmer sur la barre de progression
-        splashProgressBar.startAnimation(shimmerAnimation);
-
-        Log.d(TAG, "🎬 Animations du splash démarrées");
-        
         // ✅ Créer le canal de notification au démarrage
         createNotificationChannelAtStartup();
         
