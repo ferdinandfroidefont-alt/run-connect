@@ -11,7 +11,7 @@ export const generateRunConnectMarkerSVG = (
   const photoCenterY = height * 0.28;
   
   return `
-    <svg width="${size}" height="${height}" viewBox="0 0 ${size} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${size}" height="${height}" viewBox="0 0 ${size} ${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <defs>
         <!-- RunConnect gradient: deep blue to light blue -->
         <linearGradient id="pinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -50,21 +50,13 @@ export const generateRunConnectMarkerSVG = (
             stroke="none"/>
       
       <!-- Profile photo circle -->
-      <image href="${profileImageUrl}" 
+      <image xlink:href="${profileImageUrl}" 
              x="${size/2 - photoRadius}" 
              y="${photoCenterY - photoRadius}" 
              width="${photoRadius * 2}" 
              height="${photoRadius * 2}" 
              clip-path="url(#circleClip-${profileImageUrl.substring(0, 8)})"
              preserveAspectRatio="xMidYMid slice"/>
-      
-      <!-- White border circle around photo (thicker for contrast) -->
-      <circle cx="${size/2}" 
-              cy="${photoCenterY}" 
-              r="${photoRadius}" 
-              fill="none" 
-              stroke="white" 
-              stroke-width="3"/>
     </svg>
   `.trim().replace(/\s+/g, ' ');
 };
