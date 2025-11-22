@@ -94,7 +94,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
           </>
         ) : (
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
+              <Filter className="h-4 w-4 mt-0.5" />
             {activeFiltersCount > 0 && (
               <Badge variant="secondary" className="h-5 px-1 text-xs">
                 {activeFiltersCount}
