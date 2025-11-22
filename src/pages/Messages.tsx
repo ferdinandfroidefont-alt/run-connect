@@ -2294,7 +2294,7 @@ const Messages = () => {
                         <p className="font-medium text-sm truncate">
                           {conversation.is_group 
                             ? conversation.group_name 
-                            : (conversation.other_participant?.username || conversation.other_participant?.display_name || "Utilisateur inconnu")
+                            : (conversation.other_participant?.username || "Utilisateur inconnu")
                           }
                         </p>
                          <div className="flex items-center gap-2">
@@ -2308,12 +2308,33 @@ const Messages = () => {
                            </span>
                          </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {conversation.is_group 
-                          ? `${conversation.group_members?.length || 0} membres`
-                          : `@${conversation.other_participant?.username || "utilisateur"}`
-                        }
-                      </p>
+                       <p className={`text-xs truncate ${
+                         conversation.unread_count > 0 
+                           ? 'text-blue-400 font-medium' 
+                           : 'text-muted-foreground'
+                       }`}>
+                         {conversation.last_message ? (
+                           <>
+                             {conversation.unread_count > 0 && (
+                               <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                             )}
+                             {conversation.last_message.message_type === 'image' && '📷 Photo'}
+                             {conversation.last_message.message_type === 'file' && '📎 Fichier'}
+                             {conversation.last_message.message_type === 'voice' && '🎤 Message vocal'}
+                             {conversation.last_message.message_type === 'session' && '📅 Session partagée'}
+                             {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
+                               (conversation.last_message.content?.length > 50 
+                                 ? conversation.last_message.content.substring(0, 50) + '…' 
+                                 : conversation.last_message.content || 'Message supprimé'
+                               )
+                             }
+                           </>
+                         ) : (
+                           conversation.is_group 
+                             ? `${conversation.group_members?.length || 0} membres`
+                             : 'Aucun message'
+                         )}
+                       </p>
                     </div>
                   </div>
                 ))}
