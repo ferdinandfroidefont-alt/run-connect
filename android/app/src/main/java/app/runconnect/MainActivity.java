@@ -678,11 +678,8 @@ public class MainActivity extends AppCompatActivity {
             String path = uri.getPath(); // ex: /auth
             String query = uri.getQuery(); // ex: code=xxx&...
             
-            // Construire l'URL finale pour la WebView
-            String finalUrl = START_URL + path;
-            if (query != null && !query.isEmpty()) {
-                finalUrl += "?" + query;
-            }
+            // Construire l'URL finale pour la WebView (effectively final pour lambda)
+            String finalUrl = START_URL + path + (query != null && !query.isEmpty() ? "?" + query : "");
             
             Log.d(TAG, "🔑 Redirection vers WebView: " + finalUrl);
             
