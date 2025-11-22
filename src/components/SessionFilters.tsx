@@ -66,40 +66,48 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   const activeFiltersCount = filters.activity_types.length + filters.session_types.length;
 
   return (
-    <Card className="absolute top-1 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-control">
+    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control`}>
       {/* Header cliquable - toujours visible */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
       >
-        <div className="flex items-center gap-2">
-          <Filter className="h-3 w-3" />
-          {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="h-5 px-1 text-xs">
-              {activeFiltersCount}
-            </Badge>
-          )}
-        </div>
+        {isOpen ? (
+          <>
+            <h3 className="font-semibold">Filtres</h3>
+            <div className="flex items-center gap-2">
+              {activeFiltersCount > 0 && (
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearAllFilters();
+                  }}
+                  size="sm" 
+                  variant="ghost" 
+                  className="text-xs h-6 px-2"
+                >
+                  Effacer
+                </Button>
+              )}
+              <Filter className="h-4 w-4" />
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            {activeFiltersCount > 0 && (
+              <Badge variant="secondary" className="h-5 px-1 text-xs">
+                {activeFiltersCount}
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Contenu qui apparaît au clic */}
       {isOpen && (
         <CardContent className="p-4 pt-0">
           <Separator className="mb-4" />
-          
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Filtres</h3>
-            {activeFiltersCount > 0 && (
-              <Button
-                onClick={clearAllFilters}
-                size="sm"
-                variant="ghost"
-                className="text-xs"
-              >
-                Effacer
-              </Button>
-            )}
-          </div>
 
           <div className="space-y-4">
             {/* Activity Types */}
