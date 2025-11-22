@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Filter, X } from "lucide-react";
+import { Filter } from "lucide-react";
 import { useState } from "react";
 
 interface Filter {
@@ -85,7 +85,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
 
       {/* Filters Panel */}
       {isOpen && (
-        <Card className="absolute top-12 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
+        <Card className="absolute top-16 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Filtres</h3>
@@ -100,13 +100,6 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
                     Effacer
                   </Button>
                 )}
-                <Button
-                  onClick={() => setIsOpen(false)}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
             </div>
 
