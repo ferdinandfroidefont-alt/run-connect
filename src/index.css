@@ -6,6 +6,22 @@
 All colors MUST be HSL.
 */
 
+/* New session marker pulse animation */
+@keyframes pulse-marker {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.pulse-marker-animation {
+  animation: pulse-marker 1.5s ease-in-out infinite;
+}
+
 @layer base {
   :root {
     --background: 210 20% 98%;

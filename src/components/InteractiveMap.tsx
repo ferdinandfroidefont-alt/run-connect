@@ -86,7 +86,57 @@ interface InteractiveMapProps {
   highlightSessionId?: string;
 }
 
-export const InteractiveMap = ({ 
+// Custom HTML Marker class for animated markers
+class HTMLMarker extends google.maps.OverlayView {
+  private position: google.maps.LatLng;
+  private content: HTMLDivElement;
+  private onClick: () => void;
+
+  constructor(position: google.maps.LatLng, content: HTMLDivElement, onClick: () => void) {
+    super();
+    this.position = position;
+    this.content = content;
+    this.onClick = onClick;
+    
+    // Add click listener
+    this.content.addEventListener('click', this.onClick);
+  }
+
+  onAdd() {
+    const panes = this.getPanes();
+    if (panes) {
+      panes.overlayMouseTarget.appendChild(this.content);
+    }
+  }
+
+  draw() {
+    const overlayProjection = this.getProjection();
+    if (overlayProjection) {
+      const pos = overlayProjection.fromLatLngToDivPixel(this.position);
+      if (pos) {
+        this.content.style.left = pos.x + 'px';
+        this.content.style.top = pos.y + 'px';
+      }
+    }
+  }
+
+  onRemove() {
+    if (this.content && this.content.parentElement) {
+      this.content.removeEventListener('click', this.onClick);
+      this.content.parentElement.removeChild(this.content);
+    }
+  }
+
+  getPosition() {
+    return this.position;
+  }
+  
+  setVisible(visible: boolean) {
+    this.content.style.display = visible ? 'block' : 'none';
+  }
+}
+
+export const InteractiveMap = ({
   initialLat, 
   initialLng, 
   initialZoom, 
@@ -95,6 +145,9 @@ export const InteractiveMap = ({
   const { user, subscriptionInfo } = useAuth();
   const { setRefreshSessions, setOpenCreateSession, setOpenCreateRoute } = useAppContext();
   const navigate = useNavigate();
+  
+  // Track newly created sessions for pulse animation
+  const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
   
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
@@ -107,7 +160,7 @@ export const InteractiveMap = ({
   
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
-  const markers = useRef<google.maps.Marker[]>([]);
+  const markers = useRef<(google.maps.Marker | HTMLMarker)[]>([]);
   const sessionPolylines = useRef<google.maps.Polyline[]>([]);
   const userLocationMarker = useRef<google.maps.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -216,6 +269,22 @@ export const InteractiveMap = ({
       loadUserProfile();
     }
   }, [user]);
+
+  // Function to mark a session as new with 5 second pulse animation
+  const markSessionAsNew = (sessionId: string) => {
+    console.log('🆕 Marquage de la séance comme nouvelle:', sessionId);
+    setNewSessionIds(prev => new Set(prev).add(sessionId));
+    
+    // Remove from new sessions after 5 seconds
+    setTimeout(() => {
+      console.log('⏰ Retrait de l\'animation de pulsation pour:', sessionId);
+      setNewSessionIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(sessionId);
+        return updated;
+      });
+    }, 5000);
+  };
 
   // Register refresh function with context
   useEffect(() => {
@@ -380,7 +449,13 @@ export const InteractiveMap = ({
     if (!map.current || !window.google) return;
 
     // Clear existing markers and polylines
-    markers.current.forEach(marker => marker.setMap(null));
+    markers.current.forEach(marker => {
+      if (marker instanceof google.maps.Marker) {
+        marker.setMap(null);
+      } else if (marker instanceof HTMLMarker) {
+        marker.setMap(null);
+      }
+    });
     sessionPolylines.current.forEach(polyline => polyline.setMap(null));
     markers.current = [];
     sessionPolylines.current = [];
@@ -419,23 +494,49 @@ export const InteractiveMap = ({
         }
 
         const markerIcon = await createCustomMarker(session);
+        const isNewSession = newSessionIds.has(session.id);
         
-        const marker = new google.maps.Marker({
-          position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
-          map: map.current,
-          title: session.title,
-          icon: {
-            url: markerIcon,
-            scaledSize: new google.maps.Size(50, 50),
-            anchor: new google.maps.Point(25, 50)
-          }
-        });
+        if (isNewSession) {
+          // Create HTML marker with pulse animation for new sessions
+          const markerDiv = document.createElement('div');
+          markerDiv.style.position = 'absolute';
+          markerDiv.style.transform = 'translate(-50%, -100%)';
+          markerDiv.style.cursor = 'pointer';
+          
+          const img = document.createElement('img');
+          img.src = markerIcon;
+          img.style.width = '50px';
+          img.style.height = '50px';
+          img.className = 'pulse-marker-animation';
+          
+          markerDiv.appendChild(img);
+          
+          const position = new google.maps.LatLng(Number(session.location_lat), Number(session.location_lng));
+          const htmlMarker = new HTMLMarker(position, markerDiv, () => {
+            setSelectedSession(session);
+          });
+          
+          htmlMarker.setMap(map.current);
+          return htmlMarker;
+        } else {
+          // Create standard marker for normal sessions
+          const marker = new google.maps.Marker({
+            position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
+            map: map.current,
+            title: session.title,
+            icon: {
+              url: markerIcon,
+              scaledSize: new google.maps.Size(50, 50),
+              anchor: new google.maps.Point(25, 50)
+            }
+          });
 
-        marker.addListener('click', () => {
-          setSelectedSession(session);
-        });
+          marker.addListener('click', () => {
+            setSelectedSession(session);
+          });
 
-        return marker;
+          return marker;
+        }
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
         
@@ -1590,7 +1691,12 @@ export const InteractiveMap = ({
           setIsCreateDialogOpen(false);
           setPresetLocation(null);
         }}
-        onSessionCreated={loadSessionsWithRetry}
+        onSessionCreated={(sessionId) => {
+          if (sessionId) {
+            markSessionAsNew(sessionId);
+          }
+          loadSessionsWithRetry();
+        }}
         map={map.current}
         presetLocation={presetLocation}
         onCreateRoute={handleCreateRoute}

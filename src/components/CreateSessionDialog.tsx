@@ -26,7 +26,7 @@ import { ClubSelector } from "./ClubSelector";
   interface CreateSessionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSessionCreated: () => void;
+  onSessionCreated: (sessionId?: string) => void;
   map: google.maps.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
   onCreateRoute?: () => void;
@@ -519,7 +519,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       // Force refresh sessions with retry to ensure the new session appears
       console.log('🎯 Séance créée, rechargement de la carte...');
       setTimeout(() => {
-        onSessionCreated();
+        onSessionCreated(sessionData.id); // Pass session ID for animation
       }, 300);
       
       // Center map on new session for visual confirmation
