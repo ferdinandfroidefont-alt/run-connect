@@ -454,6 +454,10 @@ export const InteractiveMap = ({
   const createMarkers = async () => {
     if (!map.current || !window.google) return;
 
+    // Clear marker cache to force regeneration with updated design
+    markerCache.current.clear();
+    console.log('🗑️ Marker cache cleared - regenerating all markers');
+
     // Clear existing markers and polylines
     markers.current.forEach(marker => {
       if (marker instanceof google.maps.Marker) {
