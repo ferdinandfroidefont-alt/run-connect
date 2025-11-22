@@ -1169,6 +1169,23 @@ const Messages = () => {
           loadConversations(); // Reload to get updated conversation
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'conversations'
+        },
+        (payload) => {
+          console.log('🗑️ Conversation deleted:', payload.old);
+          // Remove conversation from local state immediately
+          setConversations(prev => prev.filter(c => c.id !== payload.old.id));
+          // If the deleted conversation was selected, deselect it
+          if (selectedConversation?.id === payload.old.id) {
+            setSelectedConversation(null);
+          }
+        }
+      )
       .subscribe((status) => {
         console.log('📡 Conversations channel status:', status);
       });
@@ -1212,10 +1229,36 @@ const Messages = () => {
         console.log('📡 All messages channel status:', status);
       });
 
+    // Listen to group_members deletions to handle club leave
+    const groupMembersChannel = supabase
+      .channel('user-group-members-deletions')
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'group_members',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('👋 User left a club:', payload.old);
+          // Remove the club conversation from local state
+          setConversations(prev => prev.filter(c => c.id !== payload.old.conversation_id));
+          // If the club was selected, deselect it
+          if (selectedConversation?.id === payload.old.conversation_id) {
+            setSelectedConversation(null);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Group members channel status:', status);
+      });
+
     return () => {
       console.log('🔌 Cleaning up conversations realtime channels');
       supabase.removeChannel(conversationsChannel);
       supabase.removeChannel(allMessagesChannel);
+      supabase.removeChannel(groupMembersChannel);
     };
   }, [user, selectedConversation]);
 
