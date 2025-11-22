@@ -1658,7 +1658,7 @@ const Messages = () => {
 
           {/* Messages - Scrollable area with top margin for fixed header - Ajusté pour nouveau header */}
           <div className="pt-[72px] flex-1 overflow-y-auto min-h-0">
-            <div className={`h-full px-4 pt-4 pb-4 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
+            <div className={`h-full px-4 pt-4 pb-4 space-y-1.5 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1717,7 +1717,7 @@ const Messages = () => {
                           </div>
                         )}
                         
-                        {/* Individual timestamp - appears on hover/click */}
+                         {/* Individual timestamp - appears on hover/click */}
                         {showIndividualTime && (
                           <div className={`absolute -bottom-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
                             <div className="bg-background/90 border text-foreground text-xs px-2 py-1 rounded backdrop-blur-sm shadow-sm">
@@ -1726,126 +1726,151 @@ const Messages = () => {
                           </div>
                         )}
                         
-                         <div className="relative group">
-                           <div
-                             className={`rounded-2xl p-3.5 transition-all duration-200 ${
-                               isOwnMessage
-                                 ? getThemeClasses().ownMessage
-                                 : getThemeClasses().otherMessage
-                             } ${showIndividualTime ? 'shadow-2xl scale-[1.02]' : ''}`}
-                           >
-                            {/* Delete button for own messages (only if not deleted) */}
-                            {isOwnMessage && !message.deleted_at && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                                onClick={() => {
-                                  if (confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
-                                    handleDeleteMessage(message.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
+                        <div className="relative group space-y-1">
+                          {/* Delete button for own messages (only if not deleted) */}
+                          {isOwnMessage && !message.deleted_at && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground z-10"
+                              onClick={() => {
+                                if (confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
+                                  handleDeleteMessage(message.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
 
-                            {/* Show deleted message */}
-                            {message.deleted_at ? (
-                              <p className="text-sm italic text-muted-foreground">Message supprimé</p>
-                            ) : (
-                              <>
-                                {/* Session sharing */}
-                                {message.message_type === 'session' && message.session && (
-                                  <div 
-                                    className="mb-2 p-3 bg-background/50 rounded border cursor-pointer hover:bg-background/70 transition-colors"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSessionClick(message.session);
-                                    }}
-                                  >
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-primary" />
-                                        <span className="font-medium text-sm">{message.session.title}</span>
+                          {/* Image ALWAYS outside bubble - Instagram style */}
+                          {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
+                            <img 
+                              src={message.file_url} 
+                              alt=""
+                              className="max-w-full h-auto rounded-xl"
+                              style={{ maxHeight: '200px' }}
+                            />
+                          )}
+                          
+                          {/* Bubble only if there's non-image content */}
+                          {(message.message_type === 'session' || 
+                            (message.file_url && !message.file_type?.startsWith('image/')) ||
+                            (message.content && !message.content.match(/^(Image partagée)$/i)) ||
+                            message.deleted_at) && (
+                            <div
+                              className={`rounded-2xl p-2 transition-all duration-200 ${
+                                isOwnMessage
+                                  ? getThemeClasses().ownMessage
+                                  : getThemeClasses().otherMessage
+                              } ${showIndividualTime ? 'shadow-2xl scale-[1.02]' : ''}`}
+                            >
+                              {/* Show deleted message */}
+                              {message.deleted_at ? (
+                                <p className="text-sm italic text-muted-foreground">Message supprimé</p>
+                              ) : (
+                                <>
+                                  {/* Session sharing */}
+                                  {message.message_type === 'session' && message.session && (
+                                    <div 
+                                      className="mb-2 p-3 bg-background/50 rounded border cursor-pointer hover:bg-background/70 transition-colors"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSessionClick(message.session);
+                                      }}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="h-4 w-4 text-primary" />
+                                          <span className="font-medium text-sm">{message.session.title}</span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">Cliquer pour voir sur la carte</span>
                                       </div>
-                                      <span className="text-xs text-muted-foreground">Cliquer pour voir sur la carte</span>
+                                      <div className="space-y-1 text-xs">
+                                        <div className="flex items-center gap-1">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <MapPin className="h-3 w-3" />
+                                          <span>{message.session.location_name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Users className="h-3 w-3" />
+                                          <span>{message.session.current_participants}/{message.session.max_participants} participants</span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className="space-y-1 text-xs">
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <MapPin className="h-3 w-3" />
-                                        <span>{message.session.location_name}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Users className="h-3 w-3" />
-                                        <span>{message.session.current_participants}/{message.session.max_participants} participants</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
+                                  )}
 
-                                {/* File attachment */}
-                                {message.file_url && (
-                                  <div className="mb-2">
-                                     {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
-                                       <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-background/30 backdrop-blur-sm border border-border/20 shadow-md">
-                                         <Mic className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                                         <audio 
-                                           controls 
-                                           src={message.file_url}
-                                           className="max-w-full audio-player-glass"
-                                           style={{ height: '28px', width: '160px' }}
-                                         />
-                                       </div>
-                                     ) : message.file_type?.startsWith('image/') ? (
-                                       <img 
-                                         src={message.file_url} 
-                                         alt=""
-                                         className="max-w-full h-auto rounded-2xl shadow-lg backdrop-blur-sm border border-white/10"
-                                         style={{ maxHeight: '200px' }}
-                                       />
+                                  {/* Non-image file attachments (audio, files) */}
+                                  {message.file_url && !message.file_type?.startsWith('image/') && (
+                                    <div className="mb-2">
+                                       {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
+                                         <div className="flex items-center gap-2 px-2 py-1.5 rounded-full bg-background/30 backdrop-blur-sm border border-border/20 shadow-md">
+                                           <Mic className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                                           <audio 
+                                             controls 
+                                             src={message.file_url}
+                                             className="max-w-full audio-player-glass"
+                                             style={{ height: '28px', width: '160px' }}
+                                           />
+                                         </div>
+                                      ) : (
+                                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                                          <Paperclip className="h-4 w-4" />
+                                          <span className="text-sm truncate">{message.file_name}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Show text content only if it's not a media-only message */}
+                                  {message.content && !message.content.match(/^(Image partagée|Message vocal)$/i) && (
+                                    <p className={`${
+                                      isOnlyEmojis(message.content) 
+                                        ? 'text-3xl leading-none' 
+                                        : 'text-sm'
+                                    }`}>
+                                      {message.content}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                          
+                              {/* Read status for own messages inside bubble */}
+                              {isOwnMessage && (message.content || message.message_type === 'session' || (message.file_url && !message.file_type?.startsWith('image/'))) && (
+                                <div className={`flex justify-end mt-1 ${
+                                  isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                }`}>
+                                  <div className="flex items-center">
+                                    {message.read_at ? (
+                                      <CheckCheck className="h-3 w-3 text-blue-500" />
                                     ) : (
-                                      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
-                                        <Paperclip className="h-4 w-4" />
-                                        <span className="text-sm truncate">{message.file_name}</span>
-                                      </div>
+                                      <Check className="h-3 w-3" />
                                     )}
                                   </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Read status for image-only messages (outside bubble) */}
+                          {message.file_type?.startsWith('image/') && 
+                           (!message.content || message.content.match(/^(Image partagée)$/i)) && 
+                           isOwnMessage && !message.deleted_at && (
+                            <div className="flex justify-end">
+                              <div className="flex items-center text-muted-foreground">
+                                {message.read_at ? (
+                                  <CheckCheck className="h-3 w-3 text-blue-500" />
+                                ) : (
+                                  <Check className="h-3 w-3" />
                                 )}
-                                
-                                {/* Show text content only if it's not a media-only message */}
-                                {message.content && !message.content.match(/^(Image partagée|Message vocal)/i) && (
-                                  <p className={`${
-                                    isOnlyEmojis(message.content) 
-                                      ? 'text-4xl leading-tight' 
-                                      : 'text-sm'
-                                  }`}>
-                                    {message.content}
-                                  </p>
-                                )}
-                              </>
-                            )}
-                         
-                           {/* Read status for own messages - minimal display */}
-                           {isOwnMessage && (
-                             <div className={`flex justify-end mt-1 ${
-                               isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                             }`}>
-                               <div className="flex items-center">
-                                 {message.read_at ? (
-                                   <CheckCheck className="h-3 w-3 text-blue-500" />
-                                 ) : (
-                                   <Check className="h-3 w-3" />
-                                 )}
-                               </div>
-                             </div>
-                            )}
-                          </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
+
                        </div>
                      </div>
                    </div>
@@ -1930,8 +1955,8 @@ const Messages = () => {
 
           {/* Message input - Sticky at bottom (follows keyboard) - Descendu légèrement */}
           <div 
-            className="sticky bottom-0 w-full p-3 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+            className="sticky bottom-0 w-full px-3 py-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
+            style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
           >
             {/* Emoji Picker */}
             {showEmojiPicker && (
