@@ -906,9 +906,7 @@ const Auth = () => {
                         }
                         try {
                           const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
-                            redirectTo: window.AndroidBridge 
-                              ? 'app.runconnect://auth'
-                              : `${window.location.origin}/auth`,
+                            redirectTo: 'https://run-connect.lovable.app/auth',
                           });
                           if (error) throw error;
                           toast({
