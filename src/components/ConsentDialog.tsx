@@ -41,6 +41,11 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
       });
 
       onComplete();
+      
+      // Garantir que le profil est rechargé et le dialog se ferme
+      setTimeout(() => {
+        console.log('✅ Consentement traité, profil rechargé');
+      }, 500);
     } catch (error: any) {
       console.error('Erreur sauvegarde consentement:', error);
       toast({
@@ -154,23 +159,25 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
         </ScrollArea>
 
         <div className="p-6 pt-4 border-t bg-muted/30">
-          <Button 
-            onClick={handleAccept}
-            disabled={!canContinue || isSubmitting}
-            className="w-full h-12 text-base"
-            size="lg"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                {canContinue ? "✓ Continuer vers RunConnect" : "⚠️ Veuillez accepter les deux conditions"}
-              </>
-            )}
-          </Button>
+          <div className="flex justify-center w-full">
+            <Button 
+              onClick={handleAccept}
+              disabled={!canContinue || isSubmitting}
+              className="w-full h-12 text-base"
+              size="lg"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                <>
+                  {canContinue ? "✓ Continuer vers RunConnect" : "⚠️ Veuillez accepter les deux conditions"}
+                </>
+              )}
+            </Button>
+          </div>
           
           <p className="text-xs text-center text-muted-foreground mt-3">
             En continuant, vous acceptez nos conditions d'utilisation
