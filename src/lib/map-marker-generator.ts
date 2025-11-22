@@ -4,11 +4,11 @@
  */
 export const generateRunConnectMarkerSVG = (
   profileImageUrl: string,
-  size: number = 60
+  size: number = 48
 ): string => {
-  const height = size * 1.25; // Pin ratio 4:5
-  const photoRadius = size / 3.5;
-  const photoCenterY = size / 2.5;
+  const height = size * 1.25; // Pin ratio 4:5 (48x60px)
+  const photoRadius = size / 4;
+  const photoCenterY = height * 0.28;
   
   return `
     <svg width="${size}" height="${height}" viewBox="0 0 ${size} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -19,11 +19,15 @@ export const generateRunConnectMarkerSVG = (
           <stop offset="100%" style="stop-color:hsl(195, 100%, 70%);stop-opacity:1" />
         </linearGradient>
         
-        <!-- Blue glow effect -->
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <!-- Modern drop shadow effect -->
+        <filter id="dropShadow">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+          <feOffset dx="0" dy="2" result="offsetblur"/>
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.3"/>
+          </feComponentTransfer>
           <feMerge>
-            <feMergeNode in="coloredBlur"/>
+            <feMergeNode/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
@@ -34,13 +38,15 @@ export const generateRunConnectMarkerSVG = (
         </clipPath>
       </defs>
       
-      <!-- Pin shape with gradient and glow -->
-      <path d="M ${size/2} ${height} 
-               Q ${size/2} ${height*0.7} ${size/2} ${size/1.5}
-               A ${size/2.2} ${size/2.2} 0 1 1 ${size/2} ${size/1.5} 
+      <!-- Modern pin shape (Strava-style teardrop) -->
+      <path d="M ${size/2} ${height}
+               L ${size/2} ${height * 0.65}
+               Q ${size/2 - size*0.15} ${height * 0.5} ${size/2 - size*0.35} ${height * 0.35}
+               A ${size/2.5} ${size/2.5} 0 1 1 ${size/2 + size*0.35} ${height * 0.35}
+               Q ${size/2 + size*0.15} ${height * 0.5} ${size/2} ${height * 0.65}
                Z" 
             fill="url(#pinGradient)" 
-            filter="url(#glow)" 
+            filter="url(#dropShadow)" 
             stroke="none"/>
       
       <!-- Profile photo circle -->
@@ -52,13 +58,13 @@ export const generateRunConnectMarkerSVG = (
              clip-path="url(#circleClip-${profileImageUrl.substring(0, 8)})"
              preserveAspectRatio="xMidYMid slice"/>
       
-      <!-- White border circle around photo -->
+      <!-- White border circle around photo (thicker for contrast) -->
       <circle cx="${size/2}" 
               cy="${photoCenterY}" 
               r="${photoRadius}" 
               fill="none" 
               stroke="white" 
-              stroke-width="2.5"/>
+              stroke-width="3"/>
     </svg>
   `.trim().replace(/\s+/g, ' ');
 };
@@ -79,7 +85,7 @@ export const exportMarkerAsPNG = async (
   profileImageUrl: string,
   scale: number = 2
 ): Promise<Blob> => {
-  const svg = generateRunConnectMarkerSVG(profileImageUrl, 60 * scale);
+  const svg = generateRunConnectMarkerSVG(profileImageUrl, 48 * scale);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   
@@ -91,8 +97,8 @@ export const exportMarkerAsPNG = async (
   
   return new Promise((resolve, reject) => {
     img.onload = () => {
-      canvas.width = 60 * scale;
-      canvas.height = 75 * scale;
+      canvas.width = 48 * scale;
+      canvas.height = 60 * scale;
       ctx.drawImage(img, 0, 0);
       canvas.toBlob((blob) => {
         if (blob) {
