@@ -413,6 +413,42 @@ All colors MUST be HSL.
 }
 
 /* ===================================
+   📱 MOMENTUM SCROLLING OPTIMIZATION
+   =================================== */
+
+/* Scroll optimisé avec momentum pour mobile et conteneurs imbriqués */
+.scroll-momentum {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  overscroll-behavior-y: contain; /* Empêche le scroll de remonter au parent */
+  touch-action: pan-y; /* Optimise le touch pour scroll vertical uniquement */
+  scroll-behavior: smooth; /* Scroll fluide sur navigation programmatique */
+  will-change: scroll-position; /* Optimisation GPU */
+}
+
+/* Version pour scroll sans limite de hauteur (full page) */
+.scroll-momentum-full {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto; /* Permet le rebond naturel iOS */
+  touch-action: pan-y;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+}
+
+/* Optimisation globale du scroll sur mobile */
+@media screen and (max-width: 768px) {
+  [class*="overflow-y-auto"],
+  [class*="overflow-auto"] {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+}
+
+/* ===================================
    ⌨️ ANDROID KEYBOARD HANDLING
    =================================== */
 
