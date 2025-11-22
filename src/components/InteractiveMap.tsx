@@ -514,8 +514,8 @@ export const InteractiveMap = ({
           
           const img = document.createElement('img');
           img.src = markerIcon;
-          img.style.width = '60px';
-          img.style.height = '75px';
+          img.style.width = '48px';
+          img.style.height = '60px';
           img.className = 'pulse-marker-animation';
           
           markerDiv.appendChild(img);
@@ -535,8 +535,8 @@ export const InteractiveMap = ({
             title: session.title,
             icon: {
               url: markerIcon,
-              scaledSize: new google.maps.Size(60, 75),
-              anchor: new google.maps.Point(30, 75)
+              scaledSize: new google.maps.Size(48, 60),
+              anchor: new google.maps.Point(24, 60)
             }
           });
 
@@ -604,7 +604,7 @@ export const InteractiveMap = ({
     console.log('🖼️ Generating SVG marker with profile image:', profileImageUrl);
     
     try {
-      const svg = generateRunConnectMarkerSVG(profileImageUrl, 60);
+      const svg = generateRunConnectMarkerSVG(profileImageUrl, 48);
       const dataUrl = svgToDataUrl(svg);
       
       // Cache the generated marker
