@@ -340,6 +340,16 @@ export const InteractiveMap = ({
         });
       }
 
+      // Log user's own sessions for visibility verification
+      const userSessions = sessionsWithProfiles.filter(s => s.organizer_id === user?.id);
+      console.log(`✅ Vos propres sessions visibles: ${userSessions.length}`, userSessions.map(s => ({
+        id: s.id,
+        title: s.title,
+        organizer_id: s.organizer_id,
+        has_avatar: !!s.profiles?.avatar_url,
+        avatar_url: s.profiles?.avatar_url
+      })));
+
       setSessions(sessionsWithProfiles);
     } catch (error) {
       console.error('Error loading sessions:', error);

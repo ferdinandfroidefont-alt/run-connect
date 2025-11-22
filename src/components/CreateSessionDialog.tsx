@@ -519,7 +519,15 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       // Force refresh sessions to ensure the new session appears with profile
       setTimeout(() => {
         onSessionCreated();
-      }, 100);
+      }, 500);
+      
+      // Center map on new session for visual confirmation
+      if (map && selectedLocation) {
+        setTimeout(() => {
+          map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
+          map.setZoom(15);
+        }, 600);
+      }
       
       onClose();
       
