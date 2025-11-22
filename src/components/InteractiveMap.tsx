@@ -254,12 +254,14 @@ export const InteractiveMap = ({
         .gte('scheduled_at', startOfDay.toISOString())
         .lte('scheduled_at', endOfDay.toISOString());
 
-      // If club filter is active, only show sessions from that club
-      if (filters.selected_club_id) {
+      // If club filter is active, show sessions from that club OR user's own sessions
+      if (filters.selected_club_id && user) {
+        query = query.or(`club_id.eq.${filters.selected_club_id},organizer_id.eq.${user.id}`);
+      } else if (filters.selected_club_id) {
         query = query.eq('club_id', filters.selected_club_id);
       }
 
-      // If friends_only filter is active, only show sessions from friends
+      // If friends_only filter is active, show sessions from friends AND user's own sessions
       if (filters.friends_only && user) {
         // Get user's friends first
         const { data: friends } = await supabase
@@ -270,12 +272,14 @@ export const InteractiveMap = ({
 
         const friendIds = friends?.map(f => f.following_id) || [];
         
-        if (friendIds.length > 0) {
-          query = query.in('organizer_id', friendIds);
+        // ALWAYS include user's own sessions
+        const allowedIds = [...friendIds, user.id];
+        
+        if (allowedIds.length > 0) {
+          query = query.in('organizer_id', allowedIds);
         } else {
-          // If user has no friends, show no sessions
-          setSessions([]);
-          return;
+          // Even without friends, show at least user's own sessions
+          query = query.eq('organizer_id', user.id);
         }
       }
 
