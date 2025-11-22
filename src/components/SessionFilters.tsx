@@ -66,86 +66,83 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   const activeFiltersCount = filters.activity_types.length + filters.session_types.length;
 
   return (
-    <>
-      {/* Filter Toggle Button */}
-      <div className="mt-1">
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          variant="outline"
-          className="bg-card/90 backdrop-blur-sm shadow-map-control h-7 w-8 px-1"
-        >
+    <Card className="absolute top-1 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-control">
+      {/* Header cliquable - toujours visible */}
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
+      >
+        <div className="flex items-center gap-2">
           <Filter className="h-3 w-3" />
           {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-2 h-5 px-1 text-xs">
+            <Badge variant="secondary" className="h-5 px-1 text-xs">
               {activeFiltersCount}
             </Badge>
           )}
-        </Button>
+        </div>
       </div>
 
-      {/* Filters Panel */}
+      {/* Contenu qui apparaît au clic */}
       {isOpen && (
-        <Card className="absolute top-12 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Filtres</h3>
-              <div className="flex gap-2">
-                {activeFiltersCount > 0 && (
+        <CardContent className="p-4 pt-0">
+          <Separator className="mb-4" />
+          
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Filtres</h3>
+            {activeFiltersCount > 0 && (
+              <Button
+                onClick={clearAllFilters}
+                size="sm"
+                variant="ghost"
+                className="text-xs"
+              >
+                Effacer
+              </Button>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {/* Activity Types */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Type d'activité</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {activityTypes.map((activity) => (
                   <Button
-                    onClick={clearAllFilters}
+                    key={activity.id}
+                    onClick={() => toggleActivityType(activity.id)}
+                    variant={filters.activity_types.includes(activity.id) ? "default" : "outline"}
                     size="sm"
-                    variant="ghost"
-                    className="text-xs"
+                    className="justify-start text-xs h-8"
                   >
-                    Effacer
+                    <div className={`w-2 h-2 rounded-full mr-2 ${activity.color}`} />
+                    {activity.label}
                   </Button>
-                )}
+                ))}
               </div>
             </div>
 
-            <div className="space-y-4">
-              {/* Activity Types */}
-              <div>
-                <h4 className="text-sm font-medium mb-2">Type d'activité</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {activityTypes.map((activity) => (
-                    <Button
-                      key={activity.id}
-                      onClick={() => toggleActivityType(activity.id)}
-                      variant={filters.activity_types.includes(activity.id) ? "default" : "outline"}
-                      size="sm"
-                      className="justify-start text-xs h-8"
-                    >
-                      <div className={`w-2 h-2 rounded-full mr-2 ${activity.color}`} />
-                      {activity.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+            <Separator />
 
-              <Separator />
-
-              {/* Session Types */}
-              <div>
-                <h4 className="text-sm font-medium mb-2">Type de sortie</h4>
-                <div className="grid grid-cols-1 gap-2">
-                  {sessionTypes.map((sessionType) => (
-                    <Button
-                      key={sessionType.id}
-                      onClick={() => toggleSessionType(sessionType.id)}
-                      variant={filters.session_types.includes(sessionType.id) ? "default" : "outline"}
-                      size="sm"
-                      className="justify-start text-xs h-8"
-                    >
-                      {sessionType.label}
-                    </Button>
-                  ))}
-                </div>
+            {/* Session Types */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Type de sortie</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {sessionTypes.map((sessionType) => (
+                  <Button
+                    key={sessionType.id}
+                    onClick={() => toggleSessionType(sessionType.id)}
+                    variant={filters.session_types.includes(sessionType.id) ? "default" : "outline"}
+                    size="sm"
+                    className="justify-start text-xs h-8"
+                  >
+                    {sessionType.label}
+                  </Button>
+                ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
       )}
-    </>
+    </Card>
   );
 };
