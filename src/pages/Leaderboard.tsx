@@ -1,21 +1,21 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Crown, Medal, TrendingUp, Users, Globe, Star, Award, Gem, Coins, Diamond, Calendar, Lock, ChevronLeft, ChevronRight, ShoppingBag, MapPin, CheckCircle2 } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { PhotorealisticAvatar3D } from "@/components/PhotorealisticAvatar3D";
-import { WardrobeDialog } from "@/components/WardrobeDialog";
-import { useWardrobe } from "@/hooks/useWardrobe";
-import { Camera } from "lucide-react";
+import { Trophy, Crown, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
-import { Skeleton, LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
+import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
+import { FilterBar, FilterType } from "@/components/leaderboard/FilterBar";
+import { MyRankCard } from "@/components/leaderboard/MyRankCard";
+import { SeasonStatsCard } from "@/components/leaderboard/SeasonStatsCard";
+import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
+import { ScrollToMyRankButton } from "@/components/leaderboard/ScrollToMyRankButton";
+import { WeeklyChallengesCard } from "@/components/leaderboard/WeeklyChallengesCard";
+import { BadgesToUnlockCard } from "@/components/leaderboard/BadgesToUnlockCard";
 
 interface LeaderboardUser {
   user_id: string;
@@ -26,242 +26,164 @@ interface LeaderboardUser {
     username: string;
     display_name: string;
     avatar_url: string;
+    is_premium?: boolean;
   };
   rank: number;
   user_rank: string;
-  user_stats?: {
-    reliability_rate: number;
-    streak_weeks: number;
-  };
 }
 
 const Leaderboard = () => {
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [seasonalLeaderboard, setSeasonalLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('general');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const [seasonStats, setSeasonStats] = useState<any>(null);
+  const [userClubId, setUserClubId] = useState<string | null>(null);
+  const [userPoints, setUserPoints] = useState(0);
+  const myRankRef = useRef<HTMLDivElement>(null);
   
-  // Pagination states
-  const [globalPage, setGlobalPage] = useState(1);
-  const [seasonalPage, setSeasonalPage] = useState(1);
-  const [friendsPage, setFriendsPage] = useState(1);
-  const [totalGlobalUsers, setTotalGlobalUsers] = useState(0);
-  const [totalSeasonalUsers, setTotalSeasonalUsers] = useState(0);
-  const [totalFriendsUsers, setTotalFriendsUsers] = useState(0);
-  
-  const navigate = useNavigate();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
-  const [showWardrobe, setShowWardrobe] = useState(false);
-  const [avatarModelId, setAvatarModelId] = useState<string>('male-athlete-01');
-  const { getEquippedItems, userPoints } = useWardrobe();
-  const equippedItems = getEquippedItems();
 
-  const USERS_PER_PAGE = 50;
+  const USERS_PER_PAGE = 20;
 
   useEffect(() => {
     if (user) {
-      fetchLeaderboards();
-      loadAvatarModel();
+      setCurrentPage(1);
+      fetchLeaderboard();
+      fetchSeasonStats();
+      checkUserClub();
     }
-  }, [user, globalPage, seasonalPage, friendsPage]);
+  }, [user, activeFilter]);
 
-  const loadAvatarModel = async () => {
+  useEffect(() => {
+    if (user && currentPage > 1) {
+      fetchLeaderboard();
+    }
+  }, [currentPage]);
+
+  const checkUserClub = async () => {
     if (!user) return;
     
     const { data } = await supabase
-      .from('profiles')
-      .select('avatar_model_id')
+      .from('group_members')
+      .select('conversation_id')
       .eq('user_id', user.id)
+      .limit(1)
       .maybeSingle();
     
-    if (data?.avatar_model_id) {
-      setAvatarModelId(data.avatar_model_id);
+    if (data) {
+      setUserClubId(data.conversation_id);
     }
   };
 
-  const fetchLeaderboards = async () => {
+  const fetchSeasonStats = async () => {
+    if (!user) return;
+    
     try {
-      // Get total count of all users first
-      const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
-      const totalCount = totalCountData || 0;
+      // Get user scores
+      const { data: scoresData } = await supabase
+        .from('user_scores')
+        .select('seasonal_points')
+        .eq('user_id', user.id)
+        .single();
 
-      setTotalGlobalUsers(totalCount);
-      setTotalSeasonalUsers(totalCount);
+      // Get session participations count for current season
+      const seasonDates = getCurrentSeasonDates();
+      const { data: sessionsData, error } = await supabase
+        .from('session_participants')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('joined_at', seasonDates.start.toISOString())
+        .lte('joined_at', seasonDates.end.toISOString());
 
-      // Fetch global leaderboard with pagination using new function
-      const globalOffset = (globalPage - 1) * USERS_PER_PAGE;
-      const { data: globalData, error: globalError } = await supabase.rpc('get_complete_leaderboard', {
-        limit_count: USERS_PER_PAGE,
-        offset_count: globalOffset,
-        order_by_column: 'total_points'
+      // Get badges count
+      const { data: badgesData } = await supabase
+        .from('user_badges')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      setSeasonStats({
+        totalActivities: sessionsData ? 0 : 0, // Count is in the response metadata
+        totalPoints: scoresData?.seasonal_points || 0,
+        badgesWon: badgesData ? 0 : 0
       });
 
-      if (globalError) throw globalError;
+      setUserPoints(scoresData?.seasonal_points || 0);
+    } catch (error) {
+      console.error('Error fetching season stats:', error);
+    }
+  };
 
-      // Get current user's profile separately if needed
-      let currentUserProfile = null;
-      if (user) {
-        const { data: currentProfile } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url')
-          .eq('user_id', user.id)
-          .single();
-        currentUserProfile = currentProfile;
+  const fetchLeaderboard = async () => {
+    setLoading(true);
+    try {
+      const offset = (currentPage - 1) * USERS_PER_PAGE;
+      
+      // Get total count
+      const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
+      setTotalUsers(totalCountData || 0);
+
+      let query = supabase.rpc('get_complete_leaderboard', {
+        limit_count: USERS_PER_PAGE,
+        offset_count: offset,
+        order_by_column: activeFilter === 'general' ? 'seasonal_points' : 'total_points'
+      });
+
+      const { data, error } = await query;
+      
+      if (error) throw error;
+
+      const formattedData = data?.map((item: any, index: number) => ({
+        user_id: item.user_id,
+        total_points: item.total_points,
+        weekly_points: item.weekly_points,
+        seasonal_points: item.seasonal_points,
+        profile: {
+          username: item.username,
+          display_name: item.display_name,
+          avatar_url: item.avatar_url,
+          is_premium: item.is_premium
+        },
+        rank: offset + index + 1,
+        user_rank: getUserRank(activeFilter === 'general' ? item.seasonal_points : item.total_points)
+      })) || [];
+
+      if (currentPage === 1) {
+        setLeaderboard(formattedData);
+      } else {
+        setLeaderboard(prev => [...prev, ...formattedData]);
       }
 
-      const globalLeaderboard = globalData?.map((item, index) => {
-        // Use the data directly from the function since it includes profile info
-        let profile = {
-          username: item.username,
-          display_name: item.display_name,
-          avatar_url: item.avatar_url
-        };
-        
-        // If this is the current user and no profile was found, use their own profile
-        if (!profile.username && item.user_id === user?.id && currentUserProfile) {
-          profile = currentUserProfile;
-        }
-        
-        return {
-          user_id: item.user_id,
-          total_points: item.total_points,
-          weekly_points: item.weekly_points,
-          seasonal_points: item.seasonal_points,
-          profile: profile || {
-            username: 'Unknown',
-            display_name: 'Unknown User',
-            avatar_url: ''
-          },
-          rank: globalOffset + index + 1, // Adjust rank for pagination
-          user_rank: getUserRank(item.total_points)
-        };
-      }) || [];
+      setHasMoreUsers(formattedData.length === USERS_PER_PAGE);
 
-      setLeaderboard(globalLeaderboard);
-
-      // Create seasonal leaderboard with pagination using new function
-      const seasonalOffset = (seasonalPage - 1) * USERS_PER_PAGE;
-      const { data: seasonalData } = await supabase.rpc('get_complete_leaderboard', {
-        limit_count: USERS_PER_PAGE,
-        offset_count: seasonalOffset,
-        order_by_column: 'seasonal_points'
-      });
-
-      const seasonalLeaderboard = seasonalData?.map((item, index) => {
-        // Use the data directly from the function since it includes profile info
-        let profile = {
-          username: item.username,
-          display_name: item.display_name,
-          avatar_url: item.avatar_url
-        };
-        
-        if (!profile.username && item.user_id === user?.id && currentUserProfile) {
-          profile = currentUserProfile;
-        }
-        
-        return {
-          user_id: item.user_id,
-          total_points: item.total_points,
-          weekly_points: item.weekly_points,
-          seasonal_points: item.seasonal_points,
-          profile: profile || {
-            username: 'Unknown',
-            display_name: 'Unknown User',
-            avatar_url: ''
-          },
-          rank: seasonalOffset + index + 1, // Adjust rank for pagination
-          user_rank: getUserRank(item.total_points)
-        };
-      }) || [];
-
-      setSeasonalLeaderboard(seasonalLeaderboard);
-
-      // Find user's rank in global leaderboard using complete leaderboard
-      if (user) {
-        const { data: allUsersData } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: 10000, // Get a large number to find user's position
+      // Find user rank
+      if (user && currentPage === 1) {
+        const { data: allData } = await supabase.rpc('get_complete_leaderboard', {
+          limit_count: 10000,
           offset_count: 0,
-          order_by_column: 'total_points'
+          order_by_column: 'seasonal_points'
         });
         
-        const currentUserRank = allUsersData?.findIndex(u => u.user_id === user.id);
+        const currentUserRank = allData?.findIndex((u: any) => u.user_id === user.id);
         setUserRank(currentUserRank !== undefined && currentUserRank >= 0 ? currentUserRank + 1 : null);
       }
-
-      // Fetch friends leaderboard
-      if (user) {
-        const { data: friendsFollowData } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', user.id)
-          .eq('status', 'accepted');
-
-        const friendIds = friendsFollowData?.map(f => f.following_id) || [];
-        setTotalFriendsUsers(friendIds.length);
-        
-        if (friendIds.length > 0) {
-          const friendsOffset = (friendsPage - 1) * USERS_PER_PAGE;
-          
-          // Get all friends profiles first
-          const { data: friendsProfiles } = await supabase
-            .from('profiles')
-            .select('user_id, username, display_name, avatar_url')
-            .in('user_id', friendIds);
-
-          // Get scores for friends (LEFT JOIN will include friends with no scores)
-          const { data: friendsScores } = await supabase
-            .from('user_scores')
-            .select('user_id, total_points, weekly_points, seasonal_points')
-            .in('user_id', friendIds);
-
-          // Combine profiles and scores, including friends with no scores (0 points)
-          const friendsData = friendsProfiles?.map(profile => {
-            const scores = friendsScores?.find(s => s.user_id === profile.user_id);
-            return {
-              user_id: profile.user_id,
-              total_points: scores?.total_points || 0,
-              weekly_points: scores?.weekly_points || 0,
-              seasonal_points: scores?.seasonal_points || 0,
-              profile: profile,
-              user_rank: getUserRank(scores?.total_points || 0)
-            };
-          }) || [];
-
-          // Sort by total points and apply pagination
-          const sortedFriendsData = friendsData.sort((a, b) => b.total_points - a.total_points);
-          const paginatedFriendsData = sortedFriendsData.slice(friendsOffset, friendsOffset + USERS_PER_PAGE);
-
-          const friendsLeaderboard = paginatedFriendsData.map((item, index) => ({
-            ...item,
-            rank: friendsOffset + index + 1
-          }));
-
-          setFriendsLeaderboard(friendsLeaderboard);
-        }
-      }
     } catch (error) {
-      console.error('Error fetching leaderboards:', error);
+      console.error('Error fetching leaderboard:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fonction pour calculer les dates de la saison actuelle
   const getCurrentSeasonDates = () => {
-    // Date de début de référence (première saison)
-    const startRef = new Date('2024-08-15'); // 15 août 2024
+    const startRef = new Date('2024-08-15');
     const now = new Date();
-    
-    // Durée d'une saison en millisecondes (45 jours)
     const seasonDuration = 45 * 24 * 60 * 60 * 1000;
-    
-    // Calculer combien de saisons se sont écoulées depuis la référence
     const timeSinceStart = now.getTime() - startRef.getTime();
     const seasonsElapsed = Math.floor(timeSinceStart / seasonDuration);
-    
-    // Calculer le début et la fin de la saison actuelle
     const currentSeasonStart = new Date(startRef.getTime() + (seasonsElapsed * seasonDuration));
     const currentSeasonEnd = new Date(currentSeasonStart.getTime() + seasonDuration - 1);
     
@@ -272,8 +194,6 @@ const Leaderboard = () => {
     };
   };
 
-  const seasonDates = getCurrentSeasonDates();
-
   const getUserRank = (points: number): string => {
     if (points >= 5000) return 'diamant';
     if (points >= 3000) return 'platine';
@@ -283,123 +203,84 @@ const Leaderboard = () => {
     return 'novice';
   };
 
-  const getUserTitle = (points: number) => {
-    if (points >= 200) return { title: "Champion", color: "text-yellow-500", icon: "👑" };
-    if (points >= 100) return { title: "Expert", color: "text-purple-500", icon: "🎖️" };
-    if (points >= 50) return { title: "Confirmé", color: "text-blue-500", icon: "🏃" };
-    return { title: "Novice", color: "text-gray-500", icon: "⭐" };
+  const getUserLevel = (points: number): 'novice' | 'confirmed' | 'elite' => {
+    if (points >= 3000) return 'elite';
+    if (points >= 1000) return 'confirmed';
+    return 'novice';
   };
 
-  const getRankBorderColor = (userRank: string): string => {
+  const getNextRankInfo = (currentPoints: number) => {
+    const ranks = [
+      { name: 'Bronze', points: 500 },
+      { name: 'Argent', points: 1000 },
+      { name: 'Or', points: 2000 },
+      { name: 'Platine', points: 3000 },
+      { name: 'Diamant', points: 5000 },
+    ];
+
+    const nextRank = ranks.find(r => r.points > currentPoints);
+    return nextRank || { name: 'Maximum', points: currentPoints };
+  };
+
+  const scrollToMyRank = () => {
+    if (myRankRef.current) {
+      myRankRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const isMyRankVisible = () => {
+    if (!userRank) return true;
+    const startRank = (currentPage - 1) * USERS_PER_PAGE + 1;
+    const endRank = currentPage * USERS_PER_PAGE;
+    return userRank >= startRank && userRank <= endRank;
+  };
+
+  const loadMoreUsers = () => {
+    setCurrentPage(prev => prev + 1);
+  };
+
+  const getRankBorder = (userRank: string) => {
     switch (userRank) {
-      case 'diamant':
-        return 'border-4 border-cyan-400 shadow-lg shadow-cyan-400/50 ring-2 ring-cyan-300/30';
-      case 'platine':
-        return 'border-4 border-purple-500 shadow-lg shadow-purple-500/50 ring-2 ring-purple-300/30';
-      case 'or':
-        return 'border-4 border-yellow-500 shadow-lg shadow-yellow-500/50 ring-2 ring-yellow-300/30';
-      case 'argent':
-        return 'border-4 border-gray-400 shadow-lg shadow-gray-400/50 ring-2 ring-gray-300/30';
-      case 'bronze':
-        return 'border-4 border-amber-600 shadow-lg shadow-amber-600/50 ring-2 ring-amber-300/30';
-      default:
-        return 'border-2 border-gray-300';
+      case 'diamant': return 'border-4 border-cyan-400 shadow-lg shadow-cyan-400/50';
+      case 'platine': return 'border-4 border-purple-500 shadow-lg shadow-purple-500/50';
+      case 'or': return 'border-4 border-yellow-500 shadow-lg shadow-yellow-500/50';
+      case 'argent': return 'border-4 border-gray-400 shadow-lg shadow-gray-400/50';
+      case 'bronze': return 'border-4 border-amber-600 shadow-lg shadow-amber-600/50';
+      default: return 'border-2 border-gray-300';
     }
   };
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="h-5 w-5 text-yellow-500" />;
-      case 2:
-        return <Medal className="h-5 w-5 text-gray-400" />;
-      case 3:
-        return <Medal className="h-5 w-5 text-amber-600" />;
-      default:
-        return <span className="text-sm font-bold text-muted-foreground">#{rank}</span>;
-    }
-  };
-
-  const getRankBadge = (userRank: string) => {
-    switch (userRank) {
-      case 'diamant':
-        return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white border-0">
-            <Diamond className="h-3 w-3 mr-1" />
-            Diamant
-          </Badge>
-        );
-      case 'platine':
-        return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
-            <Gem className="h-3 w-3 mr-1" />
-            Platine
-          </Badge>
-        );
-      case 'or':
-        return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
-            <Award className="h-3 w-3 mr-1" />
-            Or
-          </Badge>
-        );
-      case 'argent':
-        return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-gray-400 to-gray-600 text-white border-0">
-            <Medal className="h-3 w-3 mr-1" />
-            Argent
-          </Badge>
-        );
-      case 'bronze':
-        return (
-          <Badge variant="secondary" className="bg-gradient-to-r from-amber-600 to-amber-800 text-white border-0">
-            <Coins className="h-3 w-3 mr-1" />
-            Bronze
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline">
-            <Star className="h-3 w-3 mr-1" />
-            Novice
-          </Badge>
-        );
-    }
-  };
-
-  const PodiumDisplay = ({ top3, showSeasonal = false }: { top3: LeaderboardUser[], showSeasonal?: boolean }) => {
+  const PodiumDisplay = ({ top3 }: { top3: LeaderboardUser[] }) => {
     if (top3.length === 0) return null;
     
-    const first = top3[0];
-    const second = top3[1];
-    const third = top3[2];
+    const [first, second, third] = top3;
     
     return (
-      <div className="mb-3 pb-3 border-b">
-        <div className="flex items-end justify-center gap-2 mb-3">
-          {/* 2ème place - Gauche */}
+      <div className="mb-3">
+        <div className="flex items-end justify-center gap-1.5">
+          {/* 2ème place */}
           {second && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
               <Avatar 
-                className={`h-10 w-10 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorderColor(second.user_rank)}`}
+                className={`h-14 w-14 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorder(second.user_rank)}`}
                 onClick={() => navigateToProfile(second.user_id)}
               >
                 <AvatarImage src={second.profile?.avatar_url} />
-                <AvatarFallback className="text-xs font-bold">
-                  {second.profile?.username?.[0] || second.profile?.display_name?.[0] || '?'}
+                <AvatarFallback className="text-sm font-bold">
+                  {second.profile?.username?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center mb-1">
-                <p className="font-semibold text-xs truncate max-w-[60px]">
+                <p className="font-semibold text-xs truncate max-w-[70px]">
                   {second.profile?.username}
                 </p>
                 <p className="font-bold text-primary text-xs">
-                  {showSeasonal ? second.seasonal_points : second.total_points}
+                  {second.seasonal_points}
                 </p>
               </div>
               <div 
-                className="w-14 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-lg border border-gray-500 flex flex-col items-center justify-start pt-1 cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '50px' }}
+                className="w-16 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '40px' }}
                 onClick={() => navigateToProfile(second.user_id)}
               >
                 <span className="text-xl font-bold text-white">2</span>
@@ -407,61 +288,61 @@ const Leaderboard = () => {
             </div>
           )}
           
-          {/* 1ère place - Centre */}
+          {/* 1ère place */}
           {first && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <Crown className="h-6 w-6 text-yellow-500 mb-0.5" />
+              <Crown className="h-4 w-4 text-yellow-500 mb-0.5" />
               <Avatar 
-                className={`h-12 w-12 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorderColor(first.user_rank)}`}
+                className={`h-16 w-16 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorder(first.user_rank)}`}
                 onClick={() => navigateToProfile(first.user_id)}
               >
                 <AvatarImage src={first.profile?.avatar_url} />
-                <AvatarFallback className="text-sm font-bold">
-                  {first.profile?.username?.[0] || first.profile?.display_name?.[0] || '?'}
+                <AvatarFallback className="text-base font-bold">
+                  {first.profile?.username?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center mb-1">
-                <p className="font-bold text-sm truncate max-w-[70px]">
+                <p className="font-bold text-sm truncate max-w-[80px]">
                   {first.profile?.username}
                 </p>
                 <p className="font-bold text-primary text-sm">
-                  {showSeasonal ? first.seasonal_points : first.total_points}
+                  {first.seasonal_points}
                 </p>
               </div>
               <div 
-                className="w-16 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-t-lg border border-yellow-700 shadow-lg shadow-yellow-500/50 flex flex-col items-center justify-start pt-1 cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '70px' }}
+                className="w-18 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-t-lg shadow-lg shadow-yellow-500/50 flex flex-col items-center justify-center cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '60px' }}
                 onClick={() => navigateToProfile(first.user_id)}
               >
-                <Trophy className="h-6 w-6 text-yellow-100 mb-0.5" />
+                <Trophy className="h-5 w-5 text-yellow-100 mb-0.5" />
                 <span className="text-2xl font-bold text-white">1</span>
               </div>
             </div>
           )}
           
-          {/* 3ème place - Droite */}
+          {/* 3ème place */}
           {third && (
             <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
               <Avatar 
-                className={`h-10 w-10 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorderColor(third.user_rank)}`}
+                className={`h-14 w-14 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorder(third.user_rank)}`}
                 onClick={() => navigateToProfile(third.user_id)}
               >
                 <AvatarImage src={third.profile?.avatar_url} />
-                <AvatarFallback className="text-xs font-bold">
-                  {third.profile?.username?.[0] || third.profile?.display_name?.[0] || '?'}
+                <AvatarFallback className="text-sm font-bold">
+                  {third.profile?.username?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center mb-1">
-                <p className="font-semibold text-xs truncate max-w-[60px]">
+                <p className="font-semibold text-xs truncate max-w-[70px]">
                   {third.profile?.username}
                 </p>
                 <p className="font-bold text-primary text-xs">
-                  {showSeasonal ? third.seasonal_points : third.total_points}
+                  {third.seasonal_points}
                 </p>
               </div>
               <div 
-                className="w-14 bg-gradient-to-b from-amber-500 to-amber-700 rounded-t-lg border border-amber-800 flex flex-col items-center justify-start pt-1 cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '40px' }}
+                className="w-16 bg-gradient-to-b from-amber-600 to-amber-800 rounded-t-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-all"
+                style={{ height: '30px' }}
                 onClick={() => navigateToProfile(third.user_id)}
               >
                 <span className="text-xl font-bold text-white">3</span>
@@ -473,552 +354,124 @@ const Leaderboard = () => {
     );
   };
 
-  const LeaderboardList = ({ data, showSeasonal = false }: { data: LeaderboardUser[], showSeasonal?: boolean }) => {
-    const top3 = data.slice(0, 3);
-    const rest = data.slice(3);
-    
+  if (loading && currentPage === 1) {
     return (
-      <div className="space-y-2">
-        <PodiumDisplay top3={top3} showSeasonal={showSeasonal} />
-        
-        {rest.map((item, index) => (
-          <Card 
-            key={item.user_id} 
-            className={`
-              ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-              hover-lift hover-glow btn-interactive animate-fade-in
-            `}
-            style={{ animationDelay: `${(index + 3) * 0.1}s` }}
-          >
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 flex justify-center">
-                  {getRankIcon(item.rank)}
-                </div>
-                <Avatar 
-                  className={`h-14 w-14 cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-105 ${getRankBorderColor(item.user_rank)}`}
-                  onClick={() => navigateToProfile(item.user_id)}
-                >
-                  <AvatarImage src={item.profile?.avatar_url} />
-                  <AvatarFallback className="text-lg font-bold">
-                    {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">
-                      {item.profile?.username || item.profile?.display_name}
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    @{item.profile?.username}
-                  </p>
-                  <div className="flex items-center gap-2 my-1">
-                    {getRankBadge(item.user_rank)}
-                    {item.user_stats?.reliability_rate && item.user_stats.reliability_rate >= 90 && (
-                      <Badge variant="secondary" className="text-xs">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        GPS validé
-                      </Badge>
-                    )}
-                    {item.user_stats?.reliability_rate && item.user_stats.reliability_rate >= 95 && (
-                      <Badge variant="default" className="text-xs">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Fiable
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="mt-1">
-                    <p className="font-bold text-primary">
-                      {showSeasonal ? item.seasonal_points : item.total_points} pts
-                    </p>
-                    {!showSeasonal && (
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          +{item.seasonal_points} cette saison
-                        </p>
-                        <div className="relative w-full h-2 bg-muted rounded-full overflow-hidden mt-1">
-                          <div 
-                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
-                            style={{ width: `${((item.total_points % 50) / 50) * 100}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {item.total_points % 50}/50 pts avant le prochain rang
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="min-h-screen bg-background p-4 pb-24">
+        <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
+          <Trophy className="h-8 w-8 text-primary" />
+          Classement
+        </h1>
+        <LeaderboardSkeleton />
       </div>
     );
-  };
+  }
 
-  const PaginationControls = ({ 
-    currentPage, 
-    totalItems, 
-    onPageChange 
-  }: { 
-    currentPage: number; 
-    totalItems: number; 
-    onPageChange: (page: number) => void;
-  }) => {
-    const totalPages = Math.ceil(totalItems / USERS_PER_PAGE);
-    
-    if (totalPages <= 1) return null;
+  const top3 = leaderboard.slice(0, 3);
+  const restOfLeaderboard = leaderboard.slice(3);
+  const nextRank = getNextRankInfo(userPoints);
 
-    return (
-      <div className="flex items-center justify-center gap-2 mt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="btn-interactive"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Précédent
-        </Button>
-        
-        <div className="flex items-center gap-1">
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
+  return (
+    <div className="min-h-screen bg-background p-4 pb-24">
+      <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
+        <Trophy className="h-8 w-8 text-primary" />
+        Classement
+      </h1>
+
+      <div className="space-y-3">
+        {/* Filtres */}
+        <FilterBar 
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          hasClub={!!userClubId}
+        />
+
+        {/* Mon rang actuel */}
+        {userRank && (
+          <MyRankCard
+            currentRank={userRank}
+            totalUsers={totalUsers}
+            currentPoints={userPoints}
+            nextRankName={nextRank.name}
+            nextRankPoints={nextRank.points}
+            userRank={getUserRank(userPoints)}
+          />
+        )}
+
+        {/* Statistiques de la saison */}
+        {seasonStats && (
+          <SeasonStatsCard
+            totalActivities={seasonStats.totalActivities}
+            totalPoints={seasonStats.totalPoints}
+            badgesWon={seasonStats.badgesWon}
+          />
+        )}
+
+        {/* Top 3 */}
+        <Card>
+          <CardContent className="p-3">
+            <PodiumDisplay top3={top3} />
+          </CardContent>
+        </Card>
+
+        {/* Liste du classement */}
+        <div className="space-y-2">
+          {restOfLeaderboard.map((userItem, index) => {
+            const isCurrentUser = userItem.user_id === user?.id;
             
             return (
-              <Button
-                key={pageNum}
-                variant={currentPage === pageNum ? "default" : "outline"}
-                size="sm"
-                className="w-8 h-8 p-0 btn-interactive"
-                onClick={() => onPageChange(pageNum)}
+              <div
+                key={userItem.user_id}
+                ref={isCurrentUser ? myRankRef : null}
               >
-                {pageNum}
-              </Button>
+                <LeaderboardCard
+                  rank={userItem.rank}
+                  username={userItem.profile.username}
+                  displayName={userItem.profile.display_name}
+                  avatarUrl={userItem.profile.avatar_url}
+                  points={userItem.seasonal_points}
+                  level={getUserLevel(userItem.seasonal_points)}
+                  isPremium={userItem.profile.is_premium}
+                  userRank={userItem.user_rank}
+                  onClick={() => navigateToProfile(userItem.user_id)}
+                />
+              </div>
             );
           })}
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="btn-interactive"
-        >
-          Suivant
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background p-4 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="max-w-md mx-auto">
-          <div className="text-center py-4">
-            <h1 className="text-2xl font-bold text-foreground">Classement</h1>
+        {/* Bouton Charger plus */}
+        {hasMoreUsers && !loading && (
+          <div className="flex justify-center pt-2">
+            <Button
+              onClick={loadMoreUsers}
+              variant="outline"
+              size="lg"
+            >
+              Charger plus
+            </Button>
           </div>
-          
-          {/* Animated skeleton placeholders */}
-          <div className="space-y-4 animate-fade-in">
-            {/* Rank System Card Skeleton */}
-            <Card className="animate-pulse">
-              <CardHeader>
-                <Skeleton className="h-6 w-[140px] mx-auto" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Skeleton className="h-4 w-4 mr-2" />
-                        <Skeleton className="h-4 w-[60px]" />
-                      </div>
-                      <Skeleton className="h-3 w-[40px]" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+        )}
 
-            {/* Tabs Skeleton */}
-            <div className="flex h-10 items-center justify-center rounded-md bg-muted p-1">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex-1 h-8 mx-1">
-                  <Skeleton className="h-full w-full rounded-sm" />
-                </div>
-              ))}
-            </div>
+        {/* Défis de la semaine */}
+        <WeeklyChallengesCard />
 
-            {/* Leaderboard Items Skeleton */}
-            <LeaderboardSkeleton />
-          </div>
-        </div>
+        {/* Badges à débloquer */}
+        <BadgesToUnlockCard />
       </div>
-    );
-  }
 
-  // Check if user is premium
-  if (!subscriptionInfo?.subscribed) {
-    return (
-      <div className="min-h-screen bg-background p-4 pb-20 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="max-w-md mx-auto">
-          <div className="text-center py-8">
-            <h1 className="text-2xl font-bold text-foreground mb-6">Classement</h1>
-            
-            <Card className="border-2 border-yellow-500/20 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20">
-              <CardContent className="p-8 text-center space-y-6">
-                <div className="relative">
-                  <Lock className="h-16 w-16 text-yellow-500 mx-auto" />
-                  <Crown className="h-8 w-8 text-yellow-600 absolute -top-1 -right-1" />
-                </div>
-                
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-foreground">
-                    Fonctionnalité Premium
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Le classement est réservé aux membres Premium. 
-                    Découvrez votre rang et comparez-vous avec vos amis !
-                  </p>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>✨ Classement global et saisonnier</p>
-                    <p>🏆 Système de rangs avancé</p>
-                    <p>👥 Classement entre amis</p>
-                    <p>🚀 Badge premium</p>
-                  </div>
-                </div>
-                
-                <Button 
-                  onClick={() => navigate('/subscription')}
-                  className="w-full gap-2"
-                  size="lg"
-                >
-                  <Crown className="h-4 w-4" />
-                  Devenir Premium
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background p-4 pb-20 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-      <div className="max-w-md mx-auto space-y-2">
-
-
-        {/* Leaderboard Tabs */}
-        <Tabs defaultValue="seasonal" className="w-full">
-          {userRank && (
-            <div className="text-center mb-4">
-              <Badge variant="secondary">
-                Votre rang: #{userRank}
-              </Badge>
-            </div>
-          )}
-
-          <TabsContent value="seasonal" className="mt-2">
-            <div className="flex flex-col gap-2">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-bold flex items-center justify-center gap-2 text-primary">
-                  Classement Saison {seasonDates.number}
-                </h2>
-                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                  <span>
-                    {seasonDates.start.toLocaleDateString('fr-FR', { 
-                      day: 'numeric', 
-                      month: 'short' 
-                    })} - {seasonDates.end.toLocaleDateString('fr-FR', { 
-                      day: 'numeric', 
-                      month: 'short',
-                      year: 'numeric' 
-                    })}
-                  </span>
-                </div>
-                <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs px-2 py-0.5">
-                  🎁 Code promo à gagner
-                </Badge>
-              </div>
-              
-              {seasonalLeaderboard.length > 0 && (
-                <PodiumDisplay top3={seasonalLeaderboard.slice(0, 3)} showSeasonal />
-              )}
-              
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="seasonal" className="flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="hidden sm:inline">Saison</span>
-                </TabsTrigger>
-                <TabsTrigger value="global" className="flex items-center gap-1">
-                  <Globe className="h-4 w-4" />
-                  <span className="hidden sm:inline">Global</span>
-                </TabsTrigger>
-                <TabsTrigger value="friends" className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span className="hidden sm:inline">Amis</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <div className="space-y-1.5">
-                {seasonalLeaderboard.slice(3).map((item, index) => (
-                  <Card 
-                    key={item.user_id} 
-                    className={`
-                      ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-                      hover-lift btn-interactive animate-fade-in
-                    `}
-                    style={{ animationDelay: `${(index + 3) * 0.1}s` }}
-                  >
-                    <CardContent className="flex items-center justify-between p-2.5">
-                      <div className="flex items-center gap-2.5 flex-1">
-                        <div className="w-6 flex justify-center">
-                          <span className="text-sm font-bold text-primary">#{item.rank}</span>
-                        </div>
-                        <Avatar 
-                          className={`h-10 w-10 cursor-pointer hover:opacity-80 transition-all ${getRankBorderColor(item.user_rank)}`}
-                          onClick={() => navigateToProfile(item.user_id)}
-                        >
-                          <AvatarImage src={item.profile?.avatar_url} />
-                          <AvatarFallback className="text-sm font-bold">
-                            {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {item.profile?.username || item.profile?.display_name}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            {getRankBadge(item.user_rank)}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-primary text-sm">
-                            {item.seasonal_points} pt
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              <PaginationControls
-                currentPage={seasonalPage}
-                totalItems={totalSeasonalUsers}
-                onPageChange={setSeasonalPage}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="global" className="mt-2">
-            <div className="flex flex-col gap-2">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-bold flex items-center justify-center gap-2 text-primary">
-                  Classement Global
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Tous les points accumulés
-                </p>
-              </div>
-              
-              {leaderboard.length > 0 && (
-                <PodiumDisplay top3={leaderboard.slice(0, 3)} />
-              )}
-              
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="seasonal" className="flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="hidden sm:inline">Saison</span>
-                </TabsTrigger>
-                <TabsTrigger value="global" className="flex items-center gap-1">
-                  <Globe className="h-4 w-4" />
-                  <span className="hidden sm:inline">Global</span>
-                </TabsTrigger>
-                <TabsTrigger value="friends" className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span className="hidden sm:inline">Amis</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <div className="space-y-1.5">
-                {leaderboard.slice(3).map((item, index) => (
-                  <Card 
-                    key={item.user_id} 
-                    className={`
-                      ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-                      hover-lift btn-interactive animate-fade-in
-                    `}
-                    style={{ animationDelay: `${(index + 3) * 0.1}s` }}
-                  >
-                    <CardContent className="flex items-center justify-between p-2.5">
-                      <div className="flex items-center gap-2.5 flex-1">
-                        <div className="w-6 flex justify-center">
-                          <span className="text-sm font-bold text-primary">#{item.rank}</span>
-                        </div>
-                        <Avatar 
-                          className={`h-10 w-10 cursor-pointer hover:opacity-80 transition-all ${getRankBorderColor(item.user_rank)}`}
-                          onClick={() => navigateToProfile(item.user_id)}
-                        >
-                          <AvatarImage src={item.profile?.avatar_url} />
-                          <AvatarFallback className="text-sm font-bold">
-                            {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {item.profile?.username || item.profile?.display_name}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            {getRankBadge(item.user_rank)}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-primary text-sm">
-                            {item.total_points} pt
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            +{item.seasonal_points}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              <PaginationControls
-                currentPage={globalPage}
-                totalItems={totalGlobalUsers}
-                onPageChange={setGlobalPage}
-              />
-            </div>
-          </TabsContent>
-
-
-          <TabsContent value="friends" className="mt-2">
-            <div className="flex flex-col gap-2">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-bold flex items-center justify-center gap-2 text-primary">
-                  Classement des Amis
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Vos performances vs amis
-                </p>
-              </div>
-              {friendsLeaderboard.length > 0 ? (
-                <>
-                  <PodiumDisplay top3={friendsLeaderboard.slice(0, 3)} />
-                  
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="seasonal" className="flex items-center gap-1">
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="hidden sm:inline">Saison</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="global" className="flex items-center gap-1">
-                      <Globe className="h-4 w-4" />
-                      <span className="hidden sm:inline">Global</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="friends" className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      <span className="hidden sm:inline">Amis</span>
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <div className="space-y-1.5">
-                    {friendsLeaderboard.slice(3).map((item, index) => (
-                      <Card 
-                        key={item.user_id} 
-                        className={`
-                          ${item.user_id === user?.id ? 'border-primary bg-primary/5' : ''}
-                          hover-lift btn-interactive animate-fade-in
-                        `}
-                        style={{ animationDelay: `${(index + 3) * 0.1}s` }}
-                      >
-                        <CardContent className="flex items-center justify-between p-2.5">
-                          <div className="flex items-center gap-2.5 flex-1">
-                            <div className="w-6 flex justify-center">
-                              <span className="text-sm font-bold text-primary">#{item.rank}</span>
-                            </div>
-                            <Avatar 
-                              className={`h-10 w-10 cursor-pointer hover:opacity-80 transition-all ${getRankBorderColor(item.user_rank)}`}
-                              onClick={() => navigateToProfile(item.user_id)}
-                            >
-                              <AvatarImage src={item.profile?.avatar_url} />
-                              <AvatarFallback className="text-sm font-bold">
-                                {item.profile?.username?.[0] || item.profile?.display_name?.[0] || '?'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">
-                                {item.profile?.username || item.profile?.display_name}
-                              </p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {getRankBadge(item.user_rank)}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-primary text-sm">
-                                {item.total_points} pt
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                +{item.seasonal_points}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                  <PaginationControls
-                    currentPage={friendsPage}
-                    totalItems={totalFriendsUsers}
-                    onPageChange={setFriendsPage}
-                  />
-                </>
-              ) : (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      Suivez des amis pour voir leur classement !
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      {/* Profile Preview Dialog */}
-      <ProfilePreviewDialog
-        userId={showProfilePreview ? selectedUserId : null}
-        onClose={closeProfilePreview}
+      {/* Bouton scroll vers mon rang */}
+      <ScrollToMyRankButton
+        visible={!isMyRankVisible()}
+        onClick={scrollToMyRank}
       />
-      
-      {/* Wardrobe Dialog */}
-      <WardrobeDialog
-        open={showWardrobe}
-        onOpenChange={setShowWardrobe}
-      />
+
+      {/* Dialog de prévisualisation */}
+      {showProfilePreview && selectedUserId && (
+        <ProfilePreviewDialog
+          userId={selectedUserId}
+          onClose={closeProfilePreview}
+        />
+      )}
     </div>
   );
 };
