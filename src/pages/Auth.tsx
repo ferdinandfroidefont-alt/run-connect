@@ -61,7 +61,11 @@ const Auth = () => {
     
     // Vérifier si c'est une réinitialisation de mot de passe (détection directe du code PKCE)
     const urlParams = new URLSearchParams(window.location.search);
+    console.log('🔍 [Password Reset Detection] URL params:', Object.fromEntries(urlParams.entries()));
+    console.log('🔍 [Password Reset Detection] Has code param:', urlParams.has('code'));
+    console.log('🔍 [Password Reset Detection] Has reset param:', urlParams.get('reset'));
     const isReset = urlParams.get('reset') === 'true' || urlParams.has('code');
+    console.log('🔍 [Password Reset Detection] isReset final:', isReset);
     
     // Détecter les erreurs Supabase (lien expiré, accès refusé, etc.)
     const error = urlParams.get('error');
