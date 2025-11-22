@@ -74,7 +74,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
       >
         {isOpen ? (
           <>
-            <h3 className="font-semibold">Filtres</h3>
+            <h3 className="font-semibold leading-none pt-0.5">Filtres</h3>
             <div className="flex items-center gap-2">
               {activeFiltersCount > 0 && (
                 <Button 
