@@ -85,7 +85,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
 
       {/* Filters Panel */}
       {isOpen && (
-        <Card className="absolute top-1 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
+        <Card className="absolute top-12 right-0 z-20 w-80 bg-card/95 backdrop-blur-sm shadow-map-panel">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Filtres</h3>
