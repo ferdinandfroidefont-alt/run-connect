@@ -104,6 +104,16 @@
                     android:scheme="https"
                     android:host="run-connect.lovable.app" />
             </intent-filter>
+
+            <!-- 🔑 Deep Link password reset (custom scheme pour fiabilité) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data 
+                    android:scheme="app.runconnect"
+                    android:host="reset" />
+            </intent-filter>
         </activity>
 
         <!-- 🔓 FILE PROVIDER -->

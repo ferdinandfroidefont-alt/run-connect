@@ -697,6 +697,35 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         
+        // 🔑 GÉRER LES LIENS PASSWORD RESET SUPABASE
+        if (deepLink.contains("run-connect.lovable.app") || 
+            deepLink.contains("lovableproject.com")) {
+            
+            Log.d(TAG, "🔑 Lien password reset / auth détecté !");
+            
+            // Extraire l'URL complète avec tous les paramètres
+            Uri uri = Uri.parse(deepLink);
+            String path = uri.getPath(); // ex: /auth
+            String query = uri.getQuery(); // ex: code=xxx&...
+            
+            // Construire l'URL finale pour la WebView
+            String finalUrl = START_URL + path;
+            if (query != null && !query.isEmpty()) {
+                finalUrl += "?" + query;
+            }
+            
+            Log.d(TAG, "🔑 Redirection vers WebView: " + finalUrl);
+            
+            // Charger dans la WebView
+            if (webView != null) {
+                webView.post(() -> {
+                    webView.loadUrl(finalUrl);
+                });
+            }
+            
+            return;
+        }
+        
         // Gérer d'autres deep links si nécessaire
         Log.d(TAG, "🔗 Deep link non géré: " + deepLink);
     }
