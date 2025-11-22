@@ -15,7 +15,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@drawable/splash_gradient"
-        android:gravity="center"
+        android:gravity="top|center_horizontal"
+        android:paddingTop="60dp"
         android:fitsSystemWindows="false"
         android:visibility="visible">
 
@@ -24,9 +25,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
-            android:layout_above="@+id/app_name"
-            android:layout_marginTop="40dp"
-            android:layout_marginBottom="10dp"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="60dp"
             android:text="Bienvenue sur"
             android:textColor="@android:color/white"
             android:textSize="18sp"
@@ -38,8 +38,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
-            android:layout_above="@+id/app_logo"
-            android:layout_marginBottom="70dp"
+            android:layout_below="@+id/welcome_text"
+            android:layout_marginTop="10dp"
             android:text="RUNCONNECT"
             android:textColor="@android:color/white"
             android:textSize="28sp"
@@ -47,37 +47,23 @@
             android:fontFamily="sans-serif-medium"
             android:letterSpacing="0.1" />
 
-        <!-- Frame avec glow pour le logo -->
-        <FrameLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true">
-            
-            <!-- Glow derrière le logo -->
-            <View
-                android:layout_width="240dp"
-                android:layout_height="240dp"
-                android:layout_gravity="center"
-                android:background="@drawable/logo_glow" />
-            
-            <!-- Logo par-dessus (qualité maximale) -->
-            <ImageView
-                android:id="@+id/app_logo"
-                android:layout_width="180dp"
-                android:layout_height="180dp"
-                android:layout_gravity="center"
-                android:src="@mipmap/ic_launcher"
-                android:scaleType="fitCenter"
-                android:contentDescription="Logo RunConnect"
-                android:elevation="4dp"
-                android:adjustViewBounds="true" />
-        </FrameLayout>
+        <!-- Logo simple -->
+        <ImageView
+            android:id="@+id/app_logo"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_below="@+id/app_name"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="20dp"
+            android:src="@mipmap/ic_launcher"
+            android:scaleType="fitCenter"
+            android:contentDescription="Logo RunConnect" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_marginBottom="80dp"
+            android:layout_below="@+id/app_logo"
+            android:layout_marginTop="40dp"
             android:orientation="vertical"
             android:gravity="center"
             android:paddingLeft="80dp"
@@ -91,7 +77,8 @@
                 android:max="100"
                 android:progress="0"
                 android:indeterminate="false"
-                android:progressDrawable="@drawable/shimmer_progress_bar" />
+                android:progressTint="@android:color/white"
+                android:progressBackgroundTint="#33FFFFFF" />
 
             <TextView
                 android:id="@+id/splash_progress_text"
