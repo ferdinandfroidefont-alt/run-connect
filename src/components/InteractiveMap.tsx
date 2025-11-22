@@ -17,6 +17,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
+import { generateRunConnectMarkerSVG, svgToDataUrl } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -150,6 +151,9 @@ export const InteractiveMap = ({
   
   // Track newly created sessions for pulse animation
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
+  
+  // Cache for generated SVG marker data URLs by user ID
+  const markerCache = useRef<Map<string, string>>(new Map());
   
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
@@ -510,8 +514,8 @@ export const InteractiveMap = ({
           
           const img = document.createElement('img');
           img.src = markerIcon;
-          img.style.width = '50px';
-          img.style.height = '50px';
+          img.style.width = '60px';
+          img.style.height = '75px';
           img.className = 'pulse-marker-animation';
           
           markerDiv.appendChild(img);
@@ -531,8 +535,8 @@ export const InteractiveMap = ({
             title: session.title,
             icon: {
               url: markerIcon,
-              scaledSize: new google.maps.Size(50, 50),
-              anchor: new google.maps.Point(25, 50)
+              scaledSize: new google.maps.Size(60, 75),
+              anchor: new google.maps.Point(30, 75)
             }
           });
 
@@ -579,8 +583,7 @@ export const InteractiveMap = ({
   };
 
   const createCustomMarker = async (session: Session): Promise<string> => {
-    console.log('Creating custom marker for session:', session.id, session.title);
-    console.log('Session profile data:', session.profiles);
+    console.log('🎨 Creating RunConnect custom marker for session:', session.id, session.title);
     
     // Validation des données de session
     if (!session || !session.profiles) {
@@ -588,125 +591,31 @@ export const InteractiveMap = ({
       return getFallbackIcon(session?.activity_type || 'course');
     }
 
-    const size = 50;
-    const color = getActivityColor(session.activity_type);
-    const initials = (session.profiles.username || session.profiles.display_name || 'U')
-      .charAt(0).toUpperCase();
+    const organizerId = session.organizer_id;
+    
+    // Check cache first
+    if (markerCache.current.has(organizerId)) {
+      console.log('✅ Using cached marker for user:', organizerId);
+      return markerCache.current.get(organizerId)!;
+    }
 
-    console.log('Marker data:', { size, color, initials, avatarUrl: session.profiles.avatar_url });
-
-    // Créer un marqueur Canvas avec photo de profil
-    return new Promise<string>((resolve) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d')!;
+    // Generate new RunConnect SVG marker
+    const profileImageUrl = session.profiles.avatar_url || '/placeholder.svg';
+    console.log('🖼️ Generating SVG marker with profile image:', profileImageUrl);
+    
+    try {
+      const svg = generateRunConnectMarkerSVG(profileImageUrl, 60);
+      const dataUrl = svgToDataUrl(svg);
       
-      // Fonction pour dessiner le marqueur final
-      const drawMarker = (useAvatar: boolean = false, img?: HTMLImageElement) => {
-        // Nettoyer le canvas
-        ctx.clearRect(0, 0, size, size);
-        
-        if (useAvatar && img) {
-          // Dessiner le fond blanc avec ombre
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-          ctx.shadowBlur = 4;
-          ctx.shadowOffsetX = 2;
-          ctx.shadowOffsetY = 2;
-          
-          ctx.fillStyle = 'white';
-          ctx.beginPath();
-          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
-          ctx.fill();
-          
-          // Réinitialiser l'ombre
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          
-          // Créer un masque circulaire pour l'image
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(size/2, size/2, size/2 - 4, 0, 2 * Math.PI);
-          ctx.clip();
-          
-          // Dessiner l'image de profil en gardant les proportions
-          const imgSize = size - 8;
-          ctx.drawImage(img, 4, 4, imgSize, imgSize);
-          ctx.restore();
-          
-          // Bordure blanche
-          ctx.strokeStyle = 'white';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
-          ctx.stroke();
-        } else {
-          // Fallback avec initiales
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-          ctx.shadowBlur = 4;
-          ctx.shadowOffsetX = 2;
-          ctx.shadowOffsetY = 2;
-          
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
-          ctx.fill();
-          
-          // Réinitialiser l'ombre
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          
-          // Bordure blanche
-          ctx.strokeStyle = 'white';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
-          ctx.stroke();
-          
-          // Initiales
-          ctx.fillStyle = 'white';
-          ctx.font = `bold ${size/3}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(initials, size/2, size/2 + 1);
-        }
-        
-        resolve(canvas.toDataURL('image/png'));
-      };
+      // Cache the generated marker
+      markerCache.current.set(organizerId, dataUrl);
+      console.log('✨ RunConnect marker generated and cached for user:', organizerId);
       
-      // Essayer de charger l'avatar
-      const avatarUrl = session.profiles.avatar_url;
-      if (avatarUrl) {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        img.onload = () => {
-          console.log('Avatar loaded successfully for Canvas marker');
-          drawMarker(true, img);
-        };
-        
-        img.onerror = () => {
-          console.log('Avatar failed to load, using initials');
-          drawMarker(false);
-        };
-        
-        // Timeout de sécurité
-        setTimeout(() => {
-          if (!img.complete) {
-            console.log('Avatar timeout, using initials');
-            drawMarker(false);
-          }
-        }, 2000);
-        
-        img.src = avatarUrl;
-      } else {
-        drawMarker(false);
-      }
-    });
+      return dataUrl;
+    } catch (error) {
+      console.error('❌ Error generating RunConnect marker:', error);
+      return getFallbackIcon(session.activity_type);
+    }
   };
 
   const getActivityColor = (activityType: string) => {
