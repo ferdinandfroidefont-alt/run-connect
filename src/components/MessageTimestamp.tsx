@@ -50,7 +50,7 @@ export const MessageSectionHeader: React.FC<MessageSectionHeaderProps> = ({ time
   };
 
   return (
-    <div className="flex justify-center my-4">
+    <div className="flex justify-center my-3">
       <div className="bg-muted/50 px-3 py-1 rounded-full">
         <span className="text-xs text-muted-foreground font-medium">
           {formatSectionDate(date)}
