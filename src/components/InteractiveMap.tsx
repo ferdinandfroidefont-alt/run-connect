@@ -224,6 +224,20 @@ export const InteractiveMap = ({
     setOpenCreateRoute(handleCreateRoute);
   }, [setRefreshSessions, setOpenCreateSession, setOpenCreateRoute]);
 
+  // Load sessions with automatic retry for new session detection
+  const loadSessionsWithRetry = async (retryCount = 0, maxRetries = 3) => {
+    await loadSessions();
+    
+    // Retry with increasing delays if needed (500ms, 1000ms, 1500ms)
+    if (retryCount < maxRetries) {
+      const delay = (retryCount + 1) * 500;
+      console.log(`🔄 Rechargement automatique ${retryCount + 1}/${maxRetries} dans ${delay}ms`);
+      setTimeout(() => {
+        loadSessionsWithRetry(retryCount + 1, maxRetries);
+      }, delay);
+    }
+  };
+
   // Load sessions from database
   const loadSessions = async () => {
     try {
@@ -1572,7 +1586,7 @@ export const InteractiveMap = ({
           setIsCreateDialogOpen(false);
           setPresetLocation(null);
         }}
-        onSessionCreated={loadSessions}
+        onSessionCreated={loadSessionsWithRetry}
         map={map.current}
         presetLocation={presetLocation}
         onCreateRoute={handleCreateRoute}

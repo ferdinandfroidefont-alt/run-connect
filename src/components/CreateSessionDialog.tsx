@@ -516,17 +516,19 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       // Afficher une interstitielle après la création (si conditions remplies)
       showAdAfterSessionCreation();
       
-      // Force refresh sessions to ensure the new session appears with profile
+      // Force refresh sessions with retry to ensure the new session appears
+      console.log('🎯 Séance créée, rechargement de la carte...');
       setTimeout(() => {
         onSessionCreated();
-      }, 500);
+      }, 300);
       
       // Center map on new session for visual confirmation
       if (map && selectedLocation) {
         setTimeout(() => {
+          console.log('🗺️ Recentrage sur la séance créée');
           map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
           map.setZoom(15);
-        }, 600);
+        }, 400);
       }
       
       onClose();
