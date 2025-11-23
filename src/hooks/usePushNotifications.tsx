@@ -456,9 +456,15 @@ export const usePushNotifications = () => {
             navigate('/messages');
           }
           break;
-        case 'follow_request':
-          navigate('/profile');
-          break;
+      case 'follow_request':
+        navigate('/profile');
+        break;
+      
+      case 'challenge_almost_done':
+      case 'challenge_completed':
+      case 'challenge_reminder':
+        navigate('/leaderboard');
+        break;
         case 'session_request':
           navigate('/');
           break;

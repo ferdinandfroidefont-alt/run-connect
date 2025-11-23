@@ -5,7 +5,9 @@ import {
   MessageCircle, Mic, Image, Heart, Flag 
 } from "lucide-react";
 import { useWeeklyChallenges } from "@/hooks/useWeeklyChallenges";
+import { useChallengeNotifications } from "@/hooks/useChallengeNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
 
 const iconMap: Record<string, any> = {
   Target,
@@ -23,6 +25,7 @@ const iconMap: Record<string, any> = {
 
 export const WeeklyChallengesCard = () => {
   const { challenges, loading } = useWeeklyChallenges();
+  const { completedChallenge, almostDoneChallenge } = useChallengeNotifications();
 
   if (loading) {
     return (
@@ -61,15 +64,41 @@ export const WeeklyChallengesCard = () => {
             const progressPercentage = (challenge.progress / challenge.target) * 100;
             const isCompleted = challenge.progress >= challenge.target;
 
+            const isJustCompleted = completedChallenge === challenge.id;
+            const isAlmostDone = almostDoneChallenge === challenge.id;
+
             return (
-              <div 
+              <motion.div 
                 key={challenge.id}
-                className={`bg-card/50 rounded-lg p-3 border transition-all ${
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`bg-card/50 rounded-lg p-3 border transition-all relative overflow-hidden ${
                   isCompleted 
                     ? 'border-green-500/50 bg-green-500/5' 
                     : 'border-border/50 hover:border-primary/30'
                 }`}
               >
+                <AnimatePresence>
+                  {isJustCompleted && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      className="absolute inset-0 pointer-events-none flex items-center justify-center text-4xl z-10"
+                    >
+                      🎉
+                    </motion.div>
+                  )}
+                  {isAlmostDone && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0, 1, 0] }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 1, repeat: 2 }}
+                      className="absolute inset-0 border-2 border-orange-500/50 rounded-lg pointer-events-none"
+                    />
+                  )}
+                </AnimatePresence>
                 <div className="flex items-start gap-2 mb-2">
                   <Icon className={`h-4 w-4 shrink-0 mt-0.5 ${
                     isCompleted ? 'text-green-500' : 'text-primary'
@@ -90,9 +119,17 @@ export const WeeklyChallengesCard = () => {
                     </p>
                   </div>
                   {isCompleted && (
-                    <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
+                    <motion.span
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ 
+                        scale: isJustCompleted ? [1, 1.3, 1] : 1,
+                        rotate: 0
+                      }}
+                      transition={{ duration: 0.6, type: "spring" }}
+                      className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium"
+                    >
                       ✓ Terminé
-                    </span>
+                    </motion.span>
                   )}
                 </div>
                 <div className="space-y-1">
@@ -104,7 +141,7 @@ export const WeeklyChallengesCard = () => {
                     {challenge.progress}/{challenge.target}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             );
           })
         )}

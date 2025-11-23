@@ -45,6 +45,12 @@ verify_jwt = false
 [functions.send-push-notification]
 verify_jwt = true
 
+[functions.notify-challenge-progress]
+verify_jwt = false
+
+[functions.weekly-challenge-reminder]
+verify_jwt = false
+
 [functions.strava-connect]
 verify_jwt = true
 
