@@ -54,7 +54,7 @@ const Leaderboard = () => {
   
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
-  const USERS_PER_PAGE = 20;
+  const USERS_PER_PAGE = 10;
 
   useEffect(() => {
     if (user) {
@@ -158,129 +158,164 @@ const Leaderboard = () => {
   const fetchLeaderboard = async () => {
     setLoading(true);
     try {
-      const offset = (currentPage - 1) * USERS_PER_PAGE;
+      // Déterminer le rank de l'utilisateur d'abord
+      let currentUserRank: number | null = null;
+      if (user && currentPage === 1) {
+        const { data: allData } = await supabase.rpc('get_complete_leaderboard', {
+          limit_count: 10000,
+          offset_count: 0,
+          order_by_column: 'seasonal_points'
+        });
+        
+        const rankIndex = allData?.findIndex((u: any) => u.user_id === user.id);
+        currentUserRank = rankIndex !== undefined && rankIndex >= 0 ? rankIndex + 1 : null;
+        setUserRank(currentUserRank);
+      }
+
+      // Logique de chargement différente selon si user dans TOP 10 ou non
+      const userInTop10 = currentUserRank !== null && currentUserRank <= 10;
       
       let finalData: any[] = [];
-
-      // Filtrage par activité spécifique
-      const activityTypes: ActivityType[] = ['running', 'cycling', 'walking', 'swimming', 'basketball', 'football', 'petanque', 'tennis'];
-      if (activityTypes.includes(activeFilter as ActivityType)) {
-        // Récupérer les utilisateurs avec leurs points filtrés par activité
-        const { data: activityData, error: activityError } = await supabase
-          .from('session_participants')
-          .select(`
-            user_id,
-            points_awarded,
-            sessions!inner(activity_type)
-          `)
-          .eq('sessions.activity_type', activeFilter)
-          .gte('joined_at', getCurrentSeasonDates().start.toISOString())
-          .lte('joined_at', getCurrentSeasonDates().end.toISOString());
-
-        if (activityError) throw activityError;
-
-        // Grouper par user_id et sommer les points
-        const userPointsMap = new Map<string, number>();
-        activityData?.forEach(item => {
-          const currentPoints = userPointsMap.get(item.user_id) || 0;
-          userPointsMap.set(item.user_id, currentPoints + (item.points_awarded || 0));
-        });
-
-        // Récupérer les profils des utilisateurs
-        const userIds = Array.from(userPointsMap.keys());
-        if (userIds.length > 0) {
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('user_id, username, display_name, avatar_url, is_premium')
-            .in('user_id', userIds);
-
-          // Combiner les données
-          const combinedData = profilesData?.map(profile => ({
-            user_id: profile.user_id,
-            seasonal_points: userPointsMap.get(profile.user_id) || 0,
-            total_points: userPointsMap.get(profile.user_id) || 0,
-            weekly_points: 0,
-            username: profile.username,
-            display_name: profile.display_name,
-            avatar_url: profile.avatar_url,
-            is_premium: profile.is_premium
-          })) || [];
-
-          // Trier par points décroissants
-          combinedData.sort((a, b) => b.seasonal_points - a.seasonal_points);
-          
-          // Pagination
-          finalData = combinedData.slice(offset, offset + USERS_PER_PAGE);
-          setTotalUsers(combinedData.length);
-          setHasMoreUsers(offset + USERS_PER_PAGE < combinedData.length);
-        }
-      }
-      // Filtrage par amis
-      else if (activeFilter === 'friends') {
-        const { data: friendsData } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', user!.id)
-          .eq('status', 'accepted');
-
-        const friendIds = friendsData?.map(f => f.following_id) || [];
-        
-        if (friendIds.length > 0) {
-          const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
-            limit_count: 10000,
-            offset_count: 0,
-            order_by_column: 'seasonal_points'
-          });
-
-          const filteredData = leaderboardData?.filter((u: any) => friendIds.includes(u.user_id)) || [];
-          finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
-          setTotalUsers(filteredData.length);
-          setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
-        }
-      }
-      // Filtrage par clubs
-      else if (activeFilter === 'clubs' && selectedClubs.length > 0) {
-        const { data: membersData } = await supabase
-          .from('group_members')
-          .select('user_id')
-          .in('conversation_id', selectedClubs);
-
-        const memberIds = [...new Set(membersData?.map(m => m.user_id) || [])];
-        
-        if (memberIds.length > 0) {
-          const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
-            limit_count: 10000,
-            offset_count: 0,
-            order_by_column: 'seasonal_points'
-          });
-
-          const filteredData = leaderboardData?.filter((u: any) => memberIds.includes(u.user_id)) || [];
-          finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
-          setTotalUsers(filteredData.length);
-          setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
-        }
-      }
-      // Classement général
-      else {
-        const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
-        setTotalUsers(totalCountData || 0);
-
-        const { data, error } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: USERS_PER_PAGE,
-          offset_count: offset,
+      
+      if (currentPage === 1 && !userInTop10 && currentUserRank !== null) {
+        // User PAS dans TOP 10: charger TOP 10 + contexte user (rank-1, rank, rank+1)
+        const { data: top10Data } = await supabase.rpc('get_complete_leaderboard', {
+          limit_count: 10,
+          offset_count: 0,
           order_by_column: 'seasonal_points'
         });
 
-        if (error) throw error;
-        finalData = data || [];
-        setHasMoreUsers(finalData.length === USERS_PER_PAGE);
+        // Charger les 3 utilisateurs autour du user (rank-1, rank, rank+1)
+        const contextOffset = Math.max(0, currentUserRank - 2);
+        const { data: contextData } = await supabase.rpc('get_complete_leaderboard', {
+          limit_count: 3,
+          offset_count: contextOffset,
+          order_by_column: 'seasonal_points'
+        });
+
+        // Combiner et dédupliquer
+        const combinedIds = new Set();
+        finalData = [...(top10Data || []), ...(contextData || [])].filter((item: any) => {
+          if (combinedIds.has(item.user_id)) return false;
+          combinedIds.add(item.user_id);
+          return true;
+        });
+        
+        setHasMoreUsers(false); // Pas de "Load more" quand user pas dans TOP 10
+      } else {
+        // User dans TOP 10 OU pagination normale
+        const offset = (currentPage - 1) * USERS_PER_PAGE;
+        
+        // Filtrage par activité spécifique
+        const activityTypes: ActivityType[] = ['running', 'cycling', 'walking', 'swimming', 'basketball', 'football', 'petanque', 'tennis'];
+        if (activityTypes.includes(activeFilter as ActivityType)) {
+          const { data: activityData, error: activityError } = await supabase
+            .from('session_participants')
+            .select(`
+              user_id,
+              points_awarded,
+              sessions!inner(activity_type)
+            `)
+            .eq('sessions.activity_type', activeFilter)
+            .gte('joined_at', getCurrentSeasonDates().start.toISOString())
+            .lte('joined_at', getCurrentSeasonDates().end.toISOString());
+
+          if (activityError) throw activityError;
+
+          const userPointsMap = new Map<string, number>();
+          activityData?.forEach(item => {
+            const currentPoints = userPointsMap.get(item.user_id) || 0;
+            userPointsMap.set(item.user_id, currentPoints + (item.points_awarded || 0));
+          });
+
+          const userIds = Array.from(userPointsMap.keys());
+          if (userIds.length > 0) {
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('user_id, username, display_name, avatar_url, is_premium')
+              .in('user_id', userIds);
+
+            const combinedData = profilesData?.map(profile => ({
+              user_id: profile.user_id,
+              seasonal_points: userPointsMap.get(profile.user_id) || 0,
+              total_points: userPointsMap.get(profile.user_id) || 0,
+              weekly_points: 0,
+              username: profile.username,
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+              is_premium: profile.is_premium
+            })) || [];
+
+            combinedData.sort((a, b) => b.seasonal_points - a.seasonal_points);
+            
+            finalData = combinedData.slice(offset, offset + USERS_PER_PAGE);
+            setTotalUsers(combinedData.length);
+            setHasMoreUsers(offset + USERS_PER_PAGE < combinedData.length);
+          }
+        }
+        // Filtrage par amis
+        else if (activeFilter === 'friends') {
+          const { data: friendsData } = await supabase
+            .from('user_follows')
+            .select('following_id')
+            .eq('follower_id', user!.id)
+            .eq('status', 'accepted');
+
+          const friendIds = friendsData?.map(f => f.following_id) || [];
+          
+          if (friendIds.length > 0) {
+            const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
+              limit_count: 10000,
+              offset_count: 0,
+              order_by_column: 'seasonal_points'
+            });
+
+            const filteredData = leaderboardData?.filter((u: any) => friendIds.includes(u.user_id)) || [];
+            finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
+            setTotalUsers(filteredData.length);
+            setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
+          }
+        }
+        // Filtrage par clubs
+        else if (activeFilter === 'clubs' && selectedClubs.length > 0) {
+          const { data: membersData } = await supabase
+            .from('group_members')
+            .select('user_id')
+            .in('conversation_id', selectedClubs);
+
+          const memberIds = [...new Set(membersData?.map(m => m.user_id) || [])];
+          
+          if (memberIds.length > 0) {
+            const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
+              limit_count: 10000,
+              offset_count: 0,
+              order_by_column: 'seasonal_points'
+            });
+
+            const filteredData = leaderboardData?.filter((u: any) => memberIds.includes(u.user_id)) || [];
+            finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
+            setTotalUsers(filteredData.length);
+            setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
+          }
+        }
+        // Classement général
+        else {
+          const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
+          setTotalUsers(totalCountData || 0);
+
+          const { data, error } = await supabase.rpc('get_complete_leaderboard', {
+            limit_count: USERS_PER_PAGE,
+            offset_count: offset,
+            order_by_column: 'seasonal_points'
+          });
+
+          if (error) throw error;
+          finalData = data || [];
+          setHasMoreUsers(finalData.length === USERS_PER_PAGE);
+        }
       }
 
-      const { data, error } = { data: finalData, error: null };
-      
-      if (error) throw error;
-
-      const formattedData = data?.map((item: any, index: number) => ({
+      const formattedData = finalData?.map((item: any, index: number) => ({
         user_id: item.user_id,
         total_points: item.total_points,
         weekly_points: item.weekly_points,
@@ -291,7 +326,7 @@ const Leaderboard = () => {
           avatar_url: item.avatar_url,
           is_premium: item.is_premium
         },
-        rank: offset + index + 1,
+        rank: finalData.findIndex((u: any) => u.user_id === item.user_id) + 1,
         user_rank: getUserRank(activeFilter === 'general' ? item.seasonal_points : item.total_points)
       })) || [];
 
@@ -299,20 +334,6 @@ const Leaderboard = () => {
         setLeaderboard(formattedData);
       } else {
         setLeaderboard(prev => [...prev, ...formattedData]);
-      }
-
-      setHasMoreUsers(formattedData.length === USERS_PER_PAGE);
-
-      // Find user rank
-      if (user && currentPage === 1) {
-        const { data: allData } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: 10000,
-          offset_count: 0,
-          order_by_column: 'seasonal_points'
-        });
-        
-        const currentUserRank = allData?.findIndex((u: any) => u.user_id === user.id);
-        setUserRank(currentUserRank !== undefined && currentUserRank >= 0 ? currentUserRank + 1 : null);
       }
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -562,28 +583,101 @@ const Leaderboard = () => {
 
         {/* Liste du classement */}
         <div className="space-y-2">
-          {restOfLeaderboard.map((userItem, index) => {
-            const isCurrentUser = userItem.user_id === user?.id;
+          {(() => {
+            const userInTop10 = userRank !== null && userRank <= 10;
             
-            return (
-              <div
-                key={userItem.user_id}
-                ref={isCurrentUser ? myRankRef : null}
-              >
-                <LeaderboardCard
-                  rank={userItem.rank}
-                  username={userItem.profile.username}
-                  displayName={userItem.profile.display_name}
-                  avatarUrl={userItem.profile.avatar_url}
-                  points={userItem.seasonal_points}
-                  level={getUserLevel(userItem.seasonal_points)}
-                  isPremium={userItem.profile.is_premium}
-                  userRank={userItem.user_rank}
-                  onClick={() => navigateToProfile(userItem.user_id)}
-                />
-              </div>
-            );
-          })}
+            if (currentPage === 1 && !userInTop10 && userRank !== null) {
+              // User PAS dans TOP 10: afficher TOP 10 + séparateur + contexte user
+              const top10Users = restOfLeaderboard.filter(u => u.rank <= 10);
+              const userContextUsers = restOfLeaderboard.filter(u => u.rank > 10);
+              
+              // Éviter les séparateurs si user est #11 ou #12
+              const needTopSeparator = userRank > 12;
+              
+              return (
+                <>
+                  {/* TOP 10 */}
+                  {top10Users.map((userItem) => {
+                    const isCurrentUser = userItem.user_id === user?.id;
+                    return (
+                      <div key={userItem.user_id} ref={isCurrentUser ? myRankRef : null}>
+                        <LeaderboardCard
+                          rank={userItem.rank}
+                          username={userItem.profile.username}
+                          displayName={userItem.profile.display_name}
+                          avatarUrl={userItem.profile.avatar_url}
+                          points={userItem.seasonal_points}
+                          level={getUserLevel(userItem.seasonal_points)}
+                          isPremium={userItem.profile.is_premium}
+                          userRank={userItem.user_rank}
+                          onClick={() => navigateToProfile(userItem.user_id)}
+                          highlight={isCurrentUser}
+                        />
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Séparateur si user pas #11 ou #12 */}
+                  {needTopSeparator && (
+                    <div className="flex items-center justify-center py-1">
+                      <div className="w-full h-px bg-border opacity-30"></div>
+                      <span className="px-3 text-muted-foreground text-xs opacity-30">...</span>
+                      <div className="w-full h-px bg-border opacity-30"></div>
+                    </div>
+                  )}
+                  
+                  {/* Contexte user (rank-1, rank, rank+1) */}
+                  {userContextUsers.map((userItem) => {
+                    const isCurrentUser = userItem.user_id === user?.id;
+                    return (
+                      <div key={userItem.user_id} ref={isCurrentUser ? myRankRef : null}>
+                        <LeaderboardCard
+                          rank={userItem.rank}
+                          username={userItem.profile.username}
+                          displayName={userItem.profile.display_name}
+                          avatarUrl={userItem.profile.avatar_url}
+                          points={userItem.seasonal_points}
+                          level={getUserLevel(userItem.seasonal_points)}
+                          isPremium={userItem.profile.is_premium}
+                          userRank={userItem.user_rank}
+                          onClick={() => navigateToProfile(userItem.user_id)}
+                          highlight={isCurrentUser}
+                        />
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Séparateur final */}
+                  <div className="flex items-center justify-center py-1">
+                    <div className="w-full h-px bg-border opacity-30"></div>
+                    <span className="px-3 text-muted-foreground text-xs opacity-30">...</span>
+                    <div className="w-full h-px bg-border opacity-30"></div>
+                  </div>
+                </>
+              );
+            } else {
+              // User dans TOP 10 OU pagination normale
+              return restOfLeaderboard.map((userItem) => {
+                const isCurrentUser = userItem.user_id === user?.id;
+                return (
+                  <div key={userItem.user_id} ref={isCurrentUser ? myRankRef : null}>
+                    <LeaderboardCard
+                      rank={userItem.rank}
+                      username={userItem.profile.username}
+                      displayName={userItem.profile.display_name}
+                      avatarUrl={userItem.profile.avatar_url}
+                      points={userItem.seasonal_points}
+                      level={getUserLevel(userItem.seasonal_points)}
+                      isPremium={userItem.profile.is_premium}
+                      userRank={userItem.user_rank}
+                      onClick={() => navigateToProfile(userItem.user_id)}
+                      highlight={isCurrentUser}
+                    />
+                  </div>
+                );
+              });
+            }
+          })()}
         </div>
 
         {/* Bouton Charger plus */}
