@@ -535,10 +535,6 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
                   Notifications
                 </h3>
-                
-                {/* 🆕 DIAGNOSTIC FCM */}
-                <FCMTokenDiagnostic />
-                
                 <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
                   {/* Notifications Push - Toggle principal */}
                   <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
