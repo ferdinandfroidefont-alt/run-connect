@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,18 @@ interface ReferralCodeInputProps {
 export const ReferralCodeInput = ({ onSuccess }: ReferralCodeInputProps) => {
   const [referralCode, setReferralCode] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [codeApplied, setCodeApplied] = useState(false);
   const { toast } = useToast();
+
+  // Auto-detect referral code from sessionStorage
+  useEffect(() => {
+    const savedCode = sessionStorage.getItem('referralCode');
+    if (savedCode) {
+      setReferralCode(savedCode.toUpperCase());
+      setCodeApplied(true);
+      console.log('🎁 Code de parrainage auto-détecté:', savedCode);
+    }
+  }, []);
 
   const handleSubmitReferral = async () => {
     if (!referralCode.trim()) return;
@@ -58,6 +69,9 @@ export const ReferralCodeInput = ({ onSuccess }: ReferralCodeInputProps) => {
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Gift className="h-4 w-4" />
         <span>Avez-vous un code de parrainage ?</span>
+        {codeApplied && (
+          <span className="text-xs text-primary font-medium">✅ Code appliqué</span>
+        )}
       </div>
       
       <div className="flex gap-2">

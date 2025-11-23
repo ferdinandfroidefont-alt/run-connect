@@ -647,6 +647,21 @@ public class MainActivity extends AppCompatActivity {
         String deepLink = data.toString();
         Log.d(TAG, "🔗 Deep link reçu: " + deepLink);
         
+        // 👤 GÉRER LES LIENS PROFIL PUBLIC: app.runconnect://profile/<username>
+        String scheme = data.getScheme();
+        String host = data.getHost();
+        if ("app.runconnect".equals(scheme) && "profile".equals(host)) {
+            String username = data.getLastPathSegment();
+            if (username != null) {
+                String webUrl = START_URL + "/p/" + username;
+                Log.d(TAG, "👤 [DEEP LINK PROFILE] Redirection vers: " + webUrl);
+                if (webView != null) {
+                    webView.post(() -> webView.loadUrl(webUrl));
+                }
+                return;
+            }
+        }
+        
         // Vérifier si c'est un callback Strava
         if (deepLink.contains("strava/success")) {
             Log.d(TAG, "✅ Callback Strava détecté !");
