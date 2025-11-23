@@ -1539,19 +1539,9 @@ export const InteractiveMap = ({
           {/* Nearby Sessions Button */}
           <Button 
             variant="outline"
-            className={`shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto ${
-              subscriptionInfo?.subscribed 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-primary" 
-                : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
-            }`}
-            onClick={() => {
-              if (subscriptionInfo?.subscribed) {
-                setShowNearbySessionsDialog(true);
-              } else {
-                window.location.href = '/subscription';
-              }
-            }}
-            title={subscriptionInfo?.subscribed ? "Séances à proximité" : "Séances à proximité (Premium requis)"}
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+            onClick={() => setShowNearbySessionsDialog(true)}
+            title="Séances à proximité"
           >
             <div className="text-sm">📍🏃</div>
             <div className="text-xs leading-tight">Séances à proximité</div>
