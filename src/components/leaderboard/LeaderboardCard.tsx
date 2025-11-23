@@ -17,6 +17,7 @@ interface LeaderboardCardProps {
   isPremium?: boolean;
   userRank: string;
   onClick?: () => void;
+  highlight?: boolean;
 }
 
 export const LeaderboardCard = ({
@@ -31,7 +32,8 @@ export const LeaderboardCard = ({
   hasRecentRace = false,
   isPremium = false,
   userRank,
-  onClick
+  onClick,
+  highlight = false
 }: LeaderboardCardProps) => {
   const getLevelBadge = () => {
     switch (level) {
@@ -59,7 +61,8 @@ export const LeaderboardCard = ({
     <Card 
       className={cn(
         "hover:shadow-md transition-all cursor-pointer",
-        getRankBorder()
+        getRankBorder(),
+        highlight && "bg-primary/5 border-primary/30"
       )}
       onClick={onClick}
     >
