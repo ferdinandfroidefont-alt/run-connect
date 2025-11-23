@@ -133,6 +133,15 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!avatarFile) {
+      toast({
+        title: "Erreur",
+        description: "La photo de profil est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!username.trim()) {
       toast({
         title: "Erreur",
@@ -255,6 +264,21 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           .eq('user_id', userId);
 
         if (error) throw error;
+
+        // Vérification immédiate après l'update pour système anti-blocage
+        console.log('✅ Profile updated, verifying avatar URL in database...');
+        const { data: verifyProfile } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('user_id', userId)
+          .single();
+
+        console.log('🔍 Avatar URL in database:', verifyProfile?.avatar_url);
+
+        if (!verifyProfile?.avatar_url) {
+          console.error('⚠️ Avatar URL not found in database after update!');
+          // Ne pas bloquer, mais logger l'erreur pour diagnostic
+        }
       } else {
         // Créer un nouveau profil
         const { error } = await supabase
@@ -368,8 +392,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 className="text-xs"
                 disabled={cameraLoading}
               >
-                <Camera className="h-3 w-3 mr-1" />
-                Choisir une photo (optionnel)
+                      <Camera className="h-3 w-3 mr-1" />
+                      Choisir une photo
               </Button>
               
               {/* Bouton alternatif pour iOS/téléphones problématiques */}
@@ -397,7 +421,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               className="sr-only"
               style={{ display: 'none' }}
             />
-            <p className="text-xs text-muted-foreground">Photo de profil (optionnelle)</p>
+            <p className="text-xs text-muted-foreground">Photo de profil (obligatoire)</p>
           </div>
 
           {/* Nom d'utilisateur */}
@@ -493,7 +517,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
+              disabled={isLoading || !avatarFile || !username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer et créer mon compte
