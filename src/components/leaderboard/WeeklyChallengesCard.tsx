@@ -2,12 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { 
   Target, Users, Calendar, Award, Trophy, UserPlus, 
-  MessageCircle, Mic, Image, Heart, Flag 
+  MessageCircle, Mic, Image, Heart, Flag, Clock
 } from "lucide-react";
 import { useWeeklyChallenges } from "@/hooks/useWeeklyChallenges";
 import { useChallengeNotifications } from "@/hooks/useChallengeNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 
 const iconMap: Record<string, any> = {
   Target,
@@ -26,6 +27,35 @@ const iconMap: Record<string, any> = {
 export const WeeklyChallengesCard = () => {
   const { challenges, loading } = useWeeklyChallenges();
   const { completedChallenge, almostDoneChallenge } = useChallengeNotifications();
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const nextMonday = new Date(now);
+      
+      // Calculer le prochain lundi à 00:00
+      const daysUntilMonday = (8 - now.getDay()) % 7 || 7;
+      nextMonday.setDate(now.getDate() + daysUntilMonday);
+      nextMonday.setHours(0, 0, 0, 0);
+      
+      const diff = nextMonday.getTime() - now.getTime();
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      return `${days} jour${days > 1 ? 's' : ''} ${hours}h ${minutes} minute${minutes > 1 ? 's' : ''} ${seconds} seconde${seconds > 1 ? 's' : ''}`;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    const interval = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
@@ -35,6 +65,10 @@ export const WeeklyChallengesCard = () => {
             <Target className="h-5 w-5 text-primary" />
             Défis de la semaine
           </CardTitle>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Se termine dans : {timeLeft}</span>
+          </div>
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-3">
           {[1, 2, 3].map((i) => (
@@ -45,14 +79,18 @@ export const WeeklyChallengesCard = () => {
     );
   }
 
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          Défis de la semaine
-        </CardTitle>
-      </CardHeader>
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            Défis de la semaine
+          </CardTitle>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Se termine dans : {timeLeft}</span>
+          </div>
+        </CardHeader>
       <CardContent className="p-3 pt-0 space-y-3">
         {challenges.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground text-sm">
