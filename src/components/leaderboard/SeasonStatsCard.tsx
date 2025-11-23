@@ -1,27 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Trophy, Clock, Award, Target } from "lucide-react";
+import { Calendar, Trophy, Award, Target } from "lucide-react";
 
 interface SeasonStatsCardProps {
-  totalActivities: number;
+  sessionsJoined: number;
+  sessionsCreated: number;
   totalPoints: number;
-  totalTime?: string;
   badgesWon: number;
-  bestPerformance?: string;
+  friendsReferred: number;
 }
 
 export const SeasonStatsCard = ({ 
-  totalActivities, 
+  sessionsJoined, 
+  sessionsCreated, 
   totalPoints, 
-  totalTime = "18h", 
   badgesWon,
-  bestPerformance = "10km"
+  friendsReferred
 }: SeasonStatsCardProps) => {
   const stats = [
-    { icon: Trophy, label: "Sessions", value: totalActivities, color: "text-blue-500" },
+    { icon: Trophy, label: "Rejointes", value: sessionsJoined, color: "text-blue-500" },
+    { icon: Calendar, label: "Créées", value: sessionsCreated, color: "text-green-500" },
     { icon: Target, label: "Points", value: totalPoints.toLocaleString(), color: "text-purple-500" },
-    { icon: Clock, label: "Temps", value: totalTime, color: "text-green-500" },
     { icon: Award, label: "Badges", value: badgesWon, color: "text-yellow-500" },
-    { icon: Calendar, label: "Record", value: bestPerformance, color: "text-pink-500" },
+    { icon: Trophy, label: "Parrainés", value: friendsReferred, color: "text-pink-500" },
   ];
 
   return (

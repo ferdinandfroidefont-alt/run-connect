@@ -100,6 +100,8 @@ const Leaderboard = () => {
     if (!user) return;
     
     try {
+      const seasonDates = getCurrentSeasonDates();
+      
       // Get user scores
       const { data: scoresData } = await supabase
         .from('user_scores')
@@ -107,25 +109,44 @@ const Leaderboard = () => {
         .eq('user_id', user.id)
         .single();
 
-      // Get session participations count for current season
-      const seasonDates = getCurrentSeasonDates();
-      const { data: sessionsData, error } = await supabase
+      // Fetch sessions joined
+      const { count: sessionsJoinedCount } = await supabase
         .from('session_participants')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .gte('joined_at', seasonDates.start.toISOString())
         .lte('joined_at', seasonDates.end.toISOString());
 
+      // Fetch sessions created
+      const { count: sessionsCreatedCount } = await supabase
+        .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('organizer_id', user.id)
+        .gte('created_at', seasonDates.start.toISOString())
+        .lte('created_at', seasonDates.end.toISOString());
+
       // Get badges count
-      const { data: badgesData } = await supabase
+      const { count: badgesCount } = await supabase
         .from('user_badges')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .gte('unlocked_at', seasonDates.start.toISOString())
+        .lte('unlocked_at', seasonDates.end.toISOString());
+
+      // Fetch friends referred
+      const { count: referralsCount } = await supabase
+        .from('referrals')
+        .select('id', { count: 'exact', head: true })
+        .eq('referrer_id', user.id)
+        .gte('created_at', seasonDates.start.toISOString())
+        .lte('created_at', seasonDates.end.toISOString());
 
       setSeasonStats({
-        totalActivities: sessionsData ? 0 : 0, // Count is in the response metadata
+        sessionsJoined: sessionsJoinedCount || 0,
+        sessionsCreated: sessionsCreatedCount || 0,
         totalPoints: scoresData?.seasonal_points || 0,
-        badgesWon: badgesData ? 0 : 0
+        badgesWon: badgesCount || 0,
+        friendsReferred: referralsCount || 0,
       });
 
       setUserPoints(scoresData?.seasonal_points || 0);
@@ -524,9 +545,11 @@ const Leaderboard = () => {
         {/* Statistiques de la saison */}
         {seasonStats && (
           <SeasonStatsCard
-            totalActivities={seasonStats.totalActivities}
+            sessionsJoined={seasonStats.sessionsJoined}
+            sessionsCreated={seasonStats.sessionsCreated}
             totalPoints={seasonStats.totalPoints}
             badgesWon={seasonStats.badgesWon}
+            friendsReferred={seasonStats.friendsReferred}
           />
         )}
 
