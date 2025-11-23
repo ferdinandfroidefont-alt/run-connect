@@ -700,12 +700,6 @@ const Leaderboard = () => {
         <BadgesToUnlockCard />
       </div>
 
-      {/* Bouton scroll vers mon rang */}
-      <ScrollToMyRankButton
-        visible={!isMyRankVisible()}
-        onClick={scrollToMyRank}
-      />
-
       {/* Dialog de prévisualisation */}
       {showProfilePreview && selectedUserId && (
         <ProfilePreviewDialog
