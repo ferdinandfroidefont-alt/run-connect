@@ -460,12 +460,21 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
 
                   {/* Share Profile */}
                   <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
-                       onClick={() => {
+                       onClick={async () => {
                          if (profile) {
+                           // Récupérer referral_code et avatar_url
+                           const { data: profileData } = await supabase
+                             .from('profiles')
+                             .select('referral_code, avatar_url')
+                             .eq('user_id', user?.id)
+                             .single();
+                           
                            shareProfile({
                              username: profile.username,
                              displayName: profile.display_name,
-                             bio: profile.bio
+                             bio: profile.bio,
+                             avatarUrl: profileData?.avatar_url || profile.avatar_url,
+                             referralCode: profileData?.referral_code
                            });
                          }
                        }}>
@@ -473,7 +482,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                       <Share2 className="h-5 w-5 text-muted-foreground" />
                       <div className="flex-1">
                         <label className="text-sm font-medium">Partager mon profil</label>
-                        <p className="text-xs text-muted-foreground">Partagez sur Instagram, WhatsApp...</p>
+                        <p className="text-xs text-muted-foreground">QR code, Story Instagram, code parrainage...</p>
                       </div>
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
