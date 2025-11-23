@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
-import { FilterBar, FilterType } from "@/components/leaderboard/FilterBar";
+import { FilterBar, FilterType, ActivityType } from "@/components/leaderboard/FilterBar";
 import { MyRankCard } from "@/components/leaderboard/MyRankCard";
 import { SeasonStatsCard } from "@/components/leaderboard/SeasonStatsCard";
 import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
@@ -32,6 +32,11 @@ interface LeaderboardUser {
   user_rank: string;
 }
 
+interface Club {
+  id: string;
+  name: string;
+}
+
 const Leaderboard = () => {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
@@ -42,7 +47,8 @@ const Leaderboard = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [hasMoreUsers, setHasMoreUsers] = useState(true);
   const [seasonStats, setSeasonStats] = useState<any>(null);
-  const [userClubId, setUserClubId] = useState<string | null>(null);
+  const [userClubs, setUserClubs] = useState<Club[]>([]);
+  const [selectedClubs, setSelectedClubs] = useState<string[]>([]);
   const [userPoints, setUserPoints] = useState(0);
   const myRankRef = useRef<HTMLDivElement>(null);
   
@@ -55,9 +61,9 @@ const Leaderboard = () => {
       setCurrentPage(1);
       fetchLeaderboard();
       fetchSeasonStats();
-      checkUserClub();
+      fetchUserClubs();
     }
-  }, [user, activeFilter]);
+  }, [user, activeFilter, selectedClubs]);
 
   useEffect(() => {
     if (user && currentPage > 1) {
@@ -65,18 +71,28 @@ const Leaderboard = () => {
     }
   }, [currentPage]);
 
-  const checkUserClub = async () => {
+  const fetchUserClubs = async () => {
     if (!user) return;
     
-    const { data } = await supabase
+    const { data: membershipData } = await supabase
       .from('group_members')
       .select('conversation_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
+      .eq('user_id', user.id);
     
-    if (data) {
-      setUserClubId(data.conversation_id);
+    if (!membershipData || membershipData.length === 0) {
+      setUserClubs([]);
+      return;
+    }
+    
+    const clubIds = membershipData.map(m => m.conversation_id);
+    const { data: clubsData } = await supabase
+      .from('conversations')
+      .select('id, group_name')
+      .in('id', clubIds)
+      .eq('is_group', true);
+    
+    if (clubsData) {
+      setUserClubs(clubsData.map(c => ({ id: c.id, name: c.group_name || 'Club sans nom' })));
     }
   };
 
@@ -123,17 +139,123 @@ const Leaderboard = () => {
     try {
       const offset = (currentPage - 1) * USERS_PER_PAGE;
       
-      // Get total count
-      const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
-      setTotalUsers(totalCountData || 0);
+      let finalData: any[] = [];
 
-      let query = supabase.rpc('get_complete_leaderboard', {
-        limit_count: USERS_PER_PAGE,
-        offset_count: offset,
-        order_by_column: activeFilter === 'general' ? 'seasonal_points' : 'total_points'
-      });
+      // Filtrage par activité spécifique
+      const activityTypes: ActivityType[] = ['running', 'cycling', 'walking', 'swimming', 'basketball', 'football', 'petanque', 'tennis'];
+      if (activityTypes.includes(activeFilter as ActivityType)) {
+        // Récupérer les utilisateurs avec leurs points filtrés par activité
+        const { data: activityData, error: activityError } = await supabase
+          .from('session_participants')
+          .select(`
+            user_id,
+            points_awarded,
+            sessions!inner(activity_type)
+          `)
+          .eq('sessions.activity_type', activeFilter)
+          .gte('joined_at', getCurrentSeasonDates().start.toISOString())
+          .lte('joined_at', getCurrentSeasonDates().end.toISOString());
 
-      const { data, error } = await query;
+        if (activityError) throw activityError;
+
+        // Grouper par user_id et sommer les points
+        const userPointsMap = new Map<string, number>();
+        activityData?.forEach(item => {
+          const currentPoints = userPointsMap.get(item.user_id) || 0;
+          userPointsMap.set(item.user_id, currentPoints + (item.points_awarded || 0));
+        });
+
+        // Récupérer les profils des utilisateurs
+        const userIds = Array.from(userPointsMap.keys());
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('user_id, username, display_name, avatar_url, is_premium')
+            .in('user_id', userIds);
+
+          // Combiner les données
+          const combinedData = profilesData?.map(profile => ({
+            user_id: profile.user_id,
+            seasonal_points: userPointsMap.get(profile.user_id) || 0,
+            total_points: userPointsMap.get(profile.user_id) || 0,
+            weekly_points: 0,
+            username: profile.username,
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url,
+            is_premium: profile.is_premium
+          })) || [];
+
+          // Trier par points décroissants
+          combinedData.sort((a, b) => b.seasonal_points - a.seasonal_points);
+          
+          // Pagination
+          finalData = combinedData.slice(offset, offset + USERS_PER_PAGE);
+          setTotalUsers(combinedData.length);
+          setHasMoreUsers(offset + USERS_PER_PAGE < combinedData.length);
+        }
+      }
+      // Filtrage par amis
+      else if (activeFilter === 'friends') {
+        const { data: friendsData } = await supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', user!.id)
+          .eq('status', 'accepted');
+
+        const friendIds = friendsData?.map(f => f.following_id) || [];
+        
+        if (friendIds.length > 0) {
+          const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
+            limit_count: 10000,
+            offset_count: 0,
+            order_by_column: 'seasonal_points'
+          });
+
+          const filteredData = leaderboardData?.filter((u: any) => friendIds.includes(u.user_id)) || [];
+          finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
+          setTotalUsers(filteredData.length);
+          setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
+        }
+      }
+      // Filtrage par clubs
+      else if (activeFilter === 'clubs' && selectedClubs.length > 0) {
+        const { data: membersData } = await supabase
+          .from('group_members')
+          .select('user_id')
+          .in('conversation_id', selectedClubs);
+
+        const memberIds = [...new Set(membersData?.map(m => m.user_id) || [])];
+        
+        if (memberIds.length > 0) {
+          const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
+            limit_count: 10000,
+            offset_count: 0,
+            order_by_column: 'seasonal_points'
+          });
+
+          const filteredData = leaderboardData?.filter((u: any) => memberIds.includes(u.user_id)) || [];
+          finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
+          setTotalUsers(filteredData.length);
+          setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
+        }
+      }
+      // Classement général
+      else {
+        const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
+        setTotalUsers(totalCountData || 0);
+
+        const { data, error } = await supabase.rpc('get_complete_leaderboard', {
+          limit_count: USERS_PER_PAGE,
+          offset_count: offset,
+          order_by_column: 'seasonal_points'
+        });
+
+        if (error) throw error;
+        finalData = data || [];
+        setHasMoreUsers(finalData.length === USERS_PER_PAGE);
+      }
+
+      const { data, error } = { data: finalData, error: null };
       
       if (error) throw error;
 
@@ -382,7 +504,9 @@ const Leaderboard = () => {
         <FilterBar 
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
-          hasClub={!!userClubId}
+          selectedClubs={selectedClubs}
+          onClubsChange={setSelectedClubs}
+          userClubs={userClubs}
         />
 
         {/* Mon rang actuel */}
