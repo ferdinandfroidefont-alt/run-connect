@@ -59,6 +59,14 @@ const Auth = () => {
     
     cleanExpiredSession();
     
+    // Traiter le code de parrainage si présent dans l'URL
+    const referralParams = new URLSearchParams(window.location.search);
+    const refCode = referralParams.get('ref');
+    if (refCode) {
+      sessionStorage.setItem('referralCode', refCode);
+      console.log('🎁 Code de parrainage détecté:', refCode);
+    }
+    
     // Vérifier si c'est une réinitialisation de mot de passe (détection directe du code PKCE)
     const urlParams = new URLSearchParams(window.location.search);
     console.log('🔍 [Password Reset Detection] URL params:', Object.fromEntries(urlParams.entries()));
@@ -268,7 +276,7 @@ const Auth = () => {
     try {
       if (authMode === 'signup') {
         // For signup, use password-based registration
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password: password.trim(),
           options: {
@@ -276,6 +284,23 @@ const Auth = () => {
           },
         });
         if (error) throw error;
+        
+        // Traiter le parrainage si un code est présent
+        const referralCode = sessionStorage.getItem('referralCode');
+        if (referralCode && signUpData.user) {
+          console.log('🎁 Traitement du parrainage:', referralCode);
+          try {
+            const { data: referralData, error: refError } = await supabase.functions.invoke('process-referral-signup', {
+              body: { referralCode, newUserId: signUpData.user.id }
+            });
+            if (!refError) {
+              console.log('✅ Parrainage traité:', referralData);
+              sessionStorage.removeItem('referralCode');
+            }
+          } catch (refError) {
+            console.error('❌ Erreur parrainage:', refError);
+          }
+        }
         
         // Passer à l'étape OTP pour que l'utilisateur puisse saisir le code
         setAuthStep('otp');

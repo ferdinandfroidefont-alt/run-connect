@@ -68,6 +68,77 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_history: {
+        Row: {
+          challenge_id: string
+          completed_at: string | null
+          id: string
+          reward_points: number
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          challenge_id: string
+          completed_at?: string | null
+          id?: string
+          reward_points: number
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          challenge_id?: string
+          completed_at?: string | null
+          id?: string
+          reward_points?: number
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_history_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenges: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          icon: string
+          id: string
+          reward_points: number
+          target_value: number
+          title: string
+          validation_type: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          icon: string
+          id?: string
+          reward_points: number
+          target_value: number
+          title: string
+          validation_type: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          reward_points?: number
+          target_value?: number
+          title?: string
+          validation_type?: string
+        }
+        Relationships: []
+      }
       club_invitations: {
         Row: {
           club_id: string
@@ -519,6 +590,33 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_links: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_shared_at: string | null
+          share_count: number | null
+          unique_code: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_shared_at?: string | null
+          share_count?: number | null
+          unique_code: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_shared_at?: string | null
+          share_count?: number | null
+          unique_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           created_at: string
@@ -867,6 +965,53 @@ export type Database = {
           },
         ]
       }
+      user_challenges: {
+        Row: {
+          challenge_id: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          progress: number | null
+          status: string | null
+          target: number
+          updated_at: string | null
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          challenge_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          target: number
+          updated_at?: string | null
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          challenge_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          target?: number
+          updated_at?: string | null
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_challenges_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_follows: {
         Row: {
           created_at: string
@@ -1023,6 +1168,10 @@ export type Database = {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
       }
+      assign_random_challenge: {
+        Args: { p_category: string; p_user_id: string }
+        Returns: string
+      }
       block_user: { Args: { user_to_block_id: string }; Returns: boolean }
       calculate_and_award_points: {
         Args: { participant_id: string }
@@ -1052,6 +1201,10 @@ export type Database = {
       check_user_exists: { Args: { email_param: string }; Returns: Json }
       cleanup_audit_logs: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
+      complete_challenge: {
+        Args: { p_user_challenge_id: string }
+        Returns: undefined
+      }
       decline_club_invitation: {
         Args: { invitation_id: string }
         Returns: boolean
@@ -1098,6 +1251,7 @@ export type Database = {
           weekly_points: number
         }[]
       }
+      get_current_week_start: { Args: never; Returns: string }
       get_daily_message_count: {
         Args: { user_id_param: string }
         Returns: number
@@ -1233,12 +1387,24 @@ export type Database = {
         }[]
       }
       get_user_rank: { Args: { points: number }; Returns: string }
+      increment_challenge_progress: {
+        Args: {
+          p_increment?: number
+          p_user_id: string
+          p_validation_type: string
+        }
+        Returns: undefined
+      }
       increment_daily_message_count: {
         Args: { user_id_param: string }
         Returns: number
       }
       increment_user_sessions_joined: {
         Args: { user_id_param: string }
+        Returns: undefined
+      }
+      initialize_user_challenges: {
+        Args: { p_user_id: string }
         Returns: undefined
       }
       is_user_blocked: {
