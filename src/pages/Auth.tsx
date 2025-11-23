@@ -59,12 +59,18 @@ const Auth = () => {
     
     cleanExpiredSession();
     
-    // Traiter le code de parrainage si présent dans l'URL
+    // Traiter le code de parrainage si présent dans l'URL (?ref= ou ?r=)
     const referralParams = new URLSearchParams(window.location.search);
-    const refCode = referralParams.get('ref');
+    const refCode = referralParams.get('ref') || referralParams.get('r');
     if (refCode) {
       sessionStorage.setItem('referralCode', refCode);
       console.log('🎁 Code de parrainage détecté:', refCode);
+      
+      toast({
+        title: "🎁 Code de parrainage détecté !",
+        description: "Inscrivez-vous pour bénéficier du bonus",
+        duration: 5000
+      });
     }
     
     // Vérifier si c'est une réinitialisation de mot de passe (détection directe du code PKCE)

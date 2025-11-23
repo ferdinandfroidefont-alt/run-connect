@@ -23,8 +23,13 @@ export const useShareProfile = () => {
   } | null>(null);
 
   const shareProfile = async (options: ShareProfileOptions) => {
-    // Create a profile URL with new RunConnect domain
-    const profileUrl = `https://runconnect.app/u/${options.username}`;
+    // Create a profile URL with new RunConnect domain (corrected to /p/)
+    const baseUrl = `https://runconnect.app/p/${options.username}`;
+    
+    // Add referral code if available
+    const profileUrl = options.referralCode 
+      ? `${baseUrl}?r=${options.referralCode}`
+      : baseUrl;
     
     // Set QR data and show dialog as primary sharing method
     setQrData({

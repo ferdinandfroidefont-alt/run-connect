@@ -13,6 +13,7 @@ import MySessions from "./pages/MySessions";
 import Messages from "./pages/Messages";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
+import PublicProfile from "./pages/PublicProfile";
 import Subscription from "./pages/Subscription";
 import DonationSuccess from "./pages/DonationSuccess";
 import DonationCanceled from "./pages/DonationCanceled";
@@ -53,8 +54,10 @@ const App = () => {
                 <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
                 <Route path="/android-test" element={<Layout><AndroidTestPage /></Layout>} />
                 <Route path="/donation-success" element={<DonationSuccess />} />
-                <Route path="/donation-canceled" element={<DonationCanceled />} />
-                <Route path="*" element={<NotFound />} />
+            <Route path="/donation-canceled" element={<DonationCanceled />} />
+            {/* Route profil public (AVANT *) */}
+            <Route path="/p/:username" element={<PublicProfile />} />
+            <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
