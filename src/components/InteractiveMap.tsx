@@ -31,8 +31,9 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
-import { HelpDialog } from './HelpDialog';
 import { CheckCircle } from 'lucide-react';
+import { useShareProfile } from '@/hooks/useShareProfile';
+import { QRShareDialog } from './QRShareDialog';
 
 // Declare global google maps types
 declare global {
@@ -189,8 +190,10 @@ export const InteractiveMap = ({
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
+  
+  // Share profile hook
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   
@@ -1373,9 +1376,26 @@ export const InteractiveMap = ({
               <NotificationCenter onSessionUpdated={loadSessions} />
               <div 
                 className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
-                onClick={() => setShowHelpDialog(true)}
+                onClick={async () => {
+                  if (userProfile) {
+                    // Récupérer referral_code
+                    const { data: profileData } = await supabase
+                      .from('profiles')
+                      .select('referral_code')
+                      .eq('user_id', user?.id)
+                      .single();
+                    
+                    shareProfile({
+                      username: userProfile.username,
+                      displayName: userProfile.display_name,
+                      bio: null,
+                      avatarUrl: userProfile.avatar_url,
+                      referralCode: profileData?.referral_code
+                    });
+                  }
+                }}
               >
-                ❓
+                🔗
               </div>
               <div 
                 className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
@@ -1644,11 +1664,18 @@ export const InteractiveMap = ({
         userLocation={userLocation}
       />
 
-      {/* Help Dialog */}
-      <HelpDialog
-        isOpen={showHelpDialog}
-        onClose={() => setShowHelpDialog(false)}
-      />
+      {/* QR Share Dialog */}
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
+        />
+      )}
 
       {/* Route Dialog */}
       <RouteDialog
