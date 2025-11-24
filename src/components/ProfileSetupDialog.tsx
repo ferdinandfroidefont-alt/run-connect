@@ -67,13 +67,47 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageSrc = e.target?.result as string;
-      setOriginalImageSrc(imageSrc);
-      setShowCropEditor(true);
-    };
-    reader.readAsDataURL(file);
+    // Try/catch sur FileReader pour éviter les crashs
+    try {
+      const reader = new FileReader();
+      
+      reader.onerror = (error) => {
+        console.error('❌ FileReader error:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de lire le fichier image.",
+          variant: "destructive",
+        });
+      };
+      
+      reader.onload = (e) => {
+        try {
+          const imageSrc = e.target?.result as string;
+          if (!imageSrc) {
+            throw new Error('Image source vide');
+          }
+          setOriginalImageSrc(imageSrc);
+          setShowCropEditor(true);
+          console.log('✅ Image chargée avec succès');
+        } catch (loadError) {
+          console.error('❌ Erreur traitement image:', loadError);
+          toast({
+            title: "Erreur",
+            description: "Impossible de traiter l'image.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (readerError) {
+      console.error('❌ FileReader creation error:', readerError);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'initialiser le lecteur de fichier.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCropComplete = (croppedImageBlob: Blob) => {
@@ -372,19 +406,42 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={async () => {
+                onClick={async (e) => {
+                  // preventDefault explicite pour éviter comportements par défaut
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
                   console.log('📱 Camera button clicked, using Capacitor');
                   try {
                     const file = await selectFromGallery();
-                    if (file) {
-                      console.log('📸 File selected via Capacitor:', file.name);
-                      handleFileSelection(file);
+                    
+                    if (!file) {
+                      console.warn('⚠️ Aucun fichier sélectionné (annulation ou erreur)');
+                      toast({
+                        title: "Annulé",
+                        description: "Aucune photo sélectionnée",
+                      });
+                      return;
                     }
-                  } catch (error) {
-                    console.error('❌ Error selecting from gallery:', error);
+                    
+                    console.log('📸 File selected via Capacitor:', {
+                      name: file.name,
+                      size: file.size,
+                      type: file.type
+                    });
+                    
+                    handleFileSelection(file);
+                  } catch (error: any) {
+                    console.error('❌ Error selecting from gallery:', {
+                      error,
+                      message: error?.message,
+                      stack: error?.stack,
+                      name: error?.name
+                    });
+                    
                     toast({
                       title: "Erreur",
-                      description: "Impossible d'accéder à la galerie",
+                      description: error?.message || "Impossible d'accéder à la galerie",
                       variant: "destructive"
                     });
                   }
@@ -392,8 +449,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 className="text-xs"
                 disabled={cameraLoading}
               >
-                      <Camera className="h-3 w-3 mr-1" />
-                      Choisir une photo
+                <Camera className="h-3 w-3 mr-1" />
+                {cameraLoading ? 'Chargement...' : 'Choisir une photo'}
               </Button>
               
               {/* Bouton alternatif pour iOS/téléphones problématiques */}
