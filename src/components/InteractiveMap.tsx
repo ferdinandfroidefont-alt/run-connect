@@ -21,7 +21,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -1395,7 +1395,7 @@ export const InteractiveMap = ({
                   }
                 }}
               >
-                🔗
+                <Share2 className="h-5 w-5 text-red-500" />
               </div>
               <div 
                 className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
