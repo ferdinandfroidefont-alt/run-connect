@@ -154,9 +154,21 @@ export const useCamera = () => {
     console.log('🖼️ DÉBUT SÉLECTION GALERIE...');
     
     try {
-      // Détecter si on est dans une WebView native Android
-      const isAndroidWebView = /Android.*WebView/.test(navigator.userAgent) || 
-                               (window as any).AndroidBridge !== undefined;
+      // Détecter si on est dans une WebView native Android (détection améliorée)
+      const isAndroidWebView = 
+        /Android.*WebView/.test(navigator.userAgent) || 
+        /wv/.test(navigator.userAgent) ||
+        (window as any).AndroidBridge !== undefined ||
+        (window as any).webkit !== undefined ||
+        document.URL.startsWith('file://');
+
+      console.log('🔍 Détection WebView:', {
+        userAgent: navigator.userAgent,
+        isWebView: isAndroidWebView,
+        hasAndroidBridge: !!(window as any).AndroidBridge,
+        hasWebkit: !!(window as any).webkit,
+        documentURL: document.URL
+      });
       
       if (isAndroidWebView) {
         console.log('📱 Mode WebView native Android détecté');
@@ -207,13 +219,16 @@ export const useCamera = () => {
     } catch (error: any) {
       console.error('🖼️❌ ERREUR:', error);
       
-      // Lancer une erreur avec message explicite
+      // Ne plus lancer d'erreur, retourner null à la place pour éviter les crashs
       if (error.name === 'NotAllowedError' || error.message?.includes('permission')) {
-        throw new Error('PERMISSION_DENIED');
+        console.error('❌ Permission refusée');
+        return null;
       } else if (error.message?.includes('timeout')) {
-        throw new Error('TIMEOUT');
+        console.error('❌ Timeout');
+        return null;
       } else {
-        throw new Error('UNKNOWN_ERROR');
+        console.error('❌ Erreur inconnue');
+        return null;
       }
     } finally {
       setLoading(false);
@@ -305,19 +320,33 @@ export const useCamera = () => {
   // Stratégie web
   const selectFromGalleryWeb = async (): Promise<File | null> => {
     return new Promise((resolve) => {
+      console.log('🌐 Ouverture input file web...');
+      
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
       
+      // Timeout réduit à 60 secondes
       const timeoutId = setTimeout(() => {
+        console.warn('⏱️ Timeout sélection galerie (60s)');
         resolve(null);
-      }, 90000); // 90 secondes
+      }, 60000); // 60 secondes au lieu de 90
       
       input.onchange = (event) => {
         clearTimeout(timeoutId);
         const file = (event.target as HTMLInputElement).files?.[0];
-        console.log('✅ Fichier web sélectionné:', file?.name);
-        resolve(file || null);
+        
+        if (file) {
+          console.log('✅ Fichier web sélectionné:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
+          resolve(file);
+        } else {
+          console.warn('⚠️ Aucun fichier dans input');
+          resolve(null);
+        }
       };
       
       input.oncancel = () => {
@@ -326,24 +355,54 @@ export const useCamera = () => {
         resolve(null);
       };
       
-      input.click();
+      // Gestion d'erreur sur le click
+      input.onerror = (error) => {
+        clearTimeout(timeoutId);
+        console.error('❌ Erreur input file:', error);
+        resolve(null);
+      };
+      
+      try {
+        input.click();
+        console.log('✅ Input file cliqué');
+      } catch (clickError) {
+        clearTimeout(timeoutId);
+        console.error('❌ Erreur click input:', clickError);
+        resolve(null);
+      }
     });
   };
 
   // Convertir URI Android en File
   const convertUriToFile = async (uri: string, fileName: string): Promise<File | null> => {
     try {
-      // Pour les URIs content:// d'Android, on ne peut pas les convertir directement
-      // On retourne un objet File factice avec l'URI
+      console.log('🔄 Conversion URI vers File:', uri);
+      
+      // Pour les URIs content:// d'Android
       const response = await fetch(uri);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
       const blob = await response.blob();
-      return new File([blob], fileName, { type: 'image/jpeg' });
-    } catch (error) {
-      console.log('❌ Erreur conversion URI:', error);
-      // Retourner un File factice avec l'URI comme nom
-      const blob = new Blob([''], { type: 'image/jpeg' });
-      const file = new File([blob], uri, { type: 'image/jpeg' });
+      
+      // Vérifier que le blob n'est pas vide
+      if (blob.size === 0) {
+        throw new Error('Blob vide');
+      }
+      
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
+      console.log('✅ URI converti:', {
+        name: file.name,
+        size: file.size
+      });
+      
       return file;
+    } catch (error) {
+      console.error('❌ Erreur conversion URI:', error);
+      // Ne plus retourner de File factice vide, retourner null
+      return null;
     }
   };
 
