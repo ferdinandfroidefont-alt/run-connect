@@ -12,6 +12,8 @@ import { SettingsDialog } from "./SettingsDialog";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2, Flag, MoreVertical } from "lucide-react";
+import { ProfileStatCard } from "@/components/ProfileStatCard";
+import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
