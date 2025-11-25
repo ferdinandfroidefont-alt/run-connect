@@ -12,8 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { User, Crown, Camera, ArrowLeft, Calendar, Heart } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { ProfileStatCard } from "@/components/ProfileStatCard";
-import { ActivityHeatmap } from "@/components/ActivityHeatmap";
+import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
+import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -462,33 +462,14 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                 </CardContent>
               </Card>
 
-              {/* Statistiques principales - Mini cards (3 par ligne) */}
-              <div>
-                <h3 className="text-sm font-semibold mb-3 px-1">Statistiques</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  <ProfileStatCard 
-                    icon={Calendar}
-                    label="Séances créées"
-                    value={totalSessionsCreated}
-                  />
-                  <ProfileStatCard 
-                    icon={User}
-                    label="Séances rejointes"
-                    value={totalSessionsJoined}
-                  />
-                  <ProfileStatCard 
-                    icon={Heart}
-                    label="Fiabilité"
-                    value={`${Math.round(reliabilityRate)}%`}
-                    gradient
-                  />
-                </div>
-              </div>
+              {/* Mon Classement */}
+              {user?.id && <ProfileRankCard userId={user.id} />}
 
-              {/* Heatmap d'activité */}
-              {user?.id && (
-                <ActivityHeatmap userId={user.id} />
-              )}
+              {/* Badges gagnés */}
+              {user?.id && <EarnedBadgesSection userId={user.id} />}
+
+              {/* Activité récente */}
+              {user?.id && <UserActivityChart userId={user.id} username={profile?.username} />}
 
               {/* Bio dans une card simple */}
               {profile?.bio && (
