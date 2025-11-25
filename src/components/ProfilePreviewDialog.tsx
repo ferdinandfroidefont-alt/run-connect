@@ -12,8 +12,9 @@ import { SettingsDialog } from "./SettingsDialog";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus, UserMinus, Crown, Heart, MapPin, Calendar, Loader2, Flag, MoreVertical } from "lucide-react";
-import { ProfileStatCard } from "@/components/ProfileStatCard";
-import { ActivityHeatmap } from "@/components/ActivityHeatmap";
+import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
+import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
+import { UserActivityChart } from "@/components/UserActivityChart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -692,6 +693,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 </CardContent>
               </Card>
             )}
+
+            {/* Classement */}
+            <ProfileRankCard userId={userId} />
+
+            {/* Badges gagnés */}
+            <EarnedBadgesSection userId={userId} />
+
+            {/* Activité récente */}
+            <UserActivityChart userId={userId} username={profile.username} />
 
             {/* Age - Only show for own profile */}
             {profile.age && isOwnProfile && (
