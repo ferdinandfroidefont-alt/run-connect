@@ -10,8 +10,10 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { ProfileStatCard } from "@/components/ProfileStatCard";
+import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -344,313 +346,264 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
           </DialogHeader>
           
           <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
-            <div className="space-y-4 pb-4 min-h-full">
-              {/* Avatar Section */}
-              <Card>
-                <CardContent className="flex flex-col items-center py-6">
-                  <div className="relative mb-4">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-                      <AvatarFallback className="text-lg">
+            <div className="space-y-6 pb-4 min-h-full">
+              {/* Header modernisé - Avatar détaché */}
+              <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20 backdrop-blur-sm">
+                <CardContent className="flex flex-col items-center py-8 relative">
+                  {/* Avatar détaché avec bordure lumineuse */}
+                  <div className="relative mb-4 group">
+                    <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl group-hover:bg-primary/50 transition-all duration-300" />
+                    <Avatar className="h-28 w-28 relative border-4 border-primary shadow-2xl shadow-primary/50">
+                      <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
+                      <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-primary/50">
                         {profile?.display_name?.[0]?.toUpperCase() || 
                          profile?.username?.[0]?.toUpperCase() || 
                          user?.email?.[0]?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
-                     {isEditing && (
-                       <button 
-                         type="button"
-                         onClick={async () => {
-                           try {
-                             const file = await selectFromGallery();
-                             if (file) {
-                               handleAvatarChange({ target: { files: [file] } } as any);
-                             }
-                           } catch (error) {
-                             console.error('Error selecting from gallery:', error);
-                             toast({
-                               title: "Erreur",
-                               description: "Impossible d'accéder à la galerie",
-                               variant: "destructive"
-                             });
-                           }
-                         }}
-                         disabled={cameraLoading}
-                         className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 disabled:opacity-50"
-                       >
-                         <Camera className="h-4 w-4" />
-                       </button>
-                     )}
-                  </div>
-                  {isEditing && (
-                    <>
-                      <input
-                        id="avatar-upload"
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleAvatarChange}
-                        className="hidden"
-                      />
-                      <p className="text-xs text-muted-foreground text-center">
-                        Cliquez sur l'icône pour changer votre photo
-                      </p>
-                    </>
-                  )}
-                  <div className="flex items-center gap-2 mb-2">
-                    <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
-                    {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                      <Crown className="h-5 w-5 text-yellow-500" />
+                    {isEditing && (
+                      <button 
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const file = await selectFromGallery();
+                            if (file) {
+                              handleAvatarChange({ target: { files: [file] } } as any);
+                            }
+                          } catch (error) {
+                            console.error('Error selecting from gallery:', error);
+                            toast({
+                              title: "Erreur",
+                              description: "Impossible d'accéder à la galerie",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                        disabled={cameraLoading}
+                        className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2.5 cursor-pointer hover:bg-primary/90 disabled:opacity-50 shadow-lg"
+                      >
+                        <Camera className="h-5 w-5" />
+                      </button>
                     )}
                   </div>
 
+                  {/* Pseudo + Couronne fine */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-2xl font-bold">{profile?.username || profile?.display_name}</h2>
+                    {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                      <Crown className="h-5 w-5 text-yellow-400 drop-shadow-lg" />
+                    )}
+                  </div>
+
+                  {/* Badges compacts sur une ligne */}
                   <div className="flex gap-2 items-center mb-4 flex-wrap justify-center">
                     {profile?.is_admin && (
-                      <Badge className="bg-red-100 text-red-800 border-red-200">
+                      <Badge variant="destructive" className="text-xs px-2 py-0.5">
                         Admin
                       </Badge>
                     )}
-                    {(profile?.is_premium || subscriptionInfo?.subscribed) && !profile?.is_admin && (
-                      <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-                        {subscriptionInfo?.subscription_tier || 'Premium'}
-                      </Badge>
-                    )}
-                    {!subscriptionInfo?.subscribed && (
-                      <Button 
-                        onClick={() => {
-                          navigate('/subscription');
-                          onOpenChange(false);
-                        }}
-                        variant="outline" 
-                        size="sm"
-                        className="gap-2"
-                      >
-                        <Crown className="h-4 w-4" />
-                        Devenir Premium
-                      </Button>
-                    )}
+                    {(() => {
+                      const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
+                      const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
+                      
+                      return (
+                        <>
+                          {isStravaVerified && (
+                            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs px-2 py-0.5 hover:bg-orange-500/30 cursor-pointer">
+                              🏃 Strava
+                            </Badge>
+                          )}
+                          {isInstagramVerified && (
+                            <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-xs px-2 py-0.5 hover:bg-pink-500/30 cursor-pointer">
+                              📷 Instagram
+                            </Badge>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
-                  {/* Badge de vérification */}
-                  {(() => {
-                    console.log('ProfileDialog - Profile state:', {
-                      strava_connected: profile?.strava_connected,
-                      strava_verified_at: profile?.strava_verified_at,
-                      instagram_connected: profile?.instagram_connected,
-                      instagram_verified_at: profile?.instagram_verified_at
-                    });
-                    
-                    const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
-                    const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
-                    
-                    console.log('ProfileDialog - Verification status:', {
-                      isStravaVerified,
-                      isInstagramVerified
-                    });
-                    
-                    if (isStravaVerified && isInstagramVerified) {
-                      console.log('ProfileDialog - Showing both verified badges');
-                      return (
-                        <div className="mb-4 space-y-1">
-                          <button
-                            onClick={() => window.open(`https://www.strava.com/athletes/${profile?.strava_user_id}`, '_blank')}
-                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors mr-2"
-                          >
-                            <span className="text-orange-600">🏃</span>
-                            ✓ Strava
-                          </button>
-                          <button
-                            onClick={() => window.open(`https://www.instagram.com/${profile?.instagram_username}`, '_blank')}
-                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
-                          >
-                            <span className="text-pink-600">📷</span>
-                            ✓ Instagram
-                          </button>
-                        </div>
-                      );
-                    } else if (isStravaVerified) {
-                      console.log('ProfileDialog - Showing Strava verified badge');
-                      return (
-                        <div className="mb-4">
-                          <button
-                            onClick={() => window.open(`https://www.strava.com/athletes/${profile?.strava_user_id}`, '_blank')}
-                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                          >
-                            <span className="text-orange-600">🏃</span>
-                            ✓ Utilisateur vérifié Strava
-                          </button>
-                        </div>
-                      );
-                    } else if (isInstagramVerified) {
-                      console.log('ProfileDialog - Showing Instagram verified badge');
-                      return (
-                        <div className="mb-4">
-                          <button
-                            onClick={() => window.open(`https://www.instagram.com/${profile?.instagram_username}`, '_blank')}
-                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
-                          >
-                            <span className="text-pink-600">📷</span>
-                            ✓ Utilisateur vérifié Instagram
-                          </button>
-                        </div>
-                      );
-                    } else {
-                      console.log('ProfileDialog - Showing non-verified badge');
-                      return (
-                        <div className="mb-4">
-                          <button
-                            onClick={() => {
-                              console.log('ProfileDialog - Non-verified badge clicked, opening settings');
-                              setShowSettingsDialog(true);
-                            }}
-                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                          >
-                            <span className="text-gray-500">⚠️</span>
-                            Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)
-                          </button>
-                        </div>
-                      );
-                    }
-                  })()}
-
-                  <div className="flex gap-4 mt-2">
+                  {/* Pastilles followers/following/fiabilité sur une ligne */}
+                  <div className="flex gap-6 items-center">
                     <button
                       onClick={() => {
                         setFollowDialogType('followers');
                         setShowFollowDialog(true);
                       }}
-                      className="text-center hover:text-primary transition-colors"
+                      className="flex flex-col items-center hover:scale-105 transition-transform"
                     >
-                      <p className="font-bold text-lg">{followerCount}</p>
-                      <p className="text-sm text-muted-foreground">Abonnés</p>
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-1 border border-primary/30">
+                        <p className="font-bold text-sm">{followerCount}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Abonnés</p>
                     </button>
                     <button
                       onClick={() => {
                         setFollowDialogType('following');
                         setShowFollowDialog(true);
                       }}
-                      className="text-center hover:text-primary transition-colors"
+                      className="flex flex-col items-center hover:scale-105 transition-transform"
                     >
-                      <p className="font-bold text-lg">{followingCount}</p>
-                      <p className="text-sm text-muted-foreground">Abonnements</p>
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-1 border border-primary/30">
+                        <p className="font-bold text-sm">{followingCount}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Abonnements</p>
                     </button>
-                  </div>
-
-                  {/* Reliability Badge */}
-                  <div className="w-full mt-4 px-4">
-                    <ReliabilityBadge 
-                      rate={reliabilityRate}
+                    <button
                       onClick={() => setShowReliabilityDialog(true)}
-                    />
+                      className="flex flex-col items-center hover:scale-105 transition-transform"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-1 border border-primary/30">
+                        <p className="font-bold text-sm">{Math.round(reliabilityRate)}%</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Fiabilité</p>
+                    </button>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Activity Chart */}
+              {/* Statistiques principales - Mini cards (3 par ligne) */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 px-1">Statistiques</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <ProfileStatCard 
+                    icon={Calendar}
+                    label="Séances créées"
+                    value={totalSessionsCreated}
+                  />
+                  <ProfileStatCard 
+                    icon={User}
+                    label="Séances rejointes"
+                    value={totalSessionsJoined}
+                  />
+                  <ProfileStatCard 
+                    icon={Heart}
+                    label="Fiabilité"
+                    value={`${Math.round(reliabilityRate)}%`}
+                    gradient
+                  />
+                </div>
+              </div>
+
+              {/* Heatmap d'activité */}
               {user?.id && (
-                <UserActivityChart 
-                  userId={user.id} 
-                  username={profile?.username}
-                />
+                <ActivityHeatmap userId={user.id} />
               )}
 
-              {/* Informations personnelles */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center">
-                    <User className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-lg">Informations</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {isEditing ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium">Pseudo</label>
-                        <Input
-                          value={formData.username || ''}
-                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Nom d'affichage</label>
-                        <Input
-                          value={formData.display_name || ''}
-                          onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Âge</label>
-                        <Input
-                          type="number"
-                          value={formData.age || ''}
-                          onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Téléphone</label>
-                        <Input
-                          value={formData.phone || ''}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="06 12 34 56 78"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Bio</label>
-                        <Input
-                          value={formData.bio || ''}
-                          onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                          placeholder="Décrivez vos records, vos objectifs..."
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={updateProfile} disabled={loading}>
-                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Sauvegarder
-                        </Button>
-                        <Button variant="outline" onClick={() => setIsEditing(false)}>
-                          Annuler
-                        </Button>
-                      </div>
+              {/* Bio dans une card simple */}
+              {profile?.bio && (
+                <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Informations personnelles - Section editing */}
+              {isEditing ? (
+                <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Modifier mes informations</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Pseudo</label>
+                      <Input
+                        value={formData.username || ''}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      />
                     </div>
-                  ) : (
-                    <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Nom d'affichage</label>
+                      <Input
+                        value={formData.display_name || ''}
+                        onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Âge</label>
+                      <Input
+                        type="number"
+                        value={formData.age || ''}
+                        onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Téléphone</label>
+                      <Input
+                        value={formData.phone || ''}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="06 12 34 56 78"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Bio</label>
+                      <Input
+                        value={formData.bio || ''}
+                        onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                        placeholder="Décrivez vos records, vos objectifs..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={updateProfile} disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sauvegarder
+                      </Button>
+                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                        Annuler
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Informations personnelles
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-sm text-muted-foreground">Pseudo</p>
+                        <p className="text-muted-foreground mb-1">Pseudo</p>
                         <p className="font-medium">{profile?.username}</p>
                       </div>
                       {profile?.display_name && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Nom d'affichage</p>
+                          <p className="text-muted-foreground mb-1">Nom</p>
                           <p className="font-medium">{profile.display_name}</p>
                         </div>
                       )}
                       {profile?.age && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Âge</p>
+                          <p className="text-muted-foreground mb-1">Âge</p>
                           <p className="font-medium">{profile.age} ans</p>
                         </div>
                       )}
                       {profile?.phone && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Téléphone</p>
+                          <p className="text-muted-foreground mb-1">Téléphone</p>
                           <p className="font-medium">{profile.phone}</p>
                         </div>
                       )}
-                      {profile?.bio && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Bio</p>
-                          <p className="font-medium">{profile.bio}</p>
-                        </div>
-                      )}
-                      <Button onClick={() => setIsEditing(true)} className="w-full">
-                        <User className="h-4 w-4 mr-2" />
-                        Modifier le profil
-                      </Button>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                    <Button onClick={() => setIsEditing(true)} className="w-full mt-4" variant="outline">
+                      <User className="h-4 w-4 mr-2" />
+                      Modifier le profil
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Bouton Paramètres */}
+              <Button 
+                onClick={() => setShowSettingsDialog(true)} 
+                variant="outline"
+                className="w-full"
+              >
+                Paramètres
+              </Button>
             </div>
           </ScrollArea>
         </DialogContent>
