@@ -347,15 +347,15 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
           
           <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
             <div className="space-y-6 pb-4 min-h-full">
-              {/* Header modernisé - Avatar détaché */}
-              <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20 backdrop-blur-sm">
-                <CardContent className="flex flex-col items-center py-8 relative">
-                  {/* Avatar détaché avec bordure lumineuse */}
-                  <div className="relative mb-4 group">
-                    <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl group-hover:bg-primary/50 transition-all duration-300" />
-                    <Avatar className="h-28 w-28 relative border-4 border-primary shadow-2xl shadow-primary/50">
+              {/* Header Full-Width avec fond bleu dégradé */}
+              <div className="relative -mx-6 mb-6">
+                <div className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 px-6 pt-12 pb-6">
+                  {/* Avatar centré avec glow enhanced */}
+                  <div className="relative mb-4 flex justify-center group">
+                    <div className="absolute inset-0 bg-white/30 rounded-full blur-2xl scale-110 group-hover:scale-125 transition-all duration-300" />
+                    <Avatar className="h-36 w-36 relative border-4 border-white/20 shadow-2xl cursor-pointer hover:scale-105 transition-transform">
                       <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                      <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-primary/50">
+                      <AvatarFallback className="text-4xl bg-white/10 text-white">
                         {profile?.display_name?.[0]?.toUpperCase() || 
                          profile?.username?.[0]?.toUpperCase() || 
                          user?.email?.[0]?.toUpperCase() || "U"}
@@ -380,87 +380,93 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                           }
                         }}
                         disabled={cameraLoading}
-                        className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2.5 cursor-pointer hover:bg-primary/90 disabled:opacity-50 shadow-lg"
+                        className="absolute bottom-2 right-2 bg-white text-primary rounded-full p-3 cursor-pointer hover:bg-white/90 disabled:opacity-50 shadow-lg"
                       >
                         <Camera className="h-5 w-5" />
                       </button>
                     )}
                   </div>
 
-                  {/* Pseudo + Couronne fine */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <h2 className="text-2xl font-bold">{profile?.username || profile?.display_name}</h2>
+                  {/* Pseudo + Couronne */}
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <h2 className="text-2xl font-bold text-white">@{profile?.username}</h2>
                     {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                      <Crown className="h-5 w-5 text-yellow-400 drop-shadow-lg" />
+                      <span className="text-2xl">👑</span>
                     )}
                   </div>
 
-                  {/* Badges compacts sur une ligne */}
-                  <div className="flex gap-2 items-center mb-4 flex-wrap justify-center">
+                  {/* Badges services connectés */}
+                  <div className="flex gap-2 mb-3 justify-center">
                     {profile?.is_admin && (
-                      <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full font-semibold">
                         Admin
-                      </Badge>
+                      </span>
                     )}
-                    {(() => {
-                      const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
-                      const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
-                      
-                      return (
-                        <>
-                          {isStravaVerified && (
-                            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs px-2 py-0.5 hover:bg-orange-500/30 cursor-pointer">
-                              🏃 Strava
-                            </Badge>
-                          )}
-                          {isInstagramVerified && (
-                            <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-xs px-2 py-0.5 hover:bg-pink-500/30 cursor-pointer">
-                              📷 Instagram
-                            </Badge>
-                          )}
-                        </>
-                      );
-                    })()}
+                    {profile?.strava_connected && profile?.strava_verified_at && (
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full flex items-center gap-1">
+                        🏃 Strava
+                      </span>
+                    )}
+                    {profile?.instagram_connected && profile?.instagram_verified_at && (
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full flex items-center gap-1">
+                        📷 Instagram
+                      </span>
+                    )}
                   </div>
 
-                  {/* Pastilles followers/following/fiabilité sur une ligne */}
-                  <div className="flex gap-6 items-center">
-                    <button
-                      onClick={() => {
-                        setFollowDialogType('followers');
-                        setShowFollowDialog(true);
-                      }}
-                      className="flex flex-col items-center hover:scale-105 transition-transform"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-1 border border-primary/30">
-                        <p className="font-bold text-sm">{followerCount}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Abonnés</p>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setFollowDialogType('following');
-                        setShowFollowDialog(true);
-                      }}
-                      className="flex flex-col items-center hover:scale-105 transition-transform"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-1 border border-primary/30">
-                        <p className="font-bold text-sm">{followingCount}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Abonnements</p>
-                    </button>
+                  {/* Bio */}
+                  {profile?.bio && (
+                    <p className="text-center text-white/90 text-sm max-w-md mx-auto mb-4 line-clamp-2">
+                      {profile.bio}
+                    </p>
+                  )}
+
+                  {/* Badge fiabilité */}
+                  <div className="flex justify-center">
                     <button
                       onClick={() => setShowReliabilityDialog(true)}
-                      className="flex flex-col items-center hover:scale-105 transition-transform"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-colors text-white text-sm font-medium"
                     >
-                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-1 border border-primary/30">
-                        <p className="font-bold text-sm">{Math.round(reliabilityRate)}%</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Fiabilité</p>
+                      <span className="text-lg">✓</span>
+                      <span>{Math.round(reliabilityRate)}% • Très fiable</span>
                     </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+
+              {/* Mini Stats - 3 blocs alignés */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <button
+                  onClick={() => {
+                    setFollowDialogType('followers');
+                    setShowFollowDialog(true);
+                  }}
+                  className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl hover:bg-accent/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">👥</div>
+                  <div className="text-xl font-bold">{followerCount}</div>
+                  <div className="text-xs text-muted-foreground">Abonnés</div>
+                </button>
+                <button
+                  onClick={() => {
+                    setFollowDialogType('following');
+                    setShowFollowDialog(true);
+                  }}
+                  className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl hover:bg-accent/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">➕</div>
+                  <div className="text-xl font-bold">{followingCount}</div>
+                  <div className="text-xs text-muted-foreground">Abonnements</div>
+                </button>
+                <button
+                  onClick={() => setShowReliabilityDialog(true)}
+                  className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl hover:bg-accent/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">✓</div>
+                  <div className="text-xl font-bold">{Math.round(reliabilityRate)}%</div>
+                  <div className="text-xs text-muted-foreground">Fiable</div>
+                </button>
+              </div>
 
               {/* Mon Classement */}
               {user?.id && <ProfileRankCard userId={user.id} />}
@@ -537,41 +543,53 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Informations personnelles
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      👤 Informations
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground mb-1">Pseudo</p>
-                        <p className="font-medium">{profile?.username}</p>
+                    <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
+                      <span className="text-xl">🔤</span>
+                      <div className="flex-1">
+                        <div className="text-xs text-muted-foreground">Pseudo</div>
+                        <div className="font-medium">{profile?.username || 'Non renseigné'}</div>
                       </div>
-                      {profile?.display_name && (
-                        <div>
-                          <p className="text-muted-foreground mb-1">Nom</p>
-                          <p className="font-medium">{profile.display_name}</p>
-                        </div>
-                      )}
-                      {profile?.age && (
-                        <div>
-                          <p className="text-muted-foreground mb-1">Âge</p>
-                          <p className="font-medium">{profile.age} ans</p>
-                        </div>
-                      )}
-                      {profile?.phone && (
-                        <div>
-                          <p className="text-muted-foreground mb-1">Téléphone</p>
-                          <p className="font-medium">{profile.phone}</p>
-                        </div>
-                      )}
                     </div>
-                    <Button onClick={() => setIsEditing(true)} className="w-full mt-4" variant="outline">
-                      <User className="h-4 w-4 mr-2" />
-                      Modifier le profil
+                    {profile?.display_name && (
+                      <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
+                        <span className="text-xl">👤</span>
+                        <div className="flex-1">
+                          <div className="text-xs text-muted-foreground">Nom</div>
+                          <div className="font-medium">{profile.display_name}</div>
+                        </div>
+                      </div>
+                    )}
+                    {profile?.age && (
+                      <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
+                        <span className="text-xl">🎂</span>
+                        <div className="flex-1">
+                          <div className="text-xs text-muted-foreground">Âge</div>
+                          <div className="font-medium">{profile.age} ans</div>
+                        </div>
+                      </div>
+                    )}
+                    {profile?.phone && (
+                      <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
+                        <span className="text-xl">📞</span>
+                        <div className="flex-1">
+                          <div className="text-xs text-muted-foreground">Téléphone</div>
+                          <div className="font-medium">{profile.phone}</div>
+                        </div>
+                      </div>
+                    )}
+                    <Button 
+                      onClick={() => setIsEditing(true)} 
+                      variant="outline" 
+                      className="w-full mt-4"
+                    >
+                      ✏️ Modifier mon profil
                     </Button>
                   </CardContent>
                 </Card>

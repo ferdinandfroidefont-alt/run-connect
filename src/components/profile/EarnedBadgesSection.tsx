@@ -66,7 +66,7 @@ export const EarnedBadgesSection = ({ userId }: EarnedBadgesSectionProps) => {
 
   if (badges.length === 0) {
     return (
-      <Card className="bg-gradient-to-br from-yellow-500/5 to-background border-yellow-500/10">
+      <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/20">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Award className="h-5 w-5 text-yellow-500" />
@@ -74,9 +74,12 @@ export const EarnedBadgesSection = ({ userId }: EarnedBadgesSectionProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground mb-2">Aucun badge débloqué</p>
-            <p className="text-xs text-muted-foreground">Participez à des séances pour gagner vos premiers badges !</p>
+          <div className="text-center py-8 px-4 bg-gradient-to-br from-yellow-500/5 to-transparent rounded-lg border border-yellow-500/10">
+            <div className="text-5xl mb-4">🎯</div>
+            <p className="text-base font-semibold mb-2">Aucun badge pour l'instant !</p>
+            <p className="text-sm text-muted-foreground">
+              Participe à des sessions pour débloquer tes premiers succès 💪
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -92,14 +95,14 @@ export const EarnedBadgesSection = ({ userId }: EarnedBadgesSectionProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+        <div className="grid grid-cols-4 gap-4">
           {badges.map((badge) => (
             <div
               key={badge.id}
-              className="flex-shrink-0 group relative"
+              className="group relative"
               title={badge.badge_description || badge.badge_name}
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border-2 border-yellow-500/30 flex items-center justify-center text-2xl hover:scale-110 transition-transform cursor-pointer shadow-lg hover:shadow-yellow-500/20">
+              <div className="aspect-square rounded-2xl bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border-2 border-yellow-500/30 flex items-center justify-center text-4xl hover:scale-110 transition-transform cursor-pointer shadow-lg hover:shadow-yellow-500/20">
                 {badge.badge_icon || "🏅"}
               </div>
               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
