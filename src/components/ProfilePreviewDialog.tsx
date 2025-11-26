@@ -465,234 +465,172 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </div>
         ) : profile ? (
           <div className="space-y-4">
-            {/* Profile Header */}
-            <Card>
-              <CardContent className="flex flex-col items-center py-6">
-                <div className="relative mb-4 flex items-start justify-center w-full">
-                  <div className="flex flex-col items-center">
-                    <Avatar className="h-20 w-20">
-                      <AvatarImage src={profile.avatar_url || ""} />
-                      <AvatarFallback className="text-lg">
-                        {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {!isOwnProfile && areFriends && <OnlineStatus userId={profile.user_id} />}
-                  </div>
-                  
-                  {/* Menu à trois points pour les autres utilisateurs */}
-                  {!isOwnProfile && (
+            {/* Header Full-Width avec fond bleu dégradé */}
+            <div className="relative -mx-6 mb-6">
+              <div className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 px-6 pt-12 pb-6">
+                {/* Menu à trois points */}
+                {!isOwnProfile && (
+                  <div className="absolute top-4 right-4 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="absolute top-0 right-0 p-2 rounded-full hover:bg-accent transition-colors">
-                          <MoreVertical className="h-4 w-4" />
+                        <button className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors">
+                          <MoreVertical className="h-4 w-4 text-white" />
                         </button>
                       </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
-                          {isBlocked ? (
-                            <DropdownMenuItem 
-                              onClick={handleUnblockUser}
-                              className="text-green-600 hover:bg-green-50 cursor-pointer"
-                            >
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              Débloquer cet utilisateur
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem 
-                              onClick={handleBlockUser}
-                              className="text-destructive hover:bg-destructive/10 cursor-pointer"
-                            >
-                              <UserMinus className="h-4 w-4 mr-2" />
-                              Bloquer cet utilisateur
-                            </DropdownMenuItem>
-                          )}
+                      <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
+                        {isBlocked ? (
                           <DropdownMenuItem 
-                            onClick={() => setShowReportDialog(true)}
+                            onClick={handleUnblockUser}
+                            className="text-green-600 hover:bg-green-50 cursor-pointer"
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Débloquer cet utilisateur
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem 
+                            onClick={handleBlockUser}
                             className="text-destructive hover:bg-destructive/10 cursor-pointer"
                           >
-                            <Flag className="h-4 w-4 mr-2" />
-                            Signaler cet utilisateur
+                            <UserMinus className="h-4 w-4 mr-2" />
+                            Bloquer cet utilisateur
                           </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2 mb-2">
-                  <h2 className="text-xl font-semibold">
-                    {profile.username || profile.display_name}
-                  </h2>
-                  {profile.is_premium && (
-                    <Crown className="h-5 w-5 text-yellow-500" />
-                  )}
-                </div>
-
-                {profile.is_admin && (
-                  <Badge className="bg-red-100 text-red-800 border-red-200 mb-4">
-                    Admin
-                  </Badge>
-                )}
-
-                {profile.is_premium && (
-                  <Badge className="bg-orange-100 text-orange-800 border-orange-200 mb-4">
-                    Premium
-                  </Badge>
-                )}
-
-                {isOwnProfile && (
-                  <Badge variant="secondary" className="mb-4">
-                    Votre profil
-                  </Badge>
-                )}
-
-                {/* Badge de vérification */}
-                {(() => {
-                  console.log('ProfilePreviewDialog - Profile state:', {
-                    strava_connected: profile.strava_connected,
-                    strava_verified_at: profile.strava_verified_at,
-                    instagram_connected: profile.instagram_connected,
-                    instagram_verified_at: profile.instagram_verified_at,
-                    isOwnProfile
-                  });
-                  
-                  const isStravaVerified = profile.strava_connected && profile.strava_verified_at;
-                  const isInstagramVerified = profile.instagram_connected && profile.instagram_verified_at;
-                  
-                  console.log('ProfilePreviewDialog - Verification status:', {
-                    isStravaVerified,
-                    isInstagramVerified,
-                    isOwnProfile
-                  });
-                  
-                  if (isStravaVerified && isInstagramVerified) {
-                    console.log('ProfilePreviewDialog - Showing both verified badges');
-                    return (
-                      <div className="mb-4 space-y-1">
-                        <button
-                          onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors mr-2"
-                        >
-                          <span className="text-orange-600">🏃</span>
-                          ✓ Strava
-                        </button>
-                        <button
-                          onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
-                        >
-                          <span className="text-pink-600">📷</span>
-                          ✓ Instagram
-                        </button>
-                      </div>
-                    );
-                  } else if (isStravaVerified) {
-                    console.log('ProfilePreviewDialog - Showing Strava verified badge');
-                    return (
-                      <div className="mb-4">
-                        <button
-                          onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                        >
-                          <span className="text-orange-600">🏃</span>
-                          ✓ Utilisateur vérifié Strava
-                        </button>
-                      </div>
-                    );
-                  } else if (isInstagramVerified) {
-                    console.log('ProfilePreviewDialog - Showing Instagram verified badge');
-                    return (
-                      <div className="mb-4">
-                        <button
-                          onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
-                        >
-                          <span className="text-pink-600">📷</span>
-                          ✓ Utilisateur vérifié Instagram
-                        </button>
-                      </div>
-                    );
-                  } else {
-                    console.log('ProfilePreviewDialog - Showing non-verified badge, isOwnProfile:', isOwnProfile);
-                    return (
-                      <div className="mb-4">
-                        {isOwnProfile ? (
-                          <button
-                            onClick={() => {
-                              console.log('ProfilePreviewDialog - Non-verified badge clicked, opening settings');
-                              setShowSettingsDialog(true);
-                            }}
-                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                          >
-                            <span className="text-gray-500">⚠️</span>
-                            Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)
-                          </button>
-                        ) : (
-                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                            <span className="text-gray-500">⚠️</span>
-                            Utilisateur non vérifié
-                          </div>
                         )}
-                      </div>
-                    );
-                  }
-                })()}
-
-                <div className="flex gap-4 mb-4">
-                  <div className="text-center">
-                    <p className="font-bold text-lg">{followerCount}</p>
-                    <p className="text-sm text-muted-foreground">Abonnés</p>
+                        <DropdownMenuItem 
+                          onClick={() => setShowReportDialog(true)}
+                          className="text-destructive hover:bg-destructive/10 cursor-pointer"
+                        >
+                          <Flag className="h-4 w-4 mr-2" />
+                          Signaler cet utilisateur
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <div className="text-center">
-                    <p className="font-bold text-lg">{followingCount}</p>
-                    <p className="text-sm text-muted-foreground">Abonnements</p>
-                  </div>
-                </div>
-
-                {/* Reliability Badge - Visible pour tous les profils */}
-                <div className="mb-4 w-full px-4">
-                  <ReliabilityBadge 
-                    rate={reliabilityRate}
-                    onClick={() => setShowReliabilityDetails(true)}
-                  />
-                </div>
-
-                {!isOwnProfile && user && (
-                  <Button
-                    onClick={handleFollowToggle}
-                    disabled={actionLoading}
-                    variant={isFollowing ? "outline" : followRequestSent ? "secondary" : "default"}
-                    className="w-full"
-                  >
-                    {actionLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : isFollowing ? (
-                      <UserMinus className="h-4 w-4 mr-2" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 mr-2" />
-                    )}
-                     {actionLoading 
-                       ? "Chargement..." 
-                       : isFollowing 
-                       ? "Ne plus suivre" 
-                       : followRequestSent
-                       ? "Demande envoyée"
-                       : "Demander à suivre"
-                     }
-                  </Button>
                 )}
-              </CardContent>
-            </Card>
+                
+                {/* Avatar centré avec glow */}
+                <div className="relative mb-4 flex justify-center">
+                  <div className="absolute inset-0 bg-white/30 rounded-full blur-2xl scale-110" />
+                  <Avatar className="h-36 w-36 relative border-4 border-white/20 shadow-2xl">
+                    <AvatarImage src={profile.avatar_url || ""} />
+                    <AvatarFallback className="text-4xl bg-white/10 text-white">
+                      {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!isOwnProfile && areFriends && (
+                    <div className="absolute -bottom-2">
+                      <OnlineStatus userId={profile.user_id} />
+                    </div>
+                  )}
+                </div>
 
-            {/* Bio */}
-            {profile.bio && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Heart className="h-4 w-4 text-primary" />
-                    <span className="font-medium">À propos</span>
+                {/* Pseudo + Couronne */}
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h2 className="text-2xl font-bold text-white">@{profile.username || profile.display_name}</h2>
+                  {profile.is_premium && (
+                    <span className="text-2xl">👑</span>
+                  )}
+                </div>
+
+                {/* Badges services */}
+                <div className="flex gap-2 mb-3 justify-center flex-wrap">
+                  {profile.is_admin && (
+                    <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full font-semibold">
+                      Admin
+                    </span>
+                  )}
+                  {profile.strava_connected && profile.strava_verified_at && (
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="px-3 py-1 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white text-xs rounded-full flex items-center gap-1"
+                    >
+                      🏃 Strava
+                    </button>
+                  )}
+                  {profile.instagram_connected && profile.instagram_verified_at && (
+                    <button
+                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
+                      className="px-3 py-1 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white text-xs rounded-full flex items-center gap-1"
+                    >
+                      📷 Instagram
+                    </button>
+                  )}
+                  {isOwnProfile && !profile.strava_connected && !profile.instagram_connected && (
+                    <button
+                      onClick={() => setShowSettingsDialog(true)}
+                      className="px-3 py-1 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white text-xs rounded-full flex items-center gap-1"
+                    >
+                      ⚠️ Non vérifié
+                    </button>
+                  )}
+                </div>
+
+                {/* Bio */}
+                {profile.bio && (
+                  <p className="text-center text-white/90 text-sm max-w-md mx-auto mb-4 line-clamp-2">
+                    {profile.bio}
+                  </p>
+                )}
+
+                {/* Badge fiabilité */}
+                <div className="flex justify-center mb-4">
+                  <button
+                    onClick={() => setShowReliabilityDetails(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-colors text-white text-sm font-medium"
+                  >
+                    <span className="text-lg">✓</span>
+                    <span>{Math.round(reliabilityRate)}% • Fiable</span>
+                  </button>
+                </div>
+
+                {/* Boutons d'action */}
+                {!isOwnProfile && user && (
+                  <div className="w-full max-w-md mx-auto">
+                    <Button
+                      onClick={handleFollowToggle}
+                      disabled={actionLoading}
+                      variant={isFollowing ? "outline" : "default"}
+                      className="w-full bg-white/20 hover:bg-white/30 border-white/30 text-white"
+                    >
+                      {actionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isFollowing ? (
+                        <>
+                          <UserMinus className="h-4 w-4 mr-2" />
+                          Se désabonner
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          S'abonner
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground">{profile.bio}</p>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </div>
+            </div>
+
+            {/* Mini Stats - 3 blocs */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl">
+                <div className="text-2xl mb-1">👥</div>
+                <div className="text-xl font-bold">{followerCount}</div>
+                <div className="text-xs text-muted-foreground">Abonnés</div>
+              </div>
+              <div className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl">
+                <div className="text-2xl mb-1">➕</div>
+                <div className="text-xl font-bold">{followingCount}</div>
+                <div className="text-xs text-muted-foreground">Abonnements</div>
+              </div>
+              <button
+                onClick={() => setShowReliabilityDetails(true)}
+                className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl hover:bg-accent/50 transition-colors"
+              >
+                <div className="text-2xl mb-1">✓</div>
+                <div className="text-xl font-bold">{Math.round(reliabilityRate)}%</div>
+                <div className="text-xs text-muted-foreground">Fiable</div>
+              </button>
+            </div>
 
             {/* Classement */}
             <ProfileRankCard userId={userId} />

@@ -89,50 +89,43 @@ export const ProfileRankCard = ({ userId }: ProfileRankCardProps) => {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20 backdrop-blur-sm overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
-      <CardContent className="p-6 relative">
-        <div className="flex items-start justify-between mb-4">
+    <Card className="bg-gradient-to-br from-primary/5 to-background border-primary/10">
+      <CardContent className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <Trophy className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Mon Classement</p>
-              <h3 className="text-2xl font-bold">
-                #{rank} <span className="text-sm text-muted-foreground">/ {totalUsers}</span>
-              </h3>
-            </div>
+            <Trophy className="h-6 w-6 text-primary" />
+            <h3 className="text-xl font-bold">Mon Classement</h3>
           </div>
-          <div className="text-center">
-            <p className={`text-4xl ${badge.color}`}>{badge.emoji}</p>
-            <p className={`text-xs font-semibold ${badge.color} mt-1`}>{badge.name}</p>
+          <div className="text-right">
+            <div className="text-6xl mb-2">{badge.emoji}</div>
+            <p className="text-lg font-bold" style={{ color: badge.color }}>
+              {badge.name}
+            </p>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Points totaux</span>
-            <span className="text-lg font-bold text-primary">{points}</span>
+        <div className="text-center py-4">
+          <div className="text-5xl font-bold text-primary mb-2">
+            #{rank}
           </div>
+          <p className="text-lg text-muted-foreground">sur {totalUsers} participants</p>
+        </div>
 
-          {nextRank && (
-            <>
-              <Progress value={progress} className="h-2" />
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <TrendingUp className="h-3 w-3" />
-                <span>
-                  {nextRank.target - points} points avant {nextRank.name}
-                </span>
-              </div>
-            </>
-          )}
-
-          {!nextRank && (
-            <div className="text-center py-2">
-              <p className="text-sm text-primary font-semibold">🎉 Rang maximum atteint !</p>
+        {nextRank && (
+          <div className="space-y-3">
+            <Progress value={progress} className="h-3" />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Progression vers {nextRank.name}</span>
+              <span className="font-bold text-primary">
+                {nextRank.target - points} points restants
+              </span>
             </div>
-          )}
+          </div>
+        )}
+
+        <div className="pt-4 border-t flex justify-between items-center">
+          <span className="text-muted-foreground">Points totaux</span>
+          <div className="text-3xl font-bold text-primary">{points}</div>
         </div>
       </CardContent>
     </Card>

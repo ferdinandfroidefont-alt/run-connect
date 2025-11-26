@@ -123,27 +123,25 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
   );
 
   return (
-    <Card className="animate-fade-in">
+    <Card>
       <CardHeader>
-        <p className="text-sm text-muted-foreground">
-          Séances créées et rejointes sur les 8 dernières semaines
-        </p>
+        <h3 className="text-lg font-bold">📊 Activités récentes</h3>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={180}>
           <LineChart
             data={data}
-            margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+            margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
             <XAxis 
               dataKey="weekLabel" 
               stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '11px' }}
             />
             <YAxis 
               stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '11px' }}
               domain={[0, maxValue]}
               allowDecimals={false}
             />
@@ -156,50 +154,37 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
               }}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
             />
-            <Legend 
-              wrapperStyle={{ fontSize: '14px' }}
-              iconType="line"
-            />
             <Line 
               type="monotone" 
               dataKey="sessionsCreated" 
               stroke="hsl(217, 91%, 60%)" 
               strokeWidth={2}
-              name="Séances créées"
-              dot={{ fill: 'hsl(217, 91%, 60%)', r: 4 }}
-              activeDot={{ r: 6 }}
-              animationDuration={1000}
+              name="Créées"
+              dot={{ fill: 'hsl(217, 91%, 60%)', r: 3 }}
             />
             <Line 
               type="monotone" 
               dataKey="sessionsJoined" 
               stroke="hsl(142, 71%, 45%)" 
               strokeWidth={2}
-              name="Séances rejointes"
-              dot={{ fill: 'hsl(142, 71%, 45%)', r: 4 }}
-              activeDot={{ r: 6 }}
-              animationDuration={1000}
-              animationBegin={200}
+              name="Rejointes"
+              dot={{ fill: 'hsl(142, 71%, 45%)', r: 3 }}
             />
           </LineChart>
         </ResponsiveContainer>
         
-        <div className="mt-4 flex items-center justify-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[hsl(217,91%,60%)]"></div>
-            <span className="text-muted-foreground">
-              Total créées: <span className="font-semibold text-foreground">
-                {data.reduce((sum, d) => sum + d.sessionsCreated, 0)}
-              </span>
-            </span>
+        <div className="flex justify-around mt-3 pt-3 border-t text-sm">
+          <div className="text-center">
+            <div className="text-xl font-bold text-primary">
+              🔵 {data.reduce((sum, d) => sum + d.sessionsCreated, 0)}
+            </div>
+            <div className="text-xs text-muted-foreground">créées</div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[hsl(142,71%,45%)]"></div>
-            <span className="text-muted-foreground">
-              Total rejointes: <span className="font-semibold text-foreground">
-                {data.reduce((sum, d) => sum + d.sessionsJoined, 0)}
-              </span>
-            </span>
+          <div className="text-center">
+            <div className="text-xl font-bold text-green-600">
+              🟢 {data.reduce((sum, d) => sum + d.sessionsJoined, 0)}
+            </div>
+            <div className="text-xs text-muted-foreground">rejointes</div>
           </div>
         </div>
       </CardContent>
