@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
+import { cn } from '@/lib/utils';
 
 interface UserSession {
   id: string;
@@ -469,8 +470,8 @@ export default function MySessions() {
       {/* Petite barre noire en haut uniquement pour MySessions */}
       <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
       <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
-        {/* Fixed Header Only */}
-        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
+        {/* Fixed Header Only - Style Premium */}
+        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-gradient-to-r from-primary/5 to-primary/10 backdrop-blur-sm z-50 space-y-4 pb-4 border-b border-white/10">
           <div className="container mx-auto px-4 pt-4">
           <div className="flex items-center justify-center -mt-2">
             <Button
@@ -486,27 +487,73 @@ export default function MySessions() {
             </Button>
           </div>
           <div className="flex items-center justify-center mt-3">
-            <div className="flex gap-2">
+            <div className="flex gap-2 p-1 rounded-xl bg-white/5 backdrop-blur-sm">
               <Button
                 onClick={() => setCurrentView('sessions')}
-                variant={currentView === 'sessions' ? 'default' : 'outline'}
+                variant={currentView === 'sessions' ? 'default' : 'ghost'}
                 size="sm"
-                className="gap-2"
+                className={cn(
+                  "gap-2 rounded-xl transition-all",
+                  currentView === 'sessions' ? 'bg-primary/80 text-primary-foreground shadow-lg' : 'hover:bg-white/10'
+                )}
               >
                 <Users className="h-4 w-4" />
                 Mes Séances
               </Button>
               <Button
                 onClick={() => setCurrentView('routes')}
-                variant={currentView === 'routes' ? 'default' : 'outline'}
+                variant={currentView === 'routes' ? 'default' : 'ghost'}
                 size="sm"
-                className="gap-2"
+                className={cn(
+                  "gap-2 rounded-xl transition-all",
+                  currentView === 'routes' ? 'bg-primary/80 text-primary-foreground shadow-lg' : 'hover:bg-white/10'
+                )}
               >
                 <Route className="h-4 w-4" />
                 Mes Itinéraires
               </Button>
-            </div>
           </div>
+          
+          {/* Filter Tabs - Style Premium Pills */}
+          {currentView === 'sessions' && (
+            <div className="flex justify-center gap-2 mt-3">
+              <div className="flex gap-1 p-1 rounded-xl bg-white/5 backdrop-blur-sm">
+                <Button
+                  onClick={() => setFilter('all')}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "rounded-xl transition-all",
+                    filter === 'all' ? 'bg-primary/80 text-primary-foreground shadow-lg' : 'hover:bg-white/10'
+                  )}
+                >
+                  Toutes
+                </Button>
+                <Button
+                  onClick={() => setFilter('upcoming')}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "rounded-xl transition-all",
+                    filter === 'upcoming' ? 'bg-primary/80 text-primary-foreground shadow-lg' : 'hover:bg-white/10'
+                  )}
+                >
+                  À venir
+                </Button>
+                <Button
+                  onClick={() => setFilter('completed')}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "rounded-xl transition-all",
+                    filter === 'completed' ? 'bg-primary/80 text-primary-foreground shadow-lg' : 'hover:bg-white/10'
+                  )}
+                >
+                  Terminées
+                </Button>
+              </div>
+            </div>
+          )}
           </div>
         </div>
 
@@ -522,11 +569,11 @@ export default function MySessions() {
           ) : filteredSessions.length > 0 ? (
             <div className="space-y-2">
               {filteredSessions.slice(0, 6).map((session) => (
-                <Card 
-                  key={session.id} 
-                  className="cursor-pointer hover:shadow-sm transition-shadow"
-                  onClick={() => handleSessionClick(session)}
-                >
+                 <Card 
+                   key={session.id} 
+                   className="cursor-pointer hover:bg-white/10 transition-all bg-white/5 border-white/10"
+                   onClick={() => handleSessionClick(session)}
+                 >
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex gap-2 flex-1 min-w-0">
@@ -630,7 +677,7 @@ export default function MySessions() {
         route={editingRoute}
         onRouteUpdated={loadUserRoutes}
       />
-    </div>
+      </div>
     </>
   );
 }
