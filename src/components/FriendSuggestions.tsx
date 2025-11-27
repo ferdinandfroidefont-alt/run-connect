@@ -378,7 +378,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   }
 
   const SuggestionCard = ({ suggestion }: { suggestion: FriendSuggestion }) => (
-    <Card className="relative h-full bg-white/5 border-white/10 hover:bg-white/10 transition-all">
+    <Card className="relative h-full">
       <CardContent className="p-6">
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="relative">

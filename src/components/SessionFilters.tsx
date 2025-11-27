@@ -83,11 +83,11 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   const activeFilterLabel = getActiveFilterLabel();
 
   return (
-    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-white/5 backdrop-blur-md border-white/10 shadow-2xl`}>
+    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control`}>
       {/* Header cliquable - toujours visible */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between p-2 cursor-pointer hover:bg-white/10 transition-colors rounded-t-[20px]"
+        className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
       >
         {isOpen ? (
           <>

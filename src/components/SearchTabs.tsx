@@ -25,16 +25,16 @@ export const SearchTabs = ({ activeTab, onTabChange }: SearchTabsProps) => {
   ];
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 mx-4 mt-3 p-1 rounded-xl flex gap-1">
+    <div className="glass-card mx-4 mt-3 p-1 rounded-full flex gap-1">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl transition-all whitespace-nowrap",
+            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-full transition-all whitespace-nowrap",
             activeTab === tab.id
-              ? "bg-primary/80 text-primary-foreground shadow-lg"
-              : "text-muted-foreground hover:text-foreground hover:bg-white/10"
+              ? "bg-primary text-primary-foreground shadow-lg"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           {tab.icon}
