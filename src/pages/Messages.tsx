@@ -1415,9 +1415,9 @@ const Messages = () => {
     return (
       <>
         {/* Barre système Android */}
-        <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+        <div className="fixed top-0 left-0 right-0 w-full h-6 bg-page-premium z-50"></div>
         
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-page-premium">
           <div className="max-w-md mx-auto pt-6">
             {/* Header */}
             <div className="flex items-center gap-3 p-4 border-b border-border bg-card/95 backdrop-blur-sm">
@@ -1492,13 +1492,13 @@ const Messages = () => {
   if (selectedConversation) {
     return (
       <>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-page-premium">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* Top Bar - Fixed - Remonté légèrement */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] backdrop-blur-md z-50"></div>
           
           {/* Header - Fixed - Remonté et plus compact */}
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] backdrop-blur-md shadow-lg z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"

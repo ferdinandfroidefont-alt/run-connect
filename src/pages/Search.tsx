@@ -68,10 +68,10 @@ export default function Search() {
   return (
     <>
       {/* Barre supérieure système */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-[61]" />
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-page-premium z-[61]" />
       
       <div 
-        className={`fixed inset-0 z-[60] ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed inset-0 z-[60] bg-page-premium ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{ 
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)'
