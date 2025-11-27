@@ -512,6 +512,7 @@ export default function MySessions() {
                 <Route className="h-4 w-4" />
                 Mes Itinéraires
               </Button>
+            </div>
           </div>
           
           {/* Filter Tabs - Style Premium Pills */}
