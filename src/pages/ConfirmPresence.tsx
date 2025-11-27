@@ -148,8 +148,8 @@ export default function ConfirmPresence() {
       <div className="min-h-screen bg-background relative overflow-hidden">
         {/* Background subtle effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
       </div>
 
       {/* Content */}
@@ -195,7 +195,7 @@ export default function ConfirmPresence() {
                 onClick={() => handleRoleChoice('creator')}
                 className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
               >
-                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-full bg-white/10 flex items-center justify-center">
                   <UserCheck className="h-10 w-10 text-primary" />
                 </div>
                 <h2 className="text-xl font-bold">{t('confirmPresence.creator')}</h2>
@@ -210,7 +210,7 @@ export default function ConfirmPresence() {
                 onClick={() => handleRoleChoice('participant')}
                 className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
               >
-                <div className="h-20 w-20 rounded-full bg-accent/10 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-full bg-white/10 flex items-center justify-center">
                   <Users className="h-10 w-10 text-accent" />
                 </div>
                 <h2 className="text-xl font-bold">{t('confirmPresence.participant')}</h2>

@@ -139,7 +139,7 @@ const PublicProfile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/70 to-cyan-400">
+      <div className="min-h-screen flex items-center justify-center bg-page-premium">
         <Loader2 className="h-8 w-8 animate-spin text-white" />
       </div>
     );
@@ -150,7 +150,7 @@ const PublicProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary/70 to-cyan-400 p-4">
+    <div className="min-h-screen bg-page-premium p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
