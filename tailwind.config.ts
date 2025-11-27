@@ -78,7 +78,12 @@ export default {
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				sm: 'calc(var(--radius) - 4px)',
+        'card': 'var(--radius-card)',
+        'dialog': 'var(--radius-dialog)',
+        'input': 'var(--radius-input)',
+        'button': 'var(--radius-button)',
+        'badge': 'var(--radius-badge)',
 			},
 			backgroundImage: {
 				'gradient-map': 'var(--gradient-map)',
