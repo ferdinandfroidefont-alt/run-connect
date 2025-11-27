@@ -467,10 +467,10 @@ export default function MySessions() {
   return (
     <>
       {/* Petite barre noire en haut uniquement pour MySessions */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
-      <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-page-premium z-50"></div>
+      <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col bg-page-premium">
         {/* Fixed Header Only */}
-        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
+        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-page-premium/95 backdrop-blur-sm z-50 space-y-4 pb-4 border-b border-white/10">
           <div className="container mx-auto px-4 pt-4">
           <div className="flex items-center justify-center -mt-2">
             <Button
