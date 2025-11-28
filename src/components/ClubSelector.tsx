@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-
 interface Club {
   id: string;
   group_name: string;
@@ -15,64 +14,54 @@ interface Club {
   group_avatar_url: string | null;
   member_count: number;
 }
-
 interface ClubSelectorProps {
   selectedClubId: string | null;
   onClubSelect: (clubId: string | null) => void;
 }
-
 export const ClubSelector: React.FC<ClubSelectorProps> = ({
   selectedClubId,
   onClubSelect
 }) => {
-  const { user, subscriptionInfo } = useAuth();
+  const {
+    user,
+    subscriptionInfo
+  } = useAuth();
   const navigate = useNavigate();
   const [clubs, setClubs] = useState<Club[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const loadUserClubs = async () => {
     if (!user) return;
-    
     setLoading(true);
     try {
       // Récupérer les clubs où l'utilisateur est membre
-      const { data: memberData } = await supabase
-        .from('group_members')
-        .select('conversation_id')
-        .eq('user_id', user.id);
-
+      const {
+        data: memberData
+      } = await supabase.from('group_members').select('conversation_id').eq('user_id', user.id);
       if (!memberData || memberData.length === 0) {
         setClubs([]);
         return;
       }
-
       const clubIds = memberData.map(m => m.conversation_id);
 
       // Récupérer les informations des clubs
-      const { data: clubsData } = await supabase
-        .from('conversations')
-        .select('id, group_name, group_description, group_avatar_url')
-        .in('id', clubIds)
-        .eq('is_group', true)
-        .order('group_name');
-
+      const {
+        data: clubsData
+      } = await supabase.from('conversations').select('id, group_name, group_description, group_avatar_url').in('id', clubIds).eq('is_group', true).order('group_name');
       if (clubsData) {
         // Compter les membres de chaque club
-        const clubsWithCount = await Promise.all(
-          clubsData.map(async (club) => {
-            const { count } = await supabase
-              .from('group_members')
-              .select('*', { count: 'exact', head: true })
-              .eq('conversation_id', club.id);
-
-            return {
-              ...club,
-              member_count: count || 0
-            };
-          })
-        );
-
+        const clubsWithCount = await Promise.all(clubsData.map(async club => {
+          const {
+            count
+          } = await supabase.from('group_members').select('*', {
+            count: 'exact',
+            head: true
+          }).eq('conversation_id', club.id);
+          return {
+            ...club,
+            member_count: count || 0
+          };
+        }));
         setClubs(clubsWithCount);
       }
     } catch (error) {
@@ -82,35 +71,24 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       setLoading(false);
     }
   };
-
   useEffect(() => {
     loadUserClubs();
   }, [user]);
-
   const selectedClub = clubs.find(club => club.id === selectedClubId);
-
   const handleClubSelect = (clubId: string | null) => {
     onClubSelect(clubId);
     setIsOpen(false);
   };
-
   if (loading) {
-    return (
-      <div className="flex items-center gap-2 p-2 bg-card rounded-lg border">
+    return <div className="flex items-center gap-2 p-2 bg-card rounded-lg border">
         <Users className="h-4 w-4" />
         <span className="text-sm">Chargement des clubs...</span>
-      </div>
-    );
+      </div>;
   }
-
   if (clubs.length === 0) {
-    return (
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+    return <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Button 
-            variant="outline" 
-            className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
-          >
+          <Button variant="outline" className="w-8 justify-center bg-card hover:bg-accent h-7 px-1">
             <Users className="h-3 w-3" />
           </Button>
         </PopoverTrigger>
@@ -123,17 +101,11 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
             </div>
           </div>
         </PopoverContent>
-      </Popover>
-    );
+      </Popover>;
   }
-
-  return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+  return <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
-          className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
-        >
+        <Button variant="outline" className="w-8 justify-center h-7 px-1 bg-[#010101]">
           <Users className="h-3 w-3" />
         </Button>
       </PopoverTrigger>
@@ -141,14 +113,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       <PopoverContent className="w-80 p-2" align="start">
         <div className="space-y-1">
           {/* Option "Tous les clubs" */}
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full justify-start h-16 p-3",
-              !selectedClubId && "bg-accent"
-            )}
-            onClick={() => handleClubSelect(null)}
-          >
+          <Button variant="ghost" className={cn("w-full justify-start h-16 p-3", !selectedClubId && "bg-accent")} onClick={() => handleClubSelect(null)}>
               <div className="flex items-center gap-3 w-full">
                 <div className="flex-shrink-0">
                   <Users className="h-5 w-5" />
@@ -159,60 +124,35 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
                     Afficher toutes les sessions
                   </div>
                 </div>
-                {!selectedClubId && (
-                  <div className="flex-shrink-0">
+                {!selectedClubId && <div className="flex-shrink-0">
                     <Check className="h-4 w-4 text-primary" />
-                  </div>
-                )}
+                  </div>}
               </div>
             </Button>
 
           {/* Liste des clubs */}
-          {clubs.map((club) => (
-            <Button
-              key={club.id}
-              variant="ghost"
-              className={cn(
-                "w-full justify-start h-16 p-3",
-                selectedClubId === club.id && "bg-accent"
-              )}
-              onClick={() => handleClubSelect(club.id)}
-            >
+          {clubs.map(club => <Button key={club.id} variant="ghost" className={cn("w-full justify-start h-16 p-3", selectedClubId === club.id && "bg-accent")} onClick={() => handleClubSelect(club.id)}>
               <div className="flex items-center gap-3 w-full">
                 <div className="flex-shrink-0">
-                  {club.group_avatar_url ? (
-                    <img 
-                      src={club.group_avatar_url} 
-                      alt={club.group_name}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  {club.group_avatar_url ? <img src={club.group_avatar_url} alt={club.group_name} className="h-8 w-8 rounded-full object-cover" /> : <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                       <Users className="h-4 w-4" />
-                    </div>
-                  )}
+                    </div>}
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <div className="font-medium text-base leading-tight truncate">{club.group_name}</div>
-                  {club.group_description && (
-                    <div className="text-xs text-muted-foreground leading-tight truncate">
+                  {club.group_description && <div className="text-xs text-muted-foreground leading-tight truncate">
                       {club.group_description}
-                    </div>
-                  )}
+                    </div>}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Badge variant="secondary" className="text-xs">
                     {club.member_count}
                   </Badge>
-                  {selectedClubId === club.id && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
+                  {selectedClubId === club.id && <Check className="h-4 w-4 text-primary" />}
                 </div>
               </div>
-            </Button>
-          ))}
+            </Button>)}
         </div>
       </PopoverContent>
-    </Popover>
-  );
+    </Popover>;
 };

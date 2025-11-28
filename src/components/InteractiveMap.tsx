@@ -1434,7 +1434,7 @@ export const InteractiveMap = ({
           </Button>}
         
         {/* Locate Me Button */}
-        <Button onClick={handleLocateMe} size="sm" variant="outline" className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center">
+        <Button onClick={handleLocateMe} size="sm" variant="outline" className="w-8 h-7 p-0 backdrop-blur-sm shadow-map-control flex items-center justify-center bg-[#030303]/90">
           <MapPin className="h-3 w-3" />
         </Button>
         
