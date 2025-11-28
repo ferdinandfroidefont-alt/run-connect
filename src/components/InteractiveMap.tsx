@@ -1292,7 +1292,7 @@ export const InteractiveMap = ({
                 });
               }
             }}>
-                <Share2 className="h-5 w-5 text-red-500" />
+                <Share2 className="h-5 w-5 text-[#10c8d5]" />
               </div>
               <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={() => setShowSettingsDialog(true)}>
                 ⚙️
