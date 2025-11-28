@@ -1429,7 +1429,7 @@ export const InteractiveMap = ({
         {user && <Button onClick={() => {
         console.log('🖱️ Pencil button clicked - navigating to route creation');
         navigate('/route-create');
-      }} size="sm" variant="outline" className="w-8 h-7 p-0 shadow-map-control flex items-center justify-center bg-card/90 backdrop-blur-sm" title="Créer un itinéraire">
+      }} size="sm" variant="outline" title="Créer un itinéraire" className="w-8 h-7 p-0 shadow-map-control flex items-center justify-center backdrop-blur-sm bg-[#030303]/90">
             <PenTool className="h-3 w-3" />
           </Button>}
         
