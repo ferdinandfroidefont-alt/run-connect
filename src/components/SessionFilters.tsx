@@ -139,7 +139,7 @@ export const SessionFilters = ({
             <div>
               <h4 className="text-sm font-medium mb-2 text-foreground/80">Type de sortie</h4>
               <div className="grid grid-cols-1 gap-2">
-                {sessionTypes.map(sessionType => <Button key={sessionType.id} onClick={() => toggleSessionType(sessionType.id)} variant={filters.session_types.includes(sessionType.id) ? "default" : "outline"} size="sm" className="justify-start text-xs h-8">
+                {sessionTypes.map(sessionType => <Button key={sessionType.id} onClick={() => toggleSessionType(sessionType.id)} variant={filters.session_types.includes(sessionType.id) ? "default" : "outline"} size="sm" className="justify-start text-xs h-8 bg-[#030303]">
                     {sessionType.label}
                   </Button>)}
               </div>
