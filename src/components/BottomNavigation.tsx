@@ -102,7 +102,7 @@ export const BottomNavigation = () => {
       
       {/* Nouvelle barre du bas - couvre tout l'espace */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
-        <div className="flex items-center justify-center py-2 min-h-[40px] bg-[#0e1336]">
+        <div className="flex items-center justify-center py-2 min-h-[40px] bg-[#00dd00]">
           <SimplePermissionsTest />
         </div>
       </nav>
@@ -113,7 +113,7 @@ export const BottomNavigation = () => {
           {/* Glow effect pour l'item actif */}
           <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
           
-          <div className="grid grid-cols-5 items-center px-4 py-2 bg-[#0e173c] border-[#0d0d33]">
+          <div className="grid grid-cols-5 items-center px-4 py-2 border-[#0d0d33] bg-[#0d0d33]">
           {/* Première colonne - Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({
