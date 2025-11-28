@@ -88,9 +88,9 @@ export const SessionFilters = ({
     return labels.join(" • ");
   };
   const activeFilterLabel = getActiveFilterLabel();
-  return <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border-white/10 shadow-2xl rounded-[22px]`}>
+  return <Card className="border-[#0d0d33] bg-[#0d0d33]">
       {/* Header cliquable - toujours visible */}
-      <div onClick={() => setIsOpen(!isOpen)} className="w-8 justify-center h-7 px-1 bg-[#010101] text-[#fcf7f7]">
+      <div onClick={() => setIsOpen(!isOpen)} className="w-8 justify-center h-7 px-1 text-[#fcf7f7] bg-[#0d0d33]">
         {isOpen ? <>
             <h3 className="font-semibold leading-none pt-0.5 text-foreground">Filtres</h3>
             <div className="flex items-center gap-2">
