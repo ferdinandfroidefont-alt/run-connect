@@ -1318,7 +1318,7 @@ export const InteractiveMap = ({
               <PopoverTrigger asChild>
                 <div className="relative cursor-pointer">
                   {/* Calendar Icon Style */}
-                  <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
+                  <div className="w-12 h-12 rounded-t-lg relative shadow-lg bg-[#10c9d5]">
                     {/* Top holes */}
                     <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
                     <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
