@@ -83,15 +83,15 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   const activeFilterLabel = getActiveFilterLabel();
 
   return (
-    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border-white/10 shadow-2xl`}>
+    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border-white/10 shadow-2xl rounded-[22px]`}>
       {/* Header cliquable - toujours visible */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
+        className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 transition-colors rounded-t-[22px]"
       >
         {isOpen ? (
           <>
-            <h3 className="font-semibold leading-none pt-0.5">Filtres</h3>
+            <h3 className="font-semibold leading-none pt-0.5 text-foreground">Filtres</h3>
             <div className="flex items-center gap-2">
               {activeFiltersCount > 0 && (
                 <Button 
@@ -101,17 +101,17 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
                   }}
                   size="sm" 
                   variant="ghost" 
-                  className="text-xs h-6 px-2"
+                  className="text-xs h-6 px-2 hover:bg-white/10"
                 >
                   Effacer
                 </Button>
               )}
-              <Filter className="h-4 w-4" />
+              <Filter className="h-4 w-4 text-primary" />
             </div>
           </>
         ) : (
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 mt-0.5" />
+            <Filter className="h-4 w-4 mt-0.5 text-primary" />
             
             {/* Texte descriptif si filtres avancés actifs */}
             {activeFilterLabel && (
@@ -122,7 +122,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
             
             {/* Badge nombre de filtres (types activité + types sortie) */}
             {activeFiltersCount > 0 && (
-              <Badge variant="secondary" className="h-5 px-1 text-xs">
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-primary/20 text-primary border-primary/30">
                 {activeFiltersCount}
               </Badge>
             )}
@@ -132,13 +132,13 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
 
       {/* Contenu qui apparaît au clic */}
       {isOpen && (
-        <CardContent className="p-4 pt-0">
-          <Separator className="mb-4" />
+        <CardContent className="p-4 pt-0 bg-transparent">
+          <Separator className="mb-4 bg-white/10" />
 
           <div className="space-y-4">
             {/* Activity Types */}
             <div>
-              <h4 className="text-sm font-medium mb-2">Type d'activité</h4>
+              <h4 className="text-sm font-medium mb-2 text-foreground/80">Type d'activité</h4>
               <div className="grid grid-cols-2 gap-2">
                 {activityTypes.map((activity) => (
                   <Button
@@ -155,11 +155,11 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
               </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-white/10" />
 
             {/* Session Types */}
             <div>
-              <h4 className="text-sm font-medium mb-2">Type de sortie</h4>
+              <h4 className="text-sm font-medium mb-2 text-foreground/80">Type de sortie</h4>
               <div className="grid grid-cols-1 gap-2">
                 {sessionTypes.map((sessionType) => (
                   <Button
@@ -175,11 +175,11 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
               </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-white/10" />
 
             {/* Filtres avancés */}
             <div>
-              <h4 className="text-sm font-medium mb-2">Filtres avancés</h4>
+              <h4 className="text-sm font-medium mb-2 text-foreground/80">Filtres avancés</h4>
               
               {/* Bouton Amis uniquement */}
               <Button
