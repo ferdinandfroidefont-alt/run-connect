@@ -403,14 +403,14 @@ export default function MySessions() {
             <Button onClick={() => {
               console.log('🚀 "Créer un itinéraire" clicked - navigating to route creation');
               navigate('/route-create');
-            }} size="sm" className="gap-2">
+            }} size="sm" className="gap-2 bg-[#385bdc]">
               <Route className="h-4 w-4" />
               Créer un itinéraire
             </Button>
           </div>
           <div className="flex items-center justify-center mt-3">
             <div className="flex gap-2">
-              <Button onClick={() => setCurrentView('sessions')} variant={currentView === 'sessions' ? 'default' : 'outline'} size="sm" className="gap-2">
+              <Button onClick={() => setCurrentView('sessions')} variant={currentView === 'sessions' ? 'default' : 'outline'} size="sm" className="gap-2 bg-[#385bdc]">
                 <Users className="h-4 w-4" />
                 Mes Séances
               </Button>
