@@ -100,7 +100,7 @@ export const SessionFilters = ({
           }} size="sm" variant="ghost" className="text-xs h-6 px-2 hover:bg-white/10">
                   Effacer
                 </Button>}
-              <Filter className="h-4 w-4 text-primary" />
+              <Filter className="h-4 text-primary w-[16px] mr-0 ml-[232px] px-0 py-0 mt-0 my-[16px] mx-0" />
             </div>
           </> : <div className="flex items-center gap-2">
             <Filter className="w-4 mt-0.5 h-[16px] text-[#fcfbfb]" />
