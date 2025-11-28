@@ -72,7 +72,7 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
           <div className="space-y-8 py-4">
             {/* RGPD Section */}
             <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 bg-white/5 rounded-lg border border-white/10">
+              <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
                 <FileText className="h-6 w-6 text-primary shrink-0 mt-1" />
                 <div className="flex-1 space-y-3">
                   <h3 className="font-semibold text-lg">Règlement RGPD</h3>
@@ -118,7 +118,7 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
 
             {/* Security Rules Section */}
             <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 bg-white/5 rounded-lg border border-white/10">
+              <div className="flex items-start gap-3 p-4 bg-accent/5 rounded-lg border border-accent/20">
                 <Shield className="h-6 w-6 text-accent shrink-0 mt-1" />
                 <div className="flex-1 space-y-3">
                   <h3 className="font-semibold text-lg">Règles de sécurité et d'utilisation</h3>

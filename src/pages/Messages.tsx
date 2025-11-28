@@ -1415,9 +1415,9 @@ const Messages = () => {
     return (
       <>
         {/* Barre système Android */}
-        <div className="fixed top-0 left-0 right-0 w-full h-6 bg-page-premium z-50"></div>
+        <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
         
-        <div className="min-h-screen bg-page-premium">
+        <div className="min-h-screen bg-background">
           <div className="max-w-md mx-auto pt-6">
             {/* Header */}
             <div className="flex items-center gap-3 p-4 border-b border-border bg-card/95 backdrop-blur-sm">
@@ -1492,13 +1492,13 @@ const Messages = () => {
   if (selectedConversation) {
     return (
       <>
-        <div className="min-h-screen bg-page-premium">
+        <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* Top Bar - Fixed - Remonté légèrement */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] backdrop-blur-md z-50"></div>
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
           
           {/* Header - Fixed - Remonté et plus compact */}
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] backdrop-blur-md shadow-lg z-50">
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -2147,11 +2147,11 @@ const Messages = () => {
   return (
     <>
       {/* Petite barre noire en haut uniquement pour Messages */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] z-50"></div>
-      <div className="h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] flex flex-col">
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+      <div className="h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
           {/* Fixed Header Only - Remonté légèrement */}
-          <div className="fixed top-4 left-0 right-0 flex-shrink-0 bg-white/5 backdrop-blur-sm z-50 p-3 border-b border-white/10">
+          <div className="fixed top-4 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
             <div className="max-w-md mx-auto w-full">
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -2166,14 +2166,14 @@ const Messages = () => {
                 </Button>
               )}
               <div>
-                <h1 className="text-2xl font-bold text-white">
+                <h1 className="text-2xl font-bold text-foreground">
                   {isSelectionMode 
                     ? `${selectedConversations.size} sélectionné(s)` 
                     : "Messages"
                   }
                 </h1>
                 {!isSelectionMode && (
-                  <p className="text-white/60 text-sm">
+                  <p className="text-muted-foreground text-sm">
                     Restez en contact avec la communauté
                   </p>
                 )}
@@ -2202,7 +2202,7 @@ const Messages = () => {
                   <Button
                     onClick={() => setShowCreateGroup(true)}
                     size="sm"
-                    className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                    className="bg-primary hover:bg-primary/90"
                   >
                     <Users className="h-4 w-4 mr-1" />
                     Club
@@ -2268,27 +2268,27 @@ const Messages = () => {
             {/* Conversations */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <MessageCircle className="h-5 w-5 text-cyan-400 mr-2" />
-                <CardTitle className="text-lg text-white">Conversations</CardTitle>
+                <MessageCircle className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Conversations</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {conversations.length === 0 ? (
                   <div className="text-center py-8 px-4">
-                    <MessageCircle className="h-12 w-12 text-white/40 mx-auto mb-3" />
-                    <p className="text-white/60 text-sm">
+                    <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
                       Aucune conversation pour le moment
                     </p>
-                    <p className="text-white/40 text-xs mt-1">
+                    <p className="text-muted-foreground text-xs mt-1">
                       Cliquez sur "Nouveau" pour démarrer une conversation
                     </p>
                   </div>
                 ) : (
-                    <div className="divide-y divide-white/10">
+                    <div className="divide-y divide-border">
                     {conversations.map((conversation) => (
                    <div
                      key={conversation.id}
-                     className={`flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer transition-colors ${
-                       selectedConversations.has(conversation.id) ? 'bg-cyan-500/20' : ''
+                     className={`flex items-center gap-3 p-4 hover:bg-muted cursor-pointer transition-colors ${
+                       selectedConversations.has(conversation.id) ? 'bg-primary/10' : ''
                      }`}
                      onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
                      onTouchEnd={handleLongPressEnd}
@@ -2301,13 +2301,13 @@ const Messages = () => {
                    >
                      {isSelectionMode && (
                        <div className="flex items-center mr-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedConversations.has(conversation.id)}
-                            onChange={() => toggleConversationSelection(conversation.id)}
-                            className="w-5 h-5 rounded border-2 border-cyan-500"
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                         <input
+                           type="checkbox"
+                           checked={selectedConversations.has(conversation.id)}
+                           onChange={() => toggleConversationSelection(conversation.id)}
+                           className="w-5 h-5 rounded border-2 border-primary"
+                           onClick={(e) => e.stopPropagation()}
+                         />
                        </div>
                      )}
                      
@@ -2358,8 +2358,8 @@ const Messages = () => {
                           }
                         }}
                      >
-                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-sm truncate text-white">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-sm truncate">
                           {conversation.is_group 
                             ? conversation.group_name 
                             : (conversation.other_participant?.username || "Utilisateur inconnu")
@@ -2371,20 +2371,20 @@ const Messages = () => {
                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                              </Badge>
                            )}
-                           <span className="text-xs text-white/60">
+                           <span className="text-xs text-muted-foreground">
                              {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
                            </span>
                          </div>
                       </div>
                        <p className={`text-xs truncate ${
                          conversation.unread_count > 0 
-                           ? 'text-cyan-400 font-medium' 
-                           : 'text-white/60'
+                           ? 'text-blue-400 font-medium' 
+                           : 'text-muted-foreground'
                        }`}>
                          {conversation.last_message ? (
                            <>
                              {conversation.unread_count > 0 && (
-                               <span className="inline-block w-2 h-2 bg-cyan-500 rounded-full mr-2"></span>
+                               <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
                              )}
                              {conversation.last_message.message_type === 'image' && '📷 Photo'}
                              {conversation.last_message.message_type === 'file' && '📎 Fichier'}
@@ -2414,8 +2414,8 @@ const Messages = () => {
             {/* Friend suggestions */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-3">
-                <Users className="h-5 w-5 text-cyan-400 mr-2" />
-                <CardTitle className="text-lg text-white">Suggestions d'amis</CardTitle>
+                <Users className="h-5 w-5 text-primary mr-2" />
+                <CardTitle className="text-lg">Suggestions d'amis</CardTitle>
               </CardHeader>
               <CardContent>
                 <FriendSuggestions compact />

@@ -588,8 +588,8 @@ const Auth = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 relative overflow-hidden flex items-center justify-center p-4">
       {/* Effets d'arrière-plan animés */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-      <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
       
       <Card className="relative w-full max-w-md backdrop-blur-xl bg-card/90 border-2 border-white/10 shadow-2xl animate-slide-up">
         <CardHeader className="space-y-1 text-center border-b border-white/10 pb-4">

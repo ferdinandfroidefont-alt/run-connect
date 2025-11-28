@@ -423,11 +423,6 @@ All colors MUST be HSL.
     box-shadow: 0 0 0 3px rgba(110, 198, 255, 0.1);
   }
 
-  /* Fond de page premium - gradient bleu nuit */
-  .bg-page-premium {
-    background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
-  }
-
   /* Section Header - Unified section titles */
   .section-header {
     font-size: 0.75rem;

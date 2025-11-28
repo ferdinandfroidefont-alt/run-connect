@@ -520,7 +520,7 @@ const Leaderboard = () => {
 
   if (loading && currentPage === 1) {
     return (
-      <div className="min-h-screen bg-page-premium p-4 pb-24">
+      <div className="min-h-screen bg-background p-4 pb-24">
         <h1 className="text-3xl font-bold mb-4 flex items-center justify-center gap-2">
           <Trophy className="h-8 w-8 text-primary" />
           Classement
@@ -535,7 +535,7 @@ const Leaderboard = () => {
   const nextRank = getNextRankInfo(userPoints);
 
   return (
-    <div className="min-h-screen bg-page-premium p-4 pb-24">
+    <div className="min-h-screen bg-background p-4 pb-24">
       <h1 className="text-3xl font-bold mb-4 flex items-center justify-center gap-2">
         <Trophy className="h-8 w-8 text-primary" />
         Classement
