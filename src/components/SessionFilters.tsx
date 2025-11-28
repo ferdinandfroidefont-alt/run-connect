@@ -83,7 +83,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   const activeFilterLabel = getActiveFilterLabel();
 
   return (
-    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control`}>
+    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border-white/10 shadow-2xl`}>
       {/* Header cliquable - toujours visible */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
