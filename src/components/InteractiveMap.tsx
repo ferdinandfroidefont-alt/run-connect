@@ -1410,13 +1410,13 @@ export const InteractiveMap = ({
         {/* Search Bar and Date Filter - Floating over map */}
         <div className="absolute top-24 left-0 right-0 z-10 px-4 pb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70" />
             <Input
               ref={searchInputRef}
               placeholder="Rechercher un lieu ou une séance..."
               value={filters.search_query}
               onChange={(e) => setFilters(prev => ({ ...prev, search_query: e.target.value }))}
-              className="pl-10"
+              className="pl-10 bg-[#0f172a]/95 backdrop-blur-sm border-white/10 text-white placeholder:text-white/50 rounded-xl shadow-lg hover:bg-[#1e293b]/95 transition-colors"
             />
           </div>
           
@@ -1426,8 +1426,8 @@ export const InteractiveMap = ({
             <Popover>
               <PopoverTrigger asChild>
                 <div className="relative cursor-pointer">
-                  {/* Calendar Icon Style */}
-                  <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
+                  {/* Calendar Icon Style Premium */}
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-t-xl relative shadow-lg">
                     {/* Top holes */}
                     <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
                     <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
@@ -1437,8 +1437,8 @@ export const InteractiveMap = ({
                     </div>
                   </div>
                   {/* Calendar body */}
-                  <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
-                    <div className="text-black text-lg font-bold">
+                  <div className="w-12 h-9 bg-[#0f172a]/95 backdrop-blur-sm border-2 border-t-0 border-white/10 rounded-b-xl flex items-center justify-center shadow-lg">
+                    <div className="text-white text-lg font-bold">
                       {format(filters.selected_date, "d")}
                     </div>
                   </div>
@@ -1465,10 +1465,10 @@ export const InteractiveMap = ({
               <button
                 onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
                 className={cn(
-                  "flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7",
+                  "flex items-center justify-center rounded-xl transition-all shadow-lg border w-8 h-7",
                   filters.friends_only
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-foreground border-border hover:bg-muted"
+                    ? "bg-primary text-white border-primary/50"
+                    : "bg-[#0f172a]/95 backdrop-blur-sm text-white border-white/10 hover:bg-[#1e293b]/95"
                 )}
               >
                 <div className="flex items-center gap-0.5">
