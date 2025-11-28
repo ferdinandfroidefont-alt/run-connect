@@ -118,7 +118,7 @@ export const SessionFilters = ({
       </div>
 
       {/* Contenu qui apparaît au clic */}
-      {isOpen && <CardContent className="p-4 pt-0 bg-transparent">
+      {isOpen && <CardContent className="p-4 pt-0 bg-[#0d0d33]">
           <Separator className="mb-4 bg-white/10" />
 
           <div className="space-y-4">
