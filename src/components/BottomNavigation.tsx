@@ -153,7 +153,7 @@ export const BottomNavigation = () => {
                 navigate('/');
                 setTimeout(() => openCreateSession(), 100);
               }
-            }} className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30 bg-[#385bdc]">
+            }} className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30 bg-[#385bdc] border-[#385bdc]">
               <Plus size={20} />
               <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
             </button>
