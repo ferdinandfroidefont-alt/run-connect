@@ -102,7 +102,7 @@ export const BottomNavigation = () => {
       
       {/* Nouvelle barre du bas - couvre tout l'espace */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
-        <div className="flex items-center justify-center py-2 min-h-[40px] bg-[#00dd00]">
+        <div className="flex items-center justify-center py-2 min-h-[40px] bg-[#0d0d33]">
           <SimplePermissionsTest />
         </div>
       </nav>
