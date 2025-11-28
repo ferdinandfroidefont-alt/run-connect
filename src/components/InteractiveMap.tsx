@@ -1416,7 +1416,7 @@ export const InteractiveMap = ({
               placeholder="Rechercher un lieu ou une séance..."
               value={filters.search_query}
               onChange={(e) => setFilters(prev => ({ ...prev, search_query: e.target.value }))}
-              className="pl-10"
+              className="pl-10 bg-card/90 backdrop-blur-md border-white/20"
             />
           </div>
           
