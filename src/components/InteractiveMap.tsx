@@ -14,7 +14,6 @@ import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
-
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
 import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
@@ -41,7 +40,6 @@ declare global {
     google: typeof google;
   }
 }
-
 interface Session {
   id: string;
   title: string;
@@ -71,7 +69,6 @@ interface Session {
     total_elevation_gain: number;
   } | null;
 }
-
 interface Filter {
   activity_types: string[];
   session_types: string[];
@@ -80,7 +77,6 @@ interface Filter {
   friends_only: boolean;
   selected_club_id: string | null;
 }
-
 interface InteractiveMapProps {
   initialLat?: number;
   initialLng?: number;
@@ -94,24 +90,21 @@ const createHTMLMarkerClass = () => {
     private position: google.maps.LatLng;
     private content: HTMLDivElement;
     private onClick: () => void;
-
     constructor(position: google.maps.LatLng, content: HTMLDivElement, onClick: () => void) {
       super();
       this.position = position;
       this.content = content;
       this.onClick = onClick;
-      
+
       // Add click listener
       this.content.addEventListener('click', this.onClick);
     }
-
     onAdd() {
       const panes = this.getPanes();
       if (panes) {
         panes.overlayMouseTarget.appendChild(this.content);
       }
     }
-
     draw() {
       const overlayProjection = this.getProjection();
       if (overlayProjection) {
@@ -122,49 +115,52 @@ const createHTMLMarkerClass = () => {
         }
       }
     }
-
     onRemove() {
       if (this.content && this.content.parentElement) {
         this.content.removeEventListener('click', this.onClick);
         this.content.parentElement.removeChild(this.content);
       }
     }
-
     getPosition() {
       return this.position;
     }
-    
     setVisible(visible: boolean) {
       this.content.style.display = visible ? 'block' : 'none';
     }
   };
 };
-
 export const InteractiveMap = ({
-  initialLat, 
-  initialLng, 
-  initialZoom, 
-  highlightSessionId 
+  initialLat,
+  initialLng,
+  initialZoom,
+  highlightSessionId
 }: InteractiveMapProps = {}) => {
-  const { user, subscriptionInfo } = useAuth();
-  const { setRefreshSessions, setOpenCreateSession, setOpenCreateRoute } = useAppContext();
+  const {
+    user,
+    subscriptionInfo
+  } = useAuth();
+  const {
+    setRefreshSessions,
+    setOpenCreateSession,
+    setOpenCreateRoute
+  } = useAppContext();
   const navigate = useNavigate();
-  
+
   // Track newly created sessions for pulse animation
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
-  
+
   // Cache for generated SVG marker data URLs by user ID
   const markerCache = useRef<Map<string, string>>(new Map());
-  
+
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
     if (!user) {
       console.log('⚠️ InteractiveMap: No user detected, user should be redirected by Layout');
     }
   }, [user]);
-  
-  const { getCurrentPosition } = useGeolocation();
-  
+  const {
+    getCurrentPosition
+  } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<any[]>([]);
@@ -175,7 +171,10 @@ export const InteractiveMap = ({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [presetLocation, setPresetLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [presetLocation, setPresetLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [filters, setFilters] = useState<Filter>({
     activity_types: [],
     session_types: [],
@@ -185,18 +184,29 @@ export const InteractiveMap = ({
     selected_club_id: null
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
-  const [userProfile, setUserProfile] = useState<{username: string, display_name: string, avatar_url: string | null} | null>(null);
+  const [userProfile, setUserProfile] = useState<{
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
-  
+
   // Share profile hook
-  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
-  
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  
+  const {
+    shareProfile,
+    showQRDialog,
+    setShowQRDialog,
+    qrData
+  } = useShareProfile();
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
   // Check URL parameters for route creation mode
   const [isRouteCreationMode, setIsRouteCreationMode] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -204,7 +214,6 @@ export const InteractiveMap = ({
     console.log('🔍 Initial route creation mode from URL:', shouldCreateRoute);
     return shouldCreateRoute;
   });
-  
   const routePath = useRef<google.maps.Polyline | null>(null);
   const routeCoordinates = useRef<google.maps.LatLng[]>([]);
   const waypoints = useRef<google.maps.LatLng[]>([]);
@@ -221,40 +230,36 @@ export const InteractiveMap = ({
     const urlParams = new URLSearchParams(window.location.search);
     const shouldCreateRoute = urlParams.get('createRoute') === 'true';
     const shouldSaveRoute = urlParams.get('saveRoute') === 'true';
-    
     if (shouldCreateRoute && !isRouteCreationMode) {
       console.log('🎯 URL parameter detected - activating route creation mode');
       setIsRouteCreationMode(true);
-      
+
       // Clear the URL parameter after activation
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
       console.log('✅ URL parameter cleared');
     }
-    
     if (shouldSaveRoute) {
       console.log('💾 URL parameter detected - opening route save dialog');
-      
+
       // Récupérer les données du parcours depuis localStorage
       const pendingRouteData = localStorage.getItem('pendingRoute');
       if (pendingRouteData) {
         try {
           const routeData = JSON.parse(pendingRouteData);
-          routeCoordinates.current = routeData.coordinates.map((coord: any) => 
-            new google.maps.LatLng(coord.lat, coord.lng)
-          );
+          routeCoordinates.current = routeData.coordinates.map((coord: any) => new google.maps.LatLng(coord.lat, coord.lng));
           setRouteElevations(routeData.elevations || []);
-          
+
           // Ouvrir le dialog de sauvegarde
           setIsRouteDialogOpen(true);
-          
+
           // Nettoyer localStorage
           localStorage.removeItem('pendingRoute');
         } catch (error) {
           console.error('Erreur lors de la récupération du parcours:', error);
         }
       }
-      
+
       // Clear the URL parameter after activation
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
@@ -266,15 +271,11 @@ export const InteractiveMap = ({
   useEffect(() => {
     if (user) {
       const loadUserProfile = async () => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, display_name, avatar_url')
-          .eq('user_id', user.id)
-          .single();
-        
+        const {
+          data: profile
+        } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('user_id', user.id).single();
         setUserProfile(profile);
       };
-      
       loadUserProfile();
     }
   }, [user]);
@@ -283,7 +284,7 @@ export const InteractiveMap = ({
   const markSessionAsNew = (sessionId: string) => {
     console.log('🆕 Marquage de la séance comme nouvelle:', sessionId);
     setNewSessionIds(prev => new Set(prev).add(sessionId));
-    
+
     // Remove from new sessions after 5 seconds
     setTimeout(() => {
       console.log('⏰ Retrait de l\'animation de pulsation pour:', sessionId);
@@ -305,7 +306,7 @@ export const InteractiveMap = ({
   // Load sessions with automatic retry for new session detection
   const loadSessionsWithRetry = async (retryCount = 0, maxRetries = 3) => {
     await loadSessions();
-    
+
     // Retry with increasing delays if needed (500ms, 1000ms, 1500ms)
     if (retryCount < maxRetries) {
       const delay = (retryCount + 1) * 500;
@@ -322,15 +323,9 @@ export const InteractiveMap = ({
       // Get start and end of selected date
       const startOfDay = new Date(filters.selected_date);
       startOfDay.setHours(0, 0, 0, 0);
-      
       const endOfDay = new Date(filters.selected_date);
       endOfDay.setHours(23, 59, 59, 999);
-
-      let query = supabase
-        .from('sessions')
-        .select('*')
-        .gte('scheduled_at', startOfDay.toISOString())
-        .lte('scheduled_at', endOfDay.toISOString());
+      let query = supabase.from('sessions').select('*').gte('scheduled_at', startOfDay.toISOString()).lte('scheduled_at', endOfDay.toISOString());
 
       // If club filter is active, show sessions from that club OR user's own sessions
       if (filters.selected_club_id && user) {
@@ -342,17 +337,13 @@ export const InteractiveMap = ({
       // If friends_only filter is active, show sessions from friends AND user's own sessions
       if (filters.friends_only && user) {
         // Get user's friends first
-        const { data: friends } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', user.id)
-          .eq('status', 'accepted');
-
+        const {
+          data: friends
+        } = await supabase.from('user_follows').select('following_id').eq('follower_id', user.id).eq('status', 'accepted');
         const friendIds = friends?.map(f => f.following_id) || [];
-        
+
         // ALWAYS include user's own sessions
         const allowedIds = [...friendIds, user.id];
-        
         if (allowedIds.length > 0) {
           query = query.in('organizer_id', allowedIds);
         } else {
@@ -360,30 +351,25 @@ export const InteractiveMap = ({
           query = query.eq('organizer_id', user.id);
         }
       }
-
-      const { data, error } = await query;
-
+      const {
+        data,
+        error
+      } = await query;
       if (error) throw error;
-      
+
       // Filter sessions based on visibility rules
       let visibleSessions = data || [];
-      
       if (user) {
         // Get user's friends for visibility checks
-        const { data: userFriends } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', user.id)
-          .eq('status', 'accepted');
-
+        const {
+          data: userFriends
+        } = await supabase.from('user_follows').select('following_id').eq('follower_id', user.id).eq('status', 'accepted');
         const friendIds = userFriends?.map(f => f.following_id) || [];
-        
-        // Get user's clubs for visibility checks
-        const { data: userClubs } = await supabase
-          .from('group_members')
-          .select('conversation_id')
-          .eq('user_id', user.id);
 
+        // Get user's clubs for visibility checks
+        const {
+          data: userClubs
+        } = await supabase.from('group_members').select('conversation_id').eq('user_id', user.id);
         const clubIds = userClubs?.map(c => c.conversation_id) || [];
 
         // Filter sessions based on visibility rules
@@ -407,31 +393,30 @@ export const InteractiveMap = ({
           return !session.friends_only && !session.club_id;
         });
       }
-      
+
       // Get organizer profiles and routes for all sessions
       const sessionsWithProfiles = [];
       for (const session of visibleSessions) {
         // Get organizer profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, display_name, avatar_url')
-          .eq('user_id', session.organizer_id)
-          .maybeSingle();
-        
+        const {
+          data: profile
+        } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('user_id', session.organizer_id).maybeSingle();
+
         // Get route if session has one
         let route = null;
         if (session.route_id) {
-          const { data: routeData } = await supabase
-            .from('routes')
-            .select('id, name, coordinates, total_distance, total_elevation_gain')
-            .eq('id', session.route_id)
-            .maybeSingle();
+          const {
+            data: routeData
+          } = await supabase.from('routes').select('id, name, coordinates, total_distance, total_elevation_gain').eq('id', session.route_id).maybeSingle();
           route = routeData;
         }
-        
         sessionsWithProfiles.push({
           ...session,
-          profiles: profile || { username: 'Utilisateur', display_name: 'Utilisateur', avatar_url: null },
+          profiles: profile || {
+            username: 'Utilisateur',
+            display_name: 'Utilisateur',
+            avatar_url: null
+          },
           routes: route
         });
       }
@@ -445,7 +430,6 @@ export const InteractiveMap = ({
         has_avatar: !!s.profiles?.avatar_url,
         avatar_url: s.profiles?.avatar_url
       })));
-
       setSessions(sessionsWithProfiles);
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -478,18 +462,14 @@ export const InteractiveMap = ({
     const filteredSessions = sessions.filter(session => {
       const matchesActivity = filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
       const matchesType = filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
-      const matchesSearch = !filters.search_query || 
-        session.title.toLowerCase().includes(filters.search_query.toLowerCase()) ||
-        session.location_name.toLowerCase().includes(filters.search_query.toLowerCase());
-      
+      const matchesSearch = !filters.search_query || session.title.toLowerCase().includes(filters.search_query.toLowerCase()) || session.location_name.toLowerCase().includes(filters.search_query.toLowerCase());
       return matchesActivity && matchesType && matchesSearch;
     });
-
     console.log(`Creating markers for ${filteredSessions.length} sessions`);
-    console.log('Sessions with profiles:', filteredSessions.map(s => ({ 
-      id: s.id, 
-      title: s.title, 
-      hasProfile: !!s.profiles, 
+    console.log('Sessions with profiles:', filteredSessions.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasProfile: !!s.profiles,
       avatarUrl: s.profiles?.avatar_url,
       hasRoute: !!s.routes
     })));
@@ -506,38 +486,34 @@ export const InteractiveMap = ({
           });
           return null;
         }
-
         const markerIcon = await createCustomMarker(session);
         const isNewSession = newSessionIds.has(session.id);
-        
         if (isNewSession) {
           // Create HTML marker with pulse animation for new sessions
           const HTMLMarkerClass = createHTMLMarkerClass();
-          
           const markerDiv = document.createElement('div');
           markerDiv.style.position = 'absolute';
           markerDiv.style.transform = 'translate(-50%, -100%)';
           markerDiv.style.cursor = 'pointer';
-          
           const img = document.createElement('img');
           img.src = markerIcon;
           img.style.width = '48px';
           img.style.height = '60px';
           img.className = 'pulse-marker-animation';
-          
           markerDiv.appendChild(img);
-          
           const position = new google.maps.LatLng(Number(session.location_lat), Number(session.location_lng));
           const htmlMarker = new HTMLMarkerClass(position, markerDiv, () => {
             setSelectedSession(session);
           });
-          
           htmlMarker.setMap(map.current);
           return htmlMarker;
         } else {
           // Create standard marker for normal sessions
           const marker = new google.maps.Marker({
-            position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
+            position: {
+              lat: Number(session.location_lat),
+              lng: Number(session.location_lng)
+            },
             map: map.current,
             title: session.title,
             icon: {
@@ -546,20 +522,21 @@ export const InteractiveMap = ({
               anchor: new google.maps.Point(24, 60)
             }
           });
-
           marker.addListener('click', () => {
             setSelectedSession(session);
           });
-
           return marker;
         }
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
-        
+
         // Create a basic marker as fallback
         try {
           const fallbackMarker = new google.maps.Marker({
-            position: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
+            position: {
+              lat: Number(session.location_lat),
+              lng: Number(session.location_lng)
+            },
             map: map.current,
             title: session.title,
             icon: {
@@ -568,11 +545,9 @@ export const InteractiveMap = ({
               anchor: new google.maps.Point(20, 40)
             }
           });
-
           fallbackMarker.addListener('click', () => {
             setSelectedSession(session);
           });
-
           return fallbackMarker;
         } catch (fallbackError) {
           console.error(`Failed to create fallback marker for session ${session.id}:`, fallbackError);
@@ -584,22 +559,19 @@ export const InteractiveMap = ({
     // Wait for all markers to be created and add successful ones
     const createdMarkers = await Promise.all(markerPromises);
     const validMarkers = createdMarkers.filter(marker => marker !== null);
-    
     markers.current = validMarkers;
     console.log(`Successfully created ${validMarkers.length} markers out of ${filteredSessions.length} sessions`);
   };
-
   const createCustomMarker = async (session: Session): Promise<string> => {
     console.log('🎨 Creating RunConnect custom marker for session:', session.id, session.title);
-    
+
     // Validation des données de session
     if (!session || !session.profiles) {
       console.warn('Session or profiles missing:', session);
       return getFallbackIcon(session?.activity_type || 'course');
     }
-
     const organizerId = session.organizer_id;
-    
+
     // Check cache first
     if (markerCache.current.has(organizerId)) {
       console.log('✅ Using cached marker for user:', organizerId);
@@ -609,38 +581,35 @@ export const InteractiveMap = ({
     // Generate new RunConnect SVG marker with base64 image
     const profileImageUrl = session.profiles.avatar_url || '/placeholder.svg';
     console.log('🖼️ Generating SVG marker with profile image:', profileImageUrl);
-    
     try {
       // Convert image to base64 first
       const base64Image = await imageUrlToBase64(profileImageUrl);
       console.log('📸 Image converted to base64, length:', base64Image.length);
-      
       const svg = generateRunConnectMarkerSVG(base64Image, 48);
       const dataUrl = svgToDataUrl(svg);
-      
+
       // Cache the generated marker
       markerCache.current.set(organizerId, dataUrl);
       console.log('✨ RunConnect marker generated and cached for user:', organizerId);
-      
       return dataUrl;
     } catch (error) {
       console.error('❌ Error generating RunConnect marker:', error);
       return getFallbackIcon(session.activity_type);
     }
   };
-
   const getActivityColor = (activityType: string) => {
     const colors: Record<string, string> = {
       'course': '#ef4444',
-      'trail': '#f97316', // Orange pour le trail
-      'velo': '#3b82f6', 
-      'vtt': '#059669', // Vert pour le VTT
+      'trail': '#f97316',
+      // Orange pour le trail
+      'velo': '#3b82f6',
+      'vtt': '#059669',
+      // Vert pour le VTT
       'marche': '#22c55e',
       'natation': '#0d9488'
     };
     return colors[activityType] || colors['course'];
   };
-
   const getFallbackIcon = (activityType: string) => {
     // Fallback simple SVG data URL
     return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiNlZjQ0NDQiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNlZjQ0NDQiLz48L3N2Zz4=';
@@ -650,13 +619,14 @@ export const InteractiveMap = ({
   useEffect(() => {
     if (isMapLoaded && map.current && initialLat && initialLng) {
       // Center map on shared session location
-      const sessionLocation = { lat: initialLat, lng: initialLng };
+      const sessionLocation = {
+        lat: initialLat,
+        lng: initialLng
+      };
       map.current.setCenter(sessionLocation);
-      
       if (initialZoom) {
         map.current.setZoom(initialZoom);
       }
-      
       console.log('Map centered on shared session:', sessionLocation);
     }
   }, [isMapLoaded, initialLat, initialLng, initialZoom]);
@@ -675,24 +645,14 @@ export const InteractiveMap = ({
   // Real-time updates for sessions
   useEffect(() => {
     if (!user) return;
-
     loadSessions();
-
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sessions'
-        },
-        () => {
-          loadSessions();
-        }
-      )
-      .subscribe();
-
+    const channel = supabase.channel('schema-db-changes').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'sessions'
+    }, () => {
+      loadSessions();
+    }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
@@ -702,29 +662,27 @@ export const InteractiveMap = ({
   useEffect(() => {
     if (isMapLoaded && searchInputRef.current && !searchAutocomplete) {
       console.log('Initializing search autocomplete...');
-      
       const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
         types: ['geocode'],
-        componentRestrictions: { country: 'fr' }
+        componentRestrictions: {
+          country: 'fr'
+        }
       });
-
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
         console.log('Place selected:', place);
-        
         if (place.geometry && place.geometry.location && map.current) {
           // Center map on selected location
           map.current.setCenter(place.geometry.location);
           map.current.setZoom(15);
-          
+
           // Update search query
-          setFilters(prev => ({ 
-            ...prev, 
+          setFilters(prev => ({
+            ...prev,
             search_query: place.formatted_address || place.name || ''
           }));
         }
       });
-
       setSearchAutocomplete(autocomplete);
       console.log('Search autocomplete initialized');
     }
@@ -736,53 +694,55 @@ export const InteractiveMap = ({
       createMarkers();
     }
   }, [sessions, filters, isMapLoaded]);
-
   useEffect(() => {
     if (!mapContainer.current || isMapLoaded) return;
-
     const initializeMap = async () => {
       try {
         // Récupérer la clé API Google Maps depuis Supabase
-        const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { type: 'get-key' }
+        const {
+          data: apiKeyData
+        } = await supabase.functions.invoke('google-maps-proxy', {
+          body: {
+            type: 'get-key'
+          }
         });
-        
         const googleMapsApiKey = apiKeyData?.apiKey || 'FALLBACK_KEY';
-        
         const loader = new Loader({
           apiKey: googleMapsApiKey,
           version: 'weekly',
           libraries: ['geometry', 'places']
         });
-
         await loader.load();
-        
         if (!mapContainer.current) return;
 
         // Initialize map
         map.current = new google.maps.Map(mapContainer.current, {
           zoom: 12,
-          center: { lat: 48.8566, lng: 2.3522 }, // Paris coordinates
+          center: {
+            lat: 48.8566,
+            lng: 2.3522
+          },
+          // Paris coordinates
           mapTypeId: currentStyle as google.maps.MapTypeId,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
           zoomControl: false,
           gestureHandling: 'greedy',
-          styles: currentStyle === 'custom' ? [
-            {
-              featureType: 'all',
-              elementType: 'geometry.fill',
-              stylers: [{ color: '#f5f5f5' }]
-            },
-            {
-              featureType: 'water',
-              elementType: 'geometry',
-              stylers: [{ color: '#c9c9c9' }]
-            }
-          ] : undefined
+          styles: currentStyle === 'custom' ? [{
+            featureType: 'all',
+            elementType: 'geometry.fill',
+            stylers: [{
+              color: '#f5f5f5'
+            }]
+          }, {
+            featureType: 'water',
+            elementType: 'geometry',
+            stylers: [{
+              color: '#c9c9c9'
+            }]
+          }] : undefined
         });
-
         setIsMapLoaded(true);
 
         // Initialize elevation and directions services
@@ -790,11 +750,12 @@ export const InteractiveMap = ({
         directionsService.current = new google.maps.DirectionsService();
         directionsRenderer.current = new google.maps.DirectionsRenderer({
           draggable: false,
-          map: null, // Don't attach to map by default
+          map: null,
+          // Don't attach to map by default
           polylineOptions: {
             strokeColor: '#3b82f6',
             strokeOpacity: 1.0,
-            strokeWeight: 4,
+            strokeWeight: 4
           }
         });
 
@@ -805,31 +766,26 @@ export const InteractiveMap = ({
         map.current.addListener('mousedown', (event: google.maps.MapMouseEvent) => {
           // Don't create session if in route creation mode
           if (isRouteCreationMode) return;
-          
+
           // Check user preference for long press to create session
           const enableLongPressCreate = localStorage.getItem('enableLongPressCreate') === 'true';
           if (!enableLongPressCreate) return;
-          
           touchTimer = setTimeout(() => {
             handleCreateSessionAtLocation(event.latLng);
             touchTimer = null;
           }, 600); // 600ms for long press (reduced for better UX)
         });
-
         map.current.addListener('mouseup', () => {
           // Don't handle mouseup if in route creation mode
           if (isRouteCreationMode) return;
-          
           if (touchTimer) {
             clearTimeout(touchTimer);
             touchTimer = null;
           }
         });
-
         map.current.addListener('mousemove', () => {
           // Don't handle mousemove if in route creation mode
           if (isRouteCreationMode) return;
-          
           if (touchTimer) {
             clearTimeout(touchTimer);
             touchTimer = null;
@@ -838,56 +794,49 @@ export const InteractiveMap = ({
 
         // Try to get user's location using Capacitor with detailed logging
         console.log("🗺️ Début tentative géolocalisation");
-        
-        getCurrentPosition()
-          .then((position) => {
-            console.log("🗺️ Position reçue dans InteractiveMap:", position);
-            if (position) {
-              setUserLocation(position);
-              map.current?.setCenter(position);
-              map.current?.setZoom(14);
-              console.log("✅ Carte centrée sur position utilisateur:", position);
-            } else {
-              console.log("❌ Position null reçue");
-              throw new Error("No position returned");
-            }
-          })
-          .catch((error) => {
-            console.error("❌ Erreur géolocalisation dans InteractiveMap:", error);
-            
-            // Message d'erreur plus informatif
-            let errorMessage = "Localisation non disponible";
-            let shouldShowSettings = false;
-            
-            if (error.message?.includes('Permission') || error.message?.includes('denied')) {
-              errorMessage = "Autorisations de localisation requises - Cliquez pour ouvrir les paramètres";
-              shouldShowSettings = true;
-            } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
-              errorMessage = "Délai de localisation dépassé - Réessayez";
-            } else if (error.message?.includes('unavailable')) {
-              errorMessage = "Service de localisation indisponible - Vérifiez vos paramètres";
-              shouldShowSettings = true;
-            }
-            
-            if (shouldShowSettings) {
-              toast.error(errorMessage, {
-                action: {
-                  label: "Paramètres",
-                  onClick: openLocationSettings
-                }
-              });
-            }
-            
-            // Don't set default location for marker display
-            console.log("🗺️ Pas de position disponible, pas de marqueur");
-          });
+        getCurrentPosition().then(position => {
+          console.log("🗺️ Position reçue dans InteractiveMap:", position);
+          if (position) {
+            setUserLocation(position);
+            map.current?.setCenter(position);
+            map.current?.setZoom(14);
+            console.log("✅ Carte centrée sur position utilisateur:", position);
+          } else {
+            console.log("❌ Position null reçue");
+            throw new Error("No position returned");
+          }
+        }).catch(error => {
+          console.error("❌ Erreur géolocalisation dans InteractiveMap:", error);
 
+          // Message d'erreur plus informatif
+          let errorMessage = "Localisation non disponible";
+          let shouldShowSettings = false;
+          if (error.message?.includes('Permission') || error.message?.includes('denied')) {
+            errorMessage = "Autorisations de localisation requises - Cliquez pour ouvrir les paramètres";
+            shouldShowSettings = true;
+          } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
+            errorMessage = "Délai de localisation dépassé - Réessayez";
+          } else if (error.message?.includes('unavailable')) {
+            errorMessage = "Service de localisation indisponible - Vérifiez vos paramètres";
+            shouldShowSettings = true;
+          }
+          if (shouldShowSettings) {
+            toast.error(errorMessage, {
+              action: {
+                label: "Paramètres",
+                onClick: openLocationSettings
+              }
+            });
+          }
+
+          // Don't set default location for marker display
+          console.log("🗺️ Pas de position disponible, pas de marqueur");
+        });
       } catch (error) {
         console.error('Erreur lors du chargement de Google Maps:', error);
         toast.error("Erreur lors du chargement de la carte");
       }
     };
-
     initializeMap();
   }, [currentStyle]);
 
@@ -909,7 +858,7 @@ export const InteractiveMap = ({
       const ctx = canvas.getContext('2d')!;
 
       // Create gradient for pulse effect
-      const gradient = ctx.createRadialGradient(size/2, size/2, 5, size/2, size/2, size/2);
+      const gradient = ctx.createRadialGradient(size / 2, size / 2, 5, size / 2, size / 2, size / 2);
       gradient.addColorStop(0, 'rgba(59, 130, 246, 0.6)'); // primary blue with opacity
       gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.3)');
       gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
@@ -917,7 +866,7 @@ export const InteractiveMap = ({
       // Draw pulsating circle
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(size/2, size/2, size/2, 0, 2 * Math.PI);
+      ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
       ctx.fill();
 
       // Draw solid center dot
@@ -925,7 +874,7 @@ export const InteractiveMap = ({
       ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
       ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(size/2, size/2, 8, 0, 2 * Math.PI);
+      ctx.arc(size / 2, size / 2, 8, 0, 2 * Math.PI);
       ctx.fill();
 
       // White border around center
@@ -934,14 +883,11 @@ export const InteractiveMap = ({
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
       ctx.beginPath();
-      ctx.arc(size/2, size/2, 8, 0, 2 * Math.PI);
+      ctx.arc(size / 2, size / 2, 8, 0, 2 * Math.PI);
       ctx.stroke();
-
       return canvas.toDataURL('image/png');
     };
-
     const markerIcon = createPulsatingMarker();
-    
     userLocationMarker.current = new google.maps.Marker({
       position: userLocation,
       map: map.current,
@@ -950,10 +896,10 @@ export const InteractiveMap = ({
         scaledSize: new google.maps.Size(60, 60),
         anchor: new google.maps.Point(30, 30)
       },
-      zIndex: 1000, // Above other markers
+      zIndex: 1000,
+      // Above other markers
       title: 'Votre position'
     });
-
     console.log('✅ User location marker created with pulse animation');
 
     // Animate the pulse effect
@@ -961,7 +907,6 @@ export const InteractiveMap = ({
     let growing = true;
     const animate = () => {
       if (!userLocationMarker.current) return;
-      
       if (growing) {
         scale += 0.02;
         if (scale >= 1.3) growing = false;
@@ -969,7 +914,6 @@ export const InteractiveMap = ({
         scale -= 0.02;
         if (scale <= 1) growing = true;
       }
-      
       const animatedIcon = userLocationMarker.current.getIcon() as google.maps.Icon;
       if (animatedIcon && animatedIcon.scaledSize) {
         userLocationMarker.current.setIcon({
@@ -978,12 +922,9 @@ export const InteractiveMap = ({
           anchor: new google.maps.Point(30 * scale, 30 * scale)
         });
       }
-      
       requestAnimationFrame(animate);
     };
-    
     const animationId = requestAnimationFrame(animate);
-
     return () => {
       cancelAnimationFrame(animationId);
       if (userLocationMarker.current) {
@@ -991,57 +932,53 @@ export const InteractiveMap = ({
       }
     };
   }, [userLocation, isMapLoaded]);
-
-
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
     if (map.current) {
       if (style === 'custom') {
         map.current.setOptions({
-          styles: [
-            {
-              featureType: 'all',
-              elementType: 'geometry.fill',
-              stylers: [{ color: '#f5f5f5' }]
-            },
-            {
-              featureType: 'water',
-              elementType: 'geometry',
-              stylers: [{ color: '#c9c9c9' }]
-            }
-          ]
+          styles: [{
+            featureType: 'all',
+            elementType: 'geometry.fill',
+            stylers: [{
+              color: '#f5f5f5'
+            }]
+          }, {
+            featureType: 'water',
+            elementType: 'geometry',
+            stylers: [{
+              color: '#c9c9c9'
+            }]
+          }]
         });
       } else {
         map.current.setMapTypeId(style as google.maps.MapTypeId);
-        map.current.setOptions({ styles: undefined });
+        map.current.setOptions({
+          styles: undefined
+        });
       }
     }
   };
-
-
   const handleCreateRoute = () => {
     console.log('🗺️ InteractiveMap handleCreateRoute called - navigating to route creation');
     navigate('/route-create');
   };
-
   const createDirectionsRoute = () => {
     if (!directionsService.current || !directionsRenderer.current || waypoints.current.length < 2) return;
-
     const origin = waypoints.current[0];
     const destination = waypoints.current[waypoints.current.length - 1];
     const waypointsForDirections = waypoints.current.slice(1, -1).map(point => ({
       location: point,
       stopover: true
     }));
-
     const request: google.maps.DirectionsRequest = {
       origin: origin,
       destination: destination,
       waypoints: waypointsForDirections,
-      travelMode: google.maps.TravelMode.WALKING, // or BICYCLING for cycling routes
+      travelMode: google.maps.TravelMode.WALKING,
+      // or BICYCLING for cycling routes
       optimizeWaypoints: false
     };
-
     directionsService.current.route(request, (result, status) => {
       if (status === 'OK' && result) {
         // Set the directions renderer to display the route
@@ -1051,7 +988,6 @@ export const InteractiveMap = ({
         // Extract coordinates from the route for elevation calculation
         const route = result.routes[0];
         routeCoordinates.current = [];
-        
         route.legs.forEach(leg => {
           leg.steps.forEach(step => {
             step.path.forEach(point => {
@@ -1068,26 +1004,22 @@ export const InteractiveMap = ({
       }
     });
   };
-
   const updateElevationProfile = async () => {
     if (!elevationService.current || routeCoordinates.current.length === 0) return;
-    
     try {
       // Pour les longs itinéraires, on augmente significativement le nombre d'échantillons
       // Plus de points = calcul plus précis du dénivelé
       const routeLength = routeCoordinates.current.length;
       let samples = Math.max(100, Math.min(routeLength * 2, 512)); // Minimum 100 points, maximum 512 (limite API)
-      
+
       // Pour les très longs itinéraires, on prend le maximum de points possible
       if (routeLength > 100) {
         samples = 512; // Maximum autorisé par l'API Google Maps
       }
-
       const elevationRequest = {
         path: routeCoordinates.current,
         samples: samples
       };
-      
       elevationService.current.getElevationAlongPath(elevationRequest, (results, status) => {
         if (status === 'OK' && results) {
           const elevations = results.map(result => result.elevation);
@@ -1098,29 +1030,24 @@ export const InteractiveMap = ({
       console.error('Erreur lors du calcul du dénivelé:', error);
     }
   };
-
   const calculateRouteStats = () => {
     if (routeElevations.length === 0) return null;
-    
     let totalDistance = 0;
     let elevationGain = 0;
     let elevationLoss = 0;
     const minElevation = Math.min(...routeElevations);
     const maxElevation = Math.max(...routeElevations);
-    
+
     // Calculate total distance
     for (let i = 1; i < routeCoordinates.current.length; i++) {
-      const distance = google.maps.geometry.spherical.computeDistanceBetween(
-        routeCoordinates.current[i - 1], 
-        routeCoordinates.current[i]
-      );
+      const distance = google.maps.geometry.spherical.computeDistanceBetween(routeCoordinates.current[i - 1], routeCoordinates.current[i]);
       totalDistance += distance;
     }
-    
+
     // Calculate elevation gain/loss avec un seuil minimum pour éviter le bruit
     // On ignore les variations très petites qui peuvent être dues à l'imprécision des données
     const elevationThreshold = 1; // Minimum 1m de différence pour compter comme un dénivelé
-    
+
     for (let i = 1; i < routeElevations.length; i++) {
       const diff = routeElevations[i] - routeElevations[i - 1];
       // Suppression du seuil pour capturer tous les dénivelés, même petits
@@ -1130,45 +1057,39 @@ export const InteractiveMap = ({
         elevationLoss += Math.abs(diff);
       }
     }
-    
     return {
-      totalDistance: Math.round(totalDistance / 1000), // Convert meters to kilometers
+      totalDistance: Math.round(totalDistance / 1000),
+      // Convert meters to kilometers
       elevationGain: Math.round(elevationGain),
       elevationLoss: Math.round(elevationLoss),
       minElevation: Math.round(minElevation),
       maxElevation: Math.round(maxElevation)
     };
   };
-
   const saveRoute = async (routeName: string, routeDescription: string) => {
     if (!user || routeCoordinates.current.length < 2) return false;
-    
     const routeStats = calculateRouteStats();
     if (!routeStats) return false;
-    
     try {
       const coordinates = routeCoordinates.current.map((coord, index) => ({
         lat: coord.lat(),
         lng: coord.lng(),
         elevation: routeElevations[index] || 0
       }));
-      
-      const { error } = await supabase
-        .from('routes')
-        .insert({
-          name: routeName,
-          description: routeDescription,
-          coordinates: coordinates,
-          total_distance: routeStats.totalDistance,
-          total_elevation_gain: routeStats.elevationGain,
-          total_elevation_loss: routeStats.elevationLoss,
-          min_elevation: routeStats.minElevation,
-          max_elevation: routeStats.maxElevation,
-          created_by: user.id
-        });
-      
+      const {
+        error
+      } = await supabase.from('routes').insert({
+        name: routeName,
+        description: routeDescription,
+        coordinates: coordinates,
+        total_distance: routeStats.totalDistance,
+        total_elevation_gain: routeStats.elevationGain,
+        total_elevation_loss: routeStats.elevationLoss,
+        min_elevation: routeStats.minElevation,
+        max_elevation: routeStats.maxElevation,
+        created_by: user.id
+      });
       if (error) throw error;
-      
       toast('Itinéraire enregistré avec succès!');
       return true;
     } catch (error) {
@@ -1177,25 +1098,21 @@ export const InteractiveMap = ({
       return false;
     }
   };
-
   const finishRouteCreation = () => {
     if (waypoints.current.length < 2) {
       toast('Vous devez tracer au moins 2 points pour créer un itinéraire');
       return;
     }
-    
     setIsRouteDialogOpen(true);
   };
-
   const handleSaveRoute = async (routeName: string, routeDescription: string, createSession?: boolean) => {
     setRouteSaving(true);
     const success = await saveRoute(routeName, routeDescription);
     setRouteSaving(false);
-    
     if (success) {
       setIsRouteDialogOpen(false);
       setIsRouteCreationMode(false);
-      
+
       // Remove click listener
       if (map.current) {
         const listener = map.current.get('routeClickListener');
@@ -1203,19 +1120,14 @@ export const InteractiveMap = ({
           google.maps.event.removeListener(listener);
         }
       }
-      
+
       // Show markers again
       loadSessions();
-      
       if (createSession) {
         // Sauvegarder les coordonnées du début AVANT de les effacer
-        const startLat = waypoints.current.length > 0 
-          ? waypoints.current[0].lat() 
-          : 48.8566;
-        const startLng = waypoints.current.length > 0 
-          ? waypoints.current[0].lng() 
-          : 2.3522;
-        
+        const startLat = waypoints.current.length > 0 ? waypoints.current[0].lat() : 48.8566;
+        const startLng = waypoints.current.length > 0 ? waypoints.current[0].lng() : 2.3522;
+
         // Clear route data first
         if (directionsRenderer.current) {
           directionsRenderer.current.setMap(null);
@@ -1223,9 +1135,12 @@ export const InteractiveMap = ({
         routeCoordinates.current = [];
         waypoints.current = [];
         setRouteElevations([]);
-        
+
         // Now open create session dialog with saved coordinates
-        setPresetLocation({ lat: startLat, lng: startLng });
+        setPresetLocation({
+          lat: startLat,
+          lng: startLng
+        });
         setIsCreateDialogOpen(true);
       } else {
         // Clear route data
@@ -1235,16 +1150,15 @@ export const InteractiveMap = ({
         routeCoordinates.current = [];
         waypoints.current = [];
         setRouteElevations([]);
-        
+
         // Rediriger vers la page "Mes itinéraires"
         navigate('/my-sessions?tab=routes');
       }
     }
   };
-
   const cancelRouteCreation = () => {
     setIsRouteCreationMode(false);
-    
+
     // Remove click listener
     if (map.current) {
       const listener = map.current.get('routeClickListener');
@@ -1252,7 +1166,7 @@ export const InteractiveMap = ({
         google.maps.event.removeListener(listener);
       }
     }
-    
+
     // Clear route
     if (routePath.current) {
       routePath.current.setMap(null);
@@ -1263,43 +1177,40 @@ export const InteractiveMap = ({
     routeCoordinates.current = [];
     waypoints.current = [];
     setRouteElevations([]);
-    
+
     // Show markers again
     markers.current.forEach(marker => marker.setVisible(true));
   };
-
   const updateRoutePath = () => {
     if (!map.current || routeCoordinates.current.length === 0) return;
-    
+
     // Remove existing path
     if (routePath.current) {
       routePath.current.setMap(null);
     }
-    
+
     // Create new path
     routePath.current = new google.maps.Polyline({
       path: routeCoordinates.current,
       geodesic: true,
       strokeColor: '#3b82f6',
       strokeOpacity: 1.0,
-      strokeWeight: 4,
+      strokeWeight: 4
     });
-    
     routePath.current.setMap(map.current);
   };
-
   const handleResetView = () => {
     if (map.current) {
-      map.current.panTo({ lat: 48.8566, lng: 2.3522 });
+      map.current.panTo({
+        lat: 48.8566,
+        lng: 2.3522
+      });
       map.current.setZoom(12);
     }
   };
-
   const handleLocateMe = async () => {
     if (!map.current) return;
-    
     console.log("🗺️ handleLocateMe");
-    
     try {
       const position = await getCurrentPosition();
       if (position) {
@@ -1313,10 +1224,9 @@ export const InteractiveMap = ({
       toast.error("Impossible de vous localiser");
     }
   };
-
   const handleToggle3D = () => {
     if (!map.current) return;
-    
+
     // Toggle between map and satellite view for "3D" effect
     const currentType = map.current.getMapTypeId();
     if (currentType === 'satellite') {
@@ -1325,43 +1235,37 @@ export const InteractiveMap = ({
       map.current.setMapTypeId('satellite');
     }
   };
-
   const handleCreateSessionAtLocation = (latLng: google.maps.LatLng | null) => {
     // Don't create session if in route creation mode
     if (isRouteCreationMode) {
       console.log('🚫 Session creation blocked - route creation mode active');
       return;
     }
-    
     if (!latLng || !user) {
       toast.error("Connectez-vous pour créer une séance");
       return;
     }
-    
-    setPresetLocation({ lat: latLng.lat(), lng: latLng.lng() });
+    setPresetLocation({
+      lat: latLng.lat(),
+      lng: latLng.lng()
+    });
     setIsCreateDialogOpen(true);
   };
-
-  return (
-    <div className="relative w-full h-[calc(100vh-8rem)] bg-background">
+  return <div className="relative w-full h-[calc(100vh-8rem)] bg-background">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
       
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="relative flex items-center justify-between px-4 py-8">
+          <div className="relative flex items-center justify-between px-4 py-8 bg-[#0d0d33]/[0.81]">
             <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent mt-2">
               RunConnect
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
-            {userProfile && (
-              <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
-                <div 
-                  onClick={() => setShowProfileDialog(true)}
-                  className="cursor-pointer hover-scale hover-glow transition-all duration-200"
-                >
+            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
+                <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
                   <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                     <AvatarFallback>
@@ -1369,38 +1273,28 @@ export const InteractiveMap = ({
                     </AvatarFallback>
                   </Avatar>
                 </div>
-              </div>
-            )}
+              </div>}
             
             <div className="flex items-center gap-2 mt-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
-              <div 
-                className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
-                onClick={async () => {
-                  if (userProfile) {
-                    // Récupérer referral_code
-                    const { data: profileData } = await supabase
-                      .from('profiles')
-                      .select('referral_code')
-                      .eq('user_id', user?.id)
-                      .single();
-                    
-                    shareProfile({
-                      username: userProfile.username,
-                      displayName: userProfile.display_name,
-                      bio: null,
-                      avatarUrl: userProfile.avatar_url,
-                      referralCode: profileData?.referral_code
-                    });
-                  }
-                }}
-              >
+              <div className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={async () => {
+              if (userProfile) {
+                // Récupérer referral_code
+                const {
+                  data: profileData
+                } = await supabase.from('profiles').select('referral_code').eq('user_id', user?.id).single();
+                shareProfile({
+                  username: userProfile.username,
+                  displayName: userProfile.display_name,
+                  bio: null,
+                  avatarUrl: userProfile.avatar_url,
+                  referralCode: profileData?.referral_code
+                });
+              }
+            }}>
                 <Share2 className="h-5 w-5 text-red-500" />
               </div>
-              <div 
-                className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
-                onClick={() => setShowSettingsDialog(true)}
-              >
+              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={() => setShowSettingsDialog(true)}>
                 ⚙️
               </div>
             </div>
@@ -1411,13 +1305,10 @@ export const InteractiveMap = ({
         <div className="absolute top-24 left-0 right-0 z-10 px-4 pb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Rechercher un lieu ou une séance..."
-              value={filters.search_query}
-              onChange={(e) => setFilters(prev => ({ ...prev, search_query: e.target.value }))}
-              className="pl-10 bg-gradient-to-r from-[#0f172a]/20 via-[#1e293b]/30 to-[#0f172a]/20 backdrop-blur-sm border-white/10"
-            />
+            <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
+            ...prev,
+            search_query: e.target.value
+          }))} className="pl-10 bg-gradient-to-r from-[#0f172a]/20 via-[#1e293b]/30 to-[#0f172a]/20 backdrop-blur-sm border-white/10" />
           </div>
           
           {/* Date Filter and Friends Filter */}
@@ -1433,7 +1324,9 @@ export const InteractiveMap = ({
                     <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
                     {/* Month text */}
                     <div className="text-white text-xs font-bold text-center pt-1.5">
-                      {format(filters.selected_date, "MMM", { locale: fr }).toUpperCase()}
+                      {format(filters.selected_date, "MMM", {
+                      locale: fr
+                    }).toUpperCase()}
                     </div>
                   </div>
                   {/* Calendar body */}
@@ -1445,32 +1338,24 @@ export const InteractiveMap = ({
                 </div>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={filters.selected_date}
-                  onSelect={(date) => {
-                    if (date) {
-                      setFilters(prev => ({ ...prev, selected_date: date }));
-                    }
-                  }}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
+                <CalendarComponent mode="single" selected={filters.selected_date} onSelect={date => {
+                if (date) {
+                  setFilters(prev => ({
+                    ...prev,
+                    selected_date: date
+                  }));
+                }
+              }} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
 
             {/* Friends Only Filter and Club Selector - stacked vertically */}
             <div className="flex flex-col gap-2">
               {/* Friends Only Filter */}
-              <button
-                onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
-                className={cn(
-                  "flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7",
-                  filters.friends_only
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-foreground border-border hover:bg-muted"
-                )}
-              >
+              <button onClick={() => setFilters(prev => ({
+              ...prev,
+              friends_only: !prev.friends_only
+            }))} className={cn("flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7", filters.friends_only ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted")}>
                 <div className="flex items-center gap-0.5">
                   <PersonStanding size={12} />
                   <Bike size={12} />
@@ -1479,10 +1364,10 @@ export const InteractiveMap = ({
               
               {/* Club Selector positioned directly under "Amis uniquement" */}
               <div className="w-48">
-                <ClubSelector
-                  selectedClubId={filters.selected_club_id}
-                  onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
-                />
+                <ClubSelector selectedClubId={filters.selected_club_id} onClubSelect={clubId => setFilters(prev => ({
+                ...prev,
+                selected_club_id: clubId
+              }))} />
               </div>
             </div>
           </div>
@@ -1490,84 +1375,48 @@ export const InteractiveMap = ({
       </div>
 
       {/* Route Creation Mode Banner */}
-      {isRouteCreationMode && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+      {isRouteCreationMode && <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
           <div className="bg-blue-600 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
             <span className="text-sm font-medium">
               Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
             </span>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-white text-blue-600 hover:bg-gray-100 font-medium"
-                onClick={finishRouteCreation}
-                disabled={waypoints.current.length < 2}
-              >
+              <Button size="sm" className="bg-white text-blue-600 hover:bg-gray-100 font-medium" onClick={finishRouteCreation} disabled={waypoints.current.length < 2}>
                 Terminer
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={cancelRouteCreation}
-              >
+              <Button size="sm" variant="outline" onClick={cancelRouteCreation}>
                 Annuler
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* Elevation Profile - Show during route creation */}
-      {isRouteCreationMode && showElevationProfile && (
-        <div className="absolute bottom-6 right-6 z-20">
-          <ElevationProfile 
-            elevations={routeElevations}
-            routeStats={calculateRouteStats()}
-          />
-        </div>
-      )}
+      {isRouteCreationMode && showElevationProfile && <div className="absolute bottom-6 right-6 z-20">
+          <ElevationProfile elevations={routeElevations} routeStats={calculateRouteStats()} />
+        </div>}
 
       {/* Toggle Elevation Profile Button */}
-      {isRouteCreationMode && (
-        <div className="absolute bottom-4 left-20 z-20">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowElevationProfile(!showElevationProfile)}
-            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 hover:bg-white"
-            title={showElevationProfile ? "Masquer le profil d'élévation" : "Afficher le profil d'élévation"}
-          >
+      {isRouteCreationMode && <div className="absolute bottom-4 left-20 z-20">
+          <Button variant="outline" size="sm" onClick={() => setShowElevationProfile(!showElevationProfile)} className="bg-white/90 backdrop-blur-sm shadow-lg border-2 hover:bg-white" title={showElevationProfile ? "Masquer le profil d'élévation" : "Afficher le profil d'élévation"}>
             {showElevationProfile ? "📈 Masquer profil" : "📈 Profil"}
           </Button>
-        </div>
-      )}
+        </div>}
 
       {/* Confirm Presence & Nearby Sessions Buttons */}
-      {user && (
-        <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
+      {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
           {/* Confirm Presence Button */}
-          <Button 
-            variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-green-600 text-white hover:bg-green-700 border-green-600"
-            onClick={() => navigate('/confirm-presence')}
-            title="Confirmer ma présence GPS"
-          >
+          <Button variant="outline" className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-green-600 text-white hover:bg-green-700 border-green-600" onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
             <div className="text-sm">✅📍</div>
             <div className="text-xs leading-tight">Confirmer présence</div>
           </Button>
 
           {/* Nearby Sessions Button */}
-          <Button 
-            variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
-            onClick={() => setShowNearbySessionsDialog(true)}
-            title="Séances à proximité"
-          >
+          <Button variant="outline" className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary" onClick={() => setShowNearbySessionsDialog(true)} title="Séances à proximité">
             <div className="text-sm">📍🏃</div>
             <div className="text-xs leading-tight">Séances à proximité</div>
           </Button>
-        </div>
-      )}
+        </div>}
 
       {/* Filters - repositionné plus haut */}
       <div className="absolute top-36 right-4 z-10">
@@ -1577,115 +1426,54 @@ export const InteractiveMap = ({
       {/* All Map Controls - repositioned to left side */}
       <div className="absolute left-4 bottom-4 flex flex-col gap-3 z-10">
         {/* Route Creation Button - Pencil Button */}
-        {user && (
-          <Button
-            onClick={() => {
-              console.log('🖱️ Pencil button clicked - navigating to route creation');
-              navigate('/route-create');
-            }}
-            size="sm"
-            variant="outline"
-            className="w-8 h-7 p-0 shadow-map-control flex items-center justify-center bg-card/90 backdrop-blur-sm"
-            title="Créer un itinéraire"
-          >
+        {user && <Button onClick={() => {
+        console.log('🖱️ Pencil button clicked - navigating to route creation');
+        navigate('/route-create');
+      }} size="sm" variant="outline" className="w-8 h-7 p-0 shadow-map-control flex items-center justify-center bg-card/90 backdrop-blur-sm" title="Créer un itinéraire">
             <PenTool className="h-3 w-3" />
-          </Button>
-        )}
+          </Button>}
         
         {/* Locate Me Button */}
-        <Button
-          onClick={handleLocateMe}
-          size="sm"
-          variant="outline"
-          className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center"
-        >
+        <Button onClick={handleLocateMe} size="sm" variant="outline" className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center">
           <MapPin className="h-3 w-3" />
         </Button>
         
         {/* Map Style Selector */}
-        <MapStyleSelector
-          currentStyle={currentStyle}
-          onStyleChange={handleStyleChange}
-        />
+        <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
         
         {/* Zoom and 3D Controls */}
-        <MapControls
-          onResetView={handleResetView}
-          onToggle3D={handleToggle3D}
-        />
+        <MapControls onResetView={handleResetView} onToggle3D={handleToggle3D} />
       </div>
       
 
       {/* Create Session Dialog */}
-      <CreateSessionDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => {
-          setIsCreateDialogOpen(false);
-          setPresetLocation(null);
-        }}
-        onSessionCreated={(sessionId) => {
-          if (sessionId) {
-            markSessionAsNew(sessionId);
-          }
-          loadSessionsWithRetry();
-        }}
-        map={map.current}
-        presetLocation={presetLocation}
-        onCreateRoute={handleCreateRoute}
-      />
+      <CreateSessionDialog isOpen={isCreateDialogOpen} onClose={() => {
+      setIsCreateDialogOpen(false);
+      setPresetLocation(null);
+    }} onSessionCreated={sessionId => {
+      if (sessionId) {
+        markSessionAsNew(sessionId);
+      }
+      loadSessionsWithRetry();
+    }} map={map.current} presetLocation={presetLocation} onCreateRoute={handleCreateRoute} />
 
       {/* Session Details Dialog */}
-      <SessionDetailsDialog
-        session={selectedSession}
-        onClose={() => setSelectedSession(null)}
-        onSessionUpdated={loadSessions}
-      />
+      <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
       
-      <ProfileDialog 
-        open={showProfileDialog}
-        onOpenChange={setShowProfileDialog}
-      />
+      <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
 
-      <SettingsDialog 
-        open={showSettingsDialog}
-        onOpenChange={setShowSettingsDialog}
-      />
+      <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
 
       {/* User Sessions Dialog */}
-      <UserSessionsDialog
-        isOpen={isUserSessionsOpen}
-        onClose={() => setIsUserSessionsOpen(false)}
-      />
+      <UserSessionsDialog isOpen={isUserSessionsOpen} onClose={() => setIsUserSessionsOpen(false)} />
 
       {/* Nearby Sessions Dialog */}
-      <NearbySessionsDialog
-        isOpen={showNearbySessionsDialog}
-        onClose={() => setShowNearbySessionsDialog(false)}
-        userLocation={userLocation}
-      />
+      <NearbySessionsDialog isOpen={showNearbySessionsDialog} onClose={() => setShowNearbySessionsDialog(false)} userLocation={userLocation} />
 
       {/* QR Share Dialog */}
-      {qrData && (
-        <QRShareDialog
-          open={showQRDialog}
-          onOpenChange={setShowQRDialog}
-          profileUrl={qrData.profileUrl}
-          username={qrData.username}
-          displayName={qrData.displayName}
-          avatarUrl={qrData.avatarUrl}
-          referralCode={qrData.referralCode}
-        />
-      )}
+      {qrData && <QRShareDialog open={showQRDialog} onOpenChange={setShowQRDialog} profileUrl={qrData.profileUrl} username={qrData.username} displayName={qrData.displayName} avatarUrl={qrData.avatarUrl} referralCode={qrData.referralCode} />}
 
       {/* Route Dialog */}
-      <RouteDialog
-        isOpen={isRouteDialogOpen}
-        onClose={() => setIsRouteDialogOpen(false)}
-        onSave={handleSaveRoute}
-        title="Créer un itinéraire"
-        loading={routeSaving}
-        showCreateSessionOption={true}
-      />
-    </div>
-  );
+      <RouteDialog isOpen={isRouteDialogOpen} onClose={() => setIsRouteDialogOpen(false)} onSave={handleSaveRoute} title="Créer un itinéraire" loading={routeSaving} showCreateSessionOption={true} />
+    </div>;
 };
