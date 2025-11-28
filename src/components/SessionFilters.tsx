@@ -90,7 +90,7 @@ export const SessionFilters = ({
   const activeFilterLabel = getActiveFilterLabel();
   return <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border-white/10 shadow-2xl rounded-[22px]`}>
       {/* Header cliquable - toujours visible */}
-      <div onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between p-3 cursor-pointer transition-colors rounded-t-[22px] bg-[#0d0d33]">
+      <div onClick={() => setIsOpen(!isOpen)} className="w-8 justify-center h-7 px-1 bg-[#010101] text-[#fcf7f7]">
         {isOpen ? <>
             <h3 className="font-semibold leading-none pt-0.5 text-foreground">Filtres</h3>
             <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export const SessionFilters = ({
               <Filter className="h-4 w-4 text-primary" />
             </div>
           </> : <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 mt-0.5 text-primary" />
+            <Filter className="w-4 mt-0.5 h-[16px] text-[#fcfbfb]" />
             
             {/* Texte descriptif si filtres avancés actifs */}
             {activeFilterLabel && <span className="text-xs font-medium text-foreground">
