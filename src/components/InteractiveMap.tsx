@@ -1412,7 +1412,7 @@ export const InteractiveMap = ({
           </Button>
 
           {/* Nearby Sessions Button */}
-          <Button variant="outline" onClick={() => setShowNearbySessionsDialog(true)} title="Séances à proximité" className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto text-primary-foreground border-primary bg-[#385bdc]">
+          <Button variant="outline" onClick={() => setShowNearbySessionsDialog(true)} title="Séances à proximité" className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto text-primary-foreground border-primary bg-[#10c8d5]">
             <div className="text-sm">📍🏃</div>
             <div className="text-xs leading-tight text-[#f9f5f5]">Séances à proximité</div>
           </Button>
