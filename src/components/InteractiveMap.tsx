@@ -1406,7 +1406,7 @@ export const InteractiveMap = ({
       {/* Confirm Presence & Nearby Sessions Buttons */}
       {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
           {/* Confirm Presence Button */}
-          <Button variant="outline" className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-green-600 text-white hover:bg-green-700 border-green-600" onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
+          <Button variant="outline" onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS" className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto text-white border-green-600 bg-[#385bdc]">
             <div className="text-sm">✅📍</div>
             <div className="text-xs leading-tight">Confirmer présence</div>
           </Button>
