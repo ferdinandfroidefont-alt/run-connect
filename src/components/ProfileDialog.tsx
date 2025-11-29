@@ -332,7 +332,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-full sm:max-w-md sm:h-auto p-0 flex flex-col">
+        <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto sm:max-h-[85vh] p-0 flex flex-col">
           <DialogHeader className="p-6 pb-0 shrink-0">
             <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
               <button 
