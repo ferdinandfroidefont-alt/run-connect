@@ -1742,7 +1742,7 @@ const Messages = () => {
   }
   return <>
       {/* Petite barre noire en haut uniquement pour Messages */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
+      <div className="fixed top-0 left-0 right-0 w-full h-6 z-50 bg-[#0d0d33]"></div>
       <div className="h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
           {/* Fixed Header Only - Remonté légèrement */}
