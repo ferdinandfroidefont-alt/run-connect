@@ -379,15 +379,15 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
 
   const SuggestionCard = ({ suggestion }: { suggestion: FriendSuggestion }) => (
     <Card className="relative h-full">
-      <CardContent className="p-6">
-        <div className="flex flex-col items-center text-center space-y-4">
+      <CardContent className="p-4">
+        <div className="flex flex-col items-center text-center space-y-3">
           <div className="relative">
             <Avatar 
-              className="h-20 w-20 cursor-pointer hover:opacity-80 transition-opacity border-2 border-primary/20"
+              className="h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity border-2 border-primary/30 ring-2 ring-primary/10"
               onClick={() => navigateToProfile(suggestion.user_id)}
             >
               <AvatarImage src={suggestion.avatar_url} />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className="text-base font-semibold">
                 {suggestion.username?.[0] || suggestion.display_name?.[0] || '?'}
               </AvatarFallback>
             </Avatar>
@@ -396,65 +396,65 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
                 size="sm"
                 variant="ghost"
                 onClick={() => dismissSuggestion(suggestion.user_id)}
-                className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-background border hover:bg-muted"
+                className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full bg-background/80 backdrop-blur-sm border hover:bg-destructive/10 hover:border-destructive/50"
               >
                 <X className="h-3 w-3" />
               </Button>
             )}
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1.5 w-full">
             <div>
-              <p className="font-semibold text-lg">
+              <p className="font-semibold text-base truncate">
                 {suggestion.username || suggestion.display_name}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 @{suggestion.username}
               </p>
             </div>
             
             <div className="flex justify-center">
               {suggestion.is_contact ? (
-                <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
+                <Badge variant="default" className="text-xs bg-green-500/10 text-green-600 border-green-500/20 px-2 py-0.5">
                   <Smartphone className="h-3 w-3 mr-1" />
-                  Dans vos contacts
+                  Contact
                 </Badge>
               ) : suggestion.source === 'mutual_friends' ? (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs px-2 py-0.5">
                   <Users className="h-3 w-3 mr-1" />
-                  {suggestion.mutual_friends_count} ami{suggestion.mutual_friends_count > 1 ? 's' : ''} en commun
+                  {suggestion.mutual_friends_count} ami{suggestion.mutual_friends_count > 1 ? 's' : ''}
                 </Badge>
               ) : suggestion.source === 'common_clubs' ? (
-                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20 px-2 py-0.5">
                   <Users className="h-3 w-3 mr-1" />
-                  Club en commun
+                  Club
                 </Badge>
               ) : suggestion.source === 'friends_of_friends' ? (
-                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-500/20 px-2 py-0.5">
                   <Users className="h-3 w-3 mr-1" />
-                  Ami d'ami d'ami
+                  Ami d'ami
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-xs">
-                  Utilisateur actif
+                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                  Actif
                 </Badge>
               )}
             </div>
             
             {!compact && !suggestion.is_contact && suggestion.mutual_friend_names.length > 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-1">
                 {suggestion.mutual_friend_names.slice(0, 2).join(', ')}
-                {suggestion.mutual_friend_names.length > 2 && ` et ${suggestion.mutual_friend_names.length - 2} autre${suggestion.mutual_friend_names.length > 3 ? 's' : ''}`}
+                {suggestion.mutual_friend_names.length > 2 && ` +${suggestion.mutual_friend_names.length - 2}`}
               </p>
             )}
           </div>
           
           <Button
             onClick={() => sendFollowRequest(suggestion.user_id)}
-            className="w-full max-w-xs"
-            size="lg"
+            className="w-full"
+            size="sm"
           >
-            <UserPlus className="h-4 w-4 mr-2" />
+            <UserPlus className="h-3.5 w-3.5 mr-1.5" />
             Suivre
           </Button>
         </div>
