@@ -571,7 +571,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full h-full sm:max-w-md sm:h-auto overflow-y-auto">
+      <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto overflow-y-auto sm:max-h-[85vh]">
         <DialogHeader>
           <DialogTitle>Créer une séance</DialogTitle>
           <DialogDescription>

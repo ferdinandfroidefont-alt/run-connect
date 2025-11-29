@@ -327,7 +327,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-full sm:max-w-md sm:h-auto p-0 flex flex-col backdrop-blur-xl bg-background/95 border-border/50">
+        <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto sm:max-h-[85vh] p-0 flex flex-col backdrop-blur-xl bg-background/95 border-border/50">
           {/* Header avec flèche retour et recherche */}
           <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
             <div className="flex items-center gap-3 p-4">
