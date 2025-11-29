@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
@@ -76,9 +79,35 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     { value: 'trail', label: 'Trail' },
     { value: 'velo', label: 'Vélo' },
     { value: 'vtt', label: 'VTT' },
+    { value: 'bmx', label: 'BMX' },
+    { value: 'gravel', label: 'Gravel' },
     { value: 'marche', label: 'Marche' },
     { value: 'natation', label: 'Natation' },
+    { value: 'football', label: 'Football' },
+    { value: 'basket', label: 'Basketball' },
+    { value: 'volley', label: 'Volleyball' },
+    { value: 'badminton', label: 'Badminton' },
+    { value: 'pingpong', label: 'Tennis de table' },
+    { value: 'tennis', label: 'Tennis' },
+    { value: 'escalade', label: 'Escalade' },
+    { value: 'petanque', label: 'Pétanque' },
+    { value: 'rugby', label: 'Rugby' },
+    { value: 'handball', label: 'Handball' },
+    { value: 'fitness', label: 'Fitness' },
+    { value: 'yoga', label: 'Yoga' },
+    { value: 'musculation', label: 'Musculation' },
+    { value: 'crossfit', label: 'CrossFit' },
+    { value: 'boxe', label: 'Boxe' },
+    { value: 'arts_martiaux', label: 'Arts martiaux' },
+    { value: 'golf', label: 'Golf' },
+    { value: 'ski', label: 'Ski' },
+    { value: 'snowboard', label: 'Snowboard' },
+    { value: 'randonnee', label: 'Randonnée' },
+    { value: 'kayak', label: 'Kayak' },
+    { value: 'surf', label: 'Surf' },
   ];
+
+  const [activitySearchOpen, setActivitySearchOpen] = useState(false);
 
   const sessionTypes = [
     { value: 'footing', label: 'Footing' },
@@ -593,18 +622,48 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
           <div>
             <Label htmlFor="activity_type">Type d'activité</Label>
-            <Select value={formData.activity_type} onValueChange={(value) => setFormData(prev => ({ ...prev, activity_type: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir une activité" />
-              </SelectTrigger>
-              <SelectContent>
-                {activityTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={activitySearchOpen} onOpenChange={setActivitySearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={activitySearchOpen}
+                  className="w-full justify-between bg-background/50 backdrop-blur-sm"
+                >
+                  {formData.activity_type
+                    ? activityTypes.find((type) => type.value === formData.activity_type)?.label
+                    : "Choisir une activité"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Rechercher un sport..." />
+                  <CommandList>
+                    <CommandEmpty>Aucun sport trouvé.</CommandEmpty>
+                    <CommandGroup>
+                      {activityTypes.map((type) => (
+                        <CommandItem
+                          key={type.value}
+                          value={type.value}
+                          onSelect={(currentValue) => {
+                            setFormData(prev => ({ ...prev, activity_type: currentValue }));
+                            setActivitySearchOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              formData.activity_type === type.value ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          {type.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
