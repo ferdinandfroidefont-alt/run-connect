@@ -105,7 +105,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
   }
   return <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-8 justify-center h-7 px-1 bg-[#010101]">
+        <Button variant="outline" className="w-8 justify-center h-7 px-1 bg-[#030303]">
           <Users className="h-3 w-3" />
         </Button>
       </PopoverTrigger>
