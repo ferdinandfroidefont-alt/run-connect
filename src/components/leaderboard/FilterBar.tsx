@@ -211,11 +211,11 @@ export const FilterBar = ({
 
       {/* Dialog des sports supplémentaires */}
       <Dialog open={showSportsDialog} onOpenChange={setShowSportsDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Autres sports</DialogTitle>
+        <DialogContent className="sm:max-w-md flex flex-col items-center">
+          <DialogHeader className="w-full">
+            <DialogTitle className="text-center">Autres sports</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 py-4">
+          <div className="grid grid-cols-2 gap-2 py-4 max-h-[60vh] overflow-y-auto scrollbar-hide w-full px-2">
             {additionalSports.map((sport) => (
               <Button
                 key={sport.value}
