@@ -410,7 +410,7 @@ export default function MySessions() {
           </div>
           <div className="flex items-center justify-center mt-3">
             <div className="flex gap-2">
-              <Button onClick={() => setCurrentView('sessions')} variant={currentView === 'sessions' ? 'default' : 'outline'} size="sm" className="gap-2 bg-[#385bdc]">
+              <Button onClick={() => setCurrentView('sessions')} variant={currentView === 'sessions' ? 'default' : 'outline'} size="sm" className="gap-2 bg-[#030303]">
                 <Users className="h-4 w-4" />
                 Mes Séances
               </Button>
