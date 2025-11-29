@@ -1,71 +1,103 @@
 import React, { useState } from 'react';
 import { Map, Satellite, Mountain, Palette } from 'lucide-react';
+
 interface MapStyleSelectorProps {
   currentStyle: string;
   onStyleChange: (style: string) => void;
 }
-const mapStyles = [{
-  id: 'roadmap',
-  name: 'Route',
-  icon: Map,
-  preview: 'bg-gradient-to-br from-gray-50 to-gray-200'
-}, {
-  id: 'satellite',
-  name: 'Satellite',
-  icon: Satellite,
-  preview: 'bg-gradient-to-br from-green-600 to-blue-600'
-}, {
-  id: 'hybrid',
-  name: 'Hybride',
-  icon: Mountain,
-  preview: 'bg-gradient-to-br from-green-500 to-yellow-600'
-}, {
-  id: 'terrain',
-  name: 'Terrain',
-  icon: Mountain,
-  preview: 'bg-gradient-to-br from-amber-600 to-green-700'
-}];
+
+const mapStyles = [
+  {
+    id: 'roadmap',
+    name: 'Route',
+    icon: Map,
+    preview: 'bg-gradient-to-br from-gray-50 to-gray-200'
+  },
+  {
+    id: 'satellite',
+    name: 'Satellite',
+    icon: Satellite,
+    preview: 'bg-gradient-to-br from-green-600 to-blue-600'
+  },
+  {
+    id: 'hybrid',
+    name: 'Hybride',
+    icon: Mountain,
+    preview: 'bg-gradient-to-br from-green-500 to-yellow-600'
+  },
+  {
+    id: 'terrain',
+    name: 'Terrain',
+    icon: Mountain,
+    preview: 'bg-gradient-to-br from-amber-600 to-green-700'
+  }
+];
+
 export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
   currentStyle,
-  onStyleChange
+  onStyleChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  return <div className="relative">
+
+  return (
+    <div className="relative">
       {/* Toggle Button */}
-      <button onClick={e => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsOpen(!isOpen);
-    }} title="Styles de carte" className="w-8 h-7 p-0 backdrop-blur-sm border border-border rounded-lg flex items-center justify-center shadow-map-control transition-colors bg-neutral-950/90 hover:bg-neutral-800">
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm border border-border rounded-lg flex items-center justify-center shadow-map-control hover:bg-muted/90 transition-colors"
+        title="Styles de carte"
+      >
         <Palette size={12} className="text-foreground" />
       </button>
 
       {/* Style Options */}
-      {isOpen && <div className="absolute bottom-12 left-0 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-map-panel p-3 min-w-[200px]">
+      {isOpen && (
+        <div className="absolute bottom-12 left-0 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-map-panel p-3 min-w-[200px]">
           <h3 className="text-sm font-medium text-foreground mb-3">Style de carte</h3>
           <div className="grid grid-cols-2 gap-2">
-            {mapStyles.map(style => {
-          const Icon = style.icon;
-          const isActive = currentStyle === style.id;
-          return <button key={style.id} onClick={() => {
-            onStyleChange(style.id);
-            setIsOpen(false);
-          }} className={`
+            {mapStyles.map((style) => {
+              const Icon = style.icon;
+              const isActive = currentStyle === style.id;
+              
+              return (
+                <button
+                  key={style.id}
+                  onClick={() => {
+                    onStyleChange(style.id);
+                    setIsOpen(false);
+                  }}
+                  className={`
                     flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all
-                    ${isActive ? 'border-primary bg-primary/10' : 'border-transparent hover:border-border hover:bg-muted/50'}
-                  `}>
+                    ${isActive 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-transparent hover:border-border hover:bg-muted/50'
+                    }
+                  `}
+                >
                   <div className={`w-8 h-6 rounded ${style.preview} flex items-center justify-center`}>
                     <Icon size={12} className="text-white drop-shadow" />
                   </div>
                   <span className="text-xs font-medium text-foreground">
                     {style.name}
                   </span>
-                </button>;
-        })}
+                </button>
+              );
+            })}
           </div>
-        </div>}
+        </div>
+      )}
 
       {/* Backdrop */}
-      {isOpen && <div className="fixed inset-0 z-[-1]" onClick={() => setIsOpen(false)} />}
-    </div>;
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-[-1]" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
 };

@@ -24,9 +24,12 @@ import Privacy from "./pages/Privacy";
 import ConfirmPresence from "./pages/ConfirmPresence";
 import { SecurityDashboard } from "./components/SecurityDashboard";
 import { AndroidTestPage } from "./components/AndroidTestPage";
+
 const queryClient = new QueryClient();
+
 const App = () => {
-  return <QueryClientProvider client={queryClient}>
+  return (
+    <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AppProvider>
           <TooltipProvider>
@@ -60,6 +63,8 @@ const App = () => {
           </TooltipProvider>
         </AppProvider>
       </ThemeProvider>
-    </QueryClientProvider>;
+    </QueryClientProvider>
+  );
 };
+
 export default App;

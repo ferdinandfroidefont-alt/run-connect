@@ -8,15 +8,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { SimplePermissionsTest } from './SimplePermissionsTest';
+
 export const BottomNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    user
-  } = useAuth();
-  const {
-    t
-  } = useLanguage();
+  const { user } = useAuth();
+  const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const {
     openCreateSession
@@ -49,32 +46,38 @@ export const BottomNavigation = () => {
   // Compter le nombre total de messages non lus
   useEffect(() => {
     if (!user) return;
+
     const fetchUnreadCount = async () => {
       try {
         // Récupérer toutes les conversations de l'utilisateur
-        const {
-          data: conversations,
-          error: convError
-        } = await supabase.from('conversations').select('id').or(`participant_1.eq.${user.id},participant_2.eq.${user.id},is_group.eq.true`);
+        const { data: conversations, error: convError } = await supabase
+          .from('conversations')
+          .select('id')
+          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id},is_group.eq.true`);
+
         if (convError) throw convError;
+
         let totalUnread = 0;
 
         // Compter les messages non lus pour chaque conversation
         for (const conv of conversations || []) {
-          const {
-            count
-          } = await supabase.from('messages').select('*', {
-            count: 'exact',
-            head: true
-          }).eq('conversation_id', conv.id).neq('sender_id', user.id).is('read_at', null);
+          const { count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .neq('sender_id', user.id)
+            .is('read_at', null);
+
           totalUnread += count || 0;
         }
+
         setTotalUnreadCount(totalUnread);
         console.log('📊 Total unread messages updated:', totalUnread);
       } catch (error) {
         console.error('Error fetching unread count:', error);
       }
     };
+
     fetchUnreadCount();
 
     // Listen for custom messages-read events
@@ -82,27 +85,33 @@ export const BottomNavigation = () => {
       console.log('🔄 Custom messages-read event detected');
       fetchUnreadCount();
     };
+
     window.addEventListener('messages-read', handleMessagesRead);
 
     // Subscribe to realtime changes for messages
-    const channel = supabase.channel('unread-messages-count').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'messages'
-    }, () => {
-      console.log('🔄 Message change detected, updating unread count');
-      fetchUnreadCount();
-    }).subscribe();
+    const channel = supabase
+      .channel('unread-messages-count')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'messages' 
+      }, () => {
+        console.log('🔄 Message change detected, updating unread count');
+        fetchUnreadCount();
+      })
+      .subscribe();
+
     return () => {
       window.removeEventListener('messages-read', handleMessagesRead);
       supabase.removeChannel(channel);
     };
   }, [user]);
-  return <>
+  return (
+    <>
       
       {/* Nouvelle barre du bas - couvre tout l'espace */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
-        <div className="flex items-center justify-center py-2 min-h-[40px] bg-[#0d0d33]">
+        <div className="flex items-center justify-center py-2 min-h-[40px]">
           <SimplePermissionsTest />
         </div>
       </nav>
@@ -113,47 +122,64 @@ export const BottomNavigation = () => {
           {/* Glow effect pour l'item actif */}
           <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
           
-          <div className="grid grid-cols-5 items-center px-4 py-2 border-[#0d0d33] bg-[#0d0d33]">
+          <div className="grid grid-cols-5 items-center px-4 py-2">
           {/* Première colonne - Carte */}
           <div className="flex justify-center">
-            {navItems.slice(0, 1).map(({
-              path,
-              emoji,
-              label
-            }) => {
+            {navItems.slice(0, 1).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
-              return <button key={path} onClick={() => handleNavigation(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full", isActive ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105")}>
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => handleNavigation(path)}
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                  )}
+                >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
-                </button>;
+                </button>
+              );
             })}
           </div>
 
           {/* Deuxième colonne - Mes Séances */}
           <div className="flex justify-center">
-            {navItems.slice(1, 2).map(({
-              path,
-              emoji,
-              label
-            }) => {
+            {navItems.slice(1, 2).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
-              return <button key={path} onClick={() => handleNavigation(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full", isActive ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105")}>
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => handleNavigation(path)}
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                  )}
+                >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
-                </button>;
+                </button>
+              );
             })}
           </div>
           
           {/* Troisième colonne - Bouton Créer au centre avec effet premium */}
           <div className="flex justify-center">
-            <button onClick={() => {
-              if (location.pathname === '/') {
-                openCreateSession();
-              } else {
-                navigate('/');
-                setTimeout(() => openCreateSession(), 100);
-              }
-            }} className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30 bg-[#385bdc] border-[#385bdc]">
+            <button 
+              onClick={() => {
+                if (location.pathname === '/') {
+                  openCreateSession();
+                } else {
+                  navigate('/');
+                  setTimeout(() => openCreateSession(), 100);
+                }
+              }} 
+              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-primary text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30"
+            >
               <Plus size={20} />
               <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
             </button>
@@ -161,41 +187,62 @@ export const BottomNavigation = () => {
 
           {/* Quatrième colonne - Messages */}
           <div className="flex justify-center">
-            {navItems.slice(2, 3).map(({
-              path,
-              emoji,
-              label
-            }) => {
+            {navItems.slice(2, 3).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               const isMessages = path === '/messages';
-              return <button key={path} onClick={() => handleNavigation(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button relative h-full", isActive ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105")}>
+              
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => handleNavigation(path)}
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button relative h-full",
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                  )}
+                >
                   <div className="relative mt-1">
                     <span className="text-xl">{emoji}</span>
-                    {isMessages && totalUnreadCount > 0 && <Badge variant="destructive" className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs min-w-4 animate-bounce-subtle bg-gradient-to-r from-red-500 to-red-600 shadow-lg">
+                    {isMessages && totalUnreadCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs min-w-4 animate-bounce-subtle bg-gradient-to-r from-red-500 to-red-600 shadow-lg"
+                      >
                         {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                      </Badge>}
+                      </Badge>
+                    )}
                   </div>
                   <span className="text-xs font-medium mt-1">{label}</span>
-                </button>;
+                </button>
+              );
             })}
           </div>
 
           {/* Cinquième colonne - Classement */}
           <div className="flex justify-center">
-            {navItems.slice(3, 4).map(({
-              path,
-              emoji,
-              label
-            }) => {
+            {navItems.slice(3, 4).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
-              return <button key={path} onClick={() => handleNavigation(path)} className={cn("flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full", isActive ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105")}>
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => handleNavigation(path)}
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                  )}
+                >
                   <span className="text-xl mt-1">{emoji}</span>
                   <span className="text-xs font-medium mt-1">{label}</span>
-                </button>;
+                </button>
+              );
             })}
           </div>
         </div>
         </div>
       </nav>
-    </>;
+    </>
+  );
 };
