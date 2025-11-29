@@ -564,9 +564,9 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] p-0 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-white/10 rounded-[22px] overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] p-0 bg-[#0d0d33] border border-[#385bdc]/30 rounded-[22px] overflow-hidden">
         {/* Header Custom Premium */}
-        <div className="flex items-center gap-3 p-6 pb-4 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border-b border-white/10">
+        <div className="flex items-center gap-3 p-6 pb-4 bg-[#385bdc]/20 border-b border-[#385bdc]/30">
           <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
             <ActivityIcon className="h-5 w-5 text-primary" />
           </div>
@@ -588,7 +588,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         <div className="overflow-y-auto max-h-[calc(85vh-140px)] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             {/* Section Informations de base */}
-            <div className="bg-card/30 backdrop-blur-sm border border-white/10 rounded-2xl p-4 space-y-4">
+            <div className="bg-[#0d0d33]/50 backdrop-blur-sm border border-[#385bdc]/30 rounded-2xl p-4 space-y-4">
               <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Informations de base</h3>
               
               <div className="space-y-2">
@@ -652,7 +652,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
             </div>
 
             {/* Section Date & Heure Premium */}
-            <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 rounded-2xl p-4 space-y-3">
+            <div className="bg-[#385bdc]/20 border border-[#385bdc]/30 rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
                   <Clock className="h-4 w-4 text-primary" />
@@ -988,7 +988,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
         </div>
 
         {/* Barre d'action fixe en bas */}
-        <div className="sticky bottom-0 bg-gradient-to-t from-[#0D1B33] via-[#0f172a] to-transparent border-t border-white/10 p-4 flex gap-3">
+        <div className="sticky bottom-0 bg-[#0d0d33] border-t border-[#385bdc]/30 p-4 flex gap-3">
           <Button
             type="button"
             variant="ghost"

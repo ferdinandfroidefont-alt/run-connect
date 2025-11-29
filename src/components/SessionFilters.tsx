@@ -125,8 +125,8 @@ export const SessionFilters = ({
             {/* Activity Types */}
             <div>
               <h4 className="text-sm font-medium mb-2 text-foreground/80">Type d'activité</h4>
-              <div className="grid grid-cols-2 gap-2 bg-[#0b0b0b]">
-                {activityTypes.map(activity => <Button key={activity.id} onClick={() => toggleActivityType(activity.id)} variant={filters.activity_types.includes(activity.id) ? "default" : "outline"} size="sm" className="justify-start text-xs h-8 bg-[#080808]">
+              <div className="grid grid-cols-2 gap-2 bg-[#030303]">
+                {activityTypes.map(activity => <Button key={activity.id} onClick={() => toggleActivityType(activity.id)} variant={filters.activity_types.includes(activity.id) ? "default" : "outline"} size="sm" className="justify-start text-xs h-8 bg-[#030303]">
                     <div className={`w-2 h-2 rounded-full mr-2 ${activity.color}`} />
                     {activity.label}
                   </Button>)}
