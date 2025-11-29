@@ -46,20 +46,36 @@ interface NearbySessionsDialogProps {
 }
 
 const ACTIVITY_TYPES = [
-  { value: "course", label: "Course", emoji: "🏃‍♂️" },
-  { value: "trail", label: "Trail", emoji: "🏃‍♂️" },
+  { value: "course", label: "Course à pied", emoji: "🏃" },
+  { value: "trail", label: "Trail", emoji: "⛰️" },
   { value: "velo", label: "Vélo", emoji: "🚴" },
   { value: "vtt", label: "VTT", emoji: "🚵" },
+  { value: "bmx", label: "BMX", emoji: "🚲" },
+  { value: "gravel", label: "Gravel", emoji: "🚴‍♂️" },
+  { value: "marche", label: "Marche", emoji: "🚶" },
   { value: "natation", label: "Natation", emoji: "🏊" },
-  { value: "randonnee", label: "Randonnée", emoji: "🏔️" },
-  { value: "fitness", label: "Fitness", emoji: "🏋️" },
-  { value: "yoga", label: "Yoga", emoji: "🧘" },
   { value: "football", label: "Football", emoji: "⚽" },
-  { value: "basketball", label: "Basketball", emoji: "🏀" },
+  { value: "basket", label: "Basketball", emoji: "🏀" },
+  { value: "volley", label: "Volleyball", emoji: "🏐" },
+  { value: "badminton", label: "Badminton", emoji: "🏸" },
+  { value: "pingpong", label: "Tennis de table", emoji: "🏓" },
   { value: "tennis", label: "Tennis", emoji: "🎾" },
-  { value: "ski", label: "Ski", emoji: "⛷️" },
   { value: "escalade", label: "Escalade", emoji: "🧗" },
-  { value: "autre", label: "Autre", emoji: "🏅" }
+  { value: "petanque", label: "Pétanque", emoji: "⚪" },
+  { value: "rugby", label: "Rugby", emoji: "🏉" },
+  { value: "handball", label: "Handball", emoji: "🤾" },
+  { value: "fitness", label: "Fitness", emoji: "💪" },
+  { value: "yoga", label: "Yoga", emoji: "🧘" },
+  { value: "musculation", label: "Musculation", emoji: "🏋️" },
+  { value: "crossfit", label: "CrossFit", emoji: "🔥" },
+  { value: "boxe", label: "Boxe", emoji: "🥊" },
+  { value: "arts_martiaux", label: "Arts martiaux", emoji: "🥋" },
+  { value: "golf", label: "Golf", emoji: "⛳" },
+  { value: "ski", label: "Ski", emoji: "⛷️" },
+  { value: "snowboard", label: "Snowboard", emoji: "🏂" },
+  { value: "randonnee", label: "Randonnée", emoji: "🥾" },
+  { value: "kayak", label: "Kayak", emoji: "🛶" },
+  { value: "surf", label: "Surf", emoji: "🏄" }
 ];
 
 export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySessionsDialogProps) => {
