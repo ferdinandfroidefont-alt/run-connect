@@ -21,10 +21,36 @@ interface SessionFiltersProps {
 }
 
 const activityTypes = [
-  { id: 'course', label: 'Course à pied', color: 'bg-red-500' },
-  { id: 'velo', label: 'Vélo', color: 'bg-blue-500' },
-  { id: 'marche', label: 'Marche', color: 'bg-green-500' },
-  { id: 'natation', label: 'Natation', color: 'bg-cyan-500' },
+  { id: 'course', label: '🏃 Course à pied', color: 'bg-red-500' },
+  { id: 'trail', label: '⛰️ Trail', color: 'bg-orange-500' },
+  { id: 'velo', label: '🚴 Vélo', color: 'bg-blue-500' },
+  { id: 'vtt', label: '🚵 VTT', color: 'bg-green-600' },
+  { id: 'bmx', label: '🚲 BMX', color: 'bg-yellow-500' },
+  { id: 'gravel', label: '🚴‍♂️ Gravel', color: 'bg-teal-500' },
+  { id: 'marche', label: '🚶 Marche', color: 'bg-green-500' },
+  { id: 'natation', label: '🏊 Natation', color: 'bg-cyan-500' },
+  { id: 'football', label: '⚽ Football', color: 'bg-emerald-600' },
+  { id: 'basket', label: '🏀 Basketball', color: 'bg-orange-600' },
+  { id: 'volley', label: '🏐 Volleyball', color: 'bg-yellow-600' },
+  { id: 'badminton', label: '🏸 Badminton', color: 'bg-pink-500' },
+  { id: 'pingpong', label: '🏓 Tennis de table', color: 'bg-red-400' },
+  { id: 'tennis', label: '🎾 Tennis', color: 'bg-lime-600' },
+  { id: 'escalade', label: '🧗 Escalade', color: 'bg-stone-600' },
+  { id: 'petanque', label: '⚪ Pétanque', color: 'bg-slate-500' },
+  { id: 'rugby', label: '🏉 Rugby', color: 'bg-amber-700' },
+  { id: 'handball', label: '🤾 Handball', color: 'bg-indigo-500' },
+  { id: 'fitness', label: '💪 Fitness', color: 'bg-purple-500' },
+  { id: 'yoga', label: '🧘 Yoga', color: 'bg-violet-400' },
+  { id: 'musculation', label: '🏋️ Musculation', color: 'bg-gray-700' },
+  { id: 'crossfit', label: '🔥 CrossFit', color: 'bg-red-600' },
+  { id: 'boxe', label: '🥊 Boxe', color: 'bg-rose-600' },
+  { id: 'arts_martiaux', label: '🥋 Arts martiaux', color: 'bg-fuchsia-600' },
+  { id: 'golf', label: '⛳ Golf', color: 'bg-green-400' },
+  { id: 'ski', label: '⛷️ Ski', color: 'bg-sky-400' },
+  { id: 'snowboard', label: '🏂 Snowboard', color: 'bg-blue-600' },
+  { id: 'randonnee', label: '🥾 Randonnée', color: 'bg-amber-600' },
+  { id: 'kayak', label: '🛶 Kayak', color: 'bg-teal-600' },
+  { id: 'surf', label: '🏄 Surf', color: 'bg-cyan-600' },
 ];
 
 const sessionTypes = [
@@ -139,7 +165,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
             {/* Activity Types */}
             <div>
               <h4 className="text-sm font-medium mb-2">Type d'activité</h4>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                 {activityTypes.map((activity) => (
                   <Button
                     key={activity.id}

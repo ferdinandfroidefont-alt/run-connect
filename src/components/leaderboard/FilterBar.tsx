@@ -11,7 +11,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-export type ActivityType = 'running' | 'cycling' | 'walking' | 'swimming' | 'basketball' | 'football' | 'petanque' | 'tennis';
+export type ActivityType = 'running' | 'cycling' | 'walking' | 'course' | 'trail' | 'velo' | 'vtt' | 'bmx' | 'gravel' | 'marche' | 'natation' | 'swimming' | 'football' | 'basket' | 'basketball' | 'volley' | 'badminton' | 'pingpong' | 'tennis' | 'escalade' | 'petanque' | 'rugby' | 'handball' | 'fitness' | 'yoga' | 'musculation' | 'crossfit' | 'boxe' | 'arts_martiaux' | 'golf' | 'ski' | 'snowboard' | 'randonnee' | 'kayak' | 'surf';
 export type FilterType = 'general' | ActivityType | 'friends' | 'clubs';
 
 interface Club {
@@ -28,11 +28,38 @@ interface FilterBarProps {
 }
 
 const additionalSports: { value: ActivityType; label: string; emoji: string }[] = [
+  { value: 'course', label: 'Course à pied', emoji: '🏃' },
+  { value: 'trail', label: 'Trail', emoji: '⛰️' },
+  { value: 'velo', label: 'Vélo', emoji: '🚴' },
+  { value: 'vtt', label: 'VTT', emoji: '🚵' },
+  { value: 'bmx', label: 'BMX', emoji: '🚲' },
+  { value: 'gravel', label: 'Gravel', emoji: '🚴‍♂️' },
+  { value: 'marche', label: 'Marche', emoji: '🚶' },
+  { value: 'natation', label: 'Natation', emoji: '🏊' },
   { value: 'swimming', label: 'Natation', emoji: '🏊' },
-  { value: 'basketball', label: 'Basketball', emoji: '🏀' },
   { value: 'football', label: 'Football', emoji: '⚽' },
-  { value: 'petanque', label: 'Pétanque', emoji: '🎯' },
+  { value: 'basket', label: 'Basketball', emoji: '🏀' },
+  { value: 'basketball', label: 'Basketball', emoji: '🏀' },
+  { value: 'volley', label: 'Volleyball', emoji: '🏐' },
+  { value: 'badminton', label: 'Badminton', emoji: '🏸' },
+  { value: 'pingpong', label: 'Tennis de table', emoji: '🏓' },
   { value: 'tennis', label: 'Tennis', emoji: '🎾' },
+  { value: 'escalade', label: 'Escalade', emoji: '🧗' },
+  { value: 'petanque', label: 'Pétanque', emoji: '⚪' },
+  { value: 'rugby', label: 'Rugby', emoji: '🏉' },
+  { value: 'handball', label: 'Handball', emoji: '🤾' },
+  { value: 'fitness', label: 'Fitness', emoji: '💪' },
+  { value: 'yoga', label: 'Yoga', emoji: '🧘' },
+  { value: 'musculation', label: 'Musculation', emoji: '🏋️' },
+  { value: 'crossfit', label: 'CrossFit', emoji: '🔥' },
+  { value: 'boxe', label: 'Boxe', emoji: '🥊' },
+  { value: 'arts_martiaux', label: 'Arts martiaux', emoji: '🥋' },
+  { value: 'golf', label: 'Golf', emoji: '⛳' },
+  { value: 'ski', label: 'Ski', emoji: '⛷️' },
+  { value: 'snowboard', label: 'Snowboard', emoji: '🏂' },
+  { value: 'randonnee', label: 'Randonnée', emoji: '🥾' },
+  { value: 'kayak', label: 'Kayak', emoji: '🛶' },
+  { value: 'surf', label: 'Surf', emoji: '🏄' }
 ];
 
 export const FilterBar = ({ 
