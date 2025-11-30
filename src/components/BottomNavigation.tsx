@@ -36,6 +36,10 @@ export const BottomNavigation = () => {
     path: '/leaderboard',
     emoji: '🏆',
     label: t('navigation.leaderboard')
+  }, {
+    path: '/feed',
+    emoji: '📱',
+    label: 'Feed'
   }];
 
   // Navigation INSTANTANÉE sans délai
@@ -122,7 +126,7 @@ export const BottomNavigation = () => {
           {/* Glow effect pour l'item actif */}
           <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
           
-          <div className="grid grid-cols-5 items-center px-4 py-2">
+          <div className="grid grid-cols-6 items-center px-2 py-2">
           {/* Première colonne - Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
@@ -228,7 +232,29 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col justify-start items-center gap-1 px-2 py-2 rounded-xl instant-button h-full",
+                    isActive 
+                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                  )}
+                >
+                  <span className="text-xl mt-1">{emoji}</span>
+                  <span className="text-xs font-medium mt-1">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sixième colonne - Feed */}
+          <div className="flex justify-center">
+            {navItems.slice(4, 5).map(({ path, emoji, label }) => {
+              const isActive = location.pathname === path;
+              return (
+                <button 
+                  key={path} 
+                  onClick={() => handleNavigation(path)}
+                  className={cn(
+                    "flex flex-col justify-start items-center gap-1 px-2 py-2 rounded-xl instant-button h-full",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
