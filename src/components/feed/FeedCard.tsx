@@ -7,6 +7,7 @@ import { fr } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { Calendar, MapPin, Users } from 'lucide-react';
 import type { FeedSession } from '@/hooks/useFeed';
+import { generateRunConnectMarkerSVG, svgToDataUrl } from '@/lib/map-marker-generator';
 
 interface FeedCardProps {
   session: FeedSession;
@@ -45,6 +46,11 @@ export const FeedCard = ({
   };
 
   const activityEmoji = activityEmojis[session.activity_type] || '🏃';
+
+  // Generate custom marker with profile photo
+  const markerSvg = generateRunConnectMarkerSVG(session.organizer.avatar_url || '', 48);
+  const markerDataUrl = svgToDataUrl(markerSvg);
+  const encodedMarker = encodeURIComponent(markerDataUrl);
 
   return (
     <motion.div
@@ -108,7 +114,7 @@ export const FeedCard = ({
         {/* Mini Map */}
         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-muted">
           <img
-            src={`https://maps.googleapis.com/maps/api/staticmap?center=${session.location_lat},${session.location_lng}&zoom=14&size=600x300&markers=color:blue%7C${session.location_lat},${session.location_lng}&key=AIzaSyDH-lVLOBo0bK5l-sNBFQI_e6gqbMx_L8g`}
+            src={`https://maps.googleapis.com/maps/api/staticmap?center=${session.location_lat},${session.location_lng}&zoom=14&size=600x300&markers=icon:${encodedMarker}%7C${session.location_lat},${session.location_lng}&key=AIzaSyDH-lVLOBo0bK5l-sNBFQI_e6gqbMx_L8g`}
             alt="Map"
             className="w-full h-full object-cover"
           />
