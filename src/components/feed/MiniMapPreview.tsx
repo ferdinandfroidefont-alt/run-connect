@@ -13,10 +13,16 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProp
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const isMountedRef = useRef(true);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!mapRef.current || lat === undefined || lat === null || lng === undefined || lng === null) return;
+    isMountedRef.current = true;
+
+    if (!mapRef.current || lat === undefined || lat === null || lng === undefined || lng === null) {
+      if (isMountedRef.current) setIsLoading(false);
+      return;
+    }
 
     const initMap = async () => {
       try {
@@ -30,7 +36,7 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProp
           
           if (!googleMapsApiKey) {
             console.error('❌ MiniMapPreview: No Google Maps API key');
-            setIsLoading(false);
+            if (isMountedRef.current) setIsLoading(false);
             return;
           }
           
@@ -42,7 +48,7 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProp
           await loader.load();
         }
 
-        if (!mapRef.current) return;
+        if (!mapRef.current || !isMountedRef.current) return;
 
         const map = new google.maps.Map(mapRef.current, {
           center: { lat, lng },
@@ -76,18 +82,33 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProp
         });
 
         markerRef.current = marker;
-        setIsLoading(false);
+        if (isMountedRef.current) setIsLoading(false);
       } catch (error) {
         console.error('❌ MiniMapPreview error:', error);
-        setIsLoading(false);
+        if (isMountedRef.current) setIsLoading(false);
       }
     };
 
     initMap();
 
     return () => {
+      isMountedRef.current = false;
+      
+      // Proper cleanup to avoid DOM errors
       if (markerRef.current) {
         markerRef.current.setMap(null);
+        markerRef.current = null;
+      }
+      
+      if (mapInstanceRef.current && mapRef.current) {
+        // Clear all Google Maps elements before React unmounts
+        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+        mapInstanceRef.current = null;
+        
+        // Clear the container to prevent removeChild errors
+        if (mapRef.current) {
+          mapRef.current.innerHTML = '';
+        }
       }
     };
   }, [lat, lng, profileImageUrl]);
