@@ -1,6 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
-import { generateRunConnectMarkerSVG, svgToDataUrl } from '@/lib/map-marker-generator';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MiniMapPreviewProps {
@@ -10,116 +8,69 @@ interface MiniMapPreviewProps {
 }
 
 export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProps) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
-  const isMountedRef = useRef(true);
+  const [mapUrl, setMapUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    isMountedRef.current = true;
-
-    if (!mapRef.current || lat === undefined || lat === null || lng === undefined || lng === null) {
-      if (isMountedRef.current) setIsLoading(false);
+    if (lat === undefined || lat === null || lng === undefined || lng === null) {
+      setIsLoading(false);
+      setError(true);
       return;
     }
 
-    const initMap = async () => {
+    const loadMap = async () => {
       try {
-        // Check if Google Maps is already loaded
-        if (!window.google?.maps) {
-          const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
-          });
-          
-          const googleMapsApiKey = apiKeyData?.apiKey || '';
-          
-          if (!googleMapsApiKey) {
-            console.error('❌ MiniMapPreview: No Google Maps API key');
-            if (isMountedRef.current) setIsLoading(false);
-            return;
-          }
-          
-          const loader = new Loader({
-            apiKey: googleMapsApiKey,
-            version: 'weekly',
-          });
-
-          await loader.load();
-        }
-
-        if (!mapRef.current || !isMountedRef.current) return;
-
-        const map = new google.maps.Map(mapRef.current, {
-          center: { lat, lng },
-          zoom: 14,
-          disableDefaultUI: true,
-          gestureHandling: 'none',
-          clickableIcons: false,
-          styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }],
-            },
-          ],
+        const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
+          body: { type: 'get-key' }
         });
-
-        mapInstanceRef.current = map;
-
-        // Generate custom marker
-        const markerSvg = generateRunConnectMarkerSVG(profileImageUrl || '', 48);
-        const markerDataUrl = svgToDataUrl(markerSvg);
-
-        const marker = new google.maps.Marker({
-          position: { lat, lng },
-          map,
-          icon: {
-            url: markerDataUrl,
-            scaledSize: new google.maps.Size(48, 60),
-            anchor: new google.maps.Point(24, 60),
-          },
-        });
-
-        markerRef.current = marker;
-        if (isMountedRef.current) setIsLoading(false);
-      } catch (error) {
-        console.error('❌ MiniMapPreview error:', error);
-        if (isMountedRef.current) setIsLoading(false);
-      }
-    };
-
-    initMap();
-
-    return () => {
-      isMountedRef.current = false;
-      
-      // Proper cleanup to avoid DOM errors
-      if (markerRef.current) {
-        markerRef.current.setMap(null);
-        markerRef.current = null;
-      }
-      
-      if (mapInstanceRef.current && mapRef.current) {
-        // Clear all Google Maps elements before React unmounts
-        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
-        mapInstanceRef.current = null;
         
-        // Clear the container to prevent removeChild errors
-        if (mapRef.current) {
-          mapRef.current.innerHTML = '';
+        const googleMapsApiKey = apiKeyData?.apiKey || '';
+        
+        if (!googleMapsApiKey) {
+          console.error('❌ MiniMapPreview: No API key');
+          setError(true);
+          setIsLoading(false);
+          return;
         }
+
+        // Use Google Maps Static API for simple, reliable image rendering
+        const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=14&size=400x200&maptype=roadmap&markers=color:blue%7C${lat},${lng}&key=${googleMapsApiKey}&style=feature:poi%7Celement:labels%7Cvisibility:off`;
+        
+        setMapUrl(staticMapUrl);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('❌ MiniMapPreview error:', err);
+        setError(true);
+        setIsLoading(false);
       }
     };
-  }, [lat, lng, profileImageUrl]);
+
+    loadMap();
+  }, [lat, lng]);
+
+  if (error) {
+    return (
+      <div className="w-full h-full rounded-xl bg-muted flex items-center justify-center">
+        <span className="text-muted-foreground text-sm">Carte indisponible</span>
+      </div>
+    );
+  }
+
+  if (isLoading || !mapUrl) {
+    return (
+      <div className="w-full h-full rounded-xl bg-muted animate-pulse flex items-center justify-center">
+        <span className="text-muted-foreground text-sm">Chargement...</span>
+      </div>
+    );
+  }
 
   return (
-    <div ref={mapRef} className="w-full h-full rounded-xl">
-      {isLoading && (
-        <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse">
-          <span className="text-muted-foreground text-sm">Chargement carte...</span>
-        </div>
-      )}
-    </div>
+    <img
+      src={mapUrl}
+      alt={`Carte de la session à ${lat}, ${lng}`}
+      className="w-full h-full object-cover rounded-xl"
+      onError={() => setError(true)}
+    />
   );
 };
