@@ -50,7 +50,6 @@ export const FeedCard = ({
   // Generate custom marker with profile photo
   const markerSvg = generateRunConnectMarkerSVG(session.organizer.avatar_url || '', 48);
   const markerDataUrl = svgToDataUrl(markerSvg);
-  const encodedMarker = encodeURIComponent(markerDataUrl);
 
   return (
     <motion.div
@@ -111,13 +110,21 @@ export const FeedCard = ({
           </div>
         </div>
 
-        {/* Mini Map */}
+        {/* Mini Map with Custom Marker */}
         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-muted">
           <img
-            src={`https://maps.googleapis.com/maps/api/staticmap?center=${session.location_lat},${session.location_lng}&zoom=14&size=600x300&markers=icon:${encodedMarker}%7C${session.location_lat},${session.location_lng}&key=AIzaSyDH-lVLOBo0bK5l-sNBFQI_e6gqbMx_L8g`}
+            src={`https://maps.googleapis.com/maps/api/staticmap?center=${session.location_lat},${session.location_lng}&zoom=14&size=600x300&key=AIzaSyDH-lVLOBo0bK5l-sNBFQI_e6gqbMx_L8g`}
             alt="Map"
             className="w-full h-full object-cover"
           />
+          {/* Custom RunConnect Marker Overlay */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none">
+            <img 
+              src={markerDataUrl} 
+              alt="Marker"
+              className="w-12 h-15"
+            />
+          </div>
         </div>
       </div>
 
