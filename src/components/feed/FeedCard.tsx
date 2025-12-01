@@ -1,13 +1,13 @@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FeedActions } from './FeedActions';
 import { FeedComments } from './FeedComments';
-import { MiniMapPreview } from './MiniMapPreview';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { Calendar, MapPin, Users } from 'lucide-react';
 import type { FeedSession } from '@/hooks/useFeed';
+import { generateRunConnectMarkerSVG, svgToDataUrl } from '@/lib/map-marker-generator';
 
 interface FeedCardProps {
   session: FeedSession;
@@ -46,6 +46,10 @@ export const FeedCard = ({
   };
 
   const activityEmoji = activityEmojis[session.activity_type] || '🏃';
+
+  // Generate custom marker with profile photo
+  const markerSvg = generateRunConnectMarkerSVG(session.organizer.avatar_url || '', 48);
+  const markerDataUrl = svgToDataUrl(markerSvg);
 
   return (
     <motion.div
@@ -107,12 +111,22 @@ export const FeedCard = ({
         </div>
 
         {/* Mini Map with Custom Marker */}
-        <div className="w-full h-40 rounded-xl overflow-hidden bg-muted">
-          <MiniMapPreview 
-            lat={session.location_lat}
-            lng={session.location_lng}
-            profileImageUrl={session.organizer.avatar_url || ''}
+        <div className="relative w-full h-40 rounded-xl overflow-hidden bg-muted">
+          <iframe
+            className="w-full h-full"
+            loading="lazy"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+            src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyDH-lVLOBo0bK5l-sNBFQI_e6gqbMx_L8g&center=${session.location_lat},${session.location_lng}&zoom=14&maptype=roadmap`}
           />
+          {/* Custom RunConnect Marker Overlay */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none">
+            <img 
+              src={markerDataUrl} 
+              alt="Marker"
+              className="w-12 h-15"
+            />
+          </div>
         </div>
       </div>
 
