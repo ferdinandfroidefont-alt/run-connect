@@ -4,7 +4,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { SessionFilters } from './SessionFilters';
-import { CreateSessionDialog } from './CreateSessionDialog';
+import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { NotificationCenter } from './NotificationCenter';
 import { SettingsDialog } from './SettingsDialog';
@@ -1616,8 +1616,8 @@ export const InteractiveMap = ({
       </div>
       
 
-      {/* Create Session Dialog */}
-      <CreateSessionDialog
+      {/* Create Session Wizard */}
+      <CreateSessionWizard
         isOpen={isCreateDialogOpen}
         onClose={() => {
           setIsCreateDialogOpen(false);

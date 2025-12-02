@@ -1,0 +1,339 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useAdMob } from '@/hooks/useAdMob';
+import { supabase } from '@/integrations/supabase/client';
+import { useSendNotification } from '@/hooks/useSendNotification';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+
+import { useSessionWizard } from './useSessionWizard';
+import { ProgressIndicator } from './ProgressIndicator';
+import { LocationStep } from './steps/LocationStep';
+import { ActivityStep } from './steps/ActivityStep';
+import { DateTimeStep } from './steps/DateTimeStep';
+import { DetailsStep } from './steps/DetailsStep';
+import { ConfirmStep } from './steps/ConfirmStep';
+
+declare global {
+  interface Window {
+    currentRoutePolyline: google.maps.Polyline | null;
+  }
+}
+
+interface CreateSessionWizardProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSessionCreated: (sessionId?: string) => void;
+  map: google.maps.Map | null;
+  presetLocation?: { lat: number; lng: number } | null;
+  onCreateRoute?: () => void;
+}
+
+export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
+  isOpen,
+  onClose,
+  onSessionCreated,
+  map,
+  presetLocation,
+  onCreateRoute,
+}) => {
+  const { user, subscriptionInfo } = useAuth();
+  const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { sendPushNotification } = useSendNotification();
+  const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const wizard = useSessionWizard({ presetLocation });
+
+  // Handle preset location
+  useEffect(() => {
+    if (presetLocation && isOpen) {
+      handleReverseGeocode(presetLocation.lat, presetLocation.lng);
+    }
+  }, [presetLocation, isOpen]);
+
+  // Reset wizard when closing
+  useEffect(() => {
+    if (!isOpen) {
+      wizard.resetWizard();
+    }
+  }, [isOpen]);
+
+  const handleReverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+        body: { lat, lng, type: 'reverse' }
+      });
+
+      if (error) throw error;
+
+      if (data?.status === 'OK' && data?.results?.[0]) {
+        wizard.updateLocation({
+          lat,
+          lng,
+          name: data.results[0].formatted_address
+        });
+      }
+    } catch (error) {
+      console.error('Geocode error:', error);
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "Erreur", description: "Image max 5MB", variant: "destructive" });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({ title: "Erreur", description: "Fichier invalide", variant: "destructive" });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        wizard.setImage(file, e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageRemove = () => {
+    wizard.setImage(null, null);
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      setUploadingImage(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('session-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('session-images').getPublicUrl(fileName);
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: "Erreur", description: "Upload échoué", variant: "destructive" });
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!user || !wizard.selectedLocation) return;
+
+    const { formData, selectedLocation, selectedImage, selectedRoute, routeMode } = wizard;
+
+    // Check premium for public sessions
+    if (!formData.friends_only && !subscriptionInfo?.subscribed) {
+      toast({
+        title: "Abonnement requis",
+        description: "Les séances publiques nécessitent un abonnement premium",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let imageUrl = null;
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+      }
+
+      const { data: sessionData, error } = await supabase
+        .from('sessions')
+        .insert([{
+          organizer_id: user.id,
+          title: formData.title,
+          description: formData.description,
+          activity_type: formData.activity_type,
+          session_type: formData.session_type,
+          location_lat: selectedLocation.lat,
+          location_lng: selectedLocation.lng,
+          location_name: formData.location_name,
+          scheduled_at: formData.scheduled_at,
+          max_participants: parseInt(formData.max_participants) || null,
+          distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null,
+          pace_general: formData.pace_general || null,
+          pace_unit: formData.pace_unit || 'speed',
+          interval_distance: formData.interval_distance ? parseFloat(formData.interval_distance) : null,
+          interval_pace: formData.interval_pace || null,
+          interval_pace_unit: formData.pace_unit || 'speed',
+          interval_count: formData.interval_count ? parseInt(formData.interval_count) : null,
+          current_participants: 0,
+          friends_only: formData.friends_only,
+          image_url: imageUrl,
+          route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null,
+          club_id: formData.club_id
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Send notifications to friends
+      if (formData.friends_only && sessionData) {
+        try {
+          const { data: followers } = await supabase
+            .from('user_follows')
+            .select('follower_id')
+            .eq('following_id', user.id)
+            .eq('status', 'accepted');
+
+          if (followers?.length) {
+            for (const follower of followers) {
+              await sendPushNotification(
+                follower.follower_id,
+                'Nouvelle séance d\'ami',
+                `${user.email?.split('@')[0] || 'Un ami'} a créé une séance: ${formData.title}`,
+                'friend_session',
+                {
+                  organizer_name: user.email?.split('@')[0] || 'Un ami',
+                  session_title: formData.title,
+                  session_id: sessionData.id,
+                  activity_type: formData.activity_type,
+                  scheduled_at: formData.scheduled_at
+                }
+              );
+            }
+          }
+        } catch (notifError) {
+          console.error('Notification error:', notifError);
+        }
+      }
+
+      toast({ title: "Séance créée avec succès ! 🎉" });
+      showAdAfterSessionCreation();
+
+      setTimeout(() => {
+        onSessionCreated(sessionData.id);
+      }, 300);
+
+      if (map && selectedLocation) {
+        setTimeout(() => {
+          map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
+          map.setZoom(15);
+        }, 400);
+      }
+
+      onClose();
+      wizard.resetWizard();
+
+      // Clean up route polyline
+      if (window.currentRoutePolyline) {
+        window.currentRoutePolyline.setMap(null);
+        window.currentRoutePolyline = null;
+      }
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStep = () => {
+    switch (wizard.currentStep) {
+      case 'location':
+        return (
+          <LocationStep
+            map={map}
+            selectedLocation={wizard.selectedLocation}
+            onLocationSelect={wizard.updateLocation}
+            onNext={wizard.goToNextStep}
+          />
+        );
+      case 'activity':
+        return (
+          <ActivityStep
+            activityType={wizard.formData.activity_type}
+            sessionType={wizard.formData.session_type}
+            onActivityChange={(activity) => wizard.updateFormData({ activity_type: activity })}
+            onSessionTypeChange={(type) => wizard.updateFormData({ session_type: type })}
+            onNext={wizard.goToNextStep}
+            onBack={wizard.goToPreviousStep}
+          />
+        );
+      case 'datetime':
+        return (
+          <DateTimeStep
+            scheduledAt={wizard.formData.scheduled_at}
+            onScheduledAtChange={(value) => wizard.updateFormData({ scheduled_at: value })}
+            onNext={wizard.goToNextStep}
+            onBack={wizard.goToPreviousStep}
+          />
+        );
+      case 'details':
+        return (
+          <DetailsStep
+            formData={wizard.formData}
+            selectedLocation={wizard.selectedLocation}
+            imagePreview={wizard.imagePreview}
+            isPremium={subscriptionInfo?.subscribed || false}
+            onFormDataChange={wizard.updateFormData}
+            onImageSelect={handleImageSelect}
+            onImageRemove={handleImageRemove}
+            onNext={wizard.goToNextStep}
+            onBack={wizard.goToPreviousStep}
+          />
+        );
+      case 'confirm':
+        return (
+          <ConfirmStep
+            formData={wizard.formData}
+            selectedLocation={wizard.selectedLocation}
+            imagePreview={wizard.imagePreview}
+            loading={loading || uploadingImage}
+            onSubmit={handleSubmit}
+            onBack={wizard.goToPreviousStep}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-full h-screen sm:max-w-md sm:h-[90vh] p-0 overflow-hidden flex flex-col">
+        {/* Close button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="absolute right-4 top-4 z-50 rounded-full bg-white/10 hover:bg-white/20"
+        >
+          <X className="w-5 h-5" />
+        </Button>
+
+        {/* Progress indicator */}
+        <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
+
+        {/* Step content */}
+        <div className="flex-1 overflow-hidden px-4 pb-4">
+          <AnimatePresence mode="wait">
+            {renderStep()}
+          </AnimatePresence>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Export as default for backward compatibility
+export default CreateSessionWizard;
