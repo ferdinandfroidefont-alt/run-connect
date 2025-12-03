@@ -7,7 +7,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { SimplePermissionsTest } from './SimplePermissionsTest';
 
 export const BottomNavigation = () => {
   const location = useLocation();
@@ -15,45 +14,25 @@ export const BottomNavigation = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const {
-    openCreateSession
-  } = useAppContext();
+  const { openCreateSession } = useAppContext();
 
-  // Navigation items with translations
-  const navItems = [{
-    path: '/',
-    emoji: '🗺️',
-    label: t('navigation.home')
-  }, {
-    path: '/my-sessions',
-    emoji: '🚴‍♂️',
-    label: t('navigation.mySessions')
-  }, {
-    path: '/messages',
-    emoji: '💬',
-    label: t('navigation.messages')
-  }, {
-    path: '/leaderboard',
-    emoji: '🏆',
-    label: t('navigation.leaderboard')
-  }, {
-    path: '/feed',
-    emoji: '📱',
-    label: 'Feed'
-  }];
+  const navItems = [
+    { path: '/', emoji: '🗺️', label: t('navigation.home') },
+    { path: '/my-sessions', emoji: '🚴‍♂️', label: t('navigation.mySessions') },
+    { path: '/messages', emoji: '💬', label: t('navigation.messages') },
+    { path: '/leaderboard', emoji: '🏆', label: t('navigation.leaderboard') },
+    { path: '/feed', emoji: '📱', label: 'Feed' }
+  ];
 
-  // Navigation INSTANTANÉE sans délai
   const handleNavigation = (path: string) => {
     navigate(path);
   };
 
-  // Compter le nombre total de messages non lus
   useEffect(() => {
     if (!user) return;
 
     const fetchUnreadCount = async () => {
       try {
-        // Récupérer toutes les conversations de l'utilisateur
         const { data: conversations, error: convError } = await supabase
           .from('conversations')
           .select('id')
@@ -63,7 +42,6 @@ export const BottomNavigation = () => {
 
         let totalUnread = 0;
 
-        // Compter les messages non lus pour chaque conversation
         for (const conv of conversations || []) {
           const { count } = await supabase
             .from('messages')
@@ -76,7 +54,6 @@ export const BottomNavigation = () => {
         }
 
         setTotalUnreadCount(totalUnread);
-        console.log('📊 Total unread messages updated:', totalUnread);
       } catch (error) {
         console.error('Error fetching unread count:', error);
       }
@@ -84,15 +61,12 @@ export const BottomNavigation = () => {
 
     fetchUnreadCount();
 
-    // Listen for custom messages-read events
     const handleMessagesRead = () => {
-      console.log('🔄 Custom messages-read event detected');
       fetchUnreadCount();
     };
 
     window.addEventListener('messages-read', handleMessagesRead);
 
-    // Subscribe to realtime changes for messages
     const channel = supabase
       .channel('unread-messages-count')
       .on('postgres_changes', { 
@@ -100,7 +74,6 @@ export const BottomNavigation = () => {
         schema: 'public', 
         table: 'messages' 
       }, () => {
-        console.log('🔄 Message change detected, updating unread count');
         fetchUnreadCount();
       })
       .subscribe();
@@ -110,24 +83,14 @@ export const BottomNavigation = () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
   return (
-    <>
-      
-      {/* Nouvelle barre du bas - couvre tout l'espace */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card pb-safe z-40">
-        <div className="flex items-center justify-center py-2 min-h-[40px]">
-          <SimplePermissionsTest />
-        </div>
-      </nav>
-      
-      {/* Barre de navigation principale avec glassmorphism */}
-      <nav className="fixed bottom-6 left-0 right-0 backdrop-blur-xl bg-card/80 border-t-2 border-white/10 shadow-2xl z-50">
-        <div className="relative">
-          {/* Glow effect pour l'item actif */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
-          
-          <div className="grid grid-cols-6 items-center px-2 py-2">
-          {/* Première colonne - Carte */}
+    <nav className="fixed bottom-0 left-0 right-0 backdrop-blur-xl bg-card/90 border-t border-white/10 shadow-2xl z-50 pb-safe">
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+        
+        <div className="grid grid-cols-6 items-center px-2 py-2">
+          {/* Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
@@ -136,20 +99,20 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/10 scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span className="text-xl mt-1">{emoji}</span>
-                  <span className="text-xs font-medium mt-1">{label}</span>
+                  <span className="text-lg">{emoji}</span>
+                  <span className="text-[10px] font-medium">{label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Deuxième colonne - Mes Séances */}
+          {/* Mes Séances */}
           <div className="flex justify-center">
             {navItems.slice(1, 2).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
@@ -158,20 +121,20 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/10 scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span className="text-xl mt-1">{emoji}</span>
-                  <span className="text-xs font-medium mt-1">{label}</span>
+                  <span className="text-lg">{emoji}</span>
+                  <span className="text-[10px] font-medium">{label}</span>
                 </button>
               );
             })}
           </div>
           
-          {/* Troisième colonne - Bouton Créer au centre avec effet premium */}
+          {/* Bouton Créer au centre */}
           <div className="flex justify-center">
             <button 
               onClick={() => {
@@ -182,14 +145,14 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col justify-start items-center gap-0.5 px-4 py-3 bg-primary text-white rounded-full transition-all hover:shadow-glow hover:scale-110 -translate-y-4 scale-110 shadow-xl shadow-primary/30"
+              className="flex flex-col items-center gap-0.5 px-3 py-2 bg-primary text-primary-foreground rounded-full transition-all hover:scale-105 -translate-y-3 shadow-lg shadow-primary/30"
             >
-              <Plus size={20} />
-              <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
+              <Plus size={18} />
+              <span className="text-[9px] font-bold">{t('sessions.create').toUpperCase()}</span>
             </button>
           </div>
 
-          {/* Quatrième colonne - Messages */}
+          {/* Messages */}
           <div className="flex justify-center">
             {navItems.slice(2, 3).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
@@ -200,30 +163,30 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-3 py-2 rounded-xl instant-button relative h-full",
+                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200 relative",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/10 scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <div className="relative mt-1">
-                    <span className="text-xl">{emoji}</span>
+                  <div className="relative">
+                    <span className="text-lg">{emoji}</span>
                     {isMessages && totalUnreadCount > 0 && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs min-w-4 animate-bounce-subtle bg-gradient-to-r from-red-500 to-red-600 shadow-lg"
+                        className="absolute -top-1.5 -right-2 h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-red-500 animate-pulse"
                       >
                         {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                       </Badge>
                     )}
                   </div>
-                  <span className="text-xs font-medium mt-1">{label}</span>
+                  <span className="text-[10px] font-medium">{label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Cinquième colonne - Classement */}
+          {/* Classement */}
           <div className="flex justify-center">
             {navItems.slice(3, 4).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
@@ -232,20 +195,20 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-2 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/10 scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span className="text-xl mt-1">{emoji}</span>
-                  <span className="text-xs font-medium mt-1">{label}</span>
+                  <span className="text-lg">{emoji}</span>
+                  <span className="text-[10px] font-medium">{label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Sixième colonne - Feed */}
+          {/* Feed */}
           <div className="flex justify-center">
             {navItems.slice(4, 5).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
@@ -254,21 +217,20 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col justify-start items-center gap-1 px-2 py-2 rounded-xl instant-button h-full",
+                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
                     isActive 
-                      ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
+                      ? "text-primary bg-primary/10 scale-105" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span className="text-xl mt-1">{emoji}</span>
-                  <span className="text-xs font-medium mt-1">{label}</span>
+                  <span className="text-lg">{emoji}</span>
+                  <span className="text-[10px] font-medium">{label}</span>
                 </button>
               );
             })}
           </div>
         </div>
-        </div>
-      </nav>
-    </>
+      </div>
+    </nav>
   );
 };
