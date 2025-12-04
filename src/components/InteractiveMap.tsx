@@ -1542,9 +1542,20 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Confirm Presence & Nearby Sessions Buttons */}
+      {/* Leaderboard, Confirm Presence & Nearby Sessions Buttons */}
       {user && (
         <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
+          {/* Leaderboard Button - Podium Emoji */}
+          <Button 
+            variant="outline"
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
+            onClick={() => navigate('/leaderboard')}
+            title="Classement"
+          >
+            <div className="text-xl">🏆</div>
+            <div className="text-xs leading-tight">Classement</div>
+          </Button>
+
           {/* Confirm Presence Button */}
           <Button 
             variant="outline"
