@@ -20,8 +20,7 @@ export const BottomNavigation = () => {
     { path: '/', emoji: '🗺️', label: t('navigation.home') },
     { path: '/my-sessions', emoji: '🚴‍♂️', label: t('navigation.mySessions') },
     { path: '/messages', emoji: '💬', label: t('navigation.messages') },
-    { path: '/leaderboard', emoji: '🏆', label: t('navigation.leaderboard') },
-    { path: '/feed', emoji: '📱', label: 'Feed' }
+    { path: '/social', emoji: '🌐', label: 'Social' }
   ];
 
   const handleNavigation = (path: string) => {
@@ -89,7 +88,7 @@ export const BottomNavigation = () => {
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
         
-        <div className="grid grid-cols-6 items-center px-2 py-2">
+        <div className="grid grid-cols-5 items-center px-2 py-2">
           {/* Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
@@ -186,32 +185,10 @@ export const BottomNavigation = () => {
             })}
           </div>
 
-          {/* Classement */}
+          {/* Social */}
           <div className="flex justify-center">
             {navItems.slice(3, 4).map(({ path, emoji, label }) => {
-              const isActive = location.pathname === path;
-              return (
-                <button 
-                  key={path} 
-                  onClick={() => handleNavigation(path)}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
-                    isActive 
-                      ? "text-primary bg-primary/10 scale-105" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  <span className="text-lg">{emoji}</span>
-                  <span className="text-[10px] font-medium">{label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Feed */}
-          <div className="flex justify-center">
-            {navItems.slice(4, 5).map(({ path, emoji, label }) => {
-              const isActive = location.pathname === path;
+              const isActive = location.pathname === path || location.pathname === '/feed' || location.pathname === '/leaderboard';
               return (
                 <button 
                   key={path} 
