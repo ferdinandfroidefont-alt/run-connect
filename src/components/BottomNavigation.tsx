@@ -88,7 +88,7 @@ export const BottomNavigation = () => {
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
         
-        <div className="grid grid-cols-5 items-center px-2 py-2">
+        <div className="grid grid-cols-5 items-center px-3 py-3">
           {/* Carte */}
           <div className="flex justify-center">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
@@ -98,14 +98,14 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200",
                     isActive 
                       ? "text-primary bg-primary/10 scale-105" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span className="text-lg">{emoji}</span>
-                  <span className="text-[10px] font-medium">{label}</span>
+                  <span className="text-2xl">{emoji}</span>
+                  <span className="text-xs font-medium">{label}</span>
                 </button>
               );
             })}
@@ -120,14 +120,14 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200",
                     isActive 
                       ? "text-primary bg-primary/10 scale-105" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span className="text-lg">{emoji}</span>
-                  <span className="text-[10px] font-medium">{label}</span>
+                  <span className="text-2xl">{emoji}</span>
+                  <span className="text-xs font-medium">{label}</span>
                 </button>
               );
             })}
@@ -144,10 +144,10 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col items-center gap-0.5 px-3 py-2 bg-primary text-primary-foreground rounded-full transition-all hover:scale-105 -translate-y-3 shadow-lg shadow-primary/30"
+              className="flex flex-col items-center gap-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-full transition-all hover:scale-105 -translate-y-4 shadow-lg shadow-primary/30"
             >
-              <Plus size={18} />
-              <span className="text-[9px] font-bold">{t('sessions.create').toUpperCase()}</span>
+              <Plus size={22} />
+              <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
             </button>
           </div>
 
@@ -162,24 +162,24 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200 relative",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 relative",
                     isActive 
                       ? "text-primary bg-primary/10 scale-105" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
                   <div className="relative">
-                    <span className="text-lg">{emoji}</span>
+                    <span className="text-2xl">{emoji}</span>
                     {isMessages && totalUnreadCount > 0 && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute -top-1.5 -right-2 h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-red-500 animate-pulse"
+                        className="absolute -top-2 -right-2.5 h-5 min-w-5 p-0 flex items-center justify-center text-xs bg-red-500 animate-pulse"
                       >
                         {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                       </Badge>
                     )}
                   </div>
-                  <span className="text-[10px] font-medium">{label}</span>
+                  <span className="text-xs font-medium">{label}</span>
                 </button>
               );
             })}
@@ -194,14 +194,14 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200",
                     isActive 
                       ? "text-primary bg-primary/10 scale-105" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span className="text-lg">{emoji}</span>
-                  <span className="text-[10px] font-medium">{label}</span>
+                  <span className="text-2xl">{emoji}</span>
+                  <span className="text-xs font-medium">{label}</span>
                 </button>
               );
             })}
