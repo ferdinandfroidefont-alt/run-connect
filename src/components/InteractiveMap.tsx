@@ -1542,18 +1542,18 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Leaderboard, Confirm Presence & Nearby Sessions Buttons */}
+      {/* Nearby Sessions, Confirm Presence & Leaderboard Buttons */}
       {user && (
         <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
-          {/* Leaderboard Button - Podium Emoji */}
+          {/* Nearby Sessions Button */}
           <Button 
             variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
-            onClick={() => navigate('/leaderboard')}
-            title="Classement"
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+            onClick={() => setShowNearbySessionsDialog(true)}
+            title="Séances à proximité"
           >
-            <div className="text-xl">🏆</div>
-            <div className="text-xs leading-tight">Classement</div>
+            <div className="text-sm">📍🏃</div>
+            <div className="text-xs leading-tight">Séances à proximité</div>
           </Button>
 
           {/* Confirm Presence Button */}
@@ -1567,15 +1567,15 @@ export const InteractiveMap = ({
             <div className="text-xs leading-tight">Confirmer présence</div>
           </Button>
 
-          {/* Nearby Sessions Button */}
+          {/* Leaderboard Button - Podium Emoji */}
           <Button 
             variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
-            onClick={() => setShowNearbySessionsDialog(true)}
-            title="Séances à proximité"
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
+            onClick={() => navigate('/leaderboard')}
+            title="Classement"
           >
-            <div className="text-sm">📍🏃</div>
-            <div className="text-xs leading-tight">Séances à proximité</div>
+            <div className="text-xl">🏆</div>
+            <div className="text-xs leading-tight">Classement</div>
           </Button>
         </div>
       )}
