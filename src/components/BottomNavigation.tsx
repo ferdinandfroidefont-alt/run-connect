@@ -88,9 +88,9 @@ export const BottomNavigation = () => {
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
         
-        <div className="grid grid-cols-5 items-center px-3 py-3">
+        <div className="grid grid-cols-5 items-center px-3 pt-5 pb-3">
           {/* Carte */}
-          <div className="flex justify-center">
+          <div className="flex justify-center -translate-y-1">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               return (
@@ -112,7 +112,7 @@ export const BottomNavigation = () => {
           </div>
 
           {/* Mes Séances */}
-          <div className="flex justify-center">
+          <div className="flex justify-center -translate-y-1">
             {navItems.slice(1, 2).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               return (
@@ -144,7 +144,7 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col items-center gap-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-full transition-all hover:scale-105 -translate-y-4 shadow-lg shadow-primary/30"
+              className="flex flex-col items-center gap-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-full transition-all hover:scale-105 -translate-y-6 shadow-lg shadow-primary/30"
             >
               <Plus size={22} />
               <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
@@ -152,7 +152,7 @@ export const BottomNavigation = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex justify-center">
+          <div className="flex justify-center -translate-y-1">
             {navItems.slice(2, 3).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               const isMessages = path === '/messages';
@@ -186,7 +186,7 @@ export const BottomNavigation = () => {
           </div>
 
           {/* Feed */}
-          <div className="flex justify-center">
+          <div className="flex justify-center -translate-y-1">
             {navItems.slice(3, 4).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               return (
