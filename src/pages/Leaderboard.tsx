@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, Crown, Medal } from "lucide-react";
+import { Trophy, Crown, Medal, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
 import { ScrollToMyRankButton } from "@/components/leaderboard/ScrollToMyRankButton";
 import { WeeklyChallengesCard } from "@/components/leaderboard/WeeklyChallengesCard";
 import { BadgesToUnlockCard } from "@/components/leaderboard/BadgesToUnlockCard";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface LeaderboardUser {
   user_id: string;
@@ -39,6 +41,8 @@ interface Club {
 
 const Leaderboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { setHideBottomNav } = useAppContext();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -53,6 +57,12 @@ const Leaderboard = () => {
   const myRankRef = useRef<HTMLDivElement>(null);
   
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+
+  // Masquer la barre de navigation sur cette page
+  useEffect(() => {
+    setHideBottomNav(true);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
 
   const USERS_PER_PAGE = 10;
 
@@ -535,11 +545,22 @@ const Leaderboard = () => {
   const nextRank = getNextRankInfo(userPoints);
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
-      <h1 className="text-3xl font-bold mb-4 flex items-center justify-center gap-2">
-        <Trophy className="h-8 w-8 text-primary" />
-        Classement
-      </h1>
+    <div className="min-h-screen bg-background p-4 pb-8">
+      {/* Header avec flèche retour */}
+      <div className="flex items-center mb-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate('/')}
+          className="mr-2"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </Button>
+        <h1 className="text-2xl font-bold flex items-center gap-2 flex-1 justify-center mr-10">
+          <Trophy className="h-7 w-7 text-primary" />
+          Classement
+        </h1>
+      </div>
 
       <div className="space-y-3">
         {/* Filtres */}

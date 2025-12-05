@@ -20,6 +20,15 @@ export const useWeeklyChallenges = () => {
   const [loading, setLoading] = useState(true);
   const [referralLink, setReferralLink] = useState<string | null>(null);
 
+  const getCurrentWeekStart = () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    return monday.toISOString().split('T')[0];
+  };
+
   const fetchChallenges = async () => {
     if (!user) return;
 
@@ -27,7 +36,9 @@ export const useWeeklyChallenges = () => {
       // Initialiser les défis de l'utilisateur si nécessaire
       await supabase.rpc('initialize_user_challenges', { p_user_id: user.id });
 
-      // Récupérer les défis actifs de l'utilisateur
+      const currentWeekStart = getCurrentWeekStart();
+
+      // Récupérer les défis actifs de l'utilisateur pour la semaine courante uniquement
       const { data: userChallenges, error } = await supabase
         .from('user_challenges')
         .select(`
@@ -35,6 +46,7 @@ export const useWeeklyChallenges = () => {
           progress,
           target,
           status,
+          week_start,
           challenges (
             id,
             title,
@@ -46,6 +58,7 @@ export const useWeeklyChallenges = () => {
         `)
         .eq('user_id', user.id)
         .eq('status', 'active')
+        .eq('week_start', currentWeekStart)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
