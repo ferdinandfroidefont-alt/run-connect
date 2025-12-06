@@ -25,9 +25,12 @@ import Privacy from "./pages/Privacy";
 import ConfirmPresence from "./pages/ConfirmPresence";
 import { SecurityDashboard } from "./components/SecurityDashboard";
 import { AndroidTestPage } from "./components/AndroidTestPage";
+
 const queryClient = new QueryClient();
+
 const App = () => {
-  return <QueryClientProvider client={queryClient}>
+  return (
+    <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AppProvider>
           <TooltipProvider>
@@ -40,7 +43,7 @@ const App = () => {
                 <Route path="/" element={<Layout><Index /></Layout>} />
                 <Route path="/feed" element={<Layout><Feed /></Layout>} />
                 <Route path="/my-sessions" element={<Layout><MySessions /></Layout>} />
-                
+                <Route path="/messages" element={<Layout><Messages /></Layout>} />
                 <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
                 <Route path="/profile" element={<Layout><Profile /></Layout>} />
                 <Route path="/profile/:userId" element={<Layout><Profile /></Layout>} />
@@ -62,6 +65,8 @@ const App = () => {
           </TooltipProvider>
         </AppProvider>
       </ThemeProvider>
-    </QueryClientProvider>;
+    </QueryClientProvider>
+  );
 };
+
 export default App;
