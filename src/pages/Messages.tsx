@@ -17,7 +17,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { FriendSuggestions } from "@/components/FriendSuggestions";
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CreateClubDialog } from "@/components/CreateClubDialog";
+import { CreateClubDialogPremium } from "@/components/CreateClubDialogPremium";
+import { NewConversationView } from "@/components/NewConversationView";
 import { EditClubDialog } from "@/components/EditClubDialog";
 import { ContactsDialog } from "@/components/ContactsDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
@@ -1413,79 +1414,15 @@ const Messages = () => {
 
   if (showNewConversation) {
     return (
-      <>
-        {/* Barre système Android */}
-        <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
-        
-        <div className="min-h-screen bg-background">
-          <div className="max-w-md mx-auto pt-6">
-            {/* Header */}
-            <div className="flex items-center gap-3 p-4 border-b border-border bg-card/95 backdrop-blur-sm">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowNewConversation(false)}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-lg font-semibold">Nouvelle conversation</h1>
-          </div>
-
-          {/* Reminder about friends only */}
-          <div className="px-4 pt-2 pb-2">
-            <div className="bg-muted/50 rounded-lg p-3 border border-border/50">
-              <p className="text-sm text-muted-foreground text-center font-medium">
-                💬 Uniquement pour les amis
-              </p>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="p-4 pt-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher un utilisateur..."
-                value={searchUsers}
-                onChange={(e) => setSearchUsers(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Users list */}
-          <div className="px-4">
-             {availableUsers.map((profile) => (
-               <div
-                 key={profile.user_id}
-                 onClick={() => startConversation(profile.user_id)}
-                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
-               >
-                 <div className="relative">
-                     <Avatar 
-                       className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         handleAvatarClick(profile.avatar_url, profile.username || profile.display_name || "Utilisateur");
-                       }}
-                     >
-                      <AvatarImage src={profile.avatar_url || ""} />
-                      <AvatarFallback>
-                        {(profile.username || profile.display_name || "").charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                   <OnlineStatus userId={profile.user_id} className="w-3 h-3" />
-                 </div>
-                 <div>
-                   <p className="font-medium">{profile.username || profile.display_name}</p>
-                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                 </div>
-               </div>
-             ))}
-           </div>
-        </div>
-      </div>
-      </>
+      <NewConversationView
+        onBack={() => setShowNewConversation(false)}
+        onStartConversation={startConversation}
+        onCreateClub={() => {
+          setShowNewConversation(false);
+          setShowCreateGroup(true);
+        }}
+        onAvatarClick={handleAvatarClick}
+      />
     );
   }
 
@@ -2425,7 +2362,7 @@ const Messages = () => {
         </div>
 
         {/* Create Club Dialog */}
-        <CreateClubDialog
+        <CreateClubDialogPremium
           isOpen={showCreateGroup}
           onClose={() => setShowCreateGroup(false)}
           onGroupCreated={(groupId) => {
