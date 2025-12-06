@@ -312,7 +312,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full h-screen sm:max-w-md sm:h-[90vh] p-0 overflow-hidden flex flex-col">
         {/* Barre d'espacement haut pour Android */}
-        <div className="w-full h-6 bg-background flex-shrink-0" />
+        <div className="w-full h-3 bg-background flex-shrink-0" />
 
         {/* Progress indicator */}
         <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
@@ -325,7 +325,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         </div>
 
         {/* Barre d'espacement bas pour Android */}
-        <div className="w-full h-6 bg-background flex-shrink-0" />
+        <div className="w-full h-3 bg-background flex-shrink-0" />
       </DialogContent>
     </Dialog>
   );
