@@ -46,7 +46,7 @@ serve(async (req) => {
       .from('profiles')
       .select('strava_access_token, strava_user_id, strava_connected')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     console.log('Profile query result:', {
       profileFound: !!profile,
@@ -60,7 +60,7 @@ serve(async (req) => {
       console.error('Profile error:', profileError)
       return new Response(
         JSON.stringify({ error: 'Database error', friends: [] }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
