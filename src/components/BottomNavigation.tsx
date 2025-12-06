@@ -88,7 +88,7 @@ export const BottomNavigation = () => {
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
         
-        <div className="grid grid-cols-5 items-center px-3 pt-5 pb-3">
+        <div className="grid grid-cols-5 items-center px-3 pt-6 pb-4">
           {/* Carte */}
           <div className="flex justify-center -translate-y-1">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
