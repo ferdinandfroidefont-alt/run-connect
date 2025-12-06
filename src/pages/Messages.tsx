@@ -1078,6 +1078,25 @@ const Messages = () => {
     if (!user) return;
 
     try {
+      // First, get the other user's profile (needed for conversation display)
+      let otherParticipant = availableUsers.find(u => u.user_id === otherUserId);
+      
+      // If not in availableUsers, fetch directly from Supabase
+      if (!otherParticipant) {
+        const { data: profileData } = await supabase.rpc('get_safe_public_profiles', {
+          profile_user_ids: [otherUserId]
+        });
+        
+        if (profileData && profileData.length > 0) {
+          otherParticipant = profileData[0];
+        }
+      }
+
+      if (!otherParticipant) {
+        toast({ title: "Erreur", description: "Utilisateur introuvable", variant: "destructive" });
+        return;
+      }
+
       // Check if conversation already exists
       const { data: existingConv } = await supabase
         .from('conversations')
@@ -1087,19 +1106,16 @@ const Messages = () => {
 
       if (existingConv) {
         // Conversation exists, just select it
-        const otherParticipant = availableUsers.find(u => u.user_id === otherUserId);
-        if (otherParticipant) {
-          setSelectedConversation({
-            ...existingConv,
-            other_participant: otherParticipant
-          });
-          loadMessages(existingConv.id);
-          // Marquer les messages comme lus automatiquement
-          markMessagesAsReadOnOpen(existingConv.id);
-          setTimeout(() => {
-            markAllMessagesAsRead();
-          }, 100);
-        }
+        setSelectedConversation({
+          ...existingConv,
+          other_participant: otherParticipant
+        });
+        loadMessages(existingConv.id);
+        // Marquer les messages comme lus automatiquement
+        markMessagesAsReadOnOpen(existingConv.id);
+        setTimeout(() => {
+          markAllMessagesAsRead();
+        }, 100);
       } else {
         // Create new conversation
         const { data, error } = await supabase
@@ -1113,8 +1129,7 @@ const Messages = () => {
 
         if (error) throw error;
 
-        const otherParticipant = availableUsers.find(u => u.user_id === otherUserId);
-        if (otherParticipant && data) {
+        if (data) {
           setSelectedConversation({
             ...data,
             other_participant: otherParticipant
