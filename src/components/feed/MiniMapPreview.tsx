@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader } from '@googlemaps/js-api-loader';
+import { generateRoundProfileMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 
 interface MiniMapPreviewProps {
   lat: number;
@@ -84,22 +85,44 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
 
         mapInstanceRef.current = map;
 
-        // Use standard Marker (works without 'marker' library)
-        new google.maps.Marker({
-          map,
-          position,
-          icon: profileImageUrl ? {
-            url: profileImageUrl,
-            scaledSize: new google.maps.Size(40, 40),
-            anchor: new google.maps.Point(20, 20)
-          } : {
+        // Create round profile marker
+        let markerIcon: google.maps.Icon | google.maps.Symbol;
+        
+        if (profileImageUrl) {
+          try {
+            const base64Image = await imageUrlToBase64(profileImageUrl);
+            const svg = generateRoundProfileMarkerSVG(base64Image, 44);
+            const dataUrl = svgToDataUrl(svg);
+            markerIcon = {
+              url: dataUrl,
+              scaledSize: new google.maps.Size(44, 44),
+              anchor: new google.maps.Point(22, 22)
+            };
+          } catch {
+            markerIcon = {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 18,
+              fillColor: '#385bdc',
+              fillOpacity: 1,
+              strokeColor: '#fff',
+              strokeWeight: 3
+            };
+          }
+        } else {
+          markerIcon = {
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
+            scale: 18,
             fillColor: '#385bdc',
             fillOpacity: 1,
             strokeColor: '#fff',
-            strokeWeight: 2
-          }
+            strokeWeight: 3
+          };
+        }
+
+        new google.maps.Marker({
+          map,
+          position,
+          icon: markerIcon
         });
 
         // Add click listener for navigation
