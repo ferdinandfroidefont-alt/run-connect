@@ -549,7 +549,6 @@ const Messages = () => {
   const deleteConversation = async () => {
     const convToDelete = conversationToDelete || selectedConversation;
     if (!convToDelete || !user) return;
-    if (!selectedConversation || !user) return;
 
     try {
       setShowDeleteDialog(false);
