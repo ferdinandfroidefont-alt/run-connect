@@ -616,9 +616,11 @@ const Messages = () => {
         });
       }
 
+      // Remove conversation from local state immediately
+      setConversations(prev => prev.filter(c => c.id !== convToDelete.id));
+      
       // Go back to conversations list
       setSelectedConversation(null);
-      loadConversations();
     } catch (error: any) {
       toast({
         title: "Erreur",
