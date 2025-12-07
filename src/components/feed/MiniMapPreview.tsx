@@ -39,28 +39,32 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
 
     const initMap = async () => {
       try {
-        const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { type: 'get-key' }
-        });
-        
-        const googleMapsApiKey = apiKeyData?.apiKey || '';
-        
-        if (!googleMapsApiKey) {
-          console.error('❌ MiniMapPreview: No API key');
-          if (isMounted) {
-            setError(true);
-            setIsLoading(false);
+        // Check if Google Maps is already loaded (by InteractiveMap)
+        if (!window.google?.maps) {
+          // Need to load Google Maps
+          const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
+            body: { type: 'get-key' }
+          });
+          
+          const googleMapsApiKey = apiKeyData?.apiKey || '';
+          
+          if (!googleMapsApiKey) {
+            console.error('❌ MiniMapPreview: No API key');
+            if (isMounted) {
+              setError(true);
+              setIsLoading(false);
+            }
+            return;
           }
-          return;
+
+          const loader = new Loader({
+            apiKey: googleMapsApiKey,
+            version: 'weekly',
+            libraries: ['geometry', 'places'] // Same libraries as InteractiveMap
+          });
+
+          await loader.load();
         }
-
-        const loader = new Loader({
-          apiKey: googleMapsApiKey,
-          version: 'weekly',
-          libraries: ['marker']
-        });
-
-        await loader.load();
 
         if (!isMounted || !mapRef.current) return;
 
@@ -80,45 +84,23 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
 
         mapInstanceRef.current = map;
 
-        // Add marker with profile image
-        if (profileImageUrl) {
-          const markerContent = document.createElement('div');
-          markerContent.innerHTML = `
-            <div style="
-              width: 40px;
-              height: 40px;
-              border-radius: 50%;
-              border: 3px solid #385bdc;
-              overflow: hidden;
-              box-shadow: 0 2px 10px rgba(56, 91, 220, 0.4);
-            ">
-              <img 
-                src="${profileImageUrl}" 
-                style="width: 100%; height: 100%; object-fit: cover;"
-                onerror="this.style.display='none'; this.parentElement.style.background='#385bdc';"
-              />
-            </div>
-          `;
-
-          new google.maps.marker.AdvancedMarkerElement({
-            map,
-            position,
-            content: markerContent
-          });
-        } else {
-          new google.maps.Marker({
-            map,
-            position,
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: '#385bdc',
-              fillOpacity: 1,
-              strokeColor: '#fff',
-              strokeWeight: 2
-            }
-          });
-        }
+        // Use standard Marker (works without 'marker' library)
+        new google.maps.Marker({
+          map,
+          position,
+          icon: profileImageUrl ? {
+            url: profileImageUrl,
+            scaledSize: new google.maps.Size(40, 40),
+            anchor: new google.maps.Point(20, 20)
+          } : {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: '#385bdc',
+            fillOpacity: 1,
+            strokeColor: '#fff',
+            strokeWeight: 2
+          }
+        });
 
         // Add click listener for navigation
         map.addListener('click', handleMapClick);
