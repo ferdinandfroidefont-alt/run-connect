@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { FriendSuggestions } from "@/components/FriendSuggestions";
+
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateClubDialogPremium } from "@/components/CreateClubDialogPremium";
@@ -2363,16 +2363,6 @@ const Messages = () => {
           </CardContent>
         </Card>
 
-            {/* Friend suggestions */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-3">
-                <Users className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Suggestions d'amis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FriendSuggestions compact />
-              </CardContent>
-            </Card>
           </div>
         </div>
 
