@@ -156,7 +156,10 @@ const Messages = () => {
   
   // Conversation settings states
   const [isMuted, setIsMuted] = useState(false);
-  const [isPinned, setIsPinned] = useState(false);
+  const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('pinnedConversations');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
   
   const isLoading = loading || cameraLoading;
 
@@ -426,9 +429,32 @@ const Messages = () => {
     const timer = setTimeout(() => {
       setIsSelectionMode(true);
       setSelectedConversations(new Set([conversation.id]));
-    }, 500); // 500ms for long press
+    }, 1000); // 1000ms for long press (doubled from 500ms)
     setLongPressTimer(timer);
   };
+
+  // Pin/unpin conversation
+  const togglePinConversation = (conversationId: string) => {
+    setPinnedConversations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(conversationId)) {
+        newSet.delete(conversationId);
+      } else {
+        newSet.add(conversationId);
+      }
+      localStorage.setItem('pinnedConversations', JSON.stringify([...newSet]));
+      return newSet;
+    });
+  };
+
+  // Sort conversations with pinned first
+  const sortedConversations = [...conversations].sort((a, b) => {
+    const aPinned = pinnedConversations.has(a.id);
+    const bPinned = pinnedConversations.has(b.id);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return 0;
+  });
 
   const handleLongPressEnd = () => {
     if (longPressTimer) {
@@ -1581,7 +1607,7 @@ const Messages = () => {
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
-                    onClick={() => setIsPinned(!isPinned)}
+                    onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
                     className="justify-between"
                   >
                     <div className="flex items-center">
@@ -1589,7 +1615,7 @@ const Messages = () => {
                       <span>Épingler</span>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {isPinned ? "Oui" : "Non"}
+                      {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
                     </span>
                   </DropdownMenuItem>
                   
@@ -2236,7 +2262,7 @@ const Messages = () => {
                   </div>
                 ) : (
                     <div className="divide-y divide-border">
-                    {conversations.map((conversation) => (
+                    {sortedConversations.map((conversation) => (
                    <div
                      key={conversation.id}
                      className={`flex items-center gap-3 p-4 hover:bg-muted cursor-pointer transition-colors ${
@@ -2311,12 +2337,17 @@ const Messages = () => {
                         }}
                      >
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-sm truncate">
-                          {conversation.is_group 
-                            ? conversation.group_name 
-                            : (conversation.other_participant?.username || "Utilisateur inconnu")
-                          }
-                        </p>
+                        <div className="flex items-center gap-1 min-w-0">
+                          {pinnedConversations.has(conversation.id) && (
+                            <span className="text-sm flex-shrink-0">📌</span>
+                          )}
+                          <p className="font-medium text-sm truncate">
+                            {conversation.is_group 
+                              ? conversation.group_name 
+                              : (conversation.other_participant?.username || "Utilisateur inconnu")
+                            }
+                          </p>
+                        </div>
                          <div className="flex items-center gap-2">
                            {conversation.unread_count > 0 && (
                              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
