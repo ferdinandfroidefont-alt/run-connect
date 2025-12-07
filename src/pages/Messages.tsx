@@ -22,6 +22,7 @@ import { NewConversationView } from "@/components/NewConversationView";
 import { EditClubDialog } from "@/components/EditClubDialog";
 import { ContactsDialog } from "@/components/ContactsDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
+import { SwipeableConversationItem } from "@/components/SwipeableConversationItem";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useCamera } from "@/hooks/useCamera";
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
@@ -2263,8 +2264,17 @@ const Messages = () => {
                 ) : (
                     <div className="divide-y divide-border">
                     {sortedConversations.map((conversation) => (
+                    <SwipeableConversationItem
+                      key={conversation.id}
+                      isPinned={pinnedConversations.has(conversation.id)}
+                      disabled={isSelectionMode}
+                      onSwipeLeft={() => {
+                        setConversationToDelete(conversation);
+                        confirmDeleteConversation(conversation);
+                      }}
+                      onSwipeRight={() => togglePinConversation(conversation.id)}
+                    >
                    <div
-                     key={conversation.id}
                      className={`flex items-center gap-3 p-4 hover:bg-muted cursor-pointer transition-colors ${
                        selectedConversations.has(conversation.id) ? 'bg-primary/10' : ''
                      }`}
@@ -2388,6 +2398,7 @@ const Messages = () => {
                        </p>
                     </div>
                   </div>
+                  </SwipeableConversationItem>
                 ))}
               </div>
             )}
