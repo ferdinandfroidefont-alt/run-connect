@@ -41,18 +41,25 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
   const [friendsMap, setFriendsMap] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (user) {
-      loadFriendsStatus();
+    if (!user) return;
+
+    const initSuggestions = async () => {
+      // 1. Charger les amis d'abord et attendre
+      await loadFriendsStatus();
+      // 2. Puis charger les suggestions (friendsMap sera à jour)
       fetchSuggestions();
+      
       // Check if we should show contacts permission prompt
       if (isNative && !hasPermission) {
         setShowContactsPermission(true);
       }
-    }
+    };
+
+    initSuggestions();
   }, [user, isNative, hasPermission]);
 
-  const loadFriendsStatus = async () => {
-    if (!user) return;
+  const loadFriendsStatus = async (): Promise<Set<string>> => {
+    if (!user) return new Set();
     
     const { data } = await supabase
       .from('user_follows')
@@ -63,6 +70,7 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
     const friendIds = new Set(data?.map(f => f.following_id) || []);
     console.log('🔍 Friends loaded:', friendIds.size, 'amis existants');
     setFriendsMap(friendIds);
+    return friendIds;
   };
 
   const fetchSuggestions = async () => {
