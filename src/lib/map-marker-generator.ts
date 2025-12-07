@@ -19,91 +19,58 @@ export const imageUrlToBase64 = async (url: string): Promise<string> => {
 };
 
 /**
+ * Generates a simple round profile photo marker as SVG string
+ * Just the photo in a circle with subtle shadow - no pin shape
+ */
+export const generateRoundProfileMarkerSVG = (
+  profileImageUrl: string,
+  size: number = 48
+): string => {
+  const radius = size / 2;
+  const borderWidth = 3;
+  
+  return `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        <!-- Shadow for depth -->
+        <filter id="profileShadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+        </filter>
+        
+        <!-- Circular clip for profile photo -->
+        <clipPath id="profileClip-${size}">
+          <circle cx="${radius}" cy="${radius}" r="${radius - borderWidth}"/>
+        </clipPath>
+      </defs>
+      
+      <!-- White border circle with shadow -->
+      <circle cx="${radius}" cy="${radius}" r="${radius - 1}" 
+              fill="white" 
+              filter="url(#profileShadow)"/>
+      
+      <!-- Profile photo -->
+      <image xlink:href="${profileImageUrl}" 
+             x="${borderWidth}" 
+             y="${borderWidth}" 
+             width="${size - borderWidth * 2}" 
+             height="${size - borderWidth * 2}" 
+             clip-path="url(#profileClip-${size})"
+             preserveAspectRatio="xMidYMid slice"/>
+    </svg>
+  `.trim().replace(/\s+/g, ' ');
+};
+
+/**
  * Generates a custom RunConnect map marker as SVG string
  * with pin shape, gradient, glow effect, and circular profile photo
+ * @deprecated Use generateRoundProfileMarkerSVG instead for cleaner look
  */
 export const generateRunConnectMarkerSVG = (
   profileImageUrl: string,
   size: number = 48
 ): string => {
-  const height = size * 1.25; // Pin ratio 4:5 (48x60px)
-  const photoRadius = size / 4;
-  const photoCenterY = height * 0.28;
-  
-  return `
-    <svg width="${size}" height="${height}" viewBox="0 0 ${size} ${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-      <defs>
-        <!-- RunConnect gradient: deep blue to light blue (premium 3-stop) -->
-        <linearGradient id="pinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:hsl(217, 95%, 62%);stop-opacity:1" />
-          <stop offset="50%" style="stop-color:hsl(205, 100%, 65%);stop-opacity:1" />
-          <stop offset="100%" style="stop-color:hsl(195, 100%, 72%);stop-opacity:1" />
-        </linearGradient>
-        
-        <!-- Premium double shadow: subtle outer + strong inner -->
-        <filter id="premiumShadow" x="-50%" y="-50%" width="200%" height="200%">
-          <!-- Outer soft shadow (halo effect) -->
-          <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="outerBlur"/>
-          <feOffset dx="0" dy="2" result="outerOffset"/>
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.2"/>
-          </feComponentTransfer>
-          <feComposite in2="outerOffset" operator="in" result="outerShadow"/>
-          
-          <!-- Inner strong shadow (depth) -->
-          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="innerBlur"/>
-          <feOffset dx="0" dy="4" result="innerOffset"/>
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.6"/>
-          </feComponentTransfer>
-          <feComposite in2="innerOffset" operator="in" result="innerShadow"/>
-          
-          <!-- Merge both shadows -->
-          <feMerge>
-            <feMergeNode in="outerShadow"/>
-            <feMergeNode in="innerShadow"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-        
-        <!-- Circular clip for profile photo -->
-        <clipPath id="circleClip-${profileImageUrl.substring(0, 8)}">
-          <circle cx="${size/2}" cy="${photoCenterY}" r="${photoRadius}"/>
-        </clipPath>
-      </defs>
-      
-      <!-- Modern pin shape with rounded tip -->
-      <path d="M ${size/2} ${height}
-               Q ${size/2 - size*0.02} ${height * 0.9} ${size/2} ${height * 0.65}
-               Q ${size/2 - size*0.15} ${height * 0.5} ${size/2 - size*0.35} ${height * 0.35}
-               A ${size/2.5} ${size/2.5} 0 1 1 ${size/2 + size*0.35} ${height * 0.35}
-               Q ${size/2 + size*0.15} ${height * 0.5} ${size/2} ${height * 0.65}
-               Z" 
-            fill="url(#pinGradient)" 
-            filter="url(#premiumShadow)" 
-            stroke="none"/>
-      
-      <!-- Subtle white outline for contrast on any map background -->
-      <path d="M ${size/2} ${height}
-               Q ${size/2 - size*0.02} ${height * 0.9} ${size/2} ${height * 0.65}
-               Q ${size/2 - size*0.15} ${height * 0.5} ${size/2 - size*0.35} ${height * 0.35}
-               A ${size/2.5} ${size/2.5} 0 1 1 ${size/2 + size*0.35} ${height * 0.35}
-               Q ${size/2 + size*0.15} ${height * 0.5} ${size/2} ${height * 0.65}
-               Z" 
-            fill="none" 
-            stroke="rgba(255, 255, 255, 0.5)" 
-            stroke-width="1"/>
-      
-      <!-- Profile photo circle -->
-      <image xlink:href="${profileImageUrl}" 
-             x="${size/2 - photoRadius}" 
-             y="${photoCenterY - photoRadius}" 
-             width="${photoRadius * 2}" 
-             height="${photoRadius * 2}" 
-             clip-path="url(#circleClip-${profileImageUrl.substring(0, 8)})"
-             preserveAspectRatio="xMidYMid slice"/>
-    </svg>
-  `.trim().replace(/\s+/g, ' ');
+  // Now just returns round profile marker
+  return generateRoundProfileMarkerSVG(profileImageUrl, size);
 };
 
 /**
