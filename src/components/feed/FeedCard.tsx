@@ -169,6 +169,7 @@ export const FeedCard = ({
             lat={session.location_lat}
             lng={session.location_lng}
             profileImageUrl={session.organizer.avatar_url || ''}
+            sessionId={session.id}
           />
         </div>
       </div>
