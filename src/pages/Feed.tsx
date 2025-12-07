@@ -65,6 +65,9 @@ export default function Feed() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* Top spacer bar for Android */}
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50" />
+      
       {/* Premium Header */}
       <FeedHeader 
         onSearch={() => navigate('/search')}
