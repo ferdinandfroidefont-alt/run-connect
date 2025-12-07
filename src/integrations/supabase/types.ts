@@ -252,6 +252,27 @@ export type Database = {
         }
         Relationships: []
       }
+      dismissed_suggestions: {
+        Row: {
+          created_at: string
+          dismissed_user_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dismissed_user_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dismissed_user_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           conversation_id: string

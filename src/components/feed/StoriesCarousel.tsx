@@ -38,20 +38,15 @@ export const StoriesCarousel = () => {
   const [suggestions, setSuggestions] = useState<ProfileSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
-    // Charger les suggestions supprimées depuis localStorage
-    const saved = localStorage.getItem('dismissedSuggestions');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [friendsSet, setFriendsSet] = useState<Set<string>>(new Set());
 
-  // Charger les amis existants d'abord
   useEffect(() => {
     if (!user) return;
 
-    const loadFriendsAndSuggestions = async () => {
+    const loadData = async () => {
       try {
-        // 1. Charger la liste des amis d'abord
+        // 1. Charger les amis existants
         const { data: friendsData } = await supabase
           .from('user_follows')
           .select('following_id')
@@ -60,9 +55,17 @@ export const StoriesCarousel = () => {
 
         const friendIds = new Set(friendsData?.map(f => f.following_id) || []);
         setFriendsSet(friendIds);
-        console.log('🔍 StoriesCarousel - Friends loaded:', friendIds.size);
 
-        // 2. Puis charger les suggestions
+        // 2. Charger les suggestions supprimées depuis Supabase
+        const { data: dismissedData } = await supabase
+          .from('dismissed_suggestions')
+          .select('dismissed_user_id')
+          .eq('user_id', user.id);
+
+        const dismissed = new Set(dismissedData?.map(d => d.dismissed_user_id) || []);
+        setDismissedIds(dismissed);
+
+        // 3. Charger les suggestions (la fonction SQL exclut déjà les dismissed)
         const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
           current_user_id: user.id,
           suggestion_limit: 15
@@ -73,12 +76,11 @@ export const StoriesCarousel = () => {
           return;
         }
 
-        // 3. Filtrer les amis existants côté client (sécurité supplémentaire)
+        // Filtrer côté client également (sécurité)
         const filteredSuggestions = (data || []).filter(
-          (s: ProfileSuggestion) => !friendIds.has(s.user_id)
+          (s: ProfileSuggestion) => !friendIds.has(s.user_id) && !dismissed.has(s.user_id)
         );
 
-        console.log('🔍 StoriesCarousel - Suggestions après filtrage:', filteredSuggestions.length);
         setSuggestions(filteredSuggestions);
       } catch (error) {
         console.error('Error fetching suggestions:', error);
@@ -87,15 +89,28 @@ export const StoriesCarousel = () => {
       }
     };
 
-    loadFriendsAndSuggestions();
+    loadData();
   }, [user]);
 
-  // Sauvegarder les suggestions supprimées dans localStorage
-  const dismissSuggestion = (userId: string, e: React.MouseEvent) => {
+  // Sauvegarder les suggestions supprimées dans Supabase
+  const dismissSuggestion = async (userId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!user) return;
+
+    // Mise à jour optimiste du state local
     const newDismissed = new Set([...dismissedIds, userId]);
     setDismissedIds(newDismissed);
-    localStorage.setItem('dismissedSuggestions', JSON.stringify([...newDismissed]));
+
+    // Sauvegarder dans Supabase
+    const { error } = await supabase
+      .from('dismissed_suggestions')
+      .insert({ user_id: user.id, dismissed_user_id: userId });
+
+    if (error) {
+      console.error('Error dismissing suggestion:', error);
+      // Rollback en cas d'erreur
+      setDismissedIds(dismissedIds);
+    }
   };
 
   // Filtrer les suggestions visibles (non supprimées et non amis)
