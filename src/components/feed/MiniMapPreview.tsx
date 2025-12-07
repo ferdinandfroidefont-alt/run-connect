@@ -1,25 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Loader } from '@googlemaps/js-api-loader';
 
 interface MiniMapPreviewProps {
   lat: number;
   lng: number;
   profileImageUrl: string;
+  sessionId?: string;
 }
 
-export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProps) => {
-  const [mapUrl, setMapUrl] = useState<string>('');
+export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMapPreviewProps) => {
+  const navigate = useNavigate();
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const handleMapClick = useCallback(() => {
+    // Navigate to home page with the session location
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      zoom: '15',
+      ...(sessionId && { sessionId })
+    });
+    navigate(`/?${params.toString()}`);
+  }, [lat, lng, sessionId, navigate]);
+
   useEffect(() => {
-    if (lat === undefined || lat === null || lng === undefined || lng === null) {
+    if (!mapRef.current || lat === undefined || lat === null || lng === undefined || lng === null) {
       setIsLoading(false);
       setError(true);
       return;
     }
 
-    const loadMap = async () => {
+    let isMounted = true;
+
+    const initMap = async () => {
       try {
         const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
           body: { type: 'get-key' }
@@ -29,25 +47,103 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProp
         
         if (!googleMapsApiKey) {
           console.error('❌ MiniMapPreview: No API key');
-          setError(true);
-          setIsLoading(false);
+          if (isMounted) {
+            setError(true);
+            setIsLoading(false);
+          }
           return;
         }
 
-        // Use Google Maps Static API for simple, reliable image rendering
-        const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=14&size=400x200&maptype=roadmap&markers=color:blue%7C${lat},${lng}&key=${googleMapsApiKey}&style=feature:poi%7Celement:labels%7Cvisibility:off`;
-        
-        setMapUrl(staticMapUrl);
-        setIsLoading(false);
+        const loader = new Loader({
+          apiKey: googleMapsApiKey,
+          version: 'weekly',
+          libraries: ['marker']
+        });
+
+        await loader.load();
+
+        if (!isMounted || !mapRef.current) return;
+
+        const position = { lat, lng };
+
+        const map = new google.maps.Map(mapRef.current, {
+          center: position,
+          zoom: 14,
+          disableDefaultUI: true,
+          zoomControl: true,
+          gestureHandling: 'greedy',
+          styles: [
+            { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+            { featureType: 'transit', stylers: [{ visibility: 'off' }] }
+          ]
+        });
+
+        mapInstanceRef.current = map;
+
+        // Add marker with profile image
+        if (profileImageUrl) {
+          const markerContent = document.createElement('div');
+          markerContent.innerHTML = `
+            <div style="
+              width: 40px;
+              height: 40px;
+              border-radius: 50%;
+              border: 3px solid #385bdc;
+              overflow: hidden;
+              box-shadow: 0 2px 10px rgba(56, 91, 220, 0.4);
+            ">
+              <img 
+                src="${profileImageUrl}" 
+                style="width: 100%; height: 100%; object-fit: cover;"
+                onerror="this.style.display='none'; this.parentElement.style.background='#385bdc';"
+              />
+            </div>
+          `;
+
+          new google.maps.marker.AdvancedMarkerElement({
+            map,
+            position,
+            content: markerContent
+          });
+        } else {
+          new google.maps.Marker({
+            map,
+            position,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: '#385bdc',
+              fillOpacity: 1,
+              strokeColor: '#fff',
+              strokeWeight: 2
+            }
+          });
+        }
+
+        // Add click listener for navigation
+        map.addListener('click', handleMapClick);
+
+        if (isMounted) {
+          setIsLoading(false);
+        }
       } catch (err) {
         console.error('❌ MiniMapPreview error:', err);
-        setError(true);
-        setIsLoading(false);
+        if (isMounted) {
+          setError(true);
+          setIsLoading(false);
+        }
       }
     };
 
-    loadMap();
-  }, [lat, lng]);
+    initMap();
+
+    return () => {
+      isMounted = false;
+      if (mapInstanceRef.current) {
+        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+      }
+    };
+  }, [lat, lng, profileImageUrl, handleMapClick]);
 
   if (error) {
     return (
@@ -57,20 +153,22 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl }: MiniMapPreviewProp
     );
   }
 
-  if (isLoading || !mapUrl) {
-    return (
-      <div className="w-full h-full rounded-xl bg-muted animate-pulse flex items-center justify-center">
-        <span className="text-muted-foreground text-sm">Chargement...</span>
-      </div>
-    );
-  }
-
   return (
-    <img
-      src={mapUrl}
-      alt={`Carte de la session à ${lat}, ${lng}`}
-      className="w-full h-full object-cover rounded-xl"
-      onError={() => setError(true)}
-    />
+    <div className="relative w-full h-full">
+      {isLoading && (
+        <div className="absolute inset-0 rounded-xl bg-muted animate-pulse flex items-center justify-center z-10">
+          <span className="text-muted-foreground text-sm">Chargement...</span>
+        </div>
+      )}
+      <div 
+        ref={mapRef} 
+        className="w-full h-full rounded-xl cursor-pointer"
+        onClick={handleMapClick}
+      />
+      {/* Overlay hint */}
+      <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 text-xs text-muted-foreground pointer-events-none">
+        Cliquer pour voir
+      </div>
+    </div>
   );
 };
