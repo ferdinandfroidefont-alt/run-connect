@@ -41,31 +41,41 @@ export const usePushNotifications = () => {
   
   const isSupported = isNative || ('Notification' in window);
   
-  // 🔄 Re-vérifier isNative dynamiquement pendant les 5 premières secondes
-  useEffect(() => {
-    const recheckNative = () => {
-      const nativeNow = (window as any).CapacitorForceNative === true || 
-                        Capacitor.isNativePlatform() || 
-                        typeof (window as any).AndroidBridge !== 'undefined';
-      
-      if (nativeNow !== isNative) {
-        console.log('🔄 [NATIVE] Détection mise à jour:', isNative, '→', nativeNow);
-        setIsNative(nativeNow);
-      }
-    };
+  // 🔥 HELPER: Re-vérifier isNative en temps réel
+  const recheckNativeNow = useCallback(() => {
+    const nativeNow = (window as any).CapacitorForceNative === true || 
+                      Capacitor.isNativePlatform() || 
+                      typeof (window as any).AndroidBridge !== 'undefined';
+    
+    if (nativeNow !== isNative) {
+      console.log('🔄 [NATIVE] Détection mise à jour:', isNative, '→', nativeNow);
+      setIsNative(nativeNow);
+    }
+    return nativeNow;
+  }, [isNative]);
 
-    // Vérifier toutes les 500ms pendant les 5 premières secondes
-    const interval = setInterval(recheckNative, 500);
-    setTimeout(() => clearInterval(interval), 5000);
+  // 🔄 Re-vérifier isNative dynamiquement pendant les 10 premières secondes + listeners permanents
+  useEffect(() => {
+    // Vérifier toutes les 500ms pendant les 10 premières secondes (augmenté de 5s)
+    const interval = setInterval(recheckNativeNow, 500);
+    setTimeout(() => clearInterval(interval), 10000);
 
     // Écouter l'événement capacitorNativeReady
-    window.addEventListener('capacitorNativeReady', recheckNative);
+    window.addEventListener('capacitorNativeReady', recheckNativeNow);
+    
+    // 🔥 NOUVEAU: Listener PERMANENT pour androidPermissionsUpdated
+    const handleAndroidUpdate = () => {
+      console.log('🔄 [NATIVE] Événement androidPermissionsUpdated reçu');
+      recheckNativeNow();
+    };
+    window.addEventListener('androidPermissionsUpdated', handleAndroidUpdate);
     
     return () => {
       clearInterval(interval);
-      window.removeEventListener('capacitorNativeReady', recheckNative);
+      window.removeEventListener('capacitorNativeReady', recheckNativeNow);
+      window.removeEventListener('androidPermissionsUpdated', handleAndroidUpdate);
     };
-  }, [isNative]);
+  }, [recheckNativeNow]);
   
   // Détection de la plateforme iOS
   const isIOS = () => {
@@ -208,8 +218,13 @@ export const usePushNotifications = () => {
   const requestPermissions = async (): Promise<boolean> => {
     console.log('🔔 [REQUEST] Vérification permissions notifications...');
     
-    if (!isNative) {
+    // 🔥 RE-VÉRIFICATION IMMÉDIATE avant d'agir
+    const isCurrentlyNative = recheckNativeNow();
+    
+    if (!isCurrentlyNative) {
       console.log('❌ Mode web détecté, notifications non supportées');
+      console.log('📱 [REQUEST] CapacitorForceNative:', (window as any).CapacitorForceNative);
+      console.log('📱 [REQUEST] AndroidBridge:', typeof (window as any).AndroidBridge);
       toast({
         title: "Non supporté",
         description: "Les notifications nécessitent l'application mobile",
@@ -498,8 +513,11 @@ export const usePushNotifications = () => {
       return;
     }
 
-    if (!isNative) {
-      console.log('❌ [TEST] Mode web détecté');
+    // 🔥 RE-VÉRIFICATION IMMÉDIATE avant d'agir (corrige le bug post mise à jour design)
+    const isCurrentlyNative = recheckNativeNow();
+    
+    if (!isCurrentlyNative) {
+      console.log('❌ [TEST] Mode web détecté après re-vérification');
       console.log('📱 [TEST] CapacitorForceNative:', (window as any).CapacitorForceNative);
       console.log('📱 [TEST] AndroidBridge:', typeof (window as any).AndroidBridge);
       console.log('📱 [TEST] Platform:', Capacitor.getPlatform());
@@ -650,7 +668,7 @@ export const usePushNotifications = () => {
         variant: "destructive"
       });
     }
-  }, [user, toast, isNative, token]);
+  }, [user, toast, recheckNativeNow, token]);
 
   // Ref pour tracker si les listeners sont configurés
   const listenersConfigured = useCallback(() => {
