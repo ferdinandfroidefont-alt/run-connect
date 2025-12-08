@@ -98,10 +98,10 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         console.log('🔍 Skipping contacts - isNative:', isNative, 'hasPermission:', hasPermission);
       }
 
-      // Utiliser la nouvelle fonction avec ordre de priorité
+      // Utiliser la nouvelle fonction avec ordre de priorité - demander plus pour avoir du buffer
       const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
         current_user_id: user.id,
-        suggestion_limit: 10
+        suggestion_limit: 20
       });
 
       if (error) throw error;
@@ -125,7 +125,38 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
         allSuggestions = [
           ...contactsWithPriority,
           ...filteredDbSuggestions
-        ].slice(0, 10);
+        ].slice(0, 15);
+      }
+
+      // Fallback: Si toujours pas de suggestions, charger des utilisateurs actifs populaires
+      if (allSuggestions.length === 0) {
+        console.log('🔍 No suggestions found, loading popular users as fallback...');
+        const { data: popularUsers } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .neq('user_id', user.id)
+          .not('avatar_url', 'is', null)
+          .not('username', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        
+        if (popularUsers && popularUsers.length > 0) {
+          // Filtrer ceux qui ne sont pas déjà amis
+          const popularSuggestions = popularUsers
+            .filter(p => !friendsMap.has(p.user_id))
+            .map(p => ({
+              user_id: p.user_id,
+              username: p.username || 'Utilisateur',
+              display_name: p.display_name || p.username || 'Utilisateur',
+              avatar_url: p.avatar_url || '',
+              mutual_friends_count: 0,
+              mutual_friend_names: [] as string[],
+              source: 'popular',
+              is_contact: false,
+              priority_order: 10
+            }));
+          allSuggestions = popularSuggestions as any;
+        }
       }
 
       setSuggestions(allSuggestions);
@@ -347,8 +378,30 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
     );
   }
 
+  // Toujours afficher quelque chose, même si pas de suggestions
   if (visibleSuggestions.length === 0 && !showContactsPermission) {
-    return null;
+    return (
+      <Card className={compact ? "bg-card/30 backdrop-blur-sm border-white/10" : "max-w-md mx-auto bg-card/30 backdrop-blur-sm border-white/10"}>
+        <CardContent className="p-6 text-center">
+          <Users className="h-12 w-12 text-primary mx-auto mb-3" />
+          <p className="font-semibold text-foreground mb-1">Aucune nouvelle suggestion</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Invitez vos amis avec votre code de parrainage pour agrandir votre réseau !
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setLoading(true);
+              fetchSuggestions();
+            }}
+            className="border-primary/30 hover:bg-primary/10"
+          >
+            🔄 Rafraîchir les suggestions
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   // Show contacts permission prompt
@@ -441,6 +494,10 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
                 <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-500/20 px-2 py-0.5">
                   <Users className="h-3 w-3 mr-1" />
                   Ami d'ami
+                </Badge>
+              ) : suggestion.source === 'popular' ? (
+                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20 px-2 py-0.5">
+                  ⭐ Populaire
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-xs px-2 py-0.5">
