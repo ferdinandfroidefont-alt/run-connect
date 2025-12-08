@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
-import { X } from 'lucide-react';
+import { X, Users, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ProfileSuggestion {
   user_id: string;
@@ -28,6 +29,8 @@ const getSourceLabel = (source: string, mutualCount: number): string => {
       return '🔗 Ami d\'ami';
     case 'active_users':
       return '🔥 Actif';
+    case 'popular':
+      return '⭐ Populaire';
     default:
       return '✨ Suggéré';
   }
@@ -41,54 +44,89 @@ export const StoriesCarousel = () => {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [friendsSet, setFriendsSet] = useState<Set<string>>(new Set());
 
+  const loadData = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      // 1. Charger les amis existants
+      const { data: friendsData } = await supabase
+        .from('user_follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+        .eq('status', 'accepted');
+
+      const friendIds = new Set(friendsData?.map(f => f.following_id) || []);
+      setFriendsSet(friendIds);
+
+      // 2. Charger les suggestions supprimées depuis Supabase
+      const { data: dismissedData } = await supabase
+        .from('dismissed_suggestions')
+        .select('dismissed_user_id')
+        .eq('user_id', user.id);
+
+      const dismissed = new Set(dismissedData?.map(d => d.dismissed_user_id) || []);
+      setDismissedIds(dismissed);
+
+      // 3. Charger les suggestions (la fonction SQL exclut déjà les dismissed)
+      const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
+        current_user_id: user.id,
+        suggestion_limit: 20
+      });
+
+      if (error) {
+        console.error('Error fetching suggestions:', error);
+      }
+
+      // Filtrer côté client également (sécurité)
+      let filteredSuggestions: ProfileSuggestion[] = (data || [])
+        .filter((s: ProfileSuggestion) => !friendIds.has(s.user_id) && !dismissed.has(s.user_id))
+        .map((s: any) => ({
+          user_id: s.user_id,
+          username: s.username,
+          display_name: s.display_name,
+          avatar_url: s.avatar_url,
+          mutual_friends_count: s.mutual_friends_count || 0,
+          source: s.source
+        }));
+
+      // 4. Fallback: Si aucune suggestion, charger des utilisateurs populaires
+      if (filteredSuggestions.length === 0) {
+        console.log('🔍 No suggestions, loading popular users as fallback...');
+        const { data: popularUsers } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .neq('user_id', user.id)
+          .not('avatar_url', 'is', null)
+          .not('username', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(15);
+
+        if (popularUsers && popularUsers.length > 0) {
+          filteredSuggestions = popularUsers
+            .filter(p => !friendIds.has(p.user_id) && !dismissed.has(p.user_id))
+            .map(p => ({
+              user_id: p.user_id,
+              username: p.username || 'Utilisateur',
+              display_name: p.display_name || p.username || 'Utilisateur',
+              avatar_url: p.avatar_url || '',
+              mutual_friends_count: 0,
+              source: 'popular'
+            })) as ProfileSuggestion[];
+        }
+      }
+
+      setSuggestions(filteredSuggestions);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
-
-    const loadData = async () => {
-      try {
-        // 1. Charger les amis existants
-        const { data: friendsData } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', user.id)
-          .eq('status', 'accepted');
-
-        const friendIds = new Set(friendsData?.map(f => f.following_id) || []);
-        setFriendsSet(friendIds);
-
-        // 2. Charger les suggestions supprimées depuis Supabase
-        const { data: dismissedData } = await supabase
-          .from('dismissed_suggestions')
-          .select('dismissed_user_id')
-          .eq('user_id', user.id);
-
-        const dismissed = new Set(dismissedData?.map(d => d.dismissed_user_id) || []);
-        setDismissedIds(dismissed);
-
-        // 3. Charger les suggestions (la fonction SQL exclut déjà les dismissed)
-        const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
-          current_user_id: user.id,
-          suggestion_limit: 15
-        });
-
-        if (error) {
-          console.error('Error fetching suggestions:', error);
-          return;
-        }
-
-        // Filtrer côté client également (sécurité)
-        const filteredSuggestions = (data || []).filter(
-          (s: ProfileSuggestion) => !friendIds.has(s.user_id) && !dismissed.has(s.user_id)
-        );
-
-        setSuggestions(filteredSuggestions);
-      } catch (error) {
-        console.error('Error fetching suggestions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
   }, [user]);
 
@@ -131,9 +169,25 @@ export const StoriesCarousel = () => {
     );
   }
 
-  // Hide if no suggestions
+  // Toujours afficher quelque chose - même si pas de suggestions
   if (visibleSuggestions.length === 0) {
-    return null;
+    return (
+      <div className="py-4 px-4">
+        <div className="flex items-center justify-center gap-3 py-4 bg-card/30 backdrop-blur-sm border border-white/10 rounded-2xl">
+          <Users className="h-5 w-5 text-primary" />
+          <span className="text-sm text-muted-foreground">Aucune nouvelle suggestion</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={loadData}
+            className="h-8 px-3 text-xs hover:bg-primary/10"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Rafraîchir
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
