@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 🎯 Android 16 Fix: Opt-out de l'edge-to-edge enforcement obligatoire -->
+    <style name="OptOutEdgeToEdgeEnforcement">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>
