@@ -140,21 +140,36 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        
-        // 🎯 FULLSCREEN IMMERSIF (masquer status bar + navigation bar)
+    /**
+     * 🎯 Android 15 Fix: Configure fullscreen immersive mode with null check
+     * getInsetsController() can return null on Android 15 if called too early
+     */
+    private void setupImmersiveMode() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             getWindow().setDecorFitsSystemWindows(false);
-            getWindow().getInsetsController().hide(
-                android.view.WindowInsets.Type.statusBars() | 
-                android.view.WindowInsets.Type.navigationBars()
-            );
-            getWindow().getInsetsController().setSystemBarsBehavior(
-                android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            );
+            
+            // ✅ CRITICAL NULL CHECK for Android 15
+            android.view.WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(
+                    android.view.WindowInsets.Type.statusBars() | 
+                    android.view.WindowInsets.Type.navigationBars()
+                );
+                controller.setSystemBarsBehavior(
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                );
+                Log.d(TAG, "✅ Immersive mode configured via WindowInsetsController");
+            } else {
+                Log.w(TAG, "⚠️ getInsetsController() returned null, falling back to legacy mode");
+                // Fallback for edge cases where controller is null
+                getWindow().getDecorView().setSystemUiVisibility(
+                    android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
+                    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                );
+            }
         } else {
+            // Android < 11 (API 30) - use legacy flags
             getWindow().getDecorView().setSystemUiVisibility(
                 android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
                 android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
@@ -163,10 +178,19 @@ public class MainActivity extends AppCompatActivity {
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             );
+            Log.d(TAG, "✅ Immersive mode configured via legacy SystemUiVisibility");
         }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         
-        // Charger le nouveau layout avec splash intégré
+        // ⚠️ IMPORTANT: Charger le layout D'ABORD (Android 15 fix)
         setContentView(R.layout.activity_main);
+        
+        // 🎯 FULLSCREEN IMMERSIF - APRÈS setContentView pour éviter NullPointerException sur Android 15
+        setupImmersiveMode();
         
         // Stocker l'instance pour accès depuis MessagingService
         instance = this;

@@ -175,6 +175,13 @@ jobs:
             exit 1
           fi
           
+          # 🎯 Android 15 Fix: Vérifier que setupImmersiveMode existe
+          if grep -q "setupImmersiveMode" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
+            echo "✅ Android 15 fix (setupImmersiveMode) détecté"
+          else
+            echo "⚠️ ATTENTION: setupImmersiveMode manquant - Android 15 pourrait crasher"
+          fi
+          
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 
           echo "📁 Copie des ressources du splash screen..."
