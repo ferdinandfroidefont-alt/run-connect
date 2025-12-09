@@ -90,7 +90,7 @@ export const BottomNavigation = () => {
         
         <div className="grid grid-cols-5 items-center px-3 pt-6 pb-4">
           {/* Carte */}
-          <div className="flex justify-center -translate-y-1">
+          <div className="flex justify-center -translate-y-3">
             {navItems.slice(0, 1).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               return (
@@ -112,7 +112,7 @@ export const BottomNavigation = () => {
           </div>
 
           {/* Mes Séances */}
-          <div className="flex justify-center -translate-y-1">
+          <div className="flex justify-center -translate-y-3">
             {navItems.slice(1, 2).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               return (
@@ -152,7 +152,7 @@ export const BottomNavigation = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex justify-center -translate-y-1">
+          <div className="flex justify-center -translate-y-3">
             {navItems.slice(2, 3).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               const isMessages = path === '/messages';
@@ -186,7 +186,7 @@ export const BottomNavigation = () => {
           </div>
 
           {/* Feed */}
-          <div className="flex justify-center -translate-y-1">
+          <div className="flex justify-center -translate-y-3">
             {navItems.slice(3, 4).map(({ path, emoji, label }) => {
               const isActive = location.pathname === path;
               return (
