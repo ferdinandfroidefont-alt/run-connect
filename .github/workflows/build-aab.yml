@@ -175,12 +175,25 @@ jobs:
             exit 1
           fi
           
-          # 🎯 Android 15 Fix: Vérifier que setupImmersiveMode existe
+          # 🎯 Android 15/16 Fix: Vérifier que setupImmersiveMode existe
           if grep -q "setupImmersiveMode" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
-            echo "✅ Android 15 fix (setupImmersiveMode) détecté"
+            echo "✅ Android 15/16 fix (setupImmersiveMode) détecté"
           else
-            echo "⚠️ ATTENTION: setupImmersiveMode manquant - Android 15 pourrait crasher"
+            echo "⚠️ ATTENTION: setupImmersiveMode manquant - Android 15/16 pourrait crasher"
           fi
+          
+          # 🎯 Android 16 Fix: Créer le fichier values-v35/styles.xml
+          echo "📁 Création du style Android 16 OptOutEdgeToEdgeEnforcement..."
+          mkdir -p android-webview/app/src/main/res/values-v35
+          cat > android-webview/app/src/main/res/values-v35/styles.xml << 'STYLES_V35'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="OptOutEdgeToEdgeEnforcement">
+                  <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+              </style>
+          </resources>
+          STYLES_V35
+          echo "✅ values-v35/styles.xml créé"
           
           cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
 

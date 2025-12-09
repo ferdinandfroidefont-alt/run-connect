@@ -141,35 +141,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 🎯 Android 15 Fix: Configure fullscreen immersive mode with null check
-     * getInsetsController() can return null on Android 15 if called too early
+     * 🎯 Android 15/16 Fix: Configure fullscreen immersive mode using AndroidX
+     * Uses WindowInsetsControllerCompat for maximum compatibility across all Android versions
      */
     private void setupImmersiveMode() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
+        try {
+            // Use AndroidX WindowInsetsControllerCompat for Android 15/16 compatibility
+            androidx.core.view.WindowInsetsControllerCompat insetsController = 
+                new androidx.core.view.WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
             
-            // ✅ CRITICAL NULL CHECK for Android 15
-            android.view.WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(
-                    android.view.WindowInsets.Type.statusBars() | 
-                    android.view.WindowInsets.Type.navigationBars()
-                );
-                controller.setSystemBarsBehavior(
-                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                );
-                Log.d(TAG, "✅ Immersive mode configured via WindowInsetsController");
-            } else {
-                Log.w(TAG, "⚠️ getInsetsController() returned null, falling back to legacy mode");
-                // Fallback for edge cases where controller is null
-                getWindow().getDecorView().setSystemUiVisibility(
-                    android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
-                    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                );
+            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            insetsController.setSystemBarsBehavior(
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            );
+            
+            // Disable edge-to-edge on Android 11+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                getWindow().setDecorFitsSystemWindows(false);
             }
-        } else {
-            // Android < 11 (API 30) - use legacy flags
+            
+            Log.d(TAG, "✅ Immersive mode configured via WindowInsetsControllerCompat");
+        } catch (Exception e) {
+            Log.w(TAG, "⚠️ WindowInsetsControllerCompat failed, falling back to legacy mode: " + e.getMessage());
+            // Fallback to legacy flags for older devices or edge cases
             getWindow().getDecorView().setSystemUiVisibility(
                 android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
                 android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
@@ -184,6 +178,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 🎯 Android 16 Fix: Opt-out de l'edge-to-edge enforcement AVANT super.onCreate()
+        if (android.os.Build.VERSION.SDK_INT >= 35) {
+            try {
+                getTheme().applyStyle(R.style.OptOutEdgeToEdgeEnforcement, false);
+                Log.d(TAG, "✅ Android 16: OptOutEdgeToEdgeEnforcement applied");
+            } catch (Exception e) {
+                Log.w(TAG, "⚠️ Could not apply OptOutEdgeToEdgeEnforcement: " + e.getMessage());
+            }
+        }
+        
         super.onCreate(savedInstanceState);
         
         // ⚠️ IMPORTANT: Charger le layout D'ABORD (Android 15 fix)
