@@ -565,17 +565,43 @@ export const usePushNotifications = () => {
 
     // 🔥 NIVEAU 8: Vérifier que le token est VRAIMENT dans la base
     try {
-      const { data: profile } = await supabase
+      console.log('🔍 [TEST] Vérification token - user.id:', user.id);
+      console.log('🔍 [TEST] window.fcmToken disponible:', !!(window as any).fcmToken);
+      
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('push_token')
         .eq('user_id', user.id)
         .single();
       
+      console.log('🔍 [TEST] Résultat requête Supabase:', {
+        profile,
+        error: profileError,
+        userId: user.id,
+        hasToken: !!profile?.push_token
+      });
+      
+      if (profileError) {
+        console.error('❌ [TEST] Erreur Supabase:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
+        toast({
+          title: "Erreur Supabase",
+          description: `${profileError.code}: ${profileError.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       if (!profile?.push_token) {
         console.error('❌ [TEST] Token pas trouvé dans la base !');
+        console.log('🔍 [TEST] window.fcmToken =', (window as any).fcmToken?.substring(0, 40));
         toast({
           title: "Token non sauvegardé",
-          description: "Le token FCM n'est pas dans la base. Relancez l'app.",
+          description: `user.id: ${user.id.substring(0, 8)}... - Utilisez "Forcer sauvegarde"`,
           variant: "destructive"
         });
         return;
@@ -583,11 +609,11 @@ export const usePushNotifications = () => {
       
       console.log('✅ [TEST] Token confirmé dans la base:', profile.push_token.substring(0, 30) + '...');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [TEST] Erreur vérification token:', error);
       toast({
         title: "Erreur vérification",
-        description: "Impossible de vérifier le token dans la base",
+        description: error?.message || "Impossible de vérifier le token",
         variant: "destructive"
       });
       return;
