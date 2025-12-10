@@ -124,6 +124,61 @@ export const NotificationManager = () => {
     }
   };
 
+  // 🔥 Forcer la sauvegarde du token FCM depuis window.fcmToken
+  const forceSaveToken = async () => {
+    if (!user) {
+      toast({ title: "Erreur", description: "Utilisateur non connecté", variant: "destructive" });
+      return;
+    }
+    
+    const fcmToken = (window as any).fcmToken;
+    console.log('🔧 [FORCE SAVE] user.id:', user.id);
+    console.log('🔧 [FORCE SAVE] window.fcmToken:', fcmToken?.substring(0, 40));
+    
+    if (!fcmToken) {
+      toast({ 
+        title: "Token absent", 
+        description: "window.fcmToken n'existe pas. Régénérez d'abord le token.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    setDiagnosing(true);
+    try {
+      const platform = (window as any).AndroidBridge ? 'android' : 'web';
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          push_token: fcmToken,
+          push_token_platform: platform,
+          push_token_updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error('❌ [FORCE SAVE] Erreur Supabase:', error);
+        toast({ 
+          title: "Erreur sauvegarde", 
+          description: `${error.code}: ${error.message}`, 
+          variant: "destructive" 
+        });
+      } else {
+        console.log('✅ [FORCE SAVE] Token sauvegardé !');
+        toast({ 
+          title: "Token sauvegardé ✅", 
+          description: `${fcmToken.substring(0, 30)}...` 
+        });
+      }
+    } catch (err: any) {
+      console.error('❌ [FORCE SAVE] Exception:', err);
+      toast({ title: "Erreur", description: err?.message, variant: "destructive" });
+    } finally {
+      setDiagnosing(false);
+    }
+  };
+
   // Diagnostic complet des notifications
   const diagnoseNotifications = async () => {
     if (!user) return;
@@ -350,6 +405,15 @@ export const NotificationManager = () => {
               >
                 <Bell className="h-4 w-4" />
                 {diagnosing ? 'Génération…' : 'Régénérer le token'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={forceSaveToken} 
+                disabled={diagnosing}
+                className="gap-2 border-orange-500/50 text-orange-600"
+              >
+                <Settings className="h-4 w-4" />
+                {diagnosing ? 'Sauvegarde...' : 'Forcer sauvegarde'}
               </Button>
               <Button 
                 variant="outline" 
