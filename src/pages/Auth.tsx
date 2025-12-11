@@ -462,7 +462,15 @@ const Auth = () => {
       }
       
       console.log('✅ Connexion réussie');
-      window.location.href = '/';
+      
+      // Vérifier si on doit rediriger vers un profil cible
+      const targetUsername = sessionStorage.getItem('targetProfileUsername');
+      if (targetUsername) {
+        sessionStorage.removeItem('targetProfileUsername');
+        window.location.href = `/p/${targetUsername}`;
+      } else {
+        window.location.href = '/';
+      }
     } catch (error: any) {
       console.error('❌ Erreur complète:', error);
       

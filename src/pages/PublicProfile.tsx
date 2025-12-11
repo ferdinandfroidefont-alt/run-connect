@@ -84,12 +84,22 @@ const PublicProfile = () => {
           .single();
 
         if (profileError || !profileData) {
-          toast({
-            title: "Profil introuvable",
-            description: "Ce profil n'existe pas ou est privé",
-            variant: "destructive"
-          });
-          navigate('/');
+          // Si utilisateur non connecté, stocker le username cible et rediriger vers auth
+          if (!user) {
+            sessionStorage.setItem('targetProfileUsername', username);
+            toast({
+              title: "Connectez-vous pour découvrir ce profil",
+              description: `Inscrivez-vous pour suivre @${username}`,
+            });
+            navigate('/auth');
+          } else {
+            toast({
+              title: "Profil introuvable",
+              description: "Ce profil n'existe pas ou est privé",
+              variant: "destructive"
+            });
+            navigate('/');
+          }
           return;
         }
 
@@ -117,6 +127,10 @@ const PublicProfile = () => {
 
   const handleSubscribe = () => {
     if (!user) {
+      // Stocker le username cible pour redirection post-auth
+      if (username) {
+        sessionStorage.setItem('targetProfileUsername', username);
+      }
       navigate('/auth');
       return;
     }
