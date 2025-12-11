@@ -106,6 +106,17 @@
                     android:pathPrefix="/auth" />
             </intent-filter>
 
+            <!-- 👤 App Link HTTPS pour profils publics -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data 
+                    android:scheme="https"
+                    android:host="run-connect.lovable.app"
+                    android:pathPrefix="/p/" />
+            </intent-filter>
+
             <!-- 🔑 Deep Link password reset (custom scheme pour fiabilité) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

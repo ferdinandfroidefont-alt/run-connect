@@ -6,10 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, UserPlus, Download, MapPin, Calendar, Users } from "lucide-react";
+import { Loader2, UserPlus, Download, MapPin, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 
 interface PublicProfile {
   user_id: string;
@@ -37,6 +38,7 @@ const PublicProfile = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [isNative, setIsNative] = useState(false);
+  const [showProfilePreview, setShowProfilePreview] = useState(false);
 
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());
@@ -135,10 +137,8 @@ const PublicProfile = () => {
       return;
     }
     
-    // Rediriger vers le profil complet pour pouvoir follow
-    if (profile) {
-      navigate(`/profile/${profile.user_id}`);
-    }
+    // Pour utilisateur connecté, ouvrir le ProfilePreviewDialog
+    setShowProfilePreview(true);
   };
 
   const handleOpenInApp = () => {
@@ -275,6 +275,14 @@ const PublicProfile = () => {
           </p>
         </div>
       </motion.div>
+
+      {/* ProfilePreviewDialog pour utilisateurs connectés */}
+      {showProfilePreview && profile && (
+        <ProfilePreviewDialog
+          userId={profile.user_id}
+          onClose={() => setShowProfilePreview(false)}
+        />
+      )}
     </div>
   );
 };
