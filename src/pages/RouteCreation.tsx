@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
-import { X, Check, ChevronDown, ChevronUp, Undo, Trash2, Navigation } from 'lucide-react';
+import { X, Check, ChevronDown, ChevronUp, Undo, Trash2, Navigation, Route, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,12 +30,15 @@ export const RouteCreation = () => {
   const elevationService = useRef<google.maps.ElevationService | null>(null);
   const directionsService = useRef<google.maps.DirectionsService | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
+  const waypointMarkers = useRef<google.maps.Marker[]>([]);
   
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
   const [showElevationProfile, setShowElevationProfile] = useState(true);
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalElevationGain, setTotalElevationGain] = useState(0);
+  const [totalElevationLoss, setTotalElevationLoss] = useState(0);
+  const [isManualMode, setIsManualMode] = useState(false);
 
   // Cacher le menu du bas au montage
   useEffect(() => {
@@ -117,25 +120,88 @@ export const RouteCreation = () => {
     initializeMap();
   }, [isMapLoaded]);
 
+  // Ajouter un marqueur visuel pour chaque waypoint
+  const addWaypointMarker = (latLng: google.maps.LatLng, index: number) => {
+    if (!map.current) return;
+    
+    const marker = new google.maps.Marker({
+      position: latLng,
+      map: map.current,
+      label: {
+        text: String(index + 1),
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '12px'
+      },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: isManualMode ? '#f97316' : '#3b82f6',
+        fillOpacity: 1,
+        strokeColor: 'white',
+        strokeWeight: 2
+      }
+    });
+    waypointMarkers.current.push(marker);
+  };
+
+  // Effacer tous les marqueurs
+  const clearMarkers = () => {
+    waypointMarkers.current.forEach(marker => marker.setMap(null));
+    waypointMarkers.current = [];
+  };
+
   const addWaypoint = async (latLng: google.maps.LatLng) => {
     waypoints.current.push(latLng);
+    addWaypointMarker(latLng, waypoints.current.length - 1);
 
     if (waypoints.current.length === 1) {
       // Premier point - initialiser le polyline
       routePath.current = new google.maps.Polyline({
         path: waypoints.current,
         geodesic: true,
-        strokeColor: '#3b82f6',
+        strokeColor: isManualMode ? '#f97316' : '#3b82f6',
         strokeOpacity: 1.0,
         strokeWeight: 4,
         map: map.current,
       });
+      routeCoordinates.current = [latLng];
     } else if (waypoints.current.length >= 2) {
-      // Points suivants - tracer l'itinéraire
-      await createDirectionsRoute();
+      if (isManualMode) {
+        // Mode manuel - ligne droite entre points
+        await createManualRoute();
+      } else {
+        // Mode guidé - suivre les routes
+        await createDirectionsRoute();
+      }
     }
   };
 
+  // Mode manuel : tracé en ligne droite
+  const createManualRoute = async () => {
+    if (waypoints.current.length < 2 || !map.current) return;
+
+    // Créer un chemin direct entre tous les points
+    routeCoordinates.current = [...waypoints.current];
+
+    if (routePath.current) {
+      routePath.current.setMap(null);
+    }
+
+    routePath.current = new google.maps.Polyline({
+      path: routeCoordinates.current,
+      geodesic: true,
+      strokeColor: '#f97316',
+      strokeOpacity: 1.0,
+      strokeWeight: 4,
+      strokeDasharray: [10, 5],
+      map: map.current,
+    } as google.maps.PolylineOptions);
+
+    await updateElevationAndStats();
+  };
+
+  // Mode guidé : suivre les routes existantes
   const createDirectionsRoute = async () => {
     if (waypoints.current.length < 2 || !directionsService.current || !map.current) return;
 
@@ -181,24 +247,37 @@ export const RouteCreation = () => {
 
       routeCoordinates.current = result.routes[0].overview_path;
       
-      await updateElevationProfile();
-      calculateRouteStats();
+      await updateElevationAndStats();
       
     } catch (error) {
       console.error('Erreur lors de la création de l\'itinéraire:', error);
-      toast.error("Impossible de tracer l'itinéraire");
+      toast.error("Impossible de tracer l'itinéraire sur route. Essayez le mode manuel.");
     }
   };
 
-  const updateElevationProfile = async () => {
+  // Mise à jour élévation ET stats en une seule fonction pour éviter race condition
+  const updateElevationAndStats = async () => {
     if (routeCoordinates.current.length === 0 || !elevationService.current) return;
 
+    // Calculer d'abord la distance (pas besoin d'attendre l'élévation)
+    let distance = 0;
+    for (let i = 0; i < routeCoordinates.current.length - 1; i++) {
+      distance += google.maps.geometry.spherical.computeDistanceBetween(
+        routeCoordinates.current[i],
+        routeCoordinates.current[i + 1]
+      );
+    }
+    setTotalDistance(distance / 1000);
+
     try {
+      // Augmenter le nombre d'échantillons pour plus de précision
+      const numSamples = Math.min(512, Math.max(routeCoordinates.current.length, 100));
+      
       const result = await new Promise<google.maps.ElevationResult[]>((resolve, reject) => {
         elevationService.current!.getElevationAlongPath(
           {
             path: routeCoordinates.current,
-            samples: Math.min(256, routeCoordinates.current.length)
+            samples: numSamples
           },
           (results, status) => {
             if (status === 'OK' && results) {
@@ -211,42 +290,57 @@ export const RouteCreation = () => {
       });
 
       const elevations = result.map(r => r.elevation);
+      
+      // Calculer D+ et D- AVANT setState pour éviter race condition
+      let elevationGain = 0;
+      let elevationLoss = 0;
+      for (let i = 1; i < elevations.length; i++) {
+        const diff = elevations[i] - elevations[i - 1];
+        if (diff > 0) {
+          elevationGain += diff;
+        } else {
+          elevationLoss += Math.abs(diff);
+        }
+      }
+      
+      // Mettre à jour tous les états en même temps
       setRouteElevations(elevations);
+      setTotalElevationGain(Math.round(elevationGain));
+      setTotalElevationLoss(Math.round(elevationLoss));
+      
     } catch (error) {
       console.error('Erreur lors de la récupération des altitudes:', error);
     }
   };
 
-  const calculateRouteStats = () => {
-    if (routeCoordinates.current.length < 2) {
-      setTotalDistance(0);
-      setTotalElevationGain(0);
-      return;
-    }
-
-    let distance = 0;
-    for (let i = 0; i < routeCoordinates.current.length - 1; i++) {
-      distance += google.maps.geometry.spherical.computeDistanceBetween(
-        routeCoordinates.current[i],
-        routeCoordinates.current[i + 1]
-      );
-    }
-    setTotalDistance(distance / 1000);
-
-    let elevationGain = 0;
-    for (let i = 1; i < routeElevations.length; i++) {
-      const diff = routeElevations[i] - routeElevations[i - 1];
-      if (diff > 0) {
-        elevationGain += diff;
+  // Toggle mode et recréer la route si elle existe
+  const handleModeToggle = async () => {
+    const newMode = !isManualMode;
+    setIsManualMode(newMode);
+    
+    if (waypoints.current.length >= 2) {
+      // Recréer la route avec le nouveau mode
+      clearMarkers();
+      waypoints.current.forEach((wp, i) => addWaypointMarker(wp, i));
+      
+      if (newMode) {
+        await createManualRoute();
+      } else {
+        await createDirectionsRoute();
       }
     }
-    setTotalElevationGain(elevationGain);
+    
+    toast.success(newMode ? "Mode manuel activé (hors-piste)" : "Mode guidé activé (routes)");
   };
 
-  const handleUndo = () => {
+  const handleUndo = async () => {
     if (waypoints.current.length === 0) return;
     
     waypoints.current.pop();
+    
+    // Supprimer le dernier marqueur
+    const lastMarker = waypointMarkers.current.pop();
+    if (lastMarker) lastMarker.setMap(null);
     
     if (waypoints.current.length === 0) {
       if (routePath.current) {
@@ -257,6 +351,7 @@ export const RouteCreation = () => {
       setRouteElevations([]);
       setTotalDistance(0);
       setTotalElevationGain(0);
+      setTotalElevationLoss(0);
     } else if (waypoints.current.length === 1) {
       if (routePath.current) {
         routePath.current.setMap(null);
@@ -264,19 +359,29 @@ export const RouteCreation = () => {
       routePath.current = new google.maps.Polyline({
         path: waypoints.current,
         geodesic: true,
-        strokeColor: '#3b82f6',
+        strokeColor: isManualMode ? '#f97316' : '#3b82f6',
         strokeOpacity: 1.0,
         strokeWeight: 4,
         map: map.current,
       });
+      routeCoordinates.current = [...waypoints.current];
+      setRouteElevations([]);
+      setTotalDistance(0);
+      setTotalElevationGain(0);
+      setTotalElevationLoss(0);
     } else {
-      createDirectionsRoute();
+      if (isManualMode) {
+        await createManualRoute();
+      } else {
+        await createDirectionsRoute();
+      }
     }
   };
 
   const handleClear = () => {
     waypoints.current = [];
     routeCoordinates.current = [];
+    clearMarkers();
     if (routePath.current) {
       routePath.current.setMap(null);
       routePath.current = null;
@@ -284,6 +389,7 @@ export const RouteCreation = () => {
     setRouteElevations([]);
     setTotalDistance(0);
     setTotalElevationGain(0);
+    setTotalElevationLoss(0);
   };
 
   const handleRecenter = async () => {
@@ -316,7 +422,9 @@ export const RouteCreation = () => {
       })),
       distance: totalDistance,
       elevationGain: totalElevationGain,
-      elevations: routeElevations
+      elevationLoss: totalElevationLoss,
+      elevations: routeElevations,
+      isManual: isManualMode
     };
 
     localStorage.setItem('pendingRoute', JSON.stringify(routeData));
@@ -360,6 +468,33 @@ export const RouteCreation = () => {
       {/* Carte plein écran */}
       <div ref={mapContainer} className="absolute inset-0" />
 
+      {/* Toggle Mode */}
+      <div className="absolute left-4 top-20 z-10">
+        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-xl p-1 shadow-lg flex gap-1">
+          <Button
+            size="sm"
+            variant={!isManualMode ? "default" : "ghost"}
+            onClick={() => !isManualMode ? null : handleModeToggle()}
+            className={`gap-2 ${!isManualMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'text-muted-foreground'}`}
+          >
+            <Route className="w-4 h-4" />
+            Guidé
+          </Button>
+          <Button
+            size="sm"
+            variant={isManualMode ? "default" : "ghost"}
+            onClick={() => isManualMode ? null : handleModeToggle()}
+            className={`gap-2 ${isManualMode ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-muted-foreground'}`}
+          >
+            <MapPin className="w-4 h-4" />
+            Manuel
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1 text-center">
+          {isManualMode ? "🛤️ Tracé libre hors-piste" : "🚶 Suit les chemins"}
+        </p>
+      </div>
+
       {/* Outils latéraux */}
       <div className="absolute right-4 top-20 flex flex-col gap-2 z-10">
         <Button
@@ -397,15 +532,21 @@ export const RouteCreation = () => {
 
       {/* Stats flottantes */}
       {totalDistance > 0 && (
-        <div className="absolute top-20 left-4 z-10 bg-background/80 backdrop-blur-md border border-border/50 rounded-lg p-3 shadow-lg">
-          <div className="text-sm space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Distance:</span>
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl px-4 py-2 shadow-lg">
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">📏</span>
               <span className="font-semibold text-foreground">{totalDistance.toFixed(2)} km</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Dénivelé:</span>
-              <span className="font-semibold text-foreground">{totalElevationGain.toFixed(0)} m</span>
+            <div className="w-px h-4 bg-border" />
+            <div className="flex items-center gap-1">
+              <span className="text-green-500">⬆️</span>
+              <span className="font-semibold text-foreground">D+ {totalElevationGain}m</span>
+            </div>
+            <div className="w-px h-4 bg-border" />
+            <div className="flex items-center gap-1">
+              <span className="text-red-500">⬇️</span>
+              <span className="font-semibold text-foreground">D- {totalElevationLoss}m</span>
             </div>
           </div>
         </div>
@@ -438,12 +579,14 @@ export const RouteCreation = () => {
         </div>
       )}
 
-      {/* Instructions */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-full px-4 py-2 shadow-lg">
-        <p className="text-sm text-foreground text-center">
-          👆 Cliquez sur la carte pour tracer votre parcours
-        </p>
-      </div>
+      {/* Instructions - seulement si pas encore de tracé */}
+      {waypoints.current.length === 0 && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-full px-4 py-2 shadow-lg">
+          <p className="text-sm text-foreground text-center">
+            👆 Cliquez sur la carte pour tracer votre parcours
+          </p>
+        </div>
+      )}
     </div>
   );
 };
