@@ -46,6 +46,9 @@ export const RouteCreation = () => {
   const [totalElevationGain, setTotalElevationGain] = useState(0);
   const [totalElevationLoss, setTotalElevationLoss] = useState(0);
   const [isManualMode, setIsManualMode] = useState(false);
+  
+  // Ref pour éviter stale closure dans le listener de click
+  const isManualModeRef = useRef(false);
 
   // Cacher le menu du bas au montage
   useEffect(() => {
@@ -227,7 +230,9 @@ export const RouteCreation = () => {
   };
 
   const addWaypoint = async (latLng: google.maps.LatLng) => {
-    const currentMode = isManualMode ? 'manual' : 'guided';
+    // Utiliser la ref pour obtenir la valeur actuelle (pas stale)
+    const currentMode = isManualModeRef.current ? 'manual' : 'guided';
+    console.log('addWaypoint - mode actuel:', currentMode, 'isManualModeRef:', isManualModeRef.current);
     
     if (waypoints.current.length === 0) {
       // Premier point - juste ajouter le marqueur
@@ -333,6 +338,8 @@ export const RouteCreation = () => {
   const handleModeToggle = () => {
     const newMode = !isManualMode;
     setIsManualMode(newMode);
+    isManualModeRef.current = newMode; // Mettre à jour la ref aussi
+    console.log('Mode toggle - nouveau mode:', newMode ? 'manual' : 'guided');
     toast.success(newMode ? "Mode manuel activé - prochains points en ligne droite" : "Mode guidé activé - prochains points sur routes");
   };
 
