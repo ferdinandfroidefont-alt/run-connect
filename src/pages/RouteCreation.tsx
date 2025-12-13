@@ -16,6 +16,15 @@ declare global {
   }
 }
 
+// Interface pour les segments hybrides
+interface RouteSegment {
+  startPoint: google.maps.LatLng;
+  endPoint: google.maps.LatLng;
+  mode: 'manual' | 'guided';
+  polyline: google.maps.Polyline;
+  coordinates: google.maps.LatLng[];
+}
+
 export const RouteCreation = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -24,12 +33,10 @@ export const RouteCreation = () => {
   
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
-  const routePath = useRef<google.maps.Polyline | null>(null);
-  const routeCoordinates = useRef<google.maps.LatLng[]>([]);
+  const segments = useRef<RouteSegment[]>([]);
   const waypoints = useRef<google.maps.LatLng[]>([]);
   const elevationService = useRef<google.maps.ElevationService | null>(null);
   const directionsService = useRef<google.maps.DirectionsService | null>(null);
-  const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
   const waypointMarkers = useRef<google.maps.Marker[]>([]);
   
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -83,15 +90,6 @@ export const RouteCreation = () => {
 
         elevationService.current = new google.maps.ElevationService();
         directionsService.current = new google.maps.DirectionsService();
-        directionsRenderer.current = new google.maps.DirectionsRenderer({
-          draggable: false,
-          map: null,
-          polylineOptions: {
-            strokeColor: '#3b82f6',
-            strokeOpacity: 1.0,
-            strokeWeight: 4,
-          }
-        });
 
         // Centrer sur la position utilisateur
         getCurrentPosition()
@@ -121,7 +119,7 @@ export const RouteCreation = () => {
   }, [isMapLoaded]);
 
   // Ajouter un marqueur visuel pour chaque waypoint
-  const addWaypointMarker = (latLng: google.maps.LatLng, index: number) => {
+  const addWaypointMarker = (latLng: google.maps.LatLng, index: number, mode: 'manual' | 'guided') => {
     if (!map.current) return;
     
     const marker = new google.maps.Marker({
@@ -136,7 +134,7 @@ export const RouteCreation = () => {
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 12,
-        fillColor: isManualMode ? '#f97316' : '#3b82f6',
+        fillColor: mode === 'manual' ? '#f97316' : '#3b82f6',
         fillOpacity: 1,
         strokeColor: 'white',
         strokeWeight: 2
@@ -151,74 +149,44 @@ export const RouteCreation = () => {
     waypointMarkers.current = [];
   };
 
-  const addWaypoint = async (latLng: google.maps.LatLng) => {
-    waypoints.current.push(latLng);
-    addWaypointMarker(latLng, waypoints.current.length - 1);
-
-    if (waypoints.current.length === 1) {
-      // Premier point - initialiser le polyline
-      routePath.current = new google.maps.Polyline({
-        path: waypoints.current,
-        geodesic: true,
-        strokeColor: isManualMode ? '#f97316' : '#3b82f6',
-        strokeOpacity: 1.0,
-        strokeWeight: 4,
-        map: map.current,
-      });
-      routeCoordinates.current = [latLng];
-    } else if (waypoints.current.length >= 2) {
-      if (isManualMode) {
-        // Mode manuel - ligne droite entre points
-        await createManualRoute();
-      } else {
-        // Mode guidé - suivre les routes
-        await createDirectionsRoute();
-      }
-    }
+  // Effacer tous les segments
+  const clearSegments = () => {
+    segments.current.forEach(segment => segment.polyline.setMap(null));
+    segments.current = [];
   };
 
-  // Mode manuel : tracé en ligne droite
-  const createManualRoute = async () => {
-    if (waypoints.current.length < 2 || !map.current) return;
-
-    // Créer un chemin direct entre tous les points
-    routeCoordinates.current = [...waypoints.current];
-
-    if (routePath.current) {
-      routePath.current.setMap(null);
-    }
-
-    routePath.current = new google.maps.Polyline({
-      path: routeCoordinates.current,
+  // Créer un segment manuel (ligne droite)
+  const createManualSegment = (startPoint: google.maps.LatLng, endPoint: google.maps.LatLng): RouteSegment => {
+    const coordinates = [startPoint, endPoint];
+    
+    const polyline = new google.maps.Polyline({
+      path: coordinates,
       geodesic: true,
       strokeColor: '#f97316',
       strokeOpacity: 1.0,
       strokeWeight: 4,
-      strokeDasharray: [10, 5],
       map: map.current,
-    } as google.maps.PolylineOptions);
+    });
 
-    await updateElevationAndStats();
+    return {
+      startPoint,
+      endPoint,
+      mode: 'manual',
+      polyline,
+      coordinates
+    };
   };
 
-  // Mode guidé : suivre les routes existantes
-  const createDirectionsRoute = async () => {
-    if (waypoints.current.length < 2 || !directionsService.current || !map.current) return;
-
-    const origin = waypoints.current[0];
-    const destination = waypoints.current[waypoints.current.length - 1];
-    const intermediateWaypoints = waypoints.current.slice(1, -1).map(point => ({
-      location: point,
-      stopover: true
-    }));
+  // Créer un segment guidé (suivant les routes)
+  const createGuidedSegment = async (startPoint: google.maps.LatLng, endPoint: google.maps.LatLng): Promise<RouteSegment | null> => {
+    if (!directionsService.current || !map.current) return null;
 
     try {
       const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
         directionsService.current!.route(
           {
-            origin: origin,
-            destination: destination,
-            waypoints: intermediateWaypoints,
+            origin: startPoint,
+            destination: endPoint,
             travelMode: google.maps.TravelMode.WALKING,
             optimizeWaypoints: false
           },
@@ -232,12 +200,10 @@ export const RouteCreation = () => {
         );
       });
 
-      if (routePath.current) {
-        routePath.current.setMap(null);
-      }
-
-      routePath.current = new google.maps.Polyline({
-        path: result.routes[0].overview_path,
+      const coordinates = result.routes[0].overview_path;
+      
+      const polyline = new google.maps.Polyline({
+        path: coordinates,
         geodesic: true,
         strokeColor: '#3b82f6',
         strokeOpacity: 1.0,
@@ -245,38 +211,88 @@ export const RouteCreation = () => {
         map: map.current,
       });
 
-      routeCoordinates.current = result.routes[0].overview_path;
-      
-      await updateElevationAndStats();
-      
+      return {
+        startPoint,
+        endPoint,
+        mode: 'guided',
+        polyline,
+        coordinates
+      };
     } catch (error) {
-      console.error('Erreur lors de la création de l\'itinéraire:', error);
-      toast.error("Impossible de tracer l'itinéraire sur route. Essayez le mode manuel.");
+      console.error('Erreur création segment guidé:', error);
+      // Fallback vers segment manuel si guidé échoue
+      toast.error("Route introuvable, tracé en ligne droite");
+      return createManualSegment(startPoint, endPoint);
     }
+  };
+
+  const addWaypoint = async (latLng: google.maps.LatLng) => {
+    const currentMode = isManualMode ? 'manual' : 'guided';
+    
+    if (waypoints.current.length === 0) {
+      // Premier point - juste ajouter le marqueur
+      waypoints.current.push(latLng);
+      addWaypointMarker(latLng, 0, currentMode);
+    } else {
+      // Points suivants - créer un segment depuis le dernier point
+      const lastPoint = waypoints.current[waypoints.current.length - 1];
+      waypoints.current.push(latLng);
+      addWaypointMarker(latLng, waypoints.current.length - 1, currentMode);
+
+      let newSegment: RouteSegment | null;
+      
+      if (currentMode === 'manual') {
+        newSegment = createManualSegment(lastPoint, latLng);
+      } else {
+        newSegment = await createGuidedSegment(lastPoint, latLng);
+      }
+
+      if (newSegment) {
+        segments.current.push(newSegment);
+        await updateElevationAndStats();
+      }
+    }
+  };
+
+  // Récupérer toutes les coordonnées de tous les segments
+  const getAllCoordinates = (): google.maps.LatLng[] => {
+    if (segments.current.length === 0) return [];
+    
+    const allCoords: google.maps.LatLng[] = [];
+    segments.current.forEach((segment, index) => {
+      if (index === 0) {
+        allCoords.push(...segment.coordinates);
+      } else {
+        // Éviter les doublons de points de jonction
+        allCoords.push(...segment.coordinates.slice(1));
+      }
+    });
+    return allCoords;
   };
 
   // Mise à jour élévation ET stats en une seule fonction pour éviter race condition
   const updateElevationAndStats = async () => {
-    if (routeCoordinates.current.length === 0 || !elevationService.current) return;
+    const allCoordinates = getAllCoordinates();
+    if (allCoordinates.length === 0 || !elevationService.current) return;
 
-    // Calculer d'abord la distance (pas besoin d'attendre l'élévation)
+    // Calculer d'abord la distance totale
     let distance = 0;
-    for (let i = 0; i < routeCoordinates.current.length - 1; i++) {
+    for (let i = 0; i < allCoordinates.length - 1; i++) {
       distance += google.maps.geometry.spherical.computeDistanceBetween(
-        routeCoordinates.current[i],
-        routeCoordinates.current[i + 1]
+        allCoordinates[i],
+        allCoordinates[i + 1]
       );
     }
     setTotalDistance(distance / 1000);
 
     try {
       // Augmenter le nombre d'échantillons pour plus de précision
-      const numSamples = Math.min(512, Math.max(routeCoordinates.current.length, 100));
+      const numSamples = Math.min(512, Math.max(allCoordinates.length, 100));
       
       const result = await new Promise<google.maps.ElevationResult[]>((resolve, reject) => {
         elevationService.current!.getElevationAlongPath(
           {
-            path: routeCoordinates.current,
+            path: allCoordinates,
             samples: numSamples
           },
           (results, status) => {
@@ -313,24 +329,11 @@ export const RouteCreation = () => {
     }
   };
 
-  // Toggle mode et recréer la route si elle existe
-  const handleModeToggle = async () => {
+  // Toggle mode - NE PAS recréer les segments existants
+  const handleModeToggle = () => {
     const newMode = !isManualMode;
     setIsManualMode(newMode);
-    
-    if (waypoints.current.length >= 2) {
-      // Recréer la route avec le nouveau mode
-      clearMarkers();
-      waypoints.current.forEach((wp, i) => addWaypointMarker(wp, i));
-      
-      if (newMode) {
-        await createManualRoute();
-      } else {
-        await createDirectionsRoute();
-      }
-    }
-    
-    toast.success(newMode ? "Mode manuel activé (hors-piste)" : "Mode guidé activé (routes)");
+    toast.success(newMode ? "Mode manuel activé - prochains points en ligne droite" : "Mode guidé activé - prochains points sur routes");
   };
 
   const handleUndo = async () => {
@@ -342,50 +345,28 @@ export const RouteCreation = () => {
     const lastMarker = waypointMarkers.current.pop();
     if (lastMarker) lastMarker.setMap(null);
     
-    if (waypoints.current.length === 0) {
-      if (routePath.current) {
-        routePath.current.setMap(null);
-        routePath.current = null;
+    // Supprimer le dernier segment s'il existe
+    if (segments.current.length > 0) {
+      const lastSegment = segments.current.pop();
+      if (lastSegment) {
+        lastSegment.polyline.setMap(null);
       }
-      routeCoordinates.current = [];
-      setRouteElevations([]);
-      setTotalDistance(0);
-      setTotalElevationGain(0);
-      setTotalElevationLoss(0);
-    } else if (waypoints.current.length === 1) {
-      if (routePath.current) {
-        routePath.current.setMap(null);
-      }
-      routePath.current = new google.maps.Polyline({
-        path: waypoints.current,
-        geodesic: true,
-        strokeColor: isManualMode ? '#f97316' : '#3b82f6',
-        strokeOpacity: 1.0,
-        strokeWeight: 4,
-        map: map.current,
-      });
-      routeCoordinates.current = [...waypoints.current];
+    }
+    
+    if (waypoints.current.length <= 1) {
       setRouteElevations([]);
       setTotalDistance(0);
       setTotalElevationGain(0);
       setTotalElevationLoss(0);
     } else {
-      if (isManualMode) {
-        await createManualRoute();
-      } else {
-        await createDirectionsRoute();
-      }
+      await updateElevationAndStats();
     }
   };
 
   const handleClear = () => {
     waypoints.current = [];
-    routeCoordinates.current = [];
     clearMarkers();
-    if (routePath.current) {
-      routePath.current.setMap(null);
-      routePath.current = null;
-    }
+    clearSegments();
     setRouteElevations([]);
     setTotalDistance(0);
     setTotalElevationGain(0);
@@ -414,9 +395,16 @@ export const RouteCreation = () => {
       return;
     }
 
+    const allCoordinates = getAllCoordinates();
+    
+    // Déterminer si l'itinéraire est hybride ou purement manuel/guidé
+    const hasManual = segments.current.some(s => s.mode === 'manual');
+    const hasGuided = segments.current.some(s => s.mode === 'guided');
+    const routeType = hasManual && hasGuided ? 'hybrid' : (hasManual ? 'manual' : 'guided');
+
     // Sauvegarder le parcours dans localStorage pour le transmettre
     const routeData = {
-      coordinates: routeCoordinates.current.map(coord => ({
+      coordinates: allCoordinates.map(coord => ({
         lat: coord.lat(),
         lng: coord.lng()
       })),
@@ -424,7 +412,7 @@ export const RouteCreation = () => {
       elevationGain: totalElevationGain,
       elevationLoss: totalElevationLoss,
       elevations: routeElevations,
-      isManual: isManualMode
+      routeType
     };
 
     localStorage.setItem('pendingRoute', JSON.stringify(routeData));
