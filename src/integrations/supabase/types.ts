@@ -1276,7 +1276,7 @@ export type Database = {
       }
       check_rate_limit: {
         Args: {
-          action_type: string
+          action_type_param: string
           max_attempts: number
           time_window_minutes: number
           user_id_param: string
