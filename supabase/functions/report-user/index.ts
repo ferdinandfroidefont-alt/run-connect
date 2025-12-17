@@ -24,6 +24,40 @@ const reasonLabels: Record<string, string> = {
   other: "Autre"
 };
 
+// Security: HTML escape function to prevent XSS
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+    '/': '&#x2F;',
+    '`': '&#x60;',
+    '=': '&#x3D;'
+  };
+  return text.replace(/[&<>"'`=/]/g, (s) => map[s] || s);
+}
+
+// Security: Validate UUID format
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+// Security: Validate username format
+function isValidUsername(str: string): boolean {
+  // Allow only alphanumeric, underscores, max 50 chars
+  const usernameRegex = /^[a-zA-Z0-9_]{1,50}$/;
+  return usernameRegex.test(str);
+}
+
+// Security: Validate reason
+function isValidReason(reason: string): boolean {
+  const validReasons = ['harassment', 'fake_profile', 'inappropriate_content', 'spam', 'dangerous_behavior', 'other'];
+  return validReasons.includes(reason);
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -31,16 +65,17 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { reportedUserId, reportedUsername, reason, description }: ReportRequest = await req.json();
+    const body = await req.json();
+    const { reportedUserId, reportedUsername, reason, description } = body as ReportRequest;
 
     console.log('Processing user report:', {
       reportedUserId,
       reportedUsername,
       reason,
-      descriptionLength: description.length
+      descriptionLength: description?.length || 0
     });
 
-    // Validate required fields
+    // Security: Validate all required fields
     if (!reportedUserId || !reportedUsername || !reason || !description) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
@@ -51,24 +86,75 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Security: Validate input formats
+    if (!isValidUUID(reportedUserId)) {
+      console.error('Invalid UUID format:', reportedUserId);
+      return new Response(
+        JSON.stringify({ error: "Invalid user ID format" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    if (!isValidUsername(reportedUsername)) {
+      console.error('Invalid username format:', reportedUsername);
+      return new Response(
+        JSON.stringify({ error: "Invalid username format" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    if (!isValidReason(reason)) {
+      console.error('Invalid reason:', reason);
+      return new Response(
+        JSON.stringify({ error: "Invalid reason" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Security: Limit description length to prevent abuse
+    if (description.length > 5000) {
+      return new Response(
+        JSON.stringify({ error: "Description too long (max 5000 characters)" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Security: Escape all user inputs before including in HTML email
+    const safeUsername = escapeHtml(reportedUsername);
+    const safeUserId = escapeHtml(reportedUserId);
+    const safeReason = escapeHtml(reasonLabels[reason] || reason);
+    const safeDescription = escapeHtml(description);
+
     const emailResponse = await resend.emails.send({
       from: "RunConnect Support <onboarding@resend.dev>",
-      to: ["ferdinand.froidefont@gmail.com"], // Votre email vérifié
-      subject: `🚨 Signalement utilisateur - @${reportedUsername}`,
+      to: ["ferdinand.froidefont@gmail.com"],
+      subject: `🚨 Signalement utilisateur - @${safeUsername}`,
       html: `
         <h1>Nouveau signalement d'utilisateur</h1>
         
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2>Informations du signalement</h2>
-          <p><strong>Utilisateur signalé:</strong> @${reportedUsername}</p>
-          <p><strong>ID utilisateur:</strong> ${reportedUserId}</p>
-          <p><strong>Raison:</strong> ${reasonLabels[reason] || reason}</p>
+          <p><strong>Utilisateur signalé:</strong> @${safeUsername}</p>
+          <p><strong>ID utilisateur:</strong> ${safeUserId}</p>
+          <p><strong>Raison:</strong> ${safeReason}</p>
           <p><strong>Date:</strong> ${new Date().toLocaleString('fr-FR')}</p>
         </div>
 
         <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3>Description détaillée:</h3>
-          <p style="white-space: pre-wrap;">${description}</p>
+          <p style="white-space: pre-wrap;">${safeDescription}</p>
         </div>
 
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
@@ -95,7 +181,7 @@ const handler = async (req: Request): Promise<Response> => {
         ...corsHeaders,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in report-user function:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
