@@ -617,7 +617,7 @@ const Auth = () => {
           <Button
             onClick={handleGoogleAuth}
             disabled={isLoading}
-            variant="outline-glow"
+            variant="outline"
             className="w-full h-12"
           >
             <FcGoogle className="mr-2 h-5 w-5" />
@@ -692,7 +692,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                variant="gradient"
+                variant="default"
                 className="w-full h-12 text-button"
                 disabled={isLoading || newPassword !== confirmPassword}
               >
@@ -732,7 +732,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                variant="gradient"
+                variant="default"
                 className="w-full h-12 text-button"
                 disabled={isLoading || otp.length !== 6}
               >
@@ -841,7 +841,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                variant="gradient"
+                variant="default"
                 className="w-full h-12 text-button"
                 disabled={isLoading}
               >
@@ -875,7 +875,7 @@ const Auth = () => {
 
                 <Button
                   type="submit"
-                  variant="gradient"
+                  variant="default"
                   className="w-full h-12 text-button"
                   disabled={isLoading}
                 >

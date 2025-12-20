@@ -341,19 +341,16 @@ export default function MySessions() {
     
     return (
       <>
-      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        {/* Header avec gradient */}
-        <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
+        <div className="min-h-screen bg-background">
+          {/* Header */}
+          <div className="sticky top-0 z-50 bg-background border-b border-border">
+            <div className="px-4 py-3 flex items-center justify-between">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedSession(null)}
-                className="gap-2 text-muted-foreground hover:text-foreground"
               >
-                <span className="text-lg">←</span>
-                Retour
+                ← Retour
               </Button>
               <div className="flex items-center gap-2">
                 {isUpcoming && (
@@ -361,7 +358,7 @@ export default function MySessions() {
                     variant="outline"
                     size="icon"
                     onClick={handleEditClick}
-                    className="h-9 w-9 rounded-full border-primary/30 hover:bg-primary/10"
+                    className="h-9 w-9"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -370,192 +367,129 @@ export default function MySessions() {
                   variant="outline"
                   size="icon"
                   onClick={handleDeleteSession}
-                  className="h-9 w-9 rounded-full border-destructive/30 hover:bg-destructive/10 text-destructive"
+                  className="h-9 w-9 text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
-          {/* Hero Card avec image */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/20">
-            {selectedSession.image_url && (
-              <div className="absolute inset-0 opacity-20">
-                <img 
-                  src={selectedSession.image_url} 
-                  alt=""
-                  className="w-full h-full object-cover blur-xl"
-                />
+          <div className="px-4 py-6 pb-24 space-y-4 max-w-2xl mx-auto">
+            {/* Title & Status */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant={isUpcoming ? "default" : "secondary"}>
+                  {isUpcoming ? "À venir" : "Terminée"}
+                </Badge>
               </div>
-            )}
-            
-            <div className="relative p-6">
-              <div className="flex items-start gap-4">
-                {/* Activity Icon - Plus grand et stylé */}
-                <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-3xl">{getActivityIcon(selectedSession.activity_type)}</span>
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge 
-                      variant={isUpcoming ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {isUpcoming ? "À venir" : "Terminée"}
-                    </Badge>
-                    {selectedSession.session_type && (
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {selectedSession.session_type}
-                      </Badge>
-                    )}
-                  </div>
-                  <h1 className="text-xl font-bold tracking-tight mb-2">
-                    {selectedSession.title}
-                  </h1>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Info Cards Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Date & Heure */}
-            <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Date</p>
-                  <p className="font-medium text-sm">
-                    {format(new Date(selectedSession.scheduled_at), 'dd MMM yyyy', { locale: fr })}
-                  </p>
-                </div>
-              </div>
+              <h1 className="text-xl font-bold">{selectedSession.title}</h1>
             </div>
 
-            <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Heure</p>
-                  <p className="font-medium text-sm">
-                    {format(new Date(selectedSession.scheduled_at), 'HH:mm', { locale: fr })}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Lieu - Full width card */}
-          <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <MapPin className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-1">Lieu de rendez-vous</p>
-                <p className="font-medium text-sm leading-relaxed">
-                  {selectedSession.location_name}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          {selectedSession.description && (
-            <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-              <p className="text-xs text-muted-foreground mb-2">Description</p>
-              <p className="text-sm leading-relaxed text-foreground/80">
-                {selectedSession.description}
-              </p>
-            </div>
-          )}
-
-          {/* Participants Section */}
-          <div className="rounded-2xl bg-card/50 border border-border/50 overflow-hidden">
-            <div className="p-4 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-blue-500" />
-                  </div>
+            {/* Info Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg bg-secondary p-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="font-medium text-sm">Participants</p>
-                    <p className="text-xs text-muted-foreground">
-                      {participants.length} inscrit{participants.length > 1 ? 's' : ''}
-                      {selectedSession.max_participants && ` / ${selectedSession.max_participants} max`}
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="text-sm font-medium">
+                      {format(new Date(selectedSession.scheduled_at), 'dd MMM yyyy', { locale: fr })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-secondary p-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Heure</p>
+                    <p className="text-sm font-medium">
+                      {format(new Date(selectedSession.scheduled_at), 'HH:mm', { locale: fr })}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div className="p-4">
-              {participants.length > 0 ? (
-                <div className="space-y-3">
-                  {participants.map((participant) => (
-                    <div 
-                      key={participant.id} 
-                      className="flex items-center gap-3 p-3 rounded-xl bg-background/50 cursor-pointer hover:bg-background transition-colors"
-                      onClick={() => navigateToProfile(participant.user_id)}
-                    >
-                      <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                        <AvatarImage 
-                          src={participant.profiles.avatar_url || undefined} 
-                          alt={participant.profiles.username || participant.profiles.display_name} 
-                        />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {(participant.profiles.username || participant.profiles.display_name || 'U').charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          @{participant.profiles.username || participant.profiles.display_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Inscrit le {format(new Date(participant.joined_at), 'dd MMM', { locale: fr })}
-                        </p>
+
+            {/* Location */}
+            <div className="rounded-lg bg-secondary p-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Lieu</p>
+                  <p className="text-sm font-medium">{selectedSession.location_name}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            {selectedSession.description && (
+              <div className="rounded-lg bg-secondary p-3">
+                <p className="text-xs text-muted-foreground mb-1">Description</p>
+                <p className="text-sm">{selectedSession.description}</p>
+              </div>
+            )}
+
+            {/* Participants */}
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="p-3 border-b border-border bg-secondary/50">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    Participants ({participants.length})
+                  </span>
+                </div>
+              </div>
+              
+              <div className="p-3">
+                {participants.length > 0 ? (
+                  <div className="space-y-2">
+                    {participants.map((participant) => (
+                      <div 
+                        key={participant.id} 
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
+                        onClick={() => navigateToProfile(participant.user_id)}
+                      >
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={participant.profiles.avatar_url || undefined} />
+                          <AvatarFallback className="bg-secondary text-sm">
+                            {(participant.profiles.username || 'U').charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            @{participant.profiles.username || participant.profiles.display_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Inscrit le {format(new Date(participant.joined_at), 'dd MMM', { locale: fr })}
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-muted-foreground">→</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                    <Users className="h-6 w-6 text-muted-foreground/50" />
+                    ))}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Aucun participant pour le moment
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Partagez votre séance pour inviter des amis !
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-muted-foreground">Aucun participant</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+          
+          <EditSessionDialog
+            isOpen={isEditSessionDialogOpen}
+            onClose={() => setIsEditSessionDialogOpen(false)}
+            onSessionUpdated={handleSessionUpdated}
+            session={selectedSession}
+          />
+          
+          <ProfilePreviewDialog
+            userId={showProfilePreview ? selectedUserId : null}
+            onClose={closeProfilePreview}
+          />
         </div>
-        
-        <EditSessionDialog
-          isOpen={isEditSessionDialogOpen}
-          onClose={() => setIsEditSessionDialogOpen(false)}
-          onSessionUpdated={handleSessionUpdated}
-          session={selectedSession}
-        />
-        
-        <ProfilePreviewDialog
-          userId={showProfilePreview ? selectedUserId : null}
-          onClose={closeProfilePreview}
-        />
-      </div>
       </>
     );
   }
@@ -565,46 +499,27 @@ export default function MySessions() {
       {/* Petite barre noire en haut uniquement pour MySessions */}
       <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
       <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
-        {/* Fixed Header Only */}
-        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
-          <div className="container mx-auto px-4 pt-4">
-          <div className="flex items-center justify-center -mt-2">
+      {/* Fixed Header */}
+      <div className="fixed top-6 left-0 right-0 bg-background z-50 border-b border-border">
+        <div className="px-4 py-3 space-y-3">
+          <div className="flex items-center justify-center gap-2">
             <Button
-              onClick={() => {
-                console.log('🚀 "Créer un itinéraire" clicked - navigating to route creation');
-                navigate('/route-create');
-              }}
+              onClick={() => setCurrentView('sessions')}
+              variant={currentView === 'sessions' ? 'default' : 'ghost'}
               size="sm"
-              className="gap-2"
             >
-              <Route className="h-4 w-4" />
-              Créer un itinéraire
+              Séances
+            </Button>
+            <Button
+              onClick={() => setCurrentView('routes')}
+              variant={currentView === 'routes' ? 'default' : 'ghost'}
+              size="sm"
+            >
+              Itinéraires
             </Button>
           </div>
-          <div className="flex items-center justify-center mt-3">
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setCurrentView('sessions')}
-                variant={currentView === 'sessions' ? 'default' : 'outline'}
-                size="sm"
-                className="gap-2"
-              >
-                <Users className="h-4 w-4" />
-                Mes Séances
-              </Button>
-              <Button
-                onClick={() => setCurrentView('routes')}
-                variant={currentView === 'routes' ? 'default' : 'outline'}
-                size="sm"
-                className="gap-2"
-              >
-                <Route className="h-4 w-4" />
-                Mes Itinéraires
-              </Button>
-            </div>
-          </div>
-          </div>
         </div>
+      </div>
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto pt-32" style={{height: 'calc(100vh - 12rem)'}}>
