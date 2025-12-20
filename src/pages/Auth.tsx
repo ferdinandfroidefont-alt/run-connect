@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
-import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable } from '@/lib/googleSignIn';
 
 const Auth = () => {
@@ -29,7 +28,6 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // 🧹 NOUVEAU: Nettoyer les sessions expirées au chargement
     const cleanExpiredSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -38,64 +36,51 @@ const Auth = () => {
           const expiresAt = session.expires_at;
           const now = Math.floor(Date.now() / 1000);
           
-          // Si la session a expiré depuis plus de 1 jour (86400 secondes)
           if (expiresAt && expiresAt < now - 86400) {
-            console.log('🧹 Session expirée détectée (>24h), nettoyage automatique...');
             await supabase.auth.signOut({ scope: 'global' });
             localStorage.clear();
             sessionStorage.clear();
-            console.log('✅ Cache nettoyé automatiquement, prêt pour nouvelle connexion');
             toast({
-              title: "Session expirée nettoyée",
-              description: "Votre ancienne session a été supprimée. Vous pouvez vous reconnecter.",
+              title: "Session expirée",
+              description: "Votre ancienne session a été supprimée.",
             });
             return;
           }
         }
       } catch (error) {
-        console.error('❌ Erreur nettoyage session expirée:', error);
+        console.error('Erreur nettoyage session:', error);
       }
     };
     
     cleanExpiredSession();
     
-    // Traiter le code de parrainage si présent dans l'URL (?ref= ou ?r=)
     const referralParams = new URLSearchParams(window.location.search);
     const refCode = referralParams.get('ref') || referralParams.get('r');
     if (refCode) {
       sessionStorage.setItem('referralCode', refCode);
-      console.log('🎁 Code de parrainage détecté:', refCode);
-      
       toast({
-        title: "🎁 Code de parrainage détecté !",
+        title: "Code de parrainage détecté",
         description: "Inscrivez-vous pour bénéficier du bonus",
         duration: 5000
       });
     }
     
-    // Vérifier si c'est une réinitialisation de mot de passe (détection directe du code PKCE)
     const urlParams = new URLSearchParams(window.location.search);
-    console.log('🔍 [Password Reset Detection] URL params:', Object.fromEntries(urlParams.entries()));
-    console.log('🔍 [Password Reset Detection] Has code param:', urlParams.has('code'));
-    console.log('🔍 [Password Reset Detection] Has reset param:', urlParams.get('reset'));
     const isReset = 
       urlParams.get('reset') === 'true' || 
       urlParams.get('type') === 'recovery' || 
       urlParams.get('action') === 'recovery' || 
       urlParams.has('code');
-    console.log('🔍 [Password Reset Detection] isReset final:', isReset);
     
-    // Détecter les erreurs Supabase (lien expiré, accès refusé, etc.)
     const error = urlParams.get('error');
     const errorCode = urlParams.get('error_code');
     
     if (error && errorCode === 'otp_expired') {
       toast({
         variant: "destructive",
-        title: "⏰ Lien expiré",
-        description: "Ce lien de réinitialisation a expiré. Demandez-en un nouveau ci-dessous.",
+        title: "Lien expiré",
+        description: "Ce lien de réinitialisation a expiré. Demandez-en un nouveau.",
       });
-      // Nettoyer l'URL pour éviter de réafficher l'erreur
       window.history.replaceState({}, '', '/auth');
       return;
     }
@@ -105,11 +90,9 @@ const Auth = () => {
       return;
     }
 
-    // Vérifier si l'utilisateur est déjà connecté
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         try {
-          // Vérifier si le profil existe toujours
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('user_id')
@@ -117,21 +100,18 @@ const Auth = () => {
             .maybeSingle();
             
           if (profileError || !profile) {
-            // Compte supprimé, forcer la déconnexion
-            console.log('🚨 DELETED ACCOUNT DETECTED - clearing session');
             await supabase.auth.signOut({ scope: 'global' });
             localStorage.clear();
             sessionStorage.clear();
-            
             toast({
               title: "Compte supprimé",
-              description: "Ce compte n'existe plus. Vous avez été déconnecté.",
+              description: "Ce compte n'existe plus.",
               variant: "destructive",
             });
             return;
           }
         } catch (error) {
-          console.error('Error checking profile on auth page:', error);
+          console.error('Error checking profile:', error);
         }
         
         window.location.href = '/';
@@ -143,55 +123,38 @@ const Auth = () => {
     try {
       setIsLoading(true);
       
-      // 🔥 Vérifier si Google Sign-In natif est disponible (attend 3s max)
       const isNativeAvailable = await isNativeGoogleSignInAvailable();
       
       if (isNativeAvailable) {
-        console.log('🔥 [FIREBASE AUTH] Google Sign-In natif Android détecté');
-        
         try {
-          // Étape 1: Obtenir le token Firebase depuis le plugin natif
-          const { idToken, email, displayName } = await googleSignIn();
+          const { idToken } = await googleSignIn();
           
-          console.log('🔥✅ Firebase ID Token reçu');
-          
-          // Étape 2: Appeler la Edge Function qui valide Firebase et crée la session Supabase
           const { data, error } = await supabase.functions.invoke('firebase-auth', {
             body: { idToken }
           });
           
           if (error) {
-            console.error('❌ Firebase auth Edge Function error:', error);
-            console.error('❌ Error details:', JSON.stringify(error, null, 2));
-            
             toast({
               title: "Erreur Google Sign-In",
-              description: `Edge function error: ${error.message || 'Unknown error'}. Veuillez réessayer ou utiliser l'authentification par email.`,
+              description: error.message || 'Erreur inconnue',
               variant: "destructive",
             });
             return;
           }
 
           if (!data?.session) {
-            throw new Error('No session returned from Firebase auth');
+            throw new Error('No session returned');
           }
 
-          // Étape 3: Définir la session dans le client Supabase
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token,
           });
 
-          if (sessionError) {
-            console.error('❌ Error setting Supabase session:', sessionError);
-            throw sessionError;
-          }
-          
-          console.log('✅ Supabase session created:', { user: data.user?.email });
+          if (sessionError) throw sessionError;
           
           const user = data.user;
           
-          // Étape 3: Vérifier si le profil existe
           if (user) {
             const { data: existingProfile } = await supabase
               .from('profiles')
@@ -209,31 +172,16 @@ const Auth = () => {
           
           return;
         } catch (nativeError: any) {
-          console.error('🔥❌ Native Google Sign-In failed:', nativeError);
-          
-          let errorMessage = nativeError.message || "Erreur lors de l'authentification Google";
-          
-          // Ajouter des conseils de débogage
-          if (errorMessage.includes("User canceled")) {
-            errorMessage += "\n\n⚠️ Si vous avez sélectionné un compte, vérifiez:\n" +
-                           "1. SHA-1 certificate dans Firebase Console\n" +
-                           "2. Configuration OAuth Google Cloud\n" +
-                           "Consultez les logs Logcat pour plus de détails.";
-          }
-          
           toast({
             title: "Erreur Google Sign-In",
-            description: errorMessage,
+            description: nativeError.message || "Erreur lors de l'authentification",
             variant: "destructive",
           });
           return;
         }
       }
       
-      // Fallback : Web OAuth standard (pour WebView et navigateurs)
-      console.log('🌐 Utilisation OAuth web standard');
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
@@ -244,32 +192,14 @@ const Auth = () => {
         }
       });
 
-      if (error) {
-        console.error('❌ OAuth web error:', error);
-        throw error;
-      }
-
-      console.log('✅ OAuth popup opened');
-      // La suite se fait via callback OAuth automatique
-      return;
+      if (error) throw error;
       
     } catch (error: any) {
-      console.error('🔥 Erreur Google Auth:', error);
-      
-      // Gestion spécifique de l'erreur "disallowed_useragent"
-      if (error.message?.includes('disallowed_useragent') || error.message?.includes('403')) {
-        toast({
-          title: "Erreur d'authentification",
-          description: "L'authentification Google n'est pas disponible dans cette version de l'app. Utilisez l'authentification par email.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Erreur",
-          description: error.message || "Erreur lors de l'authentification Google",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors de l'authentification Google",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -281,7 +211,6 @@ const Auth = () => {
 
     try {
       if (authMode === 'signup') {
-        // For signup, use password-based registration
         const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password: password.trim(),
@@ -291,31 +220,24 @@ const Auth = () => {
         });
         if (error) throw error;
         
-        // Traiter le parrainage si un code est présent
         const referralCode = sessionStorage.getItem('referralCode');
         if (referralCode && signUpData.user) {
-          console.log('🎁 Traitement du parrainage:', referralCode);
           try {
-            const { data: referralData, error: refError } = await supabase.functions.invoke('process-referral-signup', {
+            await supabase.functions.invoke('process-referral-signup', {
               body: { referralCode, newUserId: signUpData.user.id }
             });
-            if (!refError) {
-              console.log('✅ Parrainage traité:', referralData);
-              sessionStorage.removeItem('referralCode');
-            }
+            sessionStorage.removeItem('referralCode');
           } catch (refError) {
-            console.error('❌ Erreur parrainage:', refError);
+            console.error('Erreur parrainage:', refError);
           }
         }
         
-        // Passer à l'étape OTP pour que l'utilisateur puisse saisir le code
         setAuthStep('otp');
         toast({
           title: "Vérifiez votre email",
-          description: "Un code de confirmation vous a été envoyé. Entrez-le ci-dessous.",
+          description: "Un code de confirmation vous a été envoyé.",
         });
       } else {
-        // For signin, send OTP avec shouldCreateUser: true pour créer le compte si nécessaire
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
@@ -327,8 +249,8 @@ const Auth = () => {
         
         setAuthStep('otp');
         toast({
-          title: "Code envoyé !",
-          description: "Vérifiez votre email pour le code de connexion à 6 chiffres.",
+          title: "Code envoyé",
+          description: "Vérifiez votre email pour le code à 6 chiffres.",
         });
       }
     } catch (error: any) {
@@ -353,11 +275,10 @@ const Auth = () => {
         type: 'email',
       });
       if (error) {
-        // Gestion spécifique des erreurs d'OTP
         if (error.message.includes('expired') || error.message.includes('invalid')) {
           toast({
             title: "Code expiré",
-            description: "Le code a expiré. Cliquez sur 'Renvoyer le code' pour en recevoir un nouveau.",
+            description: "Demandez un nouveau code.",
             variant: "destructive",
           });
         } else {
@@ -366,12 +287,9 @@ const Auth = () => {
         return;
       }
       
-      // Vérifier si c'est un nouvel utilisateur
       if (data.user) {
-        // Attendre un peu pour que le trigger crée le profil
         setTimeout(async () => {
           try {
-            // Vérifier si le profil existe déjà
             const { data: existingProfile } = await supabase
               .from('profiles')
               .select('id, username')
@@ -379,31 +297,21 @@ const Auth = () => {
               .maybeSingle();
             
             if (!existingProfile) {
-              // Nouveau utilisateur - afficher le setup de profil
               setNewUserId(data.user.id);
               setShowProfileSetup(true);
             } else {
-              // Utilisateur existant - rediriger
               window.location.href = '/';
             }
           } catch (profileError: any) {
-            console.error('Erreur lors de la vérification du profil:', profileError);
-            // En cas d'erreur, afficher le setup de profil par sécurité
             setNewUserId(data.user.id);
             setShowProfileSetup(true);
           }
         }, 1000);
       }
     } catch (error: any) {
-      let errorMessage = error.message;
-      
-      if (error.message.includes('429') || error.message.includes('rate limit')) {
-        errorMessage = "Trop de tentatives. Veuillez attendre quelques minutes avant de réessayer.";
-      }
-      
       toast({
         title: "Erreur",
-        description: errorMessage,
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -418,52 +326,28 @@ const Auth = () => {
     try {
       let emailToUse = usernameOrEmail;
       
-      // Vérifier si c'est un username (ne contient pas @)
       if (!usernameOrEmail.includes('@')) {
-        // C'est un username, récupérer l'email associé
-        console.log('🔍 Recherche email pour username:', usernameOrEmail);
         const { data: userEmail, error: emailError } = await supabase
           .rpc('get_email_from_username', { username_param: usernameOrEmail });
           
         if (emailError) {
-          console.error('🔍 Erreur RPC username:', emailError);
-          throw new Error('Impossible de vérifier le nom d\'utilisateur. Réessayez avec votre email.');
+          throw new Error('Impossible de vérifier le nom d\'utilisateur.');
         }
         
         if (!userEmail) {
-          throw new Error('Nom d\'utilisateur non trouvé. Vérifiez l\'orthographe ou utilisez votre email.');
+          throw new Error('Nom d\'utilisateur non trouvé.');
         }
         
         emailToUse = userEmail;
-        console.log('🔍 Email trouvé pour username:', emailToUse);
       }
-
-      // 🔍 Logs détaillés pour debug
-      console.log('🔐 Tentative de connexion avec email:', emailToUse);
-      console.log('🔐 Longueur exacte du mot de passe:', password.length, 'caractères');
-      console.log('🔐 Hash partiel (debug):', btoa(password.trim()).substring(0, 12));
-      console.log('🔐 Premier caractère code:', password.charCodeAt(0));
-      console.log('🔐 Dernier caractère code:', password.charCodeAt(password.length - 1));
-      console.log('🔐 Contient espaces début/fin:', password !== password.trim());
       
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse.trim(),
         password: password,
       });
       
-      if (error) {
-        console.error('🔐 Erreur auth complète:', {
-          message: error.message,
-          status: error.status,
-          name: error.name,
-          code: (error as any).code
-        });
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('✅ Connexion réussie');
-      
-      // Vérifier si on doit rediriger vers un profil cible
       const targetUsername = sessionStorage.getItem('targetProfileUsername');
       if (targetUsername) {
         sessionStorage.removeItem('targetProfileUsername');
@@ -472,34 +356,16 @@ const Auth = () => {
         window.location.href = '/';
       }
     } catch (error: any) {
-      console.error('❌ Erreur complète:', error);
-      
       let errorMessage = error.message;
       
-      // Gestion spécifique des erreurs d'authentification
       if (error.message.includes('Invalid login credentials')) {
-        errorMessage = `❌ Email/username ou mot de passe incorrect.
-
-🔑 Solutions possibles :
-• Clique sur "Mot de passe oublié ?" ci-dessous pour réinitialiser
-• Utilise "Continuer avec Google" (ton compte y est peut-être lié)
-• Vérifie qu'il n'y a pas d'espaces avant/après le mot de passe
-• Essaie avec ton email au lieu du username`;
-      } else if (error.message.includes('Email not confirmed')) {
-        errorMessage = 'Votre email n\'est pas encore confirmé. Vérifiez votre boîte mail.';
-      } else if (error.message.includes('User not found')) {
-        errorMessage = 'Aucun compte trouvé avec cet email. Créez un compte d\'abord.';
-      } else if (error.message.includes('rate limit') || error.message.includes('429')) {
-        errorMessage = 'Trop de tentatives. Attendez quelques minutes avant de réessayer.';
-      } else if (error.message.includes('network') || error.message.includes('fetch')) {
-        errorMessage = 'Problème de connexion. Vérifiez votre internet et réessayez.';
+        errorMessage = 'Email ou mot de passe incorrect.';
       }
       
       toast({
         title: "Connexion échouée",
         description: errorMessage,
         variant: "destructive",
-        duration: 8000, // 🔥 Toast plus long pour lire le message détaillé
       });
     } finally {
       setIsLoading(false);
@@ -536,11 +402,10 @@ const Auth = () => {
       if (error) throw error;
       
       toast({
-        title: "Succès !",
-        description: "Votre mot de passe a été mis à jour.",
+        title: "Mot de passe mis à jour",
+        description: "Vous allez être redirigé.",
       });
       
-      // Rediriger vers l'accueil
       setTimeout(() => {
         window.location.href = '/';
       }, 1000);
@@ -555,232 +420,168 @@ const Auth = () => {
     }
   };
 
-  const forceCleanSession = async () => {
-    try {
-      // Nettoyer complètement toutes les données
-      await supabase.auth.signOut({ scope: 'global' });
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Supprimer spécifiquement les clés Supabase
-      const keysToRemove = [
-        'supabase.auth.token',
-        'sb-dbptgehpknjsoisirviz-auth-token',
-        'supabase-auth-token'
-      ];
-      
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-        sessionStorage.removeItem(key);
-      });
-      
+  const handleForgotPassword = async () => {
+    const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
+    if (!emailToUse) {
       toast({
-        title: "Session nettoyée",
-        description: "Toutes les données de session ont été supprimées.",
+        title: "Email requis",
+        description: "Entrez votre email pour réinitialiser le mot de passe.",
+        variant: "destructive",
       });
-      
-      // Recharger la page
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
+        redirectTo: 'https://run-connect.lovable.app/auth',
+      });
+      if (error) throw error;
+      toast({
+        title: "Email envoyé",
+        description: "Vérifiez votre boîte mail.",
+      });
     } catch (error: any) {
       toast({
-        title: "Erreur lors du nettoyage",
+        title: "Erreur",
         description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 relative overflow-hidden flex items-center justify-center p-4">
-      {/* Effets d'arrière-plan animés */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
-      
-      <Card className="relative w-full max-w-md backdrop-blur-xl bg-card/90 border-2 border-white/10 shadow-2xl animate-slide-up">
-        <CardHeader className="space-y-1 text-center border-b border-white/10 pb-4">
-          <CardTitle className="text-display-md bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">RunConnect</CardTitle>
-          <CardDescription className="text-body-md">
-            {authStep === 'reset'
-              ? "Définissez votre nouveau mot de passe"
-              : authStep === 'otp' 
-                ? "Entrez le code reçu par email"
-                : authMode === 'signup' 
-                  ? "Créez votre compte pour rejoindre la communauté" 
-                  : "Connectez-vous à votre compte"
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <Button
-            onClick={handleGoogleAuth}
-            disabled={isLoading}
-            variant="outline"
-            className="w-full h-12"
-          >
-            <FcGoogle className="mr-2 h-5 w-5" />
-            {authMode === 'signup' ? "S'inscrire" : "Se connecter"} avec Google
-          </Button>
-          
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Ou avec votre email
-              </span>
-            </div>
-          </div>
+  const resendOtp = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          shouldCreateUser: true
+        },
+      });
+      if (error) throw error;
+      setOtp('');
+      toast({
+        title: "Nouveau code envoyé",
+        description: "Vérifiez votre email.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-semibold text-foreground">RunConnect</h1>
+          <p className="text-sm text-muted-foreground">
+            {authStep === 'reset'
+              ? "Nouveau mot de passe"
+              : authStep === 'otp' 
+                ? "Vérification"
+                : authMode === 'signup' 
+                  ? "Créer un compte" 
+                  : "Connexion"
+            }
+          </p>
+        </div>
+
+        {/* Forms */}
+        <div className="space-y-6">
           {authStep === 'reset' ? (
-            // Password Reset Form
             <form onSubmit={handlePasswordReset} className="space-y-4">
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type={showNewPassword ? "text" : "password"}
-                    placeholder="Nouveau mot de passe"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+              <div className="relative">
+                <Input
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Nouveau mot de passe"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-10"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
               
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirmer le mot de passe"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+              <div className="relative">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirmer le mot de passe"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pr-10"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
 
               <Button
                 type="submit"
-                variant="default"
-                className="w-full h-12 text-button"
+                className="w-full"
                 disabled={isLoading || newPassword !== confirmPassword}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Mettre à jour le mot de passe
+                Mettre à jour
               </Button>
             </form>
           ) : authStep === 'otp' ? (
-            // OTP Verification Form
             <form onSubmit={handleOtpSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Code envoyé à : <span className="font-medium text-foreground">{email}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Le code expire dans 5 minutes
-                  </p>
-                </div>
-                <div className="flex justify-center">
-                  <InputOTP
-                    maxLength={6}
-                    value={otp}
-                    onChange={(value) => setOtp(value)}
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Code envoyé à</p>
+                <p className="text-sm font-medium">{email}</p>
+              </div>
+              
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={otp}
+                  onChange={(value) => setOtp(value)}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
               </div>
 
               <Button
                 type="submit"
-                variant="default"
-                className="w-full h-12 text-button"
+                className="w-full"
                 disabled={isLoading || otp.length !== 6}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Vérifier le code
+                Vérifier
               </Button>
 
-              <div className="text-center space-y-2">
+              <div className="flex justify-center gap-4 text-sm">
                 <button
                   type="button"
-                  onClick={async () => {
-                    setIsLoading(true);
-                    try {
-                      const { error } = await supabase.auth.signInWithOtp({
-                        email,
-                        options: {
-                          emailRedirectTo: `${window.location.origin}/`,
-                          shouldCreateUser: true
-                        },
-                      });
-                      if (error) {
-                        if (error.message.includes('429') || error.message.includes('rate limit')) {
-                          toast({
-                            title: "Trop de tentatives",
-                            description: "Veuillez attendre quelques minutes avant de demander un nouveau code.",
-                            variant: "destructive",
-                          });
-                        } else {
-                          throw error;
-                        }
-                      } else {
-                        setOtp('');
-                        toast({
-                          title: "Nouveau code envoyé !",
-                          description: "Vérifiez votre email pour le nouveau code.",
-                        });
-                      }
-                    } catch (error: any) {
-                      toast({
-                        title: "Erreur",
-                        description: error.message,
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }}
-                  className="text-sm text-primary hover:underline block mx-auto"
+                  onClick={resendOtp}
+                  className="text-primary hover:underline"
                 >
                   Renvoyer le code
                 </button>
@@ -790,252 +591,135 @@ const Auth = () => {
                     setAuthStep('email');
                     setOtp('');
                   }}
-                  className="text-sm text-muted-foreground hover:underline block mx-auto"
+                  className="text-muted-foreground hover:underline flex items-center gap-1"
                 >
-                  ← Retour
+                  <ArrowLeft className="h-3 w-3" />
+                  Retour
                 </button>
               </div>
             </form>
           ) : authMode === 'signup' ? (
-            // Signup Form (email + password)
             <form onSubmit={handleEmailSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="votre.email@exemple.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
+              <Input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mot de passe (min. 6 caractères)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Créer un compte
+              </Button>
+
+              <ReferralCodeInput />
+            </form>
+          ) : (
+            <div className="space-y-4">
+              {/* Google Sign-In */}
+              <Button
+                onClick={handleGoogleAuth}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full h-11"
+              >
+                <FcGoogle className="mr-2 h-5 w-5" />
+                Continuer avec Google
+              </Button>
+              
+              {/* Separator */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-background px-3 text-muted-foreground">ou</span>
                 </div>
               </div>
-              
-              <div className="space-y-2">
+
+              {/* Password Sign-In */}
+              <form onSubmit={handleUsernameOrEmailSignin} className="space-y-4">
+                <Input
+                  type="text"
+                  placeholder="Email ou pseudonyme"
+                  value={usernameOrEmail}
+                  onChange={(e) => setUsernameOrEmail(e.target.value)}
+                  required
+                />
+                
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Mot de passe (min. 6 caractères)"
+                    placeholder="Mot de passe"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
+                    className="pr-10"
                     required
-                    minLength={6}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-              </div>
 
-              <Button
-                type="submit"
-                variant="default"
-                className="w-full h-12 text-button"
-                disabled={isLoading}
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Continuer
-              </Button>
-
-              {/* Code de parrainage pour les nouveaux utilisateurs */}
-              <div className="mt-4 pt-4 border-t border-border">
-                <ReferralCodeInput />
-              </div>
-            </form>
-          ) : (
-            // Signin Options
-            <div className="space-y-4">
-              {/* OTP Signin */}
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="email"
-                      placeholder="votre.email@exemple.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Mot de passe oublié ?
+                  </button>
                 </div>
 
-                <Button
-                  type="submit"
-                  variant="default"
-                  className="w-full h-12 text-button"
-                  disabled={isLoading}
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Recevoir un code par email
-                </Button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Ou avec mot de passe
-                  </span>
-                </div>
-              </div>
-
-              {/* Password Signin */}
-              <form onSubmit={handleUsernameOrEmailSignin} className="space-y-4">
-                <div className="space-y-2">
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      placeholder="Pseudonyme ou email"
-                      value={usernameOrEmail}
-                      onChange={(e) => setUsernameOrEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Votre mot de passe"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  {/* 🔑 Bouton mot de passe oublié */}
-                  <div className="text-right">
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      onClick={async () => {
-                        const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
-                        if (!emailToUse) {
-                          toast({
-                            title: "Email requis",
-                            description: "Veuillez entrer votre email (pas votre pseudonyme) pour réinitialiser le mot de passe",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        try {
-                          const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
-                            redirectTo: 'https://run-connect.lovable.app/auth',
-                          });
-                          if (error) throw error;
-                          toast({
-                            title: "Email envoyé ✅",
-                            description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe",
-                          });
-                        } catch (error: any) {
-                          toast({
-                            title: "Erreur",
-                            description: error.message,
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                      className="text-xs p-0 h-auto"
-                    >
-                      🔑 Mot de passe oublié ?
-                    </Button>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="outline"
-                  className="w-full"
-                  disabled={isLoading}
-                >
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Se connecter
                 </Button>
-                
-                {/* 🧹 Bouton de nettoyage de cache visible */}
-                <div className="mt-4 text-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut({ scope: 'global' });
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        toast({
-                          title: "Cache nettoyé ✅",
-                          description: "Session supprimée. Réessayez de vous connecter.",
-                        });
-                      } catch (error) {
-                        console.error('Erreur nettoyage:', error);
-                      }
-                    }}
-                  >
-                    🧹 Problème de connexion ? Nettoyer le cache
-                  </Button>
-                </div>
               </form>
             </div>
           )}
 
-          <div className="text-center space-y-2">
-            {authStep !== 'reset' && (
+          {/* Toggle Sign-in/Sign-up */}
+          {authStep !== 'reset' && authStep !== 'otp' && (
+            <div className="text-center">
               <button
                 type="button"
                 onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
-                className="text-sm text-primary hover:underline block mx-auto"
+                className="text-sm text-muted-foreground hover:text-foreground"
               >
-                {authMode === 'signup' ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
+                {authMode === 'signup' 
+                  ? "Déjà inscrit ? Se connecter" 
+                  : "Pas de compte ? S'inscrire"
+                }
               </button>
-            )}
-            
-            {/* Bouton de nettoyage d'urgence */}
-            <button
-              type="button"
-              onClick={forceCleanSession}
-              className="text-xs text-muted-foreground hover:text-destructive hover:underline block mx-auto mt-4"
-              title="En cas de problème de connexion, cliquez ici pour nettoyer complètement votre session"
-            >
-              Problème de connexion ? Nettoyer la session
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          )}
+        </div>
+      </div>
       
       <ProfileSetupDialog
         open={showProfileSetup}

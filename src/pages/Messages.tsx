@@ -1473,12 +1473,9 @@ const Messages = () => {
     return (
       <>
         <div className="min-h-screen bg-background">
-        <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
-          {/* Top Bar - Fixed - Remonté légèrement */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
-          
-          {/* Header - Fixed - Remonté et plus compact */}
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
+        <div className="max-w-md mx-auto w-full h-screen flex flex-col">
+          {/* Header */}
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 bg-background border-b border-border z-50">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -1491,7 +1488,7 @@ const Messages = () => {
               {selectedConversation.is_group ? (
                 <>
                    <Avatar 
-                     className="h-8 w-8 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-primary/50 transition-all duration-200 glass-card border border-white/20"
+                     className="h-8 w-8 cursor-pointer hover:opacity-80 transition-colors"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -1512,7 +1509,7 @@ const Messages = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div 
-                    className="cursor-pointer hover:opacity-80 hover:bg-muted/30 rounded p-1 -m-1 transition-all duration-200"
+                    className="cursor-pointer"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -1537,7 +1534,7 @@ const Messages = () => {
                 <>
                    <div className="relative">
                      <Avatar 
-                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all glass-card border border-white/20"
+                       className="h-8 w-8 cursor-pointer hover:opacity-80 transition-colors"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1575,7 +1572,7 @@ const Messages = () => {
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-sm">
+                <DropdownMenuContent align="end" className="w-56">
                   {!selectedConversation.is_group && (
                     <DropdownMenuItem 
                       onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
@@ -1636,9 +1633,9 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Messages - Scrollable area with top margin for fixed header - Ajusté pour nouveau header */}
-          <div className="pt-[72px] flex-1 overflow-y-auto min-h-0">
-            <div className={`h-full px-4 pt-4 pb-4 space-y-1.5 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
+          {/* Messages */}
+          <div className="pt-16 flex-1 overflow-y-auto min-h-0">
+            <div className="h-full px-4 pt-4 pb-4 space-y-1.5" style={{paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1699,8 +1696,8 @@ const Messages = () => {
                         
                          {/* Individual timestamp - appears on hover/click */}
                         {showIndividualTime && (
-                          <div className={`absolute -bottom-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
-                            <div className="bg-background/90 border text-foreground text-xs px-2 py-1 rounded backdrop-blur-sm shadow-sm">
+                          <div className="absolute -bottom-6 z-10" style={{ [isOwnMessage ? 'right' : 'left']: 0 }}>
+                            <div className="bg-muted text-foreground text-xs px-2 py-1 rounded">
                               {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
                             </div>
                           </div>
@@ -1739,11 +1736,11 @@ const Messages = () => {
                             (message.content && !message.content.match(/^(Image partagée)$/i)) ||
                             message.deleted_at) && (
                             <div
-                              className={`rounded-2xl p-2 transition-all duration-200 ${
+                              className={`rounded-2xl p-2.5 ${
                                 isOwnMessage
-                                  ? getThemeClasses().ownMessage
-                                  : getThemeClasses().otherMessage
-                              } ${showIndividualTime ? 'shadow-2xl scale-[1.02]' : ''}`}
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted text-foreground'
+                              }`}
                             >
                               {/* Show deleted message */}
                               {message.deleted_at ? (
@@ -1933,18 +1930,18 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Message input - Sticky at bottom (follows keyboard) - Descendu légèrement */}
+          {/* Message input */}
           <div 
-            className="sticky bottom-0 w-full px-3 py-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
+            className="sticky bottom-0 w-full px-3 py-2 bg-background border-t border-border z-40"
             style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
           >
             {/* Emoji Picker */}
             {showEmojiPicker && (
               <div 
                 ref={emojiPickerRef}
-                className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
+                className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60]"
               >
-                <div className="glass-primary backdrop-blur-xl rounded-2xl p-2 shadow-2xl border border-border/30">
+                <div className="bg-card rounded-xl p-2 shadow-lg border border-border">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
                     theme={Theme.AUTO}
@@ -1957,7 +1954,7 @@ const Messages = () => {
               </div>
             )}
             
-            <div className="glass-primary backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-border/30">
+            <div className="bg-muted/50 rounded-xl p-2">
             {uploadProgress && (
               <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg mb-2">
                 <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -1998,68 +1995,51 @@ const Messages = () => {
                       <Paperclip className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={async () => {
-                        console.log('🖼️ Bouton Image cliqué');
                         try {
                           const file = await selectFromGallery();
                           if (file) {
-                            console.log('📸 Fichier sélectionné:', file.name);
                             uploadFile(file);
-                          } else {
-                            toast({
-                              title: "Aucun fichier",
-                              description: "Aucune image sélectionnée",
-                              variant: "default"
-                            });
                           }
                         } catch (error: any) {
-                          console.error('❌ Erreur sélection galerie:', error);
-                          let errorMessage = "Impossible d'accéder à la galerie. Vérifiez les permissions.";
-                          if (error.message === 'PERMISSION_DENIED') {
-                            errorMessage = "Permission refusée. Activez l'accès à la galerie dans les paramètres.";
-                          } else if (error.message === 'TIMEOUT') {
-                            errorMessage = "Délai d'attente dépassé. Réessayez.";
-                          }
                           toast({
                             title: "Erreur",
-                            description: errorMessage,
+                            description: "Impossible d'accéder à la galerie.",
                             variant: "destructive"
                           });
                         }
                       }}
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      className="px-3"
                       disabled={isLoading}
                     >
                       <Image className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`px-3 glass-card border-border/40 hover:bg-background/60 transition-all duration-200 ${
-                        showEmojiPicker ? 'bg-primary/20 border-primary/40 shadow-lg shadow-primary/20' : ''
-                      }`}
+                      className={`px-3 ${showEmojiPicker ? 'bg-muted' : ''}`}
                       disabled={isLoading}
                     >
                       <Smile className="h-4 w-4" />
                     </Button>
                     <Input
-                      placeholder="Tapez votre message..."
+                      placeholder="Message..."
                       value={newMessage}
                       onChange={(e) => {
                         setNewMessage(e.target.value);
                         handleTyping();
                       }}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 glass-card border-border/40 focus:border-primary/60 bg-background/40"
+                      className="flex-1 bg-background border-0"
                     />
                     <Button
                       onClick={sendMessage}
                       disabled={loading || !newMessage.trim()}
                       size="sm"
-                      className="px-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-primary/50 transition-all duration-200"
+                      className="px-3"
                     >
                       <Send className="h-4 w-4" />
                     </Button>
@@ -2067,8 +2047,8 @@ const Messages = () => {
                       onClick={handleVoiceRecording}
                       disabled={loading}
                       size="sm"
-                      variant="outline"
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      variant="ghost"
+                      className="px-3"
                     >
                       <Mic className="h-4 w-4" />
                     </Button>
@@ -2126,14 +2106,12 @@ const Messages = () => {
 
   return (
     <>
-      {/* Petite barre noire en haut uniquement pour Messages */}
       <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
       <div className="h-screen bg-background flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
-          {/* Fixed Header Only - Remonté légèrement */}
-          <div className="fixed top-4 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
+          {/* Header */}
+          <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 p-4 border-b border-border">
             <div className="max-w-md mx-auto w-full">
-            {/* Header */}
             <div className="flex items-center justify-between">
               {isSelectionMode && (
                 <Button
