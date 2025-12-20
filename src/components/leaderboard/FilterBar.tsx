@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Globe, Bike, Footprints, Users, Home, Trophy, Plus } from "lucide-react";
+import { Globe, Bike, Footprints, Users, Home, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -28,37 +28,17 @@ interface FilterBarProps {
 }
 
 const additionalSports: { value: ActivityType; label: string; emoji: string }[] = [
-  { value: 'course', label: 'Course à pied', emoji: '🏃' },
+  { value: 'course', label: 'Course', emoji: '🏃' },
   { value: 'trail', label: 'Trail', emoji: '⛰️' },
   { value: 'velo', label: 'Vélo', emoji: '🚴' },
   { value: 'vtt', label: 'VTT', emoji: '🚵' },
-  { value: 'bmx', label: 'BMX', emoji: '🚲' },
-  { value: 'gravel', label: 'Gravel', emoji: '🚴‍♂️' },
-  { value: 'marche', label: 'Marche', emoji: '🚶' },
   { value: 'natation', label: 'Natation', emoji: '🏊' },
-  { value: 'swimming', label: 'Natation', emoji: '🏊' },
   { value: 'football', label: 'Football', emoji: '⚽' },
-  { value: 'basket', label: 'Basketball', emoji: '🏀' },
   { value: 'basketball', label: 'Basketball', emoji: '🏀' },
-  { value: 'volley', label: 'Volleyball', emoji: '🏐' },
-  { value: 'badminton', label: 'Badminton', emoji: '🏸' },
-  { value: 'pingpong', label: 'Tennis de table', emoji: '🏓' },
   { value: 'tennis', label: 'Tennis', emoji: '🎾' },
-  { value: 'escalade', label: 'Escalade', emoji: '🧗' },
-  { value: 'petanque', label: 'Pétanque', emoji: '⚪' },
-  { value: 'rugby', label: 'Rugby', emoji: '🏉' },
-  { value: 'handball', label: 'Handball', emoji: '🤾' },
   { value: 'fitness', label: 'Fitness', emoji: '💪' },
   { value: 'yoga', label: 'Yoga', emoji: '🧘' },
-  { value: 'musculation', label: 'Musculation', emoji: '🏋️' },
-  { value: 'crossfit', label: 'CrossFit', emoji: '🔥' },
-  { value: 'boxe', label: 'Boxe', emoji: '🥊' },
-  { value: 'arts_martiaux', label: 'Arts martiaux', emoji: '🥋' },
-  { value: 'golf', label: 'Golf', emoji: '⛳' },
-  { value: 'ski', label: 'Ski', emoji: '⛷️' },
-  { value: 'snowboard', label: 'Snowboard', emoji: '🏂' },
-  { value: 'randonnee', label: 'Randonnée', emoji: '🥾' },
-  { value: 'kayak', label: 'Kayak', emoji: '🛶' },
+  { value: 'randonnee', label: 'Rando', emoji: '🥾' },
   { value: 'surf', label: 'Surf', emoji: '🏄' }
 ];
 
@@ -74,10 +54,9 @@ export const FilterBar = ({
   const [tempSelectedClubs, setTempSelectedClubs] = useState<string[]>(selectedClubs);
 
   const mainFilters = [
-    { value: 'general' as FilterType, label: 'Général', icon: Globe },
-    { value: 'running' as FilterType, label: 'Running', icon: Trophy },
+    { value: 'general' as FilterType, label: 'Tous', icon: Globe },
+    { value: 'running' as FilterType, label: 'Course', icon: Footprints },
     { value: 'cycling' as FilterType, label: 'Vélo', icon: Bike },
-    { value: 'walking' as FilterType, label: 'Marche', icon: Footprints },
     { value: 'friends' as FilterType, label: 'Amis', icon: Users },
   ];
 
@@ -108,69 +87,60 @@ export const FilterBar = ({
     return additionalSports.some(sport => sport.value === filter);
   };
 
-  const getActiveFilterLabel = () => {
-    const additionalSport = additionalSports.find(s => s.value === activeFilter);
-    if (additionalSport) return `${additionalSport.emoji} ${additionalSport.label}`;
-    if (activeFilter === 'clubs' && selectedClubs.length > 0) {
-      return `Clubs (${selectedClubs.length})`;
-    }
-    return null;
-  };
-
   return (
     <>
-      <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
+      <div className="w-full overflow-x-auto pb-2 -mx-1">
         <div className="flex gap-2 min-w-max px-1">
           {mainFilters.map((filter) => {
             const Icon = filter.icon;
+            const isActive = activeFilter === filter.value;
             return (
-              <Button
+              <button
                 key={filter.value}
-                variant={activeFilter === filter.value ? "default" : "outline"}
-                size="sm"
                 onClick={() => onFilterChange(filter.value)}
                 className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap transition-all",
-                  activeFilter === filter.value && "shadow-md"
+                  "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-foreground text-background"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
                 )}
               >
                 <Icon className="h-4 w-4" />
                 {filter.label}
-              </Button>
+              </button>
             );
           })}
           
           {userClubs.length > 0 && (
-            <Button
-              variant={activeFilter === 'clubs' ? "default" : "outline"}
-              size="sm"
+            <button
               onClick={handleClubsClick}
               className={cn(
-                "flex items-center gap-1.5 whitespace-nowrap transition-all",
-                activeFilter === 'clubs' && "shadow-md"
+                "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                activeFilter === 'clubs'
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
               )}
             >
               <Home className="h-4 w-4" />
-              {selectedClubs.length > 0 ? `Clubs (${selectedClubs.length})` : 'Mes clubs'}
-            </Button>
+              {selectedClubs.length > 0 ? `Clubs (${selectedClubs.length})` : 'Clubs'}
+            </button>
           )}
 
-          <Button
-            variant={isAdditionalSport(activeFilter) ? "default" : "outline"}
-            size="sm"
+          <button
             onClick={() => setShowSportsDialog(true)}
             className={cn(
-              "flex items-center gap-1.5 whitespace-nowrap transition-all",
-              isAdditionalSport(activeFilter) && "shadow-md"
+              "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+              isAdditionalSport(activeFilter)
+                ? "bg-foreground text-background"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
             )}
           >
             <Plus className="h-4 w-4" />
-            {getActiveFilterLabel() || 'Plus'}
-          </Button>
+            Plus
+          </button>
         </div>
       </div>
 
-      {/* Dialog de sélection des clubs */}
       <Dialog open={showClubsDialog} onOpenChange={setShowClubsDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -178,57 +148,57 @@ export const FilterBar = ({
           </DialogHeader>
           <div className="space-y-3 py-4">
             {userClubs.map((club) => (
-              <div key={club.id} className="flex items-center space-x-2">
+              <div key={club.id} className="flex items-center space-x-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                 <Checkbox
                   id={club.id}
                   checked={tempSelectedClubs.includes(club.id)}
                   onCheckedChange={() => toggleClub(club.id)}
                 />
-                <Label
-                  htmlFor={club.id}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
+                <Label htmlFor={club.id} className="flex-1 cursor-pointer">
                   {club.name}
                 </Label>
               </div>
             ))}
             {userClubs.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-8">
                 Vous n'êtes membre d'aucun club
               </p>
             )}
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowClubsDialog(false)}>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowClubsDialog(false)} className="flex-1">
               Annuler
             </Button>
-            <Button onClick={handleApplyClubs}>
+            <Button onClick={handleApplyClubs} className="flex-1">
               Appliquer
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog des sports supplémentaires */}
       <Dialog open={showSportsDialog} onOpenChange={setShowSportsDialog}>
-        <DialogContent className="sm:max-w-md flex flex-col items-center">
-          <DialogHeader className="w-full">
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
             <DialogTitle className="text-center">Autres sports</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 py-4 max-h-[60vh] overflow-y-auto scrollbar-hide w-full px-2">
+          <div className="grid grid-cols-3 gap-2 py-4 max-h-[50vh] overflow-y-auto">
             {additionalSports.map((sport) => (
-              <Button
+              <button
                 key={sport.value}
-                variant={activeFilter === sport.value ? "default" : "outline"}
-                className="h-20 flex-col gap-2"
                 onClick={() => {
                   onFilterChange(sport.value);
                   setShowSportsDialog(false);
                 }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-2 p-4 rounded-xl transition-all duration-200",
+                  activeFilter === sport.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/30 hover:bg-muted/50"
+                )}
               >
                 <span className="text-2xl">{sport.emoji}</span>
-                <span className="text-sm">{sport.label}</span>
-              </Button>
+                <span className="text-xs font-medium">{sport.label}</span>
+              </button>
             ))}
           </div>
         </DialogContent>
