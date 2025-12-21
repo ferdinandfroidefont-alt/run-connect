@@ -1,9 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Map, Calendar, MessageCircle, Rss, Plus } from 'lucide-react';
+import { Home, Calendar, MessageCircle, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 
@@ -11,15 +10,15 @@ export const BottomNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const { openCreateSession } = useAppContext();
 
+  // 4 tabs maximum - clean and focused
   const navItems = [
-    { path: '/', icon: Map, label: t('navigation.home') },
-    { path: '/my-sessions', icon: Calendar, label: t('navigation.mySessions') },
-    { path: '/messages', icon: MessageCircle, label: t('navigation.messages') },
-    { path: '/feed', icon: Rss, label: 'Feed' }
+    { path: '/', icon: Home, label: 'Accueil' },
+    { path: '/my-sessions', icon: Calendar, label: 'Séances' },
+    { path: '/messages', icon: MessageCircle, label: 'Messages' },
+    { path: '/profile', icon: User, label: 'Profil' }
   ];
 
   const handleNavigation = (path: string) => {
@@ -92,8 +91,8 @@ export const BottomNavigation = () => {
   }, [user]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 pb-safe">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border/50 z-50 pb-safe">
+      <div className="flex items-center justify-around h-14 px-4 max-w-md mx-auto">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (
@@ -101,24 +100,24 @@ export const BottomNavigation = () => {
               key={path} 
               onClick={() => handleNavigation(path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
+                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
                 isActive 
                   ? "text-primary" 
                   : "text-muted-foreground"
               )}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
               <span className="text-[10px] font-medium">{label}</span>
             </button>
           );
         })}
 
-        {/* Center Create Button */}
+        {/* Floating Create Button */}
         <button 
           onClick={handleCreateSession} 
-          className="flex items-center justify-center w-12 h-12 bg-primary text-primary-foreground rounded-full -mt-4 shadow-sm"
+          className="flex items-center justify-center w-14 h-14 bg-primary text-primary-foreground rounded-full -mt-6 shadow-float active:scale-95 transition-transform"
         >
-          <Plus size={24} strokeWidth={2.5} />
+          <Plus size={28} strokeWidth={2} />
         </button>
 
         {navItems.slice(2).map(({ path, icon: Icon, label }) => {
@@ -130,17 +129,17 @@ export const BottomNavigation = () => {
               key={path} 
               onClick={() => handleNavigation(path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors relative",
+                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative",
                 isActive 
                   ? "text-primary" 
                   : "text-muted-foreground"
               )}
             >
               <div className="relative">
-                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
                 {isMessages && totalUnreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full">
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  <span className="absolute -top-1 -right-2 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-semibold bg-primary text-primary-foreground rounded-full">
+                    {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
                   </span>
                 )}
               </div>
