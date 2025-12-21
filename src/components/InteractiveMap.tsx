@@ -1,9 +1,12 @@
 import { RouteDialog } from './RouteDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
+import { MapControls } from './MapControls';
+import { MapStyleSelector } from './MapStyleSelector';
 import { SessionFilters } from './SessionFilters';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
+import { NotificationCenter } from './NotificationCenter';
 import { SettingsDialog } from './SettingsDialog';
 import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
@@ -11,18 +14,24 @@ import { NearbySessionsDialog } from './NearbySessionsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { supabase } from '@/integrations/supabase/client';
+
 import { openLocationSettings } from '@/lib/native';
+import { supabase } from '@/integrations/supabase/client';
 import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
+import { ClubSelector } from './ClubSelector';
+import { CheckCircle } from 'lucide-react';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 
@@ -1334,65 +1343,163 @@ export const InteractiveMap = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-4rem)] bg-background">
-      {/* Map Container - Full focus on the map */}
+    <div className="relative w-full h-[calc(100vh-8rem)] bg-background">
+      {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
       
-      {/* Minimal top bar - just date picker */}
-      <div className="absolute top-4 left-4 right-4 z-10">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="h-12 px-4 bg-card/95 backdrop-blur-sm rounded-2xl shadow-medium flex items-center gap-3 active:scale-98 transition-transform">
-              <Calendar className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium">
-                {format(filters.selected_date, "EEE d MMM", { locale: fr })}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 rounded-2xl" align="start">
-            <CalendarComponent
-              mode="single"
-              selected={filters.selected_date}
-              onSelect={(date) => {
-                if (date) {
-                  setFilters(prev => ({ ...prev, selected_date: date }));
-                }
-              }}
-              initialFocus
-              className="p-3 pointer-events-auto"
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-10">
+        <div className="bg-card/95 backdrop-blur-sm border-b border-border">
+          <div className="relative flex items-center justify-between px-4 py-8">
+            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent mt-2">
+              RunConnect
+            </h1>
+            
+            {/* User Profile Avatar - Centered - Clickable to access profile */}
+            {userProfile && (
+              <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
+                <div 
+                  onClick={() => setShowProfileDialog(true)}
+                  className="cursor-pointer hover-scale hover-glow transition-all duration-200"
+                >
+                  <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+                    <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
+                    <AvatarFallback>
+                      {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-2 mt-2">
+              <NotificationCenter onSessionUpdated={loadSessions} />
+              <div 
+                className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
+                onClick={async () => {
+                  if (userProfile) {
+                    // Récupérer referral_code
+                    const { data: profileData } = await supabase
+                      .from('profiles')
+                      .select('referral_code')
+                      .eq('user_id', user?.id)
+                      .single();
+                    
+                    shareProfile({
+                      username: userProfile.username,
+                      displayName: userProfile.display_name,
+                      bio: null,
+                      avatarUrl: userProfile.avatar_url,
+                      referralCode: profileData?.referral_code
+                    });
+                  }
+                }}
+              >
+                <Share2 className="h-5 w-5 text-red-500" />
+              </div>
+              <div 
+                className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10"
+                onClick={() => setShowSettingsDialog(true)}
+              >
+                ⚙️
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Search Bar and Date Filter - Floating over map */}
+        <div className="absolute top-24 left-0 right-0 z-10 px-4 pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Rechercher un lieu ou une séance..."
+              value={filters.search_query}
+              onChange={(e) => setFilters(prev => ({ ...prev, search_query: e.target.value }))}
+              className="pl-10"
             />
-          </PopoverContent>
-        </Popover>
-      </div>
+          </div>
+          
+          {/* Date Filter and Friends Filter */}
+          <div className="mt-3 flex justify-start gap-3">
+            {/* Date Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="relative cursor-pointer">
+                  {/* Calendar Icon Style */}
+                  <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
+                    {/* Top holes */}
+                    <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
+                    <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
+                    {/* Month text */}
+                    <div className="text-white text-xs font-bold text-center pt-1.5">
+                      {format(filters.selected_date, "MMM", { locale: fr }).toUpperCase()}
+                    </div>
+                  </div>
+                  {/* Calendar body */}
+                  <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
+                    <div className="text-black text-lg font-bold">
+                      {format(filters.selected_date, "d")}
+                    </div>
+                  </div>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filters.selected_date}
+                  onSelect={(date) => {
+                    if (date) {
+                      setFilters(prev => ({ ...prev, selected_date: date }));
+                    }
+                  }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
 
-      {/* Single filter button - Bottom left */}
-      <div className="absolute bottom-6 left-4 z-10">
-        <SessionFilters filters={filters} onFiltersChange={setFilters} />
-      </div>
-      
-      {/* Minimal controls - Bottom right */}
-      <div className="absolute bottom-6 right-4 z-10 flex flex-col gap-3">
-        {/* Locate me button */}
-        <button
-          onClick={handleLocateMe}
-          className="w-12 h-12 bg-card rounded-2xl shadow-medium flex items-center justify-center active:scale-95 transition-transform"
-        >
-          <MapPin size={20} className="text-foreground" />
-        </button>
+            {/* Friends Only Filter and Club Selector - stacked vertically */}
+            <div className="flex flex-col gap-2">
+              {/* Friends Only Filter */}
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, friends_only: !prev.friends_only }))}
+                className={cn(
+                  "flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7",
+                  filters.friends_only
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-foreground border-border hover:bg-muted"
+                )}
+              >
+                <div className="flex items-center gap-0.5">
+                  <PersonStanding size={12} />
+                  <Bike size={12} />
+                </div>
+              </button>
+              
+              {/* Club Selector positioned directly under "Amis uniquement" */}
+              <div className="w-48">
+                <ClubSelector
+                  selectedClubId={filters.selected_club_id}
+                  onClubSelect={(clubId) => setFilters(prev => ({ ...prev, selected_club_id: clubId }))}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Route Creation Mode Banner */}
       {isRouteCreationMode && (
-        <div className="absolute top-20 left-4 right-4 z-20">
-          <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl shadow-medium flex items-center justify-between">
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="bg-blue-600 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
             <span className="text-sm font-medium">
-              Mode création d'itinéraire
+              Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
             </span>
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant="secondary"
-                className="rounded-xl"
+                className="bg-white text-blue-600 hover:bg-gray-100 font-medium"
                 onClick={finishRouteCreation}
                 disabled={waypoints.current.length < 2}
               >
@@ -1400,8 +1507,7 @@ export const InteractiveMap = ({
               </Button>
               <Button
                 size="sm"
-                variant="ghost"
-                className="rounded-xl text-primary-foreground hover:bg-primary-foreground/20"
+                variant="outline"
                 onClick={cancelRouteCreation}
               >
                 Annuler
@@ -1413,13 +1519,113 @@ export const InteractiveMap = ({
 
       {/* Elevation Profile - Show during route creation */}
       {isRouteCreationMode && showElevationProfile && (
-        <div className="absolute bottom-24 right-4 z-20">
+        <div className="absolute bottom-6 right-6 z-20">
           <ElevationProfile 
             elevations={routeElevations}
             routeStats={calculateRouteStats()}
           />
         </div>
       )}
+
+      {/* Toggle Elevation Profile Button */}
+      {isRouteCreationMode && (
+        <div className="absolute bottom-4 left-20 z-20">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowElevationProfile(!showElevationProfile)}
+            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 hover:bg-white"
+            title={showElevationProfile ? "Masquer le profil d'élévation" : "Afficher le profil d'élévation"}
+          >
+            {showElevationProfile ? "📈 Masquer profil" : "📈 Profil"}
+          </Button>
+        </div>
+      )}
+
+      {/* Leaderboard, Confirm Presence & Nearby Sessions Buttons */}
+      {user && (
+        <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
+          {/* Leaderboard Button - Podium Emoji */}
+          <Button 
+            variant="outline"
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
+            onClick={() => navigate('/leaderboard')}
+            title="Classement"
+          >
+            <div className="text-xl">🏆</div>
+            <div className="text-xs leading-tight">Classement</div>
+          </Button>
+
+          {/* Confirm Presence Button */}
+          <Button 
+            variant="outline"
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-green-600 text-white hover:bg-green-700 border-green-600"
+            onClick={() => navigate('/confirm-presence')}
+            title="Confirmer ma présence GPS"
+          >
+            <div className="text-sm">✅📍</div>
+            <div className="text-xs leading-tight">Confirmer présence</div>
+          </Button>
+
+          {/* Nearby Sessions Button */}
+          <Button 
+            variant="outline"
+            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+            onClick={() => setShowNearbySessionsDialog(true)}
+            title="Séances à proximité"
+          >
+            <div className="text-sm">📍🏃</div>
+            <div className="text-xs leading-tight">Séances à proximité</div>
+          </Button>
+        </div>
+      )}
+
+      {/* Filters - repositionné plus haut */}
+      <div className="absolute top-36 right-4 z-10">
+        <SessionFilters filters={filters} onFiltersChange={setFilters} />
+      </div>
+      
+      {/* All Map Controls - repositioned to left side */}
+      <div className="absolute left-4 bottom-4 flex flex-col gap-3 z-10">
+        {/* Route Creation Button - Pencil Button */}
+        {user && (
+          <Button
+            onClick={() => {
+              console.log('🖱️ Pencil button clicked - navigating to route creation');
+              navigate('/route-create');
+            }}
+            size="sm"
+            variant="outline"
+            className="w-8 h-7 p-0 shadow-map-control flex items-center justify-center bg-card/90 backdrop-blur-sm"
+            title="Créer un itinéraire"
+          >
+            <PenTool className="h-3 w-3" />
+          </Button>
+        )}
+        
+        {/* Locate Me Button */}
+        <Button
+          onClick={handleLocateMe}
+          size="sm"
+          variant="outline"
+          className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center"
+        >
+          <MapPin className="h-3 w-3" />
+        </Button>
+        
+        {/* Map Style Selector */}
+        <MapStyleSelector
+          currentStyle={currentStyle}
+          onStyleChange={handleStyleChange}
+        />
+        
+        {/* Zoom and 3D Controls */}
+        <MapControls
+          onResetView={handleResetView}
+          onToggle3D={handleToggle3D}
+        />
+      </div>
+      
 
       {/* Create Session Wizard */}
       <CreateSessionWizard

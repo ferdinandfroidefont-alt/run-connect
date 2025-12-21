@@ -22,6 +22,7 @@ export default function Search() {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [settingsFocus, setSettingsFocus] = useState<string>("");
 
+  // Gestion du swipe pour fermer
   const handleTouchStart = (e: React.TouchEvent) => {
     setStartY(e.touches[0].clientY);
   };
@@ -29,6 +30,8 @@ export default function Search() {
   const handleTouchMove = (e: React.TouchEvent) => {
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY;
+    
+    // Si swipe vers le bas de plus de 100px, fermer
     if (diff > 100) {
       handleClose();
     }
@@ -39,6 +42,7 @@ export default function Search() {
     setTimeout(() => navigate(-1), 250);
   };
 
+  // Placeholder adaptatif selon l'onglet actif
   const getPlaceholder = () => {
     switch (activeTab) {
       case 'profiles': return 'Rechercher un utilisateur...';
@@ -48,6 +52,7 @@ export default function Search() {
     }
   };
 
+  // Désactiver le scroll du body
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -62,8 +67,11 @@ export default function Search() {
 
   return (
     <>
+      {/* Barre supérieure système */}
+      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-[61]" />
+      
       <div 
-        className={`fixed inset-0 z-[60] bg-background ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed inset-0 z-[60] ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{ 
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)'
@@ -71,36 +79,44 @@ export default function Search() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
       >
-        <div className="h-full flex flex-col">
-          <SearchHeader
-            onBack={handleClose}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            placeholder={getPlaceholder()}
-          />
+        {/* Fond glassmorphism */}
+        <div className="absolute inset-0 glass-primary" />
+      
+      {/* Contenu */}
+      <div className="relative h-full flex flex-col">
+        {/* Header fixe */}
+        <SearchHeader
+          onBack={handleClose}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          placeholder={getPlaceholder()}
+        />
 
-          <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        {/* Onglets segmentés */}
+        <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            {activeTab === 'profiles' && (
-              <ProfilesTab searchQuery={searchQuery} />
-            )}
-            {activeTab === 'clubs' && (
-              <ClubsTab searchQuery={searchQuery} />
-            )}
-            {activeTab === 'strava' && (
-              <StravaTab 
-                searchQuery={searchQuery} 
-                onOpenSettings={handleOpenSettings}
-              />
-            )}
-            {activeTab === 'contacts' && (
-              <ContactsTab searchQuery={searchQuery} />
-            )}
-          </div>
+        {/* Zone scrollable des résultats */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'profiles' && (
+            <ProfilesTab searchQuery={searchQuery} />
+          )}
+          {activeTab === 'clubs' && (
+            <ClubsTab searchQuery={searchQuery} />
+          )}
+          {activeTab === 'strava' && (
+            <StravaTab 
+              searchQuery={searchQuery} 
+              onOpenSettings={handleOpenSettings}
+            />
+          )}
+          {activeTab === 'contacts' && (
+            <ContactsTab searchQuery={searchQuery} />
+          )}
         </div>
       </div>
+      </div>
 
+      {/* Settings Dialog */}
       <SettingsDialog
         open={showSettingsDialog}
         onOpenChange={setShowSettingsDialog}

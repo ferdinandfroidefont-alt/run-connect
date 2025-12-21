@@ -2,64 +2,200 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+/* New session marker pulse animation */
+@keyframes pulse-marker {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.pulse-marker-animation {
+  animation: pulse-marker 1.5s ease-in-out infinite;
+}
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 10% 10%;
+    --background: 210 20% 98%;
+    --foreground: 215 25% 27%;
+
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 10%;
+    --card-foreground: 215 25% 27%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 10%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 10% 40%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 10% 10%;
+    --popover-foreground: 215 25% 27%;
+
+    --primary: 217 91% 65%;
+    --primary-glow: 217 91% 75%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 215 16% 47%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 215 14% 95%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 195 100% 70%;
+    --accent-glow: 195 100% 80%;
+    --accent-foreground: 210 40% 98%;
+
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
-    --radius: 1rem;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 14% 89%;
+    --input: 215 14% 89%;
+    --ring: 217 91% 65%;
+
+    /* Premium gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 71% 45%) 100%);
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 72% 51%) 100%);
+    
+    /* Map-specific design tokens */
+    --map-control-bg: 0 0% 100%;
+    --map-control-border: 215 14% 89%;
+    --map-control-shadow: 215 25% 27% / 0.1;
+    --map-control-hover: 215 14% 95%;
+    --map-control-active: 217 91% 65%;
+    --gradient-map: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
+    --gradient-control: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(215 14% 98%) 100%);
+    
+    /* Premium shadows */
+    --shadow-xs: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
+    --shadow-sm: 0 2px 4px -2px hsl(215 25% 27% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 27% / 0.1), 0 2px 4px -2px hsl(215 25% 27% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 27% / 0.1), 0 4px 6px -4px hsl(215 25% 27% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(215 25% 27% / 0.1), 0 8px 10px -6px hsl(215 25% 27% / 0.1);
+    --shadow-2xl: 0 25px 50px -12px hsl(215 25% 27% / 0.25);
+    --shadow-glow: 0 0 20px 5px hsl(217 91% 65% / 0.4);
+    --shadow-map-control: 0 4px 6px -1px hsl(var(--map-control-shadow)), 0 2px 4px -2px hsl(var(--map-control-shadow));
+    --shadow-map-panel: 0 10px 15px -3px hsl(var(--map-control-shadow)), 0 4px 6px -4px hsl(var(--map-control-shadow));
+    
+    /* Glassmorphism - Enhanced for search page */
+    --glass-bg: hsl(0 0% 100% / 0.05);
+    --glass-border: hsl(0 0% 100% / 0.1);
+    --glass-blur: 20px;
+    --glass-bg-primary: hsl(215 28% 17% / 0.55);
+    --glass-bg-card: hsl(0 0% 100% / 0.08);
+    --glass-border-card: hsl(0 0% 100% / 0.12);
+    --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.12);
+    
+    /* Transitions */
+    --transition-map: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 220 20% 4%;
-    --foreground: 0 0% 98%;
-    --card: 220 20% 7%;
-    --card-foreground: 0 0% 98%;
-    --popover: 220 20% 7%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 12%;
-    --secondary-foreground: 0 0% 70%;
-    --muted: 220 14% 12%;
-    --muted-foreground: 220 10% 50%;
-    --accent: 220 14% 12%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 14% 14%;
-    --input: 220 14% 14%;
-    --ring: 217 91% 60%;
+    --background: 215 28% 17%;
+    --foreground: 210 40% 98%;
+
+    --card: 215 28% 17%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 215 28% 17%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 65%;
+    --primary-glow: 217 91% 75%;
+    --primary-foreground: 215 28% 17%;
+
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 195 100% 70%;
+    --accent-glow: 195 100% 80%;
+    --accent-foreground: 215 28% 17%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 217 91% 65%;
+
+    /* Dark map controls */
+    --map-control-bg: 215 25% 27%;
+    --map-control-border: 215 20% 35%;
+    --map-control-shadow: 0 0% 0% / 0.3;
+    --map-control-hover: 215 20% 35%;
+    --map-control-active: 217 91% 65%;
+    --gradient-control: linear-gradient(180deg, hsl(215 25% 27%) 0%, hsl(215 28% 17%) 100%);
+    
+    /* Dark glassmorphism - Enhanced for search page */
+    --glass-bg: hsl(0 0% 100% / 0.03);
+    --glass-border: hsl(0 0% 100% / 0.08);
+    --glass-bg-primary: hsl(215 28% 17% / 0.65);
+    --glass-bg-card: hsl(0 0% 100% / 0.06);
+    --glass-border-card: hsl(0 0% 100% / 0.10);
+    --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.24);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
+}
+
+@layer base {
 
   html {
+    /* Mode sombre par défaut */
     @apply dark;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    @apply bg-background text-foreground font-sans;
+    /* Masquer les barres de défilement */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
   }
 
+  /* Masquer les barres de défilement sur les navigateurs Webkit */
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Masquer complètement les barres de défilement sur toute la page */
+  html, body {
+    overflow-x: hidden;
+  }
+
+  /* Styles spécifiques pour cacher les barres de défilement partout */
   * {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
   }
 
   *::-webkit-scrollbar {
@@ -68,14 +204,280 @@
 }
 
 @layer utilities {
-  .scroll-momentum {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+  /* Premium Typography System */
+  .text-display-xl {
+    @apply font-display font-bold text-4xl md:text-5xl tracking-tight;
+  }
+  
+  .text-display-lg {
+    @apply font-display font-bold text-3xl md:text-4xl tracking-tight;
+  }
+  
+  .text-display-md {
+    @apply font-display font-bold text-2xl md:text-3xl tracking-tight;
+  }
+  
+  .text-display-sm {
+    @apply font-display font-semibold text-xl md:text-2xl;
+  }
+  
+  .text-heading-xl {
+    @apply font-display font-semibold text-lg md:text-xl;
+  }
+  
+  .text-heading-lg {
+    @apply font-display font-semibold text-base md:text-lg;
+  }
+  
+  .text-body-lg {
+    @apply font-sans font-normal text-base md:text-lg leading-relaxed;
+  }
+  
+  .text-body-md {
+    @apply font-sans font-normal text-sm md:text-base leading-relaxed;
+  }
+  
+  .text-body-sm {
+    @apply font-sans font-normal text-xs md:text-sm leading-relaxed;
+  }
+  
+  .text-label {
+    @apply font-sans font-medium text-sm uppercase tracking-wider;
+  }
+  
+  /* Legacy support */
+  .text-title {
+    @apply font-display font-bold text-lg md:text-xl uppercase tracking-wide;
+  }
+  
+  .text-subtitle {
+    @apply font-display font-semibold text-base md:text-lg;
+  }
+  
+  .text-heading {
+    @apply font-display font-medium text-sm md:text-base uppercase tracking-wider;
+  }
+  
+  .text-body {
+    @apply font-sans font-normal text-sm md:text-base;
+  }
+  
+  .text-caption {
+    @apply font-sans font-light text-xs md:text-sm;
+  }
+  
+  .text-button {
+    @apply font-display font-semibold text-sm uppercase tracking-wide;
+  }
+  
+  /* Custom Scrollbars - Override global hide when needed */
+  .scrollbar-thin {
+    scrollbar-width: thin !important;
+    -ms-overflow-style: auto !important;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    display: block !important;
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+  }
+  
+  .scrollbar-track-muted::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  .scrollbar-track-muted\/20::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.2);
+  }
+  
+  .scrollbar-thumb-border {
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  
+  .scrollbar-thumb-muted-foreground {
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+  
+  /* Performance optimizations pour navigation instantanée */
+  .instant-button {
+    @apply will-change-transform;
+    transition: transform 50ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+  }
+
+  .instant-button:active {
+    transform: scale(0.98) translateZ(0);
+  }
+
+  /* Glassmorphism utilities */
+  .glass-primary {
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    background: var(--glass-bg-primary);
+    border: 1px solid var(--glass-border-card);
+  }
+  
+  .glass-card {
+    background: var(--glass-bg-card);
+    border: 1px solid var(--glass-border-card);
+    border-radius: 16px;
+    box-shadow: var(--glass-shadow);
+  }
+  
+  /* Fallback si backdrop-filter non supporté */
+  @supports not (backdrop-filter: blur(14px)) {
+    .glass-primary {
+      background: hsl(var(--background));
+      border-color: hsl(var(--border));
+    }
+  }
+
+  /* Audio player custom styling for glass effect */
+  .audio-player-glass {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+  }
+
+  .audio-player-glass::-webkit-media-controls-panel {
+    background: transparent;
+  }
+
+  .audio-player-glass::-webkit-media-controls-enclosure {
+    background: transparent;
+    border-radius: 8px;
   }
 }
 
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-down {
+  animation: slide-down 0.25s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* ===== Scroll horizontal fluide pour les sports ===== */
+
+/* Masquer la scrollbar sur tous les navigateurs */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Smooth scrolling avec inertie */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* ===================================
+   📱 MOMENTUM SCROLLING OPTIMIZATION
+   =================================== */
+
+/* Scroll optimisé avec momentum pour mobile et conteneurs imbriqués */
+.scroll-momentum {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  overscroll-behavior-y: contain; /* Empêche le scroll de remonter au parent */
+  touch-action: pan-y; /* Optimise le touch pour scroll vertical uniquement */
+  scroll-behavior: smooth; /* Scroll fluide sur navigation programmatique */
+  will-change: scroll-position; /* Optimisation GPU */
+}
+
+/* Version pour scroll sans limite de hauteur (full page) */
+.scroll-momentum-full {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto; /* Permet le rebond naturel iOS */
+  touch-action: pan-y;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+}
+
+/* Optimisation globale du scroll sur mobile */
 @media screen and (max-width: 768px) {
+  [class*="overflow-y-auto"],
+  [class*="overflow-auto"] {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+}
+
+/* ===================================
+   ⌨️ ANDROID KEYBOARD HANDLING
+   =================================== */
+
+/* Prevent auto-zoom on input focus (iOS & Android) */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Android keyboard handling - mobile only */
+@media screen and (max-width: 768px) {
+  /* Ensure root containers handle height properly */
   html, body {
     height: 100%;
     overflow: hidden;
@@ -89,7 +491,37 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  input, textarea, select {
-    font-size: 16px !important;
+  /* Container aware of keyboard */
+  .keyboard-aware-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height - accounts for mobile keyboards */
+    overflow: hidden;
+  }
+
+  /* Input container that moves with keyboard */
+  .keyboard-input-container {
+    flex-shrink: 0;
+    transform: translateZ(0); /* Force GPU acceleration for smooth movement */
+    will-change: transform;
+  }
+
+  /* Custom thin scrollbar for dialogs */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
   }
 }

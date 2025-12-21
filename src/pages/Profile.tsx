@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ArrowLeft } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -589,128 +589,241 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background px-5 py-6">
-      <div className="max-w-md mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          {isViewingOtherUser && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          )}
-          <h1 className="text-xl font-semibold flex-1">
-            {isViewingOtherUser ? 'Profil' : 'Mon Profil'}
-          </h1>
-          {!isViewingOtherUser && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowSettingsDialog(true)}
-              className="rounded-full"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-          )}
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-md mx-auto space-y-4">
+        <div className="text-center py-8">
+          <div className="flex items-center gap-3 justify-center mb-2">
+            {isViewingOtherUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="gap-2"
+              >
+                ← Retour
+              </Button>
+            )}
+            <h1 className="text-2xl font-bold text-foreground">
+              {isViewingOtherUser ? 'Profil utilisateur' : 'Mon Profil'}
+            </h1>
+          </div>
         </div>
 
         {/* Avatar Section */}
-        <div className="flex flex-col items-center py-4">
-          <div className="relative mb-4">
-            <Avatar className="h-24 w-24 ring-4 ring-muted">
-              <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="text-2xl font-semibold bg-muted">
-                {profile?.display_name?.[0]?.toUpperCase() || 
-                 profile?.username?.[0]?.toUpperCase() || 
-                 user?.email?.[0]?.toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-            {isEditing && !isViewingOtherUser && (
-              <button 
-                type="button"
-                onClick={async () => {
-                  try {
-                    const file = await selectFromGallery();
-                    if (file) {
-                      handleAvatarChange({ target: { files: [file] } } as any);
+        <Card>
+          <CardContent className="flex flex-col items-center py-6">
+            <div className="relative mb-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
+                <AvatarFallback className="text-lg">
+                  {profile?.display_name?.[0]?.toUpperCase() || 
+                   profile?.username?.[0]?.toUpperCase() || 
+                   user?.email?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              {isEditing && !isViewingOtherUser && (
+                <button 
+                  type="button"
+                  onClick={async () => {
+                    console.log('📸 Début sélection galerie');
+                    
+                    try {
+                      const file = await selectFromGallery();
+                      if (file) {
+                        handleAvatarChange({ target: { files: [file] } } as any);
+                      }
+                    } catch (error) {
+                      console.error('❌ Erreur sélection galerie:', error);
+                      toast({
+                        title: "Erreur",
+                        description: "Impossible d'accéder à la galerie",
+                        variant: "destructive"
+                      });
                     }
-                  } catch (error) {
-                    toast({
-                      title: "Erreur",
-                      description: "Impossible d'accéder à la galerie",
-                      variant: "destructive"
-                    });
-                  }
-                }}
-                disabled={cameraLoading}
-                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2.5 shadow-lg"
-              >
-                <Camera className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
-              {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                <Crown className="h-5 w-5 text-yellow-500" />
+                  }}
+                  disabled={cameraLoading}
+                  className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 disabled:opacity-50"
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
               )}
             </div>
-            {profile?.bio && (
-              <p className="text-sm text-muted-foreground max-w-xs">{profile.bio}</p>
+            {isEditing && !isViewingOtherUser && (
+              <>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Cliquez sur l'icône pour changer votre photo
+                </p>
+              </>
             )}
-          </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
+                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                  )}
+                </div>
+            {!isViewingOtherUser && (
+                <div className="flex flex-col items-center gap-2 mb-4">
+                  {profile?.is_admin && (
+                    <Badge className="bg-red-100 text-red-800 border-red-200">
+                      Admin
+                    </Badge>
+                  )}
+                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                    <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                      {subscriptionInfo?.subscription_tier || 'Premium'}
+                    </Badge>
+                  )}
+                  {!subscriptionInfo?.subscribed && (
+                    <Button 
+                      onClick={() => navigate('/subscription')}
+                      variant="outline" 
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Crown className="h-4 w-4" />
+                      Devenir Premium
+                    </Button>
+                  )}
+                </div>
+            )}
+            
+            {/* Badge de vérification */}
+            {(() => {
+              console.log('Profile state:', {
+                strava_connected: profile?.strava_connected,
+                strava_verified_at: profile?.strava_verified_at,
+                instagram_connected: profile?.instagram_connected,
+                instagram_verified_at: profile?.instagram_verified_at,
+                profile: profile
+              });
+              
+              const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
+              const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
+              
+              if (isStravaVerified && isInstagramVerified) {
+                return (
+                  <div className="mt-2 mb-2 space-y-1">
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors mr-2"
+                    >
+                      <span className="text-orange-600">🏃</span>
+                      ✓ Strava
+                    </button>
+                    <button
+                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
+                    >
+                      <span className="text-pink-600">📷</span>
+                      ✓ Instagram
+                    </button>
+                  </div>
+                );
+              } else if (isStravaVerified) {
+                return (
+                  <div className="mt-2 mb-2">
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                    >
+                      <span className="text-orange-600">🏃</span>
+                      ✓ Utilisateur vérifié Strava
+                    </button>
+                  </div>
+                );
+              } else if (isInstagramVerified) {
+                return (
+                  <div className="mt-2 mb-2">
+                    <button
+                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
+                    >
+                      <span className="text-pink-600">📷</span>
+                      ✓ Utilisateur vérifié Instagram
+                    </button>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="mt-2 mb-2">
+                    {isViewingOtherUser ? (
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                        <span className="text-gray-500">⚠️</span>
+                        Utilisateur non vérifié
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          console.log('Badge non vérifié cliqué, showSettingsDialog état:', showSettingsDialog);
+                          setShowSettingsDialog(true);
+                          console.log('Après setShowSettingsDialog(true), nouvel état:', showSettingsDialog);
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-gray-500">⚠️</span>
+                        Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+            })()}
+            
+            <div className="flex gap-4 mt-4">
+              <button
+                onClick={() => {
+                  setFollowDialogType('followers');
+                  setShowFollowDialog(true);
+                }}
+                className="text-center hover:text-primary transition-colors"
+              >
+                <p className="font-bold text-lg">{followerCount}</p>
+                <p className="text-sm text-muted-foreground">Abonnés</p>
+              </button>
+              <button
+                onClick={() => {
+                  setFollowDialogType('following');
+                  setShowFollowDialog(true);
+                }}
+                className="text-center hover:text-primary transition-colors"
+              >
+                <p className="font-bold text-lg">{followingCount}</p>
+                <p className="text-sm text-muted-foreground">Abonnements</p>
+              </button>
+            </div>
 
-          {/* Followers/Following */}
-          <div className="flex gap-8 mt-4">
-            <button
-              onClick={() => {
-                setFollowDialogType('followers');
-                setShowFollowDialog(true);
-              }}
-              className="text-center hover:opacity-70 transition-opacity"
-            >
-              <p className="font-bold text-lg">{followerCount}</p>
-              <p className="text-sm text-muted-foreground">Abonnés</p>
-            </button>
-            <button
-              onClick={() => {
-                setFollowDialogType('following');
-                setShowFollowDialog(true);
-              }}
-              className="text-center hover:opacity-70 transition-opacity"
-            >
-              <p className="font-bold text-lg">{followingCount}</p>
-              <p className="text-sm text-muted-foreground">Abonnements</p>
-            </button>
-          </div>
+            {/* Reliability Badge - Visible pour tous les profils */}
+            <div className="mt-4 w-full px-4">
+              <ReliabilityBadge 
+                rate={reliabilityRate}
+                onClick={() => setShowReliabilityDetails(true)}
+              />
+            </div>
 
-          {/* Reliability Badge */}
-          <div className="mt-4 w-full max-w-xs">
-            <ReliabilityBadge 
-              rate={reliabilityRate}
-              onClick={() => setShowReliabilityDetails(true)}
-            />
-          </div>
-
-          {/* Report button for other users */}
-          {isViewingOtherUser && (
-            <Button
-              onClick={() => setShowReportDialog(true)}
-              variant="ghost"
-              size="sm"
-              className="mt-4 text-muted-foreground hover:text-destructive"
-            >
-              <Flag className="h-4 w-4 mr-2" />
-              Signaler
-            </Button>
-          )}
-        </div>
+            {/* Bouton de signalement - Seulement pour les autres utilisateurs */}
+            {isViewingOtherUser && (
+              <div className="mt-4">
+                <Button
+                  onClick={() => setShowReportDialog(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                >
+                  <Flag className="h-4 w-4" />
+                  Signaler cet utilisateur
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Informations Section - Only for own profile */}
         {!isViewingOtherUser && (

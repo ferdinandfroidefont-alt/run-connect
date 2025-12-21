@@ -1,8 +1,10 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Filter } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { ClubSelector } from "./ClubSelector";
 
 interface Filter {
   activity_types: string[];
@@ -19,10 +21,10 @@ interface SessionFiltersProps {
 }
 
 const activityTypes = [
-  { id: 'course', label: 'Course', emoji: '🏃' },
-  { id: 'velo', label: 'Vélo', emoji: '🚴' },
-  { id: 'natation', label: 'Natation', emoji: '🏊' },
-  { id: 'marche', label: 'Marche', emoji: '🚶' },
+  { id: 'course', label: '🏃 Course à pied', color: 'bg-red-500' },
+  { id: 'velo', label: '🚴 Vélo', color: 'bg-blue-500' },
+  { id: 'natation', label: '🏊 Natation', color: 'bg-cyan-500' },
+  { id: 'marche', label: '🚶 Marche', color: 'bg-green-500' },
 ];
 
 const sessionTypes = [
@@ -62,105 +64,142 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
     });
   };
 
-  const activeFiltersCount = filters.activity_types.length + filters.session_types.length + (filters.friends_only ? 1 : 0);
+  const activeFiltersCount = filters.activity_types.length + filters.session_types.length;
+
+  const getActiveFilterLabel = () => {
+    const labels = [];
+    
+    if (filters.friends_only) {
+      labels.push("Amis uniquement");
+    }
+    
+    if (filters.selected_club_id) {
+      labels.push("Clubs sélectionnés");
+    }
+    
+    return labels.join(" • ");
+  };
+
+  const activeFilterLabel = getActiveFilterLabel();
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <button className="relative w-12 h-12 bg-card rounded-2xl shadow-medium flex items-center justify-center active:scale-95 transition-transform">
-          <SlidersHorizontal size={20} className="text-foreground" />
-          {activeFiltersCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-semibold rounded-full flex items-center justify-center">
-              {activeFiltersCount}
-            </span>
-          )}
-        </button>
-      </SheetTrigger>
-      
-      <SheetContent side="bottom" className="h-auto max-h-[70vh] rounded-t-3xl px-6 pb-8">
-        <SheetHeader className="pb-6">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-xl font-semibold">Filtres</SheetTitle>
+    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control`}>
+      {/* Header cliquable - toujours visible */}
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
+      >
+        {isOpen ? (
+          <>
+            <h3 className="font-semibold leading-none pt-0.5">Filtres</h3>
+            <div className="flex items-center gap-2">
+              {activeFiltersCount > 0 && (
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearAllFilters();
+                  }}
+                  size="sm" 
+                  variant="ghost" 
+                  className="text-xs h-6 px-2"
+                >
+                  Effacer
+                </Button>
+              )}
+              <Filter className="h-4 w-4" />
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 mt-0.5" />
+            
+            {/* Texte descriptif si filtres avancés actifs */}
+            {activeFilterLabel && (
+              <span className="text-xs font-medium text-foreground">
+                {activeFilterLabel}
+              </span>
+            )}
+            
+            {/* Badge nombre de filtres (types activité + types sortie) */}
             {activeFiltersCount > 0 && (
-              <Button 
-                onClick={clearAllFilters}
-                variant="ghost" 
-                size="sm"
-                className="text-primary"
-              >
-                Effacer tout
-              </Button>
+              <Badge variant="secondary" className="h-5 px-1 text-xs">
+                {activeFiltersCount}
+              </Badge>
             )}
           </div>
-        </SheetHeader>
+        )}
+      </div>
 
-        <div className="space-y-8">
-          {/* Activity Types */}
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-4">Activité</h4>
-            <div className="flex flex-wrap gap-3">
-              {activityTypes.map((activity) => (
-                <button
-                  key={activity.id}
-                  onClick={() => toggleActivityType(activity.id)}
-                  className={cn(
-                    "px-4 py-2.5 rounded-full text-sm font-medium transition-colors",
-                    filters.activity_types.includes(activity.id)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  )}
-                >
-                  {activity.emoji} {activity.label}
-                </button>
-              ))}
+      {/* Contenu qui apparaît au clic */}
+      {isOpen && (
+        <CardContent className="p-4 pt-0">
+          <Separator className="mb-4" />
+
+          <div className="space-y-4">
+            {/* Activity Types */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Type d'activité</h4>
+              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                {activityTypes.map((activity) => (
+                  <Button
+                    key={activity.id}
+                    onClick={() => toggleActivityType(activity.id)}
+                    variant={filters.activity_types.includes(activity.id) ? "default" : "outline"}
+                    size="sm"
+                    className="justify-start text-xs h-8"
+                  >
+                    <div className={`w-2 h-2 rounded-full mr-2 ${activity.color}`} />
+                    {activity.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Session Types */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Type de sortie</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {sessionTypes.map((sessionType) => (
+                  <Button
+                    key={sessionType.id}
+                    onClick={() => toggleSessionType(sessionType.id)}
+                    variant={filters.session_types.includes(sessionType.id) ? "default" : "outline"}
+                    size="sm"
+                    className="justify-start text-xs h-8"
+                  >
+                    {sessionType.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Filtres avancés */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Filtres avancés</h4>
+              
+              {/* Bouton Amis uniquement */}
+              <Button
+                onClick={() => onFiltersChange({ ...filters, friends_only: !filters.friends_only })}
+                variant={filters.friends_only ? "default" : "outline"}
+                size="sm"
+                className="justify-start text-xs h-8 w-full mb-2"
+              >
+                👥 Amis uniquement
+              </Button>
+              
+              {/* Club Selector */}
+              <ClubSelector
+                selectedClubId={filters.selected_club_id}
+                onClubSelect={(clubId) => onFiltersChange({ ...filters, selected_club_id: clubId })}
+              />
             </div>
           </div>
-
-          {/* Session Types */}
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-4">Type de séance</h4>
-            <div className="flex flex-wrap gap-3">
-              {sessionTypes.map((sessionType) => (
-                <button
-                  key={sessionType.id}
-                  onClick={() => toggleSessionType(sessionType.id)}
-                  className={cn(
-                    "px-4 py-2.5 rounded-full text-sm font-medium transition-colors",
-                    filters.session_types.includes(sessionType.id)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  )}
-                >
-                  {sessionType.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Friends Only */}
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-4">Visibilité</h4>
-            <button
-              onClick={() => onFiltersChange({ ...filters, friends_only: !filters.friends_only })}
-              className={cn(
-                "px-4 py-2.5 rounded-full text-sm font-medium transition-colors",
-                filters.friends_only
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground"
-              )}
-            >
-              👥 Amis uniquement
-            </button>
-          </div>
-        </div>
-
-        <Button 
-          onClick={() => setIsOpen(false)}
-          className="w-full mt-8 h-12 rounded-2xl text-base font-medium"
-        >
-          Appliquer
-        </Button>
-      </SheetContent>
-    </Sheet>
+        </CardContent>
+      )}
+    </Card>
   );
 };

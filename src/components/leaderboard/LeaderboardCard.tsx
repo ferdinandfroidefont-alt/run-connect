@@ -1,5 +1,7 @@
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, TrendingDown, Flame, Flag, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LeaderboardCardProps {
@@ -21,73 +23,90 @@ interface LeaderboardCardProps {
 export const LeaderboardCard = ({
   rank,
   username,
+  displayName,
   avatarUrl,
   points,
   level,
+  rankChange,
+  hasRecentActivity = false,
+  hasRecentRace = false,
   isPremium = false,
   userRank,
   onClick,
   highlight = false
 }: LeaderboardCardProps) => {
-  const getRankIndicator = () => {
-    switch (userRank) {
-      case 'diamant': return 'bg-cyan-500';
-      case 'platine': return 'bg-purple-500';
-      case 'or': return 'bg-yellow-500';
-      case 'argent': return 'bg-gray-400';
-      case 'bronze': return 'bg-amber-600';
-      default: return 'bg-muted';
+  const getLevelBadge = () => {
+    switch (level) {
+      case 'elite':
+        return <Badge className="bg-gradient-to-r from-purple-500 to-yellow-500 text-white text-xs border-0">Elite</Badge>;
+      case 'confirmed':
+        return <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs border-0">Confirmé</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">Novice</Badge>;
     }
   };
 
-  const getLevelLabel = () => {
-    switch (level) {
-      case 'elite': return 'Elite';
-      case 'confirmed': return 'Confirmé';
-      default: return 'Novice';
+  const getRankBorder = () => {
+    switch (userRank) {
+      case 'diamant': return 'border-l-4 border-l-cyan-400';
+      case 'platine': return 'border-l-4 border-l-purple-500';
+      case 'or': return 'border-l-4 border-l-yellow-500';
+      case 'argent': return 'border-l-4 border-l-gray-400';
+      case 'bronze': return 'border-l-4 border-l-amber-600';
+      default: return '';
     }
   };
 
   return (
-    <button
-      onClick={onClick}
+    <Card 
       className={cn(
-        "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left",
-        highlight 
-          ? "bg-primary/10 border border-primary/20" 
-          : "bg-card hover:bg-muted/50 border border-border"
+        "hover:shadow-md transition-all cursor-pointer",
+        getRankBorder(),
+        highlight && "bg-primary/5 border-primary/30"
       )}
+      onClick={onClick}
     >
-      {/* Rank */}
-      <div className="w-8 flex-shrink-0">
-        <span className="text-sm font-bold text-muted-foreground">#{rank}</span>
-      </div>
+      <CardContent className="p-2.5 flex items-center gap-3">
+        {/* Rank */}
+        <div className="w-8 text-center">
+          <span className="text-sm font-bold text-muted-foreground">#{rank}</span>
+        </div>
 
-      {/* Avatar with rank indicator */}
-      <div className="relative">
-        <Avatar className="h-10 w-10">
+        {/* Avatar */}
+        <Avatar className="h-11 w-11 shrink-0">
           <AvatarImage src={avatarUrl} />
-          <AvatarFallback className="text-sm font-medium">
-            {username?.[0]?.toUpperCase() || '?'}
+          <AvatarFallback className="text-sm font-bold">
+            {username?.[0] || displayName?.[0] || '?'}
           </AvatarFallback>
         </Avatar>
-        <div className={cn("absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background", getRankIndicator())} />
-      </div>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="font-medium text-sm truncate">{username}</p>
-          {isPremium && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />}
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm truncate">{username}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {getLevelBadge()}
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">{getLevelLabel()}</p>
-      </div>
 
-      {/* Points */}
-      <div className="text-right flex-shrink-0">
-        <p className="font-semibold text-sm">{points.toLocaleString()}</p>
-        <p className="text-xs text-muted-foreground">pts</p>
-      </div>
-    </button>
+        {/* Points & Badges */}
+        <div className="flex flex-col items-end gap-1">
+          <p className="font-bold text-primary text-sm">{points.toLocaleString()} pts</p>
+          <div className="flex items-center gap-1">
+            {hasRecentActivity && <Flame className="h-3.5 w-3.5 text-orange-500" />}
+            {hasRecentRace && <Flag className="h-3.5 w-3.5 text-green-500" />}
+            {isPremium && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />}
+            {rankChange !== undefined && rankChange !== 0 && (
+              <div className={cn(
+                "flex items-center gap-0.5 text-xs font-medium",
+                rankChange > 0 ? "text-green-500" : "text-red-500"
+              )}>
+                {rankChange > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                <span>{Math.abs(rankChange)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

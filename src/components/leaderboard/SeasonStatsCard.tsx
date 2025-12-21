@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Trophy, Award, Target, Users } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Trophy, Award, Target } from "lucide-react";
 
 interface SeasonStatsCardProps {
   sessionsJoined: number;
@@ -17,25 +17,33 @@ export const SeasonStatsCard = ({
   friendsReferred
 }: SeasonStatsCardProps) => {
   const stats = [
-    { icon: Trophy, label: "Rejointes", value: sessionsJoined },
-    { icon: Calendar, label: "Créées", value: sessionsCreated },
-    { icon: Target, label: "Points", value: totalPoints.toLocaleString() },
-    { icon: Award, label: "Badges", value: badgesWon },
-    { icon: Users, label: "Parrainés", value: friendsReferred },
+    { icon: Trophy, label: "Rejointes", value: sessionsJoined, color: "text-blue-500" },
+    { icon: Calendar, label: "Créées", value: sessionsCreated, color: "text-green-500" },
+    { icon: Target, label: "Points", value: totalPoints.toLocaleString(), color: "text-purple-500" },
+    { icon: Award, label: "Badges", value: badgesWon, color: "text-yellow-500" },
+    { icon: Trophy, label: "Parrainés", value: friendsReferred, color: "text-pink-500" },
   ];
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <h3 className="text-sm font-medium text-muted-foreground mb-3">Ma Saison</h3>
-        <div className="grid grid-cols-5 gap-2">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          Ma Saison
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        <div className="grid grid-cols-3 gap-2">
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <div key={index} className="flex flex-col items-center">
-                <Icon className="h-4 w-4 text-muted-foreground mb-1" />
+              <div 
+                key={index}
+                className="bg-card/50 rounded-lg p-2 flex flex-col items-center justify-center border border-border/50 hover:border-primary/30 transition-all"
+              >
+                <Icon className={`h-5 w-5 ${stat.color} mb-1`} />
                 <p className="text-lg font-bold">{stat.value}</p>
-                <p className="text-[10px] text-muted-foreground">{stat.label}</p>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
               </div>
             );
           })}
