@@ -23,11 +23,14 @@ export default {
     				'Inter',
     				'ui-sans-serif',
     				'system-ui',
-    				'sans-serif',
-    				'Apple Color Emoji',
-    				'Segoe UI Emoji',
-    				'Segoe UI Symbol',
-    				'Noto Color Emoji'
+    				'-apple-system',
+    				'BlinkMacSystemFont',
+    				'Segoe UI',
+    				'Roboto',
+    				'Helvetica Neue',
+    				'Arial',
+    				'Noto Sans',
+    				'sans-serif'
     			],
     			display: [
     				'Sora',
@@ -35,6 +38,7 @@ export default {
     				'sans-serif'
     			],
     			serif: [
+    				'Lora',
     				'ui-serif',
     				'Georgia',
     				'Cambria',
@@ -43,7 +47,7 @@ export default {
     				'serif'
     			],
     			mono: [
-    				'JetBrains Mono',
+    				'Space Mono',
     				'ui-monospace',
     				'SFMono-Regular',
     				'Menlo',
@@ -125,7 +129,8 @@ export default {
     			'2xl': 'var(--shadow-2xl)',
     			glow: 'var(--shadow-glow)',
     			'map-control': 'var(--shadow-map-control)',
-    			'map-panel': 'var(--shadow-map-panel)'
+    			'map-panel': 'var(--shadow-map-panel)',
+    			'2xs': 'var(--shadow-2xs)'
     		},
     		transitionProperty: {
     			map: 'var(--transition-map)'
