@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable } from '@/lib/googleSignIn';
+import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +27,8 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<CaptchaWidgetRef>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -287,9 +290,14 @@ const Auth = () => {
           password: password.trim(),
           options: {
             emailRedirectTo: `${window.location.origin}/`,
+            captchaToken: captchaToken || undefined,
           },
         });
         if (error) throw error;
+        
+        // Reset captcha after submission
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
         
         // Traiter le parrainage si un code est présent
         const referralCode = sessionStorage.getItem('referralCode');
@@ -320,10 +328,15 @@ const Auth = () => {
           email,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            shouldCreateUser: true
+            shouldCreateUser: true,
+            captchaToken: captchaToken || undefined,
           },
         });
         if (error) throw error;
+        
+        // Reset captcha after submission
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
         
         setAuthStep('otp');
         toast({
@@ -449,7 +462,14 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse.trim(),
         password: password,
+        options: {
+          captchaToken: captchaToken || undefined,
+        },
       });
+      
+      // Reset captcha after submission
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
       
       if (error) {
         console.error('🔐 Erreur auth complète:', {
@@ -839,11 +859,19 @@ const Auth = () => {
                 </div>
               </div>
 
+              {/* hCaptcha Widget */}
+              <CaptchaWidget
+                ref={captchaRef}
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+                onError={() => setCaptchaToken(null)}
+              />
+
               <Button
                 type="submit"
                 variant="gradient"
                 className="w-full h-12 text-button"
-                disabled={isLoading}
+                disabled={isLoading || !captchaToken}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Continuer
@@ -873,11 +901,19 @@ const Auth = () => {
                   </div>
                 </div>
 
+                {/* hCaptcha Widget for OTP signin */}
+                <CaptchaWidget
+                  ref={captchaRef}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => setCaptchaToken(null)}
+                />
+
                 <Button
                   type="submit"
                   variant="gradient"
                   className="w-full h-12 text-button"
-                  disabled={isLoading}
+                  disabled={isLoading || !captchaToken}
                 >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Recevoir un code par email
@@ -975,11 +1011,19 @@ const Auth = () => {
                   </div>
                 </div>
 
+                {/* hCaptcha Widget for Password signin */}
+                <CaptchaWidget
+                  ref={captchaRef}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => setCaptchaToken(null)}
+                />
+
                 <Button
                   type="submit"
                   variant="outline"
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || !captchaToken}
                 >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Se connecter
