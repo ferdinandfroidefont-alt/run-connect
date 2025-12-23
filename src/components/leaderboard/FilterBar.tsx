@@ -62,6 +62,15 @@ const additionalSports: { value: ActivityType; label: string; emoji: string }[] 
   { value: 'surf', label: 'Surf', emoji: '🏄' }
 ];
 
+const filterColors: Record<string, { gradient: string; shadow: string }> = {
+  'general': { gradient: 'from-blue-500 to-cyan-500', shadow: 'shadow-blue-500/30' },
+  'running': { gradient: 'from-orange-500 to-red-500', shadow: 'shadow-orange-500/30' },
+  'cycling': { gradient: 'from-green-500 to-emerald-500', shadow: 'shadow-green-500/30' },
+  'walking': { gradient: 'from-teal-500 to-cyan-500', shadow: 'shadow-teal-500/30' },
+  'friends': { gradient: 'from-purple-500 to-pink-500', shadow: 'shadow-purple-500/30' },
+  'clubs': { gradient: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/30' },
+};
+
 export const FilterBar = ({ 
   activeFilter, 
   onFilterChange, 
@@ -117,21 +126,30 @@ export const FilterBar = ({
     return null;
   };
 
+  const getFilterStyle = (filterValue: string, isActive: boolean) => {
+    const colors = filterColors[filterValue] || filterColors['general'];
+    if (isActive) {
+      return `bg-gradient-to-r ${colors.gradient} text-white shadow-lg ${colors.shadow} border-0 hover:scale-105`;
+    }
+    return "bg-background/50 hover:bg-background/80 border-border/50";
+  };
+
   return (
     <>
       <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
         <div className="flex gap-2 min-w-max px-1">
           {mainFilters.map((filter) => {
             const Icon = filter.icon;
+            const isActive = activeFilter === filter.value;
             return (
               <Button
                 key={filter.value}
-                variant={activeFilter === filter.value ? "default" : "outline"}
+                variant="outline"
                 size="sm"
                 onClick={() => onFilterChange(filter.value)}
                 className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap transition-all",
-                  activeFilter === filter.value && "shadow-md"
+                  "flex items-center gap-1.5 whitespace-nowrap transition-all duration-300",
+                  getFilterStyle(filter.value, isActive)
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -142,12 +160,12 @@ export const FilterBar = ({
           
           {userClubs.length > 0 && (
             <Button
-              variant={activeFilter === 'clubs' ? "default" : "outline"}
+              variant="outline"
               size="sm"
               onClick={handleClubsClick}
               className={cn(
-                "flex items-center gap-1.5 whitespace-nowrap transition-all",
-                activeFilter === 'clubs' && "shadow-md"
+                "flex items-center gap-1.5 whitespace-nowrap transition-all duration-300",
+                getFilterStyle('clubs', activeFilter === 'clubs')
               )}
             >
               <Home className="h-4 w-4" />
@@ -156,12 +174,14 @@ export const FilterBar = ({
           )}
 
           <Button
-            variant={isAdditionalSport(activeFilter) ? "default" : "outline"}
+            variant="outline"
             size="sm"
             onClick={() => setShowSportsDialog(true)}
             className={cn(
-              "flex items-center gap-1.5 whitespace-nowrap transition-all",
-              isAdditionalSport(activeFilter) && "shadow-md"
+              "flex items-center gap-1.5 whitespace-nowrap transition-all duration-300",
+              isAdditionalSport(activeFilter) 
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 border-0 hover:scale-105"
+                : "bg-background/50 hover:bg-background/80 border-border/50"
             )}
           >
             <Plus className="h-4 w-4" />
@@ -172,17 +192,18 @@ export const FilterBar = ({
 
       {/* Dialog de sélection des clubs */}
       <Dialog open={showClubsDialog} onOpenChange={setShowClubsDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass-primary">
           <DialogHeader>
-            <DialogTitle>Sélectionner vos clubs</DialogTitle>
+            <DialogTitle className="text-gradient-primary">Sélectionner vos clubs</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
             {userClubs.map((club) => (
-              <div key={club.id} className="flex items-center space-x-2">
+              <div key={club.id} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/5 transition-colors">
                 <Checkbox
                   id={club.id}
                   checked={tempSelectedClubs.includes(club.id)}
                   onCheckedChange={() => toggleClub(club.id)}
+                  className="border-primary/50 data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-accent"
                 />
                 <Label
                   htmlFor={club.id}
@@ -202,7 +223,7 @@ export const FilterBar = ({
             <Button variant="outline" onClick={() => setShowClubsDialog(false)}>
               Annuler
             </Button>
-            <Button onClick={handleApplyClubs}>
+            <Button onClick={handleApplyClubs} className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
               Appliquer
             </Button>
           </div>
@@ -211,16 +232,21 @@ export const FilterBar = ({
 
       {/* Dialog des sports supplémentaires */}
       <Dialog open={showSportsDialog} onOpenChange={setShowSportsDialog}>
-        <DialogContent className="sm:max-w-md flex flex-col items-center">
+        <DialogContent className="sm:max-w-md flex flex-col items-center glass-primary">
           <DialogHeader className="w-full">
-            <DialogTitle className="text-center">Autres sports</DialogTitle>
+            <DialogTitle className="text-center text-gradient-primary">Autres sports</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-2 py-4 max-h-[60vh] overflow-y-auto scrollbar-hide w-full px-2">
             {additionalSports.map((sport) => (
               <Button
                 key={sport.value}
-                variant={activeFilter === sport.value ? "default" : "outline"}
-                className="h-20 flex-col gap-2"
+                variant="outline"
+                className={cn(
+                  "h-20 flex-col gap-2 transition-all duration-300",
+                  activeFilter === sport.value 
+                    ? "bg-gradient-to-br from-primary/20 to-accent/20 border-primary/50 shadow-lg shadow-primary/20"
+                    : "hover:bg-white/5"
+                )}
                 onClick={() => {
                   onFilterChange(sport.value);
                   setShowSportsDialog(false);

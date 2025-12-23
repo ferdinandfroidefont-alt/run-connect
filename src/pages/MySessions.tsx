@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
+import { cn } from '@/lib/utils';
 
 interface UserSession {
   id: string;
@@ -565,8 +566,11 @@ export default function MySessions() {
       {/* Petite barre noire en haut uniquement pour MySessions */}
       <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
       <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
-        {/* Fixed Header Only */}
-        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
+        {/* Fixed Header Only with glass effect */}
+        <div className="fixed top-6 left-0 right-0 flex-shrink-0 glass-primary z-50 space-y-4 pb-4 border-b border-primary/20">
+          {/* Animated gradient top bar */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 animate-[shimmer_3s_ease-in-out_infinite]" style={{ backgroundSize: '200% 100%' }} />
+          
           <div className="container mx-auto px-4 pt-4">
           <div className="flex items-center justify-center -mt-2">
             <Button
@@ -575,7 +579,7 @@ export default function MySessions() {
                 navigate('/route-create');
               }}
               size="sm"
-              className="gap-2"
+              className="gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:scale-105 transition-all duration-300"
             >
               <Route className="h-4 w-4" />
               Créer un itinéraire
@@ -585,18 +589,26 @@ export default function MySessions() {
             <div className="flex gap-2">
               <Button
                 onClick={() => setCurrentView('sessions')}
-                variant={currentView === 'sessions' ? 'default' : 'outline'}
                 size="sm"
-                className="gap-2"
+                className={cn(
+                  "gap-2 transition-all duration-300",
+                  currentView === 'sessions' 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30' 
+                    : 'bg-background/50 text-foreground hover:bg-background/80 border border-border/50'
+                )}
               >
                 <Users className="h-4 w-4" />
                 Mes Séances
               </Button>
               <Button
                 onClick={() => setCurrentView('routes')}
-                variant={currentView === 'routes' ? 'default' : 'outline'}
                 size="sm"
-                className="gap-2"
+                className={cn(
+                  "gap-2 transition-all duration-300",
+                  currentView === 'routes' 
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30' 
+                    : 'bg-background/50 text-foreground hover:bg-background/80 border border-border/50'
+                )}
               >
                 <Route className="h-4 w-4" />
                 Mes Itinéraires
@@ -620,9 +632,19 @@ export default function MySessions() {
               {filteredSessions.slice(0, 6).map((session) => (
                 <Card 
                   key={session.id} 
-                  className="cursor-pointer hover:shadow-sm transition-shadow"
+                  variant="glass"
+                  className="cursor-pointer hover:shadow-lg transition-all duration-300 card-hover-glow overflow-hidden"
                   onClick={() => handleSessionClick(session)}
                 >
+                  {/* Activity color bar */}
+                  <div className={cn(
+                    "h-1 bg-gradient-to-r",
+                    session.activity_type === 'course' && "from-orange-500 to-red-500",
+                    session.activity_type === 'velo' && "from-blue-500 to-cyan-500",
+                    session.activity_type === 'marche' && "from-green-500 to-emerald-500",
+                    session.activity_type === 'natation' && "from-cyan-500 to-blue-500",
+                    !['course', 'velo', 'marche', 'natation'].includes(session.activity_type) && "from-primary to-accent"
+                  )} />
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex gap-2 flex-1 min-w-0">
@@ -630,7 +652,7 @@ export default function MySessions() {
                           <img 
                             src={session.image_url} 
                             alt={session.title}
-                            className="w-10 h-10 object-cover rounded flex-shrink-0"
+                            className="w-10 h-10 object-cover rounded-lg flex-shrink-0 ring-2 ring-primary/20"
                           />
                         )}
                         <div className="flex-1 min-w-0">
@@ -640,13 +662,13 @@ export default function MySessions() {
                           </div>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
-                              <Calendar size={10} />
+                              <Calendar size={10} className="text-primary" />
                               <span>{format(new Date(session.scheduled_at), 'dd/MM')}</span>
-                              <Clock size={10} className="ml-1" />
+                              <Clock size={10} className="ml-1 text-accent" />
                               <span>{format(new Date(session.scheduled_at), 'HH:mm')}</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Users size={10} />
+                              <Users size={10} className="text-green-500" />
                               <span>{session.current_participants || 0}</span>
                             </div>
                           </div>
@@ -654,7 +676,7 @@ export default function MySessions() {
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {getStatusBadge(session)}
-                        <Badge variant="outline" className="text-xs px-1 py-0">Créateur</Badge>
+                        <Badge className="text-xs px-1 py-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-400 border-purple-500/30">Créateur</Badge>
                       </div>
                     </div>
                   </CardContent>
