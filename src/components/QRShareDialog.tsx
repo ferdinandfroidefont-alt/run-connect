@@ -46,7 +46,7 @@ export const QRShareDialog = ({
       console.log('🔍 Generating QR for URL:', profileUrl);
       
       const qrDataURL = await QRCode.toDataURL(profileUrl, {
-        width: 250,
+        width: 320,
         margin: 2,
         color: {
           dark: '#1a1f3a',  // Bleu foncé RunConnect
@@ -282,7 +282,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
                 <div className="relative bg-gradient-to-br from-card to-card/80 p-4 rounded-2xl border border-primary/20 shadow-lg">
                   {isLoading ? (
-                    <div className="w-[180px] h-[180px] flex items-center justify-center">
+                    <div className="w-[240px] h-[240px] flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                     </div>
                   ) : qrImageUrl ? (
@@ -290,10 +290,10 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                       src={qrImageUrl} 
                       alt="QR Code du profil"
                       className="rounded-lg"
-                      style={{ width: 180, height: 180 }}
+                      style={{ width: 240, height: 240 }}
                     />
                   ) : (
-                    <div className="w-[180px] h-[180px] flex items-center justify-center text-muted-foreground text-sm">
+                    <div className="w-[240px] h-[240px] flex items-center justify-center text-muted-foreground text-sm">
                       Erreur de génération
                     </div>
                   )}
