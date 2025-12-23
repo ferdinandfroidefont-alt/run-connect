@@ -11,7 +11,6 @@ import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable } from '@/lib/googleSignIn';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
-
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [authStep, setAuthStep] = useState<'email' | 'otp' | 'password' | 'reset'>('email');
@@ -29,28 +28,34 @@ const Auth = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captchaRef = useRef<CaptchaWidgetRef>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     // 🧹 NOUVEAU: Nettoyer les sessions expirées au chargement
     const cleanExpiredSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const {
+          data: {
+            session
+          }
+        } = await supabase.auth.getSession();
         if (session) {
           const expiresAt = session.expires_at;
           const now = Math.floor(Date.now() / 1000);
-          
+
           // Si la session a expiré depuis plus de 1 jour (86400 secondes)
           if (expiresAt && expiresAt < now - 86400) {
             console.log('🧹 Session expirée détectée (>24h), nettoyage automatique...');
-            await supabase.auth.signOut({ scope: 'global' });
+            await supabase.auth.signOut({
+              scope: 'global'
+            });
             localStorage.clear();
             sessionStorage.clear();
             console.log('✅ Cache nettoyé automatiquement, prêt pour nouvelle connexion');
             toast({
               title: "Session expirée nettoyée",
-              description: "Votre ancienne session a été supprimée. Vous pouvez vous reconnecter.",
+              description: "Votre ancienne session a été supprimée. Vous pouvez vous reconnecter."
             });
             return;
           }
@@ -59,149 +64,143 @@ const Auth = () => {
         console.error('❌ Erreur nettoyage session expirée:', error);
       }
     };
-    
     cleanExpiredSession();
-    
+
     // Traiter le code de parrainage si présent dans l'URL (?ref= ou ?r=)
     const referralParams = new URLSearchParams(window.location.search);
     const refCode = referralParams.get('ref') || referralParams.get('r');
     if (refCode) {
       sessionStorage.setItem('referralCode', refCode);
       console.log('🎁 Code de parrainage détecté:', refCode);
-      
       toast({
         title: "🎁 Code de parrainage détecté !",
         description: "Inscrivez-vous pour bénéficier du bonus",
         duration: 5000
       });
     }
-    
+
     // Vérifier si c'est une réinitialisation de mot de passe (détection directe du code PKCE)
     const urlParams = new URLSearchParams(window.location.search);
     console.log('🔍 [Password Reset Detection] URL params:', Object.fromEntries(urlParams.entries()));
     console.log('🔍 [Password Reset Detection] Has code param:', urlParams.has('code'));
     console.log('🔍 [Password Reset Detection] Has reset param:', urlParams.get('reset'));
-    const isReset = 
-      urlParams.get('reset') === 'true' || 
-      urlParams.get('type') === 'recovery' || 
-      urlParams.get('action') === 'recovery' || 
-      urlParams.has('code');
+    const isReset = urlParams.get('reset') === 'true' || urlParams.get('type') === 'recovery' || urlParams.get('action') === 'recovery' || urlParams.has('code');
     console.log('🔍 [Password Reset Detection] isReset final:', isReset);
-    
+
     // Détecter les erreurs Supabase (lien expiré, accès refusé, etc.)
     const error = urlParams.get('error');
     const errorCode = urlParams.get('error_code');
-    
     if (error && errorCode === 'otp_expired') {
       toast({
         variant: "destructive",
         title: "⏰ Lien expiré",
-        description: "Ce lien de réinitialisation a expiré. Demandez-en un nouveau ci-dessous.",
+        description: "Ce lien de réinitialisation a expiré. Demandez-en un nouveau ci-dessous."
       });
       // Nettoyer l'URL pour éviter de réafficher l'erreur
       window.history.replaceState({}, '', '/auth');
       return;
     }
-    
     if (isReset) {
       setAuthStep('reset');
       return;
     }
 
     // Vérifier si l'utilisateur est déjà connecté
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({
+      data: {
+        session
+      }
+    }) => {
       if (session?.user) {
         try {
           // Vérifier si le profil existe toujours
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-            
+          const {
+            data: profile,
+            error: profileError
+          } = await supabase.from('profiles').select('user_id').eq('user_id', session.user.id).maybeSingle();
           if (profileError || !profile) {
             // Compte supprimé, forcer la déconnexion
             console.log('🚨 DELETED ACCOUNT DETECTED - clearing session');
-            await supabase.auth.signOut({ scope: 'global' });
+            await supabase.auth.signOut({
+              scope: 'global'
+            });
             localStorage.clear();
             sessionStorage.clear();
-            
             toast({
               title: "Compte supprimé",
               description: "Ce compte n'existe plus. Vous avez été déconnecté.",
-              variant: "destructive",
+              variant: "destructive"
             });
             return;
           }
         } catch (error) {
           console.error('Error checking profile on auth page:', error);
         }
-        
         window.location.href = '/';
       }
     });
   }, [toast]);
-
   const handleGoogleAuth = async () => {
     try {
       setIsLoading(true);
-      
+
       // 🔥 Vérifier si Google Sign-In natif est disponible (attend 3s max)
       const isNativeAvailable = await isNativeGoogleSignInAvailable();
-      
       if (isNativeAvailable) {
         console.log('🔥 [FIREBASE AUTH] Google Sign-In natif Android détecté');
-        
         try {
           // Étape 1: Obtenir le token Firebase depuis le plugin natif
-          const { idToken, email, displayName } = await googleSignIn();
-          
+          const {
+            idToken,
+            email,
+            displayName
+          } = await googleSignIn();
           console.log('🔥✅ Firebase ID Token reçu');
-          
+
           // Étape 2: Appeler la Edge Function qui valide Firebase et crée la session Supabase
-          const { data, error } = await supabase.functions.invoke('firebase-auth', {
-            body: { idToken }
+          const {
+            data,
+            error
+          } = await supabase.functions.invoke('firebase-auth', {
+            body: {
+              idToken
+            }
           });
-          
           if (error) {
             console.error('❌ Firebase auth Edge Function error:', error);
             console.error('❌ Error details:', JSON.stringify(error, null, 2));
-            
             toast({
               title: "Erreur Google Sign-In",
               description: `Edge function error: ${error.message || 'Unknown error'}. Veuillez réessayer ou utiliser l'authentification par email.`,
-              variant: "destructive",
+              variant: "destructive"
             });
             return;
           }
-
           if (!data?.session) {
             throw new Error('No session returned from Firebase auth');
           }
 
           // Étape 3: Définir la session dans le client Supabase
-          const { error: sessionError } = await supabase.auth.setSession({
+          const {
+            error: sessionError
+          } = await supabase.auth.setSession({
             access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
+            refresh_token: data.session.refresh_token
           });
-
           if (sessionError) {
             console.error('❌ Error setting Supabase session:', sessionError);
             throw sessionError;
           }
-          
-          console.log('✅ Supabase session created:', { user: data.user?.email });
-          
+          console.log('✅ Supabase session created:', {
+            user: data.user?.email
+          });
           const user = data.user;
-          
+
           // Étape 3: Vérifier si le profil existe
           if (user) {
-            const { data: existingProfile } = await supabase
-              .from('profiles')
-              .select('id, username')
-              .eq('user_id', user.id)
-              .maybeSingle();
-            
+            const {
+              data: existingProfile
+            } = await supabase.from('profiles').select('id, username').eq('user_id', user.id).maybeSingle();
             if (!existingProfile) {
               setNewUserId(user.id);
               setShowProfileSetup(true);
@@ -209,103 +208,103 @@ const Auth = () => {
               window.location.href = '/';
             }
           }
-          
           return;
         } catch (nativeError: any) {
           console.error('🔥❌ Native Google Sign-In failed:', nativeError);
-          
           let errorMessage = nativeError.message || "Erreur lors de l'authentification Google";
-          
+
           // Ajouter des conseils de débogage
           if (errorMessage.includes("User canceled")) {
-            errorMessage += "\n\n⚠️ Si vous avez sélectionné un compte, vérifiez:\n" +
-                           "1. SHA-1 certificate dans Firebase Console\n" +
-                           "2. Configuration OAuth Google Cloud\n" +
-                           "Consultez les logs Logcat pour plus de détails.";
+            errorMessage += "\n\n⚠️ Si vous avez sélectionné un compte, vérifiez:\n" + "1. SHA-1 certificate dans Firebase Console\n" + "2. Configuration OAuth Google Cloud\n" + "Consultez les logs Logcat pour plus de détails.";
           }
-          
           toast({
             title: "Erreur Google Sign-In",
             description: errorMessage,
-            variant: "destructive",
+            variant: "destructive"
           });
           return;
         }
       }
-      
+
       // Fallback : Web OAuth standard (pour WebView et navigateurs)
       console.log('🌐 Utilisation OAuth web standard');
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const {
+        data,
+        error
+      } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'consent'
           }
         }
       });
-
       if (error) {
         console.error('❌ OAuth web error:', error);
         throw error;
       }
-
       console.log('✅ OAuth popup opened');
       // La suite se fait via callback OAuth automatique
       return;
-      
     } catch (error: any) {
       console.error('🔥 Erreur Google Auth:', error);
-      
+
       // Gestion spécifique de l'erreur "disallowed_useragent"
       if (error.message?.includes('disallowed_useragent') || error.message?.includes('403')) {
         toast({
           title: "Erreur d'authentification",
           description: "L'authentification Google n'est pas disponible dans cette version de l'app. Utilisez l'authentification par email.",
-          variant: "destructive",
+          variant: "destructive"
         });
       } else {
         toast({
           title: "Erreur",
           description: error.message || "Erreur lors de l'authentification Google",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       if (authMode === 'signup') {
         // For signup, use password-based registration
-        const { data: signUpData, error } = await supabase.auth.signUp({
+        const {
+          data: signUpData,
+          error
+        } = await supabase.auth.signUp({
           email,
           password: password.trim(),
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            captchaToken: captchaToken || undefined,
-          },
+            captchaToken: captchaToken || undefined
+          }
         });
         if (error) throw error;
-        
+
         // Reset captcha after submission
         setCaptchaToken(null);
         captchaRef.current?.resetCaptcha();
-        
+
         // Traiter le parrainage si un code est présent
         const referralCode = sessionStorage.getItem('referralCode');
         if (referralCode && signUpData.user) {
           console.log('🎁 Traitement du parrainage:', referralCode);
           try {
-            const { data: referralData, error: refError } = await supabase.functions.invoke('process-referral-signup', {
-              body: { referralCode, newUserId: signUpData.user.id }
+            const {
+              data: referralData,
+              error: refError
+            } = await supabase.functions.invoke('process-referral-signup', {
+              body: {
+                referralCode,
+                newUserId: signUpData.user.id
+              }
             });
             if (!refError) {
               console.log('✅ Parrainage traité:', referralData);
@@ -315,55 +314,57 @@ const Auth = () => {
             console.error('❌ Erreur parrainage:', refError);
           }
         }
-        
+
         // Passer à l'étape OTP pour que l'utilisateur puisse saisir le code
         setAuthStep('otp');
         toast({
           title: "Vérifiez votre email",
-          description: "Un code de confirmation vous a été envoyé. Entrez-le ci-dessous.",
+          description: "Un code de confirmation vous a été envoyé. Entrez-le ci-dessous."
         });
       } else {
         // For signin, send OTP avec shouldCreateUser: true pour créer le compte si nécessaire
-        const { error } = await supabase.auth.signInWithOtp({
+        const {
+          error
+        } = await supabase.auth.signInWithOtp({
           email,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             shouldCreateUser: true,
-            captchaToken: captchaToken || undefined,
-          },
+            captchaToken: captchaToken || undefined
+          }
         });
         if (error) throw error;
-        
+
         // Reset captcha after submission
         setCaptchaToken(null);
         captchaRef.current?.resetCaptcha();
-        
         setAuthStep('otp');
         toast({
           title: "Code envoyé !",
-          description: "Vérifiez votre email pour le code de connexion à 6 chiffres.",
+          description: "Vérifiez votre email pour le code de connexion à 6 chiffres."
         });
       }
     } catch (error: any) {
       toast({
         title: "Erreur",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
+      const {
+        data,
+        error
+      } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'email',
+        type: 'email'
       });
       if (error) {
         // Gestion spécifique des erreurs d'OTP
@@ -371,26 +372,23 @@ const Auth = () => {
           toast({
             title: "Code expiré",
             description: "Le code a expiré. Cliquez sur 'Renvoyer le code' pour en recevoir un nouveau.",
-            variant: "destructive",
+            variant: "destructive"
           });
         } else {
           throw error;
         }
         return;
       }
-      
+
       // Vérifier si c'est un nouvel utilisateur
       if (data.user) {
         // Attendre un peu pour que le trigger crée le profil
         setTimeout(async () => {
           try {
             // Vérifier si le profil existe déjà
-            const { data: existingProfile } = await supabase
-              .from('profiles')
-              .select('id, username')
-              .eq('user_id', data.user.id)
-              .maybeSingle();
-            
+            const {
+              data: existingProfile
+            } = await supabase.from('profiles').select('id, username').eq('user_id', data.user.id).maybeSingle();
             if (!existingProfile) {
               // Nouveau utilisateur - afficher le setup de profil
               setNewUserId(data.user.id);
@@ -409,44 +407,41 @@ const Auth = () => {
       }
     } catch (error: any) {
       let errorMessage = error.message;
-      
       if (error.message.includes('429') || error.message.includes('rate limit')) {
         errorMessage = "Trop de tentatives. Veuillez attendre quelques minutes avant de réessayer.";
       }
-      
       toast({
         title: "Erreur",
         description: errorMessage,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleUsernameOrEmailSignin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       let emailToUse = usernameOrEmail;
-      
+
       // Vérifier si c'est un username (ne contient pas @)
       if (!usernameOrEmail.includes('@')) {
         // C'est un username, récupérer l'email associé
         console.log('🔍 Recherche email pour username:', usernameOrEmail);
-        const { data: userEmail, error: emailError } = await supabase
-          .rpc('get_email_from_username', { username_param: usernameOrEmail });
-          
+        const {
+          data: userEmail,
+          error: emailError
+        } = await supabase.rpc('get_email_from_username', {
+          username_param: usernameOrEmail
+        });
         if (emailError) {
           console.error('🔍 Erreur RPC username:', emailError);
           throw new Error('Impossible de vérifier le nom d\'utilisateur. Réessayez avec votre email.');
         }
-        
         if (!userEmail) {
           throw new Error('Nom d\'utilisateur non trouvé. Vérifiez l\'orthographe ou utilisez votre email.');
         }
-        
         emailToUse = userEmail;
         console.log('🔍 Email trouvé pour username:', emailToUse);
       }
@@ -458,19 +453,19 @@ const Auth = () => {
       console.log('🔐 Premier caractère code:', password.charCodeAt(0));
       console.log('🔐 Dernier caractère code:', password.charCodeAt(password.length - 1));
       console.log('🔐 Contient espaces début/fin:', password !== password.trim());
-      
-      const { error } = await supabase.auth.signInWithPassword({
+      const {
+        error
+      } = await supabase.auth.signInWithPassword({
         email: emailToUse.trim(),
         password: password,
         options: {
-          captchaToken: captchaToken || undefined,
-        },
+          captchaToken: captchaToken || undefined
+        }
       });
-      
+
       // Reset captcha after submission
       setCaptchaToken(null);
       captchaRef.current?.resetCaptcha();
-      
       if (error) {
         console.error('🔐 Erreur auth complète:', {
           message: error.message,
@@ -480,9 +475,8 @@ const Auth = () => {
         });
         throw error;
       }
-      
       console.log('✅ Connexion réussie');
-      
+
       // Vérifier si on doit rediriger vers un profil cible
       const targetUsername = sessionStorage.getItem('targetProfileUsername');
       if (targetUsername) {
@@ -493,9 +487,8 @@ const Auth = () => {
       }
     } catch (error: any) {
       console.error('❌ Erreur complète:', error);
-      
       let errorMessage = error.message;
-      
+
       // Gestion spécifique des erreurs d'authentification
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = `❌ Email/username ou mot de passe incorrect.
@@ -514,52 +507,47 @@ const Auth = () => {
       } else if (error.message.includes('network') || error.message.includes('fetch')) {
         errorMessage = 'Problème de connexion. Vérifiez votre internet et réessayez.';
       }
-      
       toast({
         title: "Connexion échouée",
         description: errorMessage,
         variant: "destructive",
-        duration: 8000, // 🔥 Toast plus long pour lire le message détaillé
+        duration: 8000 // 🔥 Toast plus long pour lire le message détaillé
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (newPassword !== confirmPassword) {
       toast({
         title: "Erreur",
         description: "Les mots de passe ne correspondent pas.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     if (newPassword.length < 6) {
       toast({
         title: "Erreur",
         description: "Le mot de passe doit contenir au moins 6 caractères.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      const {
+        error
+      } = await supabase.auth.updateUser({
         password: newPassword
       });
-      
       if (error) throw error;
-      
       toast({
         title: "Succès !",
-        description: "Votre mot de passe a été mis à jour.",
+        description: "Votre mot de passe a été mis à jour."
       });
-      
+
       // Rediriger vers l'accueil
       setTimeout(() => {
         window.location.href = '/';
@@ -568,37 +556,32 @@ const Auth = () => {
       toast({
         title: "Erreur",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const forceCleanSession = async () => {
     try {
       // Nettoyer complètement toutes les données
-      await supabase.auth.signOut({ scope: 'global' });
+      await supabase.auth.signOut({
+        scope: 'global'
+      });
       localStorage.clear();
       sessionStorage.clear();
-      
+
       // Supprimer spécifiquement les clés Supabase
-      const keysToRemove = [
-        'supabase.auth.token',
-        'sb-dbptgehpknjsoisirviz-auth-token',
-        'supabase-auth-token'
-      ];
-      
+      const keysToRemove = ['supabase.auth.token', 'sb-dbptgehpknjsoisirviz-auth-token', 'supabase-auth-token'];
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
       });
-      
       toast({
         title: "Session nettoyée",
-        description: "Toutes les données de session ont été supprimées.",
+        description: "Toutes les données de session ont été supprimées."
       });
-      
+
       // Recharger la page
       setTimeout(() => {
         window.location.reload();
@@ -607,13 +590,11 @@ const Auth = () => {
       toast({
         title: "Erreur lors du nettoyage",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 relative overflow-hidden flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 relative overflow-hidden flex items-center justify-center p-4">
       {/* Effets d'arrière-plan animés */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
@@ -623,23 +604,11 @@ const Auth = () => {
         <CardHeader className="space-y-1 text-center border-b border-white/10 pb-4">
           <CardTitle className="text-display-md bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">RunConnect</CardTitle>
           <CardDescription className="text-body-md">
-            {authStep === 'reset'
-              ? "Définissez votre nouveau mot de passe"
-              : authStep === 'otp' 
-                ? "Entrez le code reçu par email"
-                : authMode === 'signup' 
-                  ? "Créez votre compte pour rejoindre la communauté" 
-                  : "Connectez-vous à votre compte"
-            }
+            {authStep === 'reset' ? "Définissez votre nouveau mot de passe" : authStep === 'otp' ? "Entrez le code reçu par email" : authMode === 'signup' ? "Créez votre compte pour rejoindre la communauté" : "Connectez-vous à votre compte"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
-          <Button
-            onClick={handleGoogleAuth}
-            disabled={isLoading}
-            variant="outline-glow"
-            className="w-full h-12"
-          >
+          <Button onClick={handleGoogleAuth} disabled={isLoading} variant="outline-glow" className="w-full h-12">
             <FcGoogle className="mr-2 h-5 w-5" />
             {authMode === 'signup' ? "S'inscrire" : "Se connecter"} avec Google
           </Button>
@@ -655,31 +624,15 @@ const Auth = () => {
             </div>
           </div>
 
-          {authStep === 'reset' ? (
-            // Password Reset Form
-            <form onSubmit={handlePasswordReset} className="space-y-4">
+          {authStep === 'reset' ?
+        // Password Reset Form
+        <form onSubmit={handlePasswordReset} className="space-y-4">
               <div className="space-y-2">
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type={showNewPassword ? "text" : "password"}
-                    placeholder="Nouveau mot de passe"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                  <Input type={showNewPassword ? "text" : "password"} placeholder="Nouveau mot de passe" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="pl-10 pr-10" required minLength={6} />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors">
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -687,42 +640,20 @@ const Auth = () => {
               <div className="space-y-2">
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirmer le mot de passe"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                  <Input type={showConfirmPassword ? "text" : "password"} placeholder="Confirmer le mot de passe" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="pl-10 pr-10" required minLength={6} />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors">
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                variant="gradient"
-                className="w-full h-12 text-button"
-                disabled={isLoading || newPassword !== confirmPassword}
-              >
+              <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || newPassword !== confirmPassword}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Mettre à jour le mot de passe
               </Button>
-            </form>
-          ) : authStep === 'otp' ? (
-            // OTP Verification Form
-            <form onSubmit={handleOtpSubmit} className="space-y-6">
+            </form> : authStep === 'otp' ?
+        // OTP Verification Form
+        <form onSubmit={handleOtpSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-2">
@@ -733,11 +664,7 @@ const Auth = () => {
                   </p>
                 </div>
                 <div className="flex justify-center">
-                  <InputOTP
-                    maxLength={6}
-                    value={otp}
-                    onChange={(value) => setOtp(value)}
-                  >
+                  <InputOTP maxLength={6} value={otp} onChange={value => setOtp(value)}>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />
@@ -750,136 +677,87 @@ const Auth = () => {
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                variant="gradient"
-                className="w-full h-12 text-button"
-                disabled={isLoading || otp.length !== 6}
-              >
+              <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || otp.length !== 6}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Vérifier le code
               </Button>
 
               <div className="text-center space-y-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setIsLoading(true);
-                    try {
-                      const { error } = await supabase.auth.signInWithOtp({
-                        email,
-                        options: {
-                          emailRedirectTo: `${window.location.origin}/`,
-                          shouldCreateUser: true
-                        },
-                      });
-                      if (error) {
-                        if (error.message.includes('429') || error.message.includes('rate limit')) {
-                          toast({
-                            title: "Trop de tentatives",
-                            description: "Veuillez attendre quelques minutes avant de demander un nouveau code.",
-                            variant: "destructive",
-                          });
-                        } else {
-                          throw error;
-                        }
-                      } else {
-                        setOtp('');
-                        toast({
-                          title: "Nouveau code envoyé !",
-                          description: "Vérifiez votre email pour le nouveau code.",
-                        });
-                      }
-                    } catch (error: any) {
-                      toast({
-                        title: "Erreur",
-                        description: error.message,
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }}
-                  className="text-sm text-primary hover:underline block mx-auto"
-                >
+                <button type="button" onClick={async () => {
+              setIsLoading(true);
+              try {
+                const {
+                  error
+                } = await supabase.auth.signInWithOtp({
+                  email,
+                  options: {
+                    emailRedirectTo: `${window.location.origin}/`,
+                    shouldCreateUser: true
+                  }
+                });
+                if (error) {
+                  if (error.message.includes('429') || error.message.includes('rate limit')) {
+                    toast({
+                      title: "Trop de tentatives",
+                      description: "Veuillez attendre quelques minutes avant de demander un nouveau code.",
+                      variant: "destructive"
+                    });
+                  } else {
+                    throw error;
+                  }
+                } else {
+                  setOtp('');
+                  toast({
+                    title: "Nouveau code envoyé !",
+                    description: "Vérifiez votre email pour le nouveau code."
+                  });
+                }
+              } catch (error: any) {
+                toast({
+                  title: "Erreur",
+                  description: error.message,
+                  variant: "destructive"
+                });
+              } finally {
+                setIsLoading(false);
+              }
+            }} className="text-sm text-primary hover:underline block mx-auto">
                   Renvoyer le code
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthStep('email');
-                    setOtp('');
-                  }}
-                  className="text-sm text-muted-foreground hover:underline block mx-auto"
-                >
+                <button type="button" onClick={() => {
+              setAuthStep('email');
+              setOtp('');
+            }} className="text-sm text-muted-foreground hover:underline block mx-auto">
                   ← Retour
                 </button>
               </div>
-            </form>
-          ) : authMode === 'signup' ? (
-            // Signup Form (email + password)
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            </form> : authMode === 'signup' ?
+        // Signup Form (email + password)
+        <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div className="space-y-2">
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="votre.email@exemple.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
+                  <Input type="email" placeholder="votre.email@exemple.com" value={email} onChange={e => setEmail(e.target.value)} className="pl-10" required />
                 </div>
               </div>
               
               <div className="space-y-2">
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Mot de passe (min. 6 caractères)"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                  <Input type={showPassword ? "text" : "password"} placeholder="Mot de passe (min. 6 caractères)" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" required minLength={6} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
               {/* hCaptcha Widget - Unique pour tous les formulaires */}
-              {!captchaToken && (
-                <CaptchaWidget
-                  ref={captchaRef}
-                  onVerify={(token) => setCaptchaToken(token)}
-                  onExpire={() => setCaptchaToken(null)}
-                  onError={() => setCaptchaToken(null)}
-                />
-              )}
-              {captchaToken && (
-                <div className="text-center text-sm text-green-600 dark:text-green-400">
+              {!captchaToken && <CaptchaWidget ref={captchaRef} onVerify={token => setCaptchaToken(token)} onExpire={() => setCaptchaToken(null)} onError={() => setCaptchaToken(null)} />}
+              {captchaToken && <div className="text-center text-sm text-green-600 dark:text-green-400">
                   ✅ Vérification CAPTCHA réussie
-                </div>
-              )}
+                </div>}
 
-              <Button
-                type="submit"
-                variant="gradient"
-                className="w-full h-12 text-button"
-                disabled={isLoading || !captchaToken}
-              >
+              <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || !captchaToken}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Continuer
               </Button>
@@ -888,47 +766,25 @@ const Auth = () => {
               <div className="mt-4 pt-4 border-t border-border">
                 <ReferralCodeInput />
               </div>
-            </form>
-          ) : (
-            // Signin Options
-            <div className="space-y-4">
+            </form> :
+        // Signin Options
+        <div className="space-y-4">
               {/* OTP Signin */}
               <form onSubmit={handleEmailSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="email"
-                      placeholder="votre.email@exemple.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                    <Input type="email" placeholder="votre.email@exemple.com" value={email} onChange={e => setEmail(e.target.value)} className="pl-10" required />
                   </div>
                 </div>
 
                 {/* hCaptcha Widget - Unique pour tous les formulaires */}
-                {!captchaToken && (
-                  <CaptchaWidget
-                    ref={captchaRef}
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken(null)}
-                    onError={() => setCaptchaToken(null)}
-                  />
-                )}
-                {captchaToken && (
-                  <div className="text-center text-sm text-green-600 dark:text-green-400">
+                {!captchaToken}
+                {captchaToken && <div className="text-center text-sm text-green-600 dark:text-green-400">
                     ✅ Vérification CAPTCHA réussie
-                  </div>
-                )}
+                  </div>}
 
-                <Button
-                  type="submit"
-                  variant="gradient"
-                  className="w-full h-12 text-button"
-                  disabled={isLoading || !captchaToken}
-                >
+                <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || !captchaToken}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Recevoir un code par email
                 </Button>
@@ -950,166 +806,103 @@ const Auth = () => {
                 <div className="space-y-2">
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      placeholder="Pseudonyme ou email"
-                      value={usernameOrEmail}
-                      onChange={(e) => setUsernameOrEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                    <Input type="text" placeholder="Pseudonyme ou email" value={usernameOrEmail} onChange={e => setUsernameOrEmail(e.target.value)} className="pl-10" required />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Votre mot de passe"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                    <Input type={showPassword ? "text" : "password"} placeholder="Votre mot de passe" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" required />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   
                   {/* 🔑 Bouton mot de passe oublié */}
                   <div className="text-right">
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      onClick={async () => {
-                        const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
-                        if (!emailToUse) {
-                          toast({
-                            title: "Email requis",
-                            description: "Veuillez entrer votre email (pas votre pseudonyme) pour réinitialiser le mot de passe",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        try {
-                          const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
-                            redirectTo: 'https://run-connect.lovable.app/auth',
-                          });
-                          if (error) throw error;
-                          toast({
-                            title: "Email envoyé ✅",
-                            description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe",
-                          });
-                        } catch (error: any) {
-                          toast({
-                            title: "Erreur",
-                            description: error.message,
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                      className="text-xs p-0 h-auto"
-                    >
+                    <Button type="button" variant="link" size="sm" onClick={async () => {
+                  const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
+                  if (!emailToUse) {
+                    toast({
+                      title: "Email requis",
+                      description: "Veuillez entrer votre email (pas votre pseudonyme) pour réinitialiser le mot de passe",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  try {
+                    const {
+                      error
+                    } = await supabase.auth.resetPasswordForEmail(emailToUse, {
+                      redirectTo: 'https://run-connect.lovable.app/auth'
+                    });
+                    if (error) throw error;
+                    toast({
+                      title: "Email envoyé ✅",
+                      description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe"
+                    });
+                  } catch (error: any) {
+                    toast({
+                      title: "Erreur",
+                      description: error.message,
+                      variant: "destructive"
+                    });
+                  }
+                }} className="text-xs p-0 h-auto">
                       🔑 Mot de passe oublié ?
                     </Button>
                   </div>
                 </div>
 
                 {/* hCaptcha Widget - Partagé avec le formulaire OTP ci-dessus */}
-                {!captchaToken && (
-                  <CaptchaWidget
-                    ref={captchaRef}
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken(null)}
-                    onError={() => setCaptchaToken(null)}
-                  />
-                )}
-                {captchaToken && (
-                  <div className="text-center text-sm text-green-600 dark:text-green-400">
+                {!captchaToken && <CaptchaWidget ref={captchaRef} onVerify={token => setCaptchaToken(token)} onExpire={() => setCaptchaToken(null)} onError={() => setCaptchaToken(null)} />}
+                {captchaToken && <div className="text-center text-sm text-green-600 dark:text-green-400">
                     ✅ Vérification CAPTCHA réussie
-                  </div>
-                )}
+                  </div>}
 
-                <Button
-                  type="submit"
-                  variant="outline"
-                  className="w-full"
-                  disabled={isLoading || !captchaToken}
-                >
+                <Button type="submit" variant="outline" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Se connecter
                 </Button>
                 
                 {/* 🧹 Bouton de nettoyage de cache visible */}
                 <div className="mt-4 text-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut({ scope: 'global' });
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        toast({
-                          title: "Cache nettoyé ✅",
-                          description: "Session supprimée. Réessayez de vous connecter.",
-                        });
-                      } catch (error) {
-                        console.error('Erreur nettoyage:', error);
-                      }
-                    }}
-                  >
+                  <Button type="button" variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground" onClick={async () => {
+                try {
+                  await supabase.auth.signOut({
+                    scope: 'global'
+                  });
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  toast({
+                    title: "Cache nettoyé ✅",
+                    description: "Session supprimée. Réessayez de vous connecter."
+                  });
+                } catch (error) {
+                  console.error('Erreur nettoyage:', error);
+                }
+              }}>
                     🧹 Problème de connexion ? Nettoyer le cache
                   </Button>
                 </div>
               </form>
-            </div>
-          )}
+            </div>}
 
           <div className="text-center space-y-2">
-            {authStep !== 'reset' && (
-              <button
-                type="button"
-                onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
-                className="text-sm text-primary hover:underline block mx-auto"
-              >
+            {authStep !== 'reset' && <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')} className="text-sm text-primary hover:underline block mx-auto">
                 {authMode === 'signup' ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
-              </button>
-            )}
+              </button>}
             
             {/* Bouton de nettoyage d'urgence */}
-            <button
-              type="button"
-              onClick={forceCleanSession}
-              className="text-xs text-muted-foreground hover:text-destructive hover:underline block mx-auto mt-4"
-              title="En cas de problème de connexion, cliquez ici pour nettoyer complètement votre session"
-            >
+            <button type="button" onClick={forceCleanSession} className="text-xs text-muted-foreground hover:text-destructive hover:underline block mx-auto mt-4" title="En cas de problème de connexion, cliquez ici pour nettoyer complètement votre session">
               Problème de connexion ? Nettoyer la session
             </button>
           </div>
         </CardContent>
       </Card>
       
-      <ProfileSetupDialog
-        open={showProfileSetup}
-        onOpenChange={setShowProfileSetup}
-        userId={newUserId}
-        email={email}
-      />
-    </div>
-  );
+      <ProfileSetupDialog open={showProfileSetup} onOpenChange={setShowProfileSetup} userId={newUserId} email={email} />
+    </div>;
 };
-
 export default Auth;
