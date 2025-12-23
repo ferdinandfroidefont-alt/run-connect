@@ -1472,173 +1472,178 @@ const Messages = () => {
   if (selectedConversation) {
     return (
       <>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
-          {/* Top Bar - Fixed - Remonté légèrement */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
+          {/* Animated gradient top bar */}
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-2 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] animate-[shimmer_3s_ease-in-out_infinite] z-50"></div>
           
-          {/* Header - Fixed - Remonté et plus compact */}
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedConversation(null)}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              
-              {selectedConversation.is_group ? (
-                <>
-                   <Avatar 
-                     className="h-8 w-8 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-primary/50 transition-all duration-200 glass-card border border-white/20"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🔍 Club avatar clicked - redirecting to club settings');
-                      // Fermer la conversation et ouvrir les paramètres du club
-                      const clubData = selectedConversation;
-                      setSelectedConversation(null); // Ferme la conversation
-                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
-                      setTimeout(() => {
-                        setGroupInfoData(clubData);
-                        setShowGroupInfo(true);
-                      }, 100);
-                    }}
+          {/* Header - Glass effect with gradient */}
+          <div className="fixed top-2 left-1/2 transform -translate-x-1/2 max-w-md w-full px-3 z-50">
+            <div className="glass-primary rounded-2xl p-3 shadow-xl border border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedConversation(null)}
+                    className="hover:bg-primary/10 rounded-xl"
                   >
-                    <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                    <AvatarFallback>
-                      <Users className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div 
-                    className="cursor-pointer hover:opacity-80 hover:bg-muted/30 rounded p-1 -m-1 transition-all duration-200"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🔍 Club name clicked - redirecting to club settings');
-                      // Fermer la conversation et ouvrir les paramètres du club
-                      const clubData = selectedConversation;
-                      setSelectedConversation(null); // Ferme la conversation
-                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
-                      setTimeout(() => {
-                        setGroupInfoData(clubData);
-                        setShowGroupInfo(true);
-                      }, 100);
-                    }}
-                  >
-                    <p className="font-medium text-sm">{selectedConversation.group_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedConversation.group_members?.length || 0} membres • Cliquez pour voir
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                   <div className="relative">
-                     <Avatar 
-                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all glass-card border border-white/20"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Navigation directe vers la page profil
-                        navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
-                      }}
-                    >
-                      <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                      <AvatarFallback>
-                        {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} />
-                  </div>
-                  <div 
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Navigation directe vers la page profil
-                      navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
-                    }}
-                  >
-                    <p className="font-medium text-sm">
-                      {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="flex gap-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-sm">
-                  {!selectedConversation.is_group && (
-                    <DropdownMenuItem 
-                      onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Voir le profil
-                    </DropdownMenuItem>
+                  
+                  {selectedConversation.is_group ? (
+                    <>
+                      <div 
+                        className="relative cursor-pointer group"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const clubData = selectedConversation;
+                          setSelectedConversation(null);
+                          setTimeout(() => {
+                            setGroupInfoData(clubData);
+                            setShowGroupInfo(true);
+                          }, 100);
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full blur-md opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                        <Avatar className="h-10 w-10 relative ring-2 ring-primary/30 group-hover:ring-primary/60 transition-all">
+                          <AvatarImage src={selectedConversation.group_avatar_url || ""} />
+                          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                            <Users className="h-5 w-5" />
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <div 
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const clubData = selectedConversation;
+                          setSelectedConversation(null);
+                          setTimeout(() => {
+                            setGroupInfoData(clubData);
+                            setShowGroupInfo(true);
+                          }, 100);
+                        }}
+                      >
+                        <p className="font-semibold text-sm">{selectedConversation.group_name}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {selectedConversation.group_members?.length || 0} membres
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div 
+                        className="relative cursor-pointer group"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-accent to-primary rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
+                        <Avatar className="h-10 w-10 relative ring-2 ring-accent/30 group-hover:ring-accent/60 transition-all">
+                          <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
+                          <AvatarFallback className="bg-gradient-to-br from-accent to-primary text-primary-foreground">
+                            {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} />
+                      </div>
+                      <div 
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
+                        }}
+                      >
+                        <p className="font-semibold text-sm">
+                          {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
+                        </p>
+                        <p className="text-xs text-green-400">En ligne</p>
+                      </div>
+                    </>
                   )}
-                  
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setSelectedConversation(null);
-                      setShowCreateGroup(true);
-                    }}
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Créer un chat de groupe
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    onClick={() => setIsMuted(!isMuted)}
-                    className="justify-between"
-                  >
-                    <div className="flex items-center">
-                      <span className="mr-2">{isMuted ? "🔔" : "🔕"}</span>
-                      <span>Notifications</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {isMuted ? "Activées" : "Désactivées"}
-                    </span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-                    className="justify-between"
-                  >
-                    <div className="flex items-center">
-                      <span className="mr-2">📌</span>
-                      <span>Épingler</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
-                    </span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    onClick={() => confirmDeleteConversation()}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {selectedConversation.is_group && selectedConversation.created_by !== user?.id 
-                      ? "Quitter le club" 
-                      : "Supprimer"
-                    }
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </div>
+
+                <div className="flex gap-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="hover:bg-primary/10 rounded-xl">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 glass-primary border-primary/20">
+                      {!selectedConversation.is_group && (
+                        <DropdownMenuItem 
+                          onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
+                          className="hover:bg-primary/10"
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Voir le profil
+                        </DropdownMenuItem>
+                      )}
+                      
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          setSelectedConversation(null);
+                          setShowCreateGroup(true);
+                        }}
+                        className="hover:bg-primary/10"
+                      >
+                        <Users className="h-4 w-4 mr-2" />
+                        Créer un chat de groupe
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem 
+                        onClick={() => setIsMuted(!isMuted)}
+                        className="justify-between hover:bg-primary/10"
+                      >
+                        <div className="flex items-center">
+                          <span className="mr-2">{isMuted ? "🔔" : "🔕"}</span>
+                          <span>Notifications</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {isMuted ? "Activées" : "Désactivées"}
+                        </span>
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem 
+                        onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
+                        className="justify-between hover:bg-primary/10"
+                      >
+                        <div className="flex items-center">
+                          <span className="mr-2">📌</span>
+                          <span>Épingler</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
+                        </span>
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem 
+                        onClick={() => confirmDeleteConversation()}
+                        className="text-destructive focus:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {selectedConversation.is_group && selectedConversation.created_by !== user?.id 
+                          ? "Quitter le club" 
+                          : "Supprimer"
+                        }
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Messages - Scrollable area with top margin for fixed header - Ajusté pour nouveau header */}
-          <div className="pt-[72px] flex-1 overflow-y-auto min-h-0">
-            <div className={`h-full px-4 pt-4 pb-4 space-y-1.5 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
+          {/* Messages - Scrollable area */}
+          <div className="pt-[80px] flex-1 overflow-y-auto min-h-0">
+            <div className={`h-full px-4 pt-4 pb-4 space-y-2 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1933,18 +1938,21 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Message input - Sticky at bottom (follows keyboard) - Descendu légèrement */}
+          {/* Message input - Sticky at bottom with colorful gradient */}
           <div 
-            className="sticky bottom-0 w-full px-3 py-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
-            style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+            className="sticky bottom-0 w-full px-3 py-3 z-40 keyboard-input-container"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
           >
+            {/* Gradient backdrop */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none"></div>
+            
             {/* Emoji Picker */}
             {showEmojiPicker && (
               <div 
                 ref={emojiPickerRef}
                 className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
               >
-                <div className="glass-primary backdrop-blur-xl rounded-2xl p-2 shadow-2xl border border-border/30">
+                <div className="glass-primary backdrop-blur-xl rounded-2xl p-2 shadow-2xl border border-primary/30">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
                     theme={Theme.AUTO}
@@ -1957,11 +1965,14 @@ const Messages = () => {
               </div>
             )}
             
-            <div className="glass-primary backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-border/30">
+            <div className="relative glass-primary backdrop-blur-md rounded-2xl p-3 shadow-2xl border border-primary/20 ring-1 ring-primary/10">
+              {/* Gradient glow effect */}
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-accent/30 rounded-2xl blur-lg opacity-50 -z-10"></div>
+              
             {uploadProgress && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg mb-2">
-                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm text-muted-foreground">{uploadProgress}</span>
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl mb-2 border border-primary/20">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-foreground">{uploadProgress}</span>
               </div>
             )}
               <div className="flex gap-2">
@@ -1989,16 +2000,16 @@ const Messages = () => {
                       disabled={isLoading}
                     />
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      className="px-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-400 transition-all duration-300"
                       disabled={isLoading}
                     >
                       <Paperclip className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={async () => {
                         console.log('🖼️ Bouton Image cliqué');
@@ -2029,17 +2040,19 @@ const Messages = () => {
                           });
                         }
                       }}
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      className="px-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 transition-all duration-300"
                       disabled={isLoading}
                     >
                       <Image className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`px-3 glass-card border-border/40 hover:bg-background/60 transition-all duration-200 ${
-                        showEmojiPicker ? 'bg-primary/20 border-primary/40 shadow-lg shadow-primary/20' : ''
+                      className={`px-3 rounded-xl transition-all duration-300 ${
+                        showEmojiPicker 
+                          ? 'bg-yellow-500/30 border-yellow-500/50 shadow-lg shadow-yellow-500/20 text-yellow-400' 
+                          : 'bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400'
                       }`}
                       disabled={isLoading}
                     >
@@ -2053,13 +2066,13 @@ const Messages = () => {
                         handleTyping();
                       }}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 glass-card border-border/40 focus:border-primary/60 bg-background/40"
+                      className="flex-1 rounded-xl border-primary/30 focus:border-primary/60 bg-background/40 focus:bg-background/60 transition-all duration-300"
                     />
                     <Button
                       onClick={sendMessage}
                       disabled={loading || !newMessage.trim()}
                       size="sm"
-                      className="px-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-primary/50 transition-all duration-200"
+                      className="px-4 rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/40 hover:shadow-primary/60 transition-all duration-300 hover:scale-105"
                     >
                       <Send className="h-4 w-4" />
                     </Button>
@@ -2067,8 +2080,8 @@ const Messages = () => {
                       onClick={handleVoiceRecording}
                       disabled={loading}
                       size="sm"
-                      variant="outline"
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      variant="ghost"
+                      className="px-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 transition-all duration-300"
                     >
                       <Mic className="h-4 w-4" />
                     </Button>
@@ -2126,144 +2139,168 @@ const Messages = () => {
 
   return (
     <>
-      {/* Petite barre noire en haut uniquement pour Messages */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
-      <div className="h-screen bg-background flex flex-col">
+      {/* Animated gradient background bar */}
+      <div className="fixed top-0 left-0 right-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] animate-[shimmer_3s_ease-in-out_infinite] z-50"></div>
+      
+      <div className="h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
         <div className="max-w-md mx-auto w-full h-full flex flex-col">
-          {/* Fixed Header Only - Remonté légèrement */}
-          <div className="fixed top-4 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
+          {/* Fixed Header with gradient */}
+          <div className="fixed top-2 left-0 right-0 flex-shrink-0 z-50 px-3 pt-2">
             <div className="max-w-md mx-auto w-full">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              {isSelectionMode && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={exitSelectionMode}
-                  className="mr-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {isSelectionMode 
-                    ? `${selectedConversations.size} sélectionné(s)` 
-                    : "Messages"
-                  }
-                </h1>
-                {!isSelectionMode && (
-                  <p className="text-muted-foreground text-sm">
-                    Restez en contact avec la communauté
-                  </p>
-                )}
+              <div className="glass-primary rounded-2xl p-4 shadow-xl border border-primary/20">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  {isSelectionMode && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={exitSelectionMode}
+                      className="mr-2 hover:bg-destructive/20"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+                        <MessageCircle className="h-5 w-5 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                          {isSelectionMode 
+                            ? `${selectedConversations.size} sélectionné(s)` 
+                            : "Messages"
+                          }
+                        </h1>
+                        {!isSelectionMode && (
+                          <p className="text-muted-foreground text-xs">
+                            Restez en contact 💬
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {isSelectionMode ? (
+                      <Button
+                        onClick={confirmBulkDelete}
+                        size="sm"
+                        variant="destructive"
+                        disabled={selectedConversations.size === 0}
+                        className="shadow-lg shadow-destructive/30"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Supprimer
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={() => setShowNewConversation(true)}
+                          size="sm"
+                          variant="outline"
+                          className="border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Message
+                        </Button>
+                        <Button
+                          onClick={() => setShowCreateGroup(true)}
+                          size="sm"
+                          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/30 transition-all duration-300"
+                        >
+                          <Users className="h-4 w-4 mr-1" />
+                          Club
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                {isSelectionMode ? (
-                  <Button
-                    onClick={confirmBulkDelete}
-                    size="sm"
-                    variant="destructive"
-                    disabled={selectedConversations.size === 0}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Supprimer
-                  </Button>
-                ) : (
-                  <>
-                  <Button
-                    onClick={() => setShowNewConversation(true)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Message
-                  </Button>
-                  <Button
-                    onClick={() => setShowCreateGroup(true)}
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    <Users className="h-4 w-4 mr-1" />
-                    Club
-                  </Button>
-                </>
-                )}
-              </div>
-            </div>
             </div>
           </div>
 
-          {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 scroll-momentum-full p-2 pt-32">
-            {/* Search Buttons */}
-            <Card>
-              <CardContent className="p-2">
-                <div className="grid grid-cols-4 gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=profiles')}
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="text-xs">Utilisateurs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=clubs')}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="text-xs">Clubs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=strava')}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+          {/* Scrollable Content */}
+          <div className="flex-1 scroll-momentum-full px-3 pt-28 pb-4 space-y-4">
+            {/* Quick Actions Grid */}
+            <div className="glass-card p-4 rounded-2xl">
+              <div className="grid grid-cols-4 gap-3">
+                <Button
+                  variant="ghost"
+                  className="flex flex-col items-center gap-2 h-20 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 hover:from-blue-500/30 hover:to-blue-600/20 border border-blue-500/20 transition-all duration-300 group"
+                  onClick={() => navigate('/search?tab=profiles')}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-xs font-medium">Profils</span>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="flex flex-col items-center gap-2 h-20 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 hover:from-purple-500/30 hover:to-purple-600/20 border border-purple-500/20 transition-all duration-300 group"
+                  onClick={() => navigate('/search?tab=clubs')}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <Users className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-xs font-medium">Clubs</span>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="flex flex-col items-center gap-2 h-20 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 hover:from-orange-500/30 hover:to-orange-600/20 border border-orange-500/20 transition-all duration-300 group"
+                  onClick={() => navigate('/search?tab=strava')}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
                     </svg>
-                    <span className="text-xs">Strava</span>
-                  </Button>
+                  </div>
+                  <span className="text-xs font-medium">Strava</span>
+                </Button>
 
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=contacts')}
-                  >
-                    <Phone className="h-5 w-5" />
-                    <span className="text-xs">Contacts</span>
-                  </Button>
+                <Button
+                  variant="ghost"
+                  className="flex flex-col items-center gap-2 h-20 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 hover:from-green-500/30 hover:to-green-600/20 border border-green-500/20 transition-all duration-300 group"
+                  onClick={() => navigate('/search?tab=contacts')}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <Phone className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-xs font-medium">Contacts</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Conversations List */}
+            <div className="glass-card rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/30 bg-gradient-to-r from-primary/10 to-accent/10">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                  <MessageCircle className="h-4 w-4 text-primary-foreground" />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Conversations */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <MessageCircle className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Conversations</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
+                <span className="font-semibold">Conversations</span>
+                {conversations.length > 0 && (
+                  <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary">
+                    {conversations.length}
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="p-2">
                 {conversations.length === 0 ? (
-                  <div className="text-center py-8 px-4">
-                    <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">
-                      Aucune conversation pour le moment
+                  <div className="text-center py-12 px-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-4">
+                      <MessageCircle className="h-8 w-8 text-primary" />
+                    </div>
+                    <p className="text-foreground font-medium mb-1">
+                      Aucune conversation
                     </p>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      Cliquez sur "Nouveau" pour démarrer une conversation
+                    <p className="text-muted-foreground text-sm">
+                      Commencez à discuter avec la communauté 🎉
                     </p>
                   </div>
                 ) : (
-                    <div className="divide-y divide-border">
+                  <div className="space-y-2">
                     {sortedConversations.map((conversation) => (
                     <SwipeableConversationItem
                       key={conversation.id}
@@ -2401,11 +2438,10 @@ const Messages = () => {
                   </div>
                   </SwipeableConversationItem>
                 ))}
+                  </div>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
-
+            </div>
           </div>
         </div>
 
