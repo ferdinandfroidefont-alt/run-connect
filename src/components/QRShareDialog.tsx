@@ -228,92 +228,107 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm p-0 overflow-hidden border-0 bg-gradient-to-br from-background via-background to-primary/5">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
+          className="relative"
         >
-          <DialogHeader>
-            <DialogTitle className="text-center">Partager mon profil</DialogTitle>
-          </DialogHeader>
+          {/* Header avec gradient */}
+          <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-cyan-400/20 px-6 pt-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="text-center text-lg font-bold">
+                Partager mon profil
+              </DialogTitle>
+            </DialogHeader>
+          </div>
           
-          <div className="flex flex-col items-center space-y-6 py-4">
-            {/* Photo de profil */}
+          <div className="px-6 pb-6 space-y-5">
+            {/* Photo de profil avec effet glow */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="relative"
+              className="flex flex-col items-center -mt-8"
             >
-              <div className="rounded-full p-1 bg-gradient-to-br from-primary via-primary/70 to-cyan-400">
-                <Avatar className="h-24 w-24 border-4 border-background">
-                  <AvatarImage src={avatarUrl || undefined} alt={displayName || username} />
-                  <AvatarFallback className="text-2xl font-bold bg-primary/20">
-                    {(displayName || username)?.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary to-cyan-400 rounded-full blur-lg opacity-40 scale-110" />
+                <div className="relative rounded-full p-[3px] bg-gradient-to-br from-primary via-primary/70 to-cyan-400">
+                  <Avatar className="h-20 w-20 border-3 border-background shadow-xl">
+                    <AvatarImage src={avatarUrl || undefined} alt={displayName || username} />
+                    <AvatarFallback className="text-xl font-bold bg-primary/20 text-primary">
+                      {(displayName || username)?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
               </div>
-            </motion.div>
-
-            <div className="text-center">
-              <h3 className="font-semibold text-lg">
+              <h3 className="font-semibold text-base mt-3">
                 {displayName || username}
               </h3>
-              <p className="text-sm text-muted-foreground">
-                Scannez pour m'ajouter sur RunConnect
+              <p className="text-xs text-muted-foreground">
+                Scannez pour m'ajouter
               </p>
-            </div>
+            </motion.div>
             
-            {/* QR Code */}
+            {/* QR Code avec cadre élégant */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-primary/10 to-cyan-400/10 p-6 rounded-2xl border-2 border-primary/20 min-h-[280px] flex items-center justify-center shadow-lg"
+              className="flex justify-center"
             >
-              {isLoading ? (
-                <div className="text-muted-foreground">Génération du QR code...</div>
-              ) : qrImageUrl ? (
-                <img 
-                  src={qrImageUrl} 
-                  alt="QR Code du profil"
-                  className="max-w-full h-auto rounded-lg"
-                  style={{ width: 250, height: 250 }}
-                />
-              ) : (
-                <div className="text-muted-foreground">Erreur lors de la génération</div>
-              )}
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
+                <div className="relative bg-gradient-to-br from-card to-card/80 p-4 rounded-2xl border border-primary/20 shadow-lg">
+                  {isLoading ? (
+                    <div className="w-[180px] h-[180px] flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                    </div>
+                  ) : qrImageUrl ? (
+                    <img 
+                      src={qrImageUrl} 
+                      alt="QR Code du profil"
+                      className="rounded-lg"
+                      style={{ width: 180, height: 180 }}
+                    />
+                  ) : (
+                    <div className="w-[180px] h-[180px] flex items-center justify-center text-muted-foreground text-sm">
+                      Erreur de génération
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
 
-            {/* Rappel code parrainage */}
+            {/* Code parrainage compact */}
             {referralCode && (
               <motion.div
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="w-full bg-primary/10 p-3 rounded-lg border border-primary/20"
+                className="bg-gradient-to-r from-primary/10 via-primary/5 to-cyan-400/10 p-3 rounded-xl border border-primary/20"
               >
-                <p className="text-sm text-center">
-                  💡 Donne ton code de parrainage pour gagner des points bonus !
-                  <br />
-                  <span className="font-mono font-bold text-primary text-base">{referralCode}</span>
-                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Code parrainage</span>
+                  <span className="font-mono font-bold text-primary text-sm tracking-wider">{referralCode}</span>
+                </div>
               </motion.div>
             )}
             
-            <div className="text-xs text-center text-muted-foreground px-4 break-all">
+            {/* URL minimaliste */}
+            <p className="text-[10px] text-center text-muted-foreground/70 truncate px-2">
               {profileUrl}
-            </div>
+            </p>
             
-            {/* Boutons d'action */}
-            <div className="flex flex-col space-y-2 w-full">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            {/* Boutons d'action redesignés */}
+            <div className="space-y-2">
+              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Button
                   variant="default"
-                  size="lg"
+                  size="default"
                   onClick={copyUrl}
-                  className="w-full bg-primary hover:bg-primary/90"
+                  className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
                 >
                   <Copy className="h-4 w-4 mr-2" />
                   Copier le lien
@@ -324,9 +339,9 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     variant="outline"
-                    size="lg"
+                    size="default"
                     onClick={handleShare}
-                    className="w-full"
+                    className="w-full border-primary/30 hover:bg-primary/10 hover:border-primary/50"
                   >
                     <Share2 className="h-4 w-4 mr-2" />
                     Partager
@@ -336,12 +351,12 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     variant="outline"
-                    size="lg"
+                    size="default"
                     onClick={generateInstagramStoryImage}
                     disabled={!qrImageUrl}
-                    className="w-full border-pink-500/50 hover:bg-pink-500/10 hover:border-pink-500"
+                    className="w-full border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
                   >
-                    <Instagram className="h-4 w-4 mr-2" />
+                    <Instagram className="h-4 w-4 mr-2 text-pink-500" />
                     Story
                   </Button>
                 </motion.div>
