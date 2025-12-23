@@ -17,10 +17,10 @@ export const BottomNavigation = () => {
   const { openCreateSession } = useAppContext();
 
   const navItems = [
-    { path: '/', emoji: '🗺️', label: t('navigation.home') },
-    { path: '/my-sessions', emoji: '🚴‍♂️', label: t('navigation.mySessions') },
-    { path: '/messages', emoji: '💬', label: t('navigation.messages') },
-    { path: '/feed', emoji: '📱', label: 'Feed' }
+    { path: '/', emoji: '🗺️', label: t('navigation.home'), color: 'from-blue-500 to-cyan-400' },
+    { path: '/my-sessions', emoji: '🚴‍♂️', label: t('navigation.mySessions'), color: 'from-purple-500 to-pink-500' },
+    { path: '/messages', emoji: '💬', label: t('navigation.messages'), color: 'from-orange-500 to-amber-400' },
+    { path: '/feed', emoji: '📱', label: 'Feed', color: 'from-green-500 to-emerald-400' }
   ];
 
   const handleNavigation = (path: string) => {
@@ -84,28 +84,31 @@ export const BottomNavigation = () => {
   }, [user]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 backdrop-blur-xl bg-card/90 border-t border-white/10 shadow-2xl z-50 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 glass-primary shadow-2xl z-50 pb-safe">
+      {/* Gradient top border */}
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-accent to-primary animate-[shimmer_3s_ease-in-out_infinite]" style={{ backgroundSize: '200% 100%' }} />
+      
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
         
         <div className="grid grid-cols-5 items-center px-3 pt-6 pb-4">
           {/* Carte */}
           <div className="flex justify-center -translate-y-3">
-            {navItems.slice(0, 1).map(({ path, emoji, label }) => {
+            {navItems.slice(0, 1).map(({ path, emoji, label, color }) => {
               const isActive = location.pathname === path;
               return (
                 <button 
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300",
                     isActive 
-                      ? "text-primary bg-primary/10 scale-105" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? `text-foreground bg-gradient-to-br ${color} shadow-lg shadow-blue-500/30 scale-105` 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <span className="text-2xl">{emoji}</span>
-                  <span className="text-xs font-medium">{label}</span>
+                  <span className={cn("text-xs font-medium", isActive && "text-white")}>{label}</span>
                 </button>
               );
             })}
@@ -113,27 +116,27 @@ export const BottomNavigation = () => {
 
           {/* Mes Séances */}
           <div className="flex justify-center -translate-y-3">
-            {navItems.slice(1, 2).map(({ path, emoji, label }) => {
+            {navItems.slice(1, 2).map(({ path, emoji, label, color }) => {
               const isActive = location.pathname === path;
               return (
                 <button 
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300",
                     isActive 
-                      ? "text-primary bg-primary/10 scale-105" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? `text-foreground bg-gradient-to-br ${color} shadow-lg shadow-purple-500/30 scale-105` 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <span className="text-2xl">{emoji}</span>
-                  <span className="text-xs font-medium">{label}</span>
+                  <span className={cn("text-xs font-medium", isActive && "text-white")}>{label}</span>
                 </button>
               );
             })}
           </div>
           
-          {/* Bouton Créer au centre */}
+          {/* Bouton Créer au centre - Enhanced with rainbow glow */}
           <div className="flex justify-center">
             <button 
               onClick={() => {
@@ -144,16 +147,17 @@ export const BottomNavigation = () => {
                   setTimeout(() => openCreateSession(), 100);
                 }
               }} 
-              className="flex flex-col items-center gap-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-full transition-all hover:scale-105 -translate-y-6 shadow-lg shadow-primary/30"
+              className="flex flex-col items-center gap-1 px-4 py-2.5 bg-gradient-to-r from-primary via-accent to-primary text-primary-foreground rounded-full transition-all hover:scale-110 -translate-y-6 shadow-xl animate-rainbow-glow"
+              style={{ backgroundSize: '200% 100%' }}
             >
-              <Plus size={22} />
+              <Plus size={22} className="animate-pulse" />
               <span className="text-[10px] font-bold">{t('sessions.create').toUpperCase()}</span>
             </button>
           </div>
 
           {/* Messages */}
           <div className="flex justify-center -translate-y-3">
-            {navItems.slice(2, 3).map(({ path, emoji, label }) => {
+            {navItems.slice(2, 3).map(({ path, emoji, label, color }) => {
               const isActive = location.pathname === path;
               const isMessages = path === '/messages';
               
@@ -162,10 +166,10 @@ export const BottomNavigation = () => {
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 relative",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 relative",
                     isActive 
-                      ? "text-primary bg-primary/10 scale-105" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? `text-foreground bg-gradient-to-br ${color} shadow-lg shadow-orange-500/30 scale-105` 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <div className="relative">
@@ -173,13 +177,13 @@ export const BottomNavigation = () => {
                     {isMessages && totalUnreadCount > 0 && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute -top-2 -right-2.5 h-5 min-w-5 p-0 flex items-center justify-center text-xs bg-red-500 animate-pulse"
+                        className="absolute -top-2 -right-2.5 h-5 min-w-5 p-0 flex items-center justify-center text-xs bg-gradient-to-r from-red-500 to-pink-500 animate-pulse shadow-lg shadow-red-500/50"
                       >
                         {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                       </Badge>
                     )}
                   </div>
-                  <span className="text-xs font-medium">{label}</span>
+                  <span className={cn("text-xs font-medium", isActive && "text-white")}>{label}</span>
                 </button>
               );
             })}
@@ -187,21 +191,21 @@ export const BottomNavigation = () => {
 
           {/* Feed */}
           <div className="flex justify-center -translate-y-3">
-            {navItems.slice(3, 4).map(({ path, emoji, label }) => {
+            {navItems.slice(3, 4).map(({ path, emoji, label, color }) => {
               const isActive = location.pathname === path;
               return (
                 <button 
                   key={path} 
                   onClick={() => handleNavigation(path)}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200",
+                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300",
                     isActive 
-                      ? "text-primary bg-primary/10 scale-105" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? `text-foreground bg-gradient-to-br ${color} shadow-lg shadow-green-500/30 scale-105` 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:scale-105"
                   )}
                 >
                   <span className="text-2xl">{emoji}</span>
-                  <span className="text-xs font-medium">{label}</span>
+                  <span className={cn("text-xs font-medium", isActive && "text-white")}>{label}</span>
                 </button>
               );
             })}
