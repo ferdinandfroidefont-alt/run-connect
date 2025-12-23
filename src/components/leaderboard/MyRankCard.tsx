@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, TrendingUp } from "lucide-react";
+import { Trophy, TrendingUp, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface MyRankCardProps {
@@ -26,24 +26,31 @@ export const MyRankCard = ({
 
   const getRankColor = (rank: string) => {
     switch (rank) {
-      case 'diamant': return 'from-cyan-400 to-blue-500';
-      case 'platine': return 'from-purple-500 to-pink-500';
-      case 'or': return 'from-yellow-400 to-yellow-600';
-      case 'argent': return 'from-gray-400 to-gray-600';
-      case 'bronze': return 'from-amber-600 to-amber-800';
-      default: return 'from-gray-300 to-gray-500';
+      case 'diamant': return { gradient: 'from-cyan-400 to-blue-500', shadow: 'shadow-cyan-500/30' };
+      case 'platine': return { gradient: 'from-purple-500 to-pink-500', shadow: 'shadow-purple-500/30' };
+      case 'or': return { gradient: 'from-yellow-400 to-amber-500', shadow: 'shadow-yellow-500/30' };
+      case 'argent': return { gradient: 'from-gray-400 to-gray-500', shadow: 'shadow-gray-500/30' };
+      case 'bronze': return { gradient: 'from-amber-600 to-orange-500', shadow: 'shadow-amber-500/30' };
+      default: return { gradient: 'from-gray-300 to-gray-500', shadow: 'shadow-gray-500/30' };
     }
   };
 
+  const rankColors = getRankColor(userRank);
+
   return (
-    <Card className="bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/20">
+    <Card className="glass-card overflow-hidden card-hover-glow">
+      {/* Animated gradient top bar */}
+      <div className={`h-1 bg-gradient-to-r ${rankColors.gradient} animate-[shimmer_3s_ease-in-out_infinite]`} style={{ backgroundSize: '200% 100%' }} />
+      
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            <h3 className="font-bold text-lg">Mon Rang Actuel</h3>
+            <div className={`p-2 rounded-xl bg-gradient-to-br ${rankColors.gradient} ${rankColors.shadow} shadow-lg`}>
+              <Trophy className="h-5 w-5 text-white" />
+            </div>
+            <h3 className="font-bold text-lg">Mon Rang</h3>
           </div>
-          <Badge className={`bg-gradient-to-r ${getRankColor(userRank)} text-white border-0`}>
+          <Badge className={`bg-gradient-to-r ${rankColors.gradient} text-white border-0 shadow-lg ${rankColors.shadow}`}>
             {userRank === 'diamant' ? '💎' : userRank === 'platine' ? '💍' : userRank === 'or' ? '🥇' : userRank === 'argent' ? '🥈' : userRank === 'bronze' ? '🥉' : '⭐'}
             {' '}{userRank.charAt(0).toUpperCase() + userRank.slice(1)}
           </Badge>
@@ -51,26 +58,37 @@ export const MyRankCard = ({
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-primary">#{currentRank}</span>
+            <span className={`text-3xl font-bold bg-gradient-to-r ${rankColors.gradient} bg-clip-text text-transparent`}>#{currentRank}</span>
             <span className="text-sm text-muted-foreground">sur {totalUsers.toLocaleString()} participants</span>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Prochain rang : {nextRankName}</span>
-              <span className="font-medium">{progressPercentage.toFixed(0)}%</span>
+              <div className="flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-primary" />
+                <span className="text-muted-foreground">Prochain : {nextRankName}</span>
+              </div>
+              <span className="font-medium text-primary">{progressPercentage.toFixed(0)}%</span>
             </div>
-            <Progress value={progressPercentage} className="h-2" />
+            <div className="relative">
+              <Progress value={progressPercentage} className="h-2.5" />
+              <div 
+                className={`absolute top-0 left-0 h-2.5 rounded-full bg-gradient-to-r ${rankColors.gradient} transition-all duration-500`}
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
-              {pointsToNext > 0 ? `${pointsToNext} points restants` : 'Rang maximum atteint !'}
+              {pointsToNext > 0 ? `${pointsToNext} points restants` : '🎉 Rang maximum atteint !'}
             </p>
           </div>
 
           <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-sm font-medium">
-              Classement: Top {topPercentage}%
-            </span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium text-green-500">
+                Top {topPercentage}%
+              </span>
+            </div>
           </div>
         </div>
       </CardContent>
