@@ -88,8 +88,33 @@ serve(async (req) => {
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     let supabaseUser = existingUsers?.users.find(u => u.email === tokenInfo.email);
 
-    // Générer un mot de passe temporaire sécurisé
-    const tempPassword = crypto.randomUUID();
+    // Générer un mot de passe temporaire sécurisé qui respecte les exigences Supabase
+    // Doit contenir: minuscules, majuscules, chiffres (min 6 caractères)
+    const generateSecurePassword = (): string => {
+      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      const special = '!@#$%^&*';
+      
+      // Garantir au moins un de chaque type
+      let password = '';
+      password += lowercase[Math.floor(Math.random() * lowercase.length)];
+      password += uppercase[Math.floor(Math.random() * uppercase.length)];
+      password += numbers[Math.floor(Math.random() * numbers.length)];
+      password += special[Math.floor(Math.random() * special.length)];
+      
+      // Ajouter des caractères aléatoires pour atteindre 16 caractères
+      const allChars = lowercase + uppercase + numbers + special;
+      for (let i = 0; i < 12; i++) {
+        password += allChars[Math.floor(Math.random() * allChars.length)];
+      }
+      
+      // Mélanger le mot de passe
+      return password.split('').sort(() => Math.random() - 0.5).join('');
+    };
+    
+    const tempPassword = generateSecurePassword();
+    console.log('🔐 [FIREBASE AUTH] Secure password generated (length:', tempPassword.length, ')');
 
     if (!supabaseUser) {
       console.log('👤 [FIREBASE AUTH] Creating new Supabase user for:', tokenInfo.email);

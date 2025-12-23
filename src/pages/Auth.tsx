@@ -859,13 +859,20 @@ const Auth = () => {
                 </div>
               </div>
 
-              {/* hCaptcha Widget */}
-              <CaptchaWidget
-                ref={captchaRef}
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken(null)}
-                onError={() => setCaptchaToken(null)}
-              />
+              {/* hCaptcha Widget - Unique pour tous les formulaires */}
+              {!captchaToken && (
+                <CaptchaWidget
+                  ref={captchaRef}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => setCaptchaToken(null)}
+                />
+              )}
+              {captchaToken && (
+                <div className="text-center text-sm text-green-600 dark:text-green-400">
+                  ✅ Vérification CAPTCHA réussie
+                </div>
+              )}
 
               <Button
                 type="submit"
@@ -901,13 +908,20 @@ const Auth = () => {
                   </div>
                 </div>
 
-                {/* hCaptcha Widget for OTP signin */}
-                <CaptchaWidget
-                  ref={captchaRef}
-                  onVerify={(token) => setCaptchaToken(token)}
-                  onExpire={() => setCaptchaToken(null)}
-                  onError={() => setCaptchaToken(null)}
-                />
+                {/* hCaptcha Widget - Unique pour tous les formulaires */}
+                {!captchaToken && (
+                  <CaptchaWidget
+                    ref={captchaRef}
+                    onVerify={(token) => setCaptchaToken(token)}
+                    onExpire={() => setCaptchaToken(null)}
+                    onError={() => setCaptchaToken(null)}
+                  />
+                )}
+                {captchaToken && (
+                  <div className="text-center text-sm text-green-600 dark:text-green-400">
+                    ✅ Vérification CAPTCHA réussie
+                  </div>
+                )}
 
                 <Button
                   type="submit"
@@ -1011,13 +1025,20 @@ const Auth = () => {
                   </div>
                 </div>
 
-                {/* hCaptcha Widget for Password signin */}
-                <CaptchaWidget
-                  ref={captchaRef}
-                  onVerify={(token) => setCaptchaToken(token)}
-                  onExpire={() => setCaptchaToken(null)}
-                  onError={() => setCaptchaToken(null)}
-                />
+                {/* hCaptcha Widget - Partagé avec le formulaire OTP ci-dessus */}
+                {!captchaToken && (
+                  <CaptchaWidget
+                    ref={captchaRef}
+                    onVerify={(token) => setCaptchaToken(token)}
+                    onExpire={() => setCaptchaToken(null)}
+                    onError={() => setCaptchaToken(null)}
+                  />
+                )}
+                {captchaToken && (
+                  <div className="text-center text-sm text-green-600 dark:text-green-400">
+                    ✅ Vérification CAPTCHA réussie
+                  </div>
+                )}
 
                 <Button
                   type="submit"
