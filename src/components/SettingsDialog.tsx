@@ -189,7 +189,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => setCurrentPage(category.id)}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm hover:bg-muted/30 hover:scale-[1.02] transition-all duration-200 group"
+                      className="w-full flex items-center gap-4 py-6 px-4 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm hover:bg-muted/30 hover:scale-[1.02] transition-all duration-200 group"
                     >
                       <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center shadow-lg`}>
                         <category.icon className="h-6 w-6 text-white" />
