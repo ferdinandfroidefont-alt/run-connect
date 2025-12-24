@@ -38,15 +38,15 @@ const activityEmojis: Record<string, string> = {
   'swimming': '🏊'
 };
 
-const activityColors: Record<string, { bg: string; shadow: string }> = {
-  'running': { bg: 'from-orange-500 to-red-500', shadow: 'shadow-orange-500/30' },
-  'trail': { bg: 'from-green-500 to-emerald-500', shadow: 'shadow-green-500/30' },
-  'cycling': { bg: 'from-blue-500 to-cyan-500', shadow: 'shadow-blue-500/30' },
-  'mtb': { bg: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/30' },
-  'walking': { bg: 'from-teal-500 to-green-500', shadow: 'shadow-teal-500/30' },
-  'football': { bg: 'from-emerald-500 to-green-500', shadow: 'shadow-emerald-500/30' },
-  'basketball': { bg: 'from-orange-500 to-amber-500', shadow: 'shadow-orange-500/30' },
-  'swimming': { bg: 'from-cyan-500 to-blue-500', shadow: 'shadow-cyan-500/30' }
+const activityColors: Record<string, string> = {
+  'running': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  'trail': 'bg-green-500/20 text-green-400 border-green-500/30',
+  'cycling': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  'mtb': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  'walking': 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+  'football': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  'basketball': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  'swimming': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
 };
 
 export const FeedCard = ({
@@ -66,7 +66,7 @@ export const FeedCard = ({
   };
 
   const activityEmoji = activityEmojis[session.activity_type] || '🏃';
-  const activityStyle = activityColors[session.activity_type] || { bg: 'from-primary to-accent', shadow: 'shadow-primary/30' };
+  const activityColor = activityColors[session.activity_type] || 'bg-primary/20 text-primary border-primary/30';
 
   const scheduledDate = new Date(session.scheduled_at);
   const isUpcoming = scheduledDate > new Date();
@@ -75,20 +75,17 @@ export const FeedCard = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.01 }}
+      whileHover={{ y: -2 }}
       transition={{ duration: 0.3 }}
-      className="glass-card card-hover-glow overflow-hidden mb-4"
+      className="bg-card/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden shadow-xl shadow-black/5 mb-4"
     >
-      {/* Gradient top border */}
-      <div className={`h-1 bg-gradient-to-r ${activityStyle.bg}`} />
-      
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
-          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-            <Avatar className={`h-11 w-11 ring-2 ring-primary/40 shadow-lg ${activityStyle.shadow}`}>
+          <motion.div whileHover={{ scale: 1.05 }}>
+            <Avatar className="h-11 w-11 ring-2 ring-primary/30 shadow-lg">
               <AvatarImage src={session.organizer.avatar_url} />
-              <AvatarFallback className={`bg-gradient-to-br ${activityStyle.bg} text-white font-semibold`}>
+              <AvatarFallback className="bg-primary/20 text-primary font-semibold">
                 {session.organizer.username[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -104,9 +101,10 @@ export const FeedCard = ({
           </div>
         </div>
 
-        {/* Activity Badge with gradient */}
+        {/* Activity Badge */}
         <Badge 
-          className={`bg-gradient-to-r ${activityStyle.bg} text-white border-0 rounded-full px-3 py-1 text-xs font-medium shadow-lg ${activityStyle.shadow}`}
+          variant="outline" 
+          className={`${activityColor} rounded-full px-3 py-1 text-xs font-medium border`}
         >
           <span className="mr-1">{activityEmoji}</span>
           {session.activity_type}
@@ -125,14 +123,14 @@ export const FeedCard = ({
           </p>
         )}
 
-        {/* Info Grid with glass effect */}
+        {/* Info Grid */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground glass-card px-3 py-2 rounded-xl">
-            <MapPin className="h-4 w-4 text-primary" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/5 rounded-lg px-3 py-2">
+            <MapPin className="h-4 w-4 text-primary/70" />
             <span className="truncate">{session.location_name}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground glass-card px-3 py-2 rounded-xl">
-            <Users className="h-4 w-4 text-accent" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/5 rounded-lg px-3 py-2">
+            <Users className="h-4 w-4 text-primary/70" />
             <span>
               {session.current_participants}
               {session.max_participants && `/${session.max_participants}`}
@@ -140,16 +138,14 @@ export const FeedCard = ({
           </div>
         </div>
 
-        {/* Date/Time Banner with gradient */}
+        {/* Date/Time Banner */}
         <div className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
           isUpcoming 
-            ? 'bg-gradient-to-r from-primary/20 via-accent/10 to-primary/20 border border-primary/30' 
-            : 'glass-card'
+            ? 'bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/20' 
+            : 'bg-white/5 border border-white/10'
         }`}>
-          <div className={`flex items-center justify-center h-10 w-10 rounded-full ${
-            isUpcoming ? 'bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30' : 'bg-muted'
-          }`}>
-            <Calendar className={`h-5 w-5 ${isUpcoming ? 'text-white' : 'text-muted-foreground'}`} />
+          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-background/50">
+            <Calendar className="h-5 w-5 text-primary" />
           </div>
           <div>
             <p className="font-medium text-sm">
@@ -159,7 +155,7 @@ export const FeedCard = ({
               <Clock className="h-3 w-3" />
               <span>{format(scheduledDate, "HH'h'mm", { locale: fr })}</span>
               {isUpcoming && (
-                <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-lg shadow-green-500/30">
+                <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0 bg-primary/20 text-primary">
                   À venir
                 </Badge>
               )}
@@ -167,8 +163,8 @@ export const FeedCard = ({
           </div>
         </div>
 
-        {/* Mini Map with gradient border */}
-        <div className="w-full h-36 rounded-xl overflow-hidden border-gradient">
+        {/* Mini Map */}
+        <div className="w-full h-36 rounded-xl overflow-hidden border border-white/10">
           <MiniMapPreview 
             lat={session.location_lat}
             lng={session.location_lng}

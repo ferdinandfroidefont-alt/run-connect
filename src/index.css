@@ -54,15 +54,10 @@ All colors MUST be HSL.
     --input: 215 14% 89%;
     --ring: 217 91% 65%;
 
-    /* Premium gradients - Colorful */
+    /* Premium gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 71% 45%) 100%);
     --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 72% 51%) 100%);
-    --gradient-purple: linear-gradient(135deg, hsl(280 80% 60%) 0%, hsl(320 80% 60%) 100%);
-    --gradient-orange: linear-gradient(135deg, hsl(25 95% 55%) 0%, hsl(45 95% 55%) 100%);
-    --gradient-green: linear-gradient(135deg, hsl(142 76% 40%) 0%, hsl(170 80% 45%) 100%);
-    --gradient-rainbow: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(280 80% 60%) 25%, hsl(320 80% 60%) 50%, hsl(25 95% 55%) 75%, hsl(45 95% 55%) 100%);
-    --gradient-shimmer: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.1) 50%, transparent 100%);
     
     /* Map-specific design tokens */
     --map-control-bg: 0 0% 100%;
@@ -81,9 +76,6 @@ All colors MUST be HSL.
     --shadow-xl: 0 20px 25px -5px hsl(215 25% 27% / 0.1), 0 8px 10px -6px hsl(215 25% 27% / 0.1);
     --shadow-2xl: 0 25px 50px -12px hsl(215 25% 27% / 0.25);
     --shadow-glow: 0 0 20px 5px hsl(217 91% 65% / 0.4);
-    --shadow-glow-purple: 0 0 20px 5px hsl(280 80% 60% / 0.4);
-    --shadow-glow-orange: 0 0 20px 5px hsl(25 95% 55% / 0.4);
-    --shadow-glow-green: 0 0 20px 5px hsl(142 76% 40% / 0.4);
     --shadow-map-control: 0 4px 6px -1px hsl(var(--map-control-shadow)), 0 2px 4px -2px hsl(var(--map-control-shadow));
     --shadow-map-panel: 0 10px 15px -3px hsl(var(--map-control-shadow)), 0 4px 6px -4px hsl(var(--map-control-shadow));
     
@@ -150,14 +142,6 @@ All colors MUST be HSL.
     --input: 215 25% 27%;
     --ring: 217 91% 65%;
 
-    /* Dark premium gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(195 100% 70%) 100%);
-    --gradient-purple: linear-gradient(135deg, hsl(280 80% 60%) 0%, hsl(320 80% 60%) 100%);
-    --gradient-orange: linear-gradient(135deg, hsl(25 95% 55%) 0%, hsl(45 95% 55%) 100%);
-    --gradient-green: linear-gradient(135deg, hsl(142 76% 40%) 0%, hsl(170 80% 45%) 100%);
-    --gradient-rainbow: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(280 80% 60%) 25%, hsl(320 80% 60%) 50%, hsl(25 95% 55%) 75%, hsl(45 95% 55%) 100%);
-    --gradient-shimmer: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.15) 50%, transparent 100%);
-
     /* Dark map controls */
     --map-control-bg: 215 25% 27%;
     --map-control-border: 215 20% 35%;
@@ -173,13 +157,6 @@ All colors MUST be HSL.
     --glass-bg-card: hsl(0 0% 100% / 0.06);
     --glass-border-card: hsl(0 0% 100% / 0.10);
     --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.24);
-    
-    /* Dark shadows with color glow */
-    --shadow-glow: 0 0 20px 5px hsl(217 91% 65% / 0.4);
-    --shadow-glow-purple: 0 0 20px 5px hsl(280 80% 60% / 0.4);
-    --shadow-glow-orange: 0 0 20px 5px hsl(25 95% 55% / 0.4);
-    --shadow-glow-green: 0 0 20px 5px hsl(142 76% 40% / 0.4);
-    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -359,74 +336,6 @@ All colors MUST be HSL.
     border-radius: 16px;
     box-shadow: var(--glass-shadow);
   }
-
-  /* Enhanced button glow effects */
-  .btn-glow {
-    @apply relative overflow-hidden transition-all duration-300;
-  }
-  
-  .btn-glow::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: var(--gradient-shimmer);
-    background-size: 200% 100%;
-    animation: shimmer 3s ease-in-out infinite;
-  }
-  
-  .btn-glow:hover::before {
-    @apply opacity-100;
-  }
-
-  /* Gradient text utility */
-  .text-gradient-primary {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .text-gradient-rainbow {
-    background: var(--gradient-rainbow);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Card hover effects */
-  .card-hover-glow {
-    @apply transition-all duration-300;
-  }
-  
-  .card-hover-glow:hover {
-    box-shadow: 0 0 30px 5px hsl(217 91% 65% / 0.2);
-  }
-
-  /* Gradient borders */
-  .border-gradient {
-    position: relative;
-    border-radius: 16px;
-  }
-  
-  .border-gradient::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    padding: 1px;
-    border-radius: inherit;
-    background: var(--gradient-primary);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-
-  /* Animated gradient background */
-  .bg-gradient-animated {
-    background: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(280 80% 60%) 25%, hsl(320 80% 60%) 50%, hsl(25 95% 55%) 75%, hsl(45 95% 55%) 100%);
-    background-size: 300% 300%;
-    animation: gradient-shift 8s ease infinite;
-  }
   
   /* Fallback si backdrop-filter non supporté */
   @supports not (backdrop-filter: blur(14px)) {
@@ -452,33 +361,6 @@ All colors MUST be HSL.
 }
 
 /* Animations */
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { 
-    box-shadow: 0 0 20px 5px hsl(217 91% 65% / 0.3);
-  }
-  50% { 
-    box-shadow: 0 0 40px 10px hsl(217 91% 65% / 0.5);
-  }
-}
-
-@keyframes rainbow-glow {
-  0% { box-shadow: 0 0 20px 5px hsl(217 91% 65% / 0.4); }
-  25% { box-shadow: 0 0 20px 5px hsl(280 80% 60% / 0.4); }
-  50% { box-shadow: 0 0 20px 5px hsl(320 80% 60% / 0.4); }
-  75% { box-shadow: 0 0 20px 5px hsl(25 95% 55% / 0.4); }
-  100% { box-shadow: 0 0 20px 5px hsl(217 91% 65% / 0.4); }
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -527,14 +409,6 @@ All colors MUST be HSL.
 
 .animate-slide-down {
   animation: slide-down 0.25s cubic-bezier(0.4, 0, 0.6, 1);
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-.animate-rainbow-glow {
-  animation: rainbow-glow 4s ease-in-out infinite;
 }
 
 /* ===== Scroll horizontal fluide pour les sports ===== */

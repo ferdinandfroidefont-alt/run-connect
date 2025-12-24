@@ -546,23 +546,19 @@ const Leaderboard = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 pb-8">
-      {/* Header with gradient */}
+      {/* Header avec flèche retour */}
       <div className="flex items-center mb-4">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate('/')}
-          className="mr-2 hover:bg-gradient-to-br hover:from-primary/20 hover:to-accent/20"
+          className="mr-2"
         >
           <ArrowLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-2xl font-bold flex items-center gap-2 flex-1 justify-center mr-10">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 shadow-lg shadow-yellow-500/30">
-            <Trophy className="h-6 w-6 text-white" />
-          </div>
-          <span className="bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 bg-clip-text text-transparent">
-            Classement
-          </span>
+          <Trophy className="h-7 w-7 text-primary" />
+          Classement
         </h1>
       </div>
 
@@ -600,8 +596,7 @@ const Leaderboard = () => {
         )}
 
         {/* Top 3 */}
-        <Card variant="glass" className="overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500" />
+        <Card>
           <CardContent className="p-3">
             <PodiumDisplay top3={top3} />
           </CardContent>
@@ -711,7 +706,7 @@ const Leaderboard = () => {
           <div className="flex justify-center pt-2">
             <Button
               onClick={loadMoreUsers}
-              className="bg-gradient-to-r from-primary to-accent text-white hover:opacity-90 shadow-lg shadow-primary/30"
+              variant="outline"
               size="lg"
             >
               Charger plus
