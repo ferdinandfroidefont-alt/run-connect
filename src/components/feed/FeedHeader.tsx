@@ -1,11 +1,9 @@
-import { Search } from 'lucide-react';
+import { Search, Bell } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { NotificationCenter } from '@/components/NotificationCenter';
 
 interface FeedHeaderProps {
   onSearch?: () => void;
@@ -38,22 +36,18 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
   return (
     <header className="sticky top-0 z-20 bg-background">
       <div className="flex items-center justify-between px-4 py-3">
-        {/* Avatar & Welcome */}
-        <div className="flex items-center gap-3">
-          <Avatar 
-            className="h-10 w-10 cursor-pointer"
-            onClick={() => navigate('/profile')}
-          >
+        {/* Avatar */}
+        <button 
+          onClick={() => navigate('/profile')}
+          className="active:opacity-70 transition-opacity"
+        >
+          <Avatar className="h-9 w-9">
             <AvatarImage src={profile.avatar_url || ''} />
-            <AvatarFallback className="bg-secondary text-foreground">
+            <AvatarFallback className="bg-secondary text-foreground text-sm font-medium">
               {profile.username?.[0]?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <p className="text-[12px] text-muted-foreground">Bienvenue</p>
-            <p className="font-semibold text-[15px]">@{profile.username || 'user'}</p>
-          </div>
-        </div>
+        </button>
 
         {/* Title */}
         <h1 className="text-[17px] font-semibold">
@@ -62,19 +56,16 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
 
         {/* Actions */}
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10"
+          <button
             onClick={onSearch}
+            className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
           >
-            <Search className="h-5 w-5" />
-          </Button>
-          <NotificationCenter />
+            <Search className="h-[22px] w-[22px] text-primary" />
+          </button>
         </div>
       </div>
 
-      {/* iOS-style hairline separator */}
+      {/* Separator */}
       <div className="h-px bg-border" />
     </header>
   );

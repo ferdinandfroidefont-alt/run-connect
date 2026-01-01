@@ -1,6 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Calendar, MessageCircle, Newspaper, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,7 +12,7 @@ export const BottomNavigation = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const { openCreateSession } = useAppContext();
+  const { openCreateSession, hideBottomNav } = useAppContext();
 
   const navItems = [
     { path: '/', icon: Home, label: t('navigation.home') },
@@ -22,24 +21,17 @@ export const BottomNavigation = () => {
     { path: '/feed', icon: Newspaper, label: 'Feed' }
   ];
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
-  };
-
   useEffect(() => {
     if (!user) return;
 
     const fetchUnreadCount = async () => {
       try {
-        const { data: conversations, error: convError } = await supabase
+        const { data: conversations } = await supabase
           .from('conversations')
           .select('id')
-          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id},is_group.eq.true`);
-
-        if (convError) throw convError;
+          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
 
         let totalUnread = 0;
-
         for (const conv of conversations || []) {
           const { count } = await supabase
             .from('messages')
@@ -47,10 +39,8 @@ export const BottomNavigation = () => {
             .eq('conversation_id', conv.id)
             .neq('sender_id', user.id)
             .is('read_at', null);
-
           totalUnread += count || 0;
         }
-
         setTotalUnreadCount(totalUnread);
       } catch (error) {
         console.error('Error fetching unread count:', error);
@@ -58,146 +48,54 @@ export const BottomNavigation = () => {
     };
 
     fetchUnreadCount();
-
-    const handleMessagesRead = () => {
-      fetchUnreadCount();
-    };
-
-    window.addEventListener('messages-read', handleMessagesRead);
+    window.addEventListener('messages-read', fetchUnreadCount);
 
     const channel = supabase
       .channel('unread-messages-count')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'messages' 
-      }, () => {
-        fetchUnreadCount();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fetchUnreadCount)
       .subscribe();
 
     return () => {
-      window.removeEventListener('messages-read', handleMessagesRead);
+      window.removeEventListener('messages-read', fetchUnreadCount);
       supabase.removeChannel(channel);
     };
   }, [user]);
 
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 pb-safe">
-      <div className="grid grid-cols-5 items-end px-1 pt-2 pb-1">
-        {/* Map */}
-        <div className="flex justify-center">
-          {navItems.slice(0, 1).map(({ path, icon: Icon, label }) => {
-            const isActive = location.pathname === path;
-            return (
-              <button 
-                key={path} 
-                onClick={() => handleNavigation(path)}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors",
-                  isActive 
-                    ? "text-primary" 
-                    : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
-                <span className="text-[10px] font-medium">{label}</span>
-              </button>
-            );
-          })}
-        </div>
+  if (hideBottomNav) return null;
 
-        {/* Sessions */}
-        <div className="flex justify-center">
-          {navItems.slice(1, 2).map(({ path, icon: Icon, label }) => {
-            const isActive = location.pathname === path;
-            return (
-              <button 
-                key={path} 
-                onClick={() => handleNavigation(path)}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors",
-                  isActive 
-                    ? "text-primary" 
-                    : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
-                <span className="text-[10px] font-medium">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-        
-        {/* Create button - iOS style */}
-        <div className="flex justify-center">
-          <button 
-            onClick={() => {
-              if (location.pathname === '/') {
-                openCreateSession();
-              } else {
-                navigate('/');
-                setTimeout(() => openCreateSession(), 100);
-              }
-            }} 
-            className="flex items-center justify-center h-11 w-11 bg-primary text-primary-foreground rounded-full -translate-y-2 active:opacity-80 transition-opacity"
-          >
-            <Plus className="h-6 w-6" strokeWidth={2.5} />
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background pb-safe">
+      <div className="h-px bg-border" />
+      <div className="grid grid-cols-5 items-center h-[50px]">
+        {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
+          const isActive = location.pathname === path;
+          return (
+            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full">
+              <Icon className={`h-[22px] w-[22px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
+              <span className={`text-[10px] mt-0.5 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
+            </button>
+          );
+        })}
+
+        <div className="flex items-center justify-center">
+          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-[44px] w-[44px] rounded-full bg-primary flex items-center justify-center active:opacity-70">
+            <Plus className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Messages */}
-        <div className="flex justify-center">
-          {navItems.slice(2, 3).map(({ path, icon: Icon, label }) => {
-            const isActive = location.pathname === path;
-            const isMessages = path === '/messages';
-            
-            return (
-              <button 
-                key={path} 
-                onClick={() => handleNavigation(path)}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors relative",
-                  isActive 
-                    ? "text-primary" 
-                    : "text-muted-foreground"
-                )}
-              >
-                <div className="relative">
-                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
-                  {isMessages && totalUnreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1.5 h-[18px] min-w-[18px] px-1 flex items-center justify-center text-[11px] font-semibold bg-destructive text-destructive-foreground rounded-full">
-                      {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-medium">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Feed */}
-        <div className="flex justify-center">
-          {navItems.slice(3, 4).map(({ path, icon: Icon, label }) => {
-            const isActive = location.pathname === path;
-            return (
-              <button 
-                key={path} 
-                onClick={() => handleNavigation(path)}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors",
-                  isActive 
-                    ? "text-primary" 
-                    : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
-                <span className="text-[10px] font-medium">{label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {navItems.slice(2).map(({ path, icon: Icon, label }) => {
+          const isActive = location.pathname === path;
+          const showBadge = path === '/messages' && totalUnreadCount > 0;
+          return (
+            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full relative">
+              <div className="relative">
+                <Icon className={`h-[22px] w-[22px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
+                {showBadge && <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-semibold rounded-full px-1">{totalUnreadCount > 99 ? '99+' : totalUnreadCount}</span>}
+              </div>
+              <span className={`text-[10px] mt-0.5 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
+            </button>
+          );
+        })}
       </div>
     </nav>
   );
