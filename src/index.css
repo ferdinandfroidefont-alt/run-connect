@@ -2,16 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* iOS Native Design System
-   Pure, minimal, opaque colors like Apple apps
-   All colors MUST be HSL.
+/* iOS Native Design System - Ultra Clean
+   Pure Apple-style design with opaque colors
 */
 
 @layer base {
   :root {
-    /* iOS System Colors - Light Mode */
-    --background: 0 0% 100%;           /* Pure white #FFFFFF */
-    --foreground: 0 0% 0%;             /* Pure black #000000 */
+    /* iOS System Colors - Pure Light Mode */
+    --background: 0 0% 100%;           /* #FFFFFF - Pure white */
+    --foreground: 0 0% 0%;             /* #000000 - Pure black */
 
     --card: 0 0% 100%;                 /* White cards */
     --card-foreground: 0 0% 0%;
@@ -19,19 +18,19 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
 
-    /* iOS System Blue as primary */
+    /* iOS System Blue */
     --primary: 211 100% 50%;           /* #007AFF */
     --primary-foreground: 0 0% 100%;
 
-    /* iOS System Gray 6 for secondary backgrounds */
+    /* iOS System Gray 6 */
     --secondary: 240 5% 96%;           /* #F2F2F7 */
     --secondary-foreground: 0 0% 0%;
 
-    /* iOS System Grays */
+    /* iOS Muted Grays */
     --muted: 240 5% 96%;               /* #F2F2F7 */
     --muted-foreground: 240 2% 56%;    /* #8E8E93 */
 
-    /* iOS Accent */
+    /* Accent */
     --accent: 240 5% 96%;
     --accent-foreground: 0 0% 0%;
 
@@ -39,19 +38,20 @@
     --destructive: 0 100% 59%;         /* #FF3B30 */
     --destructive-foreground: 0 0% 100%;
 
-    /* iOS Borders */
+    /* iOS System Green */
+    --success: 142 76% 36%;            /* #34C759 */
+
+    /* iOS Borders - Very light */
     --border: 240 6% 90%;              /* #E5E5EA */
     --input: 240 5% 96%;               /* #F2F2F7 */
-    --ring: 211 100% 50%;              /* iOS Blue */
+    --ring: 211 100% 50%;
 
-    /* iOS Shadows - Very subtle */
-    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.04);
-    --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.06);
-    --shadow-md: 0 4px 8px hsl(0 0% 0% / 0.06);
-    --shadow-lg: 0 8px 16px hsl(0 0% 0% / 0.08);
+    /* iOS Shadows - Ultra subtle */
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.04);
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.03);
 
-    /* Standard radius */
-    --radius: 0.625rem;                /* 10px - iOS standard */
+    /* iOS Radius */
+    --radius: 0.625rem;                /* 10px */
 
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
@@ -67,13 +67,13 @@
 
 @layer base {
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Hide scrollbars globally */
+  /* Hide scrollbars */
   * {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -90,61 +90,76 @@
 
 @layer utilities {
   /* iOS Typography System */
-  .text-display-xl {
-    @apply font-semibold text-[34px] tracking-tight leading-tight;
+  .text-ios-largetitle {
+    @apply font-bold text-[34px] tracking-tight leading-tight;
   }
   
-  .text-display-lg {
-    @apply font-semibold text-[28px] tracking-tight leading-tight;
+  .text-ios-title1 {
+    @apply font-bold text-[28px] tracking-tight leading-tight;
   }
   
-  .text-display-md {
-    @apply font-semibold text-[22px] leading-tight;
+  .text-ios-title2 {
+    @apply font-bold text-[22px] leading-tight;
   }
   
-  .text-display-sm {
+  .text-ios-title3 {
     @apply font-semibold text-[20px] leading-tight;
   }
   
-  .text-heading-xl {
+  .text-ios-headline {
     @apply font-semibold text-[17px] leading-snug;
   }
   
-  .text-heading-lg {
-    @apply font-medium text-[15px] leading-snug;
-  }
-  
-  .text-body-lg {
+  .text-ios-body {
     @apply font-normal text-[17px] leading-relaxed;
   }
   
-  .text-body-md {
+  .text-ios-callout {
+    @apply font-normal text-[16px] leading-relaxed;
+  }
+  
+  .text-ios-subheadline {
     @apply font-normal text-[15px] leading-relaxed;
   }
   
-  .text-body-sm {
+  .text-ios-footnote {
     @apply font-normal text-[13px] leading-relaxed;
   }
   
-  .text-caption {
+  .text-ios-caption1 {
     @apply font-normal text-[12px] text-muted-foreground;
+  }
+  
+  .text-ios-caption2 {
+    @apply font-normal text-[11px] text-muted-foreground;
   }
 
   /* iOS List styles */
   .ios-list-item {
-    @apply flex items-center justify-between py-3 px-4 bg-card;
+    @apply flex items-center justify-between py-[11px] px-4 bg-card;
   }
 
   .ios-list-separator {
-    @apply h-px bg-border ml-4;
+    @apply h-px bg-border ml-[60px];
   }
 
   .ios-grouped-bg {
     @apply bg-secondary;
   }
+
+  /* iOS Card */
+  .ios-card {
+    @apply bg-card rounded-[10px];
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.04);
+  }
+
+  /* iOS Section Header */
+  .ios-section-header {
+    @apply text-[13px] font-normal text-muted-foreground uppercase tracking-wide px-4 py-2;
+  }
 }
 
-/* iOS Animations */
+/* iOS Animations - Subtle and fast */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -173,14 +188,14 @@
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  animation: slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .animate-slide-down {
   animation: slideDown 0.25s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Momentum scrolling for mobile */
+/* iOS Scroll */
 .scroll-momentum {
   overflow-y: auto;
   overflow-x: hidden;
@@ -210,7 +225,7 @@
   }
 }
 
-/* Safe area padding for notched devices */
+/* Safe area padding */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
