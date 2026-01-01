@@ -608,7 +608,7 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
-          <Button onClick={handleGoogleAuth} disabled={isLoading} variant="outline-glow" className="w-full h-12">
+          <Button onClick={handleGoogleAuth} disabled={isLoading} variant="outline" className="w-full h-12">
             <FcGoogle className="mr-2 h-5 w-5" />
             {authMode === 'signup' ? "S'inscrire" : "Se connecter"} avec Google
           </Button>
@@ -647,7 +647,7 @@ const Auth = () => {
                 </div>
               </div>
 
-              <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || newPassword !== confirmPassword}>
+              <Button type="submit" className="w-full h-12" disabled={isLoading || newPassword !== confirmPassword}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Mettre à jour le mot de passe
               </Button>
@@ -677,7 +677,7 @@ const Auth = () => {
                 </div>
               </div>
 
-              <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || otp.length !== 6}>
+              <Button type="submit" className="w-full h-12" disabled={isLoading || otp.length !== 6}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Vérifier le code
               </Button>
@@ -757,7 +757,7 @@ const Auth = () => {
                   ✅ Vérification CAPTCHA réussie
                 </div>}
 
-              <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || !captchaToken}>
+              <Button type="submit" className="w-full h-12" disabled={isLoading || !captchaToken}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Continuer
               </Button>
@@ -784,7 +784,7 @@ const Auth = () => {
                     ✅ Vérification CAPTCHA réussie
                   </div>}
 
-                <Button type="submit" variant="gradient" className="w-full h-12 text-button" disabled={isLoading || !captchaToken}>
+                <Button type="submit" className="w-full h-12" disabled={isLoading || !captchaToken}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Recevoir un code par email
                 </Button>

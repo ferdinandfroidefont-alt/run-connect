@@ -28,35 +28,30 @@ const settingsCategories = [
     title: 'Général',
     description: 'Langue, thème, mot de passe',
     icon: Settings,
-    gradient: 'from-blue-500 to-indigo-600',
   },
   {
     id: 'notifications' as const,
     title: 'Notifications',
     description: 'Push, alertes, préférences',
     icon: Bell,
-    gradient: 'from-red-500 to-pink-600',
   },
   {
     id: 'connections' as const,
     title: 'Connexions',
     description: 'Strava, Instagram, partage',
     icon: Link2,
-    gradient: 'from-green-500 to-emerald-600',
   },
   {
     id: 'privacy' as const,
     title: 'Confidentialité',
     description: 'RGPD, sécurité, données',
     icon: Shield,
-    gradient: 'from-purple-500 to-violet-600',
   },
   {
     id: 'support' as const,
     title: 'Aide & Support',
     description: 'Contact, déconnexion, compte',
     icon: HelpCircle,
-    gradient: 'from-orange-500 to-amber-600',
   },
 ];
 
@@ -132,7 +127,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md max-h-[80vh] p-0">
           <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         </DialogContent>
       </Dialog>
@@ -141,24 +136,24 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto sm:max-h-[85vh] p-0 flex flex-col backdrop-blur-xl bg-background/95 border-border/50 overflow-hidden">
+      <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto sm:max-h-[85vh] p-0 flex flex-col bg-background overflow-hidden">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
               key="hub"
-              initial={{ x: -100, opacity: 0 }}
+              initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -100, opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              exit={{ x: -20, opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="flex flex-col h-full"
             >
               {/* Header */}
-              <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
+              <div className="sticky top-0 z-10 bg-background border-b border-border">
                 <div className="flex items-center gap-3 p-4">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full hover:bg-muted/50"
+                    className="h-9 w-9 rounded-full"
                     onClick={() => onOpenChange(false)}
                   >
                     <ArrowLeft className="h-5 w-5" />
@@ -174,31 +169,31 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
                       placeholder="Rechercher un paramètre"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 bg-muted/30 border-border/50 focus-visible:ring-primary/50"
+                      className="pl-10"
                     />
                   </div>
                 </div>
               </div>
 
               <ScrollArea className="flex-1">
-                <div className="px-4 py-6 space-y-3">
+                <div className="p-4 space-y-1">
                   {filteredCategories.map((category, index) => (
                     <motion.button
                       key={category.id}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ delay: index * 0.03 }}
                       onClick={() => setCurrentPage(category.id)}
-                      className="w-full flex items-center gap-4 py-6 px-4 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm hover:bg-muted/30 hover:scale-[1.02] transition-all duration-200 group"
+                      className="w-full flex items-center gap-4 py-4 px-3 rounded-xl hover:bg-muted transition-colors duration-150 group"
                     >
-                      <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center shadow-lg`}>
-                        <category.icon className="h-6 w-6 text-white" />
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                        <category.icon className="h-5 w-5 text-foreground" />
                       </div>
                       <div className="flex-1 text-left">
-                        <h3 className="text-sm font-semibold">{category.title}</h3>
+                        <h3 className="text-sm font-medium">{category.title}</h3>
                         <p className="text-xs text-muted-foreground">{category.description}</p>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                     </motion.button>
                   ))}
 
