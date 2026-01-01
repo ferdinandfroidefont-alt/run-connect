@@ -2,124 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system - Native App Clean Style
-   Inspired by Zalando, Amazon, iOS native apps
+/* iOS Native Design System
+   Pure, minimal, opaque colors like Apple apps
    All colors MUST be HSL.
 */
 
-/* New session marker pulse animation */
-@keyframes pulse-marker {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
-}
-
-.pulse-marker-animation {
-  animation: pulse-marker 1.5s ease-in-out infinite;
-}
-
 @layer base {
   :root {
-    /* Native App Clean - Light theme by default */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    /* iOS System Colors - Light Mode */
+    --background: 0 0% 100%;           /* Pure white #FFFFFF */
+    --foreground: 0 0% 0%;             /* Pure black #000000 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card: 0 0% 100%;                 /* White cards */
+    --card-foreground: 0 0% 0%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover-foreground: 0 0% 0%;
 
-    --primary: 0 0% 9%;
-    --primary-glow: 0 0% 20%;
+    /* iOS System Blue as primary */
+    --primary: 211 100% 50%;           /* #007AFF */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
+    /* iOS System Gray 6 for secondary backgrounds */
+    --secondary: 240 5% 96%;           /* #F2F2F7 */
+    --secondary-foreground: 0 0% 0%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    /* iOS System Grays */
+    --muted: 240 5% 96%;               /* #F2F2F7 */
+    --muted-foreground: 240 2% 56%;    /* #8E8E93 */
 
-    --accent: 217 91% 60%;
-    --accent-glow: 217 91% 70%;
-    --accent-foreground: 0 0% 100%;
+    /* iOS Accent */
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 84% 60%;
+    /* iOS System Red */
+    --destructive: 0 100% 59%;         /* #FF3B30 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 9%;
+    /* iOS Borders */
+    --border: 240 6% 90%;              /* #E5E5EA */
+    --input: 240 5% 96%;               /* #F2F2F7 */
+    --ring: 211 100% 50%;              /* iOS Blue */
 
-    /* Minimal shadows */
-    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.03);
-    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.05);
-    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.05);
-    --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.1);
-    --shadow-glow: none;
+    /* iOS Shadows - Very subtle */
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.04);
+    --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.06);
+    --shadow-md: 0 4px 8px hsl(0 0% 0% / 0.06);
+    --shadow-lg: 0 8px 16px hsl(0 0% 0% / 0.08);
 
-    /* Map controls */
-    --map-control-bg: 0 0% 100%;
-    --map-control-border: 0 0% 90%;
-    --map-control-shadow: 0 0% 0% / 0.05;
-    --map-control-hover: 0 0% 96%;
-    --map-control-active: 0 0% 9%;
-    --gradient-map: none;
-    --gradient-control: none;
-    --shadow-map-control: 0 1px 3px 0 hsl(0 0% 0% / 0.05);
-    --shadow-map-panel: 0 4px 6px -1px hsl(0 0% 0% / 0.05);
+    /* Standard radius */
+    --radius: 0.625rem;                /* 10px - iOS standard */
 
-    /* No glassmorphism - solid backgrounds */
-    --glass-bg: hsl(0 0% 100%);
-    --glass-border: hsl(0 0% 90%);
-    --glass-blur: 0px;
-    --glass-bg-primary: hsl(0 0% 100%);
-    --glass-bg-card: hsl(0 0% 100%);
-    --glass-border-card: hsl(0 0% 90%);
-    --glass-shadow: 0 1px 3px hsl(0 0% 0% / 0.05);
-    
-    /* Simple transitions */
-    --transition-map: all 0.15s ease;
-    --transition-smooth: all 0.2s ease;
-
-    --radius: 0.75rem;
-
+    /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 9%;
-    --sidebar-primary: 0 0% 9%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 211 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 0 0% 9%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-ring: 211 100% 50%;
   }
-
-  /* No dark mode by default - keep light */
 }
 
 @layer base {
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    /* Hide scrollbars */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  body::-webkit-scrollbar {
-    display: none;
-  }
-
-  html, body {
-    overflow-x: hidden;
-  }
-
+  /* Hide scrollbars globally */
   * {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -128,157 +82,75 @@
   *::-webkit-scrollbar {
     display: none;
   }
+
+  html, body {
+    overflow-x: hidden;
+  }
 }
 
 @layer utilities {
-  /* Clean Typography System */
+  /* iOS Typography System */
   .text-display-xl {
-    @apply font-sans font-bold text-3xl md:text-4xl tracking-tight;
+    @apply font-semibold text-[34px] tracking-tight leading-tight;
   }
   
   .text-display-lg {
-    @apply font-sans font-bold text-2xl md:text-3xl tracking-tight;
+    @apply font-semibold text-[28px] tracking-tight leading-tight;
   }
   
   .text-display-md {
-    @apply font-sans font-semibold text-xl md:text-2xl;
+    @apply font-semibold text-[22px] leading-tight;
   }
   
   .text-display-sm {
-    @apply font-sans font-semibold text-lg md:text-xl;
+    @apply font-semibold text-[20px] leading-tight;
   }
   
   .text-heading-xl {
-    @apply font-sans font-semibold text-base md:text-lg;
+    @apply font-semibold text-[17px] leading-snug;
   }
   
   .text-heading-lg {
-    @apply font-sans font-medium text-sm md:text-base;
+    @apply font-medium text-[15px] leading-snug;
   }
   
   .text-body-lg {
-    @apply font-sans font-normal text-base leading-relaxed;
+    @apply font-normal text-[17px] leading-relaxed;
   }
   
   .text-body-md {
-    @apply font-sans font-normal text-sm leading-relaxed;
+    @apply font-normal text-[15px] leading-relaxed;
   }
   
   .text-body-sm {
-    @apply font-sans font-normal text-xs leading-relaxed;
-  }
-  
-  .text-label {
-    @apply font-sans font-medium text-xs uppercase tracking-wide;
-  }
-
-  /* Legacy support */
-  .text-title {
-    @apply font-sans font-bold text-lg;
-  }
-  
-  .text-subtitle {
-    @apply font-sans font-semibold text-base;
-  }
-  
-  .text-heading {
-    @apply font-sans font-medium text-sm;
-  }
-  
-  .text-body {
-    @apply font-sans font-normal text-sm;
+    @apply font-normal text-[13px] leading-relaxed;
   }
   
   .text-caption {
-    @apply font-sans font-normal text-xs text-muted-foreground;
-  }
-  
-  .text-button {
-    @apply font-sans font-medium text-sm;
+    @apply font-normal text-[12px] text-muted-foreground;
   }
 
-  /* Custom Scrollbars */
-  .scrollbar-thin {
-    scrollbar-width: thin !important;
-    -ms-overflow-style: auto !important;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar {
-    display: block !important;
-    width: 4px;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 2px;
-  }
-  
-  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground));
-  }
-  
-  .scrollbar-track-muted::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
-  }
-  
-  .scrollbar-track-muted\/20::-webkit-scrollbar-track {
-    background: hsl(var(--muted) / 0.2);
-  }
-  
-  .scrollbar-thumb-border {
-    scrollbar-color: hsl(var(--border)) transparent;
-  }
-  
-  .scrollbar-thumb-muted-foreground {
-    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  /* iOS List styles */
+  .ios-list-item {
+    @apply flex items-center justify-between py-3 px-4 bg-card;
   }
 
-  /* Performance optimizations */
-  .instant-button {
-    @apply will-change-transform;
-    transition: transform 50ms ease;
-    transform: translateZ(0);
+  .ios-list-separator {
+    @apply h-px bg-border ml-4;
   }
 
-  .instant-button:active {
-    transform: scale(0.98) translateZ(0);
-  }
-
-  /* No glass effects - solid backgrounds instead */
-  .glass-primary {
-    background: hsl(var(--background));
-    border: 1px solid hsl(var(--border));
-  }
-  
-  .glass-card {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 12px;
+  .ios-grouped-bg {
+    @apply bg-secondary;
   }
 }
 
-/* Animations - kept minimal */
+/* iOS Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-up {
+@keyframes slideUp {
   from {
     transform: translateY(100%);
     opacity: 0;
@@ -289,7 +161,7 @@
   }
 }
 
-@keyframes slide-down {
+@keyframes slideDown {
   from {
     transform: translateY(0);
     opacity: 1;
@@ -301,55 +173,19 @@
 }
 
 .animate-slide-up {
-  animation: slide-up 0.25s ease-out;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .animate-slide-down {
-  animation: slide-down 0.2s ease-out;
+  animation: slideDown 0.25s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Scrollbar utilities */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-.scroll-smooth {
-  scroll-behavior: smooth;
-}
-
-/* Momentum scrolling */
+/* Momentum scrolling for mobile */
 .scroll-momentum {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  touch-action: pan-y;
-  scroll-behavior: smooth;
-  will-change: scroll-position;
-}
-
-.scroll-momentum-full {
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: auto;
-  touch-action: pan-y;
-  scroll-behavior: smooth;
-  will-change: scroll-position;
-}
-
-@media screen and (max-width: 768px) {
-  [class*="overflow-y-auto"],
-  [class*="overflow-auto"] {
-    -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior-y: contain !important;
-    touch-action: pan-y !important;
-  }
 }
 
 /* Mobile keyboard handling */
@@ -372,33 +208,13 @@
     overflow: auto;
     -webkit-overflow-scrolling: touch;
   }
-
-  .keyboard-aware-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-  .keyboard-input-container {
-    flex-shrink: 0;
-  }
 }
 
-/* Dialog scrollbar */
-@media screen and (max-width: 768px) {
-  [data-radix-scroll-area-viewport] {
-    scrollbar-width: thin;
-  }
-  
-  [data-radix-scroll-area-viewport]::-webkit-scrollbar {
-    width: 3px;
-    display: block !important;
-  }
-  
-  [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 2px;
-  }
+/* Safe area padding for notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
 }

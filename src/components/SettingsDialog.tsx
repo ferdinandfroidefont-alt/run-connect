@@ -28,30 +28,35 @@ const settingsCategories = [
     title: 'Général',
     description: 'Langue, thème, mot de passe',
     icon: Settings,
+    color: 'bg-[#8E8E93]',
   },
   {
     id: 'notifications' as const,
     title: 'Notifications',
     description: 'Push, alertes, préférences',
     icon: Bell,
+    color: 'bg-[#FF3B30]',
   },
   {
     id: 'connections' as const,
     title: 'Connexions',
     description: 'Strava, Instagram, partage',
     icon: Link2,
+    color: 'bg-[#007AFF]',
   },
   {
     id: 'privacy' as const,
     title: 'Confidentialité',
     description: 'RGPD, sécurité, données',
     icon: Shield,
+    color: 'bg-[#34C759]',
   },
   {
     id: 'support' as const,
     title: 'Aide & Support',
     description: 'Contact, déconnexion, compte',
     icon: HelpCircle,
+    color: 'bg-[#FF9500]',
   },
 ];
 
@@ -136,7 +141,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto sm:max-h-[85vh] p-0 flex flex-col bg-background overflow-hidden">
+      <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto sm:max-h-[85vh] p-0 flex flex-col bg-secondary overflow-hidden">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
@@ -147,59 +152,64 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
               transition={{ duration: 0.15 }}
               className="flex flex-col h-full"
             >
-              {/* Header */}
-              <div className="sticky top-0 z-10 bg-background border-b border-border">
-                <div className="flex items-center gap-3 p-4">
+              {/* Header - iOS style */}
+              <div className="sticky top-0 z-10 bg-secondary">
+                <div className="flex items-center justify-center py-4 relative">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full"
+                    className="absolute left-2 h-10 w-10"
                     onClick={() => onOpenChange(false)}
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
-                  <h2 className="text-lg font-semibold">Paramètres</h2>
+                  <h2 className="text-[17px] font-semibold">Paramètres</h2>
                 </div>
                 
-                {/* Search bar */}
-                <div className="px-4 pb-4">
+                {/* iOS-style search bar */}
+                <div className="px-4 pb-3">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Rechercher un paramètre"
+                      placeholder="Rechercher"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-background"
                     />
                   </div>
                 </div>
               </div>
 
               <ScrollArea className="flex-1">
-                <div className="p-4 space-y-1">
-                  {filteredCategories.map((category, index) => (
-                    <motion.button
-                      key={category.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      onClick={() => setCurrentPage(category.id)}
-                      className="w-full flex items-center gap-4 py-4 px-3 rounded-xl hover:bg-muted transition-colors duration-150 group"
-                    >
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                        <category.icon className="h-5 w-5 text-foreground" />
+                <div className="p-4">
+                  {/* iOS grouped list style */}
+                  <div className="bg-background rounded-[10px] overflow-hidden">
+                    {filteredCategories.map((category, index) => (
+                      <div key={category.id}>
+                        <button
+                          onClick={() => setCurrentPage(category.id)}
+                          className="w-full flex items-center gap-3 py-3 px-4 active:bg-secondary transition-colors"
+                        >
+                          {/* iOS colored icon square */}
+                          <div className={`h-[29px] w-[29px] rounded-[6px] ${category.color} flex items-center justify-center`}>
+                            <category.icon className="h-4 w-4 text-white" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <span className="text-[17px]">{category.title}</span>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                        {/* Separator - iOS style (inset) */}
+                        {index < filteredCategories.length - 1 && (
+                          <div className="h-px bg-border ml-[52px]" />
+                        )}
                       </div>
-                      <div className="flex-1 text-left">
-                        <h3 className="text-sm font-medium">{category.title}</h3>
-                        <p className="text-xs text-muted-foreground">{category.description}</p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-                    </motion.button>
-                  ))}
+                    ))}
+                  </div>
 
                   {filteredCategories.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
-                      <p className="text-sm">Aucun paramètre trouvé</p>
+                      <p className="text-[15px]">Aucun paramètre trouvé</p>
                     </div>
                   )}
                 </div>
@@ -208,7 +218,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
           ) : (
             <motion.div
               key={currentPage}
-              className="flex-1 h-full"
+              className="flex-1 h-full bg-background"
             >
               {renderPage()}
             </motion.div>
