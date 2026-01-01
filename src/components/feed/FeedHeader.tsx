@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { NotificationCenter } from '@/components/NotificationCenter';
 
@@ -37,50 +36,46 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
   }, [user]);
 
   return (
-    <motion.header 
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="sticky top-0 z-20 bg-gradient-to-b from-background via-background/95 to-background/80 backdrop-blur-xl"
-    >
+    <header className="sticky top-0 z-20 bg-background">
       <div className="flex items-center justify-between px-4 py-3">
         {/* Avatar & Welcome */}
         <div className="flex items-center gap-3">
           <Avatar 
-            className="h-10 w-10 ring-2 ring-primary/30 cursor-pointer hover:ring-primary/50 transition-all"
+            className="h-10 w-10 cursor-pointer"
             onClick={() => navigate('/profile')}
           >
             <AvatarImage src={profile.avatar_url || ''} />
-            <AvatarFallback className="bg-primary/20 text-primary">
+            <AvatarFallback className="bg-secondary text-foreground">
               {profile.username?.[0]?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="text-xs text-muted-foreground">Bienvenue 👋</p>
-            <p className="font-semibold text-sm">@{profile.username || 'user'}</p>
+            <p className="text-[12px] text-muted-foreground">Bienvenue</p>
+            <p className="font-semibold text-[15px]">@{profile.username || 'user'}</p>
           </div>
         </div>
 
         {/* Title */}
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <h1 className="text-[17px] font-semibold">
           Feed
         </h1>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10"
+            className="h-10 w-10"
             onClick={onSearch}
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-5 w-5" />
           </Button>
           <NotificationCenter />
         </div>
       </div>
 
-      {/* Subtle divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-    </motion.header>
+      {/* iOS-style hairline separator */}
+      <div className="h-px bg-border" />
+    </header>
   );
 };

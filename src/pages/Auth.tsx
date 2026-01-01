@@ -594,32 +594,27 @@ const Auth = () => {
       });
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 relative overflow-hidden flex items-center justify-center p-4">
-      {/* Effets d'arrière-plan animés */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
-      
-      <Card className="relative w-full max-w-md backdrop-blur-xl bg-card/90 border-2 border-white/10 shadow-2xl animate-slide-up">
-        <CardHeader className="space-y-1 text-center border-b border-white/10 pb-4">
-          <CardTitle className="text-display-md bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">RunConnect</CardTitle>
-          <CardDescription className="text-body-md">
+  return <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center pb-4">
+          <CardTitle className="text-[28px] font-bold text-primary">RunConnect</CardTitle>
+          <CardDescription className="text-[15px]">
             {authStep === 'reset' ? "Définissez votre nouveau mot de passe" : authStep === 'otp' ? "Entrez le code reçu par email" : authMode === 'signup' ? "Créez votre compte pour rejoindre la communauté" : "Connectez-vous à votre compte"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <Button onClick={handleGoogleAuth} disabled={isLoading} variant="outline" className="w-full h-12">
             <FcGoogle className="mr-2 h-5 w-5" />
             {authMode === 'signup' ? "S'inscrire" : "Se connecter"} avec Google
           </Button>
           
-          <div className="relative">
+          <div className="relative py-2">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Ou avec votre email
+            <div className="relative flex justify-center text-[13px]">
+              <span className="bg-background px-3 text-muted-foreground">
+                ou avec votre email
               </span>
             </div>
           </div>

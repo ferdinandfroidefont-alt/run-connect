@@ -84,7 +84,7 @@ export const BottomNavigation = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 pb-safe">
-      <div className="grid grid-cols-5 items-end px-2 pt-2 pb-2">
+      <div className="grid grid-cols-5 items-end px-1 pt-2 pb-1">
         {/* Map */}
         <div className="flex justify-center">
           {navItems.slice(0, 1).map(({ path, icon: Icon, label }) => {
@@ -94,13 +94,13 @@ export const BottomNavigation = () => {
                 key={path} 
                 onClick={() => handleNavigation(path)}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors duration-150",
+                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors",
                   isActive 
-                    ? "text-foreground" 
+                    ? "text-primary" 
                     : "text-muted-foreground"
                 )}
               >
-                <Icon className={cn("h-6 w-6", isActive && "stroke-[2.5px]")} />
+                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
                 <span className="text-[10px] font-medium">{label}</span>
               </button>
             );
@@ -116,20 +116,20 @@ export const BottomNavigation = () => {
                 key={path} 
                 onClick={() => handleNavigation(path)}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors duration-150",
+                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors",
                   isActive 
-                    ? "text-foreground" 
+                    ? "text-primary" 
                     : "text-muted-foreground"
                 )}
               >
-                <Icon className={cn("h-6 w-6", isActive && "stroke-[2.5px]")} />
+                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
                 <span className="text-[10px] font-medium">{label}</span>
               </button>
             );
           })}
         </div>
         
-        {/* Create button */}
+        {/* Create button - iOS style */}
         <div className="flex justify-center">
           <button 
             onClick={() => {
@@ -140,9 +140,9 @@ export const BottomNavigation = () => {
                 setTimeout(() => openCreateSession(), 100);
               }
             }} 
-            className="flex items-center justify-center h-12 w-12 bg-foreground text-background rounded-full transition-transform duration-150 active:scale-95 -translate-y-2 shadow-lg"
+            className="flex items-center justify-center h-11 w-11 bg-primary text-primary-foreground rounded-full -translate-y-2 active:opacity-80 transition-opacity"
           >
-            <Plus className="h-6 w-6 stroke-[2.5px]" />
+            <Plus className="h-6 w-6" strokeWidth={2.5} />
           </button>
         </div>
 
@@ -157,16 +157,16 @@ export const BottomNavigation = () => {
                 key={path} 
                 onClick={() => handleNavigation(path)}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors duration-150 relative",
+                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors relative",
                   isActive 
-                    ? "text-foreground" 
+                    ? "text-primary" 
                     : "text-muted-foreground"
                 )}
               >
                 <div className="relative">
-                  <Icon className={cn("h-6 w-6", isActive && "stroke-[2.5px]")} />
+                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
                   {isMessages && totalUnreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full">
+                    <span className="absolute -top-1 -right-1.5 h-[18px] min-w-[18px] px-1 flex items-center justify-center text-[11px] font-semibold bg-destructive text-destructive-foreground rounded-full">
                       {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                     </span>
                   )}
@@ -186,13 +186,13 @@ export const BottomNavigation = () => {
                 key={path} 
                 onClick={() => handleNavigation(path)}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors duration-150",
+                  "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors",
                   isActive 
-                    ? "text-foreground" 
+                    ? "text-primary" 
                     : "text-muted-foreground"
                 )}
               >
-                <Icon className={cn("h-6 w-6", isActive && "stroke-[2.5px]")} />
+                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 1.5} />
                 <span className="text-[10px] font-medium">{label}</span>
               </button>
             );
