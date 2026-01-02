@@ -2126,286 +2126,245 @@ const Messages = () => {
 
   return (
     <>
-      {/* Petite barre noire en haut uniquement pour Messages */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
-      <div className="h-screen bg-background flex flex-col">
-        <div className="max-w-md mx-auto w-full h-full flex flex-col">
-          {/* Fixed Header Only - Remonté légèrement */}
-          <div className="fixed top-4 left-0 right-0 flex-shrink-0 bg-background z-50 p-3 border-b border-border">
-            <div className="max-w-md mx-auto w-full">
-            {/* Header */}
+      <div className="min-h-screen bg-secondary pb-24">
+        {/* iOS Header */}
+        <div className="sticky top-0 z-50 bg-card">
+          <div className="px-4 pt-14 pb-3">
             <div className="flex items-center justify-between">
-              {isSelectionMode && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={exitSelectionMode}
-                  className="mr-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {isSelectionMode 
-                    ? `${selectedConversations.size} sélectionné(s)` 
-                    : "Messages"
-                  }
-                </h1>
-                {!isSelectionMode && (
-                  <p className="text-muted-foreground text-sm">
-                    Restez en contact avec la communauté
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                {isSelectionMode ? (
+              {isSelectionMode ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={exitSelectionMode}
+                    className="text-primary p-0 h-auto font-normal"
+                  >
+                    Annuler
+                  </Button>
+                  <h1 className="text-[17px] font-semibold">
+                    {selectedConversations.size} sélectionné(s)
+                  </h1>
                   <Button
                     onClick={confirmBulkDelete}
                     size="sm"
-                    variant="destructive"
+                    variant="ghost"
                     disabled={selectedConversations.size === 0}
+                    className="text-destructive p-0 h-auto font-normal"
                   >
-                    <Trash2 className="h-4 w-4 mr-1" />
                     Supprimer
                   </Button>
-                ) : (
-                  <>
-                  <Button
-                    onClick={() => setShowNewConversation(true)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Message
-                  </Button>
-                  <Button
-                    onClick={() => setShowCreateGroup(true)}
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    <Users className="h-4 w-4 mr-1" />
-                    Club
-                  </Button>
                 </>
-                )}
-              </div>
+              ) : (
+                <>
+                  <h1 className="text-[34px] font-bold tracking-tight">Messages</h1>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => setShowNewConversation(true)}
+                      size="icon"
+                      variant="ghost"
+                      className="h-9 w-9"
+                    >
+                      <Plus className="h-6 w-6 text-primary" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
+          </div>
+          <div className="h-px bg-border" />
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Quick Search Buttons */}
+          <div className="bg-card rounded-[10px] p-3">
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                onClick={() => navigate('/search?tab=profiles')}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-[11px] text-muted-foreground">Profils</span>
+              </button>
+              
+              <button
+                onClick={() => navigate('/search?tab=clubs')}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-[11px] text-muted-foreground">Clubs</span>
+              </button>
+              
+              <button
+                onClick={() => navigate('/search?tab=strava')}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center">
+                  <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
+                  </svg>
+                </div>
+                <span className="text-[11px] text-muted-foreground">Strava</span>
+              </button>
+
+              <button
+                onClick={() => setShowCreateGroup(true)}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-[11px] text-muted-foreground">Club</span>
+              </button>
             </div>
           </div>
 
-          {/* Scrollable Content - Search Bar + Conversations */}
-          <div className="flex-1 scroll-momentum-full p-2 pt-32">
-            {/* Search Buttons */}
-            <Card>
-              <CardContent className="p-2">
-                <div className="grid grid-cols-4 gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=profiles')}
+          {/* Conversations List */}
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            {conversations.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-[17px] font-medium text-foreground mb-1">
+                  Aucune conversation
+                </p>
+                <p className="text-[15px] text-muted-foreground">
+                  Commencez une nouvelle conversation
+                </p>
+              </div>
+            ) : (
+              <div>
+                {sortedConversations.map((conversation, index) => (
+                  <SwipeableConversationItem
+                    key={conversation.id}
+                    isPinned={pinnedConversations.has(conversation.id)}
+                    disabled={isSelectionMode}
+                    onSwipeLeft={() => {
+                      setConversationToDelete(conversation);
+                      confirmDeleteConversation(conversation);
+                    }}
+                    onSwipeRight={() => togglePinConversation(conversation.id)}
                   >
-                    <User className="h-5 w-5" />
-                    <span className="text-xs">Utilisateurs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=clubs')}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="text-xs">Clubs</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=strava')}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                    </svg>
-                    <span className="text-xs">Strava</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center gap-2 h-16 will-change-transform transform-gpu active:scale-95 transition-transform duration-150"
-                    style={{ transform: 'translateZ(0)' }}
-                    onClick={() => navigate('/search?tab=contacts')}
-                  >
-                    <Phone className="h-5 w-5" />
-                    <span className="text-xs">Contacts</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Conversations */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <MessageCircle className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Conversations</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {conversations.length === 0 ? (
-                  <div className="text-center py-8 px-4">
-                    <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">
-                      Aucune conversation pour le moment
-                    </p>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      Cliquez sur "Nouveau" pour démarrer une conversation
-                    </p>
-                  </div>
-                ) : (
-                    <div className="divide-y divide-border">
-                    {sortedConversations.map((conversation) => (
-                    <SwipeableConversationItem
-                      key={conversation.id}
-                      isPinned={pinnedConversations.has(conversation.id)}
-                      disabled={isSelectionMode}
-                      onSwipeLeft={() => {
+                    <div
+                      className={`flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors relative ${
+                        selectedConversations.has(conversation.id) ? 'bg-primary/5' : ''
+                      }`}
+                      onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
+                      onTouchEnd={handleLongPressEnd}
+                      onTouchCancel={handleLongPressEnd}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
                         setConversationToDelete(conversation);
                         confirmDeleteConversation(conversation);
                       }}
-                      onSwipeRight={() => togglePinConversation(conversation.id)}
                     >
-                   <div
-                     className={`flex items-center gap-3 p-4 hover:bg-muted cursor-pointer transition-colors ${
-                       selectedConversations.has(conversation.id) ? 'bg-primary/10' : ''
-                     }`}
-                     onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
-                     onTouchEnd={handleLongPressEnd}
-                     onTouchCancel={handleLongPressEnd}
-                     onContextMenu={(e) => {
-                       e.preventDefault();
-                       setConversationToDelete(conversation);
-                       confirmDeleteConversation(conversation);
-                     }}
-                   >
-                     {isSelectionMode && (
-                       <div className="flex items-center mr-2">
-                         <input
-                           type="checkbox"
-                           checked={selectedConversations.has(conversation.id)}
-                           onChange={() => toggleConversationSelection(conversation.id)}
-                           className="w-5 h-5 rounded border-2 border-primary"
-                           onClick={(e) => e.stopPropagation()}
-                         />
-                       </div>
-                     )}
-                     
-                     <div className="relative">
-                        <Avatar 
-                          className="h-12 w-12 cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isSelectionMode) {
-                                toggleConversationSelection(conversation.id);
-                              } else if (conversation.is_group) {
-                                setSelectedConversation(conversation);
-                                setGroupInfoData(conversation);
-                                setShowGroupInfo(true);
-                              } else if (conversation.other_participant) {
-                                handleAvatarClick(conversation.other_participant.avatar_url, conversation.other_participant.username || conversation.other_participant.display_name || "Utilisateur");
-                              }
-                            }}
-                       >
-                         {conversation.is_group ? (
-                           <>
-                             <AvatarImage src={conversation.group_avatar_url || ""} />
-                             <AvatarFallback>
-                               <Users className="h-6 w-6" />
-                             </AvatarFallback>
-                           </>
-                         ) : (
-                           <>
-                             <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                             <AvatarFallback>
-                               {(conversation.other_participant?.username || conversation.other_participant?.display_name || "U").charAt(0).toUpperCase()}
-                             </AvatarFallback>
-                           </>
-                         )}
-                       </Avatar>
-                       {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
-                     </div>
-                     <div 
-                       className="flex-1 min-w-0 cursor-pointer"
+                      {isSelectionMode && (
+                        <div className="flex items-center mr-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedConversations.has(conversation.id)}
+                            onChange={() => toggleConversationSelection(conversation.id)}
+                            className="w-5 h-5 rounded-full border-2 border-primary"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="relative">
+                        <Avatar className="h-[52px] w-[52px]">
+                          {conversation.is_group ? (
+                            <>
+                              <AvatarImage src={conversation.group_avatar_url || ""} />
+                              <AvatarFallback className="bg-secondary">
+                                <Users className="h-6 w-6 text-muted-foreground" />
+                              </AvatarFallback>
+                            </>
+                          ) : (
+                            <>
+                              <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                              <AvatarFallback className="bg-secondary text-[17px] font-semibold">
+                                {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </>
+                          )}
+                        </Avatar>
+                        {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
+                      </div>
+                      
+                      <div 
+                        className="flex-1 min-w-0"
                         onClick={() => {
                           if (isSelectionMode) {
                             toggleConversationSelection(conversation.id);
                           } else {
                             setSelectedConversation(conversation);
                             loadMessages(conversation.id);
-                            // Marquer les messages comme lus automatiquement
                             markMessagesAsReadOnOpen(conversation.id);
                           }
                         }}
-                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 min-w-0">
-                          {pinnedConversations.has(conversation.id) && (
-                            <span className="text-sm flex-shrink-0">📌</span>
-                          )}
-                          <p className="font-medium text-sm truncate">
-                            {conversation.is_group 
-                              ? conversation.group_name 
-                              : (conversation.other_participant?.username || "Utilisateur inconnu")
-                            }
-                          </p>
+                      >
+                        <div className="flex items-center justify-between mb-0.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {pinnedConversations.has(conversation.id) && (
+                              <span className="text-[13px] flex-shrink-0">📌</span>
+                            )}
+                            <p className="text-[17px] font-medium truncate">
+                              {conversation.is_group 
+                                ? conversation.group_name 
+                                : (conversation.other_participant?.username || "Utilisateur")
+                              }
+                            </p>
+                          </div>
+                          <span className="text-[13px] text-muted-foreground flex-shrink-0 ml-2">
+                            {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
+                          </span>
                         </div>
-                         <div className="flex items-center gap-2">
-                           {conversation.unread_count > 0 && (
-                             <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
-                               {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                             </Badge>
-                           )}
-                           <span className="text-xs text-muted-foreground">
-                             {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
-                           </span>
-                         </div>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-[15px] truncate ${
+                            conversation.unread_count > 0 
+                              ? 'text-foreground font-medium' 
+                              : 'text-muted-foreground'
+                          }`}>
+                            {conversation.last_message ? (
+                              <>
+                                {conversation.last_message.message_type === 'image' && 'Photo'}
+                                {conversation.last_message.message_type === 'file' && 'Fichier'}
+                                {conversation.last_message.message_type === 'voice' && 'Message vocal'}
+                                {conversation.last_message.message_type === 'session' && 'Session partagée'}
+                                {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
+                                  (conversation.last_message.content?.length > 40 
+                                    ? conversation.last_message.content.substring(0, 40) + '…' 
+                                    : conversation.last_message.content || 'Message supprimé'
+                                  )
+                                }
+                              </>
+                            ) : (
+                              conversation.is_group 
+                                ? `${conversation.group_members?.length || 0} membres`
+                                : 'Aucun message'
+                            )}
+                          </p>
+                          {conversation.unread_count > 0 && (
+                            <div className="h-5 min-w-5 px-1.5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-2">
+                              <span className="text-[11px] font-semibold text-primary-foreground">
+                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                       <p className={`text-xs truncate ${
-                         conversation.unread_count > 0 
-                           ? 'text-blue-400 font-medium' 
-                           : 'text-muted-foreground'
-                       }`}>
-                         {conversation.last_message ? (
-                           <>
-                             {conversation.unread_count > 0 && (
-                               <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                             )}
-                             {conversation.last_message.message_type === 'image' && '📷 Photo'}
-                             {conversation.last_message.message_type === 'file' && '📎 Fichier'}
-                             {conversation.last_message.message_type === 'voice' && '🎤 Message vocal'}
-                             {conversation.last_message.message_type === 'session' && '📅 Session partagée'}
-                             {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
-                               (conversation.last_message.content?.length > 50 
-                                 ? conversation.last_message.content.substring(0, 50) + '…' 
-                                 : conversation.last_message.content || 'Message supprimé'
-                               )
-                             }
-                           </>
-                         ) : (
-                           conversation.is_group 
-                             ? `${conversation.group_members?.length || 0} membres`
-                             : 'Aucun message'
-                         )}
-                       </p>
+                      
+                      {/* iOS-style inset separator */}
+                      {index < sortedConversations.length - 1 && (
+                        <div className="absolute bottom-0 left-[76px] right-0 h-px bg-border" />
+                      )}
                     </div>
-                  </div>
                   </SwipeableConversationItem>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-
           </div>
         </div>
 
