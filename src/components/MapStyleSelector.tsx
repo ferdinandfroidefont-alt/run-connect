@@ -48,10 +48,10 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm border border-border rounded-lg flex items-center justify-center shadow-map-control hover:bg-muted/90 transition-colors"
+        className="w-10 h-10 p-0 bg-card border border-border rounded-[10px] flex items-center justify-center shadow-sm hover:bg-muted transition-colors"
         title="Styles de carte"
       >
-        <Palette size={12} className="text-foreground" />
+        <Palette size={18} className="text-foreground" />
       </button>
 
       {/* Style Options */}
