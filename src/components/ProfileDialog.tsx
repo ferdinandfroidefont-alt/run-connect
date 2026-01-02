@@ -368,107 +368,121 @@ export const ProfileDialog = ({
   }
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-screen sm:max-w-md sm:h-auto sm:max-h-[85vh] p-0 flex flex-col">
-          <DialogHeader className="p-6 pb-0 shrink-0">
-            <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
-              <button onClick={() => onOpenChange(false)} className="flex items-center justify-center p-1 rounded-full hover:bg-accent transition-colors">
+        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary border-0 sm:border">
+          {/* iOS Header */}
+          <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
+            <div className="flex items-center justify-between px-4 py-3">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="flex items-center gap-1 text-primary"
+              >
                 <ArrowLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
               </button>
-              Mon Profil
-            </DialogTitle>
-          </DialogHeader>
+              <h1 className="text-[17px] font-semibold text-foreground">Mon Profil</h1>
+              <div className="w-16" />
+            </div>
+          </div>
           
-          <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
-            <div className="space-y-6 pb-4 min-h-full">
-              {/* Header Full-Width avec fond bleu dégradé */}
-              <div className="relative -mx-6 mb-6">
-                <div className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 px-6 pt-12 pb-6">
-                  {/* Avatar centré avec glow enhanced */}
-                  <div className="relative mb-4 flex justify-center group">
-                    <div className="absolute inset-0 bg-white/30 rounded-full blur-2xl scale-110 group-hover:scale-125 transition-all duration-300" />
-                    <Avatar className="h-36 w-36 relative border-4 border-white/20 shadow-2xl cursor-pointer hover:scale-105 transition-transform">
-                      <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                      <AvatarFallback className="text-4xl bg-white/10 text-white">
-                        {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {isEditing && <button type="button" onClick={async () => {
-                    try {
-                      const file = await selectFromGallery();
-                      if (file) {
-                        handleAvatarChange({
-                          target: {
-                            files: [file]
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-6">
+              {/* Avatar Section - iOS Style */}
+              <div className="flex flex-col items-center pt-4">
+                <div className="relative mb-3">
+                  <Avatar className="h-[100px] w-[100px] ring-2 ring-border">
+                    <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
+                    <AvatarFallback className="text-2xl bg-secondary">
+                      {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isEditing && (
+                    <button 
+                      type="button" 
+                      onClick={async () => {
+                        try {
+                          const file = await selectFromGallery();
+                          if (file) {
+                            handleAvatarChange({
+                              target: { files: [file] }
+                            } as any);
                           }
-                        } as any);
-                      }
-                    } catch (error) {
-                      console.error('Error selecting from gallery:', error);
-                      toast({
-                        title: "Erreur",
-                        description: "Impossible d'accéder à la galerie",
-                        variant: "destructive"
-                      });
-                    }
-                  }} disabled={cameraLoading} className="absolute bottom-2 right-2 bg-white text-primary rounded-full p-3 cursor-pointer hover:bg-white/90 disabled:opacity-50 shadow-lg">
-                        <Camera className="h-5 w-5" />
-                      </button>}
-                  </div>
-
-                  {/* Pseudo + Couronne */}
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <h2 className="text-2xl font-bold text-white">@{profile?.username}</h2>
-                    {(profile?.is_premium || subscriptionInfo?.subscribed) && <span className="text-2xl">👑</span>}
-                  </div>
-
-                  {/* Badges services connectés */}
-                  <div className="flex gap-2 mb-3 justify-center">
-                    {profile?.is_admin && <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full font-semibold">
-                        Admin
-                      </span>}
-                    {profile?.strava_connected && profile?.strava_verified_at && <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full flex items-center gap-1">
-                        🏃 Strava
-                      </span>}
-                    {profile?.instagram_connected && profile?.instagram_verified_at && <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full flex items-center gap-1">
-                        📷 Instagram
-                      </span>}
-                  </div>
-
-                  {/* Bio */}
-                  {profile?.bio && <p className="text-center text-white/90 text-sm max-w-md mx-auto mb-4 line-clamp-2">
-                      {profile.bio}
-                    </p>}
-
-                  {/* Badge fiabilité */}
-                  <div className="flex justify-center">
-                    
-                  </div>
+                        } catch (error) {
+                          console.error('Error selecting from gallery:', error);
+                          toast({
+                            title: "Erreur",
+                            description: "Impossible d'accéder à la galerie",
+                            variant: "destructive"
+                          });
+                        }
+                      }} 
+                      disabled={cameraLoading} 
+                      className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-              </div>
-
-              {/* Mini Stats - 3 blocs alignés */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                <button onClick={() => {
-                setFollowDialogType('followers');
-                setShowFollowDialog(true);
-              }} className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl hover:bg-accent/50 transition-colors">
-                  <div className="text-2xl mb-1">👥</div>
-                  <div className="text-xl font-bold">{followerCount}</div>
-                  <div className="text-xs text-muted-foreground">Abonnés</div>
-                </button>
-                <button onClick={() => {
-                setFollowDialogType('following');
-                setShowFollowDialog(true);
-              }} className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl hover:bg-accent/50 transition-colors">
-                  <div className="text-2xl mb-1">➕</div>
-                  <div className="text-xl font-bold">{followingCount}</div>
-                  <div className="text-xs text-muted-foreground">Abonnements</div>
-                </button>
-                <button onClick={() => setShowReliabilityDialog(true)} className="text-center p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl hover:bg-accent/50 transition-colors">
-                  <div className="text-2xl mb-1">✓</div>
-                  <div className="text-xl font-bold">{Math.round(reliabilityRate)}%</div>
-                  <div className="text-xs text-muted-foreground">Fiable</div>
-                </button>
+                
+                {/* Username + Crown */}
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-[22px] font-bold text-foreground">@{profile?.username}</h2>
+                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                  )}
+                </div>
+                
+                {/* Badges */}
+                <div className="flex flex-wrap justify-center gap-2 mb-3">
+                  {profile?.is_admin && (
+                    <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
+                      Admin
+                    </Badge>
+                  )}
+                  {profile?.strava_connected && profile?.strava_verified_at && (
+                    <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[11px]">
+                      Strava
+                    </Badge>
+                  )}
+                  {profile?.instagram_connected && profile?.instagram_verified_at && (
+                    <Badge className="bg-pink-100 text-pink-800 border-pink-200 text-[11px]">
+                      Instagram
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* Bio */}
+                {profile?.bio && (
+                  <p className="text-center text-muted-foreground text-[15px] max-w-md mx-auto mb-3 line-clamp-2">
+                    {profile.bio}
+                  </p>
+                )}
+                
+                {/* Stats Row */}
+                <div className="flex items-center justify-center gap-8 py-3">
+                  <button
+                    onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
+                    className="text-center"
+                  >
+                    <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
+                    <p className="text-[13px] text-muted-foreground">Abonnés</p>
+                  </button>
+                  <div className="w-px h-8 bg-border" />
+                  <button
+                    onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
+                    className="text-center"
+                  >
+                    <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
+                    <p className="text-[13px] text-muted-foreground">Abonnements</p>
+                  </button>
+                </div>
+                
+                {/* Reliability Badge */}
+                <div className="w-full max-w-[200px]">
+                  <ReliabilityBadge 
+                    rate={reliabilityRate}
+                    onClick={() => setShowReliabilityDialog(true)}
+                  />
+                </div>
               </div>
 
               {/* Mon Classement */}
@@ -480,109 +494,149 @@ export const ProfileDialog = ({
               {/* Activité récente */}
               {user?.id && <UserActivityChart userId={user.id} username={profile?.username} />}
 
-              {/* Bio dans une card simple */}
-              {profile?.bio && <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
-                  <CardContent className="p-4">
-                    <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
-                  </CardContent>
-                </Card>}
-
               {/* Informations personnelles - Section editing */}
-              {isEditing ? <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
-                  <CardHeader>
-                    <CardTitle className="text-sm">Modifier mes informations</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+              {isEditing ? (
+                <div className="bg-card rounded-[10px] p-4 space-y-4">
+                  <h3 className="text-[15px] font-semibold text-foreground">Modifier mes informations</h3>
+                  <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium">Pseudo</label>
-                      <Input value={formData.username || ''} onChange={e => setFormData({
-                    ...formData,
-                    username: e.target.value
-                  })} />
+                      <label className="text-[13px] font-medium text-muted-foreground">Pseudo</label>
+                      <Input 
+                        value={formData.username || ''} 
+                        onChange={e => setFormData({ ...formData, username: e.target.value })}
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Nom d'affichage</label>
-                      <Input value={formData.display_name || ''} onChange={e => setFormData({
-                    ...formData,
-                    display_name: e.target.value
-                  })} />
+                      <label className="text-[13px] font-medium text-muted-foreground">Nom d'affichage</label>
+                      <Input 
+                        value={formData.display_name || ''} 
+                        onChange={e => setFormData({ ...formData, display_name: e.target.value })}
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Âge</label>
-                      <Input type="number" value={formData.age || ''} onChange={e => setFormData({
-                    ...formData,
-                    age: parseInt(e.target.value) || null
-                  })} />
+                      <label className="text-[13px] font-medium text-muted-foreground">Âge</label>
+                      <Input 
+                        type="number" 
+                        value={formData.age || ''} 
+                        onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Téléphone</label>
-                      <Input value={formData.phone || ''} onChange={e => setFormData({
-                    ...formData,
-                    phone: e.target.value
-                  })} placeholder="06 12 34 56 78" />
+                      <label className="text-[13px] font-medium text-muted-foreground">Téléphone</label>
+                      <Input 
+                        value={formData.phone || ''} 
+                        onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+                        placeholder="06 12 34 56 78"
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Bio</label>
-                      <Input value={formData.bio || ''} onChange={e => setFormData({
-                    ...formData,
-                    bio: e.target.value
-                  })} placeholder="Décrivez vos records, vos objectifs..." />
+                      <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
+                      <Input 
+                        value={formData.bio || ''} 
+                        onChange={e => setFormData({ ...formData, bio: e.target.value })} 
+                        placeholder="Décrivez vos records, vos objectifs..."
+                        className="mt-1"
+                      />
                     </div>
-                    <div className="flex gap-2">
-                      <Button onClick={updateProfile} disabled={loading}>
+                    <div className="flex gap-2 pt-2">
+                      <Button onClick={updateProfile} disabled={loading} className="flex-1">
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Sauvegarder
                       </Button>
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1">
                         Annuler
                       </Button>
                     </div>
-                  </CardContent>
-                </Card> : <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      👤 Informations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
-                      <span className="text-xl">🔤</span>
-                      <div className="flex-1">
-                        <div className="text-xs text-muted-foreground">Pseudo</div>
-                        <div className="font-medium">{profile?.username || 'Non renseigné'}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-card rounded-[10px] overflow-hidden">
+                  <div className="ios-list-item">
+                    <div className="flex items-center gap-3">
+                      <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
+                        <User className="h-[18px] w-[18px] text-white" />
+                      </div>
+                      <div>
+                        <p className="text-[13px] text-muted-foreground">Pseudo</p>
+                        <p className="text-[17px] text-foreground">{profile?.username || 'Non renseigné'}</p>
                       </div>
                     </div>
-                    {profile?.display_name && <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
-                        <span className="text-xl">👤</span>
-                        <div className="flex-1">
-                          <div className="text-xs text-muted-foreground">Nom</div>
-                          <div className="font-medium">{profile.display_name}</div>
+                  </div>
+                  <div className="ios-list-separator" />
+                  {profile?.display_name && (
+                    <>
+                      <div className="ios-list-item">
+                        <div className="flex items-center gap-3">
+                          <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                            <User className="h-[18px] w-[18px] text-white" />
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-muted-foreground">Nom</p>
+                            <p className="text-[17px] text-foreground">{profile.display_name}</p>
+                          </div>
                         </div>
-                      </div>}
-                    {profile?.age && <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
-                        <span className="text-xl">🎂</span>
-                        <div className="flex-1">
-                          <div className="text-xs text-muted-foreground">Âge</div>
-                          <div className="font-medium">{profile.age} ans</div>
+                      </div>
+                      <div className="ios-list-separator" />
+                    </>
+                  )}
+                  {profile?.age && (
+                    <>
+                      <div className="ios-list-item">
+                        <div className="flex items-center gap-3">
+                          <div className="h-[30px] w-[30px] rounded-[7px] bg-pink-500 flex items-center justify-center">
+                            <Calendar className="h-[18px] w-[18px] text-white" />
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-muted-foreground">Âge</p>
+                            <p className="text-[17px] text-foreground">{profile.age} ans</p>
+                          </div>
                         </div>
-                      </div>}
-                    {profile?.phone && <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
-                        <span className="text-xl">📞</span>
-                        <div className="flex-1">
-                          <div className="text-xs text-muted-foreground">Téléphone</div>
-                          <div className="font-medium">{profile.phone}</div>
+                      </div>
+                      <div className="ios-list-separator" />
+                    </>
+                  )}
+                  {profile?.phone && (
+                    <>
+                      <div className="ios-list-item">
+                        <div className="flex items-center gap-3">
+                          <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
+                            <Heart className="h-[18px] w-[18px] text-white" />
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-muted-foreground">Téléphone</p>
+                            <p className="text-[17px] text-foreground">{profile.phone}</p>
+                          </div>
                         </div>
-                      </div>}
-                    <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full mt-4">
-                      ✏️ Modifier mon profil
+                      </div>
+                    </>
+                  )}
+                  <div className="p-4 border-t border-border">
+                    <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
+                      Modifier mon profil
                     </Button>
-                  </CardContent>
-                </Card>}
+                  </div>
+                </div>
+              )}
 
               {/* Bouton Paramètres */}
-              <Button onClick={() => setShowSettingsDialog(true)} variant="outline" className="w-full">
-                Paramètres
-              </Button>
+              <div className="bg-card rounded-[10px] overflow-hidden">
+                <button 
+                  onClick={() => setShowSettingsDialog(true)}
+                  className="w-full ios-list-item active:bg-secondary transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-gray-500 flex items-center justify-center">
+                      <User className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <p className="text-[17px] text-foreground">Paramètres</p>
+                  </div>
+                  <ArrowLeft className="h-5 w-5 text-muted-foreground/50 rotate-180" />
+                </button>
+              </div>
             </div>
           </ScrollArea>
         </DialogContent>
