@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { OnlineStatus } from "./OnlineStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, UserCheck, X, UserMinus, UserX } from "lucide-react";
+import { Users, UserCheck, X, UserMinus, UserX, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +35,7 @@ interface FollowDialogProps {
   type: 'followers' | 'following';
   followerCount: number;
   followingCount: number;
-  targetUserId?: string; // ID de l'utilisateur dont on veut voir les abonnés/abonnements
+  targetUserId?: string;
 }
 
 export const FollowDialog = ({ 
@@ -74,28 +74,23 @@ export const FollowDialog = ({
   const fetchFollowData = async () => {
     if (!user) return;
 
-    // Utiliser l'ID de l'utilisateur cible ou l'utilisateur connecté
     const userId = targetUserId || user.id;
-    const isViewingOwnProfile = !targetUserId || targetUserId === user.id;
 
     try {
       setLoading(true);
 
-      // Fetch followers (people who follow the target user)
       const { data: followersData } = await supabase
         .from('user_follows')
         .select('follower_id, status')
         .eq('following_id', userId)
         .eq('status', 'accepted');
 
-      // Fetch following (people the target user follows)  
       const { data: followingData } = await supabase
         .from('user_follows')
         .select('following_id, status')
         .eq('follower_id', userId)
         .eq('status', 'accepted');
 
-      // Get profiles for followers
       if (followersData && followersData.length > 0) {
         const followerIds = followersData.map(f => f.follower_id);
         const { data: followerProfiles } = await supabase
@@ -113,7 +108,6 @@ export const FollowDialog = ({
         setFollowers([]);
       }
 
-      // Get profiles for following
       if (followingData && followingData.length > 0) {
         const followingIds = followingData.map(f => f.following_id);
         const { data: followingProfiles } = await supabase
@@ -184,10 +178,8 @@ export const FollowDialog = ({
 
       if (error) throw error;
 
-      // Remove from following list and update UI immediately
       setFollowing(prev => prev.filter(u => u.user_id !== targetUserId));
       
-      // Trigger a refresh of follow data to update counts
       setTimeout(() => {
         fetchFollowData();
       }, 500);
@@ -218,10 +210,8 @@ export const FollowDialog = ({
 
       if (error) throw error;
 
-      // Remove from followers list and update UI immediately
       setFollowers(prev => prev.filter(u => u.user_id !== followerUserId));
       
-      // Send notification to the removed follower (database + push)
       await supabase
         .from('notifications')
         .insert({
@@ -232,7 +222,6 @@ export const FollowDialog = ({
           data: { removed_by: user.id }
         });
 
-      // Send push notification
       await sendPushNotification(
         followerUserId,
         'Abonné supprimé',
@@ -241,7 +230,6 @@ export const FollowDialog = ({
         { removed_by: user.id }
       );
       
-      // Trigger a refresh of follow data to update counts
       setTimeout(() => {
         fetchFollowData();
       }, 500);
@@ -270,32 +258,34 @@ export const FollowDialog = ({
     if (users.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-12 px-4">
-          <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 rounded-2xl p-8 text-center">
-            <Users className="h-16 w-16 text-slate-500 mx-auto mb-4" />
-            <p className="text-sm font-medium text-white mb-1">
-              {showUnfollowButton ? "Aucun abonnement pour le moment" : "Aucun abonné pour le moment"}
-            </p>
-            <p className="text-xs text-slate-400">
-              {showUnfollowButton ? "Découvrez des profils pour commencer à suivre !" : "Partagez votre profil pour être suivi !"}
-            </p>
+          <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+            <Users className="h-8 w-8 text-muted-foreground" />
           </div>
+          <p className="text-sm font-medium text-foreground mb-1">
+            {showUnfollowButton ? "Aucun abonnement pour le moment" : "Aucun abonné pour le moment"}
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            {showUnfollowButton ? "Découvrez des profils pour commencer à suivre !" : "Partagez votre profil pour être suivi !"}
+          </p>
         </div>
       );
     }
     
     return (
-      <div className="space-y-2 pt-4">
-        {users.map((userItem) => (
-          <div
-            key={userItem.user_id}
-            className="bg-white/5 hover:bg-white/10 transition-all duration-200 rounded-xl border border-white/5 shadow-sm hover:shadow-md p-3 cursor-pointer"
-            onClick={() => navigateToProfile(userItem.user_id)}
-          >
-            <div className="flex items-center gap-3">
+      <div className="pt-4">
+        <div className="bg-card rounded-[10px] border border-border overflow-hidden">
+          {users.map((userItem, index) => (
+            <div
+              key={userItem.user_id}
+              className={`flex items-center gap-3 p-3 hover:bg-secondary transition-all duration-200 cursor-pointer ${
+                index !== users.length - 1 ? 'border-b border-border' : ''
+              }`}
+              onClick={() => navigateToProfile(userItem.user_id)}
+            >
               <div className="relative">
-                <Avatar className="h-14 w-14 ring-2 ring-primary/30">
+                <Avatar className="h-12 w-12">
                   <AvatarImage src={userItem.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60">
+                  <AvatarFallback className="bg-secondary text-foreground">
                     {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
                   </AvatarFallback>
                 </Avatar>
@@ -303,10 +293,10 @@ export const FollowDialog = ({
               </div>
               
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white truncate">
+                <p className="font-medium text-foreground truncate">
                   {userItem.display_name || userItem.username}
                 </p>
-                <p className="text-sm text-slate-400 truncate">
+                <p className="text-sm text-muted-foreground truncate">
                   @{userItem.username}
                 </p>
               </div>
@@ -315,10 +305,10 @@ export const FollowDialog = ({
                 <div onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => openConfirmDialog('unfollow', userItem.user_id, userItem.display_name || userItem.username)}
-                    className="h-8 w-8 rounded-full bg-transparent hover:bg-red-500/20 transition-colors flex items-center justify-center group"
+                    className="h-8 w-8 rounded-full bg-secondary hover:bg-destructive/10 transition-colors flex items-center justify-center group"
                     title="Ne plus suivre"
                   >
-                    <UserX className="h-4 w-4 text-slate-400 group-hover:text-red-400 transition-colors" />
+                    <UserX className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
                   </button>
                 </div>
               )}
@@ -326,64 +316,71 @@ export const FollowDialog = ({
                 <div onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => openConfirmDialog('remove', userItem.user_id, userItem.display_name || userItem.username)}
-                    className="h-8 w-8 rounded-full bg-transparent hover:bg-red-500/20 transition-colors flex items-center justify-center group"
+                    className="h-8 w-8 rounded-full bg-secondary hover:bg-destructive/10 transition-colors flex items-center justify-center group"
                     title="Supprimer"
                   >
-                    <UserMinus className="h-4 w-4 text-slate-400 group-hover:text-red-400 transition-colors" />
+                    <UserMinus className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
                   </button>
                 </div>
               )}
+              
+              {!isViewingOwnProfile && (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[70vh] flex flex-col p-0 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border-white/10 rounded-[22px] shadow-2xl shadow-black/50">
-        {/* Header Premium */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-br from-slate-900 via-slate-800 to-primary/20 border-b border-white/5">
+      <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[70vh] sm:rounded-lg sm:border flex flex-col">
+        {/* iOS Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-background border-b border-border">
           <div className="w-8" />
-          <DialogTitle className="text-lg font-semibold text-white">Réseaux</DialogTitle>
+          <h2 className="text-lg font-semibold text-foreground">Réseaux</h2>
           <button
             onClick={() => onOpenChange(false)}
-            className="h-8 w-8 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center text-slate-400 hover:text-white"
+            className="h-8 w-8 rounded-full hover:bg-secondary transition-colors flex items-center justify-center text-muted-foreground hover:text-foreground"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <Tabs defaultValue={type} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="mx-6 mt-4 bg-slate-800/50 p-1.5 rounded-2xl border border-white/5">
-            <TabsTrigger 
-              value="followers" 
-              className="flex-1 gap-2 rounded-xl data-[state=active]:bg-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5"
-            >
-              <Users className="h-4 w-4" />
-              Abonnés
-              {followerCount > 0 && (
-                <span className="bg-white/10 text-xs px-2 py-0.5 rounded-full">
-                  {followerCount}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="following" 
-              className="flex-1 gap-2 rounded-xl data-[state=active]:bg-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5"
-            >
-              <UserCheck className="h-4 w-4" />
-              Abonnements
-              {followingCount > 0 && (
-                <span className="bg-white/10 text-xs px-2 py-0.5 rounded-full">
-                  {followingCount}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          {/* iOS Segmented Control */}
+          <div className="px-4 pt-4">
+            <TabsList className="w-full bg-secondary p-1 rounded-[10px] border border-border">
+              <TabsTrigger 
+                value="followers" 
+                className="flex-1 gap-2 rounded-[8px] text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
+              >
+                <Users className="h-4 w-4" />
+                Abonnés
+                {followerCount > 0 && (
+                  <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                    {followerCount}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="following" 
+                className="flex-1 gap-2 rounded-[8px] text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
+              >
+                <UserCheck className="h-4 w-4" />
+                Abonnements
+                {followingCount > 0 && (
+                  <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                    {followingCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="followers" className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin">
+          <TabsContent value="followers" className="flex-1 overflow-y-auto px-4 pb-4">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -393,7 +390,7 @@ export const FollowDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="following" className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin">
+          <TabsContent value="following" className="flex-1 overflow-y-auto px-4 pb-4">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -411,9 +408,9 @@ export const FollowDialog = ({
       />
 
       <AlertDialog open={confirmDialog.open} onOpenChange={closeConfirmDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-background border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogTitle className="text-foreground">
               {confirmDialog.type === 'unfollow' ? 'Ne plus suivre ?' : 'Supprimer l\'abonné ?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -424,8 +421,8 @@ export const FollowDialog = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel className="rounded-[8px]">Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-[8px]">
               Confirmer
             </AlertDialogAction>
           </AlertDialogFooter>

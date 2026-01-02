@@ -26,28 +26,30 @@ export const ReliabilityDetailsDialog = ({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm bg-[#0D1B33] border border-sky-500/20 rounded-[22px] shadow-2xl shadow-black/50">
-        {/* Header Custom */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-gradient-to-r from-slate-900/80 to-slate-800/80 -m-6 mb-0 rounded-t-[22px]">
+      <DialogContent className="max-w-sm bg-background border border-border rounded-[22px] p-0 sm:rounded-[22px]">
+        {/* iOS Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <button
             onClick={() => onOpenChange(false)}
-            className="h-8 w-8 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center"
+            className="h-8 w-8 rounded-full hover:bg-secondary transition-colors flex items-center justify-center"
           >
-            <X className="h-4 w-4 text-slate-400" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
-          <h2 className="text-lg font-semibold text-white">Avis de fiabilité</h2>
-          <div className="w-8" /> {/* Spacer pour centrer le titre */}
+          <h2 className="text-lg font-semibold text-foreground">Avis de fiabilité</h2>
+          <div className="w-8" />
         </div>
 
-        <div className="space-y-4 pt-4">
+        <div className="p-4 space-y-4">
           {/* Grande Card Centrée - Taux de fiabilité */}
-          <div className="bg-gradient-to-br from-emerald-500/20 via-emerald-600/10 to-transparent border border-emerald-500/30 rounded-2xl p-6">
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-[10px] p-6">
             <div className="flex flex-col items-center gap-3">
-              <CheckCircle2 className="h-12 w-12 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-              <div className="text-6xl font-bold text-white">
+              <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="text-5xl font-bold text-foreground">
                 {reliabilityRate.toFixed(0)}%
               </div>
-              <p className="text-sm text-slate-400 uppercase tracking-wider">
+              <p className="text-sm text-muted-foreground uppercase tracking-wider">
                 Taux de fiabilité
               </p>
             </div>
@@ -56,31 +58,39 @@ export const ReliabilityDetailsDialog = ({
           {/* Trois Mini-Cards Horizontales */}
           <div className="grid grid-cols-3 gap-3">
             {/* Séances créées */}
-            <div className="bg-white/5 hover:bg-white/10 transition-all border border-white/10 rounded-xl p-4 flex flex-col items-center gap-2">
-              <Calendar className="h-6 w-6 text-primary" />
-              <p className="text-2xl font-bold text-white">{totalSessionsCreated}</p>
-              <p className="text-xs text-slate-400 text-center">Créées</p>
+            <div className="bg-card border border-border rounded-[10px] p-4 flex flex-col items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{totalSessionsCreated}</p>
+              <p className="text-xs text-muted-foreground text-center">Créées</p>
             </div>
 
             {/* Séances venues */}
-            <div className="bg-white/5 hover:bg-white/10 transition-all border border-white/10 rounded-xl p-4 flex flex-col items-center gap-2">
-              <CheckCircle2 className="h-6 w-6 text-emerald-400" />
-              <p className="text-2xl font-bold text-emerald-300">{totalSessionsCompleted}</p>
-              <p className="text-xs text-slate-400 text-center">Venues</p>
+            <div className="bg-card border border-border rounded-[10px] p-4 flex flex-col items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalSessionsCompleted}</p>
+              <p className="text-xs text-muted-foreground text-center">Venues</p>
             </div>
 
             {/* Séances pas venues */}
-            <div className="bg-white/5 hover:bg-white/10 transition-all border border-white/10 rounded-xl p-4 flex flex-col items-center gap-2">
-              <XCircle className="h-6 w-6 text-red-400" />
-              <p className="text-2xl font-bold text-red-300">{sessionsNotAttended}</p>
-              <p className="text-xs text-slate-400 text-center">Pas venues</p>
+            <div className="bg-card border border-border rounded-[10px] p-4 flex flex-col items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{sessionsNotAttended}</p>
+              <p className="text-xs text-muted-foreground text-center">Pas venues</p>
             </div>
           </div>
 
           {/* Texte d'explication */}
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 flex items-start gap-2">
-            <Info className="h-4 w-4 text-sky-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-slate-400 text-center flex-1">
+          <div className="bg-secondary border border-border rounded-[10px] p-3 flex items-start gap-2">
+            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Info className="h-3 w-3 text-primary" />
+            </div>
+            <p className="text-xs text-muted-foreground flex-1">
               Le taux augmente lorsque l'utilisateur respecte les présences confirmées.
             </p>
           </div>
