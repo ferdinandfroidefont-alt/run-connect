@@ -415,12 +415,12 @@ const Leaderboard = () => {
 
   const getRankBorder = (userRank: string) => {
     switch (userRank) {
-      case 'diamant': return 'border-4 border-cyan-400 shadow-lg shadow-cyan-400/50';
-      case 'platine': return 'border-4 border-purple-500 shadow-lg shadow-purple-500/50';
-      case 'or': return 'border-4 border-yellow-500 shadow-lg shadow-yellow-500/50';
-      case 'argent': return 'border-4 border-gray-400 shadow-lg shadow-gray-400/50';
-      case 'bronze': return 'border-4 border-amber-600 shadow-lg shadow-amber-600/50';
-      default: return 'border-2 border-gray-300';
+      case 'diamant': return 'ring-2 ring-cyan-400';
+      case 'platine': return 'ring-2 ring-purple-500';
+      case 'or': return 'ring-2 ring-yellow-500';
+      case 'argent': return 'ring-2 ring-gray-400';
+      case 'bronze': return 'ring-2 ring-amber-600';
+      default: return 'ring-1 ring-border';
     }
   };
 
@@ -430,33 +430,25 @@ const Leaderboard = () => {
     const [first, second, third] = top3;
     
     return (
-      <div className="mb-3">
-        <div className="flex items-end justify-center gap-1.5">
+      <div className="py-4">
+        <div className="flex items-end justify-center gap-2">
           {/* 2ème place */}
           {second && (
-            <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <Avatar 
-                className={`h-14 w-14 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorder(second.user_rank)}`}
-                onClick={() => navigateToProfile(second.user_id)}
-              >
+            <div 
+              className="flex flex-col items-center cursor-pointer active:opacity-70 transition-opacity"
+              onClick={() => navigateToProfile(second.user_id)}
+            >
+              <Avatar className={`h-14 w-14 mb-2 ${getRankBorder(second.user_rank)}`}>
                 <AvatarImage src={second.profile?.avatar_url} />
-                <AvatarFallback className="text-sm font-bold">
-                  {second.profile?.username?.[0] || '?'}
+                <AvatarFallback className="text-sm font-semibold bg-secondary">
+                  {second.profile?.username?.[0]?.toUpperCase() || '?'}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-center mb-1">
-                <p className="font-semibold text-xs truncate max-w-[70px]">
-                  {second.profile?.username}
-                </p>
-                <p className="font-bold text-primary text-xs">
-                  {second.seasonal_points}
-                </p>
-              </div>
-              <div 
-                className="w-16 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '40px' }}
-                onClick={() => navigateToProfile(second.user_id)}
-              >
+              <p className="font-medium text-[13px] truncate max-w-[70px] text-center">
+                {second.profile?.username}
+              </p>
+              <p className="text-[13px] text-muted-foreground">{second.seasonal_points} pts</p>
+              <div className="w-16 h-10 bg-gray-400 rounded-t-lg flex items-center justify-center mt-2">
                 <span className="text-xl font-bold text-white">2</span>
               </div>
             </div>
@@ -464,31 +456,22 @@ const Leaderboard = () => {
           
           {/* 1ère place */}
           {first && (
-            <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <Crown className="h-4 w-4 text-yellow-500 mb-0.5" />
-              <Avatar 
-                className={`h-16 w-16 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorder(first.user_rank)}`}
-                onClick={() => navigateToProfile(first.user_id)}
-              >
+            <div 
+              className="flex flex-col items-center cursor-pointer active:opacity-70 transition-opacity"
+              onClick={() => navigateToProfile(first.user_id)}
+            >
+              <Crown className="h-5 w-5 text-yellow-500 mb-1" />
+              <Avatar className={`h-16 w-16 mb-2 ${getRankBorder(first.user_rank)}`}>
                 <AvatarImage src={first.profile?.avatar_url} />
-                <AvatarFallback className="text-base font-bold">
-                  {first.profile?.username?.[0] || '?'}
+                <AvatarFallback className="text-base font-semibold bg-secondary">
+                  {first.profile?.username?.[0]?.toUpperCase() || '?'}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-center mb-1">
-                <p className="font-bold text-sm truncate max-w-[80px]">
-                  {first.profile?.username}
-                </p>
-                <p className="font-bold text-primary text-sm">
-                  {first.seasonal_points}
-                </p>
-              </div>
-              <div 
-                className="w-18 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-t-lg shadow-lg shadow-yellow-500/50 flex flex-col items-center justify-center cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '60px' }}
-                onClick={() => navigateToProfile(first.user_id)}
-              >
-                <Trophy className="h-5 w-5 text-yellow-100 mb-0.5" />
+              <p className="font-semibold text-[15px] truncate max-w-[80px] text-center">
+                {first.profile?.username}
+              </p>
+              <p className="text-[13px] text-muted-foreground">{first.seasonal_points} pts</p>
+              <div className="w-18 h-14 bg-yellow-500 rounded-t-lg flex items-center justify-center mt-2">
                 <span className="text-2xl font-bold text-white">1</span>
               </div>
             </div>
@@ -496,29 +479,21 @@ const Leaderboard = () => {
           
           {/* 3ème place */}
           {third && (
-            <div className="flex flex-col items-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <Avatar 
-                className={`h-14 w-14 mb-1 cursor-pointer hover:opacity-80 transition-all ${getRankBorder(third.user_rank)}`}
-                onClick={() => navigateToProfile(third.user_id)}
-              >
+            <div 
+              className="flex flex-col items-center cursor-pointer active:opacity-70 transition-opacity"
+              onClick={() => navigateToProfile(third.user_id)}
+            >
+              <Avatar className={`h-14 w-14 mb-2 ${getRankBorder(third.user_rank)}`}>
                 <AvatarImage src={third.profile?.avatar_url} />
-                <AvatarFallback className="text-sm font-bold">
-                  {third.profile?.username?.[0] || '?'}
+                <AvatarFallback className="text-sm font-semibold bg-secondary">
+                  {third.profile?.username?.[0]?.toUpperCase() || '?'}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-center mb-1">
-                <p className="font-semibold text-xs truncate max-w-[70px]">
-                  {third.profile?.username}
-                </p>
-                <p className="font-bold text-primary text-xs">
-                  {third.seasonal_points}
-                </p>
-              </div>
-              <div 
-                className="w-16 bg-gradient-to-b from-amber-600 to-amber-800 rounded-t-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-all"
-                style={{ height: '30px' }}
-                onClick={() => navigateToProfile(third.user_id)}
-              >
+              <p className="font-medium text-[13px] truncate max-w-[70px] text-center">
+                {third.profile?.username}
+              </p>
+              <p className="text-[13px] text-muted-foreground">{third.seasonal_points} pts</p>
+              <div className="w-16 h-8 bg-amber-600 rounded-t-lg flex items-center justify-center mt-2">
                 <span className="text-xl font-bold text-white">3</span>
               </div>
             </div>
@@ -530,12 +505,16 @@ const Leaderboard = () => {
 
   if (loading && currentPage === 1) {
     return (
-      <div className="min-h-screen bg-background p-4 pb-24">
-        <h1 className="text-3xl font-bold mb-4 flex items-center justify-center gap-2">
-          <Trophy className="h-8 w-8 text-primary" />
-          Classement
-        </h1>
-        <LeaderboardSkeleton />
+      <div className="min-h-screen bg-secondary pb-24">
+        <div className="sticky top-0 z-50 bg-card">
+          <div className="px-4 pt-14 pb-3">
+            <h1 className="text-[34px] font-bold tracking-tight">Classement</h1>
+          </div>
+          <div className="h-px bg-border" />
+        </div>
+        <div className="p-4">
+          <LeaderboardSkeleton />
+        </div>
       </div>
     );
   }
@@ -545,24 +524,24 @@ const Leaderboard = () => {
   const nextRank = getNextRankInfo(userPoints);
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-8">
-      {/* Header avec flèche retour */}
-      <div className="flex items-center mb-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/')}
-          className="mr-2"
-        >
-          <ArrowLeft className="h-6 w-6" />
-        </Button>
-        <h1 className="text-2xl font-bold flex items-center gap-2 flex-1 justify-center mr-10">
-          <Trophy className="h-7 w-7 text-primary" />
-          Classement
-        </h1>
+    <div className="min-h-screen bg-secondary pb-8">
+      {/* iOS Header */}
+      <div className="sticky top-0 z-50 bg-card">
+        <div className="flex items-center px-4 pt-14 pb-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/')}
+            className="gap-1 text-primary p-0 h-auto font-normal mr-4"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-[34px] font-bold tracking-tight flex-1">Classement</h1>
+        </div>
+        <div className="h-px bg-border" />
       </div>
 
-      <div className="space-y-3">
+      <div className="p-4 space-y-4">
         {/* Filtres */}
         <FilterBar 
           activeFilter={activeFilter}
@@ -595,15 +574,13 @@ const Leaderboard = () => {
           />
         )}
 
-        {/* Top 3 */}
-        <Card>
-          <CardContent className="p-3">
-            <PodiumDisplay top3={top3} />
-          </CardContent>
-        </Card>
+        {/* Top 3 Podium */}
+        <div className="bg-card rounded-[10px] overflow-hidden">
+          <PodiumDisplay top3={top3} />
+        </div>
 
         {/* Liste du classement */}
-        <div className="space-y-2">
+        <div className="bg-card rounded-[10px] overflow-hidden">
           {(() => {
             const userInTop10 = userRank !== null && userRank <= 10;
             
@@ -703,11 +680,11 @@ const Leaderboard = () => {
 
         {/* Bouton Charger plus */}
         {hasMoreUsers && !loading && (
-          <div className="flex justify-center pt-2">
+          <div className="flex justify-center pt-4">
             <Button
               onClick={loadMoreUsers}
-              variant="outline"
-              size="lg"
+              variant="secondary"
+              className="rounded-full px-6"
             >
               Charger plus
             </Button>

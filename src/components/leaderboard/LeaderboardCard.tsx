@@ -1,7 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Flame, Flag, Star } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LeaderboardCardProps {
@@ -23,90 +22,58 @@ interface LeaderboardCardProps {
 export const LeaderboardCard = ({
   rank,
   username,
-  displayName,
   avatarUrl,
   points,
-  level,
-  rankChange,
-  hasRecentActivity = false,
-  hasRecentRace = false,
-  isPremium = false,
   userRank,
   onClick,
   highlight = false
 }: LeaderboardCardProps) => {
-  const getLevelBadge = () => {
-    switch (level) {
-      case 'elite':
-        return <Badge className="bg-gradient-to-r from-purple-500 to-yellow-500 text-white text-xs border-0">Elite</Badge>;
-      case 'confirmed':
-        return <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs border-0">Confirmé</Badge>;
-      default:
-        return <Badge variant="outline" className="text-xs">Novice</Badge>;
-    }
-  };
-
-  const getRankBorder = () => {
+  // iOS-style rank indicator (simple colored line)
+  const getRankIndicator = () => {
     switch (userRank) {
-      case 'diamant': return 'border-l-4 border-l-cyan-400';
-      case 'platine': return 'border-l-4 border-l-purple-500';
-      case 'or': return 'border-l-4 border-l-yellow-500';
-      case 'argent': return 'border-l-4 border-l-gray-400';
-      case 'bronze': return 'border-l-4 border-l-amber-600';
-      default: return '';
+      case 'diamant': return 'bg-cyan-400';
+      case 'platine': return 'bg-purple-500';
+      case 'or': return 'bg-yellow-500';
+      case 'argent': return 'bg-gray-400';
+      case 'bronze': return 'bg-amber-600';
+      default: return 'bg-transparent';
     }
   };
 
   return (
-    <Card 
-      className={cn(
-        "hover:shadow-md transition-all cursor-pointer",
-        getRankBorder(),
-        highlight && "bg-primary/5 border-primary/30"
-      )}
+    <div
       onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 px-4 py-3 bg-card cursor-pointer active:bg-secondary transition-colors relative",
+        highlight && "bg-primary/5"
+      )}
     >
-      <CardContent className="p-2.5 flex items-center gap-3">
-        {/* Rank */}
-        <div className="w-8 text-center">
-          <span className="text-sm font-bold text-muted-foreground">#{rank}</span>
-        </div>
+      {/* Rank indicator bar */}
+      <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-r", getRankIndicator())} />
+      
+      {/* Rank number */}
+      <div className="w-8 text-center pl-2">
+        <span className="text-[15px] font-semibold text-muted-foreground">#{rank}</span>
+      </div>
 
-        {/* Avatar */}
-        <Avatar className="h-11 w-11 shrink-0">
-          <AvatarImage src={avatarUrl} />
-          <AvatarFallback className="text-sm font-bold">
-            {username?.[0] || displayName?.[0] || '?'}
-          </AvatarFallback>
-        </Avatar>
+      {/* Avatar */}
+      <Avatar className="h-11 w-11 shrink-0">
+        <AvatarImage src={avatarUrl} />
+        <AvatarFallback className="text-sm font-semibold bg-secondary">
+          {username?.[0]?.toUpperCase() || '?'}
+        </AvatarFallback>
+      </Avatar>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">{username}</p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {getLevelBadge()}
-          </div>
-        </div>
+      {/* Name */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[17px] font-medium truncate">{username}</p>
+      </div>
 
-        {/* Points & Badges */}
-        <div className="flex flex-col items-end gap-1">
-          <p className="font-bold text-primary text-sm">{points.toLocaleString()} pts</p>
-          <div className="flex items-center gap-1">
-            {hasRecentActivity && <Flame className="h-3.5 w-3.5 text-orange-500" />}
-            {hasRecentRace && <Flag className="h-3.5 w-3.5 text-green-500" />}
-            {isPremium && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />}
-            {rankChange !== undefined && rankChange !== 0 && (
-              <div className={cn(
-                "flex items-center gap-0.5 text-xs font-medium",
-                rankChange > 0 ? "text-green-500" : "text-red-500"
-              )}>
-                {rankChange > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                <span>{Math.abs(rankChange)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Points */}
+      <div className="flex items-center gap-2">
+        <span className="text-[15px] text-muted-foreground">{points.toLocaleString()} pts</span>
+        <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+      </div>
+    </div>
   );
 };
