@@ -310,7 +310,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full h-screen sm:max-w-md sm:h-[90vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden flex flex-col border-0 sm:border">
         {/* Progress indicator */}
         <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
 
