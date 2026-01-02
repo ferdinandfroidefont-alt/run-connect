@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +10,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "@/components/ShareSessionToConversationDialog";
+import { ActivityIcon } from "@/lib/activityIcons";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Users, UserPlus, Share2, ArrowLeft, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Users, UserPlus, Share2, ChevronLeft, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -46,36 +47,36 @@ interface NearbySessionsDialogProps {
 }
 
 const ACTIVITY_TYPES = [
-  { value: "course", label: "Course à pied", emoji: "🏃" },
-  { value: "trail", label: "Trail", emoji: "⛰️" },
-  { value: "velo", label: "Vélo", emoji: "🚴" },
-  { value: "vtt", label: "VTT", emoji: "🚵" },
-  { value: "bmx", label: "BMX", emoji: "🚲" },
-  { value: "gravel", label: "Gravel", emoji: "🚴‍♂️" },
-  { value: "marche", label: "Marche", emoji: "🚶" },
-  { value: "natation", label: "Natation", emoji: "🏊" },
-  { value: "football", label: "Football", emoji: "⚽" },
-  { value: "basket", label: "Basketball", emoji: "🏀" },
-  { value: "volley", label: "Volleyball", emoji: "🏐" },
-  { value: "badminton", label: "Badminton", emoji: "🏸" },
-  { value: "pingpong", label: "Tennis de table", emoji: "🏓" },
-  { value: "tennis", label: "Tennis", emoji: "🎾" },
-  { value: "escalade", label: "Escalade", emoji: "🧗" },
-  { value: "petanque", label: "Pétanque", emoji: "⚪" },
-  { value: "rugby", label: "Rugby", emoji: "🏉" },
-  { value: "handball", label: "Handball", emoji: "🤾" },
-  { value: "fitness", label: "Fitness", emoji: "💪" },
-  { value: "yoga", label: "Yoga", emoji: "🧘" },
-  { value: "musculation", label: "Musculation", emoji: "🏋️" },
-  { value: "crossfit", label: "CrossFit", emoji: "🔥" },
-  { value: "boxe", label: "Boxe", emoji: "🥊" },
-  { value: "arts_martiaux", label: "Arts martiaux", emoji: "🥋" },
-  { value: "golf", label: "Golf", emoji: "⛳" },
-  { value: "ski", label: "Ski", emoji: "⛷️" },
-  { value: "snowboard", label: "Snowboard", emoji: "🏂" },
-  { value: "randonnee", label: "Randonnée", emoji: "🥾" },
-  { value: "kayak", label: "Kayak", emoji: "🛶" },
-  { value: "surf", label: "Surf", emoji: "🏄" }
+  { value: "course", label: "Course" },
+  { value: "trail", label: "Trail" },
+  { value: "velo", label: "Vélo" },
+  { value: "vtt", label: "VTT" },
+  { value: "bmx", label: "BMX" },
+  { value: "gravel", label: "Gravel" },
+  { value: "marche", label: "Marche" },
+  { value: "natation", label: "Natation" },
+  { value: "football", label: "Football" },
+  { value: "basket", label: "Basketball" },
+  { value: "volley", label: "Volleyball" },
+  { value: "badminton", label: "Badminton" },
+  { value: "pingpong", label: "Ping-pong" },
+  { value: "tennis", label: "Tennis" },
+  { value: "escalade", label: "Escalade" },
+  { value: "petanque", label: "Pétanque" },
+  { value: "rugby", label: "Rugby" },
+  { value: "handball", label: "Handball" },
+  { value: "fitness", label: "Fitness" },
+  { value: "yoga", label: "Yoga" },
+  { value: "musculation", label: "Musculation" },
+  { value: "crossfit", label: "CrossFit" },
+  { value: "boxe", label: "Boxe" },
+  { value: "arts_martiaux", label: "Arts martiaux" },
+  { value: "golf", label: "Golf" },
+  { value: "ski", label: "Ski" },
+  { value: "snowboard", label: "Snowboard" },
+  { value: "randonnee", label: "Randonnée" },
+  { value: "kayak", label: "Kayak" },
+  { value: "surf", label: "Surf" }
 ];
 
 export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySessionsDialogProps) => {
@@ -83,95 +84,22 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   const { toast } = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDistance, setSelectedDistance] = useState("1000");
+  const [selectedDistance, setSelectedDistance] = useState("10");
   const [selectedActivities, setSelectedActivities] = useState<string[]>(
-    ACTIVITY_TYPES.map(a => a.value) // Tous activés par défaut
+    ACTIVITY_TYPES.map(a => a.value)
   );
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedSessionToShare, setSelectedSessionToShare] = useState<Session | null>(null);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const scrollLeftRef = useRef(0);
 
-  // Gérer le carrousel infini
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollLeft, scrollWidth, clientWidth } = container;
-      const itemWidth = scrollWidth / 3; // On a 3 copies des items
-      
-      // Si on scroll trop à droite, revenir au début (sans animation)
-      if (scrollLeft >= itemWidth * 2) {
-        container.style.scrollBehavior = 'auto';
-        container.scrollLeft = itemWidth;
-        setTimeout(() => {
-          container.style.scrollBehavior = 'smooth';
-        }, 0);
-      }
-      
-      // Si on scroll trop à gauche, aller à la fin (sans animation)
-      if (scrollLeft <= 0) {
-        container.style.scrollBehavior = 'auto';
-        container.scrollLeft = itemWidth;
-        setTimeout(() => {
-          container.style.scrollBehavior = 'smooth';
-        }, 0);
-      }
-    };
-
-    // Initialiser au milieu pour permettre le scroll dans les 2 directions
-    const itemWidth = container.scrollWidth / 3;
-    container.scrollLeft = itemWidth;
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [isOpen]);
-
-  // Gérer le drag avec la souris (desktop)
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!scrollContainerRef.current) return;
-    isDraggingRef.current = true;
-    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
-    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
-    scrollContainerRef.current.style.cursor = 'grabbing';
-    scrollContainerRef.current.style.scrollBehavior = 'auto';
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startXRef.current) * 2; // Vitesse du drag
-    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
-  };
-
-  const handleMouseUp = () => {
-    if (!scrollContainerRef.current) return;
-    isDraggingRef.current = false;
-    scrollContainerRef.current.style.cursor = 'grab';
-    scrollContainerRef.current.style.scrollBehavior = 'smooth';
-  };
-
-  const handleMouseLeave = () => {
-    if (!scrollContainerRef.current) return;
-    isDraggingRef.current = false;
-    scrollContainerRef.current.style.cursor = 'grab';
-    scrollContainerRef.current.style.scrollBehavior = 'smooth';
-  };
-
-  // Load nearby sessions
   const loadNearbySessions = async () => {
     if (!user || !userLocation) return;
 
     try {
       setLoading(true);
       
-      // Get all sessions without profiles first
       const { data: sessionsData, error } = await supabase
         .from('sessions')
         .select('*')
@@ -182,22 +110,18 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
 
       if (error) throw error;
 
-      // Get organizer profiles
       const organizerIds = [...new Set(sessionsData?.map(s => s.organizer_id) || [])];
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('user_id, username, display_name, avatar_url')
         .in('user_id', organizerIds);
 
-      // Map profiles to sessions
       const sessionsWithProfiles = (sessionsData || []).map(session => ({
         ...session,
         profiles: profilesData?.find(p => p.user_id === session.organizer_id) || null
       }));
 
-      // Filter by distance and activity
       const filteredSessions = sessionsWithProfiles.filter(session => {
-        // Distance filter
         const distanceInKm = calculateDistance(
           userLocation.lat,
           userLocation.lng,
@@ -205,10 +129,8 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           session.location_lng
         );
         
-        // Distance filter in km
         if (distanceInKm > parseInt(selectedDistance)) return false;
 
-        // Activity filter (multi-selection)
         if (selectedActivities.length > 0 && !selectedActivities.includes(session.activity_type)) {
           return false;
         }
@@ -229,9 +151,8 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
     }
   };
 
-  // Calculate distance between two points (Haversine formula)
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Radius of the Earth in kilometers
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -242,14 +163,11 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
     return R * c;
   };
 
-  // Join a session
   const joinSession = async (session: Session) => {
     if (!user) return;
 
     try {
-      // Check if session is private or friends-only and create request
       if (session.friends_only) {
-        // Create a session request for friends-only sessions
         const { error: requestError } = await supabase
           .from('session_requests')
           .insert([{
@@ -266,7 +184,6 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           description: "Votre demande de participation a été envoyée à l'organisateur"
         });
       } else {
-        // Join directly for public sessions
         const { error } = await supabase
           .from('session_participants')
           .insert([{
@@ -276,7 +193,6 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
 
         if (error) throw error;
 
-        // Update session participant count
         await supabase
           .from('sessions')
           .update({ 
@@ -289,7 +205,6 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           description: "Vous avez rejoint la séance !"
         });
 
-        // Refresh sessions
         loadNearbySessions();
       }
     } catch (error: any) {
@@ -307,7 +222,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
       case 'faible': return 'bg-green-100 text-green-800';
       case 'modere': case 'modérée': return 'bg-yellow-100 text-yellow-800';
       case 'elevee': case 'élevée': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-secondary text-muted-foreground';
     }
   };
 
@@ -340,7 +255,7 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
 
   const resetFilters = () => {
     setSelectedActivities(ACTIVITY_TYPES.map(a => a.value));
-    setSelectedDistance("5000");
+    setSelectedDistance("10");
   };
 
   useEffect(() => {
@@ -352,335 +267,226 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-    <SheetContent 
-      side="top" 
-      className="w-full h-full min-h-screen p-0 flex flex-col backdrop-blur-xl bg-background/80 border-border/50"
-    >
-      {/* Barre système Android */}
-      <div className="fixed top-0 left-0 right-0 w-full h-4 bg-background z-50"></div>
-      
-      {/* Sticky Header avec filtres */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50 pt-4">
-        {/* Flèche de retour + Titre */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full hover:bg-muted/50"
-            onClick={onClose}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h2 className="text-lg font-semibold">Séances proches de moi</h2>
-        </div>
-
-        {/* Section Sports et filtres */}
-        <div className="px-4 pb-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Sports disponibles
-            </h3>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={toggleAllActivities}
-              className="text-xs text-primary hover:underline"
+        <SheetContent 
+          side="bottom" 
+          className="w-full h-[95vh] p-0 flex flex-col bg-secondary rounded-t-[10px]"
+        >
+          {/* iOS Native Header */}
+          <div className="bg-card border-b border-border px-4 py-3 flex items-center gap-3 rounded-t-[10px]">
+            <button
+              onClick={onClose}
+              className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary active:bg-secondary/80 transition-colors"
             >
-              {selectedActivities.length === ACTIVITY_TYPES.length 
-                ? "Tout désactiver" 
-                : "Tout sélectionner"}
-            </Button>
+              <ChevronLeft className="h-6 w-6 text-primary" />
+            </button>
+            <h2 className="text-[22px] font-semibold text-foreground">Séances proches</h2>
           </div>
 
-          {/* Carrousel infini des sports */}
-          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden animate-fade-in">
-            <div className="p-4">
-              <div 
-                ref={scrollContainerRef}
-                className="overflow-x-auto scrollbar-hide cursor-grab select-none"
-                style={{
-                  WebkitOverflowScrolling: 'touch',
-                  touchAction: 'pan-x',
-                  scrollBehavior: 'smooth'
-                }}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseLeave}
+          {/* Activity Filter Pills - iOS Style */}
+          <div className="bg-card border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                Sports
+              </span>
+              <button 
+                onClick={toggleAllActivities}
+                className="text-[13px] font-medium text-primary"
               >
-                <div className="flex gap-2 pb-2">
-                  {/* Première copie (pour scroll vers la gauche) */}
-                  {ACTIVITY_TYPES.map(activity => (
-                    <button
-                      key={`prev-${activity.value}`}
-                      onClick={() => toggleActivity(activity.value)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px] flex-shrink-0",
-                        "hover:shadow-md hover:scale-105 active:scale-95",
-                        selectedActivities.includes(activity.value)
-                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
-                          : "bg-muted/50 text-muted-foreground border-border/50 opacity-60"
-                      )}
-                    >
-                      <span className="text-lg">{activity.emoji}</span>
-                      <span className="text-sm font-medium whitespace-nowrap">{activity.label}</span>
-                    </button>
-                  ))}
-                  
-                  {/* Copie principale (visible au centre) */}
-                  {ACTIVITY_TYPES.map(activity => (
-                    <button
-                      key={`main-${activity.value}`}
-                      onClick={() => toggleActivity(activity.value)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px] flex-shrink-0",
-                        "hover:shadow-md hover:scale-105 active:scale-95",
-                        selectedActivities.includes(activity.value)
-                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
-                          : "bg-muted/50 text-muted-foreground border-border/50 opacity-60"
-                      )}
-                    >
-                      <span className="text-lg">{activity.emoji}</span>
-                      <span className="text-sm font-medium whitespace-nowrap">{activity.label}</span>
-                    </button>
-                  ))}
-                  
-                  {/* Troisième copie (pour scroll vers la droite) */}
-                  {ACTIVITY_TYPES.map(activity => (
-                    <button
-                      key={`next-${activity.value}`}
-                      onClick={() => toggleActivity(activity.value)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 min-w-[120px] flex-shrink-0",
-                        "hover:shadow-md hover:scale-105 active:scale-95",
-                        selectedActivities.includes(activity.value)
-                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
-                          : "bg-muted/50 text-muted-foreground border-border/50 opacity-60"
-                      )}
-                    >
-                      <span className="text-lg">{activity.emoji}</span>
-                      <span className="text-sm font-medium whitespace-nowrap">{activity.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                {selectedActivities.length === ACTIVITY_TYPES.length 
+                  ? "Désélectionner tout" 
+                  : "Tout sélectionner"}
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenu scrollable */}
-      <ScrollArea className="flex-1 overflow-y-auto">
-        <div className="px-4 pb-6 space-y-6">
-          {/* Section Distance */}
-          <div className="space-y-3 animate-fade-in">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Filtres de recherche
-            </h3>
             
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden">
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Distance maximale
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={selectedDistance}
-                      onChange={(e) => setSelectedDistance(e.target.value)}
-                      className="w-20 h-8 text-xs text-right border-border/50 bg-background/50"
-                      min="1"
-                      max="100"
-                    />
-                    <span className="text-xs text-muted-foreground">km</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-4 bg-muted/20 border-t border-border/30">
-                <Button
-                  onClick={loadNearbySessions}
-                  disabled={loading}
-                  className="w-full rounded-full bg-primary hover:bg-primary/90 transition-all shadow-md hover:shadow-lg"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Recherche...
-                    </>
-                  ) : (
-                    'Appliquer les filtres'
-                  )}
-                </Button>
+            <div 
+              ref={scrollContainerRef}
+              className="overflow-x-auto scrollbar-hide -mx-4 px-4"
+            >
+              <div className="flex gap-2 pb-1">
+                {ACTIVITY_TYPES.map(activity => (
+                  <button
+                    key={activity.value}
+                    onClick={() => toggleActivity(activity.value)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-full border text-[13px] font-medium whitespace-nowrap transition-colors",
+                      selectedActivities.includes(activity.value)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-muted-foreground border-border"
+                    )}
+                  >
+                    <ActivityIcon activityType={activity.value} size="sm" />
+                    <span>{activity.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-          {/* Résultats */}
-          {loading ? (
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
-              <div className="flex flex-col items-center justify-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Recherche des séances à proximité...</p>
+
+          {/* Distance Filter - iOS Style */}
+          <div className="bg-card border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[15px] font-medium">Distance max</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={selectedDistance}
+                  onChange={(e) => setSelectedDistance(e.target.value)}
+                  className="w-16 h-9 text-[15px] text-right bg-secondary border-border rounded-[8px]"
+                  min="1"
+                  max="100"
+                />
+                <span className="text-[15px] text-muted-foreground">km</span>
               </div>
             </div>
-          ) : sessions.length === 0 ? (
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm p-8">
-              <div className="flex flex-col items-center justify-center space-y-4 animate-fade-in">
-                <div className="text-6xl animate-bounce">🏃‍♂️💨</div>
-                <div className="text-center space-y-2">
-                  <p className="text-lg font-semibold">Aucune séance trouvée</p>
-                  <p className="text-sm text-muted-foreground max-w-xs">
-                    Essaye d'élargir la distance ou d'activer d'autres sports.
-                  </p>
+          </div>
+
+          {/* Content */}
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3">
+              {loading ? (
+                <div className="bg-card border border-border rounded-[10px] p-8 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-[15px] text-muted-foreground">Recherche...</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetFilters}
-                  className="rounded-full"
-                >
-                  Réinitialiser les filtres
-                </Button>
-              </div>
-            </div>
-          ) : (
-            sessions.map((session) => (
-              <Card key={session.id} className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.01] animate-fade-in">
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        {/* Header */}
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-3">
-                            <Avatar 
-                              className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+              ) : sessions.length === 0 ? (
+                <div className="bg-card border border-border rounded-[10px] p-8 text-center">
+                  <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+                    <MapPin className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-[17px] font-semibold text-foreground mb-1">
+                    Aucune séance trouvée
+                  </p>
+                  <p className="text-[13px] text-muted-foreground mb-4">
+                    Élargis la distance ou active d'autres sports
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetFilters}
+                    className="rounded-full"
+                  >
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
+              ) : (
+                sessions.map((session) => (
+                  <div 
+                    key={session.id} 
+                    className="bg-card border border-border rounded-[10px] overflow-hidden"
+                  >
+                    <div className="p-4 space-y-3">
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <Avatar 
+                            className="h-10 w-10 cursor-pointer"
+                            onClick={() => setSelectedProfile(session.organizer_id)}
+                          >
+                            <AvatarImage src={session.profiles?.avatar_url || ""} />
+                            <AvatarFallback className="bg-secondary text-[15px]">
+                              {(session.profiles?.username || session.profiles?.display_name)?.charAt(0)?.toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-semibold text-[17px]">{session.title}</h3>
+                            <p 
+                              className="text-[13px] text-muted-foreground cursor-pointer"
                               onClick={() => setSelectedProfile(session.organizer_id)}
                             >
-                              <AvatarImage src={session.profiles?.avatar_url || ""} />
-                              <AvatarFallback className="text-xs">
-                                {(session.profiles?.username || session.profiles?.display_name)?.charAt(0)?.toUpperCase() || "U"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h3 className="font-semibold">{session.title}</h3>
-                              <p 
-                                className="text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors"
-                                onClick={() => setSelectedProfile(session.organizer_id)}
-                              >
-                                par {session.profiles?.username || session.profiles?.display_name}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-primary">
-                              {getDistanceToSession(session)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Badges */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs">
-                            {ACTIVITY_TYPES.find(a => a.value === session.activity_type)?.label || session.activity_type}
-                          </Badge>
-                          {session.intensity && (
-                            <Badge className={`text-xs ${getIntensityColor(session.intensity)}`}>
-                              {session.intensity}
-                            </Badge>
-                          )}
-                          {session.friends_only && (
-                            <Badge variant="secondary" className="text-xs">
-                              Amis uniquement
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Details */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            <span>
-                              {format(new Date(session.scheduled_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{session.location_name}</span>
-                          </div>
-
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Users className="h-3 w-3" />
-                            <span>
-                              {session.current_participants}
-                              {session.max_participants && `/${session.max_participants}`} participants
-                            </span>
-                          </div>
-
-                          {session.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {session.description}
+                              par {session.profiles?.username || session.profiles?.display_name}
                             </p>
-                          )}
+                          </div>
+                        </div>
+                        <span className="text-[13px] font-medium text-primary">
+                          {getDistanceToSession(session)}
+                        </span>
+                      </div>
+
+                      {/* Badges */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-[11px] rounded-full">
+                          {ACTIVITY_TYPES.find(a => a.value === session.activity_type)?.label || session.activity_type}
+                        </Badge>
+                        {session.intensity && (
+                          <Badge className={cn("text-[11px] rounded-full", getIntensityColor(session.intensity))}>
+                            {session.intensity}
+                          </Badge>
+                        )}
+                        {session.friends_only && (
+                          <Badge variant="secondary" className="text-[11px] rounded-full">
+                            Amis uniquement
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {format(new Date(session.scheduled_at), 'dd MMMM à HH:mm', { locale: fr })}
+                          </span>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="pt-2 border-t flex gap-2">
-                          <Button
-                            onClick={() => joinSession(session)}
-                            size="sm"
-                            className="flex-1"
-                          >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            {session.friends_only ? "Demander" : "Rejoindre"}
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setSelectedSessionToShare(session);
-                              setShowShareDialog(true);
-                            }}
-                            size="sm"
-                            variant="outline"
-                            className="px-3"
-                          >
-                            <Share2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span className="truncate">{session.location_name}</span>
                         </div>
+
+                        <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                          <Users className="h-4 w-4" />
+                          <span>
+                            {session.current_participants}
+                            {session.max_participants && `/${session.max_participants}`} participants
+                          </span>
+                        </div>
+
+                        {session.description && (
+                          <p className="text-[13px] text-muted-foreground line-clamp-2 pt-1">
+                            {session.description}
+                          </p>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
+
+                      {/* Action Buttons - iOS Style */}
+                      <div className="pt-3 border-t border-border flex gap-2">
+                        <Button
+                          onClick={() => joinSession(session)}
+                          size="sm"
+                          className="flex-1 h-10 rounded-[8px]"
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          {session.friends_only ? "Demander" : "Rejoindre"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setSelectedSessionToShare(session);
+                            setShowShareDialog(true);
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="h-10 w-10 p-0 rounded-[8px]"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ))
               )}
             </div>
           </ScrollArea>
-
-          {/* Actions */}
-          <div 
-            className="px-4 py-4 border-t border-border/50 backdrop-blur-xl bg-background/80"
-            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
-          >
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="w-full rounded-full hover:bg-muted/50 transition-colors"
-            >
-              Fermer
-            </Button>
-          </div>
         </SheetContent>
       </Sheet>
 
-      {/* Profile Preview Dialog */}
       <ProfilePreviewDialog 
         userId={selectedProfile} 
         onClose={() => setSelectedProfile(null)} 
       />
 
-      {/* Share Session Dialog */}
       <ShareSessionToConversationDialog
         isOpen={showShareDialog}
         onClose={() => {

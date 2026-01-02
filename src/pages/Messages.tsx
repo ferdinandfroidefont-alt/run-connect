@@ -1474,32 +1474,29 @@ const Messages = () => {
       <>
         <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
-          {/* Top Bar - Fixed - Remonté légèrement */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-4 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md z-50"></div>
+          {/* iOS Status Bar Spacer */}
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-card z-50"></div>
           
-          {/* Header - Fixed - Remonté et plus compact */}
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-blue-900/80 via-blue-800/80 to-blue-700/80 backdrop-blur-md shadow-lg z-50">
+          {/* iOS Native Header */}
+          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between px-3 py-2 border-b border-border bg-card z-50">
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setSelectedConversation(null)}
+                className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary active:bg-secondary/80 transition-colors"
               >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+                <ArrowLeft className="h-5 w-5 text-primary" />
+              </button>
               
               {selectedConversation.is_group ? (
                 <>
                    <Avatar 
-                     className="h-8 w-8 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-primary/50 transition-all duration-200 glass-card border border-white/20"
+                     className="h-10 w-10 cursor-pointer active:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       console.log('🔍 Club avatar clicked - redirecting to club settings');
-                      // Fermer la conversation et ouvrir les paramètres du club
                       const clubData = selectedConversation;
-                      setSelectedConversation(null); // Ferme la conversation
-                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
+                      setSelectedConversation(null);
                       setTimeout(() => {
                         setGroupInfoData(clubData);
                         setShowGroupInfo(true);
@@ -1512,24 +1509,22 @@ const Messages = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div 
-                    className="cursor-pointer hover:opacity-80 hover:bg-muted/30 rounded p-1 -m-1 transition-all duration-200"
+                    className="cursor-pointer active:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       console.log('🔍 Club name clicked - redirecting to club settings');
-                      // Fermer la conversation et ouvrir les paramètres du club
                       const clubData = selectedConversation;
-                      setSelectedConversation(null); // Ferme la conversation
-                      // Attendre que l'animation de fermeture soit terminée avant d'ouvrir le dialogue
+                      setSelectedConversation(null);
                       setTimeout(() => {
                         setGroupInfoData(clubData);
                         setShowGroupInfo(true);
                       }, 100);
                     }}
                   >
-                    <p className="font-medium text-sm">{selectedConversation.group_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedConversation.group_members?.length || 0} membres • Cliquez pour voir
+                    <p className="font-semibold text-[15px] text-foreground">{selectedConversation.group_name}</p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {selectedConversation.group_members?.length || 0} membres
                     </p>
                   </div>
                 </>
@@ -1537,30 +1532,28 @@ const Messages = () => {
                 <>
                    <div className="relative">
                      <Avatar 
-                       className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all glass-card border border-white/20"
+                       className="h-10 w-10 cursor-pointer active:opacity-80 transition-opacity"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        // Navigation directe vers la page profil
                         navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                       }}
                     >
                       <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-secondary text-[15px]">
                         {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} />
                   </div>
                   <div 
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                    className="cursor-pointer active:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Navigation directe vers la page profil
                       navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                     }}
                   >
-                    <p className="font-medium text-sm">
+                    <p className="font-semibold text-[15px] text-foreground">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
                     </p>
                   </div>
