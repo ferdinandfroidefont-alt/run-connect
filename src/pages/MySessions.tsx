@@ -3,12 +3,11 @@ import { RouteCard } from '@/components/RouteCard';
 import { RouteEditDialog } from '@/components/RouteEditDialog';
 import { EditSessionDialog } from '@/components/EditSessionDialog';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, Clock, MapPin, Users, Filter, Edit, Trash2, Route } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
+import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
+import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 
 interface UserSession {
   id: string;
@@ -77,13 +78,11 @@ export default function MySessions() {
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
 
-  // Load user's sessions
   const loadUserSessions = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
-      const now = new Date().toISOString();
       
       let query = supabase
         .from('sessions')
@@ -107,7 +106,6 @@ export default function MySessions() {
     }
   };
 
-  // Load participants for selected session
   const loadSessionParticipants = async (sessionId: string) => {
     try {
       const { data: participantsData, error: participantsError } = await supabase
@@ -142,7 +140,6 @@ export default function MySessions() {
     }
   };
 
-  // Vérifier le paramètre URL pour ouvrir l'onglet routes
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get('tab') === 'routes') {
@@ -157,7 +154,6 @@ export default function MySessions() {
     }
   }, [user, currentView]);
 
-  // Load user's routes
   const loadUserRoutes = async () => {
     if (!user) return;
 
@@ -254,7 +250,6 @@ export default function MySessions() {
     }
 
     try {
-      // Supprimer d'abord les participants de la séance
       const { error: participantsError } = await supabase
         .from('session_participants')
         .delete()
@@ -262,7 +257,6 @@ export default function MySessions() {
 
       if (participantsError) throw participantsError;
 
-      // Supprimer les demandes de participation
       const { error: requestsError } = await supabase
         .from('session_requests')
         .delete()
@@ -270,7 +264,6 @@ export default function MySessions() {
 
       if (requestsError) throw requestsError;
 
-      // Supprimer la séance
       const { error } = await supabase
         .from('sessions')
         .delete()
@@ -279,7 +272,6 @@ export default function MySessions() {
 
       if (error) throw error;
 
-      // Retourner à la liste et mettre à jour l'état local
       setSelectedSession(null);
       setSessions(sessions.filter(s => s.id !== selectedSession.id));
       toast({
@@ -296,31 +288,6 @@ export default function MySessions() {
     }
   };
 
-  const getActivityColor = (activityType: string) => {
-    const colors: Record<string, string> = {
-      'course': 'bg-red-500',
-      'velo': 'bg-blue-500',
-      'marche': 'bg-green-500',
-      'natation': 'bg-teal-500'
-    };
-    return colors[activityType] || 'bg-gray-500';
-  };
-
-  const getActivityIcon = (activityType: string) => {
-    switch (activityType) {
-      case 'course':
-        return '🏃‍♂️';
-      case 'velo':
-        return '🚴‍♂️';
-      case 'marche':
-        return '🚶‍♂️';
-      case 'natation':
-        return '🏊‍♂️';
-      default:
-        return '🏃‍♂️';
-    }
-  };
-
   const now = new Date().toISOString();
   const filteredSessions = sessions.filter(session => {
     if (filter === 'all') return true;
@@ -329,404 +296,345 @@ export default function MySessions() {
     return true;
   });
 
-  const getStatusBadge = (session: UserSession) => {
-    const isUpcoming = session.scheduled_at >= now;
-    return isUpcoming ? 
-      <Badge variant="default">À venir</Badge> : 
-      <Badge variant="secondary">Terminée</Badge>;
-  };
-
+  // Session detail view
   if (selectedSession) {
     const isUpcoming = new Date(selectedSession.scheduled_at) >= new Date();
     
     return (
       <>
-      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        {/* Header avec gradient */}
-        <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
+        <div className="min-h-screen bg-secondary">
+          {/* iOS Header */}
+          <div className="sticky top-0 z-50 bg-card">
+            <div className="flex items-center justify-between px-4 py-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedSession(null)}
-                className="gap-2 text-muted-foreground hover:text-foreground"
+                className="gap-1 text-primary p-0 h-auto font-normal"
               >
-                <span className="text-lg">←</span>
+                <ArrowLeft className="h-5 w-5" />
                 Retour
               </Button>
               <div className="flex items-center gap-2">
                 {isUpcoming && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
                     onClick={handleEditClick}
-                    className="h-9 w-9 rounded-full border-primary/30 hover:bg-primary/10"
+                    className="h-9 w-9"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-5 w-5 text-primary" />
                   </Button>
                 )}
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
                   onClick={handleDeleteSession}
-                  className="h-9 w-9 rounded-full border-destructive/30 hover:bg-destructive/10 text-destructive"
+                  className="h-9 w-9"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5 text-destructive" />
                 </Button>
               </div>
             </div>
+            <div className="h-px bg-border" />
           </div>
-        </div>
 
-        <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
-          {/* Hero Card avec image */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/20">
-            {selectedSession.image_url && (
-              <div className="absolute inset-0 opacity-20">
-                <img 
-                  src={selectedSession.image_url} 
-                  alt=""
-                  className="w-full h-full object-cover blur-xl"
-                />
-              </div>
-            )}
-            
-            <div className="relative p-6">
-              <div className="flex items-start gap-4">
-                {/* Activity Icon - Plus grand et stylé */}
-                <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-3xl">{getActivityIcon(selectedSession.activity_type)}</span>
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge 
-                      variant={isUpcoming ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {isUpcoming ? "À venir" : "Terminée"}
-                    </Badge>
-                    {selectedSession.session_type && (
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {selectedSession.session_type}
+          <div className="p-4 space-y-6 pb-24">
+            {/* Session Header Card */}
+            <IOSListGroup>
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <ActivityIcon activityType={selectedSession.activity_type} size="lg" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant={isUpcoming ? "default" : "secondary"} className="text-xs">
+                        {isUpcoming ? "À venir" : "Terminée"}
                       </Badge>
-                    )}
-                  </div>
-                  <h1 className="text-xl font-bold tracking-tight mb-2">
-                    {selectedSession.title}
-                  </h1>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Info Cards Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Date & Heure */}
-            <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Date</p>
-                  <p className="font-medium text-sm">
-                    {format(new Date(selectedSession.scheduled_at), 'dd MMM yyyy', { locale: fr })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Heure</p>
-                  <p className="font-medium text-sm">
-                    {format(new Date(selectedSession.scheduled_at), 'HH:mm', { locale: fr })}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Lieu - Full width card */}
-          <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <MapPin className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-1">Lieu de rendez-vous</p>
-                <p className="font-medium text-sm leading-relaxed">
-                  {selectedSession.location_name}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          {selectedSession.description && (
-            <div className="rounded-2xl bg-card/50 border border-border/50 p-4">
-              <p className="text-xs text-muted-foreground mb-2">Description</p>
-              <p className="text-sm leading-relaxed text-foreground/80">
-                {selectedSession.description}
-              </p>
-            </div>
-          )}
-
-          {/* Participants Section */}
-          <div className="rounded-2xl bg-card/50 border border-border/50 overflow-hidden">
-            <div className="p-4 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Participants</p>
-                    <p className="text-xs text-muted-foreground">
-                      {participants.length} inscrit{participants.length > 1 ? 's' : ''}
-                      {selectedSession.max_participants && ` / ${selectedSession.max_participants} max`}
+                    </div>
+                    <h1 className="text-[20px] font-semibold leading-tight">
+                      {selectedSession.title}
+                    </h1>
+                    <p className="text-[15px] text-muted-foreground mt-1">
+                      {getActivityLabel(selectedSession.activity_type)}
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="p-4">
-              {participants.length > 0 ? (
-                <div className="space-y-3">
-                  {participants.map((participant) => (
-                    <div 
-                      key={participant.id} 
-                      className="flex items-center gap-3 p-3 rounded-xl bg-background/50 cursor-pointer hover:bg-background transition-colors"
-                      onClick={() => navigateToProfile(participant.user_id)}
-                    >
-                      <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                        <AvatarImage 
-                          src={participant.profiles.avatar_url || undefined} 
-                          alt={participant.profiles.username || participant.profiles.display_name} 
-                        />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {(participant.profiles.username || participant.profiles.display_name || 'U').charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          @{participant.profiles.username || participant.profiles.display_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Inscrit le {format(new Date(participant.joined_at), 'dd MMM', { locale: fr })}
-                        </p>
-                      </div>
-                      <span className="text-muted-foreground">→</span>
-                    </div>
-                  ))}
+            </IOSListGroup>
+
+            {/* Info Cards */}
+            <IOSListGroup header="INFORMATIONS">
+              <IOSListItem
+                icon={Calendar}
+                iconBgColor="bg-red-500"
+                title="Date"
+                value={format(new Date(selectedSession.scheduled_at), 'dd MMM yyyy', { locale: fr })}
+                showChevron={false}
+                showSeparator={true}
+              />
+              <IOSListItem
+                icon={Clock}
+                iconBgColor="bg-orange-500"
+                title="Heure"
+                value={format(new Date(selectedSession.scheduled_at), 'HH:mm', { locale: fr })}
+                showChevron={false}
+                showSeparator={true}
+              />
+              <IOSListItem
+                icon={MapPin}
+                iconBgColor="bg-green-500"
+                title="Lieu"
+                subtitle={selectedSession.location_name}
+                showChevron={false}
+                showSeparator={false}
+              />
+            </IOSListGroup>
+
+            {/* Description */}
+            {selectedSession.description && (
+              <IOSListGroup header="DESCRIPTION">
+                <div className="p-4 bg-card">
+                  <p className="text-[15px] text-foreground leading-relaxed">
+                    {selectedSession.description}
+                  </p>
+                </div>
+              </IOSListGroup>
+            )}
+
+            {/* Participants */}
+            <IOSListGroup header={`PARTICIPANTS (${participants.length})`}>
+              {participants.length === 0 ? (
+                <div className="p-4 bg-card text-center">
+                  <p className="text-[15px] text-muted-foreground">Aucun participant inscrit</p>
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                    <Users className="h-6 w-6 text-muted-foreground/50" />
+                participants.map((participant, index) => (
+                  <div
+                    key={participant.id}
+                    className="flex items-center gap-3 px-4 py-3 bg-card cursor-pointer active:bg-secondary transition-colors relative"
+                    onClick={() => navigateToProfile(participant.user_id)}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={participant.profiles.avatar_url || undefined} />
+                      <AvatarFallback className="text-sm font-semibold">
+                        {participant.profiles.username?.[0]?.toUpperCase() || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[17px] font-medium">{participant.profiles.username}</p>
+                      <p className="text-[13px] text-muted-foreground">
+                        Inscrit {format(new Date(participant.joined_at), 'dd/MM', { locale: fr })}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                    {index < participants.length - 1 && (
+                      <div className="absolute bottom-0 left-[68px] right-0 h-px bg-border" />
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Aucun participant pour le moment
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Partagez votre séance pour inviter des amis !
-                  </p>
-                </div>
+                ))
               )}
-            </div>
+            </IOSListGroup>
           </div>
         </div>
-        
+
         <EditSessionDialog
           isOpen={isEditSessionDialogOpen}
           onClose={() => setIsEditSessionDialogOpen(false)}
-          onSessionUpdated={handleSessionUpdated}
           session={selectedSession}
+          onSessionUpdated={handleSessionUpdated}
         />
-        
+
         <ProfilePreviewDialog
-          userId={showProfilePreview ? selectedUserId : null}
+          userId={selectedUserId}
           onClose={closeProfilePreview}
         />
-      </div>
       </>
     );
   }
 
+  // Main list view
   return (
     <>
-      {/* Petite barre noire en haut uniquement pour MySessions */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background z-50"></div>
-      <div className="container mx-auto px-4 py-4 pb-20 min-h-screen flex flex-col">
-        {/* Fixed Header Only */}
-        <div className="fixed top-6 left-0 right-0 flex-shrink-0 bg-background z-50 space-y-4 pb-4 border-b border-border">
-          <div className="container mx-auto px-4 pt-4">
-          <div className="flex items-center justify-center -mt-2">
-            <Button
-              onClick={() => {
-                console.log('🚀 "Créer un itinéraire" clicked - navigating to route creation');
-                navigate('/route-create');
-              }}
-              size="sm"
-              className="gap-2"
-            >
-              <Route className="h-4 w-4" />
-              Créer un itinéraire
-            </Button>
+      <div className="min-h-screen bg-secondary pb-24">
+        {/* iOS Header */}
+        <div className="sticky top-0 z-50 bg-card">
+          <div className="px-4 pt-14 pb-3">
+            <h1 className="text-[34px] font-bold tracking-tight">Mes Séances</h1>
           </div>
-          <div className="flex items-center justify-center mt-3">
-            <div className="flex gap-2">
-              <Button
+          
+          {/* iOS Segmented Control */}
+          <div className="px-4 pb-3">
+            <div className="flex bg-secondary rounded-[10px] p-1">
+              <button
                 onClick={() => setCurrentView('sessions')}
-                variant={currentView === 'sessions' ? 'default' : 'outline'}
-                size="sm"
-                className="gap-2"
+                className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                  currentView === 'sessions'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground'
+                }`}
               >
-                <Users className="h-4 w-4" />
-                Mes Séances
-              </Button>
-              <Button
+                Séances
+              </button>
+              <button
                 onClick={() => setCurrentView('routes')}
-                variant={currentView === 'routes' ? 'default' : 'outline'}
-                size="sm"
-                className="gap-2"
+                className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                  currentView === 'routes'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground'
+                }`}
               >
-                <Route className="h-4 w-4" />
-                Mes Itinéraires
-              </Button>
+                Itinéraires
+              </button>
             </div>
           </div>
-          </div>
+          <div className="h-px bg-border" />
         </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto pt-32" style={{height: 'calc(100vh - 12rem)'}}>
-        {currentView === 'sessions' ? (
-          // Sessions View
-          loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-              <p className="text-xs text-muted-foreground mt-2">Chargement...</p>
-            </div>
-          ) : filteredSessions.length > 0 ? (
-            <div className="space-y-2">
-              {filteredSessions.slice(0, 6).map((session) => (
-                <Card 
-                  key={session.id} 
-                  className="cursor-pointer hover:shadow-sm transition-shadow"
-                  onClick={() => handleSessionClick(session)}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-2 flex-1 min-w-0">
-                        {session.image_url && (
-                          <img 
-                            src={session.image_url} 
-                            alt={session.title}
-                            className="w-10 h-10 object-cover rounded flex-shrink-0"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-sm">{getActivityIcon(session.activity_type)}</span>
-                            <h3 className="text-sm font-medium truncate">{session.title}</h3>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar size={10} />
-                              <span>{format(new Date(session.scheduled_at), 'dd/MM')}</span>
-                              <Clock size={10} className="ml-1" />
-                              <span>{format(new Date(session.scheduled_at), 'HH:mm')}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users size={10} />
-                              <span>{session.current_participants || 0}</span>
-                            </div>
-                          </div>
+        {/* Content */}
+        <div className="p-4">
+          {currentView === 'sessions' ? (
+            <>
+              {/* Filter Pills */}
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+                {[
+                  { key: 'all', label: 'Toutes' },
+                  { key: 'upcoming', label: 'À venir' },
+                  { key: 'completed', label: 'Terminées' }
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setFilter(f.key as any)}
+                    className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
+                      filter === f.key
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card text-muted-foreground'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sessions List */}
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-card rounded-[10px] p-4 animate-pulse">
+                      <div className="flex gap-3">
+                        <div className="h-12 w-12 bg-secondary rounded-xl" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-secondary rounded w-3/4" />
+                          <div className="h-3 bg-secondary rounded w-1/2" />
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {getStatusBadge(session)}
-                        <Badge variant="outline" className="text-xs px-1 py-0">Créateur</Badge>
-                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {filteredSessions.length > 6 && (
-                <div className="text-center py-2">
-                  <p className="text-xs text-muted-foreground">
-                    +{filteredSessions.length - 6} autres séances
+                  ))}
+                </div>
+              ) : filteredSessions.length === 0 ? (
+                <div className="bg-card rounded-[10px] p-8 text-center">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-[17px] font-medium text-foreground mb-1">Aucune séance</p>
+                  <p className="text-[15px] text-muted-foreground">
+                    Créez votre première séance sportive
                   </p>
                 </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredSessions.map((session) => {
+                    const isUpcoming = session.scheduled_at >= now;
+                    return (
+                      <div
+                        key={session.id}
+                        onClick={() => handleSessionClick(session)}
+                        className="bg-card rounded-[10px] p-4 cursor-pointer active:bg-secondary transition-colors"
+                      >
+                        <div className="flex items-start gap-3">
+                          <ActivityIcon activityType={session.activity_type} size="lg" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge 
+                                variant={isUpcoming ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {isUpcoming ? "À venir" : "Terminée"}
+                              </Badge>
+                            </div>
+                            <h3 className="text-[17px] font-semibold truncate">{session.title}</h3>
+                            <div className="flex items-center gap-4 mt-1 text-[13px] text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3.5 w-3.5" />
+                                {session.current_participants || 0}
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 mt-2" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-            </div>
+            </>
           ) : (
-            <div className="text-center py-6">
-              <div className="text-3xl mb-2">⚽</div>
-              <h3 className="text-base font-semibold mb-1">Aucune séance trouvée</h3>
-              <p className="text-xs text-muted-foreground mb-3">
-                {filter === 'all' 
-                  ? "Créez votre première séance !" 
-                  : filter === 'upcoming'
-                  ? "Planifiez votre prochaine activité !"
-                  : "Aucune séance terminée."}
-              </p>
-              <Button size="sm">Créer une séance</Button>
-            </div>
-          )
-        ) : (
-          // Routes View
-          routesLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-              <p className="text-xs text-muted-foreground mt-2">Chargement des itinéraires...</p>
-            </div>
-          ) : routes.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {routes.map((route) => (
-                <RouteCard
-                  key={route.id}
-                  route={route}
-                  onEdit={editRoute}
-                  onDelete={deleteRoute}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Route className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">Aucun itinéraire créé</h3>
-              <p className="text-muted-foreground mb-4">
-                Utilisez le bouton crayon sur la carte pour créer votre premier itinéraire
-              </p>
-              <Button onClick={() => navigate('/')} className="gap-2">
-                <MapPin className="h-4 w-4" />
-                Aller à la carte
-              </Button>
-            </div>
-          )
-        )}
+            <>
+              {/* Routes */}
+              {routesLoading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="bg-card rounded-[10px] p-4 animate-pulse">
+                      <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-secondary rounded w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : routes.length === 0 ? (
+                <div className="bg-card rounded-[10px] p-8 text-center">
+                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-[17px] font-medium text-foreground mb-1">Aucun itinéraire</p>
+                  <p className="text-[15px] text-muted-foreground mb-4">
+                    Créez votre premier itinéraire
+                  </p>
+                  <Button onClick={openCreateRoute} className="rounded-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Créer un itinéraire
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {routes.map((route) => (
+                    <RouteCard
+                      key={route.id}
+                      route={route}
+                      onEdit={() => editRoute(route)}
+                      onDelete={() => deleteRoute(route.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Route Edit Dialog */}
       <RouteEditDialog
         isOpen={isRouteEditDialogOpen}
-        onClose={() => {
-          setIsRouteEditDialogOpen(false);
-          setEditingRoute(null);
-        }}
+        onClose={() => setIsRouteEditDialogOpen(false)}
         route={editingRoute}
         onRouteUpdated={loadUserRoutes}
       />
-    </div>
+
+      <ProfilePreviewDialog
+        userId={selectedUserId}
+        onClose={closeProfilePreview}
+      />
     </>
   );
 }
