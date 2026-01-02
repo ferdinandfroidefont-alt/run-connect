@@ -1542,40 +1542,37 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Leaderboard, Confirm Presence & Nearby Sessions Buttons */}
+      {/* Leaderboard, Confirm Presence & Nearby Sessions Buttons - iOS Style */}
       {user && (
         <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
-          {/* Leaderboard Button - Podium Emoji */}
+          {/* Leaderboard Button */}
           <Button 
             variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
+            className="h-12 w-12 p-0 rounded-[10px] bg-amber-500 text-white hover:bg-amber-600 border-amber-500 shadow-sm flex items-center justify-center"
             onClick={() => navigate('/leaderboard')}
             title="Classement"
           >
-            <div className="text-xl">🏆</div>
-            <div className="text-xs leading-tight">Classement</div>
+            <Crown className="h-5 w-5" />
           </Button>
 
           {/* Confirm Presence Button */}
           <Button 
             variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-green-600 text-white hover:bg-green-700 border-green-600"
+            className="h-12 w-12 p-0 rounded-[10px] bg-green-600 text-white hover:bg-green-700 border-green-600 shadow-sm flex items-center justify-center"
             onClick={() => navigate('/confirm-presence')}
             title="Confirmer ma présence GPS"
           >
-            <div className="text-sm">✅📍</div>
-            <div className="text-xs leading-tight">Confirmer présence</div>
+            <CheckCircle className="h-5 w-5" />
           </Button>
 
           {/* Nearby Sessions Button */}
           <Button 
             variant="outline"
-            className="shadow-md border px-2 py-1 text-xs flex flex-col items-center h-auto bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+            className="h-12 w-12 p-0 rounded-[10px] bg-primary text-primary-foreground hover:bg-primary/90 border-primary shadow-sm flex items-center justify-center"
             onClick={() => setShowNearbySessionsDialog(true)}
             title="Séances à proximité"
           >
-            <div className="text-sm">📍🏃</div>
-            <div className="text-xs leading-tight">Séances à proximité</div>
+            <MapPin className="h-5 w-5" />
           </Button>
         </div>
       )}
@@ -1585,9 +1582,9 @@ export const InteractiveMap = ({
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
       </div>
       
-      {/* All Map Controls - repositioned to left side */}
-      <div className="absolute left-4 bottom-4 flex flex-col gap-3 z-10">
-        {/* Route Creation Button - Pencil Button */}
+      {/* All Map Controls - iOS Style */}
+      <div className="absolute left-4 bottom-4 flex flex-col gap-2 z-10">
+        {/* Route Creation Button */}
         {user && (
           <Button
             onClick={() => {
@@ -1596,10 +1593,10 @@ export const InteractiveMap = ({
             }}
             size="sm"
             variant="outline"
-            className="w-8 h-7 p-0 shadow-map-control flex items-center justify-center bg-card/90 backdrop-blur-sm"
+            className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center"
             title="Créer un itinéraire"
           >
-            <PenTool className="h-3 w-3" />
+            <PenTool className="h-4 w-4" />
           </Button>
         )}
         
@@ -1608,9 +1605,9 @@ export const InteractiveMap = ({
           onClick={handleLocateMe}
           size="sm"
           variant="outline"
-          className="w-8 h-7 p-0 bg-card/90 backdrop-blur-sm shadow-map-control flex items-center justify-center"
+          className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center"
         >
-          <MapPin className="h-3 w-3" />
+          <MapPin className="h-4 w-4" />
         </Button>
         
         {/* Map Style Selector */}

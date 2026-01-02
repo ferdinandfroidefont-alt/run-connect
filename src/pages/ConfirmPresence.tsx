@@ -7,8 +7,7 @@ import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
 import { ParticipantValidationView } from '@/components/ParticipantValidationView';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, UserCheck, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ChevronLeft, Loader2, UserCheck, Users } from 'lucide-react';
 
 interface Session {
   id: string;
@@ -34,7 +33,6 @@ export default function ConfirmPresence() {
   const [sessions, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
-    // If sessionId is provided in URL, load it directly
     if (sessionId && user) {
       loadSpecificSession();
     }
@@ -80,7 +78,6 @@ export default function ConfirmPresence() {
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       
       if (role === 'creator') {
-        // Load sessions created by user in last 24h
         const { data: createdSessions, error } = await supabase
           .from('sessions')
           .select('*')
@@ -91,7 +88,6 @@ export default function ConfirmPresence() {
         if (error) throw error;
         setSessions(createdSessions || []);
       } else {
-        // Load sessions where user is a participant
         const { data: participations, error: participantError } = await supabase
           .from('session_participants')
           .select('session_id')
@@ -141,124 +137,119 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <>
-      {/* Barre système Android - fusionnée avec le fond */}
-      <div className="fixed top-0 left-0 right-0 w-full h-6 bg-background/95 backdrop-blur-xl z-50"></div>
+    <div className="min-h-screen bg-secondary">
+      {/* iOS Status Bar Spacer */}
+      <div className="h-6 bg-secondary" />
       
-      <div className="min-h-screen bg-background relative overflow-hidden">
-        {/* Background subtle effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+      {/* iOS Native Header */}
+      <div className="bg-card border-b border-border px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={handleBack}
+          className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary active:bg-secondary/80 transition-colors"
+        >
+          <ChevronLeft className="h-6 w-6 text-primary" />
+        </button>
+        <h1 className="text-[22px] font-semibold text-foreground">
+          {t('confirmPresence.title')}
+        </h1>
       </div>
 
       {/* Content */}
-      <div className="relative z-10 min-h-screen p-4 pb-24 pt-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 mb-6"
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/')}
-            className="bg-card/30 backdrop-blur-sm border border-border/50 hover:bg-muted/30"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t('confirmPresence.title')}
-          </h1>
-        </motion.div>
-
+      <div className="p-4 pb-24">
         {loading ? (
-          <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-12 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-[10px] p-12 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-[15px] text-muted-foreground">Chargement...</p>
           </div>
         ) : !roleChoice ? (
-          // Role selection screen
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8"
-          >
-            <p className="text-center text-muted-foreground mb-12 text-lg">
+          // Role selection screen - iOS Style
+          <div className="space-y-4">
+            <p className="text-center text-muted-foreground text-[15px] px-4 py-4">
               {t('confirmPresence.selectRole')}
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+            <div className="space-y-3">
+              {/* Creator Card */}
+              <button
                 onClick={() => handleRoleChoice('creator')}
-                className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
+                className="w-full bg-card border border-border rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
               >
-                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                  <UserCheck className="h-10 w-10 text-primary" />
+                <div className="h-14 w-14 rounded-[10px] bg-primary/10 flex items-center justify-center">
+                  <UserCheck className="h-7 w-7 text-primary" />
                 </div>
-                <h2 className="text-xl font-bold">{t('confirmPresence.creator')}</h2>
-                <p className="text-sm text-muted-foreground text-center">
-                  {t('confirmPresence.creatorDescription')}
-                </p>
-              </motion.button>
+                <div className="flex-1 text-left">
+                  <h2 className="text-[17px] font-semibold text-foreground">
+                    {t('confirmPresence.creator')}
+                  </h2>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                    {t('confirmPresence.creatorDescription')}
+                  </p>
+                </div>
+                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+              </button>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              {/* Participant Card */}
+              <button
                 onClick={() => handleRoleChoice('participant')}
-                className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-8 flex flex-col items-center gap-4 hover:bg-muted/30 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg"
+                className="w-full bg-card border border-border rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
               >
-                <div className="h-20 w-20 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Users className="h-10 w-10 text-accent" />
+                <div className="h-14 w-14 rounded-[10px] bg-blue-500/10 flex items-center justify-center">
+                  <Users className="h-7 w-7 text-blue-500" />
                 </div>
-                <h2 className="text-xl font-bold">{t('confirmPresence.participant')}</h2>
-                <p className="text-sm text-muted-foreground text-center">
-                  {t('confirmPresence.participantDescription')}
-                </p>
-              </motion.button>
+                <div className="flex-1 text-left">
+                  <h2 className="text-[17px] font-semibold text-foreground">
+                    {t('confirmPresence.participant')}
+                  </h2>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                    {t('confirmPresence.participantDescription')}
+                  </p>
+                </div>
+                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+              </button>
             </div>
-          </motion.div>
+          </div>
         ) : !selectedSession ? (
-          // Session selection screen
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
+          // Session selection screen - iOS Style
+          <div className="space-y-4">
             {sessions.length === 0 ? (
-              <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-12 text-center">
-                <p className="text-xl font-semibold mb-2">{t('confirmPresence.noSessions')}</p>
-                <p className="text-muted-foreground">
+              <div className="bg-card border border-border rounded-[10px] p-8 text-center">
+                <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+                  <Users className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-[17px] font-semibold text-foreground mb-1">
+                  {t('confirmPresence.noSessions')}
+                </p>
+                <p className="text-[13px] text-muted-foreground">
                   {roleChoice === 'creator' 
                     ? t('confirmPresence.noCreatorSessions')
                     : t('confirmPresence.noParticipantSessions')}
                 </p>
               </div>
             ) : (
-              <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-xl p-6">
-                <h2 className="text-2xl font-bold mb-2">
-                  {t('confirmPresence.selectSession')}
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  {roleChoice === 'creator'
-                    ? t('confirmPresence.selectCreatorSession')
-                    : t('confirmPresence.selectParticipantSession')}
-                </p>
-                <SessionSelector
-                  sessions={sessions}
-                  userId={user?.id || ''}
-                  onSessionSelect={handleSessionSelect}
-                />
+              <div className="bg-card border border-border rounded-[10px] overflow-hidden">
+                <div className="px-4 py-3 border-b border-border">
+                  <h2 className="text-[17px] font-semibold text-foreground">
+                    {t('confirmPresence.selectSession')}
+                  </h2>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                    {roleChoice === 'creator'
+                      ? t('confirmPresence.selectCreatorSession')
+                      : t('confirmPresence.selectParticipantSession')}
+                  </p>
+                </div>
+                <div className="p-3">
+                  <SessionSelector
+                    sessions={sessions}
+                    userId={user?.id || ''}
+                    onSessionSelect={handleSessionSelect}
+                  />
+                </div>
               </div>
             )}
-          </motion.div>
+          </div>
         ) : (
           // Validation view
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
+          <div>
             {userRole === 'creator' ? (
               <CreatorValidationView
                 session={selectedSession}
@@ -271,10 +262,9 @@ export default function ConfirmPresence() {
                 onComplete={() => navigate('/')}
               />
             )}
-          </motion.div>
+          </div>
         )}
       </div>
     </div>
-    </>
   );
 }

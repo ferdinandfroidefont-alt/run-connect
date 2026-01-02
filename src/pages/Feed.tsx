@@ -75,12 +75,12 @@ export default function Feed() {
       {/* Separator */}
       <div className="h-px bg-border" />
 
-      {/* Pull to Refresh */}
+      {/* Pull to Refresh - iOS Style */}
       <div className="flex justify-center py-3">
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 text-[13px] text-muted-foreground active:text-foreground bg-secondary rounded-full transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-[13px] text-muted-foreground active:text-foreground bg-card border border-border rounded-full transition-colors"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           {isRefreshing ? 'Actualisation...' : 'Actualiser'}
