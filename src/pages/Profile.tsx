@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag } from "lucide-react";
+import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, Award } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -582,301 +582,268 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-md mx-auto space-y-4">
-        <div className="text-center py-8">
-          <div className="flex items-center gap-3 justify-center mb-2">
-            {isViewingOtherUser && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(-1)}
-                className="gap-2"
+    <div className="min-h-screen bg-[#F2F2F7]">
+      {/* iOS Header */}
+      <div className="sticky top-0 z-40 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          {isViewingOtherUser ? (
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1 text-primary"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              <span className="text-[17px]">Retour</span>
+            </button>
+          ) : (
+            <div className="w-16" />
+          )}
+          <h1 className="text-[17px] font-semibold text-foreground">
+            {isViewingOtherUser ? 'Profil' : 'Mon Profil'}
+          </h1>
+          {!isViewingOtherUser ? (
+            <button
+              onClick={() => setShowSettingsDialog(true)}
+              className="w-16 flex justify-end"
+            >
+              <Settings className="h-5 w-5 text-primary" />
+            </button>
+          ) : (
+            <div className="w-16" />
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto p-4 space-y-6">
+        {/* Avatar Section - iOS Style */}
+        <div className="flex flex-col items-center pt-4">
+          <div className="relative mb-3">
+            <Avatar className="h-[100px] w-[100px] ring-2 ring-border">
+              <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
+              <AvatarFallback className="text-2xl bg-secondary">
+                {profile?.display_name?.[0]?.toUpperCase() || 
+                 profile?.username?.[0]?.toUpperCase() || 
+                 user?.email?.[0]?.toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            {isEditing && !isViewingOtherUser && (
+              <button 
+                type="button"
+                onClick={async () => {
+                  try {
+                    const file = await selectFromGallery();
+                    if (file) {
+                      handleAvatarChange({ target: { files: [file] } } as any);
+                    }
+                  } catch (error) {
+                    console.error('❌ Erreur sélection galerie:', error);
+                    toast({
+                      title: "Erreur",
+                      description: "Impossible d'accéder à la galerie",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                disabled={cameraLoading}
+                className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
               >
-                ← Retour
-              </Button>
+                <Camera className="h-4 w-4" />
+              </button>
             )}
-            <h1 className="text-2xl font-bold text-foreground">
-              {isViewingOtherUser ? 'Profil utilisateur' : 'Mon Profil'}
-            </h1>
           </div>
+          
+          {isEditing && !isViewingOtherUser && (
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+          )}
+          
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-[22px] font-bold text-foreground">{profile?.username || profile?.display_name}</h2>
+            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+              <Crown className="h-5 w-5 text-yellow-500" />
+            )}
+          </div>
+          
+          {profile?.display_name && profile.display_name !== profile.username && (
+            <p className="text-[15px] text-muted-foreground mb-2">{profile.display_name}</p>
+          )}
+          
+          {/* Badges */}
+          <div className="flex flex-wrap justify-center gap-2 mb-3">
+            {profile?.is_admin && (
+              <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
+                Admin
+              </Badge>
+            )}
+            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+              <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[11px]">
+                {subscriptionInfo?.subscription_tier || 'Premium'}
+              </Badge>
+            )}
+          </div>
+          
+          {/* Verified Badges */}
+          {(() => {
+            const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
+            const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
+            
+            if (isStravaVerified || isInstagramVerified) {
+              return (
+                <div className="flex flex-wrap justify-center gap-2 mb-3">
+                  {isStravaVerified && (
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-orange-100 text-orange-800"
+                    >
+                      <Award className="h-3 w-3" />
+                      Strava
+                    </button>
+                  )}
+                  {isInstagramVerified && (
+                    <button
+                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-pink-100 text-pink-800"
+                    >
+                      <Award className="h-3 w-3" />
+                      Instagram
+                    </button>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })()}
+          
+          {/* Stats Row */}
+          <div className="flex items-center justify-center gap-8 py-3">
+            <button
+              onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
+              className="text-center"
+            >
+              <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
+              <p className="text-[13px] text-muted-foreground">Abonnés</p>
+            </button>
+            <div className="w-px h-8 bg-border" />
+            <button
+              onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
+              className="text-center"
+            >
+              <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
+              <p className="text-[13px] text-muted-foreground">Abonnements</p>
+            </button>
+          </div>
+          
+          {/* Reliability Badge */}
+          <div className="w-full max-w-[200px]">
+            <ReliabilityBadge 
+              rate={reliabilityRate}
+              onClick={() => setShowReliabilityDetails(true)}
+            />
+          </div>
+          
+          {/* Premium Button or Report Button */}
+          {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
+            <Button 
+              onClick={() => navigate('/subscription')}
+              variant="outline" 
+              size="sm"
+              className="mt-3 gap-2"
+            >
+              <Crown className="h-4 w-4" />
+              Devenir Premium
+            </Button>
+          )}
+          
+          {isViewingOtherUser && (
+            <Button
+              onClick={() => setShowReportDialog(true)}
+              variant="ghost"
+              size="sm"
+              className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+            >
+              <Flag className="h-4 w-4" />
+              Signaler
+            </Button>
+          )}
         </div>
 
-        {/* Avatar Section */}
-        <Card>
-          <CardContent className="flex flex-col items-center py-6">
-            <div className="relative mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-                <AvatarFallback className="text-lg">
-                  {profile?.display_name?.[0]?.toUpperCase() || 
-                   profile?.username?.[0]?.toUpperCase() || 
-                   user?.email?.[0]?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              {isEditing && !isViewingOtherUser && (
-                <button 
-                  type="button"
-                  onClick={async () => {
-                    console.log('📸 Début sélection galerie');
-                    
-                    try {
-                      const file = await selectFromGallery();
-                      if (file) {
-                        handleAvatarChange({ target: { files: [file] } } as any);
-                      }
-                    } catch (error) {
-                      console.error('❌ Erreur sélection galerie:', error);
-                      toast({
-                        title: "Erreur",
-                        description: "Impossible d'accéder à la galerie",
-                        variant: "destructive"
-                      });
-                    }
-                  }}
-                  disabled={cameraLoading}
-                  className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 disabled:opacity-50"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {isEditing && !isViewingOtherUser && (
-              <>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-                <p className="text-xs text-muted-foreground text-center">
-                  Cliquez sur l'icône pour changer votre photo
-                </p>
-              </>
-            )}
-                <div className="flex items-center gap-2 mb-2">
-                  <h2 className="text-xl font-semibold">{profile?.username || profile?.display_name}</h2>
-                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                    <Crown className="h-5 w-5 text-yellow-500" />
-                  )}
-                </div>
-            {!isViewingOtherUser && (
-                <div className="flex flex-col items-center gap-2 mb-4">
-                  {profile?.is_admin && (
-                    <Badge className="bg-red-100 text-red-800 border-red-200">
-                      Admin
-                    </Badge>
-                  )}
-                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                    <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-                      {subscriptionInfo?.subscription_tier || 'Premium'}
-                    </Badge>
-                  )}
-                  {!subscriptionInfo?.subscribed && (
-                    <Button 
-                      onClick={() => navigate('/subscription')}
-                      variant="outline" 
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <Crown className="h-4 w-4" />
-                      Devenir Premium
-                    </Button>
-                  )}
-                </div>
-            )}
-            
-            {/* Badge de vérification */}
-            {(() => {
-              console.log('Profile state:', {
-                strava_connected: profile?.strava_connected,
-                strava_verified_at: profile?.strava_verified_at,
-                instagram_connected: profile?.instagram_connected,
-                instagram_verified_at: profile?.instagram_verified_at,
-                profile: profile
-              });
-              
-              const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
-              const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
-              
-              if (isStravaVerified && isInstagramVerified) {
-                return (
-                  <div className="mt-2 mb-2 space-y-1">
-                    <button
-                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors mr-2"
-                    >
-                      <span className="text-orange-600">🏃</span>
-                      ✓ Strava
-                    </button>
-                    <button
-                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
-                    >
-                      <span className="text-pink-600">📷</span>
-                      ✓ Instagram
-                    </button>
-                  </div>
-                );
-              } else if (isStravaVerified) {
-                return (
-                  <div className="mt-2 mb-2">
-                    <button
-                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                    >
-                      <span className="text-orange-600">🏃</span>
-                      ✓ Utilisateur vérifié Strava
-                    </button>
-                  </div>
-                );
-              } else if (isInstagramVerified) {
-                return (
-                  <div className="mt-2 mb-2">
-                    <button
-                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors"
-                    >
-                      <span className="text-pink-600">📷</span>
-                      ✓ Utilisateur vérifié Instagram
-                    </button>
-                  </div>
-                );
-              } else {
-                return (
-                  <div className="mt-2 mb-2">
-                    {isViewingOtherUser ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                        <span className="text-gray-500">⚠️</span>
-                        Utilisateur non vérifié
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          console.log('Badge non vérifié cliqué, showSettingsDialog état:', showSettingsDialog);
-                          setShowSettingsDialog(true);
-                          console.log('Après setShowSettingsDialog(true), nouvel état:', showSettingsDialog);
-                        }}
-                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                      >
-                        <span className="text-gray-500">⚠️</span>
-                        Utilisateur non vérifié (synchroniser votre compte Strava ou Instagram dans les paramètres)
-                      </button>
-                    )}
-                  </div>
-                );
-              }
-            })()}
-            
-            <div className="flex gap-4 mt-4">
-              <button
-                onClick={() => {
-                  setFollowDialogType('followers');
-                  setShowFollowDialog(true);
-                }}
-                className="text-center hover:text-primary transition-colors"
-              >
-                <p className="font-bold text-lg">{followerCount}</p>
-                <p className="text-sm text-muted-foreground">Abonnés</p>
-              </button>
-              <button
-                onClick={() => {
-                  setFollowDialogType('following');
-                  setShowFollowDialog(true);
-                }}
-                className="text-center hover:text-primary transition-colors"
-              >
-                <p className="font-bold text-lg">{followingCount}</p>
-                <p className="text-sm text-muted-foreground">Abonnements</p>
-              </button>
-            </div>
-
-            {/* Reliability Badge - Visible pour tous les profils */}
-            <div className="mt-4 w-full px-4">
-              <ReliabilityBadge 
-                rate={reliabilityRate}
-                onClick={() => setShowReliabilityDetails(true)}
-              />
-            </div>
-
-            {/* Bouton de signalement - Seulement pour les autres utilisateurs */}
-            {isViewingOtherUser && (
-              <div className="mt-4">
-                <Button
-                  onClick={() => setShowReportDialog(true)}
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
-                >
-                  <Flag className="h-4 w-4" />
-                  Signaler cet utilisateur
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Informations Section - Only for own profile */}
+        {/* iOS List Groups */}
+        
+        {/* Informations Section - Own Profile */}
         {!isViewingOtherUser && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center">
-              <User className="h-5 w-5 text-primary mr-2" />
-              <CardTitle className="text-lg">Informations</CardTitle>
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <div
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
+            >
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
+                <User className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[17px] text-foreground">Informations personnelles</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isEditing ? (
-              <div className="space-y-4">
+            
+            {isEditing && (
+              <div className="px-4 py-4 space-y-4 border-t border-border">
                 <div>
-                  <label className="text-sm font-medium">Pseudo</label>
+                  <label className="text-[13px] text-muted-foreground mb-1 block">Pseudo</label>
                   <Input
                     value={formData.username || ''}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="h-11 rounded-[8px]"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Nom d'affichage</label>
+                  <label className="text-[13px] text-muted-foreground mb-1 block">Nom d'affichage</label>
                   <Input
                     value={formData.display_name || ''}
                     onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                    className="h-11 rounded-[8px]"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Âge</label>
+                  <label className="text-[13px] text-muted-foreground mb-1 block">Âge</label>
                   <Input
                     type="number"
                     value={formData.age || ''}
                     onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
+                    className="h-11 rounded-[8px]"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Téléphone</label>
+                  <label className="text-[13px] text-muted-foreground mb-1 block">Téléphone</label>
                   <Input
                     value={formData.phone || ''}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="06 12 34 56 78"
+                    className="h-11 rounded-[8px]"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Bio</label>
+                  <label className="text-[13px] text-muted-foreground mb-1 block">Bio</label>
                   <Input
                     value={formData.bio || ''}
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                     placeholder="Décrivez vos records, vos objectifs..."
+                    className="h-11 rounded-[8px]"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={updateProfile} disabled={loading}>
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-[8px]">
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sauvegarder
                   </Button>
@@ -885,66 +852,23 @@ const Profile = () => {
                     setAvatarFile(null);
                     setAvatarPreview("");
                     setFormData(profile || {});
-                  }}>
+                  }} className="flex-1 h-11 rounded-[8px]">
                     Annuler
                   </Button>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pseudo</p>
-                  <p className="font-medium">{profile?.username}</p>
-                </div>
-                {profile?.display_name && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nom d'affichage</p>
-                    <p className="font-medium">{profile.display_name}</p>
-                  </div>
-                )}
-                {profile?.age && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Âge</p>
-                    <p className="font-medium">{profile.age} ans</p>
-                  </div>
-                )}
-                {profile?.phone && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Téléphone</p>
-                    <p className="font-medium">{profile.phone}</p>
-                  </div>
-                )}
-                {profile?.bio && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Bio</p>
-                    <p className="font-medium">{profile.bio}</p>
-                  </div>
-                )}
-                {!isViewingOtherUser && (
-                  <Button onClick={() => setIsEditing(true)} className="w-full">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Modifier le profil
-                  </Button>
-                )}
-              </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
         )}
 
-        {/* Bio Section - Only for other users */}
+        {/* Bio Section - Other Users */}
         {isViewingOtherUser && profile?.bio && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center">
-                <User className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Bio</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-foreground">{profile.bio}</p>
-            </CardContent>
-          </Card>
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="px-4 py-3">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide mb-2">Bio</p>
+              <p className="text-[15px] text-foreground">{profile.bio}</p>
+            </div>
+          </div>
         )}
 
         {/* Records Section - For other users */}
@@ -958,7 +882,7 @@ const Profile = () => {
           }} />
         )}
 
-        {/* Activity Chart Section - Visible to all */}
+        {/* Activity Chart */}
         {(viewingUserId || user?.id) && (
           <UserActivityChart 
             userId={viewingUserId || user?.id || ''} 
@@ -966,171 +890,99 @@ const Profile = () => {
           />
         )}
 
-        {/* Common Clubs Section - For other users */}
-        {isViewingOtherUser && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center">
-                <Users className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Clubs en commun ({commonClubs.length})</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {commonClubs.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Aucun club en commun</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {commonClubs.map((club) => (
-                    <div key={club.club_id} className="flex items-center gap-3 p-3 border rounded-lg bg-card">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{club.club_name}</h4>
-                        {club.club_description && (
-                          <p className="text-xs text-muted-foreground mt-1">{club.club_description}</p>
-                        )}
-                        {club.club_code && club.created_by === user?.id && (
-                          <p className="text-xs text-primary mt-1">Code: {club.club_code}</p>
-                        )}
-                      </div>
+        {/* Common Clubs - Other Users */}
+        {isViewingOtherUser && commonClubs.length > 0 && (
+          <div>
+            <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
+              Clubs en commun ({commonClubs.length})
+            </p>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {commonClubs.map((club, index) => (
+                <div key={club.club_id} className="relative">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
+                      <Users className="h-[18px] w-[18px] text-white" />
                     </div>
-                  ))}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[17px] text-foreground">{club.club_name}</p>
+                      {club.club_description && (
+                        <p className="text-[13px] text-muted-foreground truncate">{club.club_description}</p>
+                      )}
+                    </div>
+                  </div>
+                  {index < commonClubs.length - 1 && (
+                    <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          </div>
         )}
 
-        {/* Connection History Section - Only for creator viewing other users */}
+        {/* Connection History - Admin Only */}
         {isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && connectionHistory.length > 0 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center">
-                <MapPin className="h-5 w-5 text-primary mr-2" />
-                <CardTitle className="text-lg">Historique des connexions</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {connectionHistory.map((log, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 border rounded text-sm">
-                    <span className="text-muted-foreground">{log.action}</span>
-                    <span className="font-mono">
+          <div>
+            <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
+              Historique des connexions
+            </p>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {connectionHistory.map((log, index) => (
+                <div key={index} className="relative">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[15px] text-muted-foreground">{log.action}</span>
+                    <span className="text-[13px] font-mono text-muted-foreground">
                       {new Date(log.timestamp).toLocaleString('fr-FR', {
                         day: '2-digit',
                         month: '2-digit',
-                        year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
                     </span>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  {index < connectionHistory.length - 1 && (
+                    <div className="absolute bottom-0 left-4 right-0 h-px bg-border" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
-        {/* Mes Parcours Section - Only for own profile */}
+        {/* Routes Section - Own Profile */}
         {!isViewingOtherUser && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Route className="h-5 w-5 text-primary mr-2" />
-                  <CardTitle className="text-lg">Mes Parcours ({userRoutes.length})</CardTitle>
+          <div>
+            <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
+              Mes Parcours ({userRoutes.length})
+            </p>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              <div
+                onClick={() => navigate('/my-sessions')}
+                className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative"
+              >
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
+                  <Route className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => navigate('/my-sessions')}
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Route className="h-4 w-4" />
-                    Voir mes séances/itinéraires
-                  </Button>
-                  <Button
-                    onClick={() => navigate('/')}
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    Créer
-                  </Button>
+                <div className="flex-1">
+                  <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
                 </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
               </div>
-            </CardHeader>
-          <CardContent>
-            {routesLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
+              
+              <div
+                onClick={() => navigate('/')}
+                className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
+              >
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                  <MapPin className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[17px] text-foreground">Créer un parcours</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
               </div>
-            ) : userRoutes.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Route className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">Aucun parcours créé</p>
-                <p className="text-xs">Utilisez le bouton crayon sur la carte pour créer votre premier parcours</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {userRoutes.slice(0, 3).map((route) => (
-                  <div key={route.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium text-sm truncate">{route.name}</h4>
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(route.created_at).toLocaleDateString('fr-FR')}
-                        </span>
-                      </div>
-                      {route.description && (
-                        <p className="text-xs text-muted-foreground truncate mb-2">
-                          {route.description}
-                        </p>
-                      )}
-                      <div className="flex gap-4 text-xs text-muted-foreground">
-                        {route.total_distance && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {Math.round(route.total_distance / 1000 * 10) / 10} km
-                          </span>
-                        )}
-                        {route.total_elevation_gain && (
-                          <span className="flex items-center gap-1">
-                            ↗️ {Math.round(route.total_elevation_gain)} m
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => deleteRoute(route.id)}
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                {userRoutes.length > 3 && (
-                  <div className="text-center pt-2">
-                    <Button
-                      onClick={() => navigate('/my-sessions')}
-                      variant="ghost"
-                      size="sm"
-                      className="text-primary hover:text-primary"
-                    >
-                      Voir tous les itinéraires ({userRoutes.length})
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          </div>
         )}
 
         {/* Simple AAB Diagnostic - Only for creators */}

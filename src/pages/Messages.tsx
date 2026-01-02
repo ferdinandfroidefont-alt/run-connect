@@ -2177,7 +2177,7 @@ const Messages = () => {
         <div className="p-4 space-y-4">
           {/* Quick Search Buttons */}
           <div className="bg-card rounded-[10px] p-3">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
                 className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
@@ -2186,6 +2186,16 @@ const Messages = () => {
                   <User className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-[11px] text-muted-foreground">Profils</span>
+              </button>
+              
+              <button
+                onClick={() => setShowContactsDialog(true)}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
+                  <Phone className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-[11px] text-muted-foreground">Contacts</span>
               </button>
               
               <button
