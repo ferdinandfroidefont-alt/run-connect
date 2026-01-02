@@ -228,7 +228,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm p-0 overflow-hidden border-0 bg-gradient-to-br from-background via-background to-primary/5">
+      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-sm sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden border-0 sm:border bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
