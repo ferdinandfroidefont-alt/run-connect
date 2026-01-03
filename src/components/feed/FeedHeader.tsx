@@ -34,12 +34,12 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-20 bg-background">
+    <header className="sticky top-0 z-20 bg-card border-b border-border">
       <div className="flex items-center justify-between px-4 py-3">
         {/* Avatar */}
         <button 
           onClick={() => navigate('/profile')}
-          className="active:opacity-70 transition-opacity"
+          className="active:opacity-70 transition-opacity w-16"
         >
           <Avatar className="h-9 w-9">
             <AvatarImage src={profile.avatar_url || ''} />
@@ -49,13 +49,13 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
           </Avatar>
         </button>
 
-        {/* Title */}
-        <h1 className="text-[17px] font-semibold">
+        {/* Title - Centered */}
+        <h1 className="text-[17px] font-semibold text-foreground">
           Feed
         </h1>
 
         {/* Actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end w-16">
           <button
             onClick={onSearch}
             className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
@@ -64,9 +64,6 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
           </button>
         </div>
       </div>
-
-      {/* Separator */}
-      <div className="h-px bg-border" />
     </header>
   );
 };

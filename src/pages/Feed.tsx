@@ -62,10 +62,7 @@ export default function Feed() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      {/* Top spacer for status bar */}
-      <div className="w-full h-6 bg-background flex-shrink-0" />
-      
+    <div className="min-h-screen bg-secondary pb-24">
       {/* Header */}
       <FeedHeader onSearch={() => navigate('/search')} />
 
