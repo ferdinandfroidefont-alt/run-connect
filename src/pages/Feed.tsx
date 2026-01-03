@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useFeed } from '@/hooks/useFeed';
 import { FeedCard } from '@/components/feed/FeedCard';
 import { FeedHeader } from '@/components/feed/FeedHeader';
-import { StoriesCarousel } from '@/components/feed/StoriesCarousel';
 import { FeedEmptyState } from '@/components/feed/FeedEmptyState';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -65,9 +64,6 @@ export default function Feed() {
     <div className="min-h-screen bg-secondary pb-24">
       {/* Header */}
       <FeedHeader onSearch={() => navigate('/search')} />
-
-      {/* Stories/Suggestions Carousel */}
-      <StoriesCarousel />
 
       {/* Separator */}
       <div className="h-px bg-border" />

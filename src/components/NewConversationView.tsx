@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OnlineStatus } from "@/components/OnlineStatus";
-import { ArrowLeft, Search, MessageCircle, Users, ChevronRight } from "lucide-react";
+import { ArrowLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 
 interface Profile {
   user_id: string;
@@ -15,6 +16,34 @@ interface Profile {
   display_name: string;
   avatar_url: string | null;
 }
+
+interface ProfileSuggestion {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string;
+  mutual_friends_count: number;
+  source: string;
+}
+
+const getSourceLabel = (source: string, mutualCount: number): string => {
+  switch (source) {
+    case 'contacts':
+      return 'Contact';
+    case 'mutual_friends':
+      return `${mutualCount} ami${mutualCount > 1 ? 's' : ''} en commun`;
+    case 'common_clubs':
+      return 'Même club';
+    case 'friends_of_friends':
+      return 'Ami d\'ami';
+    case 'active_users':
+      return 'Actif';
+    case 'popular':
+      return 'Populaire';
+    default:
+      return 'Suggéré';
+  }
+};
 
 interface NewConversationViewProps {
   onBack: () => void;
@@ -35,6 +64,13 @@ export const NewConversationView = ({
   const [allFriends, setAllFriends] = useState<Profile[]>([]);
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Profile suggestions state
+  const [suggestions, setSuggestions] = useState<ProfileSuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [selectedPreviewUserId, setSelectedPreviewUserId] = useState<string | null>(null);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [friendsSet, setFriendsSet] = useState<Set<string>>(new Set());
 
   // Load recent friends (based on recent conversations)
   useEffect(() => {
@@ -134,6 +170,108 @@ export const NewConversationView = ({
     setSearchResults(filtered);
   }, [searchQuery, allFriends]);
 
+  // Load profile suggestions
+  const loadSuggestions = async () => {
+    if (!user) return;
+    
+    try {
+      setSuggestionsLoading(true);
+      
+      const { data: friendsData } = await supabase
+        .from('user_follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+        .eq('status', 'accepted');
+
+      const friendIds = new Set(friendsData?.map(f => f.following_id) || []);
+      setFriendsSet(friendIds);
+
+      const { data: dismissedData } = await supabase
+        .from('dismissed_suggestions')
+        .select('dismissed_user_id')
+        .eq('user_id', user.id);
+
+      const dismissed = new Set(dismissedData?.map(d => d.dismissed_user_id) || []);
+      setDismissedIds(dismissed);
+
+      const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
+        current_user_id: user.id,
+        suggestion_limit: 20
+      });
+
+      if (error) {
+        console.error('Error fetching suggestions:', error);
+      }
+
+      let filteredSuggestions: ProfileSuggestion[] = (data || [])
+        .filter((s: ProfileSuggestion) => !friendIds.has(s.user_id) && !dismissed.has(s.user_id))
+        .map((s: any) => ({
+          user_id: s.user_id,
+          username: s.username,
+          display_name: s.display_name,
+          avatar_url: s.avatar_url,
+          mutual_friends_count: s.mutual_friends_count || 0,
+          source: s.source
+        }));
+
+      if (filteredSuggestions.length === 0) {
+        const { data: popularUsers } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .neq('user_id', user.id)
+          .not('avatar_url', 'is', null)
+          .not('username', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(15);
+
+        if (popularUsers && popularUsers.length > 0) {
+          filteredSuggestions = popularUsers
+            .filter(p => !friendIds.has(p.user_id!) && !dismissed.has(p.user_id!))
+            .map(p => ({
+              user_id: p.user_id!,
+              username: p.username || 'Utilisateur',
+              display_name: p.display_name || p.username || 'Utilisateur',
+              avatar_url: p.avatar_url || '',
+              mutual_friends_count: 0,
+              source: 'popular'
+            })) as ProfileSuggestion[];
+        }
+      }
+
+      setSuggestions(filteredSuggestions);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    loadSuggestions();
+  }, [user]);
+
+  const dismissSuggestion = async (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    const newDismissed = new Set([...dismissedIds, userId]);
+    setDismissedIds(newDismissed);
+
+    const { error } = await supabase
+      .from('dismissed_suggestions')
+      .insert({ user_id: user.id, dismissed_user_id: userId });
+
+    if (error) {
+      console.error('Error dismissing suggestion:', error);
+      setDismissedIds(dismissedIds);
+    }
+  };
+
+  const visibleSuggestions = suggestions.filter(
+    s => !dismissedIds.has(s.user_id) && !friendsSet.has(s.user_id)
+  );
+
   const displayedFriends = searchQuery.trim() ? searchResults : allFriends;
 
   return (
@@ -223,78 +361,137 @@ export const NewConversationView = ({
               </div>
             </motion.div>
 
-            {/* All Friends List */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <h2 className="text-sm font-medium text-muted-foreground mb-3">
-                {searchQuery.trim() ? `Résultats (${displayedFriends.length})` : 'Tous les amis'}
-              </h2>
-              
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
-                      <div className="h-12 w-12 rounded-full bg-muted" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 w-24 bg-muted rounded" />
-                        <div className="h-3 w-16 bg-muted rounded" />
-                      </div>
-                    </div>
-                  ))}
+            {/* Profile Suggestions Carousel */}
+            {!searchQuery.trim() && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-medium text-muted-foreground">Suggestions</h2>
+                  <button
+                    onClick={loadSuggestions}
+                    className="text-[13px] text-primary flex items-center gap-1 active:opacity-70"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Rafraîchir
+                  </button>
                 </div>
-              ) : displayedFriends.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
-                    <MessageCircle className="h-8 w-8 text-muted-foreground" />
+
+                {suggestionsLoading ? (
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1.5">
+                        <div className="h-[60px] w-[60px] rounded-full bg-muted animate-pulse" />
+                        <div className="h-2 w-10 rounded bg-muted animate-pulse" />
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-muted-foreground text-sm">
-                    {searchQuery.trim() ? "Aucun ami trouvé" : "Aucun ami pour le moment"}
-                  </p>
-                  <p className="text-muted-foreground/60 text-xs mt-1">
-                    Abonnez-vous à des utilisateurs pour leur envoyer des messages
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-card rounded-[10px] border border-border overflow-hidden">
-                  {displayedFriends.map((friend, index) => (
-                    <motion.div
-                      key={friend.user_id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      onClick={() => onStartConversation(friend.user_id)}
-                      className={`flex items-center gap-3 p-3 hover:bg-secondary cursor-pointer transition-all duration-200 ${
-                        index !== displayedFriends.length - 1 ? 'border-b border-border' : ''
-                      }`}
-                    >
-                      <div className="relative">
-                        <Avatar 
-                          className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAvatarClick(friend.avatar_url, friend.username || friend.display_name || "Utilisateur");
-                          }}
+                ) : visibleSuggestions.length === 0 ? (
+                  <div className="flex items-center justify-center gap-3 py-4 bg-card rounded-[10px] border border-border">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-[15px] text-muted-foreground">Aucune nouvelle suggestion</span>
+                  </div>
+                ) : (
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {visibleSuggestions.map((profile) => (
+                      <button
+                        key={profile.user_id}
+                        onClick={() => setSelectedPreviewUserId(profile.user_id)}
+                        className="flex flex-col items-center gap-1 min-w-fit relative active:opacity-70 transition-opacity"
+                      >
+                        {/* Dismiss button */}
+                        <button
+                          onClick={(e) => dismissSuggestion(profile.user_id, e)}
+                          className="absolute -top-0.5 -right-0.5 z-10 h-5 w-5 rounded-full bg-secondary border border-border flex items-center justify-center active:bg-muted"
                         >
-                          <AvatarImage src={friend.avatar_url || ""} />
-                          <AvatarFallback className="bg-secondary text-foreground">
-                            {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <OnlineStatus userId={friend.user_id} className="w-3 h-3" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate text-foreground">{friend.username || friend.display_name}</p>
-                        <p className="text-sm text-muted-foreground">@{friend.username}</p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
+                          <X className="h-3 w-3 text-muted-foreground" />
+                        </button>
+
+                        {/* Avatar with blue ring */}
+                        <div className="p-[2px] bg-primary rounded-full">
+                          <Avatar className="h-[56px] w-[56px] border-2 border-background">
+                            <AvatarImage src={profile.avatar_url} />
+                            <AvatarFallback className="bg-secondary text-[15px] font-medium">
+                              {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+
+                        {/* Name */}
+                        <span className="text-[11px] text-foreground max-w-[60px] truncate">
+                          {profile.display_name?.split(' ')[0] || profile.username}
+                        </span>
+
+                        {/* Source label */}
+                        <span className="text-[9px] text-muted-foreground max-w-[70px] truncate">
+                          {getSourceLabel(profile.source, profile.mutual_friends_count)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Friends List when searching */}
+            {searchQuery.trim() && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h2 className="text-sm font-medium text-muted-foreground mb-3">
+                  Résultats ({displayedFriends.length})
+                </h2>
+                
+                {displayedFriends.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
+                      <MessageCircle className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground text-sm">Aucun ami trouvé</p>
+                  </div>
+                ) : (
+                  <div className="bg-card rounded-[10px] border border-border overflow-hidden">
+                    {displayedFriends.map((friend, index) => (
+                      <motion.div
+                        key={friend.user_id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        onClick={() => onStartConversation(friend.user_id)}
+                        className={`flex items-center gap-3 p-3 hover:bg-secondary cursor-pointer transition-all duration-200 ${
+                          index !== displayedFriends.length - 1 ? 'border-b border-border' : ''
+                        }`}
+                      >
+                        <div className="relative">
+                          <Avatar 
+                            className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAvatarClick(friend.avatar_url, friend.username || friend.display_name || "Utilisateur");
+                            }}
+                          >
+                            <AvatarImage src={friend.avatar_url || ""} />
+                            <AvatarFallback className="bg-secondary text-foreground">
+                              {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <OnlineStatus userId={friend.user_id} className="w-3 h-3" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate text-foreground">{friend.username || friend.display_name}</p>
+                          <p className="text-sm text-muted-foreground">@{friend.username}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
 
             {/* Create Club Card */}
             <motion.div
@@ -318,6 +515,13 @@ export const NewConversationView = ({
           </div>
         </ScrollArea>
       </div>
+
+      {selectedPreviewUserId && (
+        <ProfilePreviewDialog
+          userId={selectedPreviewUserId}
+          onClose={() => setSelectedPreviewUserId(null)}
+        />
+      )}
     </div>
   );
 };
