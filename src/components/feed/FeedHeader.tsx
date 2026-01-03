@@ -35,7 +35,7 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
 
   return (
     <header className="sticky top-0 z-20 bg-card border-b border-border">
-      <div className="flex items-center justify-between px-4 py-4">
+      <div className="flex items-center justify-between px-4 pt-14 pb-3">
         {/* Avatar */}
         <button 
           onClick={() => navigate('/profile')}
@@ -50,7 +50,7 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
         </button>
 
         {/* Title - Centered */}
-        <h1 className="text-[34px] font-bold tracking-tight text-foreground">
+        <h1 className="text-[17px] font-semibold text-foreground">
           Feed
         </h1>
 
