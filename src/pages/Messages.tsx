@@ -2115,50 +2115,48 @@ const Messages = () => {
     <>
       <div className="min-h-screen bg-secondary pb-24">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card">
-          <div className="px-4 pt-14 pb-3">
-            <div className="flex items-center justify-between">
-              {isSelectionMode ? (
-                <>
+        <div className="sticky top-0 z-50 bg-card border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3">
+            {isSelectionMode ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={exitSelectionMode}
+                  className="text-primary p-0 h-auto font-normal w-16"
+                >
+                  Annuler
+                </Button>
+                <h1 className="text-[17px] font-semibold text-foreground">
+                  {selectedConversations.size} sélectionné(s)
+                </h1>
+                <Button
+                  onClick={confirmBulkDelete}
+                  size="sm"
+                  variant="ghost"
+                  disabled={selectedConversations.size === 0}
+                  className="text-destructive p-0 h-auto font-normal w-16 justify-end"
+                >
+                  Supprimer
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="w-16" />
+                <h1 className="text-[17px] font-semibold text-foreground">Messages</h1>
+                <div className="flex items-center justify-end w-16">
                   <Button
+                    onClick={() => setShowNewConversation(true)}
+                    size="icon"
                     variant="ghost"
-                    size="sm"
-                    onClick={exitSelectionMode}
-                    className="text-primary p-0 h-auto font-normal"
+                    className="h-9 w-9"
                   >
-                    Annuler
+                    <Plus className="h-6 w-6 text-primary" />
                   </Button>
-                  <h1 className="text-[17px] font-semibold">
-                    {selectedConversations.size} sélectionné(s)
-                  </h1>
-                  <Button
-                    onClick={confirmBulkDelete}
-                    size="sm"
-                    variant="ghost"
-                    disabled={selectedConversations.size === 0}
-                    className="text-destructive p-0 h-auto font-normal"
-                  >
-                    Supprimer
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <h1 className="text-[34px] font-bold tracking-tight">Messages</h1>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={() => setShowNewConversation(true)}
-                      size="icon"
-                      variant="ghost"
-                      className="h-9 w-9"
-                    >
-                      <Plus className="h-6 w-6 text-primary" />
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
-          <div className="h-px bg-border" />
         </div>
 
         <div className="p-4 space-y-4">
