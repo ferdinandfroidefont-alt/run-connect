@@ -10,7 +10,7 @@ import { NotificationCenter } from './NotificationCenter';
 import { SettingsDialog } from './SettingsDialog';
 import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
-import { NearbySessionsDialog } from './NearbySessionsDialog';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -193,7 +193,7 @@ export const InteractiveMap = ({
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [showNearbySessionsDialog, setShowNearbySessionsDialog] = useState(false);
+  
 
   // Share profile hook
   const {
@@ -1414,11 +1414,6 @@ export const InteractiveMap = ({
           <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-green-600 text-white hover:bg-green-700 border-green-600 shadow-sm flex items-center justify-center" onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
             <CheckCircle className="h-5 w-5" />
           </Button>
-
-          {/* Nearby Sessions Button */}
-          <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-primary text-primary-foreground hover:bg-primary/90 border-primary shadow-sm flex items-center justify-center" onClick={() => setShowNearbySessionsDialog(true)} title="Séances à proximité">
-            <MapPin className="h-5 w-5" />
-          </Button>
         </div>}
 
       {/* Filters - repositionné plus haut */}
@@ -1470,8 +1465,6 @@ export const InteractiveMap = ({
       {/* User Sessions Dialog */}
       <UserSessionsDialog isOpen={isUserSessionsOpen} onClose={() => setIsUserSessionsOpen(false)} />
 
-      {/* Nearby Sessions Dialog */}
-      <NearbySessionsDialog isOpen={showNearbySessionsDialog} onClose={() => setShowNearbySessionsDialog(false)} userLocation={userLocation} />
 
       {/* QR Share Dialog */}
       {qrData && <QRShareDialog open={showQRDialog} onOpenChange={setShowQRDialog} profileUrl={qrData.profileUrl} username={qrData.username} displayName={qrData.displayName} avatarUrl={qrData.avatarUrl} referralCode={qrData.referralCode} />}

@@ -1,15 +1,20 @@
-import { Search, Bell } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+
+export type FeedMode = 'friends' | 'discover';
 
 interface FeedHeaderProps {
   onSearch?: () => void;
+  mode: FeedMode;
+  onModeChange: (mode: FeedMode) => void;
 }
 
-export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
+export const FeedHeader = ({ onSearch, mode, onModeChange }: FeedHeaderProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null }>({ 
@@ -35,7 +40,7 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
 
   return (
     <header className="sticky top-0 z-20 bg-card border-b border-border">
-      <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
+      <div className="px-4 pt-4 pb-3 relative flex items-center justify-center min-h-[60px]">
         {/* Avatar - Left */}
         <button 
           onClick={() => navigate('/profile')}
@@ -61,6 +66,34 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
             className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
           >
             <Search className="h-[22px] w-[22px] text-primary" />
+          </button>
+        </div>
+      </div>
+
+      {/* Segmented Control - iOS Style */}
+      <div className="px-4 pb-3">
+        <div className="bg-secondary rounded-[9px] p-[2px] flex">
+          <button
+            onClick={() => onModeChange('friends')}
+            className={cn(
+              "flex-1 py-2 text-[13px] font-semibold rounded-[7px] transition-all",
+              mode === 'friends'
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground"
+            )}
+          >
+            Amis
+          </button>
+          <button
+            onClick={() => onModeChange('discover')}
+            className={cn(
+              "flex-1 py-2 text-[13px] font-semibold rounded-[7px] transition-all",
+              mode === 'discover'
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground"
+            )}
+          >
+            Découvrir
           </button>
         </div>
       </div>
