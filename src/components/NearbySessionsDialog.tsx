@@ -271,15 +271,19 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
           side="bottom" 
           className="w-full h-[95vh] p-0 flex flex-col bg-secondary rounded-t-[10px]"
         >
-          {/* iOS Native Header */}
-          <div className="bg-card border-b border-border px-4 py-3 flex items-center gap-3 rounded-t-[10px]">
-            <button
-              onClick={onClose}
-              className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary active:bg-secondary/80 transition-colors"
-            >
-              <ChevronLeft className="h-6 w-6 text-primary" />
-            </button>
-            <h2 className="text-[22px] font-semibold text-foreground">Séances proches</h2>
+          {/* iOS Header */}
+          <div className="bg-card border-b border-border shrink-0 rounded-t-[10px]">
+            <div className="flex items-center justify-between px-4 py-3">
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1 text-primary"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
+              </button>
+              <h1 className="text-[17px] font-semibold text-foreground">Séances proches</h1>
+              <div className="w-16" />
+            </div>
           </div>
 
           {/* Activity Filter Pills - iOS Style */}

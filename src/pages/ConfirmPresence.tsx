@@ -141,17 +141,21 @@ export default function ConfirmPresence() {
       {/* iOS Status Bar Spacer */}
       <div className="h-6 bg-secondary" />
       
-      {/* iOS Native Header */}
-      <div className="bg-card border-b border-border px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={handleBack}
-          className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary active:bg-secondary/80 transition-colors"
-        >
-          <ChevronLeft className="h-6 w-6 text-primary" />
-        </button>
-        <h1 className="text-[22px] font-semibold text-foreground">
-          {t('confirmPresence.title')}
-        </h1>
+      {/* iOS Header */}
+      <div className="bg-card border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-1 text-primary"
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="text-[17px]">Retour</span>
+          </button>
+          <h1 className="text-[17px] font-semibold text-foreground">
+            {t('confirmPresence.title')}
+          </h1>
+          <div className="w-16" />
+        </div>
       </div>
 
       {/* Content */}
