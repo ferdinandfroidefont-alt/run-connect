@@ -2127,7 +2127,7 @@ const Messages = () => {
                 >
                   Annuler
                 </Button>
-                <h1 className="text-[17px] font-semibold text-foreground">
+                <h1 className="text-[34px] font-bold tracking-tight text-foreground">
                   {selectedConversations.size} sélectionné(s)
                 </h1>
                 <Button
@@ -2143,7 +2143,7 @@ const Messages = () => {
             ) : (
               <>
                 <div className="w-16" />
-                <h1 className="text-[17px] font-semibold text-foreground">Messages</h1>
+                <h1 className="text-[34px] font-bold tracking-tight text-foreground">Messages</h1>
                 <div className="flex items-center justify-end w-16">
                   <Button
                     onClick={() => setShowNewConversation(true)}

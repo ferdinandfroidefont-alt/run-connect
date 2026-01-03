@@ -50,7 +50,7 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
         </button>
 
         {/* Title - Centered */}
-        <h1 className="text-[17px] font-semibold text-foreground">
+        <h1 className="text-[34px] font-bold tracking-tight text-foreground">
           Feed
         </h1>
 
