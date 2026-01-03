@@ -34,12 +34,12 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-20 bg-background">
-      <div className="flex items-center justify-between px-4 py-3">
-        {/* Avatar */}
+    <header className="sticky top-0 z-20 bg-card border-b border-border">
+      <div className="px-4 pt-14 pb-3 relative">
+        {/* Avatar - Left */}
         <button 
           onClick={() => navigate('/profile')}
-          className="active:opacity-70 transition-opacity"
+          className="active:opacity-70 transition-opacity absolute left-4 top-1/2 -translate-y-1/2 mt-4"
         >
           <Avatar className="h-9 w-9">
             <AvatarImage src={profile.avatar_url || ''} />
@@ -49,13 +49,13 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
           </Avatar>
         </button>
 
-        {/* Title */}
-        <h1 className="text-[17px] font-semibold">
+        {/* Title - Center */}
+        <h1 className="text-[34px] font-bold tracking-tight text-center">
           Feed
         </h1>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1">
+        {/* Actions - Right */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 mt-4 flex items-center gap-1">
           <button
             onClick={onSearch}
             className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
@@ -64,9 +64,6 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
           </button>
         </div>
       </div>
-
-      {/* Separator */}
-      <div className="h-px bg-border" />
     </header>
   );
 };

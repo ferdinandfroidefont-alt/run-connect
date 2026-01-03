@@ -457,9 +457,9 @@ export default function MySessions() {
     <>
       <div className="min-h-screen bg-secondary pb-24">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card">
-          <div className="px-4 pt-14 pb-3">
-            <h1 className="text-[34px] font-bold tracking-tight">Mes Séances</h1>
+        <div className="sticky top-0 z-50 bg-card border-b border-border">
+          <div className="px-4 pt-14 pb-3 relative">
+            <h1 className="text-[34px] font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           
           {/* iOS Segmented Control */}
