@@ -35,7 +35,7 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
 
   return (
     <header className="sticky top-0 z-20 bg-card border-b border-border">
-      <div className="px-4 pt-12 pb-4 relative flex items-center justify-center min-h-[80px]">
+      <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
         {/* Avatar - Left */}
         <button 
           onClick={() => navigate('/profile')}

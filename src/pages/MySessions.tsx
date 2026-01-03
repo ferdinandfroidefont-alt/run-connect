@@ -458,7 +458,7 @@ export default function MySessions() {
       <div className="min-h-screen bg-secondary pb-24">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-4 pt-12 pb-4 relative flex items-center justify-center">
+          <div className="px-4 pt-4 pb-4 relative flex items-center justify-center">
             <h1 className="text-[34px] font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           
