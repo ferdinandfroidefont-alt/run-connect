@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { X, Users, Search, Camera, Lock, Globe, MapPin, Check, Sparkles, ArrowLeft } from "lucide-react";
+import { ChevronLeft, Users, Search, Camera, Lock, Globe, MapPin, Check, Sparkles, Loader2 } from "lucide-react";
 import { ImageCropEditor } from "./ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
-import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface Profile {
   user_id: string;
@@ -53,7 +53,6 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
       if (!user || !isOpen) return;
 
       try {
-        // Get recent conversations to find closest friends
         const { data: recentConvs } = await supabase
           .from('conversations')
           .select('participant_1, participant_2, updated_at')
@@ -270,291 +269,266 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md p-0 gap-0 overflow-hidden max-h-[90vh]">
-          {/* Premium Header */}
-          <div className="bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#0f172a] p-4 border-b border-white/10">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
+        <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 gap-0 flex flex-col bg-secondary sm:max-w-lg sm:max-h-[90vh] sm:rounded-[10px] sm:border">
+          {/* iOS Header */}
+          <div className="bg-card border-b border-border shrink-0 sm:rounded-t-[10px]">
+            <div className="flex items-center justify-between px-4 py-3 min-h-[56px]">
+              <button
                 onClick={handleClose}
-                className="h-10 w-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10"
+                className="flex items-center gap-1 text-primary"
               >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-semibold">Créer un club</h1>
-                  <p className="text-xs text-muted-foreground">Rassemblez votre communauté</p>
-                </div>
-              </div>
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
+              </button>
+              <h1 className="text-[17px] font-semibold text-foreground">Créer un club</h1>
+              <div className="w-16" />
             </div>
           </div>
 
-          <ScrollArea className="flex-1 max-h-[calc(90vh-140px)]">
-            <div className="p-4 space-y-6">
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-4">
               {/* Club Avatar */}
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center gap-3"
-              >
-                <div 
-                  className="relative group cursor-pointer"
-                  onClick={() => document.getElementById('club-avatar-upload')?.click()}
-                >
-                  <Avatar className="h-24 w-24 ring-4 ring-primary/30 group-hover:ring-primary/60 transition-all duration-300">
-                    <AvatarImage src={groupAvatarUrl || ""} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5">
-                      <Users className="h-10 w-10 text-muted-foreground" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="h-6 w-6 text-white" />
+              <div className="bg-card rounded-[10px] p-6 border border-border">
+                <div className="flex flex-col items-center gap-3">
+                  <div 
+                    className="relative group cursor-pointer"
+                    onClick={() => document.getElementById('club-avatar-upload')?.click()}
+                  >
+                    <Avatar className="h-24 w-24 border-2 border-border">
+                      <AvatarImage src={groupAvatarUrl || ""} />
+                      <AvatarFallback className="bg-secondary">
+                        <Users className="h-10 w-10 text-muted-foreground" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                      <Camera className="h-4 w-4 text-primary-foreground" />
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-muted-foreground">Cliquez pour ajouter une photo</p>
-                <input
-                  id="club-avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarSelect}
-                />
-              </motion.div>
-
-              {/* Club Name */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-              >
-                <Label className="text-sm font-medium">Nom du club *</Label>
-                <Input
-                  placeholder="Ex: Running Club Paris"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  maxLength={50}
-                  className="mt-2 h-12 bg-white/5 border-white/10 rounded-xl focus:border-primary/50"
-                />
-              </motion.div>
-
-              {/* Description */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Label className="text-sm font-medium">Description</Label>
-                <Textarea
-                  placeholder="Décrivez votre club en quelques mots..."
-                  value={groupDescription}
-                  onChange={(e) => setGroupDescription(e.target.value)}
-                  maxLength={200}
-                  rows={3}
-                  className="mt-2 bg-white/5 border-white/10 rounded-xl focus:border-primary/50 resize-none"
-                />
-              </motion.div>
-
-              {/* Location */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-              >
-                <Label className="text-sm font-medium">Localisation</Label>
-                <div className="relative mt-2">
-                  <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Paris, Lyon, Marseille..."
-                    value={groupLocation}
-                    onChange={(e) => {
-                      setGroupLocation(e.target.value);
-                      setTimeout(() => searchLocation(e.target.value), 300);
-                    }}
-                    className="pl-11 h-12 bg-white/5 border-white/10 rounded-xl focus:border-primary/50"
+                  <p className="text-[13px] text-muted-foreground">Ajouter une photo</p>
+                  <input
+                    id="club-avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarSelect}
                   />
-                  {locationLoading && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              </div>
+
+              {/* Club Info */}
+              <div className="bg-card rounded-[10px] border border-border divide-y divide-border">
+                {/* Club Name */}
+                <div className="p-4">
+                  <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                    Nom du club *
+                  </Label>
+                  <Input
+                    placeholder="Ex: Running Club Paris"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    maxLength={50}
+                    className="mt-2 h-11 bg-secondary border-0 rounded-[8px]"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="p-4">
+                  <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                    Description
+                  </Label>
+                  <Textarea
+                    placeholder="Décrivez votre club en quelques mots..."
+                    value={groupDescription}
+                    onChange={(e) => setGroupDescription(e.target.value)}
+                    maxLength={200}
+                    rows={3}
+                    className="mt-2 bg-secondary border-0 rounded-[8px] resize-none"
+                  />
+                </div>
+
+                {/* Location */}
+                <div className="p-4">
+                  <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                    Localisation
+                  </Label>
+                  <div className="relative mt-2">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Paris, Lyon, Marseille..."
+                      value={groupLocation}
+                      onChange={(e) => {
+                        setGroupLocation(e.target.value);
+                        setTimeout(() => searchLocation(e.target.value), 300);
+                      }}
+                      className="pl-10 h-11 bg-secondary border-0 rounded-[8px]"
+                    />
+                    {locationLoading && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  {showLocationSuggestions && (
+                    <div className="mt-2 bg-secondary rounded-[8px] overflow-hidden">
+                      {locationSuggestions.map((loc, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setGroupLocation(loc);
+                            setShowLocationSuggestions(false);
+                          }}
+                          className="w-full px-3 py-2.5 text-left text-[15px] hover:bg-card border-b border-border last:border-0"
+                        >
+                          {loc}
+                        </button>
+                      ))}
                     </div>
                   )}
-                  <AnimatePresence>
-                    {showLocationSuggestions && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute top-full left-0 right-0 mt-2 bg-[#1e293b] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
-                      >
-                        {locationSuggestions.map((loc, i) => (
-                          <div
-                            key={i}
-                            onClick={() => {
-                              setGroupLocation(loc);
-                              setShowLocationSuggestions(false);
-                            }}
-                            className="px-4 py-3 hover:bg-white/10 cursor-pointer text-sm border-b border-white/5 last:border-0"
-                          >
-                            {loc}
-                          </div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
-              </motion.div>
+              </div>
 
               {/* Privacy Toggle */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="p-4 rounded-xl bg-white/5 border border-white/10"
-              >
+              <div className="bg-card rounded-[10px] border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {isPrivate ? (
-                      <Lock className="h-5 w-5 text-amber-400" />
-                    ) : (
-                      <Globe className="h-5 w-5 text-emerald-400" />
-                    )}
+                    <div className={cn(
+                      "h-8 w-8 rounded-[6px] flex items-center justify-center",
+                      isPrivate ? "bg-amber-500" : "bg-green-500"
+                    )}>
+                      {isPrivate ? (
+                        <Lock className="h-4 w-4 text-white" />
+                      ) : (
+                        <Globe className="h-4 w-4 text-white" />
+                      )}
+                    </div>
                     <div>
-                      <p className="font-medium">{isPrivate ? "Club privé" : "Club public"}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[15px] font-medium">{isPrivate ? "Club privé" : "Club public"}</p>
+                      <p className="text-[13px] text-muted-foreground">
                         {isPrivate ? "Sur invitation uniquement" : "Tout le monde peut rejoindre"}
                       </p>
                     </div>
                   </div>
                   <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
                 </div>
-              </motion.div>
+              </div>
 
               {/* Suggested Members */}
               {suggestedMembers.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
-                >
+                <div className="bg-card rounded-[10px] border border-border p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <Label className="text-sm font-medium">Inviter des amis</Label>
+                    <div className="h-6 w-6 rounded-[4px] bg-primary flex items-center justify-center">
+                      <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+                    </div>
+                    <span className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                      Inviter des amis
+                    </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {suggestedMembers.map((member) => {
                       const isSelected = selectedMembers.some(m => m.user_id === member.user_id);
                       return (
-                        <motion.div
+                        <button
                           key={member.user_id}
-                          whileTap={{ scale: 0.95 }}
                           onClick={() => toggleMember(member)}
-                          className={`flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-full border transition-colors",
                             isSelected 
-                              ? 'bg-primary/20 border-primary/40 border' 
-                              : 'bg-white/5 border border-white/10 hover:bg-white/10'
-                          }`}
+                              ? "bg-primary text-primary-foreground border-primary" 
+                              : "bg-secondary border-border hover:bg-secondary/80"
+                          )}
                         >
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-6 w-6">
                             <AvatarImage src={member.avatar_url || ""} />
-                            <AvatarFallback className="text-xs">
+                            <AvatarFallback className="text-[10px]">
                               {(member.username || "U").charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm">{member.username || member.display_name}</span>
-                          {isSelected && <Check className="h-4 w-4 text-primary" />}
-                        </motion.div>
+                          <span className="text-[13px] font-medium">{member.username || member.display_name}</span>
+                          {isSelected && <Check className="h-3.5 w-3.5" />}
+                        </button>
                       );
                     })}
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* Search More Members */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Label className="text-sm font-medium">Rechercher d'autres membres</Label>
+              <div className="bg-card rounded-[10px] border border-border p-4">
+                <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                  Rechercher des membres
+                </Label>
                 <div className="relative mt-2">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Rechercher un utilisateur..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-11 h-12 bg-white/5 border-white/10 rounded-xl focus:border-primary/50"
+                    className="pl-10 h-11 bg-secondary border-0 rounded-[8px]"
                   />
                 </div>
                 
                 {searchResults.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-3 space-y-1">
                     {searchResults.map((profile) => {
                       const isSelected = selectedMembers.some(m => m.user_id === profile.user_id);
                       return (
-                        <div
+                        <button
                           key={profile.user_id}
                           onClick={() => toggleMember(profile)}
-                          className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                          className={cn(
+                            "w-full flex items-center gap-3 p-3 rounded-[8px] transition-colors",
                             isSelected 
-                              ? 'bg-primary/20 border border-primary/40' 
-                              : 'bg-white/5 border border-white/10 hover:bg-white/10'
-                          }`}
+                              ? "bg-primary/10" 
+                              : "bg-secondary hover:bg-secondary/80"
+                          )}
                         >
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={profile.avatar_url || ""} />
                             <AvatarFallback>{(profile.username || "U").charAt(0).toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          <div className="flex-1">
-                            <p className="font-medium">{profile.username || profile.display_name}</p>
-                            <p className="text-xs text-muted-foreground">@{profile.username}</p>
+                          <div className="flex-1 text-left">
+                            <p className="text-[15px] font-medium">{profile.username || profile.display_name}</p>
+                            <p className="text-[13px] text-muted-foreground">@{profile.username}</p>
                           </div>
                           {isSelected && <Check className="h-5 w-5 text-primary" />}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 )}
-              </motion.div>
+              </div>
 
               {/* Selected Members Count */}
               {selectedMembers.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-center"
-                >
-                  <p className="text-sm font-medium text-primary">
+                <div className="bg-primary/10 border border-primary/20 rounded-[10px] p-4 text-center">
+                  <p className="text-[15px] font-medium text-primary">
                     {selectedMembers.length} membre{selectedMembers.length > 1 ? 's' : ''} sélectionné{selectedMembers.length > 1 ? 's' : ''}
                   </p>
-                </motion.div>
+                </div>
               )}
+
+              {/* Create Button */}
+              <div className="pt-2 pb-8">
+                <Button
+                  onClick={handleCreateGroup}
+                  disabled={!groupName.trim() || loading}
+                  className="w-full h-12 rounded-[10px] text-[17px] font-semibold"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Création en cours...
+                    </div>
+                  ) : (
+                    <>
+                      <Users className="h-5 w-5 mr-2" />
+                      Créer le club
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </ScrollArea>
-
-          {/* Footer */}
-          <div className="p-4 border-t border-white/10 bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#0f172a]">
-            <Button
-              onClick={handleCreateGroup}
-              disabled={!groupName.trim() || loading}
-              className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 rounded-xl font-medium"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Création en cours...
-                </div>
-              ) : (
-                <>
-                  <Users className="h-5 w-5 mr-2" />
-                  Créer le club
-                </>
-              )}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 
