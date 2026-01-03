@@ -506,11 +506,19 @@ const Leaderboard = () => {
   if (loading && currentPage === 1) {
     return (
       <div className="min-h-screen bg-secondary pb-24">
-        <div className="sticky top-0 z-50 bg-card">
-          <div className="px-4 pt-14 pb-3">
-            <h1 className="text-[34px] font-bold tracking-tight">Classement</h1>
+        {/* iOS Header */}
+        <div className="sticky top-0 z-50 bg-card border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1 text-primary"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="text-[17px]">Retour</span>
+            </button>
+            <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
+            <div className="w-16" />
           </div>
-          <div className="h-px bg-border" />
         </div>
         <div className="p-4">
           <LeaderboardSkeleton />
@@ -526,19 +534,18 @@ const Leaderboard = () => {
   return (
     <div className="min-h-screen bg-secondary pb-8">
       {/* iOS Header */}
-      <div className="sticky top-0 z-50 bg-card">
-        <div className="flex items-center px-4 pt-14 pb-3">
-          <Button
-            variant="ghost"
-            size="sm"
+      <div className="sticky top-0 z-50 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
             onClick={() => navigate('/')}
-            className="gap-1 text-primary p-0 h-auto font-normal mr-4"
+            className="flex items-center gap-1 text-primary"
           >
             <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-[34px] font-bold tracking-tight flex-1">Classement</h1>
+            <span className="text-[17px]">Retour</span>
+          </button>
+          <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
+          <div className="w-16" />
         </div>
-        <div className="h-px bg-border" />
       </div>
 
       <div className="p-4 space-y-4">

@@ -138,8 +138,7 @@ export default function ConfirmPresence() {
 
   return (
     <div className="min-h-screen bg-secondary">
-      {/* iOS Status Bar Spacer */}
-      <div className="h-6 bg-secondary" />
+      {/* iOS Header */}
       
       {/* iOS Header */}
       <div className="bg-card border-b border-border shrink-0">

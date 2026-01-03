@@ -269,10 +269,10 @@ export const NearbySessionsDialog = ({ isOpen, onClose, userLocation }: NearbySe
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent 
           side="bottom" 
-          className="w-full h-[95vh] p-0 flex flex-col bg-secondary rounded-t-[10px]"
+          className="w-full h-full p-0 flex flex-col bg-secondary rounded-none sm:rounded-t-[10px] sm:h-[95vh]"
         >
           {/* iOS Header */}
-          <div className="bg-card border-b border-border shrink-0 rounded-t-[10px]">
+          <div className="bg-card border-b border-border shrink-0 sm:rounded-t-[10px]">
             <div className="flex items-center justify-between px-4 py-3">
               <button
                 onClick={onClose}
