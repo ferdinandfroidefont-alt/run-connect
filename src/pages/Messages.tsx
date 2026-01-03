@@ -2116,7 +2116,7 @@ const Messages = () => {
       <div className="min-h-screen bg-secondary pb-24">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="flex items-center justify-between px-4 pt-14 pb-3">
+          <div className="flex items-center justify-between px-4 py-3">
             {isSelectionMode ? (
               <>
                 <Button
