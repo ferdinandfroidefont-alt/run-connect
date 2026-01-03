@@ -1477,98 +1477,92 @@ const Messages = () => {
           {/* iOS Status Bar Spacer */}
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-card z-50"></div>
           
-          {/* iOS Native Header */}
-          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex items-center justify-between px-3 py-2 border-b border-border bg-card z-50">
-            <div className="flex items-center gap-3">
+          {/* iOS Header */}
+          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-card border-b border-border z-50">
+            <div className="flex items-center justify-between px-4 py-3">
               <button
                 onClick={() => setSelectedConversation(null)}
-                className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary active:bg-secondary/80 transition-colors"
+                className="flex items-center gap-1 text-primary shrink-0"
               >
-                <ArrowLeft className="h-5 w-5 text-primary" />
+                <ArrowLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
               </button>
               
-              {selectedConversation.is_group ? (
-                <>
-                   <Avatar 
-                     className="h-10 w-10 cursor-pointer active:opacity-80 transition-opacity"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🔍 Club avatar clicked - redirecting to club settings');
-                      const clubData = selectedConversation;
-                      setSelectedConversation(null);
-                      setTimeout(() => {
-                        setGroupInfoData(clubData);
-                        setShowGroupInfo(true);
-                      }, 100);
-                    }}
-                  >
-                    <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                    <AvatarFallback>
-                      <Users className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div 
-                    className="cursor-pointer active:opacity-80 transition-opacity"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🔍 Club name clicked - redirecting to club settings');
-                      const clubData = selectedConversation;
-                      setSelectedConversation(null);
-                      setTimeout(() => {
-                        setGroupInfoData(clubData);
-                        setShowGroupInfo(true);
-                      }, 100);
-                    }}
-                  >
-                    <p className="font-semibold text-[15px] text-foreground">{selectedConversation.group_name}</p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {selectedConversation.group_members?.length || 0} membres
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                   <div className="relative">
-                     <Avatar 
-                       className="h-10 w-10 cursor-pointer active:opacity-80 transition-opacity"
+              <div className="flex-1 flex items-center justify-center gap-2 mx-2">
+                {selectedConversation.is_group ? (
+                  <>
+                    <Avatar 
+                      className="h-8 w-8 cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
+                        const clubData = selectedConversation;
+                        setSelectedConversation(null);
+                        setTimeout(() => {
+                          setGroupInfoData(clubData);
+                          setShowGroupInfo(true);
+                        }, 100);
+                      }}
+                    >
+                      <AvatarImage src={selectedConversation.group_avatar_url || ""} />
+                      <AvatarFallback>
+                        <Users className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div 
+                      className="cursor-pointer text-center"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const clubData = selectedConversation;
+                        setSelectedConversation(null);
+                        setTimeout(() => {
+                          setGroupInfoData(clubData);
+                          setShowGroupInfo(true);
+                        }, 100);
+                      }}
+                    >
+                      <p className="font-semibold text-[15px] text-foreground">{selectedConversation.group_name}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <Avatar 
+                        className="h-8 w-8 cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
+                        }}
+                      >
+                        <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
+                        <AvatarFallback className="bg-secondary text-[13px]">
+                          {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} className="w-2 h-2" />
+                    </div>
+                    <p 
+                      className="font-semibold text-[15px] text-foreground cursor-pointer"
+                      onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
                       }}
                     >
-                      <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                      <AvatarFallback className="bg-secondary text-[15px]">
-                        {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} />
-                  </div>
-                  <div 
-                    className="cursor-pointer active:opacity-80 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
-                    }}
-                  >
-                    <p className="font-semibold text-[15px] text-foreground">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
                     </p>
-                  </div>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
 
-            <div className="flex gap-1">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-sm">
+                <DropdownMenuContent align="end" className="w-56 bg-background border border-border">
                   {!selectedConversation.is_group && (
                     <DropdownMenuItem 
                       onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}

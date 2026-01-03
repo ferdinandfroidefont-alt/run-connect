@@ -381,18 +381,18 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               transition={{ duration: 0.15 }}
               className="flex flex-col h-full"
             >
-              {/* Header - iOS style */}
-              <div className="sticky top-0 z-10 bg-secondary">
-                <div className="flex items-center justify-center py-4 relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute left-2 h-10 w-10"
+              {/* iOS Header */}
+              <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <button
                     onClick={() => onOpenChange(false)}
+                    className="flex items-center gap-1 text-primary"
                   >
                     <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                  <h2 className="text-[17px] font-semibold">Paramètres</h2>
+                    <span className="text-[17px]">Retour</span>
+                  </button>
+                  <h1 className="text-[17px] font-semibold text-foreground">Paramètres</h1>
+                  <div className="w-16" />
                 </div>
                 
                 {/* iOS-style search bar */}
