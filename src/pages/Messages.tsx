@@ -2116,14 +2116,14 @@ const Messages = () => {
       <div className="min-h-screen bg-secondary pb-24">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-4 pt-14 pb-3 relative">
+          <div className="px-4 pt-12 pb-4 relative flex items-center justify-center min-h-[80px]">
             {isSelectionMode ? (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={exitSelectionMode}
-                  className="text-primary p-0 h-auto font-normal absolute left-4 top-1/2 -translate-y-1/2 mt-4"
+                  className="text-primary p-0 h-auto font-normal absolute left-4"
                 >
                   Annuler
                 </Button>
@@ -2135,7 +2135,7 @@ const Messages = () => {
                   size="sm"
                   variant="ghost"
                   disabled={selectedConversations.size === 0}
-                  className="text-destructive p-0 h-auto font-normal absolute right-4 top-1/2 -translate-y-1/2 mt-4"
+                  className="text-destructive p-0 h-auto font-normal absolute right-4"
                 >
                   Supprimer
                 </Button>
@@ -2143,7 +2143,7 @@ const Messages = () => {
             ) : (
               <>
                 <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 mt-4 flex items-center gap-2">
+                <div className="absolute right-4 flex items-center gap-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}
                     size="icon"

@@ -35,11 +35,11 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
 
   return (
     <header className="sticky top-0 z-20 bg-card border-b border-border">
-      <div className="px-4 pt-14 pb-3 relative">
+      <div className="px-4 pt-12 pb-4 relative flex items-center justify-center min-h-[80px]">
         {/* Avatar - Left */}
         <button 
           onClick={() => navigate('/profile')}
-          className="active:opacity-70 transition-opacity absolute left-4 top-1/2 -translate-y-1/2 mt-4"
+          className="active:opacity-70 transition-opacity absolute left-4"
         >
           <Avatar className="h-9 w-9">
             <AvatarImage src={profile.avatar_url || ''} />
@@ -55,7 +55,7 @@ export const FeedHeader = ({ onSearch }: FeedHeaderProps) => {
         </h1>
 
         {/* Actions - Right */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 mt-4 flex items-center gap-1">
+        <div className="absolute right-4 flex items-center gap-1">
           <button
             onClick={onSearch}
             className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
