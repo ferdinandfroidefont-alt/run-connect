@@ -141,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 🎯 Android 15/16 Fix: Configure fullscreen immersive mode using AndroidX
+     * 🎯 Configure status bar visibility - Show status bar, hide navigation bar
      * Uses WindowInsetsControllerCompat for maximum compatibility across all Android versions
      */
     private void setupImmersiveMode() {
@@ -150,29 +150,32 @@ public class MainActivity extends AppCompatActivity {
             androidx.core.view.WindowInsetsControllerCompat insetsController = 
                 new androidx.core.view.WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
             
-            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            // 🎯 SHOW status bar (time, battery, network) - HIDE navigation bar only
+            insetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars());
+            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.navigationBars());
             insetsController.setSystemBarsBehavior(
                 androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             );
             
-            // Disable edge-to-edge on Android 11+
+            // Set status bar to dark icons on light background (or light icons on dark)
+            insetsController.setAppearanceLightStatusBars(true);
+            
+            // Make content extend behind status bar
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                getWindow().setDecorFitsSystemWindows(false);
+                getWindow().setDecorFitsSystemWindows(true);
             }
             
-            Log.d(TAG, "✅ Immersive mode configured via WindowInsetsControllerCompat");
+            Log.d(TAG, "✅ Status bar visible, navigation bar hidden via WindowInsetsControllerCompat");
         } catch (Exception e) {
             Log.w(TAG, "⚠️ WindowInsetsControllerCompat failed, falling back to legacy mode: " + e.getMessage());
-            // Fallback to legacy flags for older devices or edge cases
+            // Fallback to legacy flags - show status bar, hide navigation
             getWindow().getDecorView().setSystemUiVisibility(
-                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
                 android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
                 android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             );
-            Log.d(TAG, "✅ Immersive mode configured via legacy SystemUiVisibility");
+            Log.d(TAG, "✅ Status bar visible via legacy SystemUiVisibility");
         }
     }
 
@@ -229,15 +232,16 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "❌ Error initializing Google Sign-In: " + e.getMessage());
         }
 
-        // ✅ Full screen immersif + transparent
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // ✅ Status bar visible avec couleur du thème
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         if (Build.VERSION.SDK_INT >= 21) {
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-            getWindow().setNavigationBarColor(Color.TRANSPARENT);
+            // Status bar avec couleur primaire de l'app
+            getWindow().setStatusBarColor(0xFF5B7CFF); // colorPrimary
+            getWindow().setNavigationBarColor(Color.BLACK);
+            // Ne cacher que la barre de navigation
             getWindow().getDecorView().setSystemUiVisibility(
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             );
         }
