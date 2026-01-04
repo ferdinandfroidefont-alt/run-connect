@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
 import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
@@ -372,10 +372,7 @@ export const ProfileDialog = ({
           {/* iOS Header */}
           <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
             <div className="flex items-center justify-between px-4 py-3">
-              <button
-                onClick={() => onOpenChange(false)}
-                className="flex items-center gap-1 text-primary"
-              >
+              <button onClick={() => onOpenChange(false)} className="flex items-center gap-1 text-primary">
                 <ArrowLeft className="h-5 w-5" />
                 <span className="text-[17px]">Retour</span>
               </button>
@@ -395,82 +392,65 @@ export const ProfileDialog = ({
                       {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  {isEditing && (
-                    <button 
-                      type="button" 
-                      onClick={async () => {
-                        try {
-                          const file = await selectFromGallery();
-                          if (file) {
-                            handleAvatarChange({
-                              target: { files: [file] }
-                            } as any);
-                          }
-                        } catch (error) {
-                          console.error('Error selecting from gallery:', error);
-                          toast({
-                            title: "Erreur",
-                            description: "Impossible d'accéder à la galerie",
-                            variant: "destructive"
-                          });
+                  {isEditing && <button type="button" onClick={async () => {
+                  try {
+                    const file = await selectFromGallery();
+                    if (file) {
+                      handleAvatarChange({
+                        target: {
+                          files: [file]
                         }
-                      }} 
-                      disabled={cameraLoading} 
-                      className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
-                    >
+                      } as any);
+                    }
+                  } catch (error) {
+                    console.error('Error selecting from gallery:', error);
+                    toast({
+                      title: "Erreur",
+                      description: "Impossible d'accéder à la galerie",
+                      variant: "destructive"
+                    });
+                  }
+                }} disabled={cameraLoading} className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                       <Camera className="h-4 w-4" />
-                    </button>
-                  )}
+                    </button>}
                 </div>
                 
                 {/* Username + Crown */}
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-[22px] font-bold text-foreground">@{profile?.username}</h2>
-                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                    <Crown className="h-5 w-5 text-yellow-500" />
-                  )}
+                  {(profile?.is_premium || subscriptionInfo?.subscribed) && <Crown className="h-5 w-5 text-yellow-500" />}
                 </div>
                 
                 {/* Badges */}
                 <div className="flex flex-wrap justify-center gap-2 mb-3">
-                  {profile?.is_admin && (
-                    <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
+                  {profile?.is_admin && <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
                       Admin
-                    </Badge>
-                  )}
-                  {profile?.strava_connected && profile?.strava_verified_at && (
-                    <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[11px]">
-                      Strava
-                    </Badge>
-                  )}
-                  {profile?.instagram_connected && profile?.instagram_verified_at && (
-                    <Badge className="bg-pink-100 text-pink-800 border-pink-200 text-[11px]">
+                    </Badge>}
+                  {profile?.strava_connected && profile?.strava_verified_at}
+                  {profile?.instagram_connected && profile?.instagram_verified_at && <Badge className="bg-pink-100 text-pink-800 border-pink-200 text-[11px]">
                       Instagram
-                    </Badge>
-                  )}
+                    </Badge>}
                 </div>
                 
                 {/* Bio */}
-                {profile?.bio && (
-                  <p className="text-center text-muted-foreground text-[15px] max-w-md mx-auto mb-3 line-clamp-2">
+                {profile?.bio && <p className="text-center text-muted-foreground text-[15px] max-w-md mx-auto mb-3 line-clamp-2">
                     {profile.bio}
-                  </p>
-                )}
+                  </p>}
                 
                 {/* Stats Row */}
                 <div className="flex items-center justify-center gap-8 py-3">
-                  <button
-                    onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-                    className="text-center"
-                  >
+                  <button onClick={() => {
+                  setFollowDialogType('followers');
+                  setShowFollowDialog(true);
+                }} className="text-center">
                     <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
                     <p className="text-[13px] text-muted-foreground">Abonnés</p>
                   </button>
                   <div className="w-px h-8 bg-border" />
-                  <button
-                    onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-                    className="text-center"
-                  >
+                  <button onClick={() => {
+                  setFollowDialogType('following');
+                  setShowFollowDialog(true);
+                }} className="text-center">
                     <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
                     <p className="text-[13px] text-muted-foreground">Abonnements</p>
                   </button>
@@ -478,10 +458,7 @@ export const ProfileDialog = ({
                 
                 {/* Reliability Badge */}
                 <div className="w-full max-w-[200px]">
-                  <ReliabilityBadge 
-                    rate={reliabilityRate}
-                    onClick={() => setShowReliabilityDialog(true)}
-                  />
+                  <ReliabilityBadge rate={reliabilityRate} onClick={() => setShowReliabilityDialog(true)} />
                 </div>
               </div>
 
@@ -495,52 +472,43 @@ export const ProfileDialog = ({
               {user?.id && <UserActivityChart userId={user.id} username={profile?.username} />}
 
               {/* Informations personnelles - Section editing */}
-              {isEditing ? (
-                <div className="bg-card rounded-[10px] p-4 space-y-4">
+              {isEditing ? <div className="bg-card rounded-[10px] p-4 space-y-4">
                   <h3 className="text-[15px] font-semibold text-foreground">Modifier mes informations</h3>
                   <div className="space-y-3">
                     <div>
                       <label className="text-[13px] font-medium text-muted-foreground">Pseudo</label>
-                      <Input 
-                        value={formData.username || ''} 
-                        onChange={e => setFormData({ ...formData, username: e.target.value })}
-                        className="mt-1"
-                      />
+                      <Input value={formData.username || ''} onChange={e => setFormData({
+                    ...formData,
+                    username: e.target.value
+                  })} className="mt-1" />
                     </div>
                     <div>
                       <label className="text-[13px] font-medium text-muted-foreground">Nom d'affichage</label>
-                      <Input 
-                        value={formData.display_name || ''} 
-                        onChange={e => setFormData({ ...formData, display_name: e.target.value })}
-                        className="mt-1"
-                      />
+                      <Input value={formData.display_name || ''} onChange={e => setFormData({
+                    ...formData,
+                    display_name: e.target.value
+                  })} className="mt-1" />
                     </div>
                     <div>
                       <label className="text-[13px] font-medium text-muted-foreground">Âge</label>
-                      <Input 
-                        type="number" 
-                        value={formData.age || ''} 
-                        onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
-                        className="mt-1"
-                      />
+                      <Input type="number" value={formData.age || ''} onChange={e => setFormData({
+                    ...formData,
+                    age: parseInt(e.target.value) || null
+                  })} className="mt-1" />
                     </div>
                     <div>
                       <label className="text-[13px] font-medium text-muted-foreground">Téléphone</label>
-                      <Input 
-                        value={formData.phone || ''} 
-                        onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                        placeholder="06 12 34 56 78"
-                        className="mt-1"
-                      />
+                      <Input value={formData.phone || ''} onChange={e => setFormData({
+                    ...formData,
+                    phone: e.target.value
+                  })} placeholder="06 12 34 56 78" className="mt-1" />
                     </div>
                     <div>
                       <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
-                      <Input 
-                        value={formData.bio || ''} 
-                        onChange={e => setFormData({ ...formData, bio: e.target.value })} 
-                        placeholder="Décrivez vos records, vos objectifs..."
-                        className="mt-1"
-                      />
+                      <Input value={formData.bio || ''} onChange={e => setFormData({
+                    ...formData,
+                    bio: e.target.value
+                  })} placeholder="Décrivez vos records, vos objectifs..." className="mt-1" />
                     </div>
                     <div className="flex gap-2 pt-2">
                       <Button onClick={updateProfile} disabled={loading} className="flex-1">
@@ -552,9 +520,7 @@ export const ProfileDialog = ({
                       </Button>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="bg-card rounded-[10px] overflow-hidden">
+                </div> : <div className="bg-card rounded-[10px] overflow-hidden">
                   <div className="ios-list-item">
                     <div className="flex items-center gap-3">
                       <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
@@ -567,8 +533,7 @@ export const ProfileDialog = ({
                     </div>
                   </div>
                   <div className="ios-list-separator" />
-                  {profile?.display_name && (
-                    <>
+                  {profile?.display_name && <>
                       <div className="ios-list-item">
                         <div className="flex items-center gap-3">
                           <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
@@ -581,10 +546,8 @@ export const ProfileDialog = ({
                         </div>
                       </div>
                       <div className="ios-list-separator" />
-                    </>
-                  )}
-                  {profile?.age && (
-                    <>
+                    </>}
+                  {profile?.age && <>
                       <div className="ios-list-item">
                         <div className="flex items-center gap-3">
                           <div className="h-[30px] w-[30px] rounded-[7px] bg-pink-500 flex items-center justify-center">
@@ -597,10 +560,8 @@ export const ProfileDialog = ({
                         </div>
                       </div>
                       <div className="ios-list-separator" />
-                    </>
-                  )}
-                  {profile?.phone && (
-                    <>
+                    </>}
+                  {profile?.phone && <>
                       <div className="ios-list-item">
                         <div className="flex items-center gap-3">
                           <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
@@ -612,70 +573,24 @@ export const ProfileDialog = ({
                           </div>
                         </div>
                       </div>
-                    </>
-                  )}
+                    </>}
                   <div className="p-4 border-t border-border">
                     <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
                       Modifier mon profil
                     </Button>
                   </div>
-                </div>
-              )}
-
-              {/* Mes Parcours Section */}
-              <div>
-                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
-                  Mes Parcours
-                </p>
-                <div className="bg-card rounded-[10px] overflow-hidden">
-                  <div
-                    onClick={() => {
-                      onOpenChange(false);
-                      navigate('/my-sessions');
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative"
-                  >
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
-                      <Route className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                  </div>
-                  <div className="h-px bg-border ml-[52px]" />
-                  
-                  <div
-                    onClick={() => {
-                      onOpenChange(false);
-                      navigate('/route-creation');
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
-                  >
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
-                      <MapPin className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[17px] text-foreground">Créer un parcours</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                  </div>
-                </div>
-              </div>
+                </div>}
 
               {/* Bouton Paramètres */}
               <div className="bg-card rounded-[10px] overflow-hidden">
-                <button 
-                  onClick={() => setShowSettingsDialog(true)}
-                  className="w-full ios-list-item active:bg-secondary transition-colors"
-                >
+                <button onClick={() => setShowSettingsDialog(true)} className="w-full ios-list-item active:bg-secondary transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-gray-500 flex items-center justify-center">
                       <User className="h-[18px] w-[18px] text-white" />
                     </div>
                     <p className="text-[17px] text-foreground">Paramètres</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                  <ArrowLeft className="h-5 w-5 text-muted-foreground/50 rotate-180" />
                 </button>
               </div>
             </div>
