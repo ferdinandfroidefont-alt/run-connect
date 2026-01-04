@@ -215,18 +215,18 @@ export const NewConversationView = ({
         }));
 
       if (filteredSuggestions.length === 0) {
+        // Fetch active users (with or without avatar)
         const { data: popularUsers } = await supabase
           .from('profiles')
           .select('user_id, username, display_name, avatar_url')
           .neq('user_id', user.id)
-          .not('avatar_url', 'is', null)
           .not('username', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(15);
+          .order('last_seen', { ascending: false })
+          .limit(30);
 
         if (popularUsers && popularUsers.length > 0) {
           filteredSuggestions = popularUsers
-            .filter(p => !friendIds.has(p.user_id!) && !dismissed.has(p.user_id!))
+            .filter(p => p.user_id && !friendIds.has(p.user_id) && !dismissed.has(p.user_id))
             .map(p => ({
               user_id: p.user_id!,
               username: p.username || 'Utilisateur',
@@ -285,10 +285,9 @@ export const NewConversationView = ({
         .from('profiles')
         .select('user_id, username, display_name, avatar_url')
         .neq('user_id', user.id)
-        .not('avatar_url', 'is', null)
         .not('username', 'is', null)
         .order('last_seen', { ascending: false })
-        .limit(30);
+        .limit(50);
 
       if (popularUsers && popularUsers.length > 0) {
         const existingIds = new Set(suggestions.map(s => s.user_id));
