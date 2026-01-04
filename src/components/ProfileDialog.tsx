@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
 import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
@@ -622,6 +622,47 @@ export const ProfileDialog = ({
                 </div>
               )}
 
+              {/* Mes Parcours Section */}
+              <div>
+                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
+                  Mes Parcours
+                </p>
+                <div className="bg-card rounded-[10px] overflow-hidden">
+                  <div
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate('/my-sessions');
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative"
+                  >
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
+                      <Route className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                  </div>
+                  <div className="h-px bg-border ml-[52px]" />
+                  
+                  <div
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate('/route-creation');
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
+                  >
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                      <MapPin className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[17px] text-foreground">Créer un parcours</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                  </div>
+                </div>
+              </div>
+
               {/* Bouton Paramètres */}
               <div className="bg-card rounded-[10px] overflow-hidden">
                 <button 
@@ -634,7 +675,7 @@ export const ProfileDialog = ({
                     </div>
                     <p className="text-[17px] text-foreground">Paramètres</p>
                   </div>
-                  <ArrowLeft className="h-5 w-5 text-muted-foreground/50 rotate-180" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
                 </button>
               </div>
             </div>
