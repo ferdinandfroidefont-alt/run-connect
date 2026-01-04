@@ -1251,7 +1251,7 @@ export const InteractiveMap = ({
     });
     setIsCreateDialogOpen(true);
   };
-  return <div className="relative w-full h-[calc(100vh-8rem)] bg-background">
+  return <div className="relative w-full h-[calc(100vh-5rem)] bg-background">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
       
