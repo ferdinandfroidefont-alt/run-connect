@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OnlineStatus } from "@/components/OnlineStatus";
-import { ArrowLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw } from "lucide-react";
+import { ChevronLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface Profile {
   user_id: string;
@@ -59,6 +60,7 @@ export const NewConversationView = ({
   onAvatarClick
 }: NewConversationViewProps) => {
   const { user } = useAuth();
+  const { setHideBottomNav } = useAppContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [recentFriends, setRecentFriends] = useState<Profile[]>([]);
   const [allFriends, setAllFriends] = useState<Profile[]>([]);
@@ -71,6 +73,12 @@ export const NewConversationView = ({
   const [selectedPreviewUserId, setSelectedPreviewUserId] = useState<string | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [friendsSet, setFriendsSet] = useState<Set<string>>(new Set());
+
+  // Hide bottom navigation when this view is open
+  useEffect(() => {
+    setHideBottomNav(true);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
 
   // Load recent friends (based on recent conversations)
   useEffect(() => {
@@ -325,31 +333,16 @@ export const NewConversationView = ({
     <div className="fixed inset-0 z-50 bg-secondary">
       <div className="h-full flex flex-col">
         {/* iOS Header */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex-shrink-0 bg-background border-b border-border"
-        >
-          <div className="flex items-center gap-3 px-4 py-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-              className="h-10 w-10 rounded-full bg-secondary hover:bg-muted"
-            >
-              <ArrowLeft className="h-5 w-5 text-foreground" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">Nouveau message</h1>
-                <p className="text-xs text-muted-foreground">Choisissez un ami</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+        <div className="flex-shrink-0 bg-card border-b border-border min-h-[60px] flex items-center justify-center relative px-4">
+          <button
+            onClick={onBack}
+            className="absolute left-4 flex items-center gap-1 text-primary active:opacity-70"
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="text-[17px]">Retour</span>
+          </button>
+          <h1 className="text-[17px] font-semibold text-foreground">Nouveau message</h1>
+        </div>
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
