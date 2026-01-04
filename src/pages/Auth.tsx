@@ -863,23 +863,7 @@ const Auth = () => {
                 
                 {/* 🧹 Bouton de nettoyage de cache visible */}
                 <div className="mt-4 text-center">
-                  <Button type="button" variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground" onClick={async () => {
-                try {
-                  await supabase.auth.signOut({
-                    scope: 'global'
-                  });
-                  localStorage.clear();
-                  sessionStorage.clear();
-                  toast({
-                    title: "Cache nettoyé ✅",
-                    description: "Session supprimée. Réessayez de vous connecter."
-                  });
-                } catch (error) {
-                  console.error('Erreur nettoyage:', error);
-                }
-              }}>
-                    🧹 Problème de connexion ? Nettoyer le cache
-                  </Button>
+                  
                 </div>
               </form>
             </div>}
