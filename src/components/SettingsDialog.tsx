@@ -48,7 +48,7 @@ const settingsCategories = [
     title: 'Connexions',
     description: 'Strava, Instagram, partage',
     icon: Link2,
-    color: 'bg-[#007AFF]',
+    color: 'bg-[#0A84FF]',
   },
   {
     id: 'privacy' as const,
