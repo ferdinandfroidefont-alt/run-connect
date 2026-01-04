@@ -233,3 +233,35 @@
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
+
+/* Imminent session pulse animation - orange/red glow */
+@keyframes imminentPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.6));
+    transform: translate(-50%, -100%) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.9));
+    transform: translate(-50%, -100%) scale(1.08);
+  }
+}
+
+.imminent-marker-animation {
+  animation: imminentPulse 1.5s ease-in-out infinite;
+}
+
+/* New session pulse animation */
+@keyframes newSessionPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.6));
+    transform: translate(-50%, -100%) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.9));
+    transform: translate(-50%, -100%) scale(1.1);
+  }
+}
+
+.pulse-marker-animation {
+  animation: newSessionPulse 0.8s ease-in-out infinite;
+}

@@ -6,6 +6,7 @@ import { MapStyleSelector } from './MapStyleSelector';
 import { SessionFilters } from './SessionFilters';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
+import { SessionPreviewPopup } from './SessionPreviewPopup';
 import { NotificationCenter } from './NotificationCenter';
 import { SettingsDialog } from './SettingsDialog';
 import { ProfileDialog } from './ProfileDialog';
@@ -170,6 +171,7 @@ export const InteractiveMap = ({
   const [currentStyle, setCurrentStyle] = useState('roadmap');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [previewSession, setPreviewSession] = useState<Session | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [presetLocation, setPresetLocation] = useState<{
     lat: number;
@@ -488,8 +490,16 @@ export const InteractiveMap = ({
         }
         const markerIcon = await createCustomMarker(session);
         const isNewSession = newSessionIds.has(session.id);
-        if (isNewSession) {
-          // Create HTML marker with pulse animation for new sessions
+        
+        // Check if session is imminent (starts in less than 2 hours)
+        const sessionDate = new Date(session.scheduled_at);
+        const now = new Date();
+        const diffMs = sessionDate.getTime() - now.getTime();
+        const diffMinutes = diffMs / 60000;
+        const isImminent = diffMinutes > 0 && diffMinutes <= 120; // 0 to 2 hours
+        
+        if (isNewSession || isImminent) {
+          // Create HTML marker with pulse animation for new or imminent sessions
           const HTMLMarkerClass = createHTMLMarkerClass();
           const markerDiv = document.createElement('div');
           markerDiv.style.position = 'absolute';
@@ -499,11 +509,11 @@ export const InteractiveMap = ({
           img.src = markerIcon;
           img.style.width = '48px';
           img.style.height = '60px';
-          img.className = 'pulse-marker-animation';
+          img.className = isNewSession ? 'pulse-marker-animation' : 'imminent-marker-animation';
           markerDiv.appendChild(img);
           const position = new google.maps.LatLng(Number(session.location_lat), Number(session.location_lng));
           const htmlMarker = new HTMLMarkerClass(position, markerDiv, () => {
-            setSelectedSession(session);
+            setPreviewSession(session);
           });
           htmlMarker.setMap(map.current);
           return htmlMarker;
@@ -523,7 +533,7 @@ export const InteractiveMap = ({
             }
           });
           marker.addListener('click', () => {
-            setSelectedSession(session);
+            setPreviewSession(session);
           });
           return marker;
         }
@@ -546,7 +556,7 @@ export const InteractiveMap = ({
             }
           });
           fallbackMarker.addListener('click', () => {
-            setSelectedSession(session);
+            setPreviewSession(session);
           });
           return fallbackMarker;
         } catch (fallbackError) {
@@ -1454,6 +1464,25 @@ export const InteractiveMap = ({
       }
       loadSessionsWithRetry();
     }} map={map.current} presetLocation={presetLocation} onCreateRoute={handleCreateRoute} />
+
+      {/* Session Preview Popup */}
+      <SessionPreviewPopup
+        session={previewSession}
+        onClose={() => setPreviewSession(null)}
+        onViewDetails={() => {
+          if (previewSession) {
+            setSelectedSession(previewSession);
+            setPreviewSession(null);
+          }
+        }}
+        isImminent={previewSession ? (() => {
+          const sessionDate = new Date(previewSession.scheduled_at);
+          const now = new Date();
+          const diffMs = sessionDate.getTime() - now.getTime();
+          const diffMinutes = diffMs / 60000;
+          return diffMinutes > 0 && diffMinutes <= 120;
+        })() : false}
+      />
 
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
