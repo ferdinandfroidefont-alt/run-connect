@@ -164,7 +164,7 @@ async function sendFCMNotification(
           priority: 'high',
           notification: {
             icon: 'ic_notification',
-            color: '#0A84FF',
+            color: '#007AFF',
             sound: 'default',
             channel_id: 'high_importance_channel'
           }
