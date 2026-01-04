@@ -29,7 +29,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentSte
   const currentIndex = WIZARD_STEPS.indexOf(currentStep);
 
   return (
-    <div className="w-full px-4 py-3">
+    <div className="w-full px-4 py-1">
       {/* Progress bar */}
       <div className="relative h-1 bg-white/10 rounded-full overflow-hidden mb-4">
         <motion.div
