@@ -3,20 +3,19 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export type FeedMode = 'friends' | 'discover';
 
 interface FeedHeaderProps {
   onSearch?: () => void;
+  onProfileClick?: () => void;
   mode: FeedMode;
   onModeChange: (mode: FeedMode) => void;
 }
 
-export const FeedHeader = ({ onSearch, mode, onModeChange }: FeedHeaderProps) => {
+export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: FeedHeaderProps) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null }>({ 
     avatar_url: null, 
     username: null 
@@ -43,7 +42,7 @@ export const FeedHeader = ({ onSearch, mode, onModeChange }: FeedHeaderProps) =>
       <div className="px-4 pt-4 pb-3 relative flex items-center justify-center min-h-[60px]">
         {/* Avatar - Left */}
         <button 
-          onClick={() => navigate('/profile')}
+          onClick={onProfileClick}
           className="active:opacity-70 transition-opacity absolute left-4"
         >
           <Avatar className="h-9 w-9">
