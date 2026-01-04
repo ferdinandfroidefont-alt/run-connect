@@ -196,7 +196,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-3 mb-10">
         <Button
           variant="outline"
           onClick={handleMyLocation}
