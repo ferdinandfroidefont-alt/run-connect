@@ -948,29 +948,31 @@ const Profile = () => {
           </div>
         )}
 
-        {/* Routes Section - Own Profile */}
-        {!isViewingOtherUser && (
-          <div>
-            <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
-              Mes Parcours ({userRoutes.length})
-            </p>
-            <div className="bg-card rounded-[10px] overflow-hidden">
-              <div
-                onClick={() => navigate('/my-sessions')}
-                className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative"
-              >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
-                  <Route className="h-[18px] w-[18px] text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+        {/* Routes Section - For all profiles */}
+        <div>
+          <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
+            {isViewingOtherUser ? 'Séances & Parcours' : `Mes Parcours (${userRoutes.length})`}
+          </p>
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <div
+              onClick={() => isViewingOtherUser ? navigate(`/my-sessions?user=${viewingUserId}`) : navigate('/my-sessions')}
+              className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative"
+            >
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
+                <Route className="h-[18px] w-[18px] text-white" />
               </div>
-              <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
-              
+              <div className="flex-1">
+                <p className="text-[17px] text-foreground">
+                  {isViewingOtherUser ? 'Voir ses séances et itinéraires' : 'Voir mes séances et itinéraires'}
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+            <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
+            
+            {!isViewingOtherUser && (
               <div
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/route-creation')}
                 className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
               >
                 <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
@@ -981,9 +983,9 @@ const Profile = () => {
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Simple AAB Diagnostic - Only for creators */}
         {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
