@@ -7,6 +7,7 @@ import { FeedEmptyState } from '@/components/feed/FeedEmptyState';
 import { DiscoverFilters } from '@/components/feed/DiscoverFilters';
 import { DiscoverCard } from '@/components/feed/DiscoverCard';
 import { DiscoverEmptyState } from '@/components/feed/DiscoverEmptyState';
+import { ProfileDialog } from '@/components/ProfileDialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,6 +15,7 @@ export default function Feed() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<FeedMode>('friends');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
   
   // Friends feed hook
   const {
@@ -95,6 +97,7 @@ export default function Feed() {
       {/* Header with Mode Selector */}
       <FeedHeader 
         onSearch={() => navigate('/search')} 
+        onProfileClick={() => setShowProfileDialog(true)}
         mode={mode}
         onModeChange={setMode}
       />
@@ -212,6 +215,12 @@ export default function Feed() {
           </>
         )}
       </div>
+
+      {/* Profile Dialog */}
+      <ProfileDialog 
+        open={showProfileDialog} 
+        onOpenChange={setShowProfileDialog} 
+      />
     </div>
   );
 }
