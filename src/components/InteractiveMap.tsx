@@ -1265,7 +1265,7 @@ export const InteractiveMap = ({
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
             {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
-                <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
+                <div onClick={() => navigate('/profile')} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
                   <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                     <AvatarFallback>
