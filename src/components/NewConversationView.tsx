@@ -436,6 +436,11 @@ export const NewConversationView = ({
                       </div>
                     ))}
                   </div>
+                ) : visibleSuggestions.length === 0 ? (
+                  <div className="flex items-center justify-center gap-3 py-4 bg-card rounded-[10px] border border-border">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-[15px] text-muted-foreground">Chargement des suggestions...</span>
+                  </div>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                     {visibleSuggestions.map((profile) => (
