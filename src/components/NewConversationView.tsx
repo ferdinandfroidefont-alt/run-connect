@@ -265,6 +265,54 @@ export const NewConversationView = ({
     if (error) {
       console.error('Error dismissing suggestion:', error);
       setDismissedIds(dismissedIds);
+    } else {
+      // Check if we need to load more suggestions after dismissal
+      const remainingSuggestions = suggestions.filter(
+        s => !newDismissed.has(s.user_id) && !friendsSet.has(s.user_id)
+      );
+      if (remainingSuggestions.length < 3) {
+        loadMoreSuggestions(newDismissed);
+      }
+    }
+  };
+
+  // Load more suggestions when running low
+  const loadMoreSuggestions = async (currentDismissed: Set<string>) => {
+    if (!user) return;
+    
+    try {
+      const { data: popularUsers } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .neq('user_id', user.id)
+        .not('avatar_url', 'is', null)
+        .not('username', 'is', null)
+        .order('last_seen', { ascending: false })
+        .limit(30);
+
+      if (popularUsers && popularUsers.length > 0) {
+        const existingIds = new Set(suggestions.map(s => s.user_id));
+        const newSuggestions = popularUsers
+          .filter(p => 
+            !friendsSet.has(p.user_id!) && 
+            !currentDismissed.has(p.user_id!) &&
+            !existingIds.has(p.user_id!)
+          )
+          .map(p => ({
+            user_id: p.user_id!,
+            username: p.username || 'Utilisateur',
+            display_name: p.display_name || p.username || 'Utilisateur',
+            avatar_url: p.avatar_url || '',
+            mutual_friends_count: 0,
+            source: 'popular'
+          })) as ProfileSuggestion[];
+
+        if (newSuggestions.length > 0) {
+          setSuggestions(prev => [...prev, ...newSuggestions]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more suggestions:', error);
     }
   };
 
@@ -387,11 +435,6 @@ export const NewConversationView = ({
                         <div className="h-2 w-10 rounded bg-muted animate-pulse" />
                       </div>
                     ))}
-                  </div>
-                ) : visibleSuggestions.length === 0 ? (
-                  <div className="flex items-center justify-center gap-3 py-4 bg-card rounded-[10px] border border-border">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-[15px] text-muted-foreground">Aucune nouvelle suggestion</span>
                   </div>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
