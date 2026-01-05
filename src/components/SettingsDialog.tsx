@@ -189,36 +189,8 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
     const shareMessage = getShareMessage();
     const profileUrl = getProfileUrl();
     
-    console.log('📤 [SHARE] Début du partage');
-    console.log('📤 [SHARE] Message:', shareMessage);
-    console.log('📤 [SHARE] URL:', profileUrl);
-    
     try {
-      // Priority 1: Native Android WebView bridge
-      const win = window as any;
-      console.log('📤 [SHARE] AndroidBridge disponible:', !!win.AndroidBridge);
-      console.log('📤 [SHARE] shareText type:', typeof win.AndroidBridge?.shareText);
-      
-      if (win.AndroidBridge && typeof win.AndroidBridge.shareText === 'function') {
-        console.log('📤 [SHARE] Appel AndroidBridge.shareText()');
-        win.AndroidBridge.shareText(shareMessage, profileUrl);
-        return;
-      }
-      
-      // Priority 2: Capacitor Share plugin
-      const { Share } = await import('@capacitor/share');
-      const canShare = await Share.canShare();
-      if (canShare.value) {
-        await Share.share({
-          title: 'Rejoins-moi sur RunConnect',
-          text: shareMessage,
-          url: profileUrl,
-          dialogTitle: 'Partager mon profil'
-        });
-        return;
-      }
-      
-      // Priority 3: Web Share API
+      // Use Web Share API first - it works on mobile browsers and opens native share sheet
       if (navigator.share) {
         await navigator.share({
           title: 'Rejoins-moi sur RunConnect',

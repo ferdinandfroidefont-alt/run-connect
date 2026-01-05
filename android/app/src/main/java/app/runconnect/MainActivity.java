@@ -1618,31 +1618,24 @@ public class MainActivity extends AppCompatActivity {
         @android.webkit.JavascriptInterface
         public void shareText(String text, String url) {
             Log.d(TAG, "📤 AndroidBridge: partage système natif");
-            Log.d(TAG, "📤 Texte: " + text);
-            Log.d(TAG, "📤 URL: " + url);
             
             runOnUiThread(() -> {
                 try {
                     Intent shareIntent = new Intent(Intent.ACTION_SEND);
                     shareIntent.setType("text/plain");
-                    
-                    // Combiner texte + URL dans EXTRA_TEXT pour que l'URL soit toujours partagée
-                    String fullText = text;
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, text);
                     if (url != null && !url.isEmpty()) {
-                        fullText = text + "\n\n" + url;
+                        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Rejoins-moi sur RunConnect");
                     }
                     
-                    shareIntent.putExtra(Intent.EXTRA_TEXT, fullText);
-                    shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Rejoins-moi sur RunConnect");
-                    
                     // Créer le chooser pour afficher la share sheet système
-                    Intent chooser = Intent.createChooser(shareIntent, "Partager");
+                    Intent chooser = Intent.createChooser(shareIntent, "Partager mon profil");
                     chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(chooser);
                     
-                    Log.d(TAG, "✅ Share sheet système ouverte avec: " + fullText);
+                    Log.d(TAG, "✅ Share sheet système ouverte");
                 } catch (Exception e) {
-                    Log.e(TAG, "❌ Erreur partage: " + e.getMessage(), e);
+                    Log.e(TAG, "❌ Erreur partage: " + e.getMessage());
                 }
             });
         }

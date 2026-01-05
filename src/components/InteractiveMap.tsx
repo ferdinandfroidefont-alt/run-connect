@@ -91,24 +91,14 @@ const createHTMLMarkerClass = () => {
     private position: google.maps.LatLng;
     private content: HTMLDivElement;
     private onClick: () => void;
-    private handleTouchEnd: (e: TouchEvent) => void;
-    
     constructor(position: google.maps.LatLng, content: HTMLDivElement, onClick: () => void) {
       super();
       this.position = position;
       this.content = content;
       this.onClick = onClick;
 
-      // Handler pour touch qui empêche le double déclenchement
-      this.handleTouchEnd = (e: TouchEvent) => {
-        e.preventDefault(); // Empêche le click simulé après touchend
-        this.onClick();
-      };
-
-      // Add click listener pour desktop
+      // Add click listener
       this.content.addEventListener('click', this.onClick);
-      // Add touch listener pour mobile (réponse immédiate)
-      this.content.addEventListener('touchend', this.handleTouchEnd);
     }
     onAdd() {
       const panes = this.getPanes();
@@ -129,7 +119,6 @@ const createHTMLMarkerClass = () => {
     onRemove() {
       if (this.content && this.content.parentElement) {
         this.content.removeEventListener('click', this.onClick);
-        this.content.removeEventListener('touchend', this.handleTouchEnd);
         this.content.parentElement.removeChild(this.content);
       }
     }

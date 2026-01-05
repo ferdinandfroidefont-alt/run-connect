@@ -146,54 +146,25 @@ Télécharge RunConnect pour participer : https://run-connect.lovable.app`;
 
   const handleNativeShare = async () => {
     const shareMessage = getShareMessage();
-    const sessionUrl = `https://run-connect.lovable.app/session/${session?.id}`;
-    
-    console.log('📤 [SHARE SESSION] Début du partage');
-    console.log('📤 [SHARE SESSION] AndroidBridge:', !!(window as any).AndroidBridge);
-    console.log('📤 [SHARE SESSION] shareText type:', typeof (window as any).AndroidBridge?.shareText);
     
     try {
-      // Priority 1: Native Android WebView bridge
-      const win = window as any;
-      if (win.AndroidBridge && typeof win.AndroidBridge.shareText === 'function') {
-        console.log('📤 [SHARE SESSION] Appel AndroidBridge.shareText()');
-        win.AndroidBridge.shareText(shareMessage, sessionUrl);
-        toast({ title: "Partagé !" });
-        return;
-      }
-      
-      // Priority 2: Capacitor Share plugin
-      try {
-        const { Share } = await import('@capacitor/share');
-        const canShare = await Share.canShare();
-        if (canShare.value) {
-          await Share.share({
-            title: session?.title || 'Séance RunConnect',
-            text: shareMessage,
-            dialogTitle: 'Partager la séance'
-          });
-          return;
-        }
-      } catch {
-        // Capacitor not available, continue to next option
-      }
-      
-      // Priority 3: Web Share API
       if (navigator.share) {
         await navigator.share({
           title: session?.title || 'Séance RunConnect',
           text: shareMessage,
         });
-        toast({ title: "Partagé !" });
-        return;
+        toast({
+          title: "Partagé !",
+          description: "La séance a été partagée"
+        });
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareMessage);
+        toast({
+          title: "✅ Lien copié !",
+          description: "Collez-le dans n'importe quelle application"
+        });
       }
-      
-      // Fallback: copy to clipboard
-      await navigator.clipboard.writeText(shareMessage);
-      toast({
-        title: "✅ Lien copié !",
-        description: "Collez-le dans n'importe quelle application"
-      });
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         try {
@@ -301,7 +272,7 @@ Télécharge RunConnect pour participer : https://run-connect.lovable.app`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 gap-0 fixed inset-0 max-w-full h-full sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:inset-auto sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0 rounded-none sm:rounded-xl">
+      <DialogContent className="p-0 gap-0 max-w-full h-full sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0">
         {/* iOS Header */}
         <div className="sticky top-0 z-10 bg-background border-b border-border">
           <div className="flex items-center justify-between h-[56px] px-4">
