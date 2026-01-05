@@ -205,32 +205,30 @@ public class MainActivity extends AppCompatActivity {
         // Handle deep link if activity was started with one
         handleIntent(getIntent());
         
+        Log.d(TAG, "═══════════════════════════════════════════════════════════");
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
+        Log.d(TAG, "📱 Device: " + Build.MANUFACTURER + " " + Build.MODEL);
+        Log.d(TAG, "📱 Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")");
         Log.d(TAG, "📍 URL to load: " + START_URL);
+        Log.d(TAG, "═══════════════════════════════════════════════════════════");
         
-        // 🔥 Initialiser Google Sign-In Client
+        // 🛡️ TRY-CATCH GLOBAL pour éviter les crashs au démarrage
         try {
-            String webClientId = getString(R.string.default_web_client_id);
-            Log.d(TAG, "🔑 Initializing Google Sign-In with Web Client ID");
-            
-            // 🔥 CORRECTION #1: Ajouter requestServerAuthCode pour un token complet
-            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(webClientId)
-                .requestServerAuthCode(webClientId)  // ✅ AJOUTÉ
-                .requestEmail()
-                .requestProfile()
-                .build();
-            
-            mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-            Log.d(TAG, "✅ Google Sign-In Client initialized successfully");
-            
-            // 🔥 CORRECTION #3: Vérifier Google Play Services au démarrage
-            if (!checkGooglePlayServices()) {
-                Log.e(TAG, "⚠️ Google Sign-In peut ne pas fonctionner correctement");
-            }
+            initializeAppSafely();
         } catch (Exception e) {
-            Log.e(TAG, "❌ Error initializing Google Sign-In: " + e.getMessage());
+            Log.e(TAG, "💥 ERREUR CRITIQUE dans onCreate: " + e.getMessage(), e);
+            handleCriticalError(e);
         }
+    }
+    
+    /**
+     * 🛡️ Initialise l'application de manière sécurisée
+     * Toute la logique d'init est ici pour pouvoir être catchée
+     */
+    private void initializeAppSafely() {
+        
+        // 🔥 Initialiser Google Sign-In Client (avec protection)
+        initializeGoogleSignInSafely();
 
         // ✅ Status bar visible avec couleur du thème
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
@@ -276,6 +274,18 @@ public class MainActivity extends AppCompatActivity {
         
         // ✅ MODE CACHE : Utiliser le cache si pas de connexion
         s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        
+        // 🛡️ Compatibilité multi-versions Android
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+            Log.d(TAG, "📱 Mixed content mode: COMPATIBILITY (Android 5.0+)");
+        }
+        
+        // 🛡️ Désactiver hardware acceleration sur appareils problématiques
+        if (isProblematicWebViewDevice()) {
+            webView.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null);
+            Log.w(TAG, "⚠️ Hardware acceleration DÉSACTIVÉE pour compatibilité");
+        }
         
         Log.d(TAG, "🌐 WebView configured with geolocation enabled");
         Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
@@ -1959,5 +1969,170 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "✅ [FCM-INJECT] Token injecté dans WebView");
             }
         });
+    }
+    
+    /**
+     * 🛡️ Initialise Google Sign-In de manière sécurisée
+     * Évite les crashs si Google Play Services n'est pas disponible
+     */
+    private void initializeGoogleSignInSafely() {
+        try {
+            // Vérifier d'abord si Google Play Services est disponible
+            boolean hasPlayServices = checkGooglePlayServicesQuietly();
+            
+            if (!hasPlayServices) {
+                Log.w(TAG, "⚠️ Google Play Services indisponible - Google Sign-In désactivé");
+                return;
+            }
+            
+            String webClientId = getString(R.string.default_web_client_id);
+            Log.d(TAG, "🔑 Initializing Google Sign-In with Web Client ID");
+            
+            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
+                .requestServerAuthCode(webClientId)
+                .requestEmail()
+                .requestProfile()
+                .build();
+            
+            mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+            Log.d(TAG, "✅ Google Sign-In Client initialized successfully");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error initializing Google Sign-In (non-fatal): " + e.getMessage());
+            // Ne pas crasher - l'utilisateur pourra toujours utiliser l'auth par email
+        }
+    }
+    
+    /**
+     * 🔍 Vérifie Google Play Services sans afficher de dialog (silencieux)
+     */
+    private boolean checkGooglePlayServicesQuietly() {
+        try {
+            com.google.android.gms.common.GoogleApiAvailability availability = 
+                com.google.android.gms.common.GoogleApiAvailability.getInstance();
+            int resultCode = availability.isGooglePlayServicesAvailable(this);
+            boolean available = (resultCode == com.google.android.gms.common.ConnectionResult.SUCCESS);
+            Log.d(TAG, "📱 Google Play Services: " + (available ? "✅ disponible" : "❌ indisponible (code: " + resultCode + ")"));
+            return available;
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Erreur vérification Google Play Services: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 💥 Gère les erreurs critiques au démarrage
+     * Affiche une page d'erreur plutôt que de crasher
+     */
+    private void handleCriticalError(Exception e) {
+        Log.e(TAG, "💥 handleCriticalError appelé: " + e.getMessage(), e);
+        
+        try {
+            // Essayer d'afficher une page d'erreur dans la WebView
+            if (webView == null) {
+                webView = findViewById(R.id.webview);
+            }
+            
+            if (webView != null) {
+                webView.loadUrl("file:///android_asset/error.html");
+                Log.d(TAG, "📄 Page d'erreur chargée");
+            } else {
+                // Dernier recours : Toast + fermer
+                android.widget.Toast.makeText(
+                    this, 
+                    "Erreur de démarrage. Veuillez réessayer.", 
+                    android.widget.Toast.LENGTH_LONG
+                ).show();
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "💥 Impossible d'afficher la page d'erreur: " + ex.getMessage());
+            // Dernier recours absolu
+            android.widget.Toast.makeText(
+                this, 
+                "Erreur critique", 
+                android.widget.Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+    
+    /**
+     * 🧹 Gestion de la mémoire - Libère les ressources quand le système le demande
+     */
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        
+        Log.d(TAG, "📉 onTrimMemory level: " + level);
+        
+        // TRIM_MEMORY_MODERATE = 60, TRIM_MEMORY_COMPLETE = 80
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE) {
+            // Libérer le cache WebView
+            if (webView != null) {
+                try {
+                    webView.clearCache(false);
+                    Log.d(TAG, "🧹 WebView cache cleared (level: " + level + ")");
+                } catch (Exception e) {
+                    Log.w(TAG, "⚠️ Erreur clearCache: " + e.getMessage());
+                }
+            }
+        }
+        
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
+            Log.w(TAG, "⚠️ Système en manque critique de mémoire");
+            System.gc();
+        }
+    }
+    
+    /**
+     * 🧹 Appelé quand le système est très bas en mémoire
+     */
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        Log.w(TAG, "⚠️ onLowMemory appelé - Libération des ressources");
+        
+        if (webView != null) {
+            try {
+                webView.clearCache(true);
+                webView.clearHistory();
+                Log.d(TAG, "🧹 WebView cache et history effacés");
+            } catch (Exception e) {
+                Log.w(TAG, "⚠️ Erreur libération mémoire WebView: " + e.getMessage());
+            }
+        }
+        
+        System.gc();
+    }
+    
+    /**
+     * 🔍 Vérifie si l'appareil est connu pour avoir des problèmes WebView
+     */
+    private boolean isProblematicWebViewDevice() {
+        String manufacturer = Build.MANUFACTURER.toLowerCase();
+        String model = Build.MODEL.toLowerCase();
+        int apiLevel = Build.VERSION.SDK_INT;
+        
+        // Samsung avec Android < 8 (API 26)
+        if (manufacturer.contains("samsung") && apiLevel < 26) {
+            return true;
+        }
+        
+        // Xiaomi Redmi 6 series (problèmes WebView connus)
+        if (manufacturer.contains("xiaomi") && model.contains("redmi 6")) {
+            return true;
+        }
+        
+        // Huawei avec Android < 7 (API 25)
+        if (manufacturer.contains("huawei") && apiLevel < 25) {
+            return true;
+        }
+        
+        // Appareils très anciens (Android 6.0)
+        if (apiLevel == 23) {
+            return true;
+        }
+        
+        return false;
     }
 }

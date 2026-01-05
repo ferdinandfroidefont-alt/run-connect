@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RunConnect - Erreur</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #5B7CFF 0%, #8B5CF6 50%, #7C3AED 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            color: white;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 320px;
+            width: 100%;
+        }
+        
+        .icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+            opacity: 0.9;
+            margin-bottom: 32px;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 32px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #5B7CFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+            background: white;
+        }
+        
+        .btn-icon {
+            font-size: 18px;
+        }
+        
+        .footer {
+            margin-top: 48px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏃</div>
+        
+        <h1>Oops !</h1>
+        
+        <p>
+            Une erreur est survenue lors du démarrage de l'application. 
+            Cela peut arriver lors d'une mise à jour ou d'un problème réseau.
+        </p>
+        
+        <button class="btn" onclick="retry()">
+            <span class="btn-icon">🔄</span>
+            Réessayer
+        </button>
+        
+        <div class="footer">
+            RunConnect v1.4.0
+        </div>
+    </div>
+    
+    <script>
+        function retry() {
+            // Tenter de recharger l'application
+            try {
+                if (window.location.href.includes('file://')) {
+                    // En mode fichier local, essayer de charger l'URL principale
+                    window.location.href = 'https://run-connect.lovable.app';
+                } else {
+                    // Sinon, juste recharger
+                    window.location.reload();
+                }
+            } catch (e) {
+                window.location.reload();
+            }
+        }
+        
+        // Auto-retry après 10 secondes si l'utilisateur ne fait rien
+        setTimeout(function() {
+            console.log('Auto-retry après 10 secondes...');
+        }, 10000);
+    </script>
+</body>
+</html>
