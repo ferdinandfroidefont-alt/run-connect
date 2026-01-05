@@ -70,7 +70,7 @@ export const BottomNavigation = () => {
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (
-            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full">
+            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-1">
               <Icon className={`h-7 w-7 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
               <span className={`text-xs mt-1 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
             </button>
@@ -87,7 +87,7 @@ export const BottomNavigation = () => {
           const isActive = location.pathname === path;
           const showBadge = path === '/messages' && totalUnreadCount > 0;
           return (
-            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full relative">
+            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-1 relative">
               <div className="relative">
                 <Icon className={`h-7 w-7 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
                 {showBadge && <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-destructive text-destructive-foreground text-[11px] font-semibold rounded-full px-1">{totalUnreadCount > 99 ? '99+' : totalUnreadCount}</span>}
