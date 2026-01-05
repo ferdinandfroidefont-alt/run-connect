@@ -573,16 +573,27 @@ export const usePushNotifications = () => {
       return;
     }
 
-    // 🔥 NIVEAU 8: Vérifier que le token est VRAIMENT dans la base
+    // 🔥 FIX: Vérifier session Supabase AVANT la requête + fallback token mémoire
+    let tokenToUse = fcmToken;
+    
     try {
       console.log('🔍 [TEST] Vérification token - user.id:', user.id);
       console.log('🔍 [TEST] window.fcmToken disponible:', !!(window as any).fcmToken);
       
+      // 1. Vérifier/rafraîchir la session Supabase d'abord
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      if (!sessionCheck?.session?.user) {
+        console.log('⚠️ [TEST] Session non synchronisée, refresh...');
+        await supabase.auth.refreshSession();
+        await new Promise(r => setTimeout(r, 500));
+      }
+      
+      // 2. Requête avec maybeSingle pour éviter erreur si pas de résultat
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('push_token')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       console.log('🔍 [TEST] Résultat requête Supabase:', {
         profile,
@@ -591,43 +602,63 @@ export const usePushNotifications = () => {
         hasToken: !!profile?.push_token
       });
       
+      // 3. Si erreur RLS (42501) ou pas de résultat, utiliser token mémoire comme fallback
       if (profileError) {
-        console.error('❌ [TEST] Erreur Supabase:', {
-          code: profileError.code,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint
-        });
-        toast({
-          title: "Erreur Supabase",
-          description: `${profileError.code}: ${profileError.message}`,
-          variant: "destructive"
-        });
-        return;
+        console.warn('⚠️ [TEST] Erreur Supabase (RLS?):', profileError.code, profileError.message);
+        
+        if (fcmToken && fcmToken.length > 50) {
+          console.log('✅ [TEST] Fallback sur token mémoire:', fcmToken.substring(0, 30) + '...');
+          tokenToUse = fcmToken;
+        } else {
+          toast({
+            title: "Erreur session",
+            description: "Session désynchronisée. Relancez l'app.",
+            variant: "destructive"
+          });
+          return;
+        }
+      } else if (!profile?.push_token) {
+        // Pas de token en base mais on a un token mémoire
+        if (fcmToken && fcmToken.length > 50) {
+          console.log('⚠️ [TEST] Token absent en base, utilisation du token mémoire');
+          tokenToUse = fcmToken;
+          
+          // Sauvegarder le token en arrière-plan (sans bloquer)
+          savePushToken(fcmToken).catch(err => {
+            console.warn('⚠️ [TEST] Sauvegarde token en arrière-plan échouée:', err);
+          });
+        } else {
+          console.error('❌ [TEST] Aucun token disponible (ni base, ni mémoire)');
+          toast({
+            title: "Token non disponible",
+            description: "Relancez l'app pour générer un nouveau token",
+            variant: "destructive"
+          });
+          return;
+        }
+      } else {
+        console.log('✅ [TEST] Token confirmé dans la base:', profile.push_token.substring(0, 30) + '...');
+        tokenToUse = profile.push_token;
       }
-      
-      if (!profile?.push_token) {
-        console.error('❌ [TEST] Token pas trouvé dans la base !');
-        console.log('🔍 [TEST] window.fcmToken =', (window as any).fcmToken?.substring(0, 40));
-        toast({
-          title: "Token non sauvegardé",
-          description: `user.id: ${user.id.substring(0, 8)}... - Utilisez "Forcer sauvegarde"`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      console.log('✅ [TEST] Token confirmé dans la base:', profile.push_token.substring(0, 30) + '...');
       
     } catch (error: any) {
       console.error('❌ [TEST] Erreur vérification token:', error);
-      toast({
-        title: "Erreur vérification",
-        description: error?.message || "Impossible de vérifier le token",
-        variant: "destructive"
-      });
-      return;
+      
+      // Fallback sur token mémoire même en cas d'exception
+      if (fcmToken && fcmToken.length > 50) {
+        console.log('✅ [TEST] Fallback exception sur token mémoire');
+        tokenToUse = fcmToken;
+      } else {
+        toast({
+          title: "Erreur vérification",
+          description: error?.message || "Impossible de vérifier le token",
+          variant: "destructive"
+        });
+        return;
+      }
     }
+    
+    console.log('✅ [TEST] Token final utilisé:', tokenToUse?.substring(0, 30) + '...');
 
     try {
       console.log('🧪 [TEST] Sending test notification...');
@@ -704,7 +735,7 @@ export const usePushNotifications = () => {
         variant: "destructive"
       });
     }
-  }, [user, toast, recheckNativeNow, token]);
+  }, [user, toast, recheckNativeNow, token, savePushToken]);
 
   // Ref pour tracker si les listeners sont configurés
   const listenersConfigured = useCallback(() => {
