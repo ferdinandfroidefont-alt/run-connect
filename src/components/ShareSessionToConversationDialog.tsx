@@ -146,25 +146,49 @@ Télécharge RunConnect pour participer : https://run-connect.lovable.app`;
 
   const handleNativeShare = async () => {
     const shareMessage = getShareMessage();
+    const sessionUrl = `https://run-connect.lovable.app/session/${session?.id}`;
     
     try {
+      // Priority 1: Native Android WebView bridge
+      const win = window as any;
+      if (win.AndroidBridge?.shareText) {
+        win.AndroidBridge.shareText(shareMessage, sessionUrl);
+        toast({ title: "Partagé !" });
+        return;
+      }
+      
+      // Priority 2: Capacitor Share plugin
+      try {
+        const { Share } = await import('@capacitor/share');
+        const canShare = await Share.canShare();
+        if (canShare.value) {
+          await Share.share({
+            title: session?.title || 'Séance RunConnect',
+            text: shareMessage,
+            dialogTitle: 'Partager la séance'
+          });
+          return;
+        }
+      } catch {
+        // Capacitor not available, continue to next option
+      }
+      
+      // Priority 3: Web Share API
       if (navigator.share) {
         await navigator.share({
           title: session?.title || 'Séance RunConnect',
           text: shareMessage,
         });
-        toast({
-          title: "Partagé !",
-          description: "La séance a été partagée"
-        });
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(shareMessage);
-        toast({
-          title: "✅ Lien copié !",
-          description: "Collez-le dans n'importe quelle application"
-        });
+        toast({ title: "Partagé !" });
+        return;
       }
+      
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(shareMessage);
+      toast({
+        title: "✅ Lien copié !",
+        description: "Collez-le dans n'importe quelle application"
+      });
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         try {

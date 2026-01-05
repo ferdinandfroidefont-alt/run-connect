@@ -193,7 +193,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
       // Priority 1: Native Android WebView bridge
       const win = window as any;
       if (win.AndroidBridge?.shareText) {
-        win.AndroidBridge.shareText(shareMessage);
+        win.AndroidBridge.shareText(shareMessage, profileUrl);
         return;
       }
       
