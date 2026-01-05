@@ -190,6 +190,13 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
     const profileUrl = getProfileUrl();
     
     try {
+      // Try Android WebView native bridge first
+      if ((window as any).AndroidBridge?.shareText) {
+        (window as any).AndroidBridge.shareText(shareMessage, profileUrl);
+        return;
+      }
+      
+      // Then try Capacitor Share plugin
       if (Capacitor.isNativePlatform()) {
         await Share.share({
           title: 'Rejoins-moi sur RunConnect',
@@ -197,27 +204,42 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           url: profileUrl,
           dialogTitle: 'Partager mon profil'
         });
-      } else if (navigator.share) {
+        return;
+      }
+      
+      // Then try Web Share API (works on most mobile browsers)
+      if (navigator.share) {
         await navigator.share({
           title: 'Rejoins-moi sur RunConnect',
           text: shareMessage,
           url: profileUrl
         });
-      } else {
-        await navigator.clipboard.writeText(shareMessage);
-        toast({
-          title: "✅ Lien copié !",
-          description: "Collez-le dans n'importe quelle application"
-        });
+        return;
       }
+      
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(shareMessage);
+      toast({
+        title: "✅ Lien copié !",
+        description: "Collez-le dans n'importe quelle application"
+      });
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error('Share error:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de partager",
-          variant: "destructive"
-        });
+        // Fallback on error: try clipboard
+        try {
+          await navigator.clipboard.writeText(shareMessage);
+          toast({
+            title: "✅ Lien copié !",
+            description: "Collez-le dans n'importe quelle application"
+          });
+        } catch {
+          toast({
+            title: "Erreur",
+            description: "Impossible de partager",
+            variant: "destructive"
+          });
+        }
       }
     }
   };
