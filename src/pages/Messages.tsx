@@ -1720,10 +1720,17 @@ const Messages = () => {
                             />
                           )}
                           
-                          {/* Bubble only if there's non-image content */}
+                          {/* Emoji-only messages - No bubble, large display */}
+                          {message.content && !message.deleted_at && isOnlyEmojis(message.content) && !message.message_type && !message.file_url && (
+                            <div className="py-1">
+                              <p className="text-4xl leading-tight">{message.content}</p>
+                            </div>
+                          )}
+
+                          {/* Bubble only if there's non-image, non-emoji-only content */}
                           {(message.message_type === 'session' || 
                             (message.file_url && !message.file_type?.startsWith('image/')) ||
-                            (message.content && !message.content.match(/^(Image partagée)$/i)) ||
+                            (message.content && !message.content.match(/^(Image partagée)$/i) && !isOnlyEmojis(message.content)) ||
                             message.deleted_at) && (
                             <div
                               className={`rounded-2xl p-2 transition-all duration-200 ${
@@ -1737,35 +1744,48 @@ const Messages = () => {
                                 <p className="text-sm italic text-muted-foreground">Message supprimé</p>
                               ) : (
                                 <>
-                                  {/* Session sharing */}
+                                  {/* Session sharing - iOS Card Style */}
                                   {message.message_type === 'session' && message.session && (
                                     <div 
-                                      className="mb-2 p-3 bg-background/50 rounded border cursor-pointer hover:bg-background/70 transition-colors"
+                                      className="mb-2 bg-background rounded-xl overflow-hidden shadow-sm border border-border/50 cursor-pointer active:scale-[0.98] transition-transform"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleSessionClick(message.session);
                                       }}
                                     >
-                                      <div className="flex items-center justify-between mb-2">
+                                      {/* Header */}
+                                      <div className="px-3 py-2 bg-primary/10 border-b border-border/30">
                                         <div className="flex items-center gap-2">
-                                          <Calendar className="h-4 w-4 text-primary" />
-                                          <span className="font-medium text-sm">{message.session.title}</span>
+                                          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+                                            <Calendar className="h-3.5 w-3.5 text-primary-foreground" />
+                                          </div>
+                                          <span className="font-semibold text-sm text-foreground flex-1 truncate">{message.session.title}</span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">Cliquer pour voir sur la carte</span>
                                       </div>
-                                      <div className="space-y-1 text-xs">
-                                        <div className="flex items-center gap-1">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
+                                      {/* Content */}
+                                      <div className="p-3 space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-5 h-5 rounded-md bg-[#FF3B30]/10 flex items-center justify-center">
+                                            <Clock className="h-3 w-3 text-[#FF3B30]" />
+                                          </div>
+                                          <span className="text-xs text-foreground">{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                          <MapPin className="h-3 w-3" />
-                                          <span>{message.session.location_name}</span>
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-5 h-5 rounded-md bg-[#34C759]/10 flex items-center justify-center">
+                                            <MapPin className="h-3 w-3 text-[#34C759]" />
+                                          </div>
+                                          <span className="text-xs text-muted-foreground truncate">{message.session.location_name}</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                          <Users className="h-3 w-3" />
-                                          <span>{message.session.current_participants}/{message.session.max_participants} participants</span>
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-5 h-5 rounded-md bg-[#007AFF]/10 flex items-center justify-center">
+                                            <Users className="h-3 w-3 text-[#007AFF]" />
+                                          </div>
+                                          <span className="text-xs text-muted-foreground">{message.session.current_participants}/{message.session.max_participants} participants</span>
                                         </div>
+                                      </div>
+                                      {/* Footer CTA */}
+                                      <div className="px-3 py-2 bg-secondary/50 border-t border-border/30">
+                                        <span className="text-xs text-primary font-medium">Voir sur la carte →</span>
                                       </div>
                                     </div>
                                   )}
@@ -1792,15 +1812,9 @@ const Messages = () => {
                                     </div>
                                   )}
                                   
-                                  {/* Show text content only if it's not a media-only message */}
-                                  {message.content && !message.content.match(/^(Image partagée|Message vocal)$/i) && (
-                                    <p className={`${
-                                      isOnlyEmojis(message.content) 
-                                        ? 'text-3xl leading-none' 
-                                        : 'text-sm'
-                                    }`}>
-                                      {message.content}
-                                    </p>
+                                  {/* Show text content only if it's not a media-only message and not emoji-only */}
+                                  {message.content && !message.content.match(/^(Image partagée|Message vocal)$/i) && !isOnlyEmojis(message.content) && (
+                                    <p className="text-sm">{message.content}</p>
                                   )}
                                 </>
                               )}
