@@ -505,10 +505,14 @@ export const InteractiveMap = ({
           markerDiv.style.position = 'absolute';
           markerDiv.style.transform = 'translate(-50%, -100%)';
           markerDiv.style.cursor = 'pointer';
+          // Add invisible hit area for better mobile touch (min 56px)
+          markerDiv.style.padding = '12px';
+          markerDiv.style.margin = '-12px';
           const img = document.createElement('img');
           img.src = markerIcon;
-          img.style.width = '48px';
-          img.style.height = '60px';
+          img.style.width = '56px';
+          img.style.height = '70px';
+          img.style.pointerEvents = 'none'; // Let parent handle clicks
           img.className = isNewSession ? 'pulse-marker-animation' : 'imminent-marker-animation';
           markerDiv.appendChild(img);
           const position = new google.maps.LatLng(Number(session.location_lat), Number(session.location_lng));
@@ -518,24 +522,27 @@ export const InteractiveMap = ({
           htmlMarker.setMap(map.current);
           return htmlMarker;
         } else {
-          // Create standard marker for normal sessions
-          const marker = new google.maps.Marker({
-            position: {
-              lat: Number(session.location_lat),
-              lng: Number(session.location_lng)
-            },
-            map: map.current,
-            title: session.title,
-            icon: {
-              url: markerIcon,
-              scaledSize: new google.maps.Size(48, 60),
-              anchor: new google.maps.Point(24, 60)
-            }
-          });
-          marker.addListener('click', () => {
+          // Create HTML marker for normal sessions with better touch target
+          const HTMLMarkerClass = createHTMLMarkerClass();
+          const markerDiv = document.createElement('div');
+          markerDiv.style.position = 'absolute';
+          markerDiv.style.transform = 'translate(-50%, -100%)';
+          markerDiv.style.cursor = 'pointer';
+          // Add invisible hit area for better mobile touch (min 56px)
+          markerDiv.style.padding = '12px';
+          markerDiv.style.margin = '-12px';
+          const img = document.createElement('img');
+          img.src = markerIcon;
+          img.style.width = '56px';
+          img.style.height = '70px';
+          img.style.pointerEvents = 'none'; // Let parent handle clicks
+          markerDiv.appendChild(img);
+          const position = new google.maps.LatLng(Number(session.location_lat), Number(session.location_lng));
+          const htmlMarker = new HTMLMarkerClass(position, markerDiv, () => {
             setPreviewSession(session);
           });
-          return marker;
+          htmlMarker.setMap(map.current);
+          return htmlMarker;
         }
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
@@ -595,7 +602,7 @@ export const InteractiveMap = ({
       // Convert image to base64 first
       const base64Image = await imageUrlToBase64(profileImageUrl);
       console.log('📸 Image converted to base64, length:', base64Image.length);
-      const svg = generateRunConnectMarkerSVG(base64Image, 48);
+      const svg = generateRunConnectMarkerSVG(base64Image, 56);
       const dataUrl = svgToDataUrl(svg);
 
       // Cache the generated marker
