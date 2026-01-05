@@ -148,10 +148,15 @@ Télécharge RunConnect pour participer : https://run-connect.lovable.app`;
     const shareMessage = getShareMessage();
     const sessionUrl = `https://run-connect.lovable.app/session/${session?.id}`;
     
+    console.log('📤 [SHARE SESSION] Début du partage');
+    console.log('📤 [SHARE SESSION] AndroidBridge:', !!(window as any).AndroidBridge);
+    console.log('📤 [SHARE SESSION] shareText type:', typeof (window as any).AndroidBridge?.shareText);
+    
     try {
       // Priority 1: Native Android WebView bridge
       const win = window as any;
-      if (win.AndroidBridge?.shareText) {
+      if (win.AndroidBridge && typeof win.AndroidBridge.shareText === 'function') {
+        console.log('📤 [SHARE SESSION] Appel AndroidBridge.shareText()');
         win.AndroidBridge.shareText(shareMessage, sessionUrl);
         toast({ title: "Partagé !" });
         return;
