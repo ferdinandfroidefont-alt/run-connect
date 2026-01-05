@@ -4,6 +4,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
@@ -97,10 +100,10 @@ public class MessagingService extends FirebaseMessagingService {
     }
 
     /**
-     * Affiche une notification système
+     * Affiche une notification système avec son personnalisé et logo RunConnect
      */
     private void showNotification(String title, String body, java.util.Map<String, String> data) {
-        // Créer le canal de notification
+        // Créer le canal de notification avec son personnalisé
         createNotificationChannel();
         
         // Intent pour ouvrir l'app quand on clique sur la notification
@@ -112,7 +115,7 @@ public class MessagingService extends FirebaseMessagingService {
             intent.putExtra(entry.getKey(), entry.getValue());
         }
         
-        // ✅ MODIFIÉ: FLAG_IMMUTABLE pour Android 12+
+        // ✅ FLAG_IMMUTABLE pour Android 12+
         int flags = PendingIntent.FLAG_ONE_SHOT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             flags |= PendingIntent.FLAG_IMMUTABLE;
@@ -130,20 +133,31 @@ public class MessagingService extends FirebaseMessagingService {
         // Increment counter for grouping
         notificationCounter++;
         
-        // ✅ MODIFIÉ: Notification plus riche avec groupement
+        // 🔥 Notification avec icône RunConnect et son personnalisé
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification) // Icône RunConnect (logo R)
+            .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher)) // Logo couleur
             .setContentTitle(title != null ? title : "RunConnect")
             .setContentText(body != null ? body : "Nouvelle notification")
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(body)) // ← Texte long
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body)) // Texte long
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL) // ← Son + vibration + LED
             .setContentIntent(pendingIntent)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // ← Affichage écran verrouillé
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Affichage écran verrouillé
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setColor(0xFF3B82F6) // ← Couleur primaire (bleu)
-            .setGroup(GROUP_KEY); // ← Groupement des notifications
+            .setColor(0xFF3B82F6) // Couleur primaire (bleu RunConnect)
+            .setGroup(GROUP_KEY); // Groupement des notifications
+        
+        // 🔊 Son personnalisé (si le fichier existe dans res/raw/)
+        try {
+            Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/raw/runconnect_notification");
+            notificationBuilder.setSound(soundUri);
+            Log.d(TAG, "🔊 Son personnalisé appliqué: runconnect_notification");
+        } catch (Exception e) {
+            // Fallback sur le son par défaut
+            notificationBuilder.setDefaults(NotificationCompat.DEFAULT_ALL);
+            Log.d(TAG, "🔊 Son par défaut (fichier custom non trouvé)");
+        }
         
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         
@@ -151,7 +165,7 @@ public class MessagingService extends FirebaseMessagingService {
             int notificationId = (int) System.currentTimeMillis();
             notificationManager.notify(notificationId, notificationBuilder.build());
             
-            Log.d(TAG, "✅ [FCM] Notification affichée (ID: " + notificationId + ")");
+            Log.d(TAG, "✅ [FCM] Notification affichée avec logo RunConnect (ID: " + notificationId + ")");
             
             // Create summary notification if we have multiple notifications
             if (notificationCounter > 1) {
@@ -167,7 +181,7 @@ public class MessagingService extends FirebaseMessagingService {
      */
     private void createSummaryNotification(NotificationManager notificationManager) {
         NotificationCompat.Builder summaryBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification) // Logo RunConnect
             .setContentTitle("RunConnect")
             .setContentText(notificationCounter + " nouvelles notifications")
             .setGroup(GROUP_KEY)
@@ -180,7 +194,7 @@ public class MessagingService extends FirebaseMessagingService {
     }
 
     /**
-     * Crée le canal de notification pour Android O+
+     * Crée le canal de notification pour Android O+ avec son personnalisé
      */
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -193,6 +207,19 @@ public class MessagingService extends FirebaseMessagingService {
             channel.enableVibration(true);
             channel.enableLights(true);
             channel.setShowBadge(true);
+            
+            // 🔊 Son personnalisé pour le canal
+            try {
+                Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/raw/runconnect_notification");
+                AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .build();
+                channel.setSound(soundUri, audioAttributes);
+                Log.d(TAG, "🔊 Canal créé avec son personnalisé");
+            } catch (Exception e) {
+                Log.d(TAG, "🔊 Canal avec son par défaut (fichier custom non trouvé)");
+            }
             
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
