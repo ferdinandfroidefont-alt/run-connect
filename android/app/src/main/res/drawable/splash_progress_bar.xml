@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Background de la barre (fond transparent avec bordure) -->
+    <!-- Background de la barre (gris iOS) -->
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
             <corners android:radius="8dp" />
-            <solid android:color="#33FFFFFF" />
+            <solid android:color="#E5E5EA" />
         </shape>
     </item>
     
-    <!-- Progress de la barre (blanc avec glow) -->
+    <!-- Progress de la barre (bleu iOS) -->
     <item android:id="@android:id/progress">
         <clip>
             <shape android:shape="rectangle">
                 <corners android:radius="8dp" />
-                <solid android:color="@android:color/white" />
+                <solid android:color="#007AFF" />
             </shape>
         </clip>
     </item>
