@@ -371,7 +371,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
-      <DialogContent className="p-0 gap-0 fixed inset-0 w-full h-full max-w-full translate-x-0 translate-y-0 top-0 left-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:inset-auto sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0 rounded-none sm:rounded-xl">
+      <DialogContent className="p-0 gap-0 !fixed !inset-0 !w-full !h-full !max-w-full !translate-x-0 !translate-y-0 !top-0 !left-0 !rounded-none sm:!left-[50%] sm:!top-[50%] sm:!translate-x-[-50%] sm:!translate-y-[-50%] sm:!inset-auto sm:!max-w-md sm:!h-auto sm:!max-h-[90vh] sm:!rounded-xl bg-secondary border-0">
         {/* iOS Header */}
         <div className="sticky top-0 z-10 bg-background border-b border-border">
           <div className="flex items-center justify-between h-[56px] px-4">
