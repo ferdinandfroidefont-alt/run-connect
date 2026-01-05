@@ -513,18 +513,28 @@ export const usePushNotifications = () => {
       return;
     }
 
-    // 🔥 RE-VÉRIFICATION IMMÉDIATE avant d'agir (corrige le bug post mise à jour design)
-    const isCurrentlyNative = recheckNativeNow();
+    // 🔥 AMÉLIORATION: Détection native multi-critères robuste
+    const nativeIndicators = {
+      capacitorForceNative: (window as any).CapacitorForceNative === true,
+      androidBridge: typeof (window as any).AndroidBridge !== 'undefined',
+      fcmToken: typeof (window as any).fcmToken === 'string' && (window as any).fcmToken.length > 50,
+      capacitorNative: Capacitor.isNativePlatform(),
+      protocolNative: window.location.protocol === 'file:' || window.location.protocol === 'capacitor:',
+      webViewUserAgent: /Android.*wv|WebView/i.test(navigator.userAgent)
+    };
+    
+    const nativeScore = Object.values(nativeIndicators).filter(Boolean).length;
+    const isCurrentlyNative = nativeScore >= 1 || nativeIndicators.fcmToken || nativeIndicators.androidBridge;
+    
+    console.log('🔍 [TEST] Détection native multi-critères:', nativeIndicators);
+    console.log('🔍 [TEST] Score natif:', nativeScore, '/ 6, isNative:', isCurrentlyNative);
     
     if (!isCurrentlyNative) {
-      console.log('❌ [TEST] Mode web détecté après re-vérification');
-      console.log('📱 [TEST] CapacitorForceNative:', (window as any).CapacitorForceNative);
-      console.log('📱 [TEST] AndroidBridge:', typeof (window as any).AndroidBridge);
-      console.log('📱 [TEST] Platform:', Capacitor.getPlatform());
+      console.log('❌ [TEST] Mode web détecté - aucun indicateur natif trouvé');
       
       toast({
         title: "Mode Web détecté",
-        description: "Les notifications push nécessitent l'application Android ou iOS",
+        description: "Installez l'app Android pour recevoir les notifications push",
         variant: "default"
       });
       return;
