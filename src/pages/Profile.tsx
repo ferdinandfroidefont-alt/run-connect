@@ -29,7 +29,6 @@ import { ReliabilityBadge } from "@/components/ReliabilityBadge";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
-
 interface Profile {
   username: string;
   display_name: string | null;
@@ -54,7 +53,6 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
 }
-
 interface UserRoute {
   id: string;
   name: string;
@@ -63,18 +61,31 @@ interface UserRoute {
   total_elevation_gain: number | null;
   created_at: string;
 }
-
 const Profile = () => {
-  const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
-  const { userProfile: globalProfile, refreshProfile: refreshGlobalProfile } = useUserProfile();
+  const {
+    user,
+    signOut,
+    subscriptionInfo,
+    refreshSubscription
+  } = useAuth();
+  const {
+    userProfile: globalProfile,
+    refreshProfile: refreshGlobalProfile
+  } = useUserProfile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { userId: urlUserId } = useParams();
+  const {
+    userId: urlUserId
+  } = useParams();
   const viewingUserId = urlUserId || searchParams.get('user'); // ID de l'utilisateur à voir via URL ou query param
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
-  const { theme, setTheme } = useTheme();
-  const { shareProfile } = useShareProfile();
-  
+  const {
+    theme,
+    setTheme
+  } = useTheme();
+  const {
+    shareProfile
+  } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -101,10 +112,16 @@ const Profile = () => {
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
-  const { toast } = useToast();
-  const { selectFromGallery, loading: cameraLoading } = useCamera();
-  const { t } = useLanguage();
-  
+  const {
+    toast
+  } = useToast();
+  const {
+    selectFromGallery,
+    loading: cameraLoading
+  } = useCamera();
+  const {
+    t
+  } = useLanguage();
 
   // Vérifier si on arrive avec un message d'erreur
   useEffect(() => {
@@ -118,7 +135,11 @@ const Profile = () => {
       // Nettoyer l'URL
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('error');
-      navigate({ search: newParams.toString() }, { replace: true });
+      navigate({
+        search: newParams.toString()
+      }, {
+        replace: true
+      });
     }
   }, [searchParams, toast, navigate]);
 
@@ -133,10 +154,13 @@ const Profile = () => {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('tab');
       newParams.delete('focus');
-      navigate({ search: newParams.toString() }, { replace: true });
+      navigate({
+        search: newParams.toString()
+      }, {
+        replace: true
+      });
     }
   }, [searchParams, navigate, isViewingOtherUser]);
-
   useEffect(() => {
     if (user) {
       // Si on regarde son propre profil, utiliser le profil global
@@ -149,7 +173,6 @@ const Profile = () => {
         // Sinon charger le profil spécifique
         fetchProfile();
       }
-      
       fetchFollowCounts();
       fetchReliabilityRate(); // Fetch for all profiles
       if (!isViewingOtherUser) {
@@ -167,80 +190,74 @@ const Profile = () => {
       setNotificationPermission(Notification.permission);
     }
   }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
-
   const fetchFollowCounts = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
-
     try {
       // Get follower count
-      const { data: followerData } = await supabase.rpc('get_follower_count', { 
-        profile_user_id: targetUserId 
+      const {
+        data: followerData
+      } = await supabase.rpc('get_follower_count', {
+        profile_user_id: targetUserId
       });
-      
+
       // Get following count
-      const { data: followingData } = await supabase.rpc('get_following_count', { 
-        profile_user_id: targetUserId 
+      const {
+        data: followingData
+      } = await supabase.rpc('get_following_count', {
+        profile_user_id: targetUserId
       });
-      
       setFollowerCount(followerData || 0);
       setFollowingCount(followingData || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
     }
   };
-
   const fetchCommonClubs = async () => {
     if (!user || !viewingUserId) return;
-
     try {
-      const { data, error } = await supabase.rpc('get_common_clubs', {
+      const {
+        data,
+        error
+      } = await supabase.rpc('get_common_clubs', {
         user_1_id: user.id,
         user_2_id: viewingUserId
       });
-
       if (error) throw error;
       setCommonClubs(data || []);
     } catch (error) {
       console.error('Error fetching common clubs:', error);
     }
   };
-
   const fetchConnectionHistory = async () => {
     if (!viewingUserId || !user || user.email !== 'ferdinand.froidefont@gmail.com') return;
-
     try {
       // Fetch audit logs for login activities for this user
-      const { data, error } = await supabase
-        .from('audit_log')
-        .select('timestamp, details, action')
-        .eq('user_id', viewingUserId)
-        .in('action', ['LOGIN', 'LOGOUT', 'SESSION_START', 'SESSION_END'])
-        .order('timestamp', { ascending: false })
-        .limit(10);
-
+      const {
+        data,
+        error
+      } = await supabase.from('audit_log').select('timestamp, details, action').eq('user_id', viewingUserId).in('action', ['LOGIN', 'LOGOUT', 'SESSION_START', 'SESSION_END']).order('timestamp', {
+        ascending: false
+      }).limit(10);
       if (error) {
         console.error('Error fetching connection history:', error);
         return;
       }
-
       setConnectionHistory(data || []);
     } catch (error) {
       console.error('Error fetching connection history:', error);
     }
   };
-
   const fetchUserRoutes = async () => {
     if (!user) return;
-
     setRoutesLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('routes')
-        .select('id, name, description, total_distance, total_elevation_gain, created_at')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('routes').select('id, name, description, total_distance, total_elevation_gain, created_at').eq('created_by', user.id).order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
       setUserRoutes(data || []);
     } catch (error) {
@@ -248,24 +265,20 @@ const Profile = () => {
       toast({
         title: "Erreur",
         description: "Impossible de charger vos parcours",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setRoutesLoading(false);
     }
   };
-
   const fetchReliabilityRate = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
-
     try {
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select('reliability_rate, total_sessions_completed, total_sessions_joined')
-        .eq('user_id', targetUserId)
-        .maybeSingle();
-
+      const {
+        data,
+        error
+      } = await supabase.from('user_stats').select('reliability_rate, total_sessions_completed, total_sessions_joined').eq('user_id', targetUserId).maybeSingle();
       if (error && error.code !== 'PGRST116') throw error;
       if (data) {
         setReliabilityRate(data.reliability_rate || 100);
@@ -274,62 +287,58 @@ const Profile = () => {
       }
 
       // Compter les sessions créées
-      const { count: createdCount } = await supabase
-        .from('sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('organizer_id', targetUserId);
-      
+      const {
+        count: createdCount
+      } = await supabase.from('sessions').select('id', {
+        count: 'exact',
+        head: true
+      }).eq('organizer_id', targetUserId);
       setTotalSessionsCreated(createdCount || 0);
     } catch (error) {
       console.error('Error fetching reliability rate:', error);
     }
   };
-
   const deleteRoute = async (routeId: string) => {
     try {
-      const { error } = await supabase
-        .from('routes')
-        .delete()
-        .eq('id', routeId)
-        .eq('created_by', user?.id);
-
+      const {
+        error
+      } = await supabase.from('routes').delete().eq('id', routeId).eq('created_by', user?.id);
       if (error) throw error;
-
       setUserRoutes(prev => prev.filter(route => route.id !== routeId));
       toast({
         title: "Parcours supprimé",
-        description: "Le parcours a été supprimé avec succès",
+        description: "Le parcours a été supprimé avec succès"
       });
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de supprimer le parcours",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const fetchProfile = async (retryCount = 0) => {
     try {
       const targetUserId = viewingUserId || user?.id;
       if (!targetUserId) return;
-
       console.log(`🔍 [Profile] Fetching profile (attempt ${retryCount + 1}/3)`);
       console.log(`🔍 [Profile] Target User ID:`, targetUserId);
       console.log(`🔍 [Profile] Is viewing other user:`, isViewingOtherUser);
-
       if (isViewingOtherUser) {
         // Viewing another user's profile - use public profile function
-        const { data, error } = await supabase.rpc('get_public_profile_safe', {
+        const {
+          data,
+          error
+        } = await supabase.rpc('get_public_profile_safe', {
           profile_user_id: targetUserId
         });
-        
         if (error) throw error;
         if (data && data.length > 0) {
           // Pour les profils publics, on ajoute des valeurs par défaut pour les champs manquants
           const publicProfile = {
             ...data[0],
-            phone: null, // Les profils publics ne montrent pas le téléphone
+            phone: null,
+            // Les profils publics ne montrent pas le téléphone
             notifications_enabled: false,
             rgpd_accepted: false,
             security_rules_accepted: false
@@ -340,12 +349,10 @@ const Profile = () => {
         }
       } else {
         // Viewing own profile - get full profile
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', targetUserId)
-          .single();
-
+        const {
+          data,
+          error
+        } = await supabase.from('profiles').select('*').eq('user_id', targetUserId).single();
         if (error) {
           // Si l'erreur est liée à l'authentification, retry
           if (error.message.includes('JWT') && retryCount < 2) {
@@ -355,7 +362,6 @@ const Profile = () => {
           }
           throw error;
         }
-        
         console.log(`✅ [Profile] Own profile loaded:`, data?.username);
         setProfile(data);
         setFormData(data);
@@ -365,13 +371,12 @@ const Profile = () => {
       toast({
         title: "Erreur",
         description: "Impossible de charger le profil. Reconnectez-vous si le problème persiste.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -380,7 +385,7 @@ const Profile = () => {
         toast({
           title: "Erreur",
           description: "Veuillez sélectionner un fichier image.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
@@ -390,13 +395,12 @@ const Profile = () => {
         toast({
           title: "Erreur",
           description: "La taille du fichier ne doit pas dépasser 5MB.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
-
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         const imageSrc = e.target?.result as string;
         setOriginalImageSrc(imageSrc);
         setShowCropEditor(true);
@@ -404,44 +408,38 @@ const Profile = () => {
       reader.readAsDataURL(file);
     }
   };
-
   const handleCropComplete = (croppedImageBlob: Blob) => {
     // Créer un fichier à partir du blob croppé
-    const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
+    const croppedFile = new File([croppedImageBlob], 'avatar.jpg', {
+      type: 'image/jpeg'
+    });
     setAvatarFile(croppedFile);
-    
+
     // Créer l'URL de prévisualisation
     const previewUrl = URL.createObjectURL(croppedImageBlob);
     setAvatarPreview(previewUrl);
-    
     setShowCropEditor(false);
   };
-
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
       const filePath = `${user?.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
+      const {
+        error: uploadError
+      } = await supabase.storage.from('avatars').upload(filePath, file);
       if (uploadError) {
         throw uploadError;
       }
-
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
+      const {
+        data
+      } = supabase.storage.from('avatars').getPublicUrl(filePath);
       return data.publicUrl;
     } catch (error) {
       console.error('Erreur upload avatar:', error);
       return null;
     }
   };
-
   const updateProfile = async () => {
     try {
       setLoading(true);
@@ -456,117 +454,109 @@ const Profile = () => {
           toast({
             title: "Erreur",
             description: "Impossible d'uploader la photo de profil.",
-            variant: "destructive",
+            variant: "destructive"
           });
           setLoading(false);
           return;
         }
       }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ ...formData, avatar_url: avatarUrl })
-        .eq('user_id', user?.id);
-
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        ...formData,
+        avatar_url: avatarUrl
+      }).eq('user_id', user?.id);
       if (error) throw error;
-      
-      setProfile({ ...profile!, ...formData, avatar_url: avatarUrl });
+      setProfile({
+        ...profile!,
+        ...formData,
+        avatar_url: avatarUrl
+      });
       setIsEditing(false);
       setAvatarFile(null);
       setAvatarPreview("");
-      
+
       // Rafraîchir le profil global
       await refreshGlobalProfile();
-      
       toast({
         title: "Profil mis à jour !",
-        description: "Vos modifications ont été sauvegardées.",
+        description: "Vos modifications ont été sauvegardées."
       });
     } catch (error: any) {
       toast({
         title: "Erreur",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const handlePasswordReset = async () => {
     if (!user?.email) {
       toast({
         title: "Erreur",
         description: "Impossible de récupérer votre adresse email.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsChangingPassword(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: window.AndroidBridge 
-          ? 'app.runconnect://auth'
-          : `${window.location.origin}/auth`,
+      const {
+        error
+      } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: window.AndroidBridge ? 'app.runconnect://auth' : `${window.location.origin}/auth`
       });
-
       if (error) throw error;
-
       toast({
         title: "Email envoyé !",
-        description: "Vérifiez votre boîte email pour réinitialiser votre mot de passe.",
+        description: "Vérifiez votre boîte email pour réinitialiser votre mot de passe."
       });
     } catch (error: any) {
       toast({
         title: "Erreur",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsChangingPassword(false);
     }
   };
-
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
       try {
         const permission = await Notification.requestPermission();
         setNotificationPermission(permission);
-        
+
         // Update profile with new permission
         if (user) {
-          await supabase
-            .from('profiles')
-            .update({ notifications_enabled: permission === 'granted' })
-            .eq('user_id', user.id);
+          await supabase.from('profiles').update({
+            notifications_enabled: permission === 'granted'
+          }).eq('user_id', user.id);
         }
-        
         toast({
           title: permission === 'granted' ? "Notifications activées" : "Notifications refusées",
-          description: permission === 'granted' ? 
-            "Vous recevrez désormais des notifications." : 
-            "Vous ne recevrez pas de notifications."
+          description: permission === 'granted' ? "Vous recevrez désormais des notifications." : "Vous ne recevrez pas de notifications."
         });
       } catch (error) {
         console.error('Error requesting notification permission:', error);
       }
     }
   };
-
   const updatePrivacySettings = async (field: string, value: boolean) => {
     if (!user) return;
-
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ [field]: value })
-        .eq('user_id', user.id);
-
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        [field]: value
+      }).eq('user_id', user.id);
       if (error) throw error;
-
-      setProfile(prev => prev ? { ...prev, [field]: value } : null);
-      
+      setProfile(prev => prev ? {
+        ...prev,
+        [field]: value
+      } : null);
       toast({
         title: "Paramètres mis à jour",
         description: "Vos préférences ont été sauvegardées."
@@ -579,44 +569,25 @@ const Profile = () => {
       });
     }
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center">
+    return <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-[#F2F2F7]">
+  return <div className="min-h-screen bg-[#F2F2F7]">
       {/* iOS Header */}
       <div className="sticky top-0 z-40 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
-          {isViewingOtherUser ? (
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-1 text-primary"
-            >
+          {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-primary">
               <ChevronLeft className="h-5 w-5" />
               <span className="text-[17px]">Retour</span>
-            </button>
-          ) : (
-            <div className="w-16" />
-          )}
+            </button> : <div className="w-16" />}
           <h1 className="text-[17px] font-semibold text-foreground">
             {isViewingOtherUser ? 'Profil' : 'Mon Profil'}
           </h1>
-          {!isViewingOtherUser ? (
-            <button
-              onClick={() => setShowSettingsDialog(true)}
-              className="w-16 flex justify-end"
-            >
+          {!isViewingOtherUser ? <button onClick={() => setShowSettingsDialog(true)} className="w-16 flex justify-end">
               <Settings className="h-5 w-5 text-primary" />
-            </button>
-          ) : (
-            <div className="w-16" />
-          )}
+            </button> : <div className="w-16" />}
         </div>
       </div>
 
@@ -627,119 +598,84 @@ const Profile = () => {
             <Avatar className="h-[100px] w-[100px] ring-2 ring-border">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
               <AvatarFallback className="text-2xl bg-secondary">
-                {profile?.display_name?.[0]?.toUpperCase() || 
-                 profile?.username?.[0]?.toUpperCase() || 
-                 user?.email?.[0]?.toUpperCase() || "U"}
+                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-            {isEditing && !isViewingOtherUser && (
-              <button 
-                type="button"
-                onClick={async () => {
-                  try {
-                    const file = await selectFromGallery();
-                    if (file) {
-                      handleAvatarChange({ target: { files: [file] } } as any);
-                    }
-                  } catch (error) {
-                    console.error('❌ Erreur sélection galerie:', error);
-                    toast({
-                      title: "Erreur",
-                      description: "Impossible d'accéder à la galerie",
-                      variant: "destructive"
-                    });
+            {isEditing && !isViewingOtherUser && <button type="button" onClick={async () => {
+            try {
+              const file = await selectFromGallery();
+              if (file) {
+                handleAvatarChange({
+                  target: {
+                    files: [file]
                   }
-                }}
-                disabled={cameraLoading}
-                className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
-              >
+                } as any);
+              }
+            } catch (error) {
+              console.error('❌ Erreur sélection galerie:', error);
+              toast({
+                title: "Erreur",
+                description: "Impossible d'accéder à la galerie",
+                variant: "destructive"
+              });
+            }
+          }} disabled={cameraLoading} className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                 <Camera className="h-4 w-4" />
-              </button>
-            )}
+              </button>}
           </div>
           
-          {isEditing && !isViewingOtherUser && (
-            <input
-              id="avatar-upload"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleAvatarChange}
-              className="hidden"
-            />
-          )}
+          {isEditing && !isViewingOtherUser && <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />}
           
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-[22px] font-bold text-foreground">{profile?.username || profile?.display_name}</h2>
-            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-              <Crown className="h-5 w-5 text-yellow-500" />
-            )}
+            {(profile?.is_premium || subscriptionInfo?.subscribed) && <Crown className="h-5 w-5 text-yellow-500" />}
           </div>
           
-          {profile?.display_name && profile.display_name !== profile.username && (
-            <p className="text-[15px] text-muted-foreground mb-2">{profile.display_name}</p>
-          )}
+          {profile?.display_name && profile.display_name !== profile.username && <p className="text-[15px] text-muted-foreground mb-2">{profile.display_name}</p>}
           
           {/* Badges */}
           <div className="flex flex-wrap justify-center gap-2 mb-3">
-            {profile?.is_admin && (
-              <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
+            {profile?.is_admin && <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
                 Admin
-              </Badge>
-            )}
-            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-              <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[11px]">
+              </Badge>}
+            {(profile?.is_premium || subscriptionInfo?.subscribed) && <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[11px]">
                 {subscriptionInfo?.subscription_tier || 'Premium'}
-              </Badge>
-            )}
+              </Badge>}
           </div>
           
           {/* Verified Badges */}
           {(() => {
-            const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
-            const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
-            
-            if (isStravaVerified || isInstagramVerified) {
-              return (
-                <div className="flex flex-wrap justify-center gap-2 mb-3">
-                  {isStravaVerified && (
-                    <button
-                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-orange-100 text-orange-800"
-                    >
+          const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
+          const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
+          if (isStravaVerified || isInstagramVerified) {
+            return <div className="flex flex-wrap justify-center gap-2 mb-3">
+                  {isStravaVerified && <button onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-orange-100 text-orange-800">
                       <Award className="h-3 w-3" />
                       Strava
-                    </button>
-                  )}
-                  {isInstagramVerified && (
-                    <button
-                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-pink-100 text-pink-800"
-                    >
+                    </button>}
+                  {isInstagramVerified && <button onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-pink-100 text-pink-800">
                       <Award className="h-3 w-3" />
                       Instagram
-                    </button>
-                  )}
-                </div>
-              );
-            }
-            return null;
-          })()}
+                    </button>}
+                </div>;
+          }
+          return null;
+        })()}
           
           {/* Stats Row */}
           <div className="flex items-center justify-center gap-8 py-3">
-            <button
-              onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-              className="text-center"
-            >
+            <button onClick={() => {
+            setFollowDialogType('followers');
+            setShowFollowDialog(true);
+          }} className="text-center">
               <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
               <p className="text-[13px] text-muted-foreground">Abonnés</p>
             </button>
             <div className="w-px h-8 bg-border" />
-            <button
-              onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-              className="text-center"
-            >
+            <button onClick={() => {
+            setFollowDialogType('following');
+            setShowFollowDialog(true);
+          }} className="text-center">
               <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
               <p className="text-[13px] text-muted-foreground">Abonnements</p>
             </button>
@@ -747,47 +683,26 @@ const Profile = () => {
           
           {/* Reliability Badge */}
           <div className="w-full max-w-[200px]">
-            <ReliabilityBadge 
-              rate={reliabilityRate}
-              onClick={() => setShowReliabilityDetails(true)}
-            />
+            <ReliabilityBadge rate={reliabilityRate} onClick={() => setShowReliabilityDetails(true)} />
           </div>
           
           {/* Premium Button or Report Button */}
-          {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-            <Button 
-              onClick={() => navigate('/subscription')}
-              variant="outline" 
-              size="sm"
-              className="mt-3 gap-2"
-            >
+          {!isViewingOtherUser && !subscriptionInfo?.subscribed && <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-3 gap-2">
               <Crown className="h-4 w-4" />
               Devenir Premium
-            </Button>
-          )}
+            </Button>}
           
-          {isViewingOtherUser && (
-            <Button
-              onClick={() => setShowReportDialog(true)}
-              variant="ghost"
-              size="sm"
-              className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
-            >
+          {isViewingOtherUser && <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
               <Flag className="h-4 w-4" />
               Signaler
-            </Button>
-          )}
+            </Button>}
         </div>
 
         {/* iOS List Groups */}
         
         {/* Informations Section - Own Profile */}
-        {!isViewingOtherUser && (
-          <div className="bg-card rounded-[10px] overflow-hidden">
-            <div
-              onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
-            >
+        {!isViewingOtherUser && <div className="bg-card rounded-[10px] overflow-hidden">
+            <div onClick={() => setIsEditing(!isEditing)} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
               <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
                 <User className="h-[18px] w-[18px] text-white" />
               </div>
@@ -797,50 +712,41 @@ const Profile = () => {
               <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
             </div>
             
-            {isEditing && (
-              <div className="px-4 py-4 space-y-4 border-t border-border">
+            {isEditing && <div className="px-4 py-4 space-y-4 border-t border-border">
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Pseudo</label>
-                  <Input
-                    value={formData.username || ''}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="h-11 rounded-[8px]"
-                  />
+                  <Input value={formData.username || ''} onChange={e => setFormData({
+              ...formData,
+              username: e.target.value
+            })} className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Nom d'affichage</label>
-                  <Input
-                    value={formData.display_name || ''}
-                    onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                    className="h-11 rounded-[8px]"
-                  />
+                  <Input value={formData.display_name || ''} onChange={e => setFormData({
+              ...formData,
+              display_name: e.target.value
+            })} className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Âge</label>
-                  <Input
-                    type="number"
-                    value={formData.age || ''}
-                    onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
-                    className="h-11 rounded-[8px]"
-                  />
+                  <Input type="number" value={formData.age || ''} onChange={e => setFormData({
+              ...formData,
+              age: parseInt(e.target.value) || null
+            })} className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Téléphone</label>
-                  <Input
-                    value={formData.phone || ''}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="06 12 34 56 78"
-                    className="h-11 rounded-[8px]"
-                  />
+                  <Input value={formData.phone || ''} onChange={e => setFormData({
+              ...formData,
+              phone: e.target.value
+            })} placeholder="06 12 34 56 78" className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Bio</label>
-                  <Input
-                    value={formData.bio || ''}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    placeholder="Décrivez vos records, vos objectifs..."
-                    className="h-11 rounded-[8px]"
-                  />
+                  <Input value={formData.bio || ''} onChange={e => setFormData({
+              ...formData,
+              bio: e.target.value
+            })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-[8px]" />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-[8px]">
@@ -848,116 +754,86 @@ const Profile = () => {
                     Sauvegarder
                   </Button>
                   <Button variant="outline" onClick={() => {
-                    setIsEditing(false);
-                    setAvatarFile(null);
-                    setAvatarPreview("");
-                    setFormData(profile || {});
-                  }} className="flex-1 h-11 rounded-[8px]">
+              setIsEditing(false);
+              setAvatarFile(null);
+              setAvatarPreview("");
+              setFormData(profile || {});
+            }} className="flex-1 h-11 rounded-[8px]">
                     Annuler
                   </Button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div>}
+          </div>}
 
         {/* Bio Section - Other Users */}
-        {isViewingOtherUser && profile?.bio && (
-          <div className="bg-card rounded-[10px] overflow-hidden">
+        {isViewingOtherUser && profile?.bio && <div className="bg-card rounded-[10px] overflow-hidden">
             <div className="px-4 py-3">
               <p className="text-[13px] text-muted-foreground uppercase tracking-wide mb-2">Bio</p>
               <p className="text-[15px] text-foreground">{profile.bio}</p>
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Records Section - For other users */}
-        {isViewingOtherUser && profile && (
-          <PersonalRecords records={{
-            running_records: profile.running_records,
-            cycling_records: profile.cycling_records,
-            swimming_records: profile.swimming_records,
-            triathlon_records: profile.triathlon_records,
-            walking_records: profile.walking_records
-          }} />
-        )}
+        {isViewingOtherUser && profile && <PersonalRecords records={{
+        running_records: profile.running_records,
+        cycling_records: profile.cycling_records,
+        swimming_records: profile.swimming_records,
+        triathlon_records: profile.triathlon_records,
+        walking_records: profile.walking_records
+      }} />}
 
         {/* Activity Chart */}
-        {(viewingUserId || user?.id) && (
-          <UserActivityChart 
-            userId={viewingUserId || user?.id || ''} 
-            username={profile?.username}
-          />
-        )}
+        {(viewingUserId || user?.id) && <UserActivityChart userId={viewingUserId || user?.id || ''} username={profile?.username} />}
 
         {/* Common Clubs - Other Users */}
-        {isViewingOtherUser && commonClubs.length > 0 && (
-          <div>
+        {isViewingOtherUser && commonClubs.length > 0 && <div>
             <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
               Clubs en commun ({commonClubs.length})
             </p>
             <div className="bg-card rounded-[10px] overflow-hidden">
-              {commonClubs.map((club, index) => (
-                <div key={club.club_id} className="relative">
+              {commonClubs.map((club, index) => <div key={club.club_id} className="relative">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
                       <Users className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[17px] text-foreground">{club.club_name}</p>
-                      {club.club_description && (
-                        <p className="text-[13px] text-muted-foreground truncate">{club.club_description}</p>
-                      )}
+                      {club.club_description && <p className="text-[13px] text-muted-foreground truncate">{club.club_description}</p>}
                     </div>
                   </div>
-                  {index < commonClubs.length - 1 && (
-                    <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
-                  )}
-                </div>
-              ))}
+                  {index < commonClubs.length - 1 && <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />}
+                </div>)}
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Connection History - Admin Only */}
-        {isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && connectionHistory.length > 0 && (
-          <div>
+        {isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && connectionHistory.length > 0 && <div>
             <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
               Historique des connexions
             </p>
             <div className="bg-card rounded-[10px] overflow-hidden">
-              {connectionHistory.map((log, index) => (
-                <div key={index} className="relative">
+              {connectionHistory.map((log, index) => <div key={index} className="relative">
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-[15px] text-muted-foreground">{log.action}</span>
                     <span className="text-[13px] font-mono text-muted-foreground">
                       {new Date(log.timestamp).toLocaleString('fr-FR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
                     </span>
                   </div>
-                  {index < connectionHistory.length - 1 && (
-                    <div className="absolute bottom-0 left-4 right-0 h-px bg-border" />
-                  )}
-                </div>
-              ))}
+                  {index < connectionHistory.length - 1 && <div className="absolute bottom-0 left-4 right-0 h-px bg-border" />}
+                </div>)}
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Routes Section - For all profiles */}
         <div>
-          <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
-            {isViewingOtherUser ? 'Séances & Parcours' : `Mes Parcours (${userRoutes.length})`}
-          </p>
+          
           <div className="bg-card rounded-[10px] overflow-hidden">
-            <div
-              onClick={() => isViewingOtherUser ? navigate(`/my-sessions?user=${viewingUserId}`) : navigate('/my-sessions')}
-              className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative"
-            >
+            <div onClick={() => isViewingOtherUser ? navigate(`/my-sessions?user=${viewingUserId}`) : navigate('/my-sessions')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative">
               <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
                 <Route className="h-[18px] w-[18px] text-white" />
               </div>
@@ -970,11 +846,7 @@ const Profile = () => {
             </div>
             <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
             
-            {!isViewingOtherUser && (
-              <div
-                onClick={() => navigate('/route-creation')}
-                className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
-              >
+            {!isViewingOtherUser && <div onClick={() => navigate('/route-creation')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
                 <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
                   <MapPin className="h-[18px] w-[18px] text-white" />
                 </div>
@@ -982,69 +854,31 @@ const Profile = () => {
                   <p className="text-[17px] text-foreground">Créer un parcours</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-              </div>
-            )}
+              </div>}
           </div>
         </div>
 
         {/* Simple AAB Diagnostic - Only for creators */}
-        {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
-          <SimpleAABDiagnostic />
-        )}
+        {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && <SimpleAABDiagnostic />}
 
         {/* Strava Connect Section */}
-        <StravaConnect 
-          profile={profile} 
-          isOwnProfile={!isViewingOtherUser}
-          onProfileUpdate={fetchProfile}
-        />
+        <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
 
         {/* Follow Dialog */}
-        <FollowDialog
-          open={showFollowDialog}
-          onOpenChange={setShowFollowDialog}
-          type={followDialogType}
-          followerCount={followerCount}
-          followingCount={followingCount}
-          targetUserId={viewingUserId || undefined}
-        />
+        <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />
 
         {/* Settings Dialog */}
-        <SettingsDialog
-          open={showSettingsDialog}
-          onOpenChange={setShowSettingsDialog}
-          initialSearch={settingsFocus}
-        />
+        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
 
         {/* Report User Dialog */}
-        <ReportUserDialog
-          isOpen={showReportDialog}
-          onClose={() => setShowReportDialog(false)}
-          reportedUserId={viewingUserId || ""}
-          reportedUsername={profile?.username || ""}
-        />
+        <ReportUserDialog isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} reportedUserId={viewingUserId || ""} reportedUsername={profile?.username || ""} />
 
         {/* Reliability Details Dialog - Pour tous les profils */}
-        <ReliabilityDetailsDialog
-          open={showReliabilityDetails}
-          onOpenChange={setShowReliabilityDetails}
-          userName={profile?.username || profile?.display_name || ''}
-          reliabilityRate={reliabilityRate}
-          totalSessionsCreated={totalSessionsCreated}
-          totalSessionsJoined={totalSessionsJoined}
-          totalSessionsCompleted={totalSessionsCompleted}
-        />
+        <ReliabilityDetailsDialog open={showReliabilityDetails} onOpenChange={setShowReliabilityDetails} userName={profile?.username || profile?.display_name || ''} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
 
         {/* Image Crop Editor */}
-        <ImageCropEditor
-          open={showCropEditor}
-          onClose={() => setShowCropEditor(false)}
-          imageSrc={originalImageSrc}
-          onCropComplete={handleCropComplete}
-        />
+        <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Profile;
