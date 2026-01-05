@@ -10,13 +10,6 @@ import { ChevronLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw }
 import { motion } from "framer-motion";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useAppContext } from "@/contexts/AppContext";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 interface Profile {
   user_id: string;
   username: string;
@@ -362,42 +355,31 @@ export const NewConversationView = ({
                 <div className="flex items-center gap-2 mb-3">
                   <h2 className="text-sm font-medium text-muted-foreground">Amis récents</h2>
                 </div>
-                <Carousel
-                  opts={{
-                    align: "start",
-                    dragFree: true,
-                  }}
-                  className="w-full"
-                >
-                  <CarouselContent className="-ml-2">
-                    {recentFriends.map((friend, index) => (
-                      <CarouselItem key={friend.user_id} className="pl-2 basis-auto">
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          onClick={() => onStartConversation(friend.user_id)}
-                          className="flex flex-col items-center gap-2 cursor-pointer group"
-                        >
-                          <div className="relative">
-                            <Avatar className="h-14 w-14 border-2 border-border group-hover:border-primary transition-all duration-300">
-                              <AvatarImage src={friend.avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary text-foreground text-lg">
-                                {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <OnlineStatus userId={friend.user_id} className="w-3.5 h-3.5" />
-                          </div>
-                          <span className="text-xs text-center truncate w-16 text-foreground">
-                            {friend.username || friend.display_name}
-                          </span>
-                        </motion.div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious className="left-0 h-8 w-8 bg-card/90 border-border" />
-                  <CarouselNext className="right-0 h-8 w-8 bg-card/90 border-border" />
-                </Carousel>
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                  {recentFriends.map((friend, index) => (
+                    <motion.div
+                      key={friend.user_id}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => onStartConversation(friend.user_id)}
+                      className="flex flex-col items-center gap-2 cursor-pointer group flex-shrink-0"
+                    >
+                      <div className="relative">
+                        <Avatar className="h-14 w-14 border-2 border-border group-hover:border-primary transition-all duration-300">
+                          <AvatarImage src={friend.avatar_url || ""} />
+                          <AvatarFallback className="bg-secondary text-foreground text-lg">
+                            {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <OnlineStatus userId={friend.user_id} className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs text-center truncate w-16 text-foreground">
+                        {friend.username || friend.display_name}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
               </motion.div>
             )}
 
@@ -451,54 +433,43 @@ export const NewConversationView = ({
                     <span className="text-[15px] text-muted-foreground">Chargement des suggestions...</span>
                   </div>
                 ) : (
-                  <Carousel
-                    opts={{
-                      align: "start",
-                      dragFree: true,
-                    }}
-                    className="w-full"
-                  >
-                    <CarouselContent className="-ml-2">
-                      {visibleSuggestions.map((profile) => (
-                        <CarouselItem key={profile.user_id} className="pl-2 basis-auto">
-                          <button
-                            onClick={() => setSelectedPreviewUserId(profile.user_id)}
-                            className="flex flex-col items-center gap-1 min-w-fit relative active:opacity-70 transition-opacity"
-                          >
-                            {/* Dismiss button */}
-                            <button
-                              onClick={(e) => dismissSuggestion(profile.user_id, e)}
-                              className="absolute -top-0.5 -right-0.5 z-10 h-5 w-5 rounded-full bg-secondary border border-border flex items-center justify-center active:bg-muted"
-                            >
-                              <X className="h-3 w-3 text-muted-foreground" />
-                            </button>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {visibleSuggestions.map((profile) => (
+                      <button
+                        key={profile.user_id}
+                        onClick={() => setSelectedPreviewUserId(profile.user_id)}
+                        className="flex flex-col items-center gap-1 min-w-fit relative active:opacity-70 transition-opacity flex-shrink-0"
+                      >
+                        {/* Dismiss button */}
+                        <button
+                          onClick={(e) => dismissSuggestion(profile.user_id, e)}
+                          className="absolute -top-0.5 -right-0.5 z-10 h-5 w-5 rounded-full bg-secondary border border-border flex items-center justify-center active:bg-muted"
+                        >
+                          <X className="h-3 w-3 text-muted-foreground" />
+                        </button>
 
-                            {/* Avatar with blue ring */}
-                            <div className="p-[2px] bg-primary rounded-full">
-                              <Avatar className="h-[56px] w-[56px] border-2 border-background">
-                                <AvatarImage src={profile.avatar_url} />
-                                <AvatarFallback className="bg-secondary text-[15px] font-medium">
-                                  {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                            </div>
+                        {/* Avatar with blue ring */}
+                        <div className="p-[2px] bg-primary rounded-full">
+                          <Avatar className="h-[56px] w-[56px] border-2 border-background">
+                            <AvatarImage src={profile.avatar_url} />
+                            <AvatarFallback className="bg-secondary text-[15px] font-medium">
+                              {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
 
-                            {/* Name */}
-                            <span className="text-[11px] text-foreground max-w-[60px] truncate">
-                              {profile.display_name?.split(' ')[0] || profile.username}
-                            </span>
+                        {/* Name */}
+                        <span className="text-[11px] text-foreground max-w-[60px] truncate">
+                          {profile.display_name?.split(' ')[0] || profile.username}
+                        </span>
 
-                            {/* Source label */}
-                            <span className="text-[9px] text-muted-foreground max-w-[70px] truncate">
-                              {getSourceLabel(profile.source, profile.mutual_friends_count)}
-                            </span>
-                          </button>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="left-0 h-8 w-8 bg-card/90 border-border" />
-                    <CarouselNext className="right-0 h-8 w-8 bg-card/90 border-border" />
-                  </Carousel>
+                        {/* Source label */}
+                        <span className="text-[9px] text-muted-foreground max-w-[70px] truncate">
+                          {getSourceLabel(profile.source, profile.mutual_friends_count)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </motion.div>
             )}
