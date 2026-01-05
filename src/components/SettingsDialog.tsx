@@ -190,24 +190,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
     const profileUrl = getProfileUrl();
     
     try {
-      // Try Android WebView native bridge first
-      if ((window as any).AndroidBridge?.shareText) {
-        (window as any).AndroidBridge.shareText(shareMessage, profileUrl);
-        return;
-      }
-      
-      // Then try Capacitor Share plugin
-      if (Capacitor.isNativePlatform()) {
-        await Share.share({
-          title: 'Rejoins-moi sur RunConnect',
-          text: shareMessage,
-          url: profileUrl,
-          dialogTitle: 'Partager mon profil'
-        });
-        return;
-      }
-      
-      // Then try Web Share API (works on most mobile browsers)
+      // Use Web Share API first - it works on mobile browsers and opens native share sheet
       if (navigator.share) {
         await navigator.share({
           title: 'Rejoins-moi sur RunConnect',
@@ -217,7 +200,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
         return;
       }
       
-      // Fallback: copy to clipboard
+      // Fallback for desktop: copy to clipboard
       await navigator.clipboard.writeText(shareMessage);
       toast({
         title: "✅ Lien copié !",
