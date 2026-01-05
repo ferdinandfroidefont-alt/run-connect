@@ -6,4 +6,8 @@
     <color name="colorAccent">#EC4899</color>
     <color name="white">#FFFFFF</color>
     <color name="progressBarBlue">#6EC6FF</color>
+    <!-- iOS Colors -->
+    <color name="iosBlue">#007AFF</color>
+    <color name="iosGray">#E5E5EA</color>
+    <color name="iosSystemGray">#F2F2F7</color>
 </resources>
