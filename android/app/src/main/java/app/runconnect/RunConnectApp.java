@@ -1,5 +1,6 @@
 package app.runconnect;
 
+import android.app.ActivityManager;
 import android.app.Application;
 import android.content.Context;
 import android.os.Build;
@@ -12,8 +13,9 @@ import android.widget.Toast;
  * 🔥 Application globale RunConnect
  * 
  * Gère:
- * - Exception handler global pour éviter les crashes brutaux
+ * - Exception handler global pour éviter les crashs brutaux
  * - Détection des appareils problématiques (Xiaomi, Samsung, Huawei)
+ * - Détection MIUI, Android Go, version WebView
  * - Optimisations spécifiques par fabricant
  */
 public class RunConnectApp extends Application {
@@ -25,6 +27,8 @@ public class RunConnectApp extends Application {
     private static String deviceManufacturer;
     private static String deviceModel;
     private static int androidApiLevel;
+    private static String miuiVersion = null;
+    private static boolean isLowRamDevice = false;
 
     @Override
     public void onCreate() {
@@ -36,13 +40,14 @@ public class RunConnectApp extends Application {
         deviceModel = Build.MODEL;
         androidApiLevel = Build.VERSION.SDK_INT;
         
-        Log.d(TAG, "═══════════════════════════════════════════════════════════");
-        Log.d(TAG, "🚀 RunConnect Application Starting...");
-        Log.d(TAG, "📱 Device: " + deviceManufacturer + " " + deviceModel);
-        Log.d(TAG, "📱 Android: " + Build.VERSION.RELEASE + " (API " + androidApiLevel + ")");
-        Log.d(TAG, "📱 Product: " + Build.PRODUCT);
-        Log.d(TAG, "📱 Brand: " + Build.BRAND);
-        Log.d(TAG, "═══════════════════════════════════════════════════════════");
+        // Détecter MIUI
+        miuiVersion = detectMIUIVersion();
+        
+        // Détecter appareil low memory (Android Go)
+        detectLowMemoryDevice();
+        
+        // Logger toutes les infos système au démarrage
+        logFullSystemInfo();
         
         // Installer le gestionnaire d'exceptions global
         installGlobalExceptionHandler();
@@ -51,6 +56,67 @@ public class RunConnectApp extends Application {
         applyManufacturerFixes();
         
         Log.d(TAG, "✅ RunConnectApp initialized successfully");
+    }
+    
+    /**
+     * 📊 Log complet des informations système pour debug
+     */
+    private void logFullSystemInfo() {
+        Log.d(TAG, "══════════════════ SYSTEM INFO ══════════════════");
+        Log.d(TAG, "📱 Manufacturer: " + deviceManufacturer);
+        Log.d(TAG, "📱 Model: " + deviceModel);
+        Log.d(TAG, "📱 Product: " + Build.PRODUCT);
+        Log.d(TAG, "📱 Brand: " + Build.BRAND);
+        Log.d(TAG, "📱 Device: " + Build.DEVICE);
+        Log.d(TAG, "📱 Board: " + Build.BOARD);
+        Log.d(TAG, "📱 Hardware: " + Build.HARDWARE);
+        Log.d(TAG, "📱 Android: " + Build.VERSION.RELEASE + " (API " + androidApiLevel + ")");
+        Log.d(TAG, "📱 SDK_INT: " + Build.VERSION.SDK_INT);
+        if (Build.VERSION.SDK_INT >= 23) {
+            Log.d(TAG, "📱 Security Patch: " + Build.VERSION.SECURITY_PATCH);
+        }
+        Log.d(TAG, "📱 MIUI Version: " + (miuiVersion != null ? miuiVersion : "Non MIUI"));
+        Log.d(TAG, "📱 Low RAM Device: " + isLowRamDevice);
+        Log.d(TAG, "📱 Fingerprint: " + Build.FINGERPRINT);
+        Log.d(TAG, "═══════════════════════════════════════════════════");
+    }
+    
+    /**
+     * 🔍 Détecte la version MIUI (Xiaomi) via SystemProperties
+     */
+    private String detectMIUIVersion() {
+        try {
+            Class<?> systemProperties = Class.forName("android.os.SystemProperties");
+            java.lang.reflect.Method get = systemProperties.getMethod("get", String.class);
+            
+            String miuiName = (String) get.invoke(null, "ro.miui.ui.version.name");
+            String miuiCode = (String) get.invoke(null, "ro.miui.ui.version.code");
+            
+            if (miuiName != null && !miuiName.isEmpty()) {
+                Log.d(TAG, "📱 MIUI détecté: " + miuiName + " (code: " + miuiCode + ")");
+                return miuiName;
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "📱 Pas de MIUI détecté (normal si pas Xiaomi)");
+        }
+        return null;
+    }
+    
+    /**
+     * 🔍 Détecte si l'appareil a peu de RAM (Android Go / entrée de gamme)
+     */
+    private void detectLowMemoryDevice() {
+        try {
+            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            if (am != null) {
+                isLowRamDevice = am.isLowRamDevice();
+                if (isLowRamDevice) {
+                    Log.w(TAG, "⚠️ Appareil à mémoire limitée détecté (Android Go / Low RAM)");
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "⚠️ Impossible de détecter le type de mémoire: " + e.getMessage());
+        }
     }
     
     /**
@@ -69,6 +135,8 @@ public class RunConnectApp extends Application {
                     Log.e(TAG, "💥 CRASH INTERCEPTÉ!");
                     Log.e(TAG, "📱 Device: " + deviceManufacturer + " " + deviceModel);
                     Log.e(TAG, "📱 Android: " + Build.VERSION.RELEASE + " (API " + androidApiLevel + ")");
+                    Log.e(TAG, "📱 MIUI: " + (miuiVersion != null ? miuiVersion : "N/A"));
+                    Log.e(TAG, "📱 Low RAM: " + isLowRamDevice);
                     Log.e(TAG, "💥 Thread: " + thread.getName());
                     Log.e(TAG, "💥 Exception: " + throwable.getClass().getSimpleName());
                     Log.e(TAG, "💥 Message: " + throwable.getMessage());
@@ -110,27 +178,26 @@ public class RunConnectApp extends Application {
         // 🔴 Xiaomi / Redmi / POCO (MIUI)
         if (manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco")) {
             Log.d(TAG, "📱 Appareil Xiaomi/MIUI détecté - Préparation des adaptations");
+            if (miuiVersion != null) {
+                Log.d(TAG, "📱 MIUI Version: " + miuiVersion);
+            }
             // MIUI peut avoir des problèmes avec les WebView et les permissions agressives
-            // Les fixes spécifiques sont appliqués dans MainActivity
         }
         
         // 🔵 Samsung (OneUI)
         else if (manufacturer.contains("samsung")) {
             Log.d(TAG, "📱 Appareil Samsung détecté - Mode compatibilité Samsung");
-            // Samsung a parfois des problèmes avec hardware acceleration sur vieux modèles
         }
         
         // 🟢 Huawei / Honor (HMS au lieu de GMS)
         else if (manufacturer.contains("huawei") || manufacturer.contains("honor")) {
             Log.d(TAG, "📱 Appareil Huawei/Honor détecté - Vérification GMS/HMS");
-            // Ces appareils peuvent ne pas avoir Google Play Services
         }
         
         // 🟠 OPPO / Vivo / Realme / OnePlus
         else if (manufacturer.contains("oppo") || manufacturer.contains("vivo") || 
                  manufacturer.contains("realme") || manufacturer.contains("oneplus")) {
             Log.d(TAG, "📱 Appareil " + manufacturer + " détecté");
-            // ColorOS/FunTouchOS ont une gestion agressive de la batterie
         }
         
         // 🟣 Autres fabricants
@@ -154,7 +221,6 @@ public class RunConnectApp extends Application {
                             Toast.LENGTH_LONG
                         ).show();
                     } catch (Exception e) {
-                        // Ignorer les erreurs de Toast
                         Log.e(TAG, "⚠️ Impossible d'afficher le toast: " + e.getMessage());
                     }
                 }
@@ -184,19 +250,42 @@ public class RunConnectApp extends Application {
     }
     
     /**
+     * 🔍 Retourne la version MIUI si détectée
+     */
+    public static String getMIUIVersion() {
+        return miuiVersion;
+    }
+    
+    /**
+     * 🔍 Vérifie si l'appareil est MIUI (Xiaomi/Redmi/POCO)
+     */
+    public static boolean isMIUI() {
+        return miuiVersion != null && !miuiVersion.isEmpty();
+    }
+    
+    /**
+     * 🔍 Vérifie si l'appareil a peu de RAM
+     */
+    public static boolean isLowMemoryDevice() {
+        return isLowRamDevice;
+    }
+    
+    /**
      * 🔍 Vérifie si l'appareil est connu pour avoir des problèmes WebView
      */
     public static boolean isProblematicWebViewDevice() {
+        if (deviceManufacturer == null) return false;
+        
         String manufacturer = deviceManufacturer.toLowerCase();
-        String model = deviceModel.toLowerCase();
+        String model = deviceModel != null ? deviceModel.toLowerCase() : "";
         
         // Samsung avec Android < 8
         if (manufacturer.contains("samsung") && androidApiLevel < 26) {
             return true;
         }
         
-        // Xiaomi Redmi 6 series (problèmes connus)
-        if (manufacturer.contains("xiaomi") && model.contains("redmi 6")) {
+        // Xiaomi Redmi 6/7 series (problèmes connus)
+        if (manufacturer.contains("xiaomi") && (model.contains("redmi 6") || model.contains("redmi 7"))) {
             return true;
         }
         
@@ -210,6 +299,11 @@ public class RunConnectApp extends Application {
             return true;
         }
         
+        // Appareils low memory = mode compatibilité
+        if (isLowRamDevice) {
+            return true;
+        }
+        
         return false;
     }
     
@@ -217,6 +311,8 @@ public class RunConnectApp extends Application {
      * 🔍 Vérifie si l'appareil a probablement Google Play Services
      */
     public static boolean mightHaveGooglePlayServices() {
+        if (deviceManufacturer == null) return true;
+        
         String manufacturer = deviceManufacturer.toLowerCase();
         
         // Huawei post-2019 et Honor n'ont généralement pas GMS
@@ -226,5 +322,24 @@ public class RunConnectApp extends Application {
         }
         
         return true;
+    }
+    
+    /**
+     * 📊 Retourne un résumé des infos système pour injection JS
+     */
+    public static String getSystemInfoJson() {
+        try {
+            return String.format(
+                "{\"manufacturer\":\"%s\",\"model\":\"%s\",\"android\":\"%s\",\"api\":%d,\"miui\":\"%s\",\"lowRam\":%b}",
+                deviceManufacturer != null ? deviceManufacturer : "unknown",
+                deviceModel != null ? deviceModel : "unknown",
+                Build.VERSION.RELEASE,
+                androidApiLevel,
+                miuiVersion != null ? miuiVersion : "none",
+                isLowRamDevice
+            );
+        } catch (Exception e) {
+            return "{\"error\":\"" + e.getMessage() + "\"}";
+        }
     }
 }

@@ -629,6 +629,21 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
         
+        // 🔥 NOUVEAU: Vérifier la version WebView installée
+        checkWebViewVersion();
+        
+        // ⏱️ TIMEOUT: Afficher page offline si chargement trop long (15s)
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            if (splashOverlay != null && splashOverlay.getVisibility() == android.view.View.VISIBLE) {
+                if (splashProgressBar != null && splashProgressBar.getProgress() < 30) {
+                    Log.w(TAG, "⏱️ TIMEOUT WebView - Progression bloquée à " + splashProgressBar.getProgress() + "%");
+                    Log.w(TAG, "⏱️ Affichage de la page offline");
+                    webView.loadUrl("file:///android_asset/offline.html");
+                    splashOverlay.setVisibility(android.view.View.GONE);
+                }
+            }
+        }, 15000);
+        
         // Injecter immédiatement après le chargement de l'URL avec délai
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             Log.d(TAG, "🔄 Injection initiale forcée au démarrage");
@@ -639,6 +654,50 @@ public class MainActivity extends AppCompatActivity {
         }, 1000); // ✅ Réduit à 1s pour que AndroidBridge soit disponible plus rapidement
         
         Log.d(TAG, "🎯 MainActivity setup complete");
+    }
+    
+    /**
+     * 📦 Vérifie la version de WebView installée sur l'appareil
+     */
+    private void checkWebViewVersion() {
+        try {
+            // Essayer les différents packages WebView
+            String[] webViewPackages = {
+                "com.google.android.webview",
+                "com.android.webview",
+                "com.google.android.trichromelibrary"
+            };
+            
+            for (String packageName : webViewPackages) {
+                try {
+                    android.content.pm.PackageInfo webViewPackage = getPackageManager()
+                        .getPackageInfo(packageName, 0);
+                    
+                    long versionCode;
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        versionCode = webViewPackage.getLongVersionCode();
+                    } else {
+                        versionCode = webViewPackage.versionCode;
+                    }
+                    
+                    Log.d(TAG, "📦 WebView Package: " + packageName);
+                    Log.d(TAG, "📦 WebView Version: " + webViewPackage.versionName + " (code: " + versionCode + ")");
+                    
+                    // Alerter si version très ancienne (< version 80, environ code 4000000)
+                    if (versionCode < 4000000 && versionCode > 0) {
+                        Log.w(TAG, "⚠️ WebView très ancienne détectée - compatibilité limitée possible");
+                    }
+                    
+                    return; // Trouvé, on arrête
+                } catch (android.content.pm.PackageManager.NameNotFoundException e) {
+                    // Ce package n'existe pas, essayer le suivant
+                }
+            }
+            
+            Log.w(TAG, "⚠️ Impossible de détecter le package WebView");
+        } catch (Exception e) {
+            Log.w(TAG, "⚠️ Erreur lors de la vérification WebView: " + e.getMessage());
+        }
     }
     
     @Override

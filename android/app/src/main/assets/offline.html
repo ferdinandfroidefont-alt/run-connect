@@ -92,23 +92,58 @@
     </div>
     
     <script>
+        let retryCount = 0;
+        const maxRetries = 20;
+        let retryTimer = null;
+        
         // Détecter le retour de la connexion et recharger automatiquement
         window.addEventListener('online', function() {
             console.log('🟢 Connexion rétablie - rechargement...');
+            document.querySelector('.status span:last-child').textContent = 'Reconnexion...';
             setTimeout(() => {
                 window.location.href = 'https://run-connect.lovable.app';
             }, 500);
         });
         
-        // Vérifier la connexion toutes les 3 secondes
-        setInterval(function() {
-            fetch('https://run-connect.lovable.app', { method: 'HEAD', mode: 'no-cors' })
-                .then(() => {
-                    console.log('🟢 Connexion détectée - rechargement...');
-                    window.location.href = 'https://run-connect.lovable.app';
-                })
-                .catch(() => console.log('🔴 Toujours hors ligne'));
-        }, 3000);
+        // Retry avec backoff exponentiel
+        function tryReconnect() {
+            if (retryCount >= maxRetries) {
+                document.querySelector('.status span:last-child').textContent = 'Vérifiez votre connexion';
+                console.log('🔴 Max retries atteint');
+                return;
+            }
+            
+            retryCount++;
+            console.log('🔄 Tentative ' + retryCount + '/' + maxRetries);
+            
+            fetch('https://run-connect.lovable.app/favicon.png', { 
+                method: 'HEAD', 
+                mode: 'no-cors',
+                cache: 'no-store'
+            })
+            .then(() => {
+                console.log('🟢 Connexion détectée - rechargement...');
+                document.querySelector('.status span:last-child').textContent = 'Reconnexion...';
+                window.location.href = 'https://run-connect.lovable.app';
+            })
+            .catch(() => {
+                // Backoff exponentiel: 3s, 4s, 5s, 6s... jusqu'à max 15s
+                const delay = Math.min(3000 + (retryCount * 1000), 15000);
+                console.log('🔴 Toujours hors ligne, retry dans ' + (delay/1000) + 's');
+                retryTimer = setTimeout(tryReconnect, delay);
+            });
+        }
+        
+        // Démarrer le retry automatique après 2s
+        setTimeout(tryReconnect, 2000);
+        
+        // Bouton retry manuel
+        document.querySelector('.retry-btn').addEventListener('click', function() {
+            retryCount = 0;
+            if (retryTimer) clearTimeout(retryTimer);
+            document.querySelector('.status span:last-child').textContent = 'Connexion...';
+            tryReconnect();
+        });
     </script>
 </body>
 </html>
