@@ -1,0 +1,25 @@
+// 🔧 Variables de configuration pour RunConnect
+// Compatible avec Android 6.0+ (API 23) jusqu'à Android 15 (API 35)
+
+ext {
+    // 📱 Versions SDK - Compatibilité maximale
+    minSdkVersion = 23            // Android 6.0 Marshmallow (99% des appareils)
+    compileSdkVersion = 35        // Android 15 (dernière version stable)
+    targetSdkVersion = 34         // Android 14 (cible recommandée)
+    
+    // 📦 Versions des dépendances AndroidX
+    androidxAppCompatVersion = '1.6.1'
+    androidxCoordinatorLayoutVersion = '1.2.0'
+    coreSplashScreenVersion = '1.0.1'
+    androidxCoreVersion = '1.12.0'
+    androidxBrowserVersion = '1.8.0'
+    
+    // 🧪 Versions des dépendances de test
+    junitVersion = '4.13.2'
+    androidxJunitVersion = '1.1.5'
+    androidxEspressoCoreVersion = '3.5.1'
+    
+    // 🏷️ Version de l'application
+    versionCode = 15
+    versionName = "1.4.0"
+}
