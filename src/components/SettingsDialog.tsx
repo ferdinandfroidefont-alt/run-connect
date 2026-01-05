@@ -189,10 +189,18 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
     const shareMessage = getShareMessage();
     const profileUrl = getProfileUrl();
     
+    console.log('📤 [SHARE] Début du partage');
+    console.log('📤 [SHARE] Message:', shareMessage);
+    console.log('📤 [SHARE] URL:', profileUrl);
+    
     try {
       // Priority 1: Native Android WebView bridge
       const win = window as any;
-      if (win.AndroidBridge?.shareText) {
+      console.log('📤 [SHARE] AndroidBridge disponible:', !!win.AndroidBridge);
+      console.log('📤 [SHARE] shareText type:', typeof win.AndroidBridge?.shareText);
+      
+      if (win.AndroidBridge && typeof win.AndroidBridge.shareText === 'function') {
+        console.log('📤 [SHARE] Appel AndroidBridge.shareText()');
         win.AndroidBridge.shareText(shareMessage, profileUrl);
         return;
       }
