@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
@@ -19,6 +17,8 @@ import { SessionQuestions } from "./SessionQuestions";
 import { useAdMob } from '@/hooks/useAdMob';
 import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '@/contexts/AppContext';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Session {
   id: string;
@@ -36,12 +36,12 @@ interface Session {
   organizer_id: string;
   image_url?: string;
   distance_km?: number;
-  pace_general?: string; // Allure générale
-  pace_unit?: string; // Unité : "speed" ou "power"
-  interval_distance?: number; // Distance par fraction
-  interval_pace?: string; // Allure des fractions
-  interval_pace_unit?: string; // Unité pour les fractions
-  interval_count?: number; // Nombre de fractions
+  pace_general?: string;
+  pace_unit?: string;
+  interval_distance?: number;
+  interval_pace?: string;
+  interval_pace_unit?: string;
+  interval_count?: number;
   profiles: {
     username: string;
     display_name: string;
@@ -62,12 +62,50 @@ interface SessionDetailsDialogProps {
   onSessionUpdated: () => void;
 }
 
+// iOS Settings style row component
+const SettingsRow = ({ 
+  icon: Icon, 
+  iconBg, 
+  label, 
+  value, 
+  onClick,
+  showChevron = false 
+}: { 
+  icon: any; 
+  iconBg: string; 
+  label: string; 
+  value?: React.ReactNode; 
+  onClick?: () => void;
+  showChevron?: boolean;
+}) => (
+  <div 
+    className={`flex items-center gap-3 px-4 py-3 bg-background ${onClick ? 'cursor-pointer active:bg-secondary/50' : ''}`}
+    onClick={onClick}
+  >
+    <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
+      <Icon className="h-4 w-4 text-white" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <span className="text-[15px] text-foreground">{label}</span>
+    </div>
+    {value && (
+      <span className="text-[15px] text-muted-foreground truncate max-w-[50%] text-right">{value}</span>
+    )}
+    {showChevron && <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />}
+  </div>
+);
+
+const SettingsSeparator = () => (
+  <div className="h-px bg-border ml-[60px]" />
+);
+
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const { validatePresence, validating: validatingGPS } = useGPSValidation();
   const { sendPushNotification } = useSendNotification();
+  const { setHideBottomNav } = useAppContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
@@ -76,12 +114,18 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [gpsValidated, setGpsValidated] = useState(false);
 
-  // Check if user has already requested to join this session or is a participant
+  // Hide bottom nav when dialog opens
+  useEffect(() => {
+    if (session) {
+      setHideBottomNav(true);
+    }
+    return () => setHideBottomNav(false);
+  }, [session, setHideBottomNav]);
+
   useEffect(() => {
     const checkUserStatus = async () => {
       if (!user || !session) return;
 
-      // Check for pending request
       const { data: requestData } = await supabase
         .from('session_requests')
         .select('id')
@@ -92,7 +136,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       setHasRequested(!!requestData);
 
-      // Check if user is a participant
       const { data: participantData } = await supabase
         .from('session_participants')
         .select('id, confirmed_by_gps')
@@ -107,30 +150,31 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     checkUserStatus();
   }, [user, session]);
 
-  // Early return if no session - AFTER all hooks
   if (!session) return null;
 
   const isOrganizer = user?.id === session.organizer_id;
   const isScheduled = new Date(session.scheduled_at) > new Date();
   const isFull = session.max_participants && session.current_participants >= session.max_participants;
 
-  const getActivityColor = (activityType: string) => {
-    const colors: Record<string, string> = {
-      'course': 'bg-red-500',
-      'velo': 'bg-blue-500',
-      'marche': 'bg-green-500',
-      'natation': 'bg-cyan-500'
+  const getActivityLabel = (activityType: string) => {
+    const labels: Record<string, string> = {
+      'course': 'Course',
+      'velo': 'Vélo',
+      'marche': 'Marche',
+      'natation': 'Natation'
     };
-    return colors[activityType] || 'bg-gray-500';
+    return labels[activityType] || activityType;
   };
 
-  const getIntensityColor = (intensity: string) => {
-    const colors: Record<string, string> = {
-      'facile': 'bg-green-100 text-green-800',
-      'modere': 'bg-yellow-100 text-yellow-800',
-      'intense': 'bg-red-100 text-red-800'
+  const getSessionTypeLabel = (sessionType: string) => {
+    const labels: Record<string, string> = {
+      'footing': 'Footing',
+      'sortie_longue': 'Sortie longue',
+      'fractionne': 'Fractionné',
+      'competition': 'Compétition',
+      'recuperation': 'Récupération'
     };
-    return colors[intensity] || 'bg-gray-100 text-gray-800';
+    return labels[sessionType] || sessionType;
   };
 
   const handleRequestJoin = async () => {
@@ -138,7 +182,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
     setLoading(true);
     try {
-      // Check if already requested
       const { data: existingRequest } = await supabase
         .from('session_requests')
         .select('id')
@@ -151,14 +194,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         return;
       }
 
-      // Get user profile for request
       const { data: profile } = await supabase
         .from('profiles')
         .select('display_name, username, avatar_url')
         .eq('user_id', user.id)
         .single();
 
-      // Create session request
       const { error: requestError } = await supabase
         .from('session_requests')
         .insert([{
@@ -170,7 +211,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       if (requestError) throw requestError;
 
-      // Create notification for session organizer
       const { error: notificationError } = await supabase
         .from('notifications')
         .insert([{
@@ -189,7 +229,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       if (notificationError) throw notificationError;
 
-      // Envoyer notification push
       await sendPushNotification(
         session.organizer_id,
         'Nouvelle demande de participation',
@@ -206,8 +245,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       setHasRequested(true);
       toast({ title: "Demande envoyée !", description: "Le créateur va recevoir votre demande" });
-      
-      // Afficher une interstitielle après avoir rejoint (si conditions remplies)
       showAdAfterJoiningSession();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -221,7 +258,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
     setLoading(true);
     try {
-      // Delete the pending request
       const { error } = await supabase
         .from('session_requests')
         .delete()
@@ -272,7 +308,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
     setLoading(true);
     try {
-      // Leave session
       const { error: leaveError } = await supabase
         .from('session_participants')
         .delete()
@@ -281,7 +316,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       if (leaveError) throw leaveError;
 
-      // Update session participant count
       const { error: updateError } = await supabase
         .from('sessions')
         .update({
@@ -311,7 +345,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
     setLoading(true);
     try {
-      // Delete session participants first
       const { error: participantsError } = await supabase
         .from('session_participants')
         .delete()
@@ -319,7 +352,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       if (participantsError) throw participantsError;
 
-      // Delete the session
       const { error: sessionError } = await supabase
         .from('sessions')
         .delete()
@@ -339,366 +371,410 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${getActivityColor(session.activity_type)}`} />
-            {session.title}
-          </DialogTitle>
-          <DialogDescription className="flex items-center gap-2">
-            <Avatar 
-              className="h-6 w-6 cursor-pointer hover:opacity-80 transition-opacity" 
-              onClick={() => setShowOrganizerProfile(true)}
+      <DialogContent className="p-0 gap-0 max-w-full h-full sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0">
+        {/* iOS Header */}
+        <div className="sticky top-0 z-10 bg-background border-b border-border">
+          <div className="flex items-center justify-between h-[56px] px-4">
+            <button 
+              onClick={onClose}
+              className="flex items-center gap-1 text-primary"
             >
-              <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.username || session.profiles.display_name} />
-              <AvatarFallback className="text-xs">
-                {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <span>Organisé par {session.profiles.username || session.profiles.display_name}</span>
-          </DialogDescription>
-        </DialogHeader>
+              <ChevronLeft className="h-5 w-5" />
+              <span className="text-[17px]">Retour</span>
+            </button>
+            <h1 className="absolute left-1/2 transform -translate-x-1/2 text-[17px] font-semibold text-foreground">
+              Détails
+            </h1>
+            <div className="w-16" />
+          </div>
+        </div>
 
-        <div className="space-y-4">
-          {/* Image du lieu */}
-          {session.image_url && (
-            <Card>
-              <CardContent className="p-0">
+        <ScrollArea className="flex-1 h-[calc(100vh-56px)] sm:h-auto sm:max-h-[calc(90vh-56px)]">
+          <div className="pb-8">
+            {/* Session Header Card */}
+            <div className="bg-background mt-6 mx-4 rounded-xl overflow-hidden">
+              {session.image_url && (
                 <img 
                   src={session.image_url} 
                   alt={session.title}
-                  className="w-full h-48 object-cover rounded-t-lg"
+                  className="w-full h-40 object-cover"
                 />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Activity and Session Type */}
-          <div className="flex gap-2">
-            <Badge variant="secondary">
-              {session.activity_type ? 
-                session.activity_type.charAt(0).toUpperCase() + session.activity_type.slice(1) : 
-                'Activité'
-              }
-            </Badge>
-            <Badge variant="outline">
-              {session.session_type ? session.session_type.replace('_', ' ') : 'Type de séance'}
-            </Badge>
-          </div>
-
-          {/* Date and Time */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="font-medium">Date et heure</span>
+              )}
+              <div className="p-4">
+                <h2 className="text-[20px] font-semibold text-foreground mb-2">{session.title}</h2>
+                <div 
+                  className="flex items-center gap-2 cursor-pointer"
+                  onClick={() => setShowOrganizerProfile(true)}
+                >
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={session.profiles.avatar_url} />
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-[15px] text-muted-foreground">
+                    Organisé par {session.profiles.username || session.profiles.display_name}
+                  </span>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {format(new Date(session.scheduled_at), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
-              </p>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Distance prévue */}
-          {session.distance_km && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Route className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Distance prévue</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {session.distance_km} km
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-           {/* Allure - Footing ou Sortie longue */}
-           {session.pace_general && (session.session_type === 'footing' || session.session_type === 'sortie_longue') && (
-             <Card>
-               <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span className="font-medium">
-                      {session.activity_type === 'course' 
-                        ? 'Allure prévue'
-                        : session.activity_type === 'natation'
-                          ? 'Allure prévue'
-                          : session.activity_type === 'velo' && session.pace_unit === 'power'
-                            ? 'Puissance prévue'
-                            : 'Vitesse prévue'
-                      }
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {session.activity_type === 'course' 
-                      ? `${session.pace_general}/km`
-                      : session.activity_type === 'natation'
-                        ? `${session.pace_general}/100m`
-                        : session.activity_type === 'velo' && session.pace_unit === 'power'
-                          ? `${session.pace_general} watts`
-                          : `${session.pace_general} km/h`
-                    }
-                  </p>
-               </CardContent>
-             </Card>
-           )}
-
-          {/* Informations fractionné */}
-          {session.session_type === 'fractionne' && (session.interval_distance || session.interval_pace || session.interval_count) && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Séance fractionné</span>
-                </div>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  {session.interval_count && session.interval_distance && (
-                    <p>{session.interval_count} × {session.interval_distance} km</p>
-                  )}
-                    {session.interval_pace && (
-                      <p>
-                        {session.activity_type === 'course' 
-                          ? 'Allure:'
+            {/* Activity Type Section */}
+            <div className="mt-6 mx-4">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Informations</p>
+              <div className="bg-background rounded-xl overflow-hidden">
+                <SettingsRow
+                  icon={Star}
+                  iconBg="bg-[#FF9500]"
+                  label="Activité"
+                  value={getActivityLabel(session.activity_type)}
+                />
+                <SettingsSeparator />
+                <SettingsRow
+                  icon={Route}
+                  iconBg="bg-[#5856D6]"
+                  label="Type de séance"
+                  value={getSessionTypeLabel(session.session_type)}
+                />
+                <SettingsSeparator />
+                <SettingsRow
+                  icon={Calendar}
+                  iconBg="bg-[#FF3B30]"
+                  label="Date"
+                  value={format(new Date(session.scheduled_at), "d MMM yyyy, HH:mm", { locale: fr })}
+                />
+                {session.distance_km && (
+                  <>
+                    <SettingsSeparator />
+                    <SettingsRow
+                      icon={Route}
+                      iconBg="bg-[#34C759]"
+                      label="Distance"
+                      value={`${session.distance_km} km`}
+                    />
+                  </>
+                )}
+                {session.pace_general && (session.session_type === 'footing' || session.session_type === 'sortie_longue') && (
+                  <>
+                    <SettingsSeparator />
+                    <SettingsRow
+                      icon={Clock}
+                      iconBg="bg-[#007AFF]"
+                      label="Allure"
+                      value={
+                        session.activity_type === 'course' 
+                          ? `${session.pace_general}/km`
                           : session.activity_type === 'natation'
-                            ? 'Allure:'
-                            : session.activity_type === 'velo' && session.interval_pace_unit === 'power'
-                              ? 'Puissance:'
-                              : 'Vitesse:'
-                        } {
+                            ? `${session.pace_general}/100m`
+                            : session.activity_type === 'velo' && session.pace_unit === 'power'
+                              ? `${session.pace_general} W`
+                              : `${session.pace_general} km/h`
+                      }
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Fractionné Info */}
+            {session.session_type === 'fractionne' && (session.interval_distance || session.interval_pace || session.interval_count) && (
+              <div className="mt-6 mx-4">
+                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Fractionné</p>
+                <div className="bg-background rounded-xl overflow-hidden">
+                  {session.interval_count && session.interval_distance && (
+                    <SettingsRow
+                      icon={Route}
+                      iconBg="bg-[#FF9500]"
+                      label="Séries"
+                      value={`${session.interval_count} × ${session.interval_distance} km`}
+                    />
+                  )}
+                  {session.interval_pace && (
+                    <>
+                      <SettingsSeparator />
+                      <SettingsRow
+                        icon={Clock}
+                        iconBg="bg-[#FF3B30]"
+                        label="Allure"
+                        value={
                           session.activity_type === 'course'
                             ? `${session.interval_pace}/km`
                             : session.activity_type === 'natation'
                               ? `${session.interval_pace}/100m`
                               : session.activity_type === 'velo' && session.interval_pace_unit === 'power'
-                                ? `${session.interval_pace} watts`
+                                ? `${session.interval_pace} W`
                                 : `${session.interval_pace} km/h`
                         }
-                      </p>
-                    )}
+                      />
+                    </>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Location */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span className="font-medium">Lieu de rendez-vous</span>
               </div>
-              <p className="text-sm text-muted-foreground">{session.location_name}</p>
-            </CardContent>
-          </Card>
+            )}
 
-          {/* Participants */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4 text-primary" />
-                <span className="font-medium">Participants</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  {session.current_participants} participant{session.current_participants > 1 ? 's' : ''}
-                  {session.max_participants && ` / ${session.max_participants} max`}
-                </span>
-                {isFull && (
-                  <Badge variant="destructive">Complet</Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Description */}
-          {session.description && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Star className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Description</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{session.description}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Itinéraire */}
-          {session.routes && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Route className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Itinéraire</span>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">{session.routes.name}</p>
-                  
-                  {/* Mini carte de l'itinéraire */}
-                  <div className="relative bg-gray-100 rounded-lg overflow-hidden">
-                    <RoutePreview 
-                      coordinates={session.routes.coordinates}
-                      activityType={session.activity_type}
-                    />
-                  </div>
-                  
-                  <div className="flex gap-4 text-xs text-muted-foreground">
-                    <span>Distance: {(session.routes.total_distance / 1000).toFixed(1)} km</span>
-                    <span>Dénivelé: {Math.round(session.routes.total_elevation_gain)}m</span>
+            {/* Location Section */}
+            <div className="mt-6 mx-4">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Lieu</p>
+              <div className="bg-background rounded-xl overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#FF3B30] flex items-center justify-center flex-shrink-0">
+                      <MapPin className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[15px] text-foreground">{session.location_name}</p>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Organizer */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <User className="h-4 w-4 text-primary" />
-                <span className="font-medium">Organisateur</span>
               </div>
-              <div className="flex items-center gap-3">
-                <Avatar 
-                  className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity" 
+            </div>
+
+            {/* Participants Section */}
+            <div className="mt-6 mx-4">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Participants</p>
+              <div className="bg-background rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#007AFF] flex items-center justify-center">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-[15px] text-foreground">
+                      {session.current_participants} participant{session.current_participants > 1 ? 's' : ''}
+                      {session.max_participants && ` / ${session.max_participants}`}
+                    </span>
+                  </div>
+                  {isFull && (
+                    <Badge variant="destructive" className="text-xs">Complet</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            {session.description && (
+              <div className="mt-6 mx-4">
+                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Description</p>
+                <div className="bg-background rounded-xl overflow-hidden p-4">
+                  <p className="text-[15px] text-foreground">{session.description}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Route Preview */}
+            {session.routes && (
+              <div className="mt-6 mx-4">
+                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Itinéraire</p>
+                <div className="bg-background rounded-xl overflow-hidden">
+                  <div className="p-4">
+                    <p className="text-[15px] font-medium text-foreground mb-3">{session.routes.name}</p>
+                    <div className="rounded-lg overflow-hidden bg-secondary">
+                      <RoutePreview 
+                        coordinates={session.routes.coordinates}
+                        activityType={session.activity_type}
+                      />
+                    </div>
+                    <div className="flex gap-4 mt-3 text-[13px] text-muted-foreground">
+                      <span>{(session.routes.total_distance / 1000).toFixed(1)} km</span>
+                      <span>D+ {Math.round(session.routes.total_elevation_gain)}m</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Organizer */}
+            <div className="mt-6 mx-4">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Organisateur</p>
+              <div className="bg-background rounded-xl overflow-hidden">
+                <div 
+                  className="flex items-center gap-3 p-4 cursor-pointer active:bg-secondary/50"
                   onClick={() => setShowOrganizerProfile(true)}
                 >
-                  <AvatarImage src={session.profiles.avatar_url} alt={session.profiles.username || session.profiles.display_name} />
-                  <AvatarFallback className="text-sm">
-                    {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm text-muted-foreground">
-                  {session.profiles.username || session.profiles.display_name}
-                </span>
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={session.profiles.avatar_url} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="text-[15px] font-medium text-foreground">
+                      {session.profiles.username || session.profiles.display_name}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Separator />
-
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-2">
-            {/* Share Button - Available to everyone */}
-            <Button
-              onClick={() => setShowShareDialog(true)}
-              variant="outline"
-              className="w-full"
-            >
-              <Share2 className="h-4 w-4 mr-2" />
-              Partager la séance
-            </Button>
-
-            {isOrganizer ? (
-              <>
-                <Badge variant="secondary" className="justify-center py-2">
-                  Votre séance
-                </Badge>
-                {!isScheduled && (
-                  <Button
-                    onClick={() => navigate(`/confirm-presence/${session.id}`)}
-                    variant="default"
-                    className="w-full"
-                  >
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Valider les participants
-                  </Button>
-                )}
-                <Button
-                  onClick={handleDeleteSession}
-                  disabled={loading}
-                  variant="destructive"
-                  className="w-full"
+            {/* Actions Section */}
+            <div className="mt-6 mx-4">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Actions</p>
+              <div className="bg-background rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setShowShareDialog(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {loading ? "Suppression..." : "Supprimer la séance"}
-                </Button>
-              </>
-            ) : isParticipant ? (
-              <>
-                {isScheduled && !gpsValidated && (
-                  <Button
-                    onClick={handleGPSValidation}
-                    disabled={validatingGPS}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    {validatingGPS ? (
+                  <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
+                    <Share2 className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-[15px] text-foreground">Partager la séance</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                </button>
+
+                {isOrganizer ? (
+                  <>
+                    <SettingsSeparator />
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#007AFF] flex items-center justify-center">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-[15px] text-primary font-medium">Votre séance</span>
+                    </div>
+                    {!isScheduled && (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Validation GPS en cours...
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="mr-2 h-4 w-4" />
-                        📍 Je suis arrivé (Validation GPS)
+                        <SettingsSeparator />
+                        <button
+                          onClick={() => navigate(`/confirm-presence/${session.id}`)}
+                          className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
+                            <CheckCircle2 className="h-4 w-4 text-white" />
+                          </div>
+                          <span className="text-[15px] text-foreground">Valider les participants</span>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                        </button>
                       </>
                     )}
-                  </Button>
-                )}
+                  </>
+                ) : isParticipant ? (
+                  <>
+                    {isScheduled && !gpsValidated && (
+                      <>
+                        <SettingsSeparator />
+                        <button
+                          onClick={handleGPSValidation}
+                          disabled={validatingGPS}
+                          className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
+                            {validatingGPS ? (
+                              <Loader2 className="h-4 w-4 text-white animate-spin" />
+                            ) : (
+                              <MapPin className="h-4 w-4 text-white" />
+                            )}
+                          </div>
+                          <span className="text-[15px] text-foreground">
+                            {validatingGPS ? 'Validation GPS...' : 'Je suis arrivé (GPS)'}
+                          </span>
+                        </button>
+                      </>
+                    )}
+                    {gpsValidated && (
+                      <>
+                        <SettingsSeparator />
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
+                            <CheckCircle2 className="h-4 w-4 text-white" />
+                          </div>
+                          <span className="text-[15px] text-[#34C759] font-medium">GPS validé - Présence confirmée</span>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : hasRequested ? (
+                  <>
+                    <SettingsSeparator />
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#FF9500] flex items-center justify-center">
+                        <Clock className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-[15px] text-[#FF9500] font-medium">Demande en attente</span>
+                    </div>
+                  </>
+                ) : !isScheduled ? (
+                  <>
+                    <SettingsSeparator />
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#8E8E93] flex items-center justify-center">
+                        <Clock className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-[15px] text-muted-foreground">Séance terminée</span>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
 
-                {gpsValidated && (
-                  <Badge className="w-full justify-center py-2" variant="default">
-                    ✅ GPS validé - Présence confirmée
-                  </Badge>
-                )}
-
+            {/* Danger Zone */}
+            <div className="mt-6 mx-4">
+              {isOrganizer ? (
+                <div className="bg-background rounded-xl overflow-hidden">
+                  <button
+                    onClick={handleDeleteSession}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <span className="text-[15px] text-destructive">
+                      {loading ? "Suppression..." : "Supprimer la séance"}
+                    </span>
+                  </button>
+                </div>
+              ) : isParticipant ? (
+                <div className="bg-background rounded-xl overflow-hidden">
+                  <button
+                    onClick={handleLeaveSession}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
+                  >
+                    <span className="text-[15px] text-destructive">
+                      {loading ? "Traitement..." : "Quitter la séance"}
+                    </span>
+                  </button>
+                </div>
+              ) : hasRequested ? (
+                <div className="bg-background rounded-xl overflow-hidden">
+                  <button
+                    onClick={handleCancelRequest}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
+                  >
+                    <span className="text-[15px] text-destructive">
+                      {loading ? "Annulation..." : "Annuler ma demande"}
+                    </span>
+                  </button>
+                </div>
+              ) : isScheduled && !isFull ? (
                 <Button
-                  onClick={handleLeaveSession}
+                  onClick={handleRequestJoin}
                   disabled={loading}
-                  variant="destructive"
-                  className="w-full"
+                  className="w-full h-12 rounded-xl text-[17px] font-medium"
                 >
-                  {loading ? "Traitement..." : "Quitter la séance"}
+                  {loading ? "Envoi..." : "Demander à rejoindre"}
                 </Button>
-              </>
-            ) : hasRequested ? (
-              <Button
-                onClick={handleCancelRequest}
-                disabled={loading}
-                variant="outline"
-                className="w-full"
-              >
-                {loading ? "Annulation..." : "Annuler ma demande"}
-              </Button>
-            ) : isScheduled ? (
-              <Button
-                onClick={handleRequestJoin}
-                disabled={loading || isFull}
-                className="w-full"
-              >
-                {loading ? "Envoi..." :
-                 isFull ? "Complet" : 
-                 "Demander à rejoindre"}
-              </Button>
-            ) : (
-              <Badge variant="destructive" className="justify-center py-2">
-                Séance terminée
-              </Badge>
-            )}
-          </div>
+              ) : null}
+            </div>
 
-          {/* Questions sur la séance */}
-          <SessionQuestions 
-            sessionId={session.id}
-            sessionTitle={session.title}
-            organizerId={session.organizer_id}
-            activityType={session.activity_type}
-            locationName={session.location_name}
-            scheduledAt={session.scheduled_at}
-          />
-        </div>
+            {/* Questions Section */}
+            <div className="mt-6 mx-4 pb-4">
+              <SessionQuestions 
+                sessionId={session.id}
+                sessionTitle={session.title}
+                organizerId={session.organizer_id}
+                activityType={session.activity_type}
+                locationName={session.location_name}
+                scheduledAt={session.scheduled_at}
+              />
+            </div>
+          </div>
+        </ScrollArea>
       </DialogContent>
 
-      {/* Profile Preview Dialog */}
       <ProfilePreviewDialog
         userId={showOrganizerProfile ? session.organizer_id : null}
         onClose={() => setShowOrganizerProfile(false)}
       />
 
-      {/* Share Session Dialog */}
       <ShareSessionToConversationDialog
         isOpen={showShareDialog}
         onClose={() => setShowShareDialog(false)}
