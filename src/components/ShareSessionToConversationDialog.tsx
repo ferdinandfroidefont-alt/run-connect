@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Users } from "lucide-react";
+import { Send, Users, ChevronLeft, ChevronRight, Share2, Copy, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface Session {
   id: string;
@@ -45,6 +46,10 @@ interface ShareSessionToConversationDialogProps {
   onSessionShared: () => void;
 }
 
+const SettingsSeparator = () => (
+  <div className="h-px bg-border ml-[60px]" />
+);
+
 export const ShareSessionToConversationDialog = ({ 
   isOpen, 
   onClose, 
@@ -53,9 +58,18 @@ export const ShareSessionToConversationDialog = ({
 }: ShareSessionToConversationDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setHideBottomNav } = useAppContext();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [sharingTo, setSharingTo] = useState<string | null>(null);
+
+  // Hide bottom nav when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setHideBottomNav(true);
+    }
+    return () => setHideBottomNav(false);
+  }, [isOpen, setHideBottomNav]);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -69,7 +83,6 @@ export const ShareSessionToConversationDialog = ({
     try {
       setLoading(true);
       
-      // Get conversations where user is participant
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select('*')
@@ -81,7 +94,6 @@ export const ShareSessionToConversationDialog = ({
       const conversationsWithProfiles = await Promise.all(
         (conversationsData || []).map(async (conv) => {
           if (conv.is_group) {
-            // For groups, check if user is a member
             const { data: memberData } = await supabase
               .from('group_members')
               .select('id')
@@ -89,10 +101,9 @@ export const ShareSessionToConversationDialog = ({
               .eq('user_id', user.id)
               .single();
 
-            if (!memberData) return null; // User is not a member
+            if (!memberData) return null;
             return conv;
           } else {
-            // For direct conversations, get other participant's profile
             const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
             
             const { data: profileData } = await supabase
@@ -122,25 +133,91 @@ export const ShareSessionToConversationDialog = ({
     }
   };
 
+  const getShareMessage = () => {
+    if (!session) return '';
+    const date = format(new Date(session.scheduled_at), "EEEE d MMMM 'à' HH:mm", { locale: fr });
+    return `🏃 Rejoins-moi pour "${session.title}" !
+
+📅 ${date}
+📍 ${session.location_name}
+
+Télécharge RunConnect pour participer : https://run-connect.lovable.app`;
+  };
+
+  const handleNativeShare = async () => {
+    const shareMessage = getShareMessage();
+    
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: session?.title || 'Séance RunConnect',
+          text: shareMessage,
+        });
+        toast({
+          title: "Partagé !",
+          description: "La séance a été partagée"
+        });
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareMessage);
+        toast({
+          title: "✅ Lien copié !",
+          description: "Collez-le dans n'importe quelle application"
+        });
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(shareMessage);
+          toast({
+            title: "✅ Lien copié !",
+            description: "Collez-le dans n'importe quelle application"
+          });
+        } catch {
+          toast({
+            title: "Erreur",
+            description: "Impossible de partager",
+            variant: "destructive"
+          });
+        }
+      }
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const shareMessage = getShareMessage();
+    try {
+      await navigator.clipboard.writeText(shareMessage);
+      toast({
+        title: "✅ Copié !",
+        description: "Le message a été copié dans le presse-papiers"
+      });
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible de copier",
+        variant: "destructive"
+      });
+    }
+  };
+
   const shareToConversation = async (conversationId: string) => {
     if (!user || !session) return;
 
     setSharingTo(conversationId);
     try {
-      // Check if this conversation is a group/club
       const conversation = conversations.find(c => c.id === conversationId);
       const isClub = conversation?.is_group;
 
-      // If sharing to a club and user owns the session, update session visibility
       if (isClub && session.organizer_id === user.id) {
         const { error: sessionError } = await supabase
           .from('sessions')
           .update({ 
             club_id: conversationId,
-            friends_only: false // Ensure it's visible in the club
+            friends_only: false
           })
           .eq('id', session.id)
-          .eq('organizer_id', user.id); // Security check
+          .eq('organizer_id', user.id);
 
         if (sessionError) {
           console.error('Error updating session visibility:', sessionError);
@@ -153,7 +230,6 @@ export const ShareSessionToConversationDialog = ({
         }
       }
 
-      // Create message with session data
       const { error } = await supabase
         .from('messages')
         .insert([{
@@ -166,7 +242,6 @@ export const ShareSessionToConversationDialog = ({
 
       if (error) throw error;
 
-      // Update conversation's updated_at
       await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
@@ -197,78 +272,138 @@ export const ShareSessionToConversationDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5" />
-            Partager "{session.title}"
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="p-0 gap-0 max-w-full h-full sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0">
+        {/* iOS Header */}
+        <div className="sticky top-0 z-10 bg-background border-b border-border">
+          <div className="flex items-center justify-between h-[56px] px-4">
+            <button 
+              onClick={onClose}
+              className="flex items-center gap-1 text-primary"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              <span className="text-[17px]">Retour</span>
+            </button>
+            <h1 className="absolute left-1/2 transform -translate-x-1/2 text-[17px] font-semibold text-foreground">
+              Partager
+            </h1>
+            <div className="w-16" />
+          </div>
+        </div>
 
-        <ScrollArea className="max-h-96">
-          <div className="space-y-2">
-            {loading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Chargement des conversations...</p>
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Aucune conversation trouvée</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Créez des conversations pour partager des séances
-                </p>
-              </div>
-            ) : (
-              conversations.map((conversation) => (
-                <Card 
-                  key={conversation.id} 
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => shareToConversation(conversation.id)}
+        <ScrollArea className="flex-1 h-[calc(100vh-56px)] sm:h-auto sm:max-h-[calc(90vh-56px)]">
+          <div className="pb-8">
+            {/* Session Preview */}
+            <div className="bg-background mt-6 mx-4 rounded-xl overflow-hidden p-4">
+              <p className="text-[13px] text-muted-foreground mb-1">Séance à partager</p>
+              <h2 className="text-[17px] font-semibold text-foreground">{session.title}</h2>
+              <p className="text-[15px] text-muted-foreground mt-1">
+                {format(new Date(session.scheduled_at), "d MMM yyyy, HH:mm", { locale: fr })}
+              </p>
+            </div>
+
+            {/* Share Actions */}
+            <div className="mt-6 mx-4">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Partage rapide</p>
+              <div className="bg-background rounded-xl overflow-hidden">
+                <button
+                  onClick={handleNativeShare}
+                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
                 >
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage 
-                          src={conversation.is_group 
-                            ? conversation.group_avatar_url || "" 
-                            : conversation.profiles?.avatar_url || ""} 
-                        />
-                        <AvatarFallback>
-                          {conversation.is_group ? (
-                            <Users className="h-4 w-4" />
-                          ) : (
-                            (conversation.profiles?.username || conversation.profiles?.display_name)?.charAt(0)?.toUpperCase() || "U"
-                          )}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {conversation.is_group 
-                            ? conversation.group_name 
-                            : conversation.profiles?.display_name || conversation.profiles?.username}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {conversation.is_group ? "Club" : "Conversation"}
-                        </p>
-                      </div>
-                      {sharingTo === conversation.id ? (
-                        <div className="text-xs text-muted-foreground">Envoi...</div>
-                      ) : (
-                        <Send className="h-4 w-4 text-muted-foreground" />
-                      )}
+                  <div className="w-8 h-8 rounded-lg bg-[#007AFF] flex items-center justify-center">
+                    <Share2 className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-[15px] text-foreground">Partager via...</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                </button>
+                <SettingsSeparator />
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#8E8E93] flex items-center justify-center">
+                    <Copy className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-[15px] text-foreground">Copier le lien</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conversations */}
+            <div className="mt-6 mx-4">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">
+                Envoyer dans une conversation
+              </p>
+              <div className="bg-background rounded-xl overflow-hidden">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="text-center py-8 px-4">
+                    <p className="text-[15px] text-muted-foreground">Aucune conversation</p>
+                    <p className="text-[13px] text-muted-foreground mt-1">
+                      Créez des conversations pour partager
+                    </p>
+                  </div>
+                ) : (
+                  conversations.map((conversation, index) => (
+                    <div key={conversation.id}>
+                      {index > 0 && <SettingsSeparator />}
+                      <button
+                        onClick={() => shareToConversation(conversation.id)}
+                        disabled={sharingTo === conversation.id}
+                        className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage 
+                            src={conversation.is_group 
+                              ? conversation.group_avatar_url || "" 
+                              : conversation.profiles?.avatar_url || ""} 
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {conversation.is_group ? (
+                              <Users className="h-4 w-4" />
+                            ) : (
+                              (conversation.profiles?.username || conversation.profiles?.display_name)?.charAt(0)?.toUpperCase() || "U"
+                            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-[15px] font-medium text-foreground truncate">
+                            {conversation.is_group 
+                              ? conversation.group_name 
+                              : conversation.profiles?.display_name || conversation.profiles?.username}
+                          </p>
+                          <p className="text-[13px] text-muted-foreground">
+                            {conversation.is_group ? "Club" : "Conversation"}
+                          </p>
+                        </div>
+                        {sharingTo === conversation.id ? (
+                          <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Cancel Button */}
+            <div className="mt-6 mx-4">
+              <div className="bg-background rounded-xl overflow-hidden">
+                <button
+                  onClick={onClose}
+                  className="w-full flex items-center justify-center py-3 active:bg-secondary/50"
+                >
+                  <span className="text-[17px] text-primary font-medium">Annuler</span>
+                </button>
+              </div>
+            </div>
           </div>
         </ScrollArea>
-
-        <div className="pt-4">
-          <Button variant="outline" onClick={onClose} className="w-full">
-            Annuler
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
