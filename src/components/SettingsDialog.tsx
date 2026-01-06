@@ -190,8 +190,29 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
     const profileUrl = getProfileUrl();
     
     try {
-      // Use Web Share API first - it works on mobile browsers and opens native share sheet
+      // Priority 1: AndroidBridge for native Android WebView
+      const win = window as any;
+      if (win.AndroidBridge && typeof win.AndroidBridge.shareText === 'function') {
+        console.log('[Share] Using AndroidBridge.shareText');
+        win.AndroidBridge.shareText(shareMessage, profileUrl);
+        return;
+      }
+      
+      // Priority 2: Capacitor Share for native apps
+      if (Capacitor.isNativePlatform()) {
+        console.log('[Share] Using Capacitor Share');
+        await Share.share({
+          title: 'Rejoins-moi sur RunConnect',
+          text: shareMessage,
+          url: profileUrl,
+          dialogTitle: 'Partager mon profil'
+        });
+        return;
+      }
+      
+      // Priority 3: Web Share API for mobile browsers
       if (navigator.share) {
+        console.log('[Share] Using Web Share API');
         await navigator.share({
           title: 'Rejoins-moi sur RunConnect',
           text: shareMessage,
