@@ -36,13 +36,22 @@ jobs:
           mkdir -p android-webview/app/src/main/res/drawable
 
           cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories { 
+          pluginManagement {
+            repositories {
+              maven { url 'https://maven.aliyun.com/repository/public' }
+              maven { url 'https://maven.aliyun.com/repository/google' }
               google()
               mavenCentral()
-              maven { url 'https://jitpack.io' }
+              gradlePluginPortal()
+            }
+          }
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+            repositories { 
+              maven { url 'https://maven.aliyun.com/repository/public' }
+              maven { url 'https://maven.aliyun.com/repository/google' }
+              google()
+              mavenCentral()
             }
           }
           rootProject.name = "RunConnect"
@@ -52,9 +61,10 @@ jobs:
           cat > android-webview/build.gradle <<'EOF'
           buildscript {
             repositories {
+              maven { url 'https://maven.aliyun.com/repository/public' }
+              maven { url 'https://maven.aliyun.com/repository/google' }
               google()
               mavenCentral()
-              maven { url 'https://maven.aliyun.com/repository/public' }
             }
             dependencies {
               classpath 'com.android.tools.build:gradle:8.2.1'
@@ -62,7 +72,18 @@ jobs:
             }
           }
 
-          plugins { id 'com.android.application' version '8.2.1' apply false }
+          allprojects {
+            repositories {
+              maven { url 'https://maven.aliyun.com/repository/public' }
+              maven { url 'https://maven.aliyun.com/repository/google' }
+              google()
+              mavenCentral()
+            }
+          }
+
+          task clean(type: Delete) {
+            delete rootProject.buildDir
+          }
           EOF
 
           cat > android-webview/app/build.gradle <<'EOF'
