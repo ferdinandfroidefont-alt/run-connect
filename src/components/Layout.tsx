@@ -33,8 +33,8 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen bg-background overflow-hidden">
-      <main className={hideBottomNav ? "h-full" : "h-full"}>{children}</main>
+    <div className="h-screen bg-background flex flex-col">
+      <main className={`flex-1 overflow-auto ${hideBottomNav ? "" : "pb-[72px]"}`}>{children}</main>
       {!hideBottomNav && <BottomNavigation />}
     </div>
   );
