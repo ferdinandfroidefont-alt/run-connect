@@ -221,15 +221,16 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
       toast({ title: "Séance créée avec succès ! 🎉" });
       showAdAfterSessionCreation();
 
-      setTimeout(() => {
-        onSessionCreated(sessionData.id);
-      }, 300);
+      // Call session created callback immediately with session ID
+      console.log('🎯 Calling onSessionCreated with sessionId:', sessionData.id);
+      onSessionCreated(sessionData.id);
 
+      // Center map on new session location
       if (map && selectedLocation) {
         setTimeout(() => {
           map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
           map.setZoom(15);
-        }, 400);
+        }, 200);
       }
 
       onClose();
