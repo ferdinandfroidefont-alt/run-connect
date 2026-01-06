@@ -3,5 +3,7 @@
     <!-- 🎯 Android 16 Fix: Opt-out de l'edge-to-edge enforcement obligatoire -->
     <style name="OptOutEdgeToEdgeEnforcement">
         <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+        <item name="android:statusBarColor">@color/iosBlue</item>
+        <item name="android:navigationBarColor">@color/iosBlue</item>
     </style>
 </resources>

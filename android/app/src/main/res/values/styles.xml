@@ -1,30 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Thème principal de l'application -->
+    <!-- Thème principal de l'application avec barres système bleues iOS -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorPrimary">@color/iosBlue</item>
+        <item name="colorPrimaryDark">@color/iosBlue</item>
+        <item name="colorAccent">@color/iosBlue</item>
+        <item name="android:statusBarColor">@color/iosBlue</item>
+        <item name="android:navigationBarColor">@color/iosBlue</item>
     </style>
 
-    <!-- Thème sans action bar pour MainActivity -->
+    <!-- Thème sans action bar pour MainActivity avec barres bleues -->
     <style name="AppTheme.NoActionBarFull" parent="AppTheme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:statusBarColor">@color/iosBlue</item>
+        <item name="android:navigationBarColor">@color/iosBlue</item>
     </style>
 
-    <!-- Thème pour le Splash Screen (FULLSCREEN IMMERSIF) -->
+    <!-- Thème pour le Splash Screen avec barres bleues -->
     <style name="SplashTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_background</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowFullscreen">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         
-        <!-- FLAGS pour masquer status bar + navigation bar -->
+        <!-- Barres système bleues iOS -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@color/iosBlue</item>
+        <item name="android:navigationBarColor">@color/iosBlue</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>
