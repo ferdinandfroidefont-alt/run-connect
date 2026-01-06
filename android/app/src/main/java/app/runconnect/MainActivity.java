@@ -150,32 +150,30 @@ public class MainActivity extends AppCompatActivity {
             androidx.core.view.WindowInsetsControllerCompat insetsController = 
                 new androidx.core.view.WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
             
-            // 🎯 SHOW status bar (time, battery, network) - HIDE navigation bar only
+            // 🎯 SHOW both status bar AND navigation bar with iOS blue color
             insetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars());
-            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.navigationBars());
-            insetsController.setSystemBarsBehavior(
-                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            );
+            insetsController.show(androidx.core.view.WindowInsetsCompat.Type.navigationBars());
             
-            // Set status bar to dark icons on light background (or light icons on dark)
-            insetsController.setAppearanceLightStatusBars(true);
+            // Set light icons on blue background (white icons)
+            insetsController.setAppearanceLightStatusBars(false);
+            insetsController.setAppearanceLightNavigationBars(false);
             
-            // Make content extend behind status bar
+            // Set iOS blue color for both bars
+            getWindow().setStatusBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
+            getWindow().setNavigationBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
+            
+            // Make content not extend behind system bars
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                 getWindow().setDecorFitsSystemWindows(true);
             }
             
-            Log.d(TAG, "✅ Status bar visible, navigation bar hidden via WindowInsetsControllerCompat");
+            Log.d(TAG, "✅ Status bar and navigation bar visible with iOS blue color");
         } catch (Exception e) {
             Log.w(TAG, "⚠️ WindowInsetsControllerCompat failed, falling back to legacy mode: " + e.getMessage());
-            // Fallback to legacy flags - show status bar, hide navigation
-            getWindow().getDecorView().setSystemUiVisibility(
-                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            );
-            Log.d(TAG, "✅ Status bar visible via legacy SystemUiVisibility");
+            // Fallback to legacy - just set the colors
+            getWindow().setStatusBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
+            getWindow().setNavigationBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
+            Log.d(TAG, "✅ Status bar and navigation bar with iOS blue via legacy method");
         }
     }
 
