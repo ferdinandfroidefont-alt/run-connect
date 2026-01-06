@@ -652,18 +652,57 @@ export const InteractiveMap = ({
     }
   }, [highlightSessionId, sessions]);
 
-  // Real-time updates for sessions
+  // Real-time updates for sessions with improved mobile support
   useEffect(() => {
     if (!user) return;
     loadSessions();
-    const channel = supabase.channel('schema-db-changes').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'sessions'
-    }, () => {
-      loadSessions();
-    }).subscribe();
+    
+    // Create a unique channel name for better mobile WebSocket handling
+    const channelName = `sessions-realtime-${user.id}-${Date.now()}`;
+    console.log('📡 Subscribing to realtime channel:', channelName);
+    
+    const channel = supabase.channel(channelName)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'sessions'
+      }, (payload) => {
+        console.log('🆕 Realtime: New session detected', payload);
+        // Immediate reload on insert
+        loadSessions();
+        
+        // Mark as new for animation if it's the user's session
+        if (payload.new && (payload.new as any).organizer_id === user.id) {
+          markSessionAsNew((payload.new as any).id);
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'sessions'
+      }, (payload) => {
+        console.log('✏️ Realtime: Session updated', payload);
+        loadSessions();
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'sessions'
+      }, (payload) => {
+        console.log('🗑️ Realtime: Session deleted', payload);
+        loadSessions();
+      })
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('📡 Realtime channel error, reloading sessions manually');
+          // Fallback: reload sessions periodically on error
+          setTimeout(() => loadSessions(), 1000);
+        }
+      });
+      
     return () => {
+      console.log('📡 Unsubscribing from realtime channel');
       supabase.removeChannel(channel);
     };
   }, [user, filters.selected_date, filters.friends_only, filters.selected_club_id]);
@@ -1458,11 +1497,25 @@ export const InteractiveMap = ({
       <CreateSessionWizard isOpen={isCreateDialogOpen} onClose={() => {
       setIsCreateDialogOpen(false);
       setPresetLocation(null);
-    }} onSessionCreated={sessionId => {
+    }} onSessionCreated={async (sessionId) => {
+      console.log('🎯 Session created callback triggered, sessionId:', sessionId);
+      
       if (sessionId) {
         markSessionAsNew(sessionId);
       }
-      loadSessionsWithRetry();
+      
+      // Immediate load for faster display
+      await loadSessions();
+      
+      // Mobile-specific: Force multiple reloads with increasing delays
+      // This ensures the session appears even if WebSocket is slow
+      const reloadDelays = [500, 1500, 3000, 5000];
+      reloadDelays.forEach((delay) => {
+        setTimeout(async () => {
+          console.log(`🔄 Mobile retry: Reloading sessions after ${delay}ms`);
+          await loadSessions();
+        }, delay);
+      });
     }} map={map.current} presetLocation={presetLocation} onCreateRoute={handleCreateRoute} />
 
       {/* Session Preview Popup */}
