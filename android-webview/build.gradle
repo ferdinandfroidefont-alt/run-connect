@@ -1,0 +1,30 @@
+// Top-level build file for android-webview
+// Configuration compatible Gradle 8.4 + AGP 8.2.1
+
+buildscript {
+    repositories {
+        // Maven mirror to avoid 403 errors from Maven Central on GitHub runners
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.1'
+        classpath 'com.google.gms:google-services:4.4.0'
+    }
+}
+
+allprojects {
+    repositories {
+        // Maven mirror to avoid 403 errors from Maven Central on GitHub runners
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
