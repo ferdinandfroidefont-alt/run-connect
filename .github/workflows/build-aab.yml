@@ -54,14 +54,15 @@ jobs:
             repositories {
               google()
               mavenCentral()
+              maven { url 'https://maven.aliyun.com/repository/public' }
             }
             dependencies {
-              classpath 'com.android.tools.build:gradle:8.6.0'
+              classpath 'com.android.tools.build:gradle:8.2.1'
               classpath 'com.google.gms:google-services:4.4.0'
             }
           }
 
-          plugins { id 'com.android.application' version '8.6.0' apply false }
+          plugins { id 'com.android.application' version '8.2.1' apply false }
           EOF
 
           cat > android-webview/app/build.gradle <<'EOF'
@@ -145,7 +146,7 @@ jobs:
           cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           EOF
@@ -293,10 +294,22 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         run: |
-          echo "🎯 Création du wrapper gradle si manquant..."
-          [ -f ./gradlew ] || gradle wrapper --gradle-version 8.7
-          chmod +x ./gradlew
-          ./gradlew :app:bundleRelease
+          echo "🎯 Téléchargement du wrapper Gradle 8.4..."
+          
+          # Télécharger le wrapper JAR directement (évite d'utiliser Gradle 9 global)
+          curl -Lo gradle/wrapper/gradle-wrapper.jar \
+            https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          
+          # Créer le script gradlew
+          cat > gradlew << 'GRADLEW_SCRIPT'
+          #!/bin/sh
+          DIRNAME=$(dirname "$0")
+          exec java -jar "$DIRNAME/gradle/wrapper/gradle-wrapper.jar" "$@"
+          GRADLEW_SCRIPT
+          chmod +x gradlew
+          
+          echo "✅ Wrapper Gradle 8.4 prêt"
+          ./gradlew :app:bundleRelease --no-daemon
 
       - name: 📦 Télécharger l'AAB
         uses: actions/upload-artifact@v4
