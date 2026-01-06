@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Users, ChevronLeft, ChevronRight, Share2, Copy, Loader2 } from "lucide-react";
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useAppContext } from "@/contexts/AppContext";
@@ -146,27 +148,49 @@ Télécharge RunConnect pour participer : https://run-connect.lovable.app`;
 
   const handleNativeShare = async () => {
     const shareMessage = getShareMessage();
+    const shareUrl = 'https://run-connect.lovable.app';
     
     try {
+      // Priority 1: AndroidBridge for native Android WebView
+      const win = window as any;
+      if (win.AndroidBridge && typeof win.AndroidBridge.shareText === 'function') {
+        console.log('[Share] Using AndroidBridge.shareText');
+        win.AndroidBridge.shareText(shareMessage, shareUrl);
+        return;
+      }
+      
+      // Priority 2: Capacitor Share for native apps
+      if (Capacitor.isNativePlatform()) {
+        console.log('[Share] Using Capacitor Share');
+        await Share.share({
+          title: session?.title || 'Séance RunConnect',
+          text: shareMessage,
+          url: shareUrl,
+          dialogTitle: 'Partager la séance'
+        });
+        return;
+      }
+      
+      // Priority 3: Web Share API for mobile browsers
       if (navigator.share) {
+        console.log('[Share] Using Web Share API');
         await navigator.share({
           title: session?.title || 'Séance RunConnect',
           text: shareMessage,
+          url: shareUrl
         });
-        toast({
-          title: "Partagé !",
-          description: "La séance a été partagée"
-        });
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(shareMessage);
-        toast({
-          title: "✅ Lien copié !",
-          description: "Collez-le dans n'importe quelle application"
-        });
+        return;
       }
+      
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(shareMessage);
+      toast({
+        title: "✅ Lien copié !",
+        description: "Collez-le dans n'importe quelle application"
+      });
     } catch (error: any) {
       if (error.name !== 'AbortError') {
+        console.error('Share error:', error);
         try {
           await navigator.clipboard.writeText(shareMessage);
           toast({
