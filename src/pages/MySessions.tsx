@@ -147,12 +147,53 @@ export default function MySessions() {
     }
   }, [location.search]);
 
+  // Load sessions and subscribe to real-time updates
   useEffect(() => {
+    if (!user) return;
+    
     loadUserSessions();
     if (currentView === 'routes') {
       loadUserRoutes();
     }
+
+    // Real-time subscription for immediate updates on Android & Web
+    const channelName = `my-sessions-${user.id}-${Date.now()}`;
+    console.log('📡 MySessions: Subscribing to realtime channel:', channelName);
+    
+    const channel = supabase.channel(channelName)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'sessions',
+        filter: `organizer_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('🆕 MySessions: Session change detected', payload.eventType);
+        loadUserSessions();
+      })
+      .subscribe((status) => {
+        console.log('📡 MySessions: Subscription status:', status);
+      });
+
+    return () => {
+      console.log('📡 MySessions: Unsubscribing from channel');
+      supabase.removeChannel(channel);
+    };
   }, [user, currentView]);
+
+  // Reload sessions when page becomes visible (Android WebView fix)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        console.log('👁️ MySessions: Page visible, reloading sessions');
+        loadUserSessions();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
 
   const loadUserRoutes = async () => {
     if (!user) return;

@@ -225,6 +225,16 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
       console.log('🎯 Calling onSessionCreated with sessionId:', sessionData.id);
       onSessionCreated(sessionData.id);
 
+      // Force multiple refreshes for Android WebView reliability
+      // WebSockets can be unreliable on mobile WebViews
+      const forceRefreshDelays = [100, 500, 1500, 3000];
+      forceRefreshDelays.forEach((delay) => {
+        setTimeout(() => {
+          console.log(`🔄 Force refresh at ${delay}ms for Android compatibility`);
+          onSessionCreated(sessionData.id);
+        }, delay);
+      });
+
       // Center map on new session location
       if (map && selectedLocation) {
         setTimeout(() => {
