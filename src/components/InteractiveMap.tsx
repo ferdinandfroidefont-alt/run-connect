@@ -1307,13 +1307,13 @@ export const InteractiveMap = ({
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="relative flex items-center justify-between px-4 pt-2 pb-6">
-            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
+          <div className="relative flex items-center justify-between px-4 py-8">
+            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent mt-2">
               RunConnect
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
-            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2">
+            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
                 <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
                   <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
@@ -1324,7 +1324,7 @@ export const InteractiveMap = ({
                 </div>
               </div>}
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-2">
               <NotificationCenter onSessionUpdated={loadSessions} />
               <div className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={async () => {
               if (userProfile) {
@@ -1351,7 +1351,7 @@ export const InteractiveMap = ({
         </div>
         
         {/* Search Bar and Date Filter - Floating over map */}
-        <div className="absolute top-20 left-0 right-0 z-10 px-4 pb-4">
+        <div className="absolute top-24 left-0 right-0 z-10 px-4 pb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
