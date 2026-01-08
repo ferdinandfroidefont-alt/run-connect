@@ -80,12 +80,18 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
 
-        // Full screen immersif + transparent
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // ✅ Barres système iOS Blue permanentes
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         if (Build.VERSION.SDK_INT >= 21) {
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-            getWindow().setNavigationBarColor(Color.TRANSPARENT);
+            getWindow().setStatusBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
+            getWindow().setNavigationBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
         }
+        
+        // ✅ Icônes blanches sur fond bleu
+        androidx.core.view.WindowInsetsControllerCompat insetsController = 
+            new androidx.core.view.WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        insetsController.setAppearanceLightStatusBars(false);
+        insetsController.setAppearanceLightNavigationBars(false);
 
         // WebView setup
         webView = new WebView(this);
