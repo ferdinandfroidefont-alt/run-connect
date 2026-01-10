@@ -1307,42 +1307,27 @@ export const InteractiveMap = ({
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="relative flex items-start justify-between px-4 py-8">
-            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent mt-0">
-              RunConnect
+          <div className="relative flex items-center justify-between px-4 py-6">
+            {/* Runconnect Title - Left aligned iOS style */}
+            <h1 className="text-xl font-semibold text-foreground">
+              Runconnect
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
-            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2 -mt-2">
+            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2">
                 <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
-                  <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+                  <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
-                    <AvatarFallback>
+                    <AvatarFallback className="text-lg">
                       {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
               </div>}
             
-            <div className="flex items-center gap-2 -mt-2">
+            {/* Bell and Settings - Right aligned, closer together */}
+            <div className="flex items-center gap-1">
               <NotificationCenter onSessionUpdated={loadSessions} />
-              <div className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={async () => {
-              if (userProfile) {
-                // Récupérer referral_code
-                const {
-                  data: profileData
-                } = await supabase.from('profiles').select('referral_code').eq('user_id', user?.id).single();
-                shareProfile({
-                  username: userProfile.username,
-                  displayName: userProfile.display_name,
-                  bio: null,
-                  avatarUrl: userProfile.avatar_url,
-                  referralCode: profileData?.referral_code
-                });
-              }
-            }}>
-                
-              </div>
               <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={() => setShowSettingsDialog(true)}>
                 ⚙️
               </div>
