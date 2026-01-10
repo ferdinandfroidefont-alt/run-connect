@@ -1304,120 +1304,110 @@ export const InteractiveMap = ({
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
       
-      {/* Header */}
+      {/* Header - White bar with title only */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="relative flex items-center justify-between px-4 py-8">
-            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent mt-2">
+          <div className="flex items-center justify-center px-4 py-4">
+            <h1 className="text-lg font-bold bg-gradient-map bg-clip-text text-transparent">
               RunConnect
             </h1>
-            
-            {/* User Profile Avatar - Centered - Clickable to access profile */}
-            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
-                <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
-                  <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
-                    <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
-                    <AvatarFallback>
-                      {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              </div>}
-            
-            <div className="flex items-center gap-2 mt-2">
-              <NotificationCenter onSessionUpdated={loadSessions} />
-              <div className="cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={async () => {
-              if (userProfile) {
-                // Récupérer referral_code
-                const {
-                  data: profileData
-                } = await supabase.from('profiles').select('referral_code').eq('user_id', user?.id).single();
-                shareProfile({
-                  username: userProfile.username,
-                  displayName: userProfile.display_name,
-                  bio: null,
-                  avatarUrl: userProfile.avatar_url,
-                  referralCode: profileData?.referral_code
-                });
-              }
-            }}>
-                
-              </div>
-              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={() => setShowSettingsDialog(true)}>
-                ⚙️
-              </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Profile, Bell, Settings - Positioned between top of screen and search bar */}
+      <div className="absolute top-14 left-0 right-0 z-20 px-4">
+        <div className="flex items-center justify-between">
+          {/* Empty space for balance */}
+          <div className="w-12"></div>
+          
+          {/* User Profile Avatar - Centered */}
+          {userProfile && <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
+              <Avatar className="w-12 h-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+                <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
+                <AvatarFallback>
+                  {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </div>}
+          
+          {/* Bell and Settings */}
+          <div className="flex items-center gap-2">
+            <NotificationCenter onSessionUpdated={loadSessions} />
+            <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={() => setShowSettingsDialog(true)}>
+              ⚙️
             </div>
           </div>
         </div>
+      </div>
         
-        {/* Search Bar and Date Filter - Floating over map */}
-        <div className="absolute top-24 left-0 right-0 z-10 px-4 pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
-            ...prev,
-            search_query: e.target.value
-          }))} className="pl-10" />
-          </div>
+      {/* Search Bar and Date Filter - Floating over map */}
+      <div className="absolute top-28 left-0 right-0 z-10 px-4 pb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
+          ...prev,
+          search_query: e.target.value
+        }))} className="pl-10" />
+        </div>
           
-          {/* Date Filter and Friends Filter */}
-          <div className="mt-3 flex justify-start gap-3">
-            {/* Date Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="relative cursor-pointer">
-                  {/* Calendar Icon Style */}
-                  <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
-                    {/* Top holes */}
-                    <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
-                    <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
-                    {/* Month text */}
-                    <div className="text-white text-xs font-bold text-center pt-1.5">
-                      {format(filters.selected_date, "MMM", {
-                      locale: fr
-                    }).toUpperCase()}
-                    </div>
-                  </div>
-                  {/* Calendar body */}
-                  <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
-                    <div className="text-black text-lg font-bold">
-                      {format(filters.selected_date, "d")}
-                    </div>
+        {/* Date Filter and Friends Filter */}
+        <div className="mt-3 flex justify-start gap-3">
+          {/* Date Filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <div className="relative cursor-pointer">
+                {/* Calendar Icon Style */}
+                <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
+                  {/* Top holes */}
+                  <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
+                  <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
+                  {/* Month text */}
+                  <div className="text-white text-xs font-bold text-center pt-1.5">
+                    {format(filters.selected_date, "MMM", {
+                    locale: fr
+                  }).toUpperCase()}
                   </div>
                 </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent mode="single" selected={filters.selected_date} onSelect={date => {
-                if (date) {
-                  setFilters(prev => ({
-                    ...prev,
-                    selected_date: date
-                  }));
-                }
-              }} initialFocus className="p-3 pointer-events-auto" />
-              </PopoverContent>
-            </Popover>
-
-            {/* Friends Only Filter and Club Selector - stacked vertically */}
-            <div className="flex flex-col gap-2">
-              {/* Friends Only Filter */}
-              <button onClick={() => setFilters(prev => ({
-              ...prev,
-              friends_only: !prev.friends_only
-            }))} className={cn("flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7", filters.friends_only ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted")}>
-                <div className="flex items-center gap-0.5">
-                  <PersonStanding size={12} />
-                  <Bike size={12} />
+                {/* Calendar body */}
+                <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
+                  <div className="text-black text-lg font-bold">
+                    {format(filters.selected_date, "d")}
+                  </div>
                 </div>
-              </button>
-              
-              {/* Club Selector positioned directly under "Amis uniquement" */}
-              <div className="w-48">
-                <ClubSelector selectedClubId={filters.selected_club_id} onClubSelect={clubId => setFilters(prev => ({
-                ...prev,
-                selected_club_id: clubId
-              }))} />
               </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={filters.selected_date} onSelect={date => {
+              if (date) {
+                setFilters(prev => ({
+                  ...prev,
+                  selected_date: date
+                }));
+              }
+            }} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+
+          {/* Friends Only Filter and Club Selector - stacked vertically */}
+          <div className="flex flex-col gap-2">
+            {/* Friends Only Filter */}
+            <button onClick={() => setFilters(prev => ({
+            ...prev,
+            friends_only: !prev.friends_only
+          }))} className={cn("flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7", filters.friends_only ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted")}>
+              <div className="flex items-center gap-0.5">
+                <PersonStanding size={12} />
+                <Bike size={12} />
+              </div>
+            </button>
+            
+            {/* Club Selector positioned directly under "Amis uniquement" */}
+            <div className="w-48">
+              <ClubSelector selectedClubId={filters.selected_club_id} onClubSelect={clubId => setFilters(prev => ({
+              ...prev,
+              selected_club_id: clubId
+            }))} />
             </div>
           </div>
         </div>
