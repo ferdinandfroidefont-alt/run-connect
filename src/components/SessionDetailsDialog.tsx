@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -113,6 +114,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [gpsValidated, setGpsValidated] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Hide bottom nav when dialog opens
   useEffect(() => {
@@ -339,10 +341,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const handleDeleteSession = async () => {
     if (!user || !isOrganizer) return;
 
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette séance ?")) {
-      return;
-    }
-
     setLoading(true);
     try {
       const { error: participantsError } = await supabase
@@ -366,6 +364,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -710,13 +709,13 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               {isOrganizer ? (
                 <div className="bg-background rounded-xl overflow-hidden">
                   <button
-                    onClick={handleDeleteSession}
+                    onClick={() => setShowDeleteConfirm(true)}
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                     <span className="text-[15px] text-destructive">
-                      {loading ? "Suppression..." : "Supprimer la séance"}
+                      Supprimer la séance
                     </span>
                   </button>
                 </div>
@@ -783,6 +782,34 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           setShowShareDialog(false);
         }}
       />
+
+      {/* Delete Confirmation Dialog - iOS Style */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Supprimer la séance
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Êtes-vous sûr de vouloir supprimer cette séance ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={handleDeleteSession}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              {loading ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
