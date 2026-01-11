@@ -1307,9 +1307,9 @@ export const InteractiveMap = ({
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border">
-          <div className="relative flex items-center justify-between px-4 py-6">
+          <div className="relative flex items-center justify-between px-4 py-8">
             {/* Runconnect Title - Left aligned iOS style */}
-            <h1 className="text-xl font-semibold text-foreground">
+            <h1 className="text-xl font-semibold text-primary">
               Runconnect
             </h1>
             
