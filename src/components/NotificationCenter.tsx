@@ -50,6 +50,8 @@ export const NotificationCenter = ({
   const [pendingRejectNotification, setPendingRejectNotification] = useState<Notification | null>(null);
   const [pendingAcceptClubNotification, setPendingAcceptClubNotification] = useState<Notification | null>(null);
   const [pendingDeclineClubNotification, setPendingDeclineClubNotification] = useState<Notification | null>(null);
+  const [pendingAcceptFollowNotification, setPendingAcceptFollowNotification] = useState<Notification | null>(null);
+  const [pendingRejectFollowNotification, setPendingRejectFollowNotification] = useState<Notification | null>(null);
   const fetchNotifications = async () => {
     if (!user) return;
     try {
@@ -393,7 +395,12 @@ export const NotificationCenter = ({
       });
     } finally {
       setLoading(false);
+      setPendingAcceptFollowNotification(null);
     }
+  };
+  
+  const confirmAcceptFollow = (notification: Notification) => {
+    setPendingAcceptFollowNotification(notification);
   };
 
   // Handle follow back - follow the person who followed us
@@ -486,7 +493,12 @@ export const NotificationCenter = ({
       });
     } finally {
       setLoading(false);
+      setPendingRejectFollowNotification(null);
     }
+  };
+  
+  const confirmRejectFollow = (notification: Notification) => {
+    setPendingRejectFollowNotification(notification);
   };
   const markAsRead = async (notificationId: string) => {
     try {
@@ -635,11 +647,11 @@ export const NotificationCenter = ({
                            <div className="flex flex-col gap-2">
                              {/* Montrer accepter/refuser seulement si pas encore accepté */}
                              {!acceptedFollows.has(notification.id) && !notification.read && <div className="flex gap-2">
-                                 <Button size="sm" onClick={() => handleAcceptFollow(notification)} disabled={loading} className="flex-1">
+                                 <Button size="sm" onClick={() => confirmAcceptFollow(notification)} disabled={loading} className="flex-1">
                                    <Check className="h-4 w-4 mr-1" />
                                    Accepter
                                  </Button>
-                                 <Button size="sm" variant="outline" onClick={() => handleRejectFollow(notification)} disabled={loading} className="flex-1">
+                                 <Button size="sm" variant="outline" onClick={() => confirmRejectFollow(notification)} disabled={loading} className="flex-1">
                                    <X className="h-4 w-4 mr-1" />
                                    Refuser
                                  </Button>
@@ -772,6 +784,62 @@ export const NotificationCenter = ({
           <div className="border-t border-border">
             <AlertDialogAction
               onClick={() => pendingDeclineClubNotification && handleDeclineClubInvitation(pendingDeclineClubNotification)}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              {loading ? "Traitement..." : "Refuser"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Accept Follow Request Confirmation Dialog - iOS Style */}
+      <AlertDialog open={!!pendingAcceptFollowNotification} onOpenChange={(open) => !open && setPendingAcceptFollowNotification(null)}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Accepter l'abonnement
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Voulez-vous accepter cette demande d'abonnement ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={() => pendingAcceptFollowNotification && handleAcceptFollow(pendingAcceptFollowNotification)}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-primary text-[17px] font-semibold"
+            >
+              {loading ? "Traitement..." : "Accepter"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Follow Request Confirmation Dialog - iOS Style */}
+      <AlertDialog open={!!pendingRejectFollowNotification} onOpenChange={(open) => !open && setPendingRejectFollowNotification(null)}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Refuser l'abonnement
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Voulez-vous refuser cette demande d'abonnement ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={() => pendingRejectFollowNotification && handleRejectFollow(pendingRejectFollowNotification)}
               disabled={loading}
               className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
             >
