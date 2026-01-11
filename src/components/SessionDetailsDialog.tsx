@@ -115,6 +115,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [gpsValidated, setGpsValidated] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   // Hide bottom nav when dialog opens
   useEffect(() => {
@@ -335,6 +336,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
+      setShowLeaveConfirm(false);
     }
   };
 
@@ -722,12 +724,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               ) : isParticipant ? (
                 <div className="bg-background rounded-xl overflow-hidden">
                   <button
-                    onClick={handleLeaveSession}
+                    onClick={() => setShowLeaveConfirm(true)}
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
                   >
                     <span className="text-[15px] text-destructive">
-                      {loading ? "Traitement..." : "Quitter la séance"}
+                      Quitter la séance
                     </span>
                   </button>
                 </div>
@@ -806,6 +808,34 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
             >
               {loading ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Leave Confirmation Dialog - iOS Style */}
+      <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Quitter la séance
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Êtes-vous sûr de vouloir quitter cette séance ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={handleLeaveSession}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              {loading ? "Traitement..." : "Quitter"}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
