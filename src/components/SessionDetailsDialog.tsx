@@ -116,6 +116,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [gpsValidated, setGpsValidated] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showCancelRequestConfirm, setShowCancelRequestConfirm] = useState(false);
 
   // Hide bottom nav when dialog opens
   useEffect(() => {
@@ -276,6 +277,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
+      setShowCancelRequestConfirm(false);
     }
   };
 
@@ -736,12 +738,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               ) : hasRequested ? (
                 <div className="bg-background rounded-xl overflow-hidden">
                   <button
-                    onClick={handleCancelRequest}
+                    onClick={() => setShowCancelRequestConfirm(true)}
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
                   >
                     <span className="text-[15px] text-destructive">
-                      {loading ? "Annulation..." : "Annuler ma demande"}
+                      Annuler ma demande
                     </span>
                   </button>
                 </div>
@@ -836,6 +838,34 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
             >
               {loading ? "Traitement..." : "Quitter"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Request Confirmation Dialog - iOS Style */}
+      <AlertDialog open={showCancelRequestConfirm} onOpenChange={setShowCancelRequestConfirm}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Annuler la demande
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Êtes-vous sûr de vouloir annuler votre demande de participation ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+              Non, garder
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={handleCancelRequest}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              {loading ? "Annulation..." : "Oui, annuler"}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
