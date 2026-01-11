@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,6 +46,8 @@ export const NotificationCenter = ({
   const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
   const [acceptedFollows, setAcceptedFollows] = useState<Set<string>>(new Set());
   const [followedBack, setFollowedBack] = useState<Set<string>>(new Set());
+  const [pendingAcceptNotification, setPendingAcceptNotification] = useState<Notification | null>(null);
+  const [pendingRejectNotification, setPendingRejectNotification] = useState<Notification | null>(null);
   const fetchNotifications = async () => {
     if (!user) return;
     try {
@@ -259,7 +262,12 @@ export const NotificationCenter = ({
       });
     } finally {
       setLoading(false);
+      setPendingAcceptNotification(null);
     }
+  };
+  
+  const confirmAcceptRequest = (notification: Notification) => {
+    setPendingAcceptNotification(notification);
   };
   const handleRejectRequest = async (notification: Notification) => {
     if (!user || notification.type !== 'session_request') return;
@@ -303,7 +311,12 @@ export const NotificationCenter = ({
       });
     } finally {
       setLoading(false);
+      setPendingRejectNotification(null);
     }
+  };
+  
+  const confirmRejectRequest = (notification: Notification) => {
+    setPendingRejectNotification(notification);
   };
 
   // Handle follow request acceptance
@@ -580,11 +593,11 @@ export const NotificationCenter = ({
                        {notification.type === 'session_request' && !notification.read && <>
                            <Separator className="my-3" />
                            <div className="flex gap-2">
-                             <Button size="sm" onClick={() => handleAcceptRequest(notification)} disabled={loading} className="flex-1">
+                             <Button size="sm" onClick={() => confirmAcceptRequest(notification)} disabled={loading} className="flex-1">
                                <Check className="h-4 w-4 mr-1" />
                                Accepter
                              </Button>
-                             <Button size="sm" variant="outline" onClick={() => handleRejectRequest(notification)} disabled={loading} className="flex-1">
+                             <Button size="sm" variant="outline" onClick={() => confirmRejectRequest(notification)} disabled={loading} className="flex-1">
                                <X className="h-4 w-4 mr-1" />
                                Refuser
                              </Button>
@@ -643,5 +656,61 @@ export const NotificationCenter = ({
         setProfilePreviewUserId(null);
       }} />
       </SheetContent>
+
+      {/* Accept Request Confirmation Dialog - iOS Style */}
+      <AlertDialog open={!!pendingAcceptNotification} onOpenChange={(open) => !open && setPendingAcceptNotification(null)}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Accepter la demande
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Voulez-vous accepter cette demande de participation ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={() => pendingAcceptNotification && handleAcceptRequest(pendingAcceptNotification)}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-primary text-[17px] font-semibold"
+            >
+              {loading ? "Traitement..." : "Accepter"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Request Confirmation Dialog - iOS Style */}
+      <AlertDialog open={!!pendingRejectNotification} onOpenChange={(open) => !open && setPendingRejectNotification(null)}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Refuser la demande
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Voulez-vous refuser cette demande de participation ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={() => pendingRejectNotification && handleRejectRequest(pendingRejectNotification)}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              {loading ? "Traitement..." : "Refuser"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>;
 };
