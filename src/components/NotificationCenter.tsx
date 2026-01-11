@@ -48,6 +48,8 @@ export const NotificationCenter = ({
   const [followedBack, setFollowedBack] = useState<Set<string>>(new Set());
   const [pendingAcceptNotification, setPendingAcceptNotification] = useState<Notification | null>(null);
   const [pendingRejectNotification, setPendingRejectNotification] = useState<Notification | null>(null);
+  const [pendingAcceptClubNotification, setPendingAcceptClubNotification] = useState<Notification | null>(null);
+  const [pendingDeclineClubNotification, setPendingDeclineClubNotification] = useState<Notification | null>(null);
   const fetchNotifications = async () => {
     if (!user) return;
     try {
@@ -151,7 +153,12 @@ export const NotificationCenter = ({
       });
     } finally {
       setLoading(false);
+      setPendingAcceptClubNotification(null);
     }
+  };
+  
+  const confirmAcceptClubInvitation = (notification: Notification) => {
+    setPendingAcceptClubNotification(notification);
   };
   const handleDeclineClubInvitation = async (notification: Notification) => {
     if (!user || notification.type !== 'club_invitation') return;
@@ -188,7 +195,12 @@ export const NotificationCenter = ({
       });
     } finally {
       setLoading(false);
+      setPendingDeclineClubNotification(null);
     }
+  };
+  
+  const confirmDeclineClubInvitation = (notification: Notification) => {
+    setPendingDeclineClubNotification(notification);
   };
   const handleAcceptRequest = async (notification: Notification) => {
     if (!user || notification.type !== 'session_request') return;
@@ -607,11 +619,11 @@ export const NotificationCenter = ({
                         {notification.type === 'club_invitation' && !notification.read && <>
                             <Separator className="my-3" />
                             <div className="flex gap-2">
-                              <Button size="sm" onClick={() => handleAcceptClubInvitation(notification)} disabled={loading} className="flex-1">
+                              <Button size="sm" onClick={() => confirmAcceptClubInvitation(notification)} disabled={loading} className="flex-1">
                                 <Check className="h-4 w-4 mr-1" />
                                 Rejoindre
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleDeclineClubInvitation(notification)} disabled={loading} className="flex-1">
+                              <Button size="sm" variant="outline" onClick={() => confirmDeclineClubInvitation(notification)} disabled={loading} className="flex-1">
                                 <X className="h-4 w-4 mr-1" />
                                 Refuser
                               </Button>
@@ -704,6 +716,62 @@ export const NotificationCenter = ({
           <div className="border-t border-border">
             <AlertDialogAction
               onClick={() => pendingRejectNotification && handleRejectRequest(pendingRejectNotification)}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              {loading ? "Traitement..." : "Refuser"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Accept Club Invitation Confirmation Dialog - iOS Style */}
+      <AlertDialog open={!!pendingAcceptClubNotification} onOpenChange={(open) => !open && setPendingAcceptClubNotification(null)}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Rejoindre le club
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Voulez-vous rejoindre ce club ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={() => pendingAcceptClubNotification && handleAcceptClubInvitation(pendingAcceptClubNotification)}
+              disabled={loading}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-primary text-[17px] font-semibold"
+            >
+              {loading ? "Traitement..." : "Rejoindre"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Decline Club Invitation Confirmation Dialog - iOS Style */}
+      <AlertDialog open={!!pendingDeclineClubNotification} onOpenChange={(open) => !open && setPendingDeclineClubNotification(null)}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Refuser l'invitation
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Voulez-vous refuser cette invitation au club ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={() => pendingDeclineClubNotification && handleDeclineClubInvitation(pendingDeclineClubNotification)}
               disabled={loading}
               className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
             >
