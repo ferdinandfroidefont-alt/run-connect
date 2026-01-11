@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
 import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
@@ -431,24 +431,29 @@ export const ProfileDialog = ({
                   )}
                 </div>
                 
-                {/* Badges */}
-                <div className="flex flex-wrap justify-center gap-2 mb-3">
-                  {profile?.is_admin && (
-                    <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
-                      Admin
-                    </Badge>
-                  )}
-                  {profile?.strava_connected && profile?.strava_verified_at && (
-                    <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[11px]">
-                      Strava
-                    </Badge>
-                  )}
-                  {profile?.instagram_connected && profile?.instagram_verified_at && (
-                    <Badge className="bg-pink-100 text-pink-800 border-pink-200 text-[11px]">
-                      Instagram
-                    </Badge>
-                  )}
-                </div>
+                {/* Badges - iOS Style Pills */}
+                {(profile?.is_admin || (profile?.strava_connected && profile?.strava_verified_at) || (profile?.instagram_connected && profile?.instagram_verified_at)) && (
+                  <div className="flex flex-wrap justify-center gap-2 mb-3">
+                    {profile?.is_admin && (
+                      <div className="flex items-center gap-1.5 bg-red-500/10 text-red-600 px-3 py-1 rounded-full">
+                        <Shield className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">Admin</span>
+                      </div>
+                    )}
+                    {profile?.strava_connected && profile?.strava_verified_at && (
+                      <div className="flex items-center gap-1.5 bg-orange-500/10 text-orange-600 px-3 py-1 rounded-full">
+                        <Zap className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">Strava</span>
+                      </div>
+                    )}
+                    {profile?.instagram_connected && profile?.instagram_verified_at && (
+                      <div className="flex items-center gap-1.5 bg-pink-500/10 text-pink-600 px-3 py-1 rounded-full">
+                        <Instagram className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">Instagram</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 {/* Bio */}
                 {profile?.bio && (
