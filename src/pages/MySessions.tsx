@@ -4,6 +4,7 @@ import { RouteEditDialog } from '@/components/RouteEditDialog';
 import { EditSessionDialog } from '@/components/EditSessionDialog';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { Card, CardContent } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -77,6 +78,7 @@ export default function MySessions() {
   const [editingRoute, setEditingRoute] = useState<any>(null);
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const loadUserSessions = async () => {
     if (!user) return;
@@ -286,10 +288,6 @@ export default function MySessions() {
   const handleDeleteSession = async () => {
     if (!selectedSession) return;
 
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette séance ? Cette action est irréversible.')) {
-      return;
-    }
-
     try {
       const { error: participantsError } = await supabase
         .from('session_participants')
@@ -326,6 +324,8 @@ export default function MySessions() {
         description: "Erreur lors de la suppression de la séance",
         variant: "destructive",
       });
+    } finally {
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -370,7 +370,7 @@ export default function MySessions() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleDeleteSession}
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="h-9 w-9"
                 >
                   <Trash2 className="h-5 w-5 text-destructive" />
@@ -676,6 +676,33 @@ export default function MySessions() {
         userId={selectedUserId}
         onClose={closeProfilePreview}
       />
+
+      {/* Delete Confirmation Dialog - iOS Style */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Supprimer la séance
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Êtes-vous sûr de vouloir supprimer cette séance ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={handleDeleteSession}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
