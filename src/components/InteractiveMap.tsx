@@ -1440,13 +1440,13 @@ export const InteractiveMap = ({
       {/* Leaderboard, Confirm Presence & Nearby Sessions Buttons - iOS Style */}
       {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
           {/* Leaderboard Button */}
-          <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-amber-500 text-white hover:bg-amber-600 border-amber-500 shadow-sm flex items-center justify-center" onClick={() => navigate('/leaderboard')} title="Classement">
-            <Crown className="h-5 w-5" />
+          <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50" onClick={() => navigate('/leaderboard')} title="Classement">
+            <Crown className="h-5 w-5 text-amber-500" />
           </Button>
 
           {/* Confirm Presence Button */}
-          <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-green-600 text-white hover:bg-green-700 border-green-600 shadow-sm flex items-center justify-center" onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
-            <CheckCircle className="h-5 w-5" />
+          <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50" onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
+            <CheckCircle className="h-5 w-5 text-green-600" />
           </Button>
         </div>}
 
