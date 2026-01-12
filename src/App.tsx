@@ -50,6 +50,7 @@ const App = () => {
                 <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/route-create" element={<RouteCreation />} />
+                <Route path="/route-creation" element={<RouteCreation />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/confirm-presence" element={<ConfirmPresence />} />
                 <Route path="/confirm-presence/:sessionId" element={<ConfirmPresence />} />
