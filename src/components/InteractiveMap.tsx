@@ -251,6 +251,11 @@ export const InteractiveMap = ({
           const routeData = JSON.parse(pendingRouteData);
           routeCoordinates.current = routeData.coordinates.map((coord: any) => new google.maps.LatLng(coord.lat, coord.lng));
           setRouteElevations(routeData.elevations || []);
+          
+          // Stocker les waypoints si disponibles
+          if (routeData.waypoints) {
+            waypoints.current = routeData.waypoints.map((wp: any) => new google.maps.LatLng(wp.lat, wp.lng));
+          }
 
           // Ouvrir le dialog de sauvegarde
           setIsRouteDialogOpen(true);
@@ -1125,12 +1130,23 @@ export const InteractiveMap = ({
         lng: coord.lng(),
         elevation: routeElevations[index] || 0
       }));
+      
+      // Sauvegarder les waypoints s'ils existent
+      const waypointsData = waypoints.current.length > 0 
+        ? waypoints.current.map(wp => ({
+            lat: wp.lat(),
+            lng: wp.lng(),
+            mode: 'manual' as const
+          }))
+        : [];
+      
       const {
         error
       } = await supabase.from('routes').insert({
         name: routeName,
         description: routeDescription,
         coordinates: coordinates,
+        waypoints: waypointsData,
         total_distance: routeStats.totalDistance,
         total_elevation_gain: routeStats.elevationGain,
         total_elevation_loss: routeStats.elevationLoss,
