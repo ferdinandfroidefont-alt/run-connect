@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
 import { X, Check, ChevronDown, ChevronUp, Undo, Trash2, Navigation, Route, MapPin } from 'lucide-react';
@@ -25,11 +25,23 @@ interface RouteSegment {
   coordinates: google.maps.LatLng[];
 }
 
+// Interface pour les données d'édition
+interface EditRouteData {
+  id: string;
+  name: string;
+  description: string;
+  coordinates: Array<{ lat: number; lng: number }>;
+}
+
 export const RouteCreation = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { setHideBottomNav } = useAppContext();
   const { getCurrentPosition } = useGeolocation();
+  
+  const isEditMode = searchParams.get('edit') === 'true';
+  const editRouteDataRef = useRef<EditRouteData | null>(null);
   
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
@@ -50,11 +62,63 @@ export const RouteCreation = () => {
   // Ref pour éviter stale closure dans le listener de click
   const isManualModeRef = useRef(false);
 
+  // Charger les données d'édition depuis localStorage
+  useEffect(() => {
+    if (isEditMode) {
+      const storedData = localStorage.getItem('editRouteData');
+      if (storedData) {
+        try {
+          editRouteDataRef.current = JSON.parse(storedData);
+        } catch (e) {
+          console.error('Erreur parsing editRouteData:', e);
+        }
+      }
+    }
+    
+    return () => {
+      // Nettoyer les données d'édition au démontage
+      localStorage.removeItem('editRouteData');
+    };
+  }, [isEditMode]);
+
   // Cacher le menu du bas au montage
   useEffect(() => {
     setHideBottomNav(true);
     return () => setHideBottomNav(false);
   }, [setHideBottomNav]);
+
+  // Charger l'itinéraire existant sur la carte
+  const loadExistingRoute = () => {
+    if (!editRouteDataRef.current || !map.current) return;
+    
+    const coords = editRouteDataRef.current.coordinates;
+    if (!coords || coords.length === 0) return;
+
+    // Convertir les coordonnées en LatLng et afficher
+    const latLngs = coords.map(c => new google.maps.LatLng(c.lat, c.lng));
+    
+    // Ajouter tous les points comme waypoints
+    latLngs.forEach((latLng, index) => {
+      waypoints.current.push(latLng);
+      addWaypointMarker(latLng, index, 'manual');
+    });
+
+    // Créer les segments entre chaque paire de points
+    for (let i = 0; i < latLngs.length - 1; i++) {
+      const segment = createManualSegment(latLngs[i], latLngs[i + 1]);
+      segments.current.push(segment);
+    }
+
+    // Centrer sur l'itinéraire
+    const bounds = new google.maps.LatLngBounds();
+    latLngs.forEach(latLng => bounds.extend(latLng));
+    map.current.fitBounds(bounds, 50);
+
+    // Calculer les stats
+    updateElevationAndStats();
+    
+    toast.success("Itinéraire chargé - modifiez ou ajoutez des points");
+  };
 
   // Initialiser la carte
   useEffect(() => {
@@ -94,17 +158,22 @@ export const RouteCreation = () => {
         elevationService.current = new google.maps.ElevationService();
         directionsService.current = new google.maps.DirectionsService();
 
-        // Centrer sur la position utilisateur
-        getCurrentPosition()
-          .then((position) => {
-            if (position) {
-              map.current?.setCenter(position);
-              map.current?.setZoom(14);
-            }
-          })
-          .catch(() => {
-            console.log('Position non disponible, centré sur Paris');
-          });
+        // Si mode édition, charger l'itinéraire existant
+        if (isEditMode && editRouteDataRef.current) {
+          loadExistingRoute();
+        } else {
+          // Centrer sur la position utilisateur
+          getCurrentPosition()
+            .then((position) => {
+              if (position) {
+                map.current?.setCenter(position);
+                map.current?.setZoom(14);
+              }
+            })
+            .catch(() => {
+              console.log('Position non disponible, centré sur Paris');
+            });
+        }
 
         // Créer le parcours au clic
         map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
@@ -119,7 +188,7 @@ export const RouteCreation = () => {
     };
 
     initializeMap();
-  }, [isMapLoaded]);
+  }, [isMapLoaded, isEditMode]);
 
   // Ajouter un marqueur visuel pour chaque waypoint
   const addWaypointMarker = (latLng: google.maps.LatLng, index: number, mode: 'manual' | 'guided') => {
@@ -396,7 +465,7 @@ export const RouteCreation = () => {
     navigate('/');
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (waypoints.current.length < 2) {
       toast.error("Veuillez tracer un parcours avec au moins 2 points");
       return;
@@ -409,12 +478,40 @@ export const RouteCreation = () => {
     const hasGuided = segments.current.some(s => s.mode === 'guided');
     const routeType = hasManual && hasGuided ? 'hybrid' : (hasManual ? 'manual' : 'guided');
 
-    // Sauvegarder le parcours dans localStorage pour le transmettre
+    const coordinates = allCoordinates.map(coord => ({
+      lat: coord.lat(),
+      lng: coord.lng()
+    }));
+
+    // Mode édition : mettre à jour l'itinéraire existant directement
+    if (isEditMode && editRouteDataRef.current && user) {
+      try {
+        const { error } = await supabase
+          .from('routes')
+          .update({
+            coordinates,
+            total_distance: totalDistance * 1000, // Convertir en mètres
+            total_elevation_gain: totalElevationGain,
+            total_elevation_loss: totalElevationLoss
+          })
+          .eq('id', editRouteDataRef.current.id)
+          .eq('created_by', user.id);
+
+        if (error) throw error;
+
+        toast.success("Itinéraire modifié avec succès");
+        navigate('/');
+        return;
+      } catch (error) {
+        console.error('Erreur mise à jour itinéraire:', error);
+        toast.error("Erreur lors de la modification");
+        return;
+      }
+    }
+
+    // Mode création : sauvegarder dans localStorage pour le dialog
     const routeData = {
-      coordinates: allCoordinates.map(coord => ({
-        lat: coord.lat(),
-        lng: coord.lng()
-      })),
+      coordinates,
       distance: totalDistance,
       elevationGain: totalElevationGain,
       elevationLoss: totalElevationLoss,
@@ -435,7 +532,7 @@ export const RouteCreation = () => {
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <span className="text-2xl">✏️</span>
-            Mode création d'itinéraire
+            {isEditMode ? "Modifier le tracé" : "Mode création d'itinéraire"}
           </h1>
           
           <div className="flex items-center gap-2">
