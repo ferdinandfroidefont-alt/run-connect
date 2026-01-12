@@ -94,20 +94,35 @@ export const RouteCreation = () => {
     const coords = editRouteDataRef.current.coordinates;
     if (!coords || coords.length === 0) return;
 
-    // Convertir les coordonnées en LatLng et afficher
+    // Convertir les coordonnées en LatLng
     const latLngs = coords.map(c => new google.maps.LatLng(c.lat, c.lng));
     
-    // Ajouter tous les points comme waypoints
-    latLngs.forEach((latLng, index) => {
-      waypoints.current.push(latLng);
-      addWaypointMarker(latLng, index, 'manual');
+    // Stocker le premier et dernier point comme waypoints (pour pouvoir continuer le tracé)
+    waypoints.current.push(latLngs[0]);
+    waypoints.current.push(latLngs[latLngs.length - 1]);
+    
+    // Afficher uniquement les marqueurs de départ et d'arrivée
+    addWaypointMarker(latLngs[0], 0, 'manual');
+    addWaypointMarker(latLngs[latLngs.length - 1], 1, 'manual');
+
+    // Créer une seule polyline pour tout le tracé existant
+    const existingPolyline = new google.maps.Polyline({
+      path: latLngs,
+      geodesic: true,
+      strokeColor: '#f97316',
+      strokeOpacity: 1.0,
+      strokeWeight: 4,
+      map: map.current,
     });
 
-    // Créer les segments entre chaque paire de points
-    for (let i = 0; i < latLngs.length - 1; i++) {
-      const segment = createManualSegment(latLngs[i], latLngs[i + 1]);
-      segments.current.push(segment);
-    }
+    // Stocker comme un seul segment
+    segments.current.push({
+      startPoint: latLngs[0],
+      endPoint: latLngs[latLngs.length - 1],
+      mode: 'manual',
+      polyline: existingPolyline,
+      coordinates: latLngs
+    });
 
     // Centrer sur l'itinéraire
     const bounds = new google.maps.LatLngBounds();
@@ -117,7 +132,7 @@ export const RouteCreation = () => {
     // Calculer les stats
     updateElevationAndStats();
     
-    toast.success("Itinéraire chargé - modifiez ou ajoutez des points");
+    toast.success("Itinéraire chargé - cliquez pour ajouter des points");
   };
 
   // Initialiser la carte
