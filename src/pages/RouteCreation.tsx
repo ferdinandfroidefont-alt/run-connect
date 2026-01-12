@@ -31,6 +31,7 @@ interface EditRouteData {
   name: string;
   description: string;
   coordinates: Array<{ lat: number; lng: number }>;
+  waypoints?: Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }>;
 }
 
 export const RouteCreation = () => {
@@ -88,51 +89,79 @@ export const RouteCreation = () => {
   }, [setHideBottomNav]);
 
   // Charger l'itinéraire existant sur la carte
-  const loadExistingRoute = () => {
+  const loadExistingRoute = async () => {
     if (!editRouteDataRef.current || !map.current) return;
     
+    const savedWaypoints = editRouteDataRef.current.waypoints;
     const coords = editRouteDataRef.current.coordinates;
-    if (!coords || coords.length === 0) return;
-
-    // Convertir les coordonnées en LatLng
-    const latLngs = coords.map(c => new google.maps.LatLng(c.lat, c.lng));
     
-    // Stocker le premier et dernier point comme waypoints (pour pouvoir continuer le tracé)
-    waypoints.current.push(latLngs[0]);
-    waypoints.current.push(latLngs[latLngs.length - 1]);
-    
-    // Afficher uniquement les marqueurs de départ et d'arrivée
-    addWaypointMarker(latLngs[0], 0, 'manual');
-    addWaypointMarker(latLngs[latLngs.length - 1], 1, 'manual');
+    // Si on a les waypoints originaux, les utiliser
+    if (savedWaypoints && savedWaypoints.length >= 2) {
+      // Charger les waypoints et recréer les segments
+      for (let i = 0; i < savedWaypoints.length; i++) {
+        const wp = savedWaypoints[i];
+        const latLng = new google.maps.LatLng(wp.lat, wp.lng);
+        waypoints.current.push(latLng);
+        addWaypointMarker(latLng, i, wp.mode || 'manual');
+        
+        // Créer le segment vers ce point (sauf pour le premier)
+        if (i > 0) {
+          const prevWp = savedWaypoints[i - 1];
+          const prevLatLng = new google.maps.LatLng(prevWp.lat, prevWp.lng);
+          
+          let segment: RouteSegment | null;
+          if (wp.mode === 'guided') {
+            segment = await createGuidedSegment(prevLatLng, latLng);
+          } else {
+            segment = createManualSegment(prevLatLng, latLng);
+          }
+          
+          if (segment) {
+            segments.current.push(segment);
+          }
+        }
+      }
+    } else if (coords && coords.length > 0) {
+      // Fallback : utiliser les coordonnées (ancien format sans waypoints)
+      const latLngs = coords.map(c => new google.maps.LatLng(c.lat, c.lng));
+      
+      // Stocker le premier et dernier point comme waypoints
+      waypoints.current.push(latLngs[0]);
+      waypoints.current.push(latLngs[latLngs.length - 1]);
+      
+      addWaypointMarker(latLngs[0], 0, 'manual');
+      addWaypointMarker(latLngs[latLngs.length - 1], 1, 'manual');
 
-    // Créer une seule polyline pour tout le tracé existant
-    const existingPolyline = new google.maps.Polyline({
-      path: latLngs,
-      geodesic: true,
-      strokeColor: '#f97316',
-      strokeOpacity: 1.0,
-      strokeWeight: 4,
-      map: map.current,
-    });
+      // Créer une seule polyline pour tout le tracé existant
+      const existingPolyline = new google.maps.Polyline({
+        path: latLngs,
+        geodesic: true,
+        strokeColor: '#f97316',
+        strokeOpacity: 1.0,
+        strokeWeight: 4,
+        map: map.current,
+      });
 
-    // Stocker comme un seul segment
-    segments.current.push({
-      startPoint: latLngs[0],
-      endPoint: latLngs[latLngs.length - 1],
-      mode: 'manual',
-      polyline: existingPolyline,
-      coordinates: latLngs
-    });
+      segments.current.push({
+        startPoint: latLngs[0],
+        endPoint: latLngs[latLngs.length - 1],
+        mode: 'manual',
+        polyline: existingPolyline,
+        coordinates: latLngs
+      });
+    }
 
     // Centrer sur l'itinéraire
-    const bounds = new google.maps.LatLngBounds();
-    latLngs.forEach(latLng => bounds.extend(latLng));
-    map.current.fitBounds(bounds, 50);
+    if (waypoints.current.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      waypoints.current.forEach(latLng => bounds.extend(latLng));
+      map.current.fitBounds(bounds, 50);
+    }
 
     // Calculer les stats
-    updateElevationAndStats();
+    await updateElevationAndStats();
     
-    toast.success("Itinéraire chargé - cliquez pour ajouter des points");
+    toast.success("Itinéraire chargé - modifiez les points");
   };
 
   // Initialiser la carte
@@ -498,6 +527,17 @@ export const RouteCreation = () => {
       lng: coord.lng()
     }));
 
+    // Sauvegarder les waypoints avec leur mode
+    const waypointsData = waypoints.current.map((wp, index) => {
+      // Trouver le mode du segment qui commence à ce waypoint
+      const segmentMode = index < segments.current.length ? segments.current[index].mode : 'manual';
+      return {
+        lat: wp.lat(),
+        lng: wp.lng(),
+        mode: segmentMode
+      };
+    });
+
     // Mode édition : mettre à jour l'itinéraire existant directement
     if (isEditMode && editRouteDataRef.current && user) {
       try {
@@ -505,7 +545,8 @@ export const RouteCreation = () => {
           .from('routes')
           .update({
             coordinates,
-            total_distance: totalDistance * 1000, // Convertir en mètres
+            waypoints: waypointsData,
+            total_distance: totalDistance * 1000,
             total_elevation_gain: totalElevationGain,
             total_elevation_loss: totalElevationLoss
           })
@@ -527,6 +568,7 @@ export const RouteCreation = () => {
     // Mode création : sauvegarder dans localStorage pour le dialog
     const routeData = {
       coordinates,
+      waypoints: waypointsData,
       distance: totalDistance,
       elevationGain: totalElevationGain,
       elevationLoss: totalElevationLoss,

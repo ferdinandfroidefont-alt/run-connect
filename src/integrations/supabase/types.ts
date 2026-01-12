@@ -701,6 +701,7 @@ export type Database = {
           total_elevation_gain: number | null
           total_elevation_loss: number | null
           updated_at: string
+          waypoints: Json | null
         }
         Insert: {
           coordinates: Json
@@ -716,6 +717,7 @@ export type Database = {
           total_elevation_gain?: number | null
           total_elevation_loss?: number | null
           updated_at?: string
+          waypoints?: Json | null
         }
         Update: {
           coordinates?: Json
@@ -731,6 +733,7 @@ export type Database = {
           total_elevation_gain?: number | null
           total_elevation_loss?: number | null
           updated_at?: string
+          waypoints?: Json | null
         }
         Relationships: [
           {

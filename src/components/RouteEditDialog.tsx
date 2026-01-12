@@ -34,12 +34,13 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
   }, [route]);
 
   const handleEditPath = () => {
-    // Stocker les données de l'itinéraire pour l'édition
+    // Stocker les données de l'itinéraire pour l'édition (inclure les waypoints)
     localStorage.setItem('editRouteData', JSON.stringify({
       id: route.id,
       name: route.name,
       description: route.description,
-      coordinates: route.coordinates
+      coordinates: route.coordinates,
+      waypoints: route.waypoints || []
     }));
     onClose();
     navigate('/route-creation?edit=true');
