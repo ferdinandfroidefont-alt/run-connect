@@ -646,23 +646,23 @@ export const RouteCreation = () => {
             {isEditMode ? "Modifier le tracé" : "Mode création d'itinéraire"}
           </h1>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              size="sm"
+              onClick={handleFinish}
+              className="bg-primary/90 hover:bg-primary backdrop-blur-sm w-28"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Terminer
+            </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleCancel}
-              className="bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border/50"
+              className="bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border/50 w-28"
             >
               <X className="w-4 h-4 mr-2" />
               Annuler
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleFinish}
-              className="bg-primary/90 hover:bg-primary backdrop-blur-sm"
-            >
-              <Check className="w-4 h-4 mr-2" />
-              Terminer
             </Button>
           </div>
         </div>
