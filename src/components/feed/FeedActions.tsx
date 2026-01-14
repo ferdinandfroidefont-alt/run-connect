@@ -11,15 +11,18 @@ interface FeedActionsProps {
   onLike: () => void;
   onComment: () => void;
   onJoin: () => void;
+  onShare: () => void;
 }
 
 export const FeedActions = ({
+  sessionId,
   likesCount,
   commentsCount,
   isLiked,
   onLike,
   onComment,
-  onJoin
+  onJoin,
+  onShare
 }: FeedActionsProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showHearts, setShowHearts] = useState(false);
@@ -104,6 +107,7 @@ export const FeedActions = ({
           {/* Share Button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
+            onClick={onShare}
             className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/5 transition-colors"
           >
             <Share2 className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />

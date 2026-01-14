@@ -5,6 +5,8 @@ import { MiniMapPreview } from './MiniMapPreview';
 import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { Share } from '@capacitor/share';
+import { toast } from 'sonner';
 import type { FeedSession } from '@/hooks/useFeed';
 
 interface FeedCardProps {
@@ -42,6 +44,44 @@ export const FeedCard = ({
       onUnlike(session.id);
     } else {
       onLike(session.id);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = `https://run-connect.lovable.app/?session=${session.id}`;
+    const shareText = `🏃 ${session.title} - ${activityLabels[session.activity_type] || session.activity_type}\n📍 ${session.location_name}\n📅 ${format(new Date(session.scheduled_at), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })}`;
+    
+    try {
+      // Try AndroidBridge first (native WebView)
+      if ((window as any).AndroidBridge?.shareText) {
+        (window as any).AndroidBridge.shareText(shareText + '\n\n' + shareUrl);
+        return;
+      }
+      
+      // Try Capacitor Share
+      await Share.share({
+        title: session.title,
+        text: shareText,
+        url: shareUrl,
+        dialogTitle: 'Partager cette séance'
+      });
+    } catch (error) {
+      // Fallback to Web Share API
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: session.title,
+            text: shareText,
+            url: shareUrl
+          });
+        } catch {
+          // User cancelled or error
+        }
+      } else {
+        // Final fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Lien copié !');
+      }
     }
   };
 
@@ -143,6 +183,7 @@ export const FeedCard = ({
         onLike={handleLike}
         onComment={() => onViewComments(session.id)}
         onJoin={() => onJoinSession(session.id)}
+        onShare={handleShare}
       />
 
       {/* Comments */}
