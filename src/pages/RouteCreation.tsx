@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
-import { X, Check, ChevronDown, ChevronUp, Undo, Trash2, Navigation, Route, MapPin } from 'lucide-react';
+import { X, Check, ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -59,6 +59,15 @@ export const RouteCreation = () => {
   const [totalElevationGain, setTotalElevationGain] = useState(0);
   const [totalElevationLoss, setTotalElevationLoss] = useState(0);
   const [isManualMode, setIsManualMode] = useState(false);
+  
+  // Historique pour redo
+  const undoHistory = useRef<Array<{
+    waypoint: google.maps.LatLng;
+    segment: RouteSegment | null;
+    marker: google.maps.Marker | null;
+    mode: 'manual' | 'guided';
+  }>>([]);
+  const [canRedo, setCanRedo] = useState(false);
   
   // Ref pour éviter stale closure dans le listener de click
   const isManualModeRef = useRef(false);
@@ -459,18 +468,30 @@ export const RouteCreation = () => {
   const handleUndo = async () => {
     if (waypoints.current.length === 0) return;
     
-    waypoints.current.pop();
+    const removedWaypoint = waypoints.current.pop();
+    const removedMarker = waypointMarkers.current.pop();
+    let removedSegment: RouteSegment | null = null;
     
     // Supprimer le dernier marqueur
-    const lastMarker = waypointMarkers.current.pop();
-    if (lastMarker) lastMarker.setMap(null);
+    if (removedMarker) removedMarker.setMap(null);
     
     // Supprimer le dernier segment s'il existe
     if (segments.current.length > 0) {
-      const lastSegment = segments.current.pop();
-      if (lastSegment) {
-        lastSegment.polyline.setMap(null);
+      removedSegment = segments.current.pop() || null;
+      if (removedSegment) {
+        removedSegment.polyline.setMap(null);
       }
+    }
+    
+    // Sauvegarder pour redo
+    if (removedWaypoint) {
+      undoHistory.current.push({
+        waypoint: removedWaypoint,
+        segment: removedSegment,
+        marker: removedMarker || null,
+        mode: removedSegment?.mode || (isManualModeRef.current ? 'manual' : 'guided')
+      });
+      setCanRedo(true);
     }
     
     if (waypoints.current.length <= 1) {
@@ -481,6 +502,39 @@ export const RouteCreation = () => {
     } else {
       await updateElevationAndStats();
     }
+  };
+
+  const handleRedo = async () => {
+    if (undoHistory.current.length === 0) return;
+    
+    const lastUndo = undoHistory.current.pop();
+    if (!lastUndo) return;
+    
+    // Restaurer le waypoint
+    waypoints.current.push(lastUndo.waypoint);
+    
+    // Recréer le marqueur
+    const markerIndex = waypoints.current.length - 1;
+    addWaypointMarker(lastUndo.waypoint, markerIndex, lastUndo.mode);
+    
+    // Recréer le segment si nécessaire
+    if (waypoints.current.length > 1) {
+      const prevPoint = waypoints.current[waypoints.current.length - 2];
+      let segment: RouteSegment | null = null;
+      
+      if (lastUndo.mode === 'guided') {
+        segment = await createGuidedSegment(prevPoint, lastUndo.waypoint);
+      } else {
+        segment = createManualSegment(prevPoint, lastUndo.waypoint);
+      }
+      
+      if (segment) {
+        segments.current.push(segment);
+      }
+    }
+    
+    setCanRedo(undoHistory.current.length > 0);
+    await updateElevationAndStats();
   };
 
   const handleClear = () => {
@@ -582,7 +636,7 @@ export const RouteCreation = () => {
     navigate('/?saveRoute=true');
   };
 
-  return (
+   return (
     <div className="fixed inset-0 bg-background z-50">
       {/* Barre supérieure minimaliste */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background/95 to-transparent backdrop-blur-sm border-b border-border/30 p-4">
@@ -592,7 +646,16 @@ export const RouteCreation = () => {
             {isEditMode ? "Modifier le tracé" : "Mode création d'itinéraire"}
           </h1>
           
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              className="bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border/50"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Annuler
+            </Button>
             <Button
               size="sm"
               onClick={handleFinish}
@@ -600,15 +663,6 @@ export const RouteCreation = () => {
             >
               <Check className="w-4 h-4 mr-2" />
               Terminer
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border/50 text-xs px-2 py-1 h-auto"
-            >
-              <X className="w-3 h-3 mr-1" />
-              Annuler
             </Button>
           </div>
         </div>
@@ -618,7 +672,7 @@ export const RouteCreation = () => {
       <div ref={mapContainer} className="absolute inset-0" />
 
       {/* Toggle Mode */}
-      <div className="absolute left-4 top-20 z-10">
+      <div className="absolute left-4 top-24 z-10">
         <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-xl p-1 shadow-lg flex gap-1">
           <Button
             size="sm"
@@ -645,7 +699,7 @@ export const RouteCreation = () => {
       </div>
 
       {/* Outils latéraux */}
-      <div className="absolute right-4 top-20 flex flex-col gap-2 z-10">
+      <div className="absolute right-4 top-24 flex flex-col gap-2 z-10">
         <Button
           size="icon"
           variant="outline"
@@ -670,6 +724,17 @@ export const RouteCreation = () => {
         <Button
           size="icon"
           variant="outline"
+          onClick={handleRedo}
+          disabled={!canRedo}
+          className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg disabled:opacity-50"
+          title="Rétablir"
+        >
+          <Redo className="w-4 h-4" />
+        </Button>
+        
+        <Button
+          size="icon"
+          variant="outline"
           onClick={handleClear}
           disabled={waypoints.current.length === 0}
           className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg disabled:opacity-50"
@@ -681,7 +746,7 @@ export const RouteCreation = () => {
 
       {/* Stats flottantes */}
       {totalDistance > 0 && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl px-4 py-2 shadow-lg">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl px-4 py-2 shadow-lg">
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">📏</span>
