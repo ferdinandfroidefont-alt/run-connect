@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FeedActions } from './FeedActions';
 import { FeedComments } from './FeedComments';
@@ -15,7 +16,6 @@ interface FeedCardProps {
   onUnlike: (sessionId: string) => void;
   onAddComment: (sessionId: string, content: string) => void;
   onJoinSession: (sessionId: string) => void;
-  onViewComments: (sessionId: string) => void;
 }
 
 const activityLabels: Record<string, string> = {
@@ -36,9 +36,10 @@ export const FeedCard = ({
   onLike,
   onUnlike,
   onAddComment,
-  onJoinSession,
-  onViewComments
+  onJoinSession
 }: FeedCardProps) => {
+  const [showComments, setShowComments] = useState(false);
+  
   const handleLike = () => {
     if (session.is_liked) {
       onUnlike(session.id);
@@ -181,18 +182,18 @@ export const FeedCard = ({
         commentsCount={session.comments_count}
         isLiked={session.is_liked}
         onLike={handleLike}
-        onComment={() => onViewComments(session.id)}
+        onComment={() => setShowComments(!showComments)}
         onJoin={() => onJoinSession(session.id)}
         onShare={handleShare}
       />
 
-      {/* Comments */}
-      {session.latest_comments.length > 0 && (
+      {/* Comments - Toggle visibility */}
+      {(showComments || session.latest_comments.length > 0) && (
         <FeedComments
           comments={session.latest_comments}
           totalComments={session.comments_count}
           onAddComment={(content) => onAddComment(session.id, content)}
-          onViewAll={() => onViewComments(session.id)}
+          onViewAll={() => setShowComments(true)}
         />
       )}
     </div>

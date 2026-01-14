@@ -86,10 +86,6 @@ export default function Feed() {
     navigate('/', { state: { openSessionId: sessionId } });
   };
 
-  const handleViewComments = (sessionId: string) => {
-    navigate('/', { state: { openSessionId: sessionId, focusComments: true } });
-  };
-
   const loading = mode === 'friends' ? friendsLoading : discoverLoading;
 
   return (
@@ -162,7 +158,6 @@ export default function Feed() {
                     onUnlike={unlikeSession}
                     onAddComment={addComment}
                     onJoinSession={handleJoinSession}
-                    onViewComments={handleViewComments}
                   />
                 ))}
               </>
