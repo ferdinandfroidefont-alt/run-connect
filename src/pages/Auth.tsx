@@ -687,9 +687,13 @@ const Auth = () => {
                   email,
                   options: {
                     emailRedirectTo: `${window.location.origin}/`,
-                    shouldCreateUser: true
+                    shouldCreateUser: true,
+                    captchaToken: captchaToken || undefined
                   }
                 });
+                // Reset captcha après utilisation
+                setCaptchaToken(null);
+                captchaRef.current?.resetCaptcha();
                 if (error) {
                   if (error.message.includes('429') || error.message.includes('rate limit')) {
                     toast({
@@ -774,7 +778,14 @@ const Auth = () => {
                 </div>
 
                 {/* hCaptcha Widget - Unique pour tous les formulaires */}
-                {!captchaToken}
+                {!captchaToken && (
+                  <CaptchaWidget 
+                    ref={captchaRef} 
+                    onVerify={token => setCaptchaToken(token)} 
+                    onExpire={() => setCaptchaToken(null)} 
+                    onError={() => setCaptchaToken(null)} 
+                  />
+                )}
                 {captchaToken && <div className="text-center text-sm text-green-600 dark:text-green-400">
                     ✅ Vérification CAPTCHA réussie
                   </div>}
