@@ -592,16 +592,7 @@ export const RouteCreation = () => {
             {isEditMode ? "Modifier le tracé" : "Mode création d'itinéraire"}
           </h1>
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border/50"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Annuler
-            </Button>
+          <div className="flex flex-col items-end gap-1">
             <Button
               size="sm"
               onClick={handleFinish}
@@ -609,6 +600,15 @@ export const RouteCreation = () => {
             >
               <Check className="w-4 h-4 mr-2" />
               Terminer
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+              className="bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border/50 text-xs px-2 py-1 h-auto"
+            >
+              <X className="w-3 h-3 mr-1" />
+              Annuler
             </Button>
           </div>
         </div>
