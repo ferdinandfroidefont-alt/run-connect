@@ -22,6 +22,8 @@ import NotFound from "./pages/NotFound";
 import Search from "./pages/Search";
 import RouteCreation from "./pages/RouteCreation";
 import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import About from "./pages/About";
 import ConfirmPresence from "./pages/ConfirmPresence";
 import { SecurityDashboard } from "./components/SecurityDashboard";
 import { AndroidTestPage } from "./components/AndroidTestPage";
@@ -52,6 +54,8 @@ const App = () => {
                 <Route path="/route-create" element={<RouteCreation />} />
                 <Route path="/route-creation" element={<RouteCreation />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/about" element={<About />} />
                 <Route path="/confirm-presence" element={<ConfirmPresence />} />
                 <Route path="/confirm-presence/:sessionId" element={<ConfirmPresence />} />
                 <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
