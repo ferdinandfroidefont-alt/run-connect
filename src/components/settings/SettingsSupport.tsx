@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
+import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,6 +18,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
   const { user, session, signOut } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSignOut = () => {
     signOut();
@@ -84,6 +86,51 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
       <ScrollArea className="flex-1">
         <div className="px-4 py-6 space-y-6">
+          {/* Mentions légales */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+              Mentions légales
+            </h3>
+            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+              <button 
+                onClick={() => { onClose(); navigate('/about'); }}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                    <Info className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-sm font-medium">À propos</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+              <button 
+                onClick={() => { onClose(); navigate('/terms'); }}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-sm font-medium">Conditions d'utilisation</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+              <button 
+                onClick={() => { onClose(); navigate('/privacy'); }}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-sm font-medium">Politique de confidentialité</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+
           {/* Support */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
