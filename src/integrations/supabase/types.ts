@@ -497,6 +497,7 @@ export type Database = {
           strava_verified_at: string | null
           swimming_records: Json | null
           triathlon_records: Json | null
+          tutorial_completed: boolean | null
           updated_at: string
           user_id: string | null
           username: string | null
@@ -550,6 +551,7 @@ export type Database = {
           strava_verified_at?: string | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
+          tutorial_completed?: boolean | null
           updated_at?: string
           user_id?: string | null
           username?: string | null
@@ -603,6 +605,7 @@ export type Database = {
           strava_verified_at?: string | null
           swimming_records?: Json | null
           triathlon_records?: Json | null
+          tutorial_completed?: boolean | null
           updated_at?: string
           user_id?: string | null
           username?: string | null

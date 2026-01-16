@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield } from "lucide-react";
+import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield, GraduationCap } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTutorial } from "@/hooks/useTutorial";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 
@@ -17,8 +19,16 @@ interface SettingsSupportProps {
 export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
   const { user, session, signOut } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
+  const { restartTutorial } = useTutorial();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleRestartTutorial = async () => {
+    await restartTutorial();
+    onClose();
+    navigate('/');
+  };
 
   const handleSignOut = () => {
     signOut();
@@ -136,7 +146,22 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
               Support
             </h3>
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden">
+            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+              {/* Restart Tutorial Button */}
+              <button 
+                onClick={handleRestartTutorial}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                    <GraduationCap className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-sm font-medium">{t('tutorial.restartTutorial')}</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+
+              {/* Contact Support */}
               <div className="p-6 text-center space-y-4">
                 <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mx-auto">
                   <Mail className="h-8 w-8 text-white" />

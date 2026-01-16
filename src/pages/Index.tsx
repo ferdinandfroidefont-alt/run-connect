@@ -2,7 +2,9 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { NativePermissionTester } from "@/components/NativePermissionTester";
+import { InteractiveTutorial } from "@/components/InteractiveTutorial";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useTutorial } from "@/hooks/useTutorial";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams } from "react-router-dom";
@@ -19,6 +21,12 @@ const Index = () => {
     completeOnboarding,
     completeProfileSetup
   } = useOnboarding();
+  const {
+    shouldShowTutorial,
+    tutorialSteps,
+    completeTutorial,
+    skipTutorial,
+  } = useTutorial();
   const [searchParams] = useSearchParams();
   const [showPermissionTester, setShowPermissionTester] = useState(false);
   const [nativeStatus, setNativeStatus] = useState<boolean | null>(null);
@@ -85,6 +93,15 @@ const Index = () => {
       {showPermissionTester && (
         <NativePermissionTester 
           onClose={() => setShowPermissionTester(false)} 
+        />
+      )}
+
+      {/* Tutoriel interactif pour nouveaux utilisateurs */}
+      {shouldShowTutorial && !needsOnboarding && !needsProfileSetup && (
+        <InteractiveTutorial 
+          steps={tutorialSteps}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
         />
       )}
     </>
