@@ -1318,7 +1318,7 @@ export const InteractiveMap = ({
   };
   return <div className="relative w-full h-[calc(100vh-72px)] bg-background overflow-hidden">
       {/* Map Container */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div ref={mapContainer} className="absolute inset-0" data-tutorial="map-container" />
       
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
@@ -1330,7 +1330,7 @@ export const InteractiveMap = ({
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
-            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2">
+            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2" data-tutorial="profile-avatar">
                 <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
                   <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
@@ -1343,7 +1343,9 @@ export const InteractiveMap = ({
             
             {/* Bell and Settings - Right aligned, closer together */}
             <div className="flex items-center gap-1">
-              <NotificationCenter onSessionUpdated={loadSessions} />
+              <div data-tutorial="notifications">
+                <NotificationCenter onSessionUpdated={loadSessions} />
+              </div>
               <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={() => setShowSettingsDialog(true)}>
                 ⚙️
               </div>
