@@ -1005,35 +1005,50 @@ export type Database = {
       }
       subscribers: {
         Row: {
+          cancel_at_period_end: boolean | null
           created_at: string
           email: string
           id: string
+          last_synced_at: string | null
           stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           subscribed: boolean
           subscription_end: string | null
+          subscription_status: string | null
           subscription_tier: string | null
+          trial_end: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          cancel_at_period_end?: boolean | null
           created_at?: string
           email: string
           id?: string
+          last_synced_at?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscribed?: boolean
           subscription_end?: string | null
+          subscription_status?: string | null
           subscription_tier?: string | null
+          trial_end?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          cancel_at_period_end?: boolean | null
           created_at?: string
           email?: string
           id?: string
+          last_synced_at?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscribed?: boolean
           subscription_end?: string | null
+          subscription_status?: string | null
           subscription_tier?: string | null
+          trial_end?: string | null
           updated_at?: string
           user_id?: string
         }

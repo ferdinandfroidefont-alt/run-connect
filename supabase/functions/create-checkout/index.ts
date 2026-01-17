@@ -69,8 +69,19 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/profile?success=true`,
-      cancel_url: `${req.headers.get("origin")}/profile?canceled=true`,
+      success_url: `${req.headers.get("origin")}/subscription?success=true`,
+      cancel_url: `${req.headers.get("origin")}/subscription?canceled=true`,
+      metadata: {
+        user_id: user.id,
+        plan_type: planType,
+        user_email: user.email,
+      },
+      subscription_data: {
+        metadata: {
+          user_id: user.id,
+          plan_type: planType,
+        },
+      },
     });
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
