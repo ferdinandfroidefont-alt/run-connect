@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useSendNotification } from "@/hooks/useSendNotification";
 import { OnlineStatus } from "./OnlineStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,12 +15,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, UserCheck, X, UserMinus, UserX, ChevronRight } from "lucide-react";
+import { Users, UserCheck, X, UserMinus, UserX, ChevronRight, Clock, UserPlus, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
+import { useFollow } from "@/hooks/useFollow";
 
 interface FollowUser {
   user_id: string;
@@ -27,6 +28,16 @@ interface FollowUser {
   display_name: string;
   avatar_url: string;
   status: string;
+  isFollowingBack?: boolean;
+}
+
+interface PendingRequest {
+  id: string;
+  follower_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
 }
 
 interface FollowDialogProps {
@@ -47,12 +58,13 @@ export const FollowDialog = ({
   targetUserId 
 }: FollowDialogProps) => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
-  const { sendPushNotification } = useSendNotification();
+  const { unfollow, removeFollower, acceptFollowRequest, rejectFollowRequest, getPendingRequests, followBack, loading: followLoading } = useFollow();
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>(type);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: 'unfollow' | 'remove' | null;
@@ -68,8 +80,15 @@ export const FollowDialog = ({
   useEffect(() => {
     if (open && user) {
       fetchFollowData();
+      fetchPendingRequests();
     }
   }, [open, user, targetUserId]);
+
+  const fetchPendingRequests = async () => {
+    if (!user || targetUserId) return; // Only show pending for own profile
+    const requests = await getPendingRequests();
+    setPendingRequests(requests);
+  };
 
   const fetchFollowData = async () => {
     if (!user) return;
@@ -91,6 +110,11 @@ export const FollowDialog = ({
         .eq('follower_id', userId)
         .eq('status', 'accepted');
 
+      // Get the list of people I follow (to check "follow back")
+      const myFollowingIds = new Set(
+        followingData?.map(f => f.following_id) || []
+      );
+
       if (followersData && followersData.length > 0) {
         const followerIds = followersData.map(f => f.follower_id);
         const { data: followerProfiles } = await supabase
@@ -100,7 +124,8 @@ export const FollowDialog = ({
 
         const followersWithProfiles = followerProfiles?.map(profile => ({
           ...profile,
-          status: 'accepted'
+          status: 'accepted',
+          isFollowingBack: myFollowingIds.has(profile.user_id)
         })) || [];
 
         setFollowers(followersWithProfiles);
@@ -126,11 +151,6 @@ export const FollowDialog = ({
       }
     } catch (error) {
       console.error('Error fetching follow data:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données",
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
@@ -158,94 +178,120 @@ export const FollowDialog = ({
     if (!confirmDialog.userId || !confirmDialog.type) return;
 
     if (confirmDialog.type === 'unfollow') {
-      await unfollowUser(confirmDialog.userId);
+      const success = await unfollow(confirmDialog.userId);
+      if (success) {
+        setFollowing(prev => prev.filter(u => u.user_id !== confirmDialog.userId));
+      }
     } else if (confirmDialog.type === 'remove') {
-      await removeFollower(confirmDialog.userId);
+      const success = await removeFollower(confirmDialog.userId);
+      if (success) {
+        setFollowers(prev => prev.filter(u => u.user_id !== confirmDialog.userId));
+      }
     }
 
     closeConfirmDialog();
   };
 
-  const unfollowUser = async (targetUserId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('user_follows')
-        .update({ status: 'unfollowed' })
-        .eq('follower_id', user.id)
-        .eq('following_id', targetUserId);
-
-      if (error) throw error;
-
-      setFollowing(prev => prev.filter(u => u.user_id !== targetUserId));
-      
-      setTimeout(() => {
-        fetchFollowData();
-      }, 500);
-      
-      toast({
-        title: "Désabonné",
-        description: "Vous ne suivez plus cet utilisateur"
-      });
-    } catch (error: any) {
-      console.error('Error unfollowing user:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de se désabonner",
-        variant: "destructive"
-      });
+  const handleAcceptRequest = async (followerId: string) => {
+    const success = await acceptFollowRequest(followerId);
+    if (success) {
+      setPendingRequests(prev => prev.filter(r => r.follower_id !== followerId));
+      fetchFollowData();
     }
   };
 
-  const removeFollower = async (followerUserId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('user_follows')
-        .update({ status: 'unfollowed' })
-        .eq('follower_id', followerUserId)
-        .eq('following_id', user.id);
-
-      if (error) throw error;
-
-      setFollowers(prev => prev.filter(u => u.user_id !== followerUserId));
-      
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: followerUserId,
-          type: 'follower_removed',
-          title: 'Abonné supprimé',
-          message: `${user.email} a supprimé votre abonnement`,
-          data: { removed_by: user.id }
-        });
-
-      await sendPushNotification(
-        followerUserId,
-        'Abonné supprimé',
-        `${user.email?.split('@')[0] || 'Un utilisateur'} a supprimé votre abonnement`,
-        'follower_removed',
-        { removed_by: user.id }
-      );
-      
-      setTimeout(() => {
-        fetchFollowData();
-      }, 500);
-      
-      toast({
-        title: "Abonné supprimé",
-        description: "Cet utilisateur ne vous suit plus"
-      });
-    } catch (error: any) {
-      console.error('Error removing follower:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer cet abonné",
-        variant: "destructive"
-      });
+  const handleRejectRequest = async (followerId: string) => {
+    const success = await rejectFollowRequest(followerId);
+    if (success) {
+      setPendingRequests(prev => prev.filter(r => r.follower_id !== followerId));
     }
+  };
+
+  const handleFollowBack = async (userId: string) => {
+    const success = await followBack(userId);
+    if (success) {
+      setFollowers(prev => prev.map(f => 
+        f.user_id === userId ? { ...f, isFollowingBack: true } : f
+      ));
+    }
+  };
+
+  const PendingRequestsList = () => {
+    if (pendingRequests.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+            <Clock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-foreground mb-1">
+            Aucune demande en attente
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            Les nouvelles demandes de suivi apparaîtront ici
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pt-4">
+        <div className="bg-card rounded-[10px] border border-border overflow-hidden">
+          {pendingRequests.map((request, index) => (
+            <div
+              key={request.id}
+              className={`flex items-center gap-3 p-3 ${
+                index !== pendingRequests.length - 1 ? 'border-b border-border' : ''
+              }`}
+            >
+              <div 
+                className="relative cursor-pointer"
+                onClick={() => navigateToProfile(request.follower_id)}
+              >
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={request.avatar_url || undefined} />
+                  <AvatarFallback className="bg-secondary text-foreground">
+                    {request.username?.[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              
+              <div 
+                className="flex-1 min-w-0 cursor-pointer"
+                onClick={() => navigateToProfile(request.follower_id)}
+              >
+                <p className="font-medium text-foreground truncate">
+                  {request.display_name || request.username}
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  @{request.username}
+                </p>
+              </div>
+
+              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => handleAcceptRequest(request.follower_id)}
+                  disabled={followLoading}
+                  className="h-8 px-3 rounded-full"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleRejectRequest(request.follower_id)}
+                  disabled={followLoading}
+                  className="h-8 px-3 rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const UserList = ({ users, showUnfollowButton = false, showRemoveButton = false }: { 
@@ -301,6 +347,22 @@ export const FollowDialog = ({
                 </p>
               </div>
 
+              {/* Follow back button for followers */}
+              {isViewingOwnProfile && showRemoveButton && !userItem.isFollowingBack && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleFollowBack(userItem.user_id)}
+                    disabled={followLoading}
+                    className="h-8 px-3 rounded-full text-xs"
+                  >
+                    <UserPlus className="h-3 w-3 mr-1" />
+                    Suivre
+                  </Button>
+                </div>
+              )}
+
               {isViewingOwnProfile && showUnfollowButton && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <button
@@ -349,34 +411,49 @@ export const FollowDialog = ({
           </button>
         </div>
 
-        <Tabs defaultValue={type} className="flex-1 flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           {/* iOS Segmented Control */}
           <div className="px-4 pt-4">
             <TabsList className="w-full bg-secondary p-1 rounded-[10px] border border-border">
               <TabsTrigger 
                 value="followers" 
-                className="flex-1 gap-2 rounded-[8px] text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
+                className="flex-1 gap-1 rounded-[8px] text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
               >
-                <Users className="h-4 w-4" />
+                <Users className="h-3.5 w-3.5" />
                 Abonnés
                 {followerCount > 0 && (
-                  <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                  <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
                     {followerCount}
                   </span>
                 )}
               </TabsTrigger>
               <TabsTrigger 
                 value="following" 
-                className="flex-1 gap-2 rounded-[8px] text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
+                className="flex-1 gap-1 rounded-[8px] text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
               >
-                <UserCheck className="h-4 w-4" />
+                <UserCheck className="h-3.5 w-3.5" />
                 Abonnements
                 {followingCount > 0 && (
-                  <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                  <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
                     {followingCount}
                   </span>
                 )}
               </TabsTrigger>
+              {/* Pending requests tab - only for own profile */}
+              {(!targetUserId || targetUserId === user?.id) && (
+                <TabsTrigger 
+                  value="requests" 
+                  className="flex-1 gap-1 rounded-[8px] text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Demandes
+                  {pendingRequests.length > 0 && (
+                    <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
+                      {pendingRequests.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
@@ -397,6 +474,16 @@ export const FollowDialog = ({
               </div>
             ) : (
               <UserList users={following} showUnfollowButton />
+            )}
+          </TabsContent>
+
+          <TabsContent value="requests" className="flex-1 overflow-y-auto px-4 pb-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <PendingRequestsList />
             )}
           </TabsContent>
         </Tabs>
