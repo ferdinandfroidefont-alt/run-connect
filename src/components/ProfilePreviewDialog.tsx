@@ -309,87 +309,69 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     setActionLoading(true);
     try {
       if (isFollowing || followRequestSent) {
+        // Unfollow or cancel pending request - use DELETE instead of UPDATE
+        const { error } = await supabase
+          .from('user_follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('following_id', userId);
+
+        if (error) throw error;
+
         if (isFollowing) {
-          const { error } = await supabase
-            .from('user_follows')
-            .update({ status: 'unfollowed' })
-            .eq('follower_id', user.id)
-            .eq('following_id', userId);
-
-          if (error) throw error;
-
-          setIsFollowing(false);
-          setFollowRequestSent(false);
           setFollowerCount(prev => Math.max(0, prev - 1));
           setAreFriends(false);
           toast({ title: "Vous ne suivez plus cette personne" });
         } else {
-          const { error } = await supabase
-            .from('user_follows')
-            .delete()
-            .eq('follower_id', user.id)
-            .eq('following_id', userId);
-
-          if (error) throw error;
-
-          setIsFollowing(false);
-          setFollowRequestSent(false);
           toast({ title: "Demande de suivi annulée" });
         }
+        
+        setIsFollowing(false);
+        setFollowRequestSent(false);
       } else {
-        const { data: existingFollow } = await supabase
+        // Send new follow request
+        const { error } = await supabase
           .from('user_follows')
-          .select('status')
-          .eq('follower_id', user.id)
-          .eq('following_id', userId)
-          .maybeSingle();
+          .insert({
+            follower_id: user.id,
+            following_id: userId,
+            status: 'pending'
+          });
 
-        if (existingFollow && existingFollow.status === 'unfollowed') {
-          const { error } = await supabase
-            .from('user_follows')
-            .update({ status: 'accepted' })
-            .eq('follower_id', user.id)
-            .eq('following_id', userId);
-
-          if (error) throw error;
-
-          setIsFollowing(true);
-          setFollowRequestSent(false);
-          toast({ title: "Réabonnement réussi" });
-        } else {
-          const { error } = await supabase
-            .from('user_follows')
-            .insert([{
-              follower_id: user.id,
-              following_id: userId,
-              status: 'pending'
-            }]);
-
-          if (error) throw error;
-
-          const { data: followerProfile } = await supabase
-            .from('profiles')
-            .select('display_name, username, avatar_url')
-            .eq('user_id', user.id)
-            .single();
-
-          if (followerProfile) {
-            await sendPushNotification(
-              userId,
-              'Nouvelle demande de suivi',
-              `${followerProfile.display_name || followerProfile.username} souhaite vous suivre`,
-              'follow_request',
-              {
-                follower_id: user.id,
-                follower_name: followerProfile.display_name || followerProfile.username,
-                follower_avatar: followerProfile.avatar_url
-              }
-            );
+        if (error) {
+          // Check if it's a unique constraint violation (already exists)
+          if (error.code === '23505') {
+            toast({
+              title: "Demande déjà envoyée",
+              description: "Vous avez déjà envoyé une demande de suivi",
+            });
+            return;
           }
-
-          setFollowRequestSent(true);
-          toast({ title: "Demande de suivi envoyée" });
+          throw error;
         }
+
+        const { data: followerProfile } = await supabase
+          .from('profiles')
+          .select('display_name, username, avatar_url')
+          .eq('user_id', user.id)
+          .single();
+
+        if (followerProfile) {
+          await sendPushNotification(
+            userId,
+            'Nouvelle demande de suivi',
+            `${followerProfile.display_name || followerProfile.username} souhaite vous suivre`,
+            'follow_request',
+            {
+              follower_id: user.id,
+              follower_name: followerProfile.display_name || followerProfile.username,
+              follower_avatar: followerProfile.avatar_url
+            }
+          );
+        }
+
+        setFollowRequestSent(true);
+        toast({ title: "Demande de suivi envoyée" });
       }
     } catch (error: any) {
       toast({
