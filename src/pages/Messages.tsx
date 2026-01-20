@@ -1106,6 +1106,21 @@ const Messages = () => {
     if (!user) return;
 
     try {
+      // IMPORTANT: Check if users are mutual friends before allowing conversation
+      const { data: areFriends } = await supabase.rpc('are_users_friends', {
+        user1_id: user.id,
+        user2_id: otherUserId
+      });
+
+      if (!areFriends) {
+        toast({ 
+          title: "Impossible d'envoyer un message", 
+          description: "Vous devez être amis pour envoyer un message. Attendez que votre demande de suivi soit acceptée.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
       // First, get the other user's profile (needed for conversation display)
       let otherParticipant = availableUsers.find(u => u.user_id === otherUserId);
       

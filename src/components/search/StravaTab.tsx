@@ -80,6 +80,21 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
     if (!user) return;
 
     try {
+      // IMPORTANT: Vérifier si les utilisateurs sont amis mutuels
+      const { data: areFriends } = await supabase.rpc('are_users_friends', {
+        user1_id: user.id,
+        user2_id: profile.user_id
+      });
+
+      if (!areFriends) {
+        toast({
+          title: "Impossible d'envoyer un message",
+          description: "Vous devez être amis pour envoyer un message. Attendez que votre demande de suivi soit acceptée.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data: existingConversation } = await supabase
         .from('conversations')
         .select('id')
