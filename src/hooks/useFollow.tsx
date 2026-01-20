@@ -341,6 +341,49 @@ export const useFollow = () => {
     }
   }, [user]);
 
+  const getSentPendingRequests = useCallback(async (): Promise<Array<{
+    id: string;
+    following_id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    created_at: string;
+  }>> => {
+    if (!user) return [];
+
+    try {
+      const { data: pendingFollows } = await supabase
+        .from('user_follows')
+        .select('id, following_id, created_at')
+        .eq('follower_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (!pendingFollows || pendingFollows.length === 0) return [];
+
+      const followingIds = pendingFollows.map(f => f.following_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .in('user_id', followingIds);
+
+      return pendingFollows.map(follow => {
+        const profile = profiles?.find(p => p.user_id === follow.following_id);
+        return {
+          id: follow.id,
+          following_id: follow.following_id,
+          username: profile?.username || '',
+          display_name: profile?.display_name || null,
+          avatar_url: profile?.avatar_url || null,
+          created_at: follow.created_at,
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching sent pending requests:', error);
+      return [];
+    }
+  }, [user]);
+
   return {
     loading,
     checkFollowStatus,
@@ -352,5 +395,6 @@ export const useFollow = () => {
     removeFollower,
     followBack,
     getPendingRequests,
+    getSentPendingRequests,
   };
 };
