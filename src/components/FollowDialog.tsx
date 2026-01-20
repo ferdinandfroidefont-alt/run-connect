@@ -40,6 +40,15 @@ interface PendingRequest {
   created_at: string;
 }
 
+interface SentPendingRequest {
+  id: string;
+  following_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}
+
 interface FollowDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,12 +68,14 @@ export const FollowDialog = ({
 }: FollowDialogProps) => {
   const { user } = useAuth();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
-  const { unfollow, removeFollower, acceptFollowRequest, rejectFollowRequest, getPendingRequests, followBack, loading: followLoading } = useFollow();
+  const { unfollow, removeFollower, acceptFollowRequest, rejectFollowRequest, getPendingRequests, getSentPendingRequests, cancelFollowRequest, followBack, loading: followLoading } = useFollow();
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+  const [sentPendingRequests, setSentPendingRequests] = useState<SentPendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>(type);
+  const [requestsSubTab, setRequestsSubTab] = useState<'received' | 'sent'>('received');
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: 'unfollow' | 'remove' | null;
@@ -81,6 +92,7 @@ export const FollowDialog = ({
     if (open && user) {
       fetchFollowData();
       fetchPendingRequests();
+      fetchSentPendingRequests();
     }
   }, [open, user, targetUserId]);
 
@@ -88,6 +100,12 @@ export const FollowDialog = ({
     if (!user || targetUserId) return; // Only show pending for own profile
     const requests = await getPendingRequests();
     setPendingRequests(requests);
+  };
+
+  const fetchSentPendingRequests = async () => {
+    if (!user || targetUserId) return; // Only show for own profile
+    const requests = await getSentPendingRequests();
+    setSentPendingRequests(requests);
   };
 
   const fetchFollowData = async () => {
@@ -216,6 +234,13 @@ export const FollowDialog = ({
     }
   };
 
+  const handleCancelSentRequest = async (followingId: string) => {
+    const success = await cancelFollowRequest(followingId);
+    if (success) {
+      setSentPendingRequests(prev => prev.filter(r => r.following_id !== followingId));
+    }
+  };
+
   const PendingRequestsList = () => {
     if (pendingRequests.length === 0) {
       return (
@@ -283,6 +308,78 @@ export const FollowDialog = ({
                   onClick={() => handleRejectRequest(request.follower_id)}
                   disabled={followLoading}
                   className="h-8 px-3 rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const SentPendingRequestsList = () => {
+    if (sentPendingRequests.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+            <Clock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-foreground mb-1">
+            Aucune demande envoyée
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            Vos demandes de suivi en attente apparaîtront ici
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pt-4">
+        <div className="bg-card rounded-[10px] border border-border overflow-hidden">
+          {sentPendingRequests.map((request, index) => (
+            <div
+              key={request.id}
+              className={`flex items-center gap-3 p-3 ${
+                index !== sentPendingRequests.length - 1 ? 'border-b border-border' : ''
+              }`}
+            >
+              <div 
+                className="relative cursor-pointer"
+                onClick={() => navigateToProfile(request.following_id)}
+              >
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={request.avatar_url || undefined} />
+                  <AvatarFallback className="bg-secondary text-foreground">
+                    {request.username?.[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              
+              <div 
+                className="flex-1 min-w-0 cursor-pointer"
+                onClick={() => navigateToProfile(request.following_id)}
+              >
+                <p className="font-medium text-foreground truncate">
+                  {request.display_name || request.username}
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  @{request.username}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  En attente
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleCancelSentRequest(request.following_id)}
+                  disabled={followLoading}
+                  className="h-8 px-3 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -447,9 +544,9 @@ export const FollowDialog = ({
                 >
                   <Clock className="h-3.5 w-3.5" />
                   Demandes
-                  {pendingRequests.length > 0 && (
+                  {(pendingRequests.length > 0 || sentPendingRequests.length > 0) && (
                     <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
-                      {pendingRequests.length}
+                      {pendingRequests.length + sentPendingRequests.length}
                     </span>
                   )}
                 </TabsTrigger>
@@ -477,13 +574,43 @@ export const FollowDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="requests" className="flex-1 overflow-y-auto px-4 pb-4">
+          <TabsContent value="requests" className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col">
+            {/* Sub-tabs for Received / Sent */}
+            <div className="flex gap-2 mb-4 pt-4">
+              <Button
+                variant={requestsSubTab === 'received' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRequestsSubTab('received')}
+                className="flex-1 rounded-full text-xs"
+              >
+                Reçues
+                {pendingRequests.length > 0 && (
+                  <span className="ml-1.5 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
+                    {pendingRequests.length}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant={requestsSubTab === 'sent' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRequestsSubTab('sent')}
+                className="flex-1 rounded-full text-xs"
+              >
+                Envoyées
+                {sentPendingRequests.length > 0 && (
+                  <span className="ml-1.5 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                    {sentPendingRequests.length}
+                  </span>
+                )}
+              </Button>
+            </div>
+
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <PendingRequestsList />
+              requestsSubTab === 'received' ? <PendingRequestsList /> : <SentPendingRequestsList />
             )}
           </TabsContent>
         </Tabs>
