@@ -174,10 +174,10 @@ export const useFollow = () => {
       if (myProfile) {
         await sendPushNotification(
           followerId,
-          'Demande acceptée',
-          `${myProfile.display_name || myProfile.username} a accepté votre demande de suivi`,
+          'Demande acceptée ! 🎉',
+          `${myProfile.display_name || myProfile.username} a accepté votre demande. Vous pouvez maintenant lui envoyer des messages !`,
           'follow_accepted',
-          { accepted_by: user.id }
+          { accepted_by: user.id, can_message: true }
         );
       }
 
