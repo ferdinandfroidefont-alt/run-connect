@@ -77,7 +77,15 @@ interface Filter {
   selected_date: Date;
   friends_only: boolean;
   selected_club_id: string | null;
+  time_slot: 'morning' | 'afternoon' | 'evening' | null;
 }
+
+// Time slot definitions for filtering sessions by time of day
+const TIME_SLOTS = [
+  { id: 'morning' as const, emoji: '🌅', label: '6h-12h', startHour: 6, endHour: 12 },
+  { id: 'afternoon' as const, emoji: '☀️', label: '12h-18h', startHour: 12, endHour: 18 },
+  { id: 'evening' as const, emoji: '🌙', label: '18h-23h', startHour: 18, endHour: 23 },
+];
 interface InteractiveMapProps {
   initialLat?: number;
   initialLng?: number;
@@ -183,7 +191,8 @@ export const InteractiveMap = ({
     search_query: '',
     selected_date: new Date(),
     friends_only: false,
-    selected_club_id: null
+    selected_club_id: null,
+    time_slot: null
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [userProfile, setUserProfile] = useState<{
@@ -470,7 +479,18 @@ export const InteractiveMap = ({
       const matchesActivity = filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
       const matchesType = filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
       const matchesSearch = !filters.search_query || session.title.toLowerCase().includes(filters.search_query.toLowerCase()) || session.location_name.toLowerCase().includes(filters.search_query.toLowerCase());
-      return matchesActivity && matchesType && matchesSearch;
+      
+      // Time slot filter
+      let matchesTimeSlot = true;
+      if (filters.time_slot) {
+        const slot = TIME_SLOTS.find(s => s.id === filters.time_slot);
+        if (slot) {
+          const sessionHour = new Date(session.scheduled_at).getHours();
+          matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
+        }
+      }
+      
+      return matchesActivity && matchesType && matchesSearch && matchesTimeSlot;
     });
     console.log(`Creating markers for ${filteredSessions.length} sessions`);
     console.log('Sessions with profiles:', filteredSessions.map(s => ({
@@ -1363,43 +1383,66 @@ export const InteractiveMap = ({
           }))} className="pl-10" />
           </div>
           
-          {/* Date Filter and Friends Filter */}
+          {/* Date Filter and Time Slots */}
           <div className="mt-3 flex flex-col gap-3">
-            {/* Date Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="relative cursor-pointer">
-                  {/* Calendar Icon Style */}
-                  <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
-                    {/* Top holes */}
-                    <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
-                    <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
-                    {/* Month text */}
-                    <div className="text-white text-xs font-bold text-center pt-1.5">
-                      {format(filters.selected_date, "MMM", {
-                      locale: fr
-                    }).toUpperCase()}
-                    </div>
-                  </div>
-                  {/* Calendar body */}
-                  <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
-                    <div className="text-black text-lg font-bold">
-                      {format(filters.selected_date, "d")}
-                    </div>
-                  </div>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent mode="single" selected={filters.selected_date} onSelect={date => {
-                if (date) {
-                  setFilters(prev => ({
+            {/* Time Slots and Calendar Row */}
+            <div className="flex items-start gap-2">
+              {/* Time Slot Filters */}
+              {TIME_SLOTS.map(slot => (
+                <button
+                  key={slot.id}
+                  onClick={() => setFilters(prev => ({
                     ...prev,
-                    selected_date: date
-                  }));
-                }
-              }} initialFocus className="p-3 pointer-events-auto" />
-              </PopoverContent>
-            </Popover>
+                    time_slot: prev.time_slot === slot.id ? null : slot.id
+                  }))}
+                  className={cn(
+                    "flex flex-col items-center justify-center rounded-lg p-1.5 transition-all shadow-md border min-w-[50px]",
+                    filters.time_slot === slot.id 
+                      ? "bg-primary text-primary-foreground border-primary scale-105" 
+                      : "bg-card text-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  <span className="text-xl">{slot.emoji}</span>
+                  <span className="text-[10px] font-medium mt-0.5">{slot.label}</span>
+                </button>
+              ))}
+
+              {/* Date Filter - Calendar */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <div className="relative cursor-pointer">
+                    {/* Calendar Icon Style */}
+                    <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
+                      {/* Top holes */}
+                      <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
+                      <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
+                      {/* Month text */}
+                      <div className="text-white text-xs font-bold text-center pt-1.5">
+                        {format(filters.selected_date, "MMM", {
+                        locale: fr
+                      }).toUpperCase()}
+                      </div>
+                    </div>
+                    {/* Calendar body */}
+                    <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
+                      <div className="text-black text-lg font-bold">
+                        {format(filters.selected_date, "d")}
+                      </div>
+                    </div>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent mode="single" selected={filters.selected_date} onSelect={date => {
+                  if (date) {
+                    setFilters(prev => ({
+                      ...prev,
+                      selected_date: date
+                    }));
+                  }
+                }} initialFocus className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
 
             {/* Friends Only Filter and Club Selector - stacked below calendar */}
             <div className="flex flex-col gap-2">
