@@ -415,7 +415,7 @@ export const FollowDialog = ({
     }
     
     return (
-      <div className="pt-4">
+      <div>
         <div className="bg-card rounded-[10px] border border-border overflow-hidden">
           {users.map((userItem, index) => (
             <div
@@ -497,7 +497,7 @@ export const FollowDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent hideCloseButton className="!grid-cols-1 w-full h-[100dvh] max-w-full max-h-[100dvh] rounded-none border-0 p-0 !gap-0 bg-secondary sm:max-w-md sm:h-[70vh] sm:max-h-[70vh] sm:rounded-lg sm:border !flex !flex-col overflow-hidden">
         {/* iOS Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-background border-b border-border">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-background border-b border-border">
           <div className="w-8" />
           <h2 className="text-lg font-semibold text-foreground">Réseaux</h2>
           <button
@@ -510,7 +510,7 @@ export const FollowDialog = ({
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* iOS Segmented Control */}
-          <div className="px-4 py-2 bg-background border-b border-border">
+          <div className="flex-shrink-0 relative z-10 px-4 py-2 bg-background border-b border-border">
             <TabsList className="w-full bg-secondary p-1 rounded-[10px]">
               <TabsTrigger 
                 value="followers" 
@@ -554,7 +554,7 @@ export const FollowDialog = ({
             </TabsList>
           </div>
 
-          <TabsContent value="followers" className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+          <TabsContent value="followers" className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 relative z-0">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -564,7 +564,7 @@ export const FollowDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="following" className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+          <TabsContent value="following" className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 relative z-0">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -574,9 +574,9 @@ export const FollowDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="requests" className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col">
+          <TabsContent value="requests" className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col relative z-0">
             {/* Sub-tabs for Received / Sent */}
-            <div className="flex gap-2 mb-4 pt-4">
+            <div className="flex gap-2 mb-4">
               <Button
                 variant={requestsSubTab === 'received' ? 'default' : 'outline'}
                 size="sm"
