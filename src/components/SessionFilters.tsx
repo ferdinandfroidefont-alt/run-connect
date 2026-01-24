@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Filter } from "lucide-react";
+import { Filter, Sunrise, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { ClubSelector } from "./ClubSelector";
 
@@ -37,9 +37,9 @@ const sessionTypes = [
 
 // Time slot definitions for filtering sessions by time of day
 const TIME_SLOTS = [
-  { id: 'morning' as const, emoji: '🌅', label: 'Matin (6h-12h)', startHour: 6, endHour: 12 },
-  { id: 'afternoon' as const, emoji: '☀️', label: 'Après-midi (12h-18h)', startHour: 12, endHour: 18 },
-  { id: 'evening' as const, emoji: '🌙', label: 'Soir (18h-23h)', startHour: 18, endHour: 23 },
+  { id: 'morning' as const, icon: Sunrise, label: 'Matin', startHour: 6, endHour: 12, color: 'text-amber-500' },
+  { id: 'afternoon' as const, icon: Sun, label: 'Après-midi', startHour: 12, endHour: 18, color: 'text-yellow-500' },
+  { id: 'evening' as const, icon: Moon, label: 'Soir', startHour: 18, endHour: 23, color: 'text-indigo-500' },
 ];
 
 export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps) => {
@@ -199,10 +199,10 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
                     })}
                     variant={filters.time_slot === slot.id ? "default" : "outline"}
                     size="sm"
-                    className="flex flex-col items-center justify-center h-14 text-xs"
+                    className="flex flex-col items-center justify-center h-14 text-xs gap-0.5"
                   >
-                    <span className="text-lg mb-0.5">{slot.emoji}</span>
-                    <span className="text-[10px]">{slot.id === 'morning' ? 'Matin' : slot.id === 'afternoon' ? 'Après-midi' : 'Soir'}</span>
+                    <slot.icon className={`h-5 w-5 ${filters.time_slot === slot.id ? '' : slot.color}`} />
+                    <span className="text-[10px]">{slot.label}</span>
                   </Button>
                 ))}
               </div>

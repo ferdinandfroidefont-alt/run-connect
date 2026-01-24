@@ -21,7 +21,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -82,9 +82,9 @@ interface Filter {
 
 // Time slot definitions for filtering sessions by time of day
 const TIME_SLOTS = [
-  { id: 'morning' as const, emoji: '🌅', label: '6h-12h', startHour: 6, endHour: 12 },
-  { id: 'afternoon' as const, emoji: '☀️', label: '12h-18h', startHour: 12, endHour: 18 },
-  { id: 'evening' as const, emoji: '🌙', label: '18h-23h', startHour: 18, endHour: 23 },
+  { id: 'morning' as const, icon: Sunrise, label: '6h-12h', startHour: 6, endHour: 12, color: 'text-amber-500' },
+  { id: 'afternoon' as const, icon: Sun, label: '12h-18h', startHour: 12, endHour: 18, color: 'text-yellow-500' },
+  { id: 'evening' as const, icon: Moon, label: '18h-23h', startHour: 18, endHour: 23, color: 'text-indigo-500' },
 ];
 interface InteractiveMapProps {
   initialLat?: number;
@@ -1438,7 +1438,7 @@ export const InteractiveMap = ({
                       : "bg-card text-foreground border-border hover:bg-muted"
                   )}
                 >
-                  <span className="text-xl">{slot.emoji}</span>
+                  <slot.icon className={cn("h-5 w-5", filters.time_slot === slot.id ? "text-primary-foreground" : slot.color)} />
                   <span className="text-[10px] font-medium mt-0.5">{slot.label}</span>
                 </button>
               ))}
