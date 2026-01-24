@@ -80,12 +80,10 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🚀 RunConnect AAB - Starting MainActivity");
         Log.d(TAG, "📍 URL to load: " + START_URL);
 
-        // ✅ Barres système iOS Blue permanentes
+        // ✅ Barres système NOIRES permanentes
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
-        if (Build.VERSION.SDK_INT >= 21) {
-            getWindow().setStatusBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
-            getWindow().setNavigationBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
-        }
+        getWindow().setStatusBarColor(getResources().getColor(R.color.systemBarBlack, getTheme()));
+        getWindow().setNavigationBarColor(getResources().getColor(R.color.systemBarBlack, getTheme()));
         
         // ✅ Icônes blanches sur fond bleu
         androidx.core.view.WindowInsetsControllerCompat insetsController = 
