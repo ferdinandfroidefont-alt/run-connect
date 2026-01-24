@@ -510,8 +510,8 @@ export const FollowDialog = ({
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* iOS Segmented Control */}
-          <div className="px-4 pt-2 pb-2">
-            <TabsList className="w-full bg-secondary p-1 rounded-[10px] border border-border">
+          <div className="px-4 py-2 bg-background border-b border-border">
+            <TabsList className="w-full bg-secondary p-1 rounded-[10px]">
               <TabsTrigger 
                 value="followers" 
                 className="flex-1 gap-1 rounded-[8px] text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
