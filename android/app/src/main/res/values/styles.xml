@@ -1,34 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Thème principal de l'application avec barres système bleues iOS -->
+    <!-- Thème principal de l'application avec barres système NOIRES -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/iosBlue</item>
         <item name="colorPrimaryDark">@color/iosBlue</item>
         <item name="colorAccent">@color/iosBlue</item>
-        <item name="android:statusBarColor">@color/iosBlue</item>
-        <item name="android:navigationBarColor">@color/iosBlue</item>
+        <item name="android:statusBarColor">@color/systemBarBlack</item>
+        <item name="android:navigationBarColor">@color/systemBarBlack</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
-    <!-- Thème sans action bar pour MainActivity avec barres bleues -->
+    <!-- Thème sans action bar pour MainActivity avec barres NOIRES -->
     <style name="AppTheme.NoActionBarFull" parent="AppTheme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowFullscreen">false</item>
-        <item name="android:statusBarColor">@color/iosBlue</item>
-        <item name="android:navigationBarColor">@color/iosBlue</item>
+        <item name="android:statusBarColor">@color/systemBarBlack</item>
+        <item name="android:navigationBarColor">@color/systemBarBlack</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
-    <!-- Thème pour le Splash Screen avec barres bleues -->
+    <!-- Thème pour le Splash Screen avec barres NOIRES -->
     <style name="SplashTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         
-        <!-- Barres système bleues iOS -->
+        <!-- Barres système NOIRES permanentes -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@color/iosBlue</item>
-        <item name="android:navigationBarColor">@color/iosBlue</item>
+        <item name="android:statusBarColor">@color/systemBarBlack</item>
+        <item name="android:navigationBarColor">@color/systemBarBlack</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

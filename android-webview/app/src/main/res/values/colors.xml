@@ -3,4 +3,6 @@
     <color name="iosBlue">#007AFF</color>
     <color name="iosGray">#E5E5EA</color>
     <color name="white">#FFFFFF</color>
+    <!-- System Bars - NOIR permanent -->
+    <color name="systemBarBlack">#000000</color>
 </resources>

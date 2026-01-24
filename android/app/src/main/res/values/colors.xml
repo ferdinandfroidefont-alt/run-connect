@@ -10,4 +10,6 @@
     <color name="iosBlue">#007AFF</color>
     <color name="iosGray">#E5E5EA</color>
     <color name="iosSystemGray">#F2F2F7</color>
+    <!-- System Bars - NOIR permanent -->
+    <color name="systemBarBlack">#000000</color>
 </resources>
