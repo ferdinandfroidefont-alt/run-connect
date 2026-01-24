@@ -35,6 +35,13 @@ const sessionTypes = [
   { id: 'competition', label: 'Compétition' },
 ];
 
+// Time slot definitions for filtering sessions by time of day
+const TIME_SLOTS = [
+  { id: 'morning' as const, emoji: '🌅', label: 'Matin (6h-12h)', startHour: 6, endHour: 12 },
+  { id: 'afternoon' as const, emoji: '☀️', label: 'Après-midi (12h-18h)', startHour: 12, endHour: 18 },
+  { id: 'evening' as const, emoji: '🌙', label: 'Soir (18h-23h)', startHour: 18, endHour: 23 },
+];
+
 export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -172,6 +179,30 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
                     className="justify-start text-xs h-8"
                   >
                     {sessionType.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Time Slot Filters */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Créneau horaire</h4>
+              <div className="grid grid-cols-3 gap-2">
+                {TIME_SLOTS.map((slot) => (
+                  <Button
+                    key={slot.id}
+                    onClick={() => onFiltersChange({ 
+                      ...filters, 
+                      time_slot: filters.time_slot === slot.id ? null : slot.id 
+                    })}
+                    variant={filters.time_slot === slot.id ? "default" : "outline"}
+                    size="sm"
+                    className="flex flex-col items-center justify-center h-14 text-xs"
+                  >
+                    <span className="text-lg mb-0.5">{slot.emoji}</span>
+                    <span className="text-[10px]">{slot.id === 'morning' ? 'Matin' : slot.id === 'afternoon' ? 'Après-midi' : 'Soir'}</span>
                   </Button>
                 ))}
               </div>

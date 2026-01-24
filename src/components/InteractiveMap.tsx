@@ -1385,28 +1385,8 @@ export const InteractiveMap = ({
           
           {/* Date Filter and Time Slots */}
           <div className="mt-3 flex flex-col gap-3">
-            {/* Time Slots and Calendar Row */}
+            {/* Calendar and Time Slots Row */}
             <div className="flex items-start gap-2">
-              {/* Time Slot Filters */}
-              {TIME_SLOTS.map(slot => (
-                <button
-                  key={slot.id}
-                  onClick={() => setFilters(prev => ({
-                    ...prev,
-                    time_slot: prev.time_slot === slot.id ? null : slot.id
-                  }))}
-                  className={cn(
-                    "flex flex-col items-center justify-center rounded-lg p-1.5 transition-all shadow-md border min-w-[50px]",
-                    filters.time_slot === slot.id 
-                      ? "bg-primary text-primary-foreground border-primary scale-105" 
-                      : "bg-card text-foreground border-border hover:bg-muted"
-                  )}
-                >
-                  <span className="text-xl">{slot.emoji}</span>
-                  <span className="text-[10px] font-medium mt-0.5">{slot.label}</span>
-                </button>
-              ))}
-
               {/* Date Filter - Calendar */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -1442,6 +1422,26 @@ export const InteractiveMap = ({
                 }} initialFocus className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
+
+              {/* Time Slot Filters - Right of Calendar */}
+              {TIME_SLOTS.map(slot => (
+                <button
+                  key={slot.id}
+                  onClick={() => setFilters(prev => ({
+                    ...prev,
+                    time_slot: prev.time_slot === slot.id ? null : slot.id
+                  }))}
+                  className={cn(
+                    "flex flex-col items-center justify-center rounded-lg p-1.5 transition-all shadow-md border min-w-[50px]",
+                    filters.time_slot === slot.id 
+                      ? "bg-primary text-primary-foreground border-primary scale-105" 
+                      : "bg-card text-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  <span className="text-xl">{slot.emoji}</span>
+                  <span className="text-[10px] font-medium mt-0.5">{slot.label}</span>
+                </button>
+              ))}
             </div>
 
             {/* Friends Only Filter and Club Selector - stacked below calendar */}
