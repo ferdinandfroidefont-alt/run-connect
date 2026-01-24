@@ -495,7 +495,7 @@ export const FollowDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent hideCloseButton className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[70vh] sm:rounded-lg sm:border flex flex-col">
+      <DialogContent hideCloseButton className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 gap-0 bg-secondary sm:max-w-md sm:max-h-[70vh] sm:rounded-lg sm:border flex flex-col">
         {/* iOS Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-background border-b border-border">
           <div className="w-8" />
