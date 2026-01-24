@@ -1401,8 +1401,8 @@ export const InteractiveMap = ({
               </PopoverContent>
             </Popover>
 
-            {/* Friends Only Filter and Club Selector - below calendar */}
-            <div className="flex items-center gap-2">
+            {/* Friends Only Filter and Club Selector - stacked below calendar */}
+            <div className="flex flex-col gap-2">
               {/* Friends Only Filter */}
               <button onClick={() => setFilters(prev => ({
               ...prev,
