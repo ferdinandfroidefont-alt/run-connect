@@ -2202,7 +2202,7 @@ const Messages = () => {
               </button>
               
               <button
-                onClick={() => setShowContactsDialog(true)}
+                onClick={() => navigate('/search?tab=contacts')}
                 className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
