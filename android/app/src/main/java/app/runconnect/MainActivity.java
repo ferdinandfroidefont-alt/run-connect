@@ -150,30 +150,30 @@ public class MainActivity extends AppCompatActivity {
             androidx.core.view.WindowInsetsControllerCompat insetsController = 
                 new androidx.core.view.WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
             
-            // 🎯 SHOW both status bar AND navigation bar with iOS blue color
+            // 🎯 SHOW both status bar AND navigation bar
             insetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars());
             insetsController.show(androidx.core.view.WindowInsetsCompat.Type.navigationBars());
             
-            // Set light icons on blue background (white icons)
+            // Set light icons on BLACK background (white icons)
             insetsController.setAppearanceLightStatusBars(false);
             insetsController.setAppearanceLightNavigationBars(false);
             
-            // Set iOS blue color for both bars
-            getWindow().setStatusBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
-            getWindow().setNavigationBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
+            // 🎯 Set BLACK color for both bars - PERMANENT
+            getWindow().setStatusBarColor(getResources().getColor(R.color.systemBarBlack, getTheme()));
+            getWindow().setNavigationBarColor(getResources().getColor(R.color.systemBarBlack, getTheme()));
             
             // Make content not extend behind system bars
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                 getWindow().setDecorFitsSystemWindows(true);
             }
             
-            Log.d(TAG, "✅ Status bar and navigation bar visible with iOS blue color");
+            Log.d(TAG, "✅ Status bar and navigation bar visible with BLACK color");
         } catch (Exception e) {
             Log.w(TAG, "⚠️ WindowInsetsControllerCompat failed, falling back to legacy mode: " + e.getMessage());
-            // Fallback to legacy - just set the colors
-            getWindow().setStatusBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
-            getWindow().setNavigationBarColor(getResources().getColor(R.color.iosBlue, getTheme()));
-            Log.d(TAG, "✅ Status bar and navigation bar with iOS blue via legacy method");
+            // Fallback to legacy - just set the colors to BLACK
+            getWindow().setStatusBarColor(getResources().getColor(R.color.systemBarBlack, getTheme()));
+            getWindow().setNavigationBarColor(getResources().getColor(R.color.systemBarBlack, getTheme()));
+            Log.d(TAG, "✅ Status bar and navigation bar with BLACK via legacy method");
         }
     }
 
