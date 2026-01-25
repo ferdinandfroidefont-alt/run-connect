@@ -498,7 +498,7 @@ export const FollowDialog = ({
       <DialogContent 
         hideCloseButton 
         fullScreen
-        className="bg-secondary"
+        className="bg-secondary !overflow-hidden"
       >
         {/* iOS Header */}
         <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-background border-b border-border">
@@ -512,7 +512,7 @@ export const FollowDialog = ({
           </button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col overflow-hidden bg-secondary">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden bg-secondary">
           {/* iOS Segmented Control */}
           <div className="flex-shrink-0 relative z-10 px-4 py-2 bg-background border-b border-border">
             <TabsList className="w-full bg-secondary p-1 rounded-[10px]">
@@ -558,64 +558,70 @@ export const FollowDialog = ({
             </TabsList>
           </div>
 
-          <TabsContent value="followers" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 relative z-0 bg-secondary">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <UserList users={followers} showRemoveButton />
-            )}
-          </TabsContent>
-
-          <TabsContent value="following" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 relative z-0 bg-secondary">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <UserList users={following} showUnfollowButton />
-            )}
-          </TabsContent>
-
-          <TabsContent value="requests" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 flex flex-col relative z-0 bg-secondary">
-            {/* Sub-tabs for Received / Sent */}
-            <div className="flex gap-2 mb-4">
-              <Button
-                variant={requestsSubTab === 'received' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setRequestsSubTab('received')}
-                className="flex-1 rounded-full text-xs"
-              >
-                Reçues
-                {pendingRequests.length > 0 && (
-                  <span className="ml-1.5 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
-                    {pendingRequests.length}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant={requestsSubTab === 'sent' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setRequestsSubTab('sent')}
-                className="flex-1 rounded-full text-xs"
-              >
-                Envoyées
-                {sentPendingRequests.length > 0 && (
-                  <span className="ml-1.5 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                    {sentPendingRequests.length}
-                  </span>
-                )}
-              </Button>
+          <TabsContent value="followers" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
+            <div className="absolute inset-0 overflow-y-auto px-4 pb-24">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <UserList users={followers} showRemoveButton />
+              )}
             </div>
+          </TabsContent>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <TabsContent value="following" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
+            <div className="absolute inset-0 overflow-y-auto px-4 pb-24">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <UserList users={following} showUnfollowButton />
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="requests" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
+            <div className="absolute inset-0 overflow-y-auto px-4 pb-24">
+              {/* Sub-tabs for Received / Sent */}
+              <div className="flex gap-2 mb-4">
+                <Button
+                  variant={requestsSubTab === 'received' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setRequestsSubTab('received')}
+                  className="flex-1 rounded-full text-xs"
+                >
+                  Reçues
+                  {pendingRequests.length > 0 && (
+                    <span className="ml-1.5 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
+                      {pendingRequests.length}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant={requestsSubTab === 'sent' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setRequestsSubTab('sent')}
+                  className="flex-1 rounded-full text-xs"
+                >
+                  Envoyées
+                  {sentPendingRequests.length > 0 && (
+                    <span className="ml-1.5 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                      {sentPendingRequests.length}
+                    </span>
+                  )}
+                </Button>
               </div>
-            ) : (
-              requestsSubTab === 'received' ? <PendingRequestsList /> : <SentPendingRequestsList />
-            )}
+
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                requestsSubTab === 'received' ? <PendingRequestsList /> : <SentPendingRequestsList />
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
