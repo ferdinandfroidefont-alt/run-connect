@@ -511,7 +511,7 @@ export const FollowDialog = ({
           </button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col overflow-hidden bg-secondary">
           {/* iOS Segmented Control */}
           <div className="flex-shrink-0 relative z-10 px-4 py-2 bg-background border-b border-border">
             <TabsList className="w-full bg-secondary p-1 rounded-[10px]">
@@ -557,7 +557,7 @@ export const FollowDialog = ({
             </TabsList>
           </div>
 
-          <TabsContent value="followers" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 relative z-0">
+          <TabsContent value="followers" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 relative z-0 bg-secondary">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -567,7 +567,7 @@ export const FollowDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="following" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 relative z-0">
+          <TabsContent value="following" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 relative z-0 bg-secondary">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -577,7 +577,7 @@ export const FollowDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="requests" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 flex flex-col relative z-0">
+          <TabsContent value="requests" className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 flex flex-col relative z-0 bg-secondary">
             {/* Sub-tabs for Received / Sent */}
             <div className="flex gap-2 mb-4">
               <Button
