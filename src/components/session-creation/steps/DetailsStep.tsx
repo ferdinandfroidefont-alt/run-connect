@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, UserCheck, Crown } from 'lucide-react';
+import { FileText, ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, UserCheck, Timer, Gauge, Mountain, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SessionFormData, SelectedLocation, ACTIVITY_TYPES } from '../types';
+import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, INTENSITY_LEVELS, TERRAIN_TYPES, RECOVERY_TYPES } from '../types';
 import { ClubSelector } from '@/components/ClubSelector';
 import { cn } from '@/lib/utils';
 
@@ -44,8 +44,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     }
   }, [formData.activity_type, selectedLocation]);
 
-  const showPaceFields = ['course', 'trail', 'velo', 'vtt', 'gravel', 'marche', 'natation'].includes(formData.activity_type);
-  const showIntervalFields = formData.session_type === 'fractionne';
+  const isRunningActivity = ['course', 'trail', 'marche'].includes(formData.activity_type);
+  const isCyclingActivity = ['velo', 'vtt', 'gravel'].includes(formData.activity_type);
+  const showPaceFields = isRunningActivity || isCyclingActivity || formData.activity_type === 'natation';
+  const isIntervalSession = ['fractionne', 'cotes', 'fartlek'].includes(formData.session_type);
+  const isStructuredSession = ['fractionne', 'seuil', 'cotes', 'fartlek', 'sortie_longue'].includes(formData.session_type);
 
   return (
     <motion.div
@@ -63,7 +66,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         <p className="text-muted-foreground mt-1">Personnalisez votre séance</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-4">
+      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
         {/* Title */}
         <div>
           <Label htmlFor="title">Titre de la séance *</Label>
@@ -74,6 +77,254 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             placeholder="ex: Footing matinal au parc"
             className="h-12"
             required
+          />
+        </div>
+
+        {/* Intensity Level */}
+        {showPaceFields && (
+          <div>
+            <Label className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-orange-500" />
+              Intensité
+            </Label>
+            <div className="grid grid-cols-5 gap-1 mt-2">
+              {INTENSITY_LEVELS.map((level) => (
+                <button
+                  key={level.value}
+                  type="button"
+                  onClick={() => onFormDataChange({ intensity: level.value })}
+                  className={cn(
+                    "py-2 px-1 rounded-lg text-[10px] font-medium transition-all text-center",
+                    formData.intensity === level.value
+                      ? `${level.color} text-white`
+                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  )}
+                >
+                  {level.label.split(' - ')[1]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Terrain Type */}
+        {(isRunningActivity || isCyclingActivity) && (
+          <div>
+            <Label className="flex items-center gap-2">
+              <Mountain className="w-4 h-4 text-green-600" />
+              Type de terrain
+            </Label>
+            <Select value={formData.terrain_type} onValueChange={(v) => onFormDataChange({ terrain_type: v })}>
+              <SelectTrigger className="h-10 mt-2">
+                <SelectValue placeholder="Sélectionner le terrain" />
+              </SelectTrigger>
+              <SelectContent>
+                {TERRAIN_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Distance & Elevation */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="distance_km">
+              <Ruler className="w-4 h-4 inline mr-1" />
+              Distance (km)
+            </Label>
+            <Input
+              id="distance_km"
+              type="number"
+              step="0.1"
+              value={formData.distance_km}
+              onChange={(e) => onFormDataChange({ distance_km: e.target.value })}
+              placeholder="ex: 10"
+              className="h-10"
+            />
+          </div>
+          {(isRunningActivity || isCyclingActivity) && (
+            <div>
+              <Label htmlFor="elevation_gain">
+                <Mountain className="w-4 h-4 inline mr-1" />
+                D+ (m)
+              </Label>
+              <Input
+                id="elevation_gain"
+                type="number"
+                value={formData.elevation_gain}
+                onChange={(e) => onFormDataChange({ elevation_gain: e.target.value })}
+                placeholder="ex: 150"
+                className="h-10"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* General Pace for footing/sortie longue */}
+        {showPaceFields && !isIntervalSession && (
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30">
+            <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+              <Gauge className="w-4 h-4 text-blue-500" />
+              Allure générale
+            </Label>
+            <Input
+              value={formData.pace_general}
+              onChange={(e) => onFormDataChange({ pace_general: e.target.value })}
+              placeholder={isRunningActivity ? "ex: 5:30 min/km" : isCyclingActivity ? "ex: 25 km/h" : "Allure"}
+              className="h-10"
+            />
+          </div>
+        )}
+
+        {/* Warmup Section - for structured sessions */}
+        {isStructuredSession && showPaceFields && (
+          <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/30">
+            <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+              <Timer className="w-4 h-4 text-green-500" />
+              Échauffement
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs text-muted-foreground">Durée (min)</Label>
+                <Input
+                  type="number"
+                  value={formData.warmup_duration}
+                  onChange={(e) => onFormDataChange({ warmup_duration: e.target.value })}
+                  placeholder="15"
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Allure</Label>
+                <Input
+                  value={formData.warmup_pace}
+                  onChange={(e) => onFormDataChange({ warmup_pace: e.target.value })}
+                  placeholder="6:00 min/km"
+                  className="h-10"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Interval fields */}
+        {isIntervalSession && (
+          <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/30">
+            <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+              <Flame className="w-4 h-4 text-orange-500" />
+              Paramètres fractionné
+            </Label>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Nb fractions</Label>
+                <Input
+                  type="number"
+                  value={formData.interval_count}
+                  onChange={(e) => onFormDataChange({ interval_count: e.target.value })}
+                  placeholder="10"
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Distance (m)</Label>
+                <Input
+                  type="number"
+                  value={formData.interval_distance}
+                  onChange={(e) => onFormDataChange({ interval_distance: e.target.value })}
+                  placeholder="400"
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Allure</Label>
+                <Input
+                  value={formData.interval_pace}
+                  onChange={(e) => onFormDataChange({ interval_pace: e.target.value })}
+                  placeholder="4:00"
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            {/* Recovery between intervals */}
+            <div className="pt-3 border-t border-orange-500/20">
+              <Label className="text-xs text-muted-foreground mb-2 block">Récupération entre fractions</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Durée (sec)</Label>
+                  <Input
+                    type="number"
+                    value={formData.recovery_duration}
+                    onChange={(e) => onFormDataChange({ recovery_duration: e.target.value })}
+                    placeholder="90"
+                    className="h-10"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Type</Label>
+                  <Select value={formData.recovery_type} onValueChange={(v) => onFormDataChange({ recovery_type: v })}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RECOVERY_TYPES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cooldown Section - for structured sessions */}
+        {isStructuredSession && showPaceFields && (
+          <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
+            <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+              <Timer className="w-4 h-4 text-purple-500" />
+              Retour au calme
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs text-muted-foreground">Durée (min)</Label>
+                <Input
+                  type="number"
+                  value={formData.cooldown_duration}
+                  onChange={(e) => onFormDataChange({ cooldown_duration: e.target.value })}
+                  placeholder="10"
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Allure</Label>
+                <Input
+                  value={formData.cooldown_pace}
+                  onChange={(e) => onFormDataChange({ cooldown_pace: e.target.value })}
+                  placeholder="6:30 min/km"
+                  className="h-10"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Max participants */}
+        <div>
+          <Label htmlFor="max_participants">
+            <Users className="w-4 h-4 inline mr-1" />
+            Nombre max de participants
+          </Label>
+          <Input
+            id="max_participants"
+            type="number"
+            value={formData.max_participants}
+            onChange={(e) => onFormDataChange({ max_participants: e.target.value })}
+            placeholder="Illimité"
+            min="1"
+            className="h-10"
           />
         </div>
 
@@ -112,96 +363,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </div>
         </div>
 
-        {/* Participants & Distance */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="max_participants">
-              <Users className="w-4 h-4 inline mr-1" />
-              Max participants
-            </Label>
-            <Input
-              id="max_participants"
-              type="number"
-              value={formData.max_participants}
-              onChange={(e) => onFormDataChange({ max_participants: e.target.value })}
-              placeholder="Illimité"
-              min="1"
-              className="h-10"
-            />
-          </div>
-          <div>
-            <Label htmlFor="distance_km">
-              <Ruler className="w-4 h-4 inline mr-1" />
-              Distance (km)
-            </Label>
-            <Input
-              id="distance_km"
-              type="number"
-              step="0.1"
-              value={formData.distance_km}
-              onChange={(e) => onFormDataChange({ distance_km: e.target.value })}
-              placeholder="ex: 5.2"
-              className="h-10"
-            />
-          </div>
-        </div>
-
-        {/* Pace fields for running/cycling */}
-        {showPaceFields && !showIntervalFields && (formData.session_type === 'footing' || formData.session_type === 'sortie_longue') && (
-          <div>
-            <Label htmlFor="pace_general">
-              {formData.activity_type === 'course' ? 'Allure (min:sec/km)' : 
-               formData.activity_type === 'velo' ? 'Vitesse (km/h)' : 'Allure'}
-            </Label>
-            <Input
-              id="pace_general"
-              value={formData.pace_general}
-              onChange={(e) => onFormDataChange({ pace_general: e.target.value })}
-              placeholder={formData.activity_type === 'course' ? 'ex: 5:30' : 'ex: 25'}
-              className="h-10"
-            />
-          </div>
-        )}
-
-        {/* Interval fields */}
-        {showIntervalFields && (
-          <div className="space-y-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/30">
-            <Label className="text-sm font-medium">Paramètres fractionné</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label className="text-xs">Nb fractions</Label>
-                <Input
-                  type="number"
-                  value={formData.interval_count}
-                  onChange={(e) => onFormDataChange({ interval_count: e.target.value })}
-                  placeholder="10"
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Distance (km)</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={formData.interval_distance}
-                  onChange={(e) => onFormDataChange({ interval_distance: e.target.value })}
-                  placeholder="0.4"
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Allure</Label>
-                <Input
-                  value={formData.interval_pace}
-                  onChange={(e) => onFormDataChange({ interval_pace: e.target.value })}
-                  placeholder="4:00"
-                  className="h-10"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Image */}
         <div>
           <Label>Image (optionnel)</Label>
@@ -232,12 +393,12 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
 
         {/* Description */}
         <div>
-          <Label htmlFor="description">Description (optionnel)</Label>
+          <Label htmlFor="description">Notes additionnelles (optionnel)</Label>
           <Textarea
             id="description"
             value={formData.description}
             onChange={(e) => onFormDataChange({ description: e.target.value })}
-            placeholder="Détails, niveau requis, matériel..."
+            placeholder="Niveau requis, matériel recommandé, points de ravitaillement..."
             rows={3}
           />
         </div>
