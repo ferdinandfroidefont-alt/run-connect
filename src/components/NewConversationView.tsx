@@ -355,7 +355,7 @@ export const NewConversationView = ({
                 <div className="flex items-center gap-2 mb-3">
                   <h2 className="text-sm font-medium text-muted-foreground">Amis récents</h2>
                 </div>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
                   {recentFriends.map((friend, index) => (
                     <motion.div
                       key={friend.user_id}
@@ -363,10 +363,10 @@ export const NewConversationView = ({
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => onStartConversation(friend.user_id)}
-                      className="flex flex-col items-center gap-2 cursor-pointer group flex-shrink-0"
+                      className="flex flex-col items-center gap-1.5 cursor-pointer group flex-shrink-0"
                     >
                       <div className="relative">
-                        <Avatar className="h-14 w-14 border-2 border-border group-hover:border-primary transition-all duration-300">
+                        <Avatar className="h-16 w-16 border-2 border-border group-hover:border-primary transition-all duration-300">
                           <AvatarImage src={friend.avatar_url || ""} />
                           <AvatarFallback className="bg-secondary text-foreground text-lg">
                             {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
@@ -374,7 +374,7 @@ export const NewConversationView = ({
                         </Avatar>
                         <OnlineStatus userId={friend.user_id} className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-xs text-center truncate w-16 text-foreground">
+                      <span className="text-[11px] text-center truncate w-16 text-foreground font-medium">
                         {friend.username || friend.display_name}
                       </span>
                     </motion.div>
@@ -419,11 +419,11 @@ export const NewConversationView = ({
                 </div>
 
                 {suggestionsLoading ? (
-                  <div className="flex gap-3 overflow-x-auto pb-2">
+                  <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
                     {[...Array(6)].map((_, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1.5">
-                        <div className="h-[60px] w-[60px] rounded-full bg-muted animate-pulse" />
-                        <div className="h-2 w-10 rounded bg-muted animate-pulse" />
+                      <div key={i} className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                        <div className="h-16 w-16 rounded-full bg-muted animate-pulse" />
+                        <div className="h-2 w-12 rounded bg-muted animate-pulse" />
                       </div>
                     ))}
                   </div>
@@ -433,7 +433,7 @@ export const NewConversationView = ({
                     <span className="text-[15px] text-muted-foreground">Chargement des suggestions...</span>
                   </div>
                 ) : (
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
                     {visibleSuggestions.map((profile) => (
                       <button
                         key={profile.user_id}
