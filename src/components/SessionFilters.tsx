@@ -141,7 +141,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
 
       {/* Contenu qui apparaît au clic */}
       {isOpen && (
-        <CardContent className="p-4 pt-0">
+        <CardContent className="p-4 pt-0 max-h-64 overflow-y-auto">
           <Separator className="mb-4" />
 
           <div className="space-y-4">
