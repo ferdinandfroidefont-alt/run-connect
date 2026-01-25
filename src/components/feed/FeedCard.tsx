@@ -51,38 +51,48 @@ export const FeedCard = ({
   const handleShare = async () => {
     const shareUrl = `https://run-connect.lovable.app/?session=${session.id}`;
     const shareText = `🏃 ${session.title} - ${activityLabels[session.activity_type] || session.activity_type}\n📍 ${session.location_name}\n📅 ${format(new Date(session.scheduled_at), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })}`;
+    const fullText = `${shareText}\n\n${shareUrl}`;
     
+    // Try AndroidBridge first (native WebView)
+    if ((window as any).AndroidBridge?.shareText) {
+      (window as any).AndroidBridge.shareText(fullText);
+      return;
+    }
+    
+    // Try Capacitor Share
     try {
-      // Try AndroidBridge first (native WebView)
-      if ((window as any).AndroidBridge?.shareText) {
-        (window as any).AndroidBridge.shareText(shareText + '\n\n' + shareUrl);
-        return;
-      }
-      
-      // Try Capacitor Share
+      const { Share } = await import('@capacitor/share');
       await Share.share({
         title: session.title,
         text: shareText,
         url: shareUrl,
         dialogTitle: 'Partager cette séance'
       });
+      return;
     } catch (error) {
-      // Fallback to Web Share API
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: session.title,
-            text: shareText,
-            url: shareUrl
-          });
-        } catch {
-          // User cancelled or error
-        }
-      } else {
-        // Final fallback: copy to clipboard
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success('Lien copié !');
+      console.log('Capacitor share failed, trying Web Share API');
+    }
+    
+    // Fallback to Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: session.title,
+          text: shareText,
+          url: shareUrl
+        });
+        return;
+      } catch {
+        // User cancelled or error
       }
+    }
+    
+    // Final fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Lien copié !');
+    } catch {
+      toast.error('Impossible de copier le lien');
     }
   };
 
