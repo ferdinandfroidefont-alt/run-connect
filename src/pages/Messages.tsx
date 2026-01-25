@@ -297,8 +297,10 @@ const Messages = () => {
       );
 
       // Sort conversations by most recent activity (messages or conversation updates)
+      // Filter out conversations without any messages (except groups/clubs which should always show)
       const sortedConversations = conversationsWithProfiles
         .filter(Boolean)
+        .filter((conv) => conv.is_group || conv.last_message) // Keep groups, hide DMs without messages
         .sort((a, b) => {
           // Use the most recent between last message date and conversation updated_at
           const aDate = a.last_message_date && new Date(a.last_message_date) > new Date(a.updated_at) 
