@@ -1304,10 +1304,15 @@ export type Database = {
         Returns: boolean
       }
       accept_follow_request: { Args: { follow_id: string }; Returns: boolean }
-      add_user_points: {
-        Args: { points_to_add: number; user_id_param: string }
-        Returns: undefined
-      }
+      add_user_points:
+        | {
+            Args: { points_to_add: number; user_id_param: string }
+            Returns: undefined
+          }
+        | {
+            Args: { points_to_add: number; user_id_param: string }
+            Returns: undefined
+          }
       anonymize_user_data: {
         Args: { target_user_id: string }
         Returns: undefined
@@ -1336,6 +1341,10 @@ export type Database = {
       check_and_award_badges: {
         Args: { user_id_param: string }
         Returns: undefined
+      }
+      check_point_rate_limit: {
+        Args: { user_id_param: string }
+        Returns: boolean
       }
       check_rate_limit: {
         Args: {
@@ -1571,10 +1580,15 @@ export type Database = {
         Args: { new_user_id: string; referral_code_param: string }
         Returns: boolean
       }
-      remove_user_points: {
-        Args: { points_to_remove: number; user_id_param: string }
-        Returns: undefined
-      }
+      remove_user_points:
+        | {
+            Args: { points_to_remove: number; user_id_param: string }
+            Returns: undefined
+          }
+        | {
+            Args: { points_to_remove: number; user_id_param: string }
+            Returns: undefined
+          }
       sanitize_input: { Args: { input_text: string }; Returns: string }
       security_maintenance: { Args: never; Returns: Json }
       trigger_season_reset: { Args: never; Returns: undefined }
