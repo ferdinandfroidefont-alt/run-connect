@@ -158,16 +158,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // Nettoyer complètement le stockage local
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('sb-dbptgehpknjsoisirviz-auth-token');
+      // Clear all sensitive application data from localStorage
+      const sensitiveKeys = [
+        'supabase.auth.token',
+        'sb-dbptgehpknjsoisirviz-auth-token',
+        'pendingRoute',          // GPS route data
+        'editRouteData',         // Route editing data with coordinates
+        'subscription_cache',    // Subscription cache
+      ];
+      
+      sensitiveKeys.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      
+      // Clear all sessionStorage (includes referralCode, targetProfileUsername)
       sessionStorage.clear();
       
       await supabase.auth.signOut({ scope: 'global' });
       window.location.href = '/auth';
     } catch (error) {
       console.error('Error signing out:', error);
-      // Forcer la redirection même en cas d'erreur
+      // Force redirect even on error, but still try to clear storage
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        // Ignore storage errors during cleanup
+      }
       window.location.href = '/auth';
     }
   };
