@@ -13,6 +13,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   subscriptionInfo: SubscriptionInfo | null;
+  isAdmin: boolean;
   refreshSubscription: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -24,34 +25,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user has admin role using database function
+  const checkAdminRole = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin'
+      });
+      
+      if (error) {
+        console.error('Error checking admin role:', error);
+        return false;
+      }
+      
+      return data === true;
+    } catch (error) {
+      console.error('Error in checkAdminRole:', error);
+      return false;
+    }
+  };
 
   const refreshSubscription = async () => {
     if (!session) return;
     
     try {
-      console.log('🔍 SUBSCRIPTION CHECK: Starting check for user', session.user?.email);
+      console.log('🔍 SUBSCRIPTION CHECK: Starting check for user');
       
-      // Pour ferdinand.froidefont@gmail.com, vérifier directement dans la base
-      if (session.user?.email === 'ferdinand.froidefont@gmail.com') {
-        console.log('🔍 SUBSCRIPTION CHECK: Admin user detected, checking database directly');
+      // Check if user is admin via database role
+      const userIsAdmin = await checkAdminRole(session.user.id);
+      setIsAdmin(userIsAdmin);
+      
+      if (userIsAdmin) {
+        console.log('🔍 SUBSCRIPTION CHECK: Admin role detected via database');
         
-        const { data: directCheck, error: directError } = await supabase
+        // Check if admin has a subscription record, otherwise create default admin access
+        const { data: adminSub, error: adminSubError } = await supabase
           .from('subscribers')
           .select('*')
           .eq('user_id', session.user.id)
           .maybeSingle();
           
-        console.log('🔍 SUBSCRIPTION CHECK: Direct database result', { directCheck, directError });
-        
-        if (directCheck && directCheck.subscribed) {
-          console.log('🔍 SUBSCRIPTION CHECK: Setting admin premium access');
+        if (adminSub && adminSub.subscribed) {
           setSubscriptionInfo({
             subscribed: true,
-            subscription_tier: directCheck.subscription_tier,
-            subscription_end: directCheck.subscription_end
+            subscription_tier: adminSub.subscription_tier || 'Admin',
+            subscription_end: adminSub.subscription_end
           });
-          return;
+        } else {
+          // Admin role grants premium access even without subscriber record
+          setSubscriptionInfo({
+            subscribed: true,
+            subscription_tier: 'Admin',
+            subscription_end: null
+          });
         }
+        return;
       }
       
       const { data, error } = await supabase.functions.invoke('check-subscription', {
@@ -78,7 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
+        console.log('🔄 AUTH STATE CHANGE:', event);
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -100,30 +130,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 500);
         }
         
-        // Force premium status for ferdinand.froidefont@gmail.com
-        if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
-          console.log('🔍 ADMIN USER: Forcing premium access');
-          setSubscriptionInfo({
-            subscribed: true,
-            subscription_tier: 'Admin',
-            subscription_end: '2099-12-31T23:59:59+00:00'
-          });
+        // Check subscription and admin role for signed in users
+        if (session?.user) {
+          setTimeout(() => {
+            refreshSubscription();
+          }, 0);
         } else {
-          // Check subscription when user signs in
-          if (session?.user) {
-            setTimeout(() => {
-              refreshSubscription();
-            }, 0);
-          } else {
-            setSubscriptionInfo(null);
-          }
+          setSubscriptionInfo(null);
+          setIsAdmin(false);
         }
       }
     );
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
+      console.log('🔄 INITIAL SESSION CHECK');
       console.log('🔄 Session access_token present:', !!session?.access_token);
       console.log('🔄 Session refresh_token present:', !!session?.refresh_token);
       
@@ -135,21 +156,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Force premium status for ferdinand.froidefont@gmail.com
-      if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
-        console.log('🔍 ADMIN USER: Forcing premium access on initial load');
-        setSubscriptionInfo({
-          subscribed: true,
-          subscription_tier: 'Admin',
-          subscription_end: '2099-12-31T23:59:59+00:00'
-        });
-      } else {
-        // Check subscription for existing session
-        if (session?.user) {
-          setTimeout(() => {
-            refreshSubscription();
-          }, 0);
-        }
+      // Check subscription and admin role for existing session
+      if (session?.user) {
+        setTimeout(() => {
+          refreshSubscription();
+        }, 0);
       }
     });
 
@@ -190,7 +201,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, subscriptionInfo, refreshSubscription, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, subscriptionInfo, isAdmin, refreshSubscription, signOut }}>
       {children}
     </AuthContext.Provider>
   );
