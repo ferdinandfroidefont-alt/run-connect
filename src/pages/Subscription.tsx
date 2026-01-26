@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { DonationDialog } from '@/components/DonationDialog';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 
 const Subscription = () => {
   const { user, session } = useAuth();
@@ -59,7 +61,13 @@ const Subscription = () => {
       });
 
       if (error) throw error;
-      window.location.href = data.url;
+      
+      // Use Capacitor Browser for native apps, regular redirect for web
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: data.url, presentationStyle: 'popover' });
+      } else {
+        window.location.href = data.url;
+      }
     } catch (error) {
       console.error('Error creating checkout:', error);
       toast({
@@ -84,7 +92,13 @@ const Subscription = () => {
       });
 
       if (error) throw error;
-      window.open(data.url, '_blank');
+      
+      // Use Capacitor Browser for native apps, window.open for web
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: data.url, presentationStyle: 'popover' });
+      } else {
+        window.open(data.url, '_blank');
+      }
     } catch (error) {
       console.error('Error opening customer portal:', error);
       toast({
