@@ -7,12 +7,94 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Input validation constants
+const MAX_TITLE_LENGTH = 100;
+const MAX_BODY_LENGTH = 500;
+const MAX_DATA_SIZE = 4096; // 4KB max for FCM data payload
+const ALLOWED_NOTIFICATION_TYPES = [
+  'message', 'session_request', 'follow_request', 'friend_session',
+  'club_invitation', 'session_accepted', 'presence_confirmed', 'challenge', 'info'
+] as const;
+
 interface NotificationPayload {
   user_id: string;
   title: string;
   body: string;
-  data?: any;
-  type?: string;
+  data?: Record<string, unknown>;
+  type?: typeof ALLOWED_NOTIFICATION_TYPES[number];
+}
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// Validate notification payload
+function validateNotificationPayload(payload: any): { valid: boolean; error?: string; data?: NotificationPayload } {
+  const { user_id, title, body, data, type } = payload || {};
+
+  // Required fields
+  if (!user_id || typeof user_id !== 'string') {
+    return { valid: false, error: 'user_id is required and must be a string' };
+  }
+  if (!UUID_REGEX.test(user_id)) {
+    return { valid: false, error: 'user_id must be a valid UUID' };
+  }
+
+  if (!title || typeof title !== 'string') {
+    return { valid: false, error: 'title is required and must be a string' };
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    return { valid: false, error: `title must be ${MAX_TITLE_LENGTH} characters or less` };
+  }
+
+  if (!body || typeof body !== 'string') {
+    return { valid: false, error: 'body is required and must be a string' };
+  }
+  if (body.length > MAX_BODY_LENGTH) {
+    return { valid: false, error: `body must be ${MAX_BODY_LENGTH} characters or less` };
+  }
+
+  // Optional type validation
+  if (type !== undefined) {
+    if (typeof type !== 'string' || !ALLOWED_NOTIFICATION_TYPES.includes(type as any)) {
+      return { valid: false, error: `type must be one of: ${ALLOWED_NOTIFICATION_TYPES.join(', ')}` };
+    }
+  }
+
+  // Optional data validation
+  let sanitizedData: Record<string, unknown> | undefined = undefined;
+  if (data !== undefined) {
+    if (typeof data !== 'object' || Array.isArray(data)) {
+      return { valid: false, error: 'data must be an object' };
+    }
+    // Check data size
+    const dataString = JSON.stringify(data);
+    if (dataString.length > MAX_DATA_SIZE) {
+      return { valid: false, error: `data payload too large (max ${MAX_DATA_SIZE} bytes)` };
+    }
+    // Sanitize data values - ensure all are strings or numbers
+    sanitizedData = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        sanitizedData[key] = value;
+      } else if (value === null || value === undefined) {
+        // Skip null/undefined
+      } else {
+        // Convert objects to string representation
+        sanitizedData[key] = String(value);
+      }
+    }
+  }
+
+  return {
+    valid: true,
+    data: {
+      user_id: user_id.trim(),
+      title: title.trim(),
+      body: body.trim(),
+      data: sanitizedData,
+      type: type as NotificationPayload['type']
+    }
+  };
 }
 
 // Firebase service account interface 
@@ -271,16 +353,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { user_id, title, body, data, type }: NotificationPayload = await req.json()
+    // Parse and validate input
+    const rawPayload = await req.json();
+    const validation = validateNotificationPayload(rawPayload);
     
-    console.log('📦 [PAYLOAD] Received:', { user_id, title, body, type })
-
-    if (!user_id || !title || !body) {
+    if (!validation.valid) {
+      console.warn('❌ [VALIDATION] Invalid payload:', validation.error);
       return new Response(
-        JSON.stringify({ error: 'user_id, title et body sont requis' }),
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const { user_id, title, body, data, type } = validation.data!;
+    
+    console.log('📦 [PAYLOAD] Validated:', { user_id, title: title.substring(0, 30), type })
 
     console.log('🔔 Processing push notification:', { user_id, title, body, type })
 
