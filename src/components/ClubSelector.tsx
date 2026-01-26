@@ -109,9 +109,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
         <PopoverTrigger asChild>
           <Button 
             variant="outline" 
-            className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
+            className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50"
           >
-            <Users className="h-3 w-3" />
+            <Users className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
         
@@ -132,9 +132,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="w-8 justify-center bg-card hover:bg-accent h-7 px-1"
+          className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50"
         >
-          <Users className="h-3 w-3" />
+          <Users className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
       
