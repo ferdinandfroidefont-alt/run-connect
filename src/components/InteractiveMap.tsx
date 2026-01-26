@@ -1450,15 +1450,15 @@ export const InteractiveMap = ({
               <button onClick={() => setFilters(prev => ({
               ...prev,
               friends_only: !prev.friends_only
-            }))} className={cn("flex items-center justify-center rounded-md transition-all shadow-md border w-8 h-7", filters.friends_only ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted")}>
-                <div className="flex items-center gap-0.5">
-                  <PersonStanding size={12} />
-                  <Bike size={12} />
+            }))} className={cn("flex items-center justify-center rounded-[10px] transition-all shadow-sm border w-10 h-10", filters.friends_only ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-secondary/50")}>
+                <div className="flex items-center gap-1">
+                  <PersonStanding size={16} />
+                  <Bike size={16} />
                 </div>
               </button>
               
               {/* Club Selector */}
-              <div className="w-48">
+              <div className="w-10">
                 <ClubSelector selectedClubId={filters.selected_club_id} onClubSelect={clubId => setFilters(prev => ({
                 ...prev,
                 selected_club_id: clubId
