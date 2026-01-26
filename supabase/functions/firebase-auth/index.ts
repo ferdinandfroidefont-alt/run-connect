@@ -24,8 +24,8 @@ serve(async (req) => {
       throw new Error('Missing Firebase ID Token');
     }
 
-    console.log('🎫 [FIREBASE AUTH] Token length:', idToken.length);
-    console.log('🎫 [FIREBASE AUTH] Token preview:', idToken.substring(0, 50) + '...');
+    // Log minimal token info (security: don't expose full token)
+    console.log('🎫 [FIREBASE AUTH] Token received (length:', idToken.length, ')');
 
     // 1. Vérifier le Firebase ID Token avec Firebase API
     const firebaseServiceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
@@ -52,15 +52,20 @@ serve(async (req) => {
 
     if (!verifyResponse.ok) {
       const errorText = await verifyResponse.text();
-      console.error('❌ [FIREBASE AUTH] Token verification failed');
-      console.error('❌ [FIREBASE AUTH] Status:', verifyResponse.status);
-      console.error('❌ [FIREBASE AUTH] Response:', errorText);
+      // Server-side logging only (don't expose to client)
+      console.error('❌ [FIREBASE AUTH] Token verification failed - Status:', verifyResponse.status);
+      console.error('❌ [FIREBASE AUTH] Internal error:', errorText);
+      
+      // Map to safe client-facing error messages
+      const safeErrorMessages: Record<number, string> = {
+        400: 'Invalid token format',
+        401: 'Authentication failed',
+        403: 'Token expired or invalid',
+      };
       
       return new Response(
         JSON.stringify({ 
-          error: 'Invalid Firebase ID Token',
-          details: errorText,
-          status: verifyResponse.status
+          error: safeErrorMessages[verifyResponse.status] || 'Authentication error'
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
