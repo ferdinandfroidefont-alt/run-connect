@@ -8,6 +8,8 @@ import { Heart, Euro } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 
 interface DonationDialogProps {
   trigger?: React.ReactNode;
@@ -85,8 +87,12 @@ export const DonationDialog = ({ trigger, open, onOpenChange }: DonationDialogPr
         throw new Error('URL de paiement non reçue');
       }
 
-      // Ouvrir Stripe Checkout dans un nouvel onglet
-      window.open(data.url, '_blank');
+      // Use Capacitor Browser for native apps, window.open for web
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: data.url, presentationStyle: 'popover' });
+      } else {
+        window.open(data.url, '_blank');
+      }
 
       // Fermer le dialog
       const newOpenState = false;
