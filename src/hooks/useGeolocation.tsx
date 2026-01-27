@@ -160,16 +160,31 @@ export const useGeolocation = () => {
 
   const requestPermissions = async (): Promise<{ granted: boolean; message?: string }> => {
     console.log('🧪 REQUEST PERMISSIONS...');
+    const currentPlatform = Capacitor.getPlatform();
     
     try {
-      // Sur Android natif avec plugin
+      // 🍎 iOS: Utiliser directement Capacitor Geolocation (déclenche la popup native iOS)
+      if (currentPlatform === 'ios') {
+        console.log('🍎📍 Request permissions iOS via Capacitor');
+        try {
+          const result = await Geolocation.requestPermissions();
+          const granted = result.location === 'granted';
+          console.log('🍎📍 Résultat popup iOS:', granted ? 'GRANTED ✅' : 'DENIED ❌');
+          return { granted };
+        } catch (error) {
+          console.error('🍎📍 Erreur request iOS:', error);
+          return { granted: false, message: 'Erreur demande permission iOS' };
+        }
+      }
+      
+      // 🤖 Android natif avec plugin
       if (isNative() && (window as any).PermissionsPlugin) {
-        console.log('🧪 Request permissions via plugin Android');
+        console.log('🤖🧪 Request permissions via plugin Android');
         
         const deviceInfo = getDeviceInfo();
         const isAndroid10Plus = deviceInfo?.sdkInt >= 29;
         
-        console.log('📱 Info périphérique pour permissions:', {
+        console.log('🤖📱 Info périphérique pour permissions:', {
           manufacturer: deviceInfo?.manufacturer,
           sdkInt: deviceInfo?.sdkInt,
           isAndroid10Plus,
@@ -179,27 +194,23 @@ export const useGeolocation = () => {
         let result: boolean;
         
         if (isAndroid10Plus) {
-          console.log('🧪 Android 10+ détecté - demande séquentielle des permissions');
+          console.log('🤖🧪 Android 10+ détecté - demande séquentielle des permissions');
           
-          // 1. D'abord les permissions de base (FINE_LOCATION, COARSE_LOCATION)
           result = await (window as any).PermissionsPlugin.forceRequestLocationPermissions();
           
           if (result) {
-            // 2. Ensuite la permission background (ACCESS_BACKGROUND_LOCATION)
             try {
               const backgroundResult = await (window as any).PermissionsPlugin.forceRequestLocationPermissionsAndroid10();
-              console.log('📱 Résultat permission arrière-plan:', backgroundResult);
+              console.log('🤖📱 Résultat permission arrière-plan:', backgroundResult);
               result = backgroundResult;
             } catch (bgError) {
-              console.warn('⚠️ Permission arrière-plan échouée, mais permission de base OK:', bgError);
-              // On garde le résultat de base si le background échoue
+              console.warn('🤖⚠️ Permission arrière-plan échouée, mais permission de base OK:', bgError);
             }
           }
         } else {
           result = await (window as any).PermissionsPlugin.forceRequestLocationPermissions();
         }
         
-        // Gestion spécifique des fabricants
         if (!result && deviceInfo?.needsSpecialHandling) {
           return await handleManufacturerSpecificPermissions(deviceInfo);
         }
@@ -207,14 +218,13 @@ export const useGeolocation = () => {
         return { granted: result };
       }
 
-      // Fallback Capacitor standard
+      // Fallback Capacitor standard (Android sans plugin ou autres cas)
       if (isNative()) {
         console.log('📱 Request permissions Capacitor standard');
         const deviceInfo = getDeviceInfo();
         const result = await Geolocation.requestPermissions();
         console.log('📱 Résultat demande permissions:', result, 'Device:', deviceInfo);
         
-        // Si les permissions sont refusées, proposer d'ouvrir les paramètres sur certains fabricants
         if (result.location === 'denied' && deviceInfo?.needsSpecialHandling) {
           return await handleManufacturerSpecificPermissions(deviceInfo);
         }

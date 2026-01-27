@@ -220,6 +220,7 @@ export const usePushNotifications = () => {
     
     // 🔥 RE-VÉRIFICATION IMMÉDIATE avant d'agir
     const isCurrentlyNative = recheckNativeNow();
+    const currentPlatform = Capacitor.getPlatform();
     
     if (!isCurrentlyNative) {
       console.log('❌ Mode web détecté, notifications non supportées');
@@ -233,8 +234,59 @@ export const usePushNotifications = () => {
       return false;
     }
     
+    // 🍎 iOS: Utiliser directement Capacitor PushNotifications (déclenche la popup native iOS)
+    if (currentPlatform === 'ios') {
+      console.log('🍎🔔 [REQUEST] Demande permissions notifications iOS via Capacitor');
+      try {
+        const permResult = await PushNotifications.requestPermissions();
+        const granted = permResult.receive === 'granted';
+        
+        console.log('🍎🔔 [REQUEST] Résultat popup iOS:', granted ? 'GRANTED ✅' : 'DENIED ❌');
+        
+        if (granted) {
+          // Enregistrer pour recevoir les notifications
+          await PushNotifications.register();
+          
+          setPermissionStatus({
+            granted: true,
+            denied: false,
+            prompt: false
+          });
+          setIsRegistered(true);
+          
+          toast({
+            title: "Notifications activées",
+            description: "Vous recevrez les notifications de RunConnect"
+          });
+        } else {
+          setPermissionStatus({
+            granted: false,
+            denied: true,
+            prompt: false
+          });
+          
+          toast({
+            title: "Notifications désactivées",
+            description: "Activez les notifications dans les réglages iOS",
+            variant: "destructive"
+          });
+        }
+        
+        return granted;
+      } catch (error) {
+        console.error('🍎🔔 [REQUEST] Erreur iOS:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de configurer les notifications",
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    
+    // 🤖 Android: Logique existante
     // ✅ Vérifier Google Play Services (requis pour FCM)
-    if (Capacitor.getPlatform() === 'android') {
+    if (currentPlatform === 'android') {
       const hasGPS = await checkGooglePlayServices();
       if (!hasGPS) {
         toast({
@@ -251,7 +303,7 @@ export const usePushNotifications = () => {
       const androidState = window.androidPermissions?.notifications;
       
       if (androidState === 'granted') {
-        console.log('✅ [REQUEST] Permissions déjà accordées');
+        console.log('🤖✅ [REQUEST] Permissions déjà accordées');
         
         // Vérifier si un token existe en base
         const hasToken = await ensureTokenRegistered();
@@ -272,7 +324,7 @@ export const usePushNotifications = () => {
         await checkPermissionStatus();
         return true;
       } else {
-        console.log('⚠️ [REQUEST] Permissions non accordées');
+        console.log('🤖⚠️ [REQUEST] Permissions non accordées');
         console.log('💡 [REQUEST] Les notifications sont demandées automatiquement au démarrage de l\'app');
         
         toast({
