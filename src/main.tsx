@@ -5,10 +5,15 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { AuthProvider } from "@/hooks/useAuth";
 
-// ✅ NIVEAU 28: DÉTECTION NATIVE ULTRA-RENFORCÉE (AVANT le render)
+// ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
   const userAgent = navigator.userAgent;
   const protocol = window.location.protocol.toLowerCase();
+  
+  // ✅ CRITÈRE iOS: Détection iPhone/iPad/iPod en mode natif
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(userAgent);
+  const isCapacitorProtocol = protocol === 'capacitor:';
+  const isIOSNative = isIOSDevice && (isCapacitorProtocol || protocol === 'ionic:' || protocol === 'file:');
   
   // ✅ CRITÈRE 1: Protocole natif
   const isFileProtocol = protocol === 'file:' || protocol === 'capacitor:' || protocol === 'ionic:';
@@ -29,37 +34,52 @@ const detectNativeImmediately = () => {
   // ✅ CRITÈRE 6: Capacitor déjà chargé
   const hasCapacitor = !!(window as any).Capacitor;
   
-  // ✅ SI AU MOINS 2 CRITÈRES SUR 6 => NATIF (ou AndroidBridge seul suffit)
+  // ✅ CRITÈRE 7: Détection iOS native via Capacitor
+  const capacitorPlatform = hasCapacitor ? (window as any).Capacitor?.getPlatform?.() : null;
+  const isCapacitorIOS = capacitorPlatform === 'ios';
+  const isCapacitorAndroid = capacitorPlatform === 'android';
+  
+  // ✅ Déterminer la plateforme
+  const detectedPlatform = isCapacitorIOS || isIOSNative ? 'ios' : 
+                           (isCapacitorAndroid || isAndroid) ? 'android' : 'web';
+  
+  // ✅ SI iOS natif OU Android natif => NATIF
   const criteriaCount = [
     isFileProtocol,
     isAndroid && hasWebView,
     hasAndroidBridge,
     hasForceFlag,
     isAndroid && isFullscreen,
-    hasCapacitor
+    hasCapacitor,
+    isIOSNative,
+    isCapacitorIOS
   ].filter(Boolean).length;
   
-  const isNative = criteriaCount >= 2 || hasAndroidBridge; // AndroidBridge est un critère fort
+  const isNative = criteriaCount >= 2 || hasAndroidBridge || isCapacitorIOS || isIOSNative;
   
-  console.log('🔥 NIVEAU 28 - DÉTECTION NATIVE RENFORCÉE:', {
-    criteriaCount: `${criteriaCount}/6`,
+  console.log('🔥 NIVEAU 29 - DÉTECTION NATIVE MULTI-PLATEFORME:', {
+    criteriaCount: `${criteriaCount}/8`,
+    platform: detectedPlatform,
+    isIOSDevice,
+    isIOSNative,
+    isCapacitorIOS,
     isFileProtocol,
     hasWebView,
     hasAndroidBridge,
     hasForceFlag,
-    isFullscreen,
     hasCapacitor,
-    '🎯 RÉSULTAT': isNative ? '✅ NATIF' : '❌ WEB'
+    '🎯 RÉSULTAT': isNative ? `✅ NATIF (${detectedPlatform})` : '❌ WEB'
   });
   
   if (isNative) {
     (window as any).CapacitorForceNative = true;
     (window as any).nativeModeActivated = true;
-    console.log('✅✅✅ FLAG NATIF DÉFINI - Permissions seront demandées !');
+    (window as any).detectedPlatform = detectedPlatform;
+    console.log(`✅✅✅ FLAG NATIF DÉFINI (${detectedPlatform.toUpperCase()}) - Permissions seront demandées !`);
     
     // 🔥 DISPATCHER UN ÉVÉNEMENT POUR NOTIFIER LES HOOKS
     window.dispatchEvent(new CustomEvent('capacitorNativeReady', { 
-      detail: { isNative: true } 
+      detail: { isNative: true, platform: detectedPlatform } 
     }));
   } else {
     console.log('ℹ️ MODE WEB DÉTECTÉ - Fallback OAuth web');

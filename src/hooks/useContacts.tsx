@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Contacts } from '@capacitor-community/contacts';
+import { Capacitor } from '@capacitor/core';
 import { nativeManager } from '@/lib/nativeInit';
 import { forceContactsPermissions } from '@/lib/forceNativePermissions';
 import { MIUIPermissionsFix } from '@/lib/miuiPermissionsFix';
@@ -24,13 +25,14 @@ declare global {
       requestContactsPermission: () => void;
       requestLocationPermission: () => void;
       requestStoragePermission: () => void;
-      requestNotificationPermissions: () => void; // ✅ AJOUT SOLUTION 3
-      getContacts: () => void; // ✅ Asynchrone, pas de retour direct
-      invalidateContactsCache: () => void; // ✅ Nouveau
-      googleSignIn: () => void; // 🔥 Google Sign-In natif
-      googleSignOut: () => void; // 🔥 Google Sign-Out natif
+      requestNotificationPermissions: () => void;
+      getContacts: () => void;
+      invalidateContactsCache: () => void;
+      googleSignIn: () => void;
+      googleSignOut: () => void;
     };
     onNativePermissionResult?: (granted: boolean) => void;
+    detectedPlatform?: 'ios' | 'android' | 'web';
   }
 }
 
@@ -47,21 +49,36 @@ export interface Contact {
   }>;
 }
 
+// 🍎 Helper pour détecter iOS
+const isIOSPlatform = (): boolean => {
+  return Capacitor.getPlatform() === 'ios';
+};
+
+// 🤖 Helper pour détecter Android
+const isAndroidPlatform = (): boolean => {
+  return Capacitor.getPlatform() === 'android' || !!(window as any).AndroidBridge;
+};
+
 export const useContacts = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [isNative, setIsNative] = useState(false);
+  const [platform, setPlatform] = useState<'ios' | 'android' | 'web'>('web');
 
   useEffect(() => {
     const initNativeStatus = async () => {
-      // Vérifier immédiatement si AndroidBridge existe
+      // Détecter la plateforme
+      const currentPlatform = isIOSPlatform() ? 'ios' : isAndroidPlatform() ? 'android' : 'web';
+      setPlatform(currentPlatform);
+      
       const hasAndroidBridge = !!(window as any).AndroidBridge;
       const forceNative = (window as any).CapacitorForceNative === true;
+      const isCapacitorNative = Capacitor.isNativePlatform();
       
-      console.log('👥 Init native status - AndroidBridge:', hasAndroidBridge, 'ForceNative:', forceNative);
+      console.log('👥 Init native status - Platform:', currentPlatform, 'AndroidBridge:', hasAndroidBridge, 'ForceNative:', forceNative, 'CapacitorNative:', isCapacitorNative);
       
-      if (hasAndroidBridge || forceNative) {
+      if (hasAndroidBridge || forceNative || isCapacitorNative) {
         setIsNative(true);
         checkPermissions();
       } else {
@@ -80,6 +97,9 @@ export const useContacts = () => {
       console.log('👥 Événement capacitorNativeReady reçu:', event.detail);
       if (event.detail?.isNative) {
         setIsNative(true);
+        if (event.detail?.platform) {
+          setPlatform(event.detail.platform);
+        }
         checkPermissions();
       }
     };
@@ -106,21 +126,37 @@ export const useContacts = () => {
   const checkPermissions = async (): Promise<boolean> => {
     try {
       const native = await nativeManager.ensureNativeStatus();
+      const currentPlatform = isIOSPlatform() ? 'ios' : isAndroidPlatform() ? 'android' : 'web';
       
-      if (!native) {
+      if (!native && !Capacitor.isNativePlatform()) {
         console.log('👥 Contacts non disponibles en mode web');
         setHasPermission(false);
         return false;
       }
       
-      console.log('👥🔍 Vérification permissions contacts - LECTURE DIRECTE Android');
+      // 🍎 iOS: Utiliser directement le plugin Capacitor
+      if (currentPlatform === 'ios') {
+        console.log('🍎👥 Vérification permissions contacts iOS via Capacitor');
+        try {
+          const result = await Contacts.checkPermissions();
+          const granted = result.contacts === 'granted';
+          console.log('🍎👥 Résultat iOS:', granted ? 'GRANTED ✅' : 'DENIED ❌');
+          setHasPermission(granted);
+          return granted;
+        } catch (error) {
+          console.log('🍎👥 Erreur check iOS:', error);
+          setHasPermission(false);
+          return false;
+        }
+      }
       
-      // ✅ SOLUTION: Lire UNIQUEMENT l'état Android injecté
+      // 🤖 Android: Lire l'état Android injecté
+      console.log('🤖👥 Vérification permissions contacts Android');
       const androidState = window.androidPermissions?.contacts;
-      console.log('👥 État Android:', androidState);
+      console.log('🤖👥 État Android:', androidState);
       
       const granted = androidState === 'granted';
-      console.log('👥 Résultat final:', granted ? 'GRANTED ✅' : 'DENIED ❌');
+      console.log('🤖👥 Résultat final:', granted ? 'GRANTED ✅' : 'DENIED ❌');
       
       setHasPermission(granted);
       return granted;
@@ -134,47 +170,71 @@ export const useContacts = () => {
   const requestPermissions = async (): Promise<boolean> => {
     try {
       const native = await nativeManager.ensureNativeStatus();
+      const currentPlatform = isIOSPlatform() ? 'ios' : isAndroidPlatform() ? 'android' : 'web';
       
-      if (!native) {
+      if (!native && !Capacitor.isNativePlatform()) {
         console.log('👥 Contacts nécessitent mode natif');
         return false;
       }
       
-      console.log('👥🔄 Demande permissions contacts - VIA BRIDGE ANDROID NATIF');
+      // 🍎 iOS: Utiliser directement le plugin Capacitor (déclenche la popup native iOS)
+      if (currentPlatform === 'ios') {
+        console.log('🍎👥 Demande permissions contacts iOS via Capacitor');
+        try {
+          const result = await Contacts.requestPermissions();
+          const granted = result.contacts === 'granted';
+          console.log('🍎👥 Résultat popup iOS:', granted ? 'GRANTED ✅' : 'DENIED ❌');
+          setHasPermission(granted);
+          return granted;
+        } catch (error) {
+          console.error('🍎👥 Erreur request iOS:', error);
+          setHasPermission(false);
+          return false;
+        }
+      }
+      
+      // 🤖 Android: Utiliser le bridge Android natif
+      console.log('🤖👥 Demande permissions contacts Android');
       
       // Vérifier d'abord si déjà accordé
       const currentState = window.androidPermissions?.contacts;
       if (currentState === 'granted') {
-        console.log('👥✅ Déjà accordé selon Android');
+        console.log('🤖👥 Déjà accordé selon Android');
         setHasPermission(true);
         return true;
       }
       
-      // ✅ SOLUTION: Utiliser le bridge Android natif
+      // Utiliser le bridge Android natif
       if (!window.AndroidBridge) {
-        console.error('👥❌ AndroidBridge non disponible!');
-        return false;
+        console.error('🤖👥 AndroidBridge non disponible, fallback Capacitor');
+        // Fallback Capacitor
+        try {
+          const result = await Contacts.requestPermissions();
+          const granted = result.contacts === 'granted';
+          setHasPermission(granted);
+          return granted;
+        } catch (e) {
+          console.error('🤖👥 Fallback Capacitor échoué:', e);
+          return false;
+        }
       }
       
       return new Promise((resolve) => {
-        // Écouter le résultat de la permission
         window.onNativePermissionResult = (granted: boolean) => {
-          console.log('👥 Résultat natif reçu:', granted ? 'GRANTED ✅' : 'DENIED ❌');
+          console.log('🤖👥 Résultat natif reçu:', granted ? 'GRANTED ✅' : 'DENIED ❌');
           setHasPermission(granted);
           
-          // Re-vérifier l'état après 500ms pour être sûr
           setTimeout(() => {
             const finalState = window.androidPermissions?.contacts;
-            console.log('👥 État final après demande:', finalState);
+            console.log('🤖👥 État final après demande:', finalState);
             setHasPermission(finalState === 'granted');
           }, 500);
           
           resolve(granted);
         };
         
-        // Appeler le bridge natif
-        console.log('👥 Appel du bridge Android...');
-        window.AndroidBridge.requestContactsPermission();
+        console.log('🤖👥 Appel du bridge Android...');
+        window.AndroidBridge!.requestContactsPermission();
       });
     } catch (error) {
       console.error('👥❌ Erreur request permissions contacts:', error);
@@ -185,11 +245,12 @@ export const useContacts = () => {
 
   const loadContacts = async (): Promise<Contact[]> => {
     console.log('👥 DÉBUT CHARGEMENT CONTACTS...');
+    const currentPlatform = isIOSPlatform() ? 'ios' : isAndroidPlatform() ? 'android' : 'web';
     
     try {
       const native = await nativeManager.ensureNativeStatus();
       
-      if (!native) {
+      if (!native && !Capacitor.isNativePlatform()) {
         throw new Error('Contacts disponibles uniquement en mode natif');
       }
 
@@ -201,18 +262,76 @@ export const useContacts = () => {
         throw new Error('Permission contacts refusée');
       }
 
-      // ✅ NOUVELLE APPROCHE: Écouter l'événement asynchrone
+      // 🍎 iOS: Utiliser directement le plugin Capacitor
+      if (currentPlatform === 'ios') {
+        console.log('🍎👥 Chargement contacts iOS via Capacitor');
+        try {
+          const result = await Contacts.getContacts({
+            projection: {
+              name: true,
+              phones: true,
+              emails: true
+            }
+          });
+          
+          const formattedContacts: Contact[] = result.contacts
+            .filter((contact: any) => contact.name?.display || (contact.phones && contact.phones.length > 0))
+            .map((contact: any) => ({
+              contactId: contact.contactId,
+              displayName: contact.name?.display || 'Contact sans nom',
+              phoneNumbers: contact.phones?.map((p: any) => ({ label: p.label, number: p.number })) || [],
+              emails: contact.emails?.map((e: any) => ({ label: e.label, address: e.address })) || []
+            }));
+          
+          console.log('🍎👥 Contacts iOS chargés:', formattedContacts.length);
+          setContacts(formattedContacts);
+          setLoading(false);
+          return formattedContacts;
+        } catch (error) {
+          console.error('🍎👥 Erreur chargement iOS:', error);
+          setLoading(false);
+          throw error;
+        }
+      }
+
+      // 🤖 Android: Utiliser le bridge Android
       if (!window.AndroidBridge) {
-        throw new Error('AndroidBridge non disponible');
+        // Fallback Capacitor pour Android sans bridge
+        console.log('🤖👥 Fallback Capacitor pour Android');
+        try {
+          const result = await Contacts.getContacts({
+            projection: {
+              name: true,
+              phones: true,
+              emails: true
+            }
+          });
+          
+          const formattedContacts: Contact[] = result.contacts
+            .filter((contact: any) => contact.name?.display || (contact.phones && contact.phones.length > 0))
+            .map((contact: any) => ({
+              contactId: contact.contactId,
+              displayName: contact.name?.display || 'Contact sans nom',
+              phoneNumbers: contact.phones?.map((p: any) => ({ label: p.label, number: p.number })) || [],
+              emails: contact.emails?.map((e: any) => ({ label: e.label, address: e.address })) || []
+            }));
+          
+          setContacts(formattedContacts);
+          setLoading(false);
+          return formattedContacts;
+        } catch (error) {
+          console.error('🤖👥 Fallback Capacitor échoué:', error);
+          setLoading(false);
+          throw error;
+        }
       }
 
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           setLoading(false);
           reject(new Error('Timeout récupération contacts (30s)'));
-        }, 30000); // 30 secondes max
+        }, 30000);
 
-        // ✅ Écouter le résultat depuis le thread background
         const handleContactsLoaded = (event: any) => {
           clearTimeout(timeout);
           window.removeEventListener('contactsLoaded', handleContactsLoaded);
@@ -226,9 +345,8 @@ export const useContacts = () => {
               return;
             }
 
-            console.log('👥 Contacts bruts reçus:', contactsData.length || 0);
+            console.log('🤖👥 Contacts bruts reçus:', contactsData.length || 0);
 
-            // Formatter contacts
             const formattedContacts: Contact[] = contactsData
               .filter((contact: any) => {
                 const hasName = contact.displayName;
@@ -242,14 +360,14 @@ export const useContacts = () => {
                 emails: contact.emails || []
               }));
 
-            console.log('👥✅ Contacts formatés:', formattedContacts.length);
+            console.log('🤖👥 Contacts formatés:', formattedContacts.length);
             
             setContacts(formattedContacts);
             setLoading(false);
             resolve(formattedContacts);
 
           } catch (error) {
-            console.error('👥❌ Erreur parsing contacts:', error);
+            console.error('🤖👥 Erreur parsing contacts:', error);
             setLoading(false);
             reject(error);
           }
@@ -257,8 +375,7 @@ export const useContacts = () => {
 
         window.addEventListener('contactsLoaded', handleContactsLoaded);
         
-        // ✅ Lancer la récupération asynchrone (retour immédiat)
-        console.log('👥⚡ Appel AndroidBridge.getContacts() (non-bloquant)...');
+        console.log('🤖👥 Appel AndroidBridge.getContacts()...');
         window.AndroidBridge!.getContacts();
       });
 
@@ -284,6 +401,7 @@ export const useContacts = () => {
     loading,
     hasPermission,
     isNative,
+    platform,
     checkPermissions,
     requestPermissions,
     loadContacts,
