@@ -1,79 +1,57 @@
 
-# Plan : Support complet des permissions iOS (popups natives) ✅ IMPLÉMENTÉ
+# Plan : Écran de Chargement Premium iOS
 
-## Problème identifié
+## Ce qui change
 
-Le code actuel était fortement optimisé pour Android avec :
-- `window.AndroidBridge` : interface JavaScript-Java spécifique à Android
-- Détection native dans `main.tsx` qui cherchait uniquement des signaux Android (WebView `wv`, `AndroidBridge`, etc.)
-- Les hooks (`useContacts`, `useGeolocation`, `usePushNotifications`) utilisaient `AndroidBridge` qui n'existe pas sur iOS
+Remplacement de l'écran de chargement basique actuel (simple texte "Chargement...") par un écran premium style iOS Settings avec progression animée.
 
-## Solution implémentée ✅
+## Fichiers à créer/modifier
 
-### Fichiers modifiés
+### 1. Créer `src/components/LoadingScreen.tsx`
 
-**1. `src/main.tsx`** ✅
-- Ajouté détection iOS natif (`/iPhone|iPad|iPod/` + protocole `capacitor:`)
-- Dispatcher l'événement `capacitorNativeReady` avec la plateforme (ios/android)
-- Niveau 29 avec 8 critères de détection
+Nouvel écran avec :
+- Fond gris iOS (#F2F2F7)
+- Texte "Bienvenue sur" en haut
+- Titre "RUNCONNECT" bleu gras
+- Icône SVG personnalisée (runner + calendrier + pin sur fond bleu arrondi, ~120px)
+- Carte blanche avec barre de progression fine
+- Pourcentage dynamique (0% → 100%)
+- Phrases de statut aléatoires ("Préparation de la carte...", "Synchronisation...", etc.)
 
-**2. `src/lib/nativeDetection.ts`** ✅
-- Ajouté helpers `isIOS()`, `isAndroid()`, `getPlatform()`
-- Détection multi-plateforme via Capacitor
+### 2. Modifier `src/App.tsx`
 
-**3. `src/hooks/useContacts.tsx`** ✅
-- Branche iOS: utilise `Contacts.requestPermissions()` et `Contacts.getContacts()` directement via Capacitor
-- La popup iOS de permission est automatiquement déclenchée
-- Fallback Capacitor pour Android sans AndroidBridge
+- Ajouter état `isAppLoaded` (false au départ)
+- Afficher `LoadingScreen` si `!isAppLoaded`
+- Quand progression = 100%, passer à l'app normale
 
-**4. `src/hooks/useGeolocation.tsx`** ✅
-- Branche iOS: utilise `Geolocation.requestPermissions()` de Capacitor
-- La popup iOS de permission est automatiquement déclenchée
-
-**5. `src/hooks/usePushNotifications.tsx`** ✅
-- Branche iOS: utilise `PushNotifications.requestPermissions()` et `PushNotifications.register()` de Capacitor
-- La popup iOS de permission est automatiquement déclenchée
-- iOS utilise APNs au lieu de FCM
-
-**6. `src/hooks/useCamera.tsx`** ✅
-- Déjà compatible iOS (utilise `Camera.requestPermissions()` de Capacitor)
-- Aucune modification majeure requise
-
-## Flux permissions multi-plateforme
+## Design visuel
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│                    FLUX PERMISSIONS                           │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│   1. Détection plateforme (main.tsx)                         │
-│      ├── iOS → Capacitor.getPlatform() === 'ios'             │
-│      └── Android → AndroidBridge + Capacitor                 │
-│                                                              │
-│   2. Demande permission                                      │
-│      ├── iOS: Capacitor plugins déclenchent popup native     │
-│      │   ├── Geolocation.requestPermissions()                │
-│      │   ├── Camera.requestPermissions()                     │
-│      │   ├── Contacts.requestPermissions()                   │
-│      │   └── PushNotifications.requestPermissions()          │
-│      │                                                       │
-│      └── Android: AndroidBridge OU fallback Capacitor        │
-│                                                              │
-│   3. Les popups iOS apparaissent automatiquement avec        │
-│      les messages définis dans Info.plist                    │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐
+│                             │
+│       Bienvenue sur         │
+│                             │
+│        RUNCONNECT           │
+│        (bleu, gras)         │
+│                             │
+│      ┌─────────────┐        │
+│      │   🏃📅📍    │        │
+│      │  (icône)    │        │
+│      └─────────────┘        │
+│                             │
+│   ┌───────────────────┐     │
+│   │ Chargement...     │     │
+│   │ ━━━━━━━━━━━━──── │     │
+│   │ Synchronisation   │     │
+│   │      67%          │     │
+│   └───────────────────┘     │
+│                             │
+└─────────────────────────────┘
 ```
 
-## Prérequis iOS (pour l'utilisateur)
+## Comportement
 
-Pour que les popups iOS fonctionnent, l'utilisateur doit avoir :
-1. Créé le dossier `ios/` avec `npx cap add ios`
-2. Configuré `Info.plist` avec les descriptions de permissions (déjà dans `IOS_SETUP_INSTRUCTIONS.md`)
-3. Ajouté `GoogleService-Info.plist` pour les notifications push
-
-## Résultat
-
-- ✅ Sur Android : comportement inchangé (AndroidBridge + popups natives Android)
-- ✅ Sur iOS : les plugins Capacitor déclenchent automatiquement les popups iOS natives
-- ✅ Les permissions (localisation, caméra, contacts, notifications) fonctionnent sur les deux plateformes
+- Progression fluide sur ~2.5 secondes
+- Phrases qui changent pendant le chargement
+- Transition automatique vers la carte à 100%
+- Safe areas respectées pour Android/iOS
