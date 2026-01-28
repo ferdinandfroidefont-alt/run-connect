@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +9,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { isAndroid } from "@/lib/nativeDetection";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -33,7 +34,8 @@ import { AndroidTestPage } from "./components/AndroidTestPage";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isAppLoaded, setIsAppLoaded] = useState(false);
+  // Skip React loading screen on native Android (has its own native splash)
+  const [isAppLoaded, setIsAppLoaded] = useState(() => isAndroid());
 
   if (!isAppLoaded) {
     return (
