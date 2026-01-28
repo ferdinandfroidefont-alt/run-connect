@@ -52,7 +52,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   }, [progress, onLoadingComplete]);
 
   return (
-    <div className="fixed inset-0 bg-secondary flex flex-col items-center justify-center pt-safe pb-safe px-6 -mt-12">
+    <div className="fixed inset-0 bg-secondary flex flex-col items-center justify-center pt-safe pb-safe px-6 -mt-20">
       {/* Welcome text */}
       <p className="text-muted-foreground text-[15px] mb-1">Bienvenue sur</p>
       
