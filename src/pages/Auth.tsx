@@ -778,14 +778,7 @@ const Auth = () => {
                 </div>
 
                 {/* hCaptcha Widget - Unique pour tous les formulaires */}
-                {!captchaToken && (
-                  <CaptchaWidget 
-                    ref={captchaRef} 
-                    onVerify={token => setCaptchaToken(token)} 
-                    onExpire={() => setCaptchaToken(null)} 
-                    onError={() => setCaptchaToken(null)} 
-                  />
-                )}
+                {!captchaToken}
                 {captchaToken && <div className="text-center text-sm text-green-600 dark:text-green-400">
                     ✅ Vérification CAPTCHA réussie
                   </div>}
@@ -828,50 +821,50 @@ const Auth = () => {
                   {/* 🔑 Bouton mot de passe oublié */}
                   <div className="text-right">
                     <Button type="button" variant="link" size="sm" onClick={async () => {
-                      const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
-                      if (!emailToUse) {
-                        toast({
-                          title: "Email requis",
-                          description: "Veuillez entrer votre email (pas votre pseudonyme) pour réinitialiser le mot de passe",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      if (!captchaToken) {
-                        toast({
-                          title: "Vérification requise",
-                          description: "Veuillez d'abord valider le CAPTCHA avant de réinitialiser le mot de passe",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      try {
-                        const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
-                          redirectTo: 'https://run-connect.lovable.app/auth',
-                          captchaToken: captchaToken
-                        });
-                        
-                        // Reset captcha après utilisation
-                        setCaptchaToken(null);
-                        captchaRef.current?.resetCaptcha();
-                        
-                        if (error) throw error;
-                        toast({
-                          title: "Email envoyé ✅",
-                          description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe"
-                        });
-                      } catch (error: any) {
-                        // Reset captcha en cas d'erreur aussi
-                        setCaptchaToken(null);
-                        captchaRef.current?.resetCaptcha();
-                        
-                        toast({
-                          title: "Erreur",
-                          description: error.message,
-                          variant: "destructive"
-                        });
-                      }
-                    }} className="text-xs p-0 h-auto" disabled={!captchaToken}>
+                  const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
+                  if (!emailToUse) {
+                    toast({
+                      title: "Email requis",
+                      description: "Veuillez entrer votre email (pas votre pseudonyme) pour réinitialiser le mot de passe",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  if (!captchaToken) {
+                    toast({
+                      title: "Vérification requise",
+                      description: "Veuillez d'abord valider le CAPTCHA avant de réinitialiser le mot de passe",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  try {
+                    const {
+                      error
+                    } = await supabase.auth.resetPasswordForEmail(emailToUse, {
+                      redirectTo: 'https://run-connect.lovable.app/auth',
+                      captchaToken: captchaToken
+                    });
+
+                    // Reset captcha après utilisation
+                    setCaptchaToken(null);
+                    captchaRef.current?.resetCaptcha();
+                    if (error) throw error;
+                    toast({
+                      title: "Email envoyé ✅",
+                      description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe"
+                    });
+                  } catch (error: any) {
+                    // Reset captcha en cas d'erreur aussi
+                    setCaptchaToken(null);
+                    captchaRef.current?.resetCaptcha();
+                    toast({
+                      title: "Erreur",
+                      description: error.message,
+                      variant: "destructive"
+                    });
+                  }
+                }} className="text-xs p-0 h-auto" disabled={!captchaToken}>
                       🔑 Mot de passe oublié ?
                     </Button>
                   </div>
