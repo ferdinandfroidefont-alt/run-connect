@@ -11,7 +11,7 @@ import { NotificationCenter } from './NotificationCenter';
 import { SettingsDialog } from './SettingsDialog';
 import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
-import { LevelPyramidFilter } from './LevelPyramidFilter';
+import { LevelSliderFilter } from './LevelSliderFilter';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
@@ -80,7 +80,7 @@ interface Filter {
   friends_only: boolean;
   selected_club_id: string | null;
   time_slot: 'morning' | 'afternoon' | 'evening' | null;
-  level_range: [number, number] | null;
+  level: number | null;
 }
 
 // Time slot definitions for filtering sessions by time of day
@@ -196,7 +196,7 @@ export const InteractiveMap = ({
     friends_only: false,
     selected_club_id: null,
     time_slot: null,
-    level_range: null
+    level: null
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [userProfile, setUserProfile] = useState<{
@@ -494,10 +494,9 @@ export const InteractiveMap = ({
         }
       }
 
-      // Level filter
-      const matchesLevel = !filters.level_range || (
-        (session.calculated_level || 3) >= filters.level_range[0] && 
-        (session.calculated_level || 3) <= filters.level_range[1]
+      // Level filter - show sessions at selected level or higher
+      const matchesLevel = !filters.level || (
+        (session.calculated_level || 3) === filters.level
       );
       
       return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
@@ -1510,10 +1509,10 @@ export const InteractiveMap = ({
 
       {/* Leaderboard, Confirm Presence & Level Filter Buttons - iOS Style */}
       {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
-          {/* Level Pyramid Filter */}
-          <LevelPyramidFilter
-            selectedRange={filters.level_range}
-            onRangeChange={(range) => setFilters(prev => ({ ...prev, level_range: range }))}
+          {/* Level Slider Filter - iOS Style */}
+          <LevelSliderFilter
+            selectedLevel={filters.level}
+            onLevelChange={(level) => setFilters(prev => ({ ...prev, level }))}
           />
 
           {/* Leaderboard Button */}
