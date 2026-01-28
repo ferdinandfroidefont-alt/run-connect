@@ -9,7 +9,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { isAndroid } from "@/lib/nativeDetection";
+
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -34,8 +34,8 @@ import { AndroidTestPage } from "./components/AndroidTestPage";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Skip React loading screen on native Android (has its own native splash)
-  const [isAppLoaded, setIsAppLoaded] = useState(() => isAndroid());
+  // Show loading screen on all platforms
+  const [isAppLoaded, setIsAppLoaded] = useState(false);
 
   if (!isAppLoaded) {
     return (
