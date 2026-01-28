@@ -15,6 +15,7 @@ export interface FeedSession {
   current_participants: number;
   description: string | null;
   created_at: string;
+  calculated_level?: number;
   organizer: {
     user_id: string;
     username: string;

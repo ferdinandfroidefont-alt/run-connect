@@ -21,6 +21,7 @@ export interface DiscoverSession {
   is_private: boolean;
   friends_only: boolean;
   distance_km: number;
+  calculated_level?: number;
   organizer: {
     user_id: string;
     username: string;

@@ -8,18 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
 import { SessionQuestions } from "./SessionQuestions";
+import { SessionLevelBadge } from "./SessionLevelBadge";
 import { useAdMob } from '@/hooks/useAdMob';
 import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
 
 interface Session {
   id: string;
@@ -43,6 +45,7 @@ interface Session {
   interval_pace?: string;
   interval_pace_unit?: string;
   interval_count?: number;
+  calculated_level?: number;
   profiles: {
     username: string;
     display_name: string;
@@ -426,6 +429,23 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             <div className="mt-6 mx-4">
               <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Informations</p>
               <div className="bg-background rounded-xl overflow-hidden">
+                {/* Level Row */}
+                <SettingsRow
+                  icon={Zap}
+                  iconBg={LEVEL_CONFIG[(session.calculated_level || 3) as SessionLevel]?.bgClass || "bg-yellow-500"}
+                  label="Niveau"
+                  value={
+                    <div className="flex items-center gap-2">
+                      <SessionLevelBadge 
+                        level={(session.calculated_level || 3) as SessionLevel} 
+                        variant="full"
+                        size="sm"
+                        showTooltip={false}
+                      />
+                    </div>
+                  }
+                />
+                <SettingsSeparator />
                 <SettingsRow
                   icon={Star}
                   iconBg="bg-[#FF9500]"

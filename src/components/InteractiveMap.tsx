@@ -11,6 +11,7 @@ import { NotificationCenter } from './NotificationCenter';
 import { SettingsDialog } from './SettingsDialog';
 import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
+import { LevelPyramidFilter } from './LevelPyramidFilter';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
@@ -57,6 +58,7 @@ interface Session {
   organizer_id: string;
   club_id?: string | null;
   image_url?: string;
+  calculated_level?: number;
   profiles: {
     username: string;
     display_name: string;
@@ -78,6 +80,7 @@ interface Filter {
   friends_only: boolean;
   selected_club_id: string | null;
   time_slot: 'morning' | 'afternoon' | 'evening' | null;
+  level_range: [number, number] | null;
 }
 
 // Time slot definitions for filtering sessions by time of day
@@ -192,7 +195,8 @@ export const InteractiveMap = ({
     selected_date: new Date(),
     friends_only: false,
     selected_club_id: null,
-    time_slot: null
+    time_slot: null,
+    level_range: null
   });
   const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [userProfile, setUserProfile] = useState<{
@@ -489,8 +493,14 @@ export const InteractiveMap = ({
           matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
         }
       }
+
+      // Level filter
+      const matchesLevel = !filters.level_range || (
+        (session.calculated_level || 3) >= filters.level_range[0] && 
+        (session.calculated_level || 3) <= filters.level_range[1]
+      );
       
-      return matchesActivity && matchesType && matchesSearch && matchesTimeSlot;
+      return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
     });
     console.log(`Creating markers for ${filteredSessions.length} sessions`);
     console.log('Sessions with profiles:', filteredSessions.map(s => ({
@@ -1498,8 +1508,14 @@ export const InteractiveMap = ({
           </Button>
         </div>}
 
-      {/* Leaderboard, Confirm Presence & Nearby Sessions Buttons - iOS Style */}
+      {/* Leaderboard, Confirm Presence & Level Filter Buttons - iOS Style */}
       {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
+          {/* Level Pyramid Filter */}
+          <LevelPyramidFilter
+            selectedRange={filters.level_range}
+            onRangeChange={(range) => setFilters(prev => ({ ...prev, level_range: range }))}
+          />
+
           {/* Leaderboard Button */}
           <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50" onClick={() => navigate('/leaderboard')} title="Classement">
             <Crown className="h-5 w-5 text-amber-500" />

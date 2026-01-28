@@ -14,6 +14,7 @@ interface Filter {
   friends_only: boolean;
   selected_club_id: string | null;
   time_slot: 'morning' | 'afternoon' | 'evening' | null;
+  level_range: [number, number] | null;
 }
 
 interface SessionFiltersProps {
@@ -69,7 +70,8 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
       selected_date: filters.selected_date,
       friends_only: false,
       selected_club_id: null,
-      time_slot: null
+      time_slot: null,
+      level_range: null
     });
   };
 

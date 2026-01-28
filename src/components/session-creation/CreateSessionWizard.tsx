@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 
 import { useSessionWizard } from './useSessionWizard';
 import { ProgressIndicator } from './ProgressIndicator';
@@ -156,6 +157,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         imageUrl = await uploadImage(selectedImage);
       }
 
+      // Calculate session level automatically
+      const calculatedLevel = calculateSessionLevel(formData);
+
       const { data: sessionData, error } = await supabase
         .from('sessions')
         .insert([{
@@ -180,7 +184,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           friends_only: formData.friends_only,
           image_url: imageUrl,
           route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null,
-          club_id: formData.club_id
+          club_id: formData.club_id,
+          calculated_level: calculatedLevel
         }])
         .select()
         .single();
