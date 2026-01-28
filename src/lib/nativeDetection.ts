@@ -27,9 +27,10 @@ export const isIOS = (): boolean => {
 };
 
 export const isAndroid = (): boolean => {
-  return Capacitor.getPlatform() === 'android' || 
-         !!(window as any).AndroidBridge ||
-         (navigator.userAgent.includes('Android') && navigator.userAgent.includes('wv'));
+  // Only return true for NATIVE Android (not web viewed on Android browser)
+  const isNativeAndroid = Capacitor.getPlatform() === 'android' && Capacitor.isNativePlatform();
+  const hasAndroidBridge = !!(window as any).AndroidBridge;
+  return isNativeAndroid || hasAndroidBridge;
 };
 
 export const waitForCapacitorAndDetect = async (maxWait: number = 2000): Promise<boolean> => {
