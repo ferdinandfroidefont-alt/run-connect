@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { getActivityConfig } from "@/lib/activityIcons";
+import { SessionLevelBadge } from "./SessionLevelBadge";
+import type { SessionLevel } from "@/lib/sessionLevelCalculator";
 
 interface Session {
   id: string;
@@ -23,6 +25,7 @@ interface Session {
   organizer_id: string;
   club_id?: string | null;
   image_url?: string;
+  calculated_level?: number;
   profiles: {
     username: string;
     display_name: string;
@@ -180,6 +183,12 @@ export const SessionPreviewPopup = ({
                 
                 {/* Tags row */}
                 <div className="flex items-center gap-2 mt-3">
+                  {/* Level Badge */}
+                  <SessionLevelBadge 
+                    level={(session.calculated_level || 3) as SessionLevel} 
+                    variant="compact"
+                    size="sm"
+                  />
                   <Badge variant="secondary" className="text-xs">
                     {getIntensityLabel(session.intensity)}
                   </Badge>

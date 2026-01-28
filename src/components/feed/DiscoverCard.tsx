@@ -4,12 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
+import { SessionLevelBadge } from '@/components/SessionLevelBadge';
 import { ActivityIcon } from '@/lib/activityIcons';
 import { MapPin, Calendar, Users, UserPlus, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DiscoverSession, ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
+import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 
 interface DiscoverCardProps {
   session: DiscoverSession;
@@ -62,6 +64,12 @@ export const DiscoverCard = ({ session, onJoin }: DiscoverCardProps) => {
 
           {/* Badges */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Level Badge */}
+            <SessionLevelBadge 
+              level={(session.calculated_level || 3) as SessionLevel} 
+              variant="compact"
+              size="sm"
+            />
             <Badge variant="outline" className="text-[11px] rounded-full flex items-center gap-1.5">
               <ActivityIcon activityType={session.activity_type} size="sm" />
               {ACTIVITY_TYPES.find(a => a.value === session.activity_type)?.label || session.activity_type}

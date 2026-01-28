@@ -3,12 +3,14 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FeedActions } from './FeedActions';
 import { FeedComments } from './FeedComments';
 import { MiniMapPreview } from './MiniMapPreview';
+import { SessionLevelBadge } from '@/components/SessionLevelBadge';
 import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import { Share } from '@capacitor/share';
 import { toast } from 'sonner';
 import type { FeedSession } from '@/hooks/useFeed';
+import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 
 interface FeedCardProps {
   session: FeedSession;
@@ -122,10 +124,17 @@ export const FeedCard = ({
           </div>
         </div>
 
-        {/* Activity Badge */}
-        <span className="text-[13px] font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-          {activityLabel}
-        </span>
+        {/* Activity Badge & Level */}
+        <div className="flex items-center gap-2">
+          <SessionLevelBadge 
+            level={(session.calculated_level || 3) as SessionLevel} 
+            variant="compact"
+            size="sm"
+          />
+          <span className="text-[13px] font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+            {activityLabel}
+          </span>
+        </div>
       </div>
 
       {/* Content */}

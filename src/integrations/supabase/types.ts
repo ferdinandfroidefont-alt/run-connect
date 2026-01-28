@@ -901,6 +901,7 @@ export type Database = {
       sessions: {
         Row: {
           activity_type: string
+          calculated_level: number | null
           club_id: string | null
           created_at: string
           current_participants: number | null
@@ -930,6 +931,7 @@ export type Database = {
         }
         Insert: {
           activity_type: string
+          calculated_level?: number | null
           club_id?: string | null
           created_at?: string
           current_participants?: number | null
@@ -959,6 +961,7 @@ export type Database = {
         }
         Update: {
           activity_type?: string
+          calculated_level?: number | null
           club_id?: string | null
           created_at?: string
           current_participants?: number | null
