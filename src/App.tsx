@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -31,6 +33,16 @@ import { AndroidTestPage } from "./components/AndroidTestPage";
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [isAppLoaded, setIsAppLoaded] = useState(false);
+
+  if (!isAppLoaded) {
+    return (
+      <ThemeProvider>
+        <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -61,10 +73,10 @@ const App = () => {
                 <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
                 <Route path="/android-test" element={<Layout><AndroidTestPage /></Layout>} />
                 <Route path="/donation-success" element={<DonationSuccess />} />
-            <Route path="/donation-canceled" element={<DonationCanceled />} />
-            {/* Route profil public (AVANT *) */}
-            <Route path="/p/:username" element={<PublicProfile />} />
-            <Route path="*" element={<NotFound />} />
+                <Route path="/donation-canceled" element={<DonationCanceled />} />
+                {/* Route profil public (AVANT *) */}
+                <Route path="/p/:username" element={<PublicProfile />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
