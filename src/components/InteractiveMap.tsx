@@ -494,9 +494,9 @@ export const InteractiveMap = ({
         }
       }
 
-      // Level filter - show sessions at selected level or higher
+      // Level filter - show sessions at selected level or higher (minimum level)
       const matchesLevel = !filters.level || (
-        (session.calculated_level || 3) === filters.level
+        (session.calculated_level || 3) >= filters.level
       );
       
       return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
