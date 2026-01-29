@@ -183,10 +183,15 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           current_participants: 0,
           friends_only: formData.friends_only,
           image_url: imageUrl,
-          route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null,
+          route_id: formData.route_id || (routeMode === 'existing' && selectedRoute ? selectedRoute : null),
           club_id: formData.club_id,
           // Only set calculated_level for endurance sports, null for others
-          calculated_level: calculatedLevel
+          calculated_level: calculatedLevel,
+          // New fields for intelligent builder
+          session_mode: formData.session_mode || 'simple',
+          session_blocks: formData.blocks && formData.blocks.length > 0 
+            ? JSON.parse(JSON.stringify(formData.blocks)) 
+            : null,
         }])
         .select()
         .single();

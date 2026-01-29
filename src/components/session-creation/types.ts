@@ -1,3 +1,25 @@
+export type BlockType = 'warmup' | 'interval' | 'cooldown' | 'steady';
+
+export interface SessionBlock {
+  id: string;
+  type: BlockType;
+  // For warmup/cooldown/steady blocks
+  duration?: string;
+  durationType?: 'time' | 'distance';
+  intensity?: string;
+  pace?: string;
+  // For interval blocks
+  repetitions?: number;
+  effortDuration?: string;
+  effortType?: 'time' | 'distance';
+  effortIntensity?: string;
+  effortPace?: string;
+  recoveryDuration?: string;
+  recoveryType?: 'trot' | 'marche' | 'statique';
+}
+
+export type SessionMode = 'simple' | 'structured';
+
 export interface SessionFormData {
   title: string;
   description: string;
@@ -16,7 +38,7 @@ export interface SessionFormData {
   friends_only: boolean;
   image_url: string;
   club_id: string | null;
-  // Nouveaux champs détaillés
+  // Detailed fields
   warmup_duration: string;
   warmup_pace: string;
   cooldown_duration: string;
@@ -26,6 +48,10 @@ export interface SessionFormData {
   intensity: string;
   terrain_type: string;
   elevation_gain: string;
+  // New fields for intelligent builder
+  session_mode: SessionMode;
+  blocks: SessionBlock[];
+  route_id: string | null;
 }
 
 export interface SelectedLocation {
@@ -83,7 +109,7 @@ export const SESSION_TYPES = [
 ];
 
 export const INTENSITY_LEVELS = [
-  { value: 'z1', label: 'Z1 - Récupération', color: 'bg-blue-500' },
+  { value: 'z1', label: 'Z1 - Récup', color: 'bg-blue-500' },
   { value: 'z2', label: 'Z2 - Endurance', color: 'bg-green-500' },
   { value: 'z3', label: 'Z3 - Tempo', color: 'bg-yellow-500' },
   { value: 'z4', label: 'Z4 - Seuil', color: 'bg-orange-500' },
@@ -107,6 +133,13 @@ export const RECOVERY_TYPES = [
   { value: 'statique', label: 'Récup statique' },
 ];
 
+export const BLOCK_TYPES = [
+  { value: 'warmup', label: 'Échauffement', icon: '🔥', color: 'bg-green-500' },
+  { value: 'interval', label: 'Série / Fractionné', icon: '⚡', color: 'bg-orange-500' },
+  { value: 'steady', label: 'Bloc constant', icon: '🏃', color: 'bg-blue-500' },
+  { value: 'cooldown', label: 'Retour au calme', icon: '❄️', color: 'bg-purple-500' },
+];
+
 export const DEFAULT_FORM_DATA: SessionFormData = {
   title: "",
   description: "",
@@ -125,7 +158,6 @@ export const DEFAULT_FORM_DATA: SessionFormData = {
   friends_only: true,
   image_url: "",
   club_id: null,
-  // Nouveaux champs
   warmup_duration: "",
   warmup_pace: "",
   cooldown_duration: "",
@@ -135,4 +167,38 @@ export const DEFAULT_FORM_DATA: SessionFormData = {
   intensity: "",
   terrain_type: "",
   elevation_gain: "",
+  session_mode: "simple",
+  blocks: [],
+  route_id: null,
+};
+
+// Helper function to check if activity supports pace fields
+export const isEnduranceActivity = (activityType: string): boolean => {
+  return ['course', 'trail', 'marche', 'velo', 'vtt', 'gravel', 'natation', 'randonnee'].includes(activityType);
+};
+
+export const isRunningActivity = (activityType: string): boolean => {
+  return ['course', 'trail', 'marche'].includes(activityType);
+};
+
+export const isCyclingActivity = (activityType: string): boolean => {
+  return ['velo', 'vtt', 'gravel'].includes(activityType);
+};
+
+export const isSwimmingActivity = (activityType: string): boolean => {
+  return activityType === 'natation';
+};
+
+// Get pace placeholder based on activity
+export const getPacePlaceholder = (activityType: string): string => {
+  if (isRunningActivity(activityType)) return "5:30 min/km";
+  if (isCyclingActivity(activityType)) return "25 km/h";
+  if (isSwimmingActivity(activityType)) return "2:00 min/100m";
+  return "Allure";
+};
+
+// Get distance unit based on activity
+export const getDistanceUnit = (activityType: string): string => {
+  if (isSwimmingActivity(activityType)) return "m";
+  return "km";
 };
