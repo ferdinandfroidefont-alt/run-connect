@@ -18,8 +18,16 @@ export const LEVEL_CONFIG: Record<SessionLevel, LevelConfig> = {
   6: { label: 'Élite', color: '#8b5cf6', bgClass: 'bg-violet-500', textClass: 'text-violet-500' },
 };
 
-// Sports où le calcul automatique s'applique
-const ENDURANCE_SPORTS = ['course', 'trail', 'velo', 'vtt', 'gravel', 'natation', 'marche', 'randonnee'];
+// Sports où le calcul automatique s'applique (endurance)
+export const ENDURANCE_SPORTS = ['course', 'trail', 'velo', 'vtt', 'gravel', 'natation', 'marche', 'randonnee'];
+
+// Sports collectifs/autres où le niveau n'est PAS calculé
+export const NON_LEVEL_SPORTS = [
+  'football', 'basket', 'volley', 'badminton', 'pingpong', 'tennis', 
+  'escalade', 'petanque', 'rugby', 'handball', 'fitness', 'yoga', 
+  'musculation', 'crossfit', 'boxe', 'arts_martiaux', 'golf', 
+  'ski', 'snowboard', 'kayak', 'surf', 'bmx'
+];
 
 // Base levels par type de séance
 const SESSION_TYPE_BASE_LEVEL: Record<string, number> = {
@@ -41,6 +49,13 @@ const INTENSITY_MODIFIER: Record<string, number> = {
   'z4': 1,
   'z5': 2,
 };
+
+/**
+ * Vérifie si un sport est de type endurance (nécessite un niveau)
+ */
+export function isEnduranceSport(activityType: string): boolean {
+  return ENDURANCE_SPORTS.includes(activityType);
+}
 
 /**
  * Convertit une allure string "5:30" en secondes par km
@@ -77,14 +92,14 @@ function getPaceModifier(paceSeconds: number | null): number {
 
 /**
  * Calcule automatiquement le niveau d'une séance (1-6)
- * basé sur le type de séance, l'allure et l'intensité
+ * Retourne null pour les sports non-endurance (collectifs, etc.)
  */
-export function calculateSessionLevel(formData: Partial<SessionFormData>): SessionLevel {
+export function calculateSessionLevel(formData: Partial<SessionFormData>): SessionLevel | null {
   const { activity_type, session_type, pace_general, intensity } = formData;
   
-  // Pour les sports non-endurance, retourner niveau par défaut (Intermédiaire)
-  if (!activity_type || !ENDURANCE_SPORTS.includes(activity_type)) {
-    return 3;
+  // Pour les sports non-endurance, retourner null (pas de niveau)
+  if (!activity_type || !isEnduranceSport(activity_type)) {
+    return null;
   }
   
   // Niveau de base selon le type de séance

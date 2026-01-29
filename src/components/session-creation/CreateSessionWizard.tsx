@@ -157,7 +157,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         imageUrl = await uploadImage(selectedImage);
       }
 
-      // Calculate session level automatically
+      // Calculate session level automatically (only for endurance sports)
       const calculatedLevel = calculateSessionLevel(formData);
 
       const { data: sessionData, error } = await supabase
@@ -185,6 +185,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           image_url: imageUrl,
           route_id: routeMode === 'existing' && selectedRoute ? selectedRoute : null,
           club_id: formData.club_id,
+          // Only set calculated_level for endurance sports, null for others
           calculated_level: calculatedLevel
         }])
         .select()
