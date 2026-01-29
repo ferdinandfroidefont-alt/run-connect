@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { SessionFormData, SelectedLocation, WizardStep, WIZARD_STEPS, DEFAULT_FORM_DATA } from './types';
+import { SessionFormData, SelectedLocation, WizardStep, WIZARD_STEPS, DEFAULT_FORM_DATA, SessionBlock, SessionMode } from './types';
 
 interface UseSessionWizardProps {
   presetLocation?: { lat: number; lng: number } | null;
@@ -53,6 +53,20 @@ export const useSessionWizard = ({ presetLocation }: UseSessionWizardProps = {})
     setImagePreview(preview);
   }, []);
 
+  // Block management functions
+  const updateBlocks = useCallback((blocks: SessionBlock[]) => {
+    setFormData(prev => ({ ...prev, blocks }));
+  }, []);
+
+  const setSessionMode = useCallback((mode: SessionMode) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      session_mode: mode,
+      // Clear blocks when switching to simple mode
+      blocks: mode === 'simple' ? [] : prev.blocks
+    }));
+  }, []);
+
   const resetWizard = useCallback(() => {
     setCurrentStep('location');
     setFormData(DEFAULT_FORM_DATA);
@@ -100,6 +114,8 @@ export const useSessionWizard = ({ presetLocation }: UseSessionWizardProps = {})
     setImage,
     setSelectedRoute,
     setRouteMode,
+    updateBlocks,
+    setSessionMode,
     resetWizard,
     canProceed,
   };

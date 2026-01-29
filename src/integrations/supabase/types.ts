@@ -925,6 +925,8 @@ export type Database = {
           pace_unit: string | null
           route_id: string | null
           scheduled_at: string
+          session_blocks: Json | null
+          session_mode: string | null
           session_type: string
           title: string
           updated_at: string
@@ -955,6 +957,8 @@ export type Database = {
           pace_unit?: string | null
           route_id?: string | null
           scheduled_at: string
+          session_blocks?: Json | null
+          session_mode?: string | null
           session_type: string
           title: string
           updated_at?: string
@@ -985,6 +989,8 @@ export type Database = {
           pace_unit?: string | null
           route_id?: string | null
           scheduled_at?: string
+          session_blocks?: Json | null
+          session_mode?: string | null
           session_type?: string
           title?: string
           updated_at?: string
