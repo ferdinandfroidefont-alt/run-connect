@@ -1,145 +1,127 @@
 
-# Système de Niveaux Automatiques pour RunConnect
+# Constructeur de Séance Intelligent
 
 ## Vue d'ensemble
-Ce plan implémente un système de classification automatique des séances en 6 niveaux, avec un nouveau filtre visuel en forme de pyramide sur la carte principale. Le niveau est calculé automatiquement à partir des paramètres de la séance (allure, type, intensité) - l'utilisateur ne choisit jamais son niveau.
+Transformer la page "Détails" du wizard de création de séance en un constructeur intelligent permettant de créer des séances simples (footing) ou des séances structurées complexes (fractionné avec blocs multiples). L'UI suivra le design iOS Settings / Apple Fitness.
 
 ---
 
-## Les 6 Niveaux
+## Architecture de la solution
 
-| Niveau | Label | Couleur | Badge |
-|--------|-------|---------|-------|
-| 1 | Débutant | Vert clair (#22c55e) | Rond vert |
-| 2 | Loisir | Vert foncé (#16a34a) | Rond vert foncé |
-| 3 | Intermédiaire | Jaune (#eab308) | Rond jaune |
-| 4 | Avancé | Orange (#f97316) | Rond orange |
-| 5 | Performance | Rouge (#ef4444) | Rond rouge |
-| 6 | Élite | Violet (#8b5cf6) | Rond violet |
+### 1. Nouveau type de données : Blocs de séance
 
----
+**Ajout dans `src/components/session-creation/types.ts`** :
 
-## Phase 1 : Logique de calcul automatique du niveau
-
-### Fichier : `src/lib/sessionLevelCalculator.ts` (nouveau)
-
-Algorithme de calcul basé sur :
-
-**Pour les sports d'endurance (course, trail, vélo, natation) :**
-- Type de séance (footing = niveau bas, fractionné/compétition = niveau haut)
-- Allure cible (pace_general) convertie en vitesse
-- Intensité sélectionnée (Z1-Z5)
-- Distance prévue
-
-**Matrice de calcul pour la course à pied :**
-```text
-Type séance          | Base | Modificateur allure      | Modificateur intensité
----------------------|------|--------------------------|----------------------
-recuperation         | 1    | -                        | -
-footing              | 2    | > 6:00/km → 1            | Z1 → -1
-sortie_longue        | 3    | 5:00-6:00 → +0           | Z2 → 0  
-seuil                | 4    | 4:30-5:00 → +1           | Z3 → +1
-fractionne/fartlek   | 5    | 4:00-4:30 → +2           | Z4 → +1
-competition          | 5    | < 4:00 → +3              | Z5 → +2
-```
-
-**Pour les sports collectifs/autres (foot, basket, yoga...) :**
-- L'utilisateur peut optionnellement sélectionner un niveau (débutant à confirmé)
-- Si non spécifié : niveau 3 (Intermédiaire) par défaut
-
----
-
-## Phase 2 : Composant Badge de Niveau
-
-### Fichier : `src/components/SessionLevelBadge.tsx` (nouveau)
-
-Composant réutilisable affichant :
-- Pastille colorée avec le niveau
-- Tooltip avec le nom complet du niveau
-- Variantes : compact (icône seule), full (icône + texte)
-
----
-
-## Phase 3 : Filtre Pyramide sur la carte
-
-### Fichier : `src/components/LevelPyramidFilter.tsx` (nouveau)
-
-**Design visuel :**
-```text
-    ▲  ← Élite (6)
-   ▲▲  ← Performance (5)
-  ▲▲▲  ← Avancé (4)
- ▲▲▲▲  ← Intermédiaire (3)
-▲▲▲▲▲  ← Loisir (2)
-▲▲▲▲▲▲ ← Débutant (1)
-```
-
-**Interaction style iPhone (slider vertical) :**
-- Glisser verticalement pour sélectionner un niveau ou une plage
-- Tap sur un niveau = sélection unique
-- Drag pour sélectionner une plage (ex: niveaux 3 à 5)
-- Les segments non sélectionnés sont grisés
-- Animation fluide type iOS Settings
-
-**Positionnement :**
-- À gauche des boutons "Classement" et "Confirmer présence"
-- Taille compacte : ~50x100px
-- Semi-transparent avec backdrop blur
-
----
-
-## Phase 4 : Intégration dans InteractiveMap
-
-### Modifications `src/components/InteractiveMap.tsx`
-
-1. **Nouveau state pour le filtre niveau :**
 ```typescript
-interface Filter {
-  // ... existants
-  level_range: [number, number] | null; // [min, max] ou null = tous
+// Types de blocs disponibles
+type BlockType = 'warmup' | 'interval' | 'recovery' | 'cooldown' | 'tempo' | 'steady';
+
+interface SessionBlock {
+  id: string;
+  type: BlockType;
+  // Pour échauffement/retour au calme
+  duration?: string;      // "15" (minutes) ou "1500" (mètres)
+  durationType?: 'time' | 'distance';
+  intensity?: string;     // z1, z2, z3, z4, z5
+  pace?: string;          // "5:30" min/km
+  
+  // Pour séries (interval)
+  repetitions?: number;   // 10
+  effortDuration?: string;
+  effortType?: 'time' | 'distance';
+  effortIntensity?: string;
+  effortPace?: string;
+  recoveryDuration?: string;
+  recoveryType?: 'trot' | 'marche' | 'statique';
+}
+
+// Nouveau champ dans SessionFormData
+interface SessionFormData {
+  // ... champs existants
+  session_mode: 'simple' | 'structured';
+  blocks: SessionBlock[];
 }
 ```
 
-2. **Intégration du LevelPyramidFilter** dans le layout à droite, au-dessus des boutons existants
+---
 
-3. **Filtrage des sessions** dans `createMarkers()` :
-```typescript
-const matchesLevel = !filters.level_range || 
-  (session.calculated_level >= filters.level_range[0] && 
-   session.calculated_level <= filters.level_range[1]);
-```
+### 2. Nouveau design de DetailsStep
 
-4. **Coloration des marqueurs** selon le niveau de la séance
+**Refonte complète avec les sections suivantes** :
+
+#### Header simplifié
+- Titre de la séance (obligatoire)
+- Switch iOS "Séance simple / Séance structurée"
+
+#### Section conditionnelle : Séance Simple
+- Intensité (Z1-Z5)
+- Distance + D+
+- Allure générale
+- Terrain
+
+#### Section conditionnelle : Séance Structurée
+- **Constructeur de blocs** (liste empilée style Apple)
+- Bouton "Ajouter un bloc"
+- Pas d'allure générale (calculée par bloc)
+
+#### Sections communes
+- Lien vers itinéraire (nouveau)
+- Participants max
+- Visibilité (amis / public)
+- Club
+- Image & Notes
 
 ---
 
-## Phase 5 : Stockage et affichage
+### 3. Composant SessionBlockBuilder
 
-### Modification base de données
+**Nouveau fichier : `src/components/session-creation/SessionBlockBuilder.tsx`**
 
-Ajout colonne `calculated_level` (integer 1-6) dans la table `sessions` :
-```sql
-ALTER TABLE sessions ADD COLUMN calculated_level integer DEFAULT 3;
-```
+Liste verticale de blocs avec design iOS :
+- Cartes arrondies blanches
+- Icônes par type de bloc
+- Drag & drop pour réordonner (optionnel)
+- Bouton supprimer sur chaque bloc
 
-### Calcul à la création
-
-Dans `CreateSessionWizard.tsx`, calculer le niveau avant l'insertion :
-```typescript
-const level = calculateSessionLevel(formData);
-// Insérer avec calculated_level: level
-```
+**Types de blocs disponibles** :
+| Type | Icône | Champs |
+|------|-------|--------|
+| Échauffement | 🔥 | Durée, Intensité, Allure |
+| Série/Fractionné | ⚡ | Répétitions, Effort (dist/temps), Récup, Intensité |
+| Bloc constant | 🏃 | Durée/Distance, Intensité, Allure |
+| Retour au calme | ❄️ | Durée, Intensité, Allure |
 
 ---
 
-## Phase 6 : Affichage du niveau partout
+### 4. Composant RouteSelector
 
-### Fichiers à modifier :
+**Nouveau fichier : `src/components/session-creation/RouteSelector.tsx`**
 
-1. **SessionPreviewPopup.tsx** : Ajouter le badge niveau
-2. **SessionDetailsDialog.tsx** : Afficher niveau + explication
-3. **FeedCard.tsx** : Badge niveau sur les cartes du feed
-4. **DiscoverCard.tsx** : Badge niveau
+Sélecteur d'itinéraire existant :
+- Liste des itinéraires créés par l'utilisateur
+- Affichage miniature + stats
+- Auto-remplissage : Distance, D+, Terrain
+
+Lorsqu'un itinéraire est sélectionné :
+- `distance_km` → valeur de route.total_distance
+- `elevation_gain` → valeur de route.total_elevation_gain
+- Champs passent en mode "Auto" (badge)
+
+---
+
+### 5. Adaptation automatique selon le sport
+
+**Logique conditionnelle** :
+
+| Sport | Allure | Distance | D+ | Terrain | Puissance |
+|-------|--------|----------|----|---------|-----------| 
+| Course | min/km | ✓ | ✓ | ✓ | - |
+| Trail | min/km | ✓ | ✓ | ✓ | - |
+| Vélo | km/h | ✓ | ✓ | - | Watts |
+| Natation | min/100m | ✓ (m) | - | - | - |
+| Autre | - | - | - | - | - |
+
+Implémentation via helper `getFieldsForActivity(activityType)`.
 
 ---
 
@@ -147,61 +129,153 @@ const level = calculateSessionLevel(formData);
 
 | Fichier | Description |
 |---------|-------------|
-| `src/lib/sessionLevelCalculator.ts` | Logique de calcul du niveau |
-| `src/components/SessionLevelBadge.tsx` | Badge visuel du niveau |
-| `src/components/LevelPyramidFilter.tsx` | Filtre pyramide interactif |
+| `src/components/session-creation/SessionBlockBuilder.tsx` | Composant constructeur de blocs |
+| `src/components/session-creation/SessionBlock.tsx` | Composant individuel pour un bloc |
+| `src/components/session-creation/RouteSelector.tsx` | Sélecteur d'itinéraire avec auto-fill |
+| `src/components/session-creation/SessionModeSwitch.tsx` | Switch Simple/Structurée style iOS |
+
+---
 
 ## Fichiers à modifier
 
 | Fichier | Modifications |
 |---------|---------------|
-| `src/components/InteractiveMap.tsx` | Ajout filtre niveau + state + filtrage |
-| `src/components/session-creation/CreateSessionWizard.tsx` | Calcul niveau à la création |
-| `src/components/SessionPreviewPopup.tsx` | Affichage badge niveau |
-| `src/components/SessionDetailsDialog.tsx` | Affichage niveau détaillé |
-| `src/components/session-creation/types.ts` | Types pour les niveaux |
-| `src/integrations/supabase/types.ts` | Après migration DB |
+| `src/components/session-creation/types.ts` | Ajouter types Block, session_mode, etc. |
+| `src/components/session-creation/steps/DetailsStep.tsx` | Refonte complète avec design iOS |
+| `src/components/session-creation/useSessionWizard.ts` | Gestion des blocs |
+| `src/components/session-creation/CreateSessionWizard.tsx` | Sérialisation des blocs pour la DB |
 
 ---
 
 ## Détails techniques
 
-### Algorithme de calcul (sessionLevelCalculator.ts)
+### Structure de données des blocs
 
 ```typescript
-export type SessionLevel = 1 | 2 | 3 | 4 | 5 | 6;
-
-export const LEVEL_CONFIG = {
-  1: { label: 'Débutant', color: '#22c55e', bgClass: 'bg-green-500' },
-  2: { label: 'Loisir', color: '#16a34a', bgClass: 'bg-green-600' },
-  3: { label: 'Intermédiaire', color: '#eab308', bgClass: 'bg-yellow-500' },
-  4: { label: 'Avancé', color: '#f97316', bgClass: 'bg-orange-500' },
-  5: { label: 'Performance', color: '#ef4444', bgClass: 'bg-red-500' },
-  6: { label: 'Élite', color: '#8b5cf6', bgClass: 'bg-violet-500' },
-};
-
-// Sports où le calcul automatique s'applique
-const ENDURANCE_SPORTS = ['course', 'trail', 'velo', 'vtt', 'gravel', 'natation', 'marche'];
-
-// Conversion pace string "5:30" en secondes par km
-function parsePaceToSeconds(pace: string): number | null;
-
-// Calcul principal
-export function calculateSessionLevel(formData: SessionFormData): SessionLevel;
+// Exemple : 10x400m
+const exampleBlocks: SessionBlock[] = [
+  {
+    id: 'block-1',
+    type: 'warmup',
+    duration: '15',
+    durationType: 'time',
+    intensity: 'z2',
+    pace: '5:30'
+  },
+  {
+    id: 'block-2',
+    type: 'interval',
+    repetitions: 10,
+    effortDuration: '400',
+    effortType: 'distance',
+    effortIntensity: 'z5',
+    effortPace: '3:30',
+    recoveryDuration: '90',
+    recoveryType: 'trot'
+  },
+  {
+    id: 'block-3',
+    type: 'cooldown',
+    duration: '10',
+    durationType: 'time',
+    intensity: 'z1',
+    pace: '6:00'
+  }
+];
 ```
 
-### LevelPyramidFilter - Interaction
+### Stockage en base de données
 
-- **Single tap** : Toggle un niveau unique
-- **Vertical drag** : Sélectionne une plage de niveaux
-- **Double tap** : Reset (afficher tous les niveaux)
-- **Feedback visuel** : Segments sélectionnés en couleur, autres en gris avec opacité réduite
+Option 1 - Sérialisation JSON dans le champ `description` (simple)
+Option 2 - Nouveau champ `session_blocks` de type JSONB (recommandé)
+
+Migration DB nécessaire :
+```sql
+ALTER TABLE sessions ADD COLUMN session_blocks jsonb DEFAULT NULL;
+ALTER TABLE sessions ADD COLUMN session_mode text DEFAULT 'simple';
+```
+
+### Calcul automatique du niveau
+
+Le niveau (1-6) est recalculé à partir des blocs :
+- Prend l'intensité la plus élevée des blocs
+- Considère les allures d'effort des séries
+- Plus le volume à haute intensité est élevé, plus le niveau monte
+
+---
+
+## Design UI (style iOS Settings)
+
+### Palette de couleurs des blocs
+
+| Type | Couleur de fond | Icône |
+|------|-----------------|-------|
+| Échauffement | `bg-green-500/10` | Timer vert |
+| Série | `bg-orange-500/10` | Flame orange |
+| Récup | `bg-blue-500/10` | Pause bleue |
+| Retour au calme | `bg-purple-500/10` | Timer violet |
+
+### Spacing et arrondis
+
+- Cartes : `rounded-xl` (12px)
+- Sections : `rounded-2xl` (16px)
+- Padding sections : `p-4`
+- Gap entre éléments : `gap-3`
+
+### Switch Mode (style iOS)
+
+```tsx
+<div className="bg-secondary rounded-xl p-1 flex">
+  <button 
+    className={cn(
+      "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
+      sessionMode === 'simple' 
+        ? "bg-white shadow-sm" 
+        : "text-muted-foreground"
+    )}
+  >
+    Simple
+  </button>
+  <button 
+    className={cn(
+      "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
+      sessionMode === 'structured' 
+        ? "bg-white shadow-sm" 
+        : "text-muted-foreground"
+    )}
+  >
+    Structurée
+  </button>
+</div>
+```
+
+---
+
+## Flux utilisateur
+
+```
+1. Utilisateur arrive sur Détails
+   ↓
+2. Switch "Simple / Structurée" visible en haut
+   ↓
+3a. Mode Simple → Champs classiques (intensité, distance, allure)
+   ↓
+3b. Mode Structurée → Constructeur de blocs
+   ↓
+4. Section Itinéraire (optionnel)
+   → Sélection → Auto-fill distance/D+
+   ↓
+5. Sections communes (participants, visibilité, club)
+   ↓
+6. Aperçu → Soumission
+```
 
 ---
 
 ## Résultat attendu
 
-1. **Création de séance** → Niveau calculé automatiquement et affiché
-2. **Carte principale** → Nouveau filtre pyramide permettant de filtrer par niveau
-3. **Marqueurs carte** → Colorés selon le niveau de la séance
-4. **Expérience utilisateur** → "La carte s'adapte à mon niveau" - iPhone style, zéro friction
+1. **Switch en haut** : Bascule fluide entre séance simple et structurée
+2. **Constructeur de blocs** : Interface empilée style Apple pour créer des séances complexes
+3. **Adaptation automatique** : Champs dynamiques selon le sport sélectionné
+4. **Lien itinéraire** : Sélection d'un tracé existant avec auto-remplissage
+5. **Design premium** : Cohérent avec iOS Settings, espacements généreux, animations fluides
