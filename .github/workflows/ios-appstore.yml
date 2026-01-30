@@ -58,11 +58,16 @@ jobs:
           security set-keychain-settings -t 3600 -u "$KEYCHAIN_NAME"
           
           # Importer certificat (decode PROPRE)
-          printf '%s' "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
+          printf '%s' "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > certificate_original.p12
 
-          # ✅ TEST: vérifier que le .p12 + mot de passe matchent AVANT import keychain
-          # Si ça échoue ici -> ton secret P12_BASE64 ou ton PASSWORD ne correspondent pas
-          openssl pkcs12 -in certificate.p12 -info -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+          # ✅ TEST: vérifier que le .p12 + mot de passe matchent
+          openssl pkcs12 -in certificate_original.p12 -info -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+
+          # 🔄 Convertir le P12 vers un format compatible macOS (legacy algorithm)
+          # Ceci résout l'erreur "MAC verification failed" sur les runners macOS récents
+          openssl pkcs12 -in certificate_original.p12 -out certificate.pem -nodes -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+          openssl pkcs12 -export -in certificate.pem -out certificate.p12 -passout pass:"$IOS_CERTIFICATE_PASSWORD" -legacy
+          rm certificate.pem certificate_original.p12
 
           # Import dans keychain
           security import certificate.p12 -k "$KEYCHAIN_NAME" \
