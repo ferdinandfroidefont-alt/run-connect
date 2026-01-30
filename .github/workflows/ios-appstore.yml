@@ -101,10 +101,13 @@ jobs:
       - name: 🔧 Configure App signing
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PROFILE_UUID: ${{ env.PROFILE_UUID }}
         run: |
           cd ios/App
           
-          ruby << 'RUBY_SCRIPT'
+          echo "Using Profile UUID: $PROFILE_UUID"
+          
+          ruby << RUBY_SCRIPT
           require 'xcodeproj'
           
           project_path = 'App.xcodeproj'
@@ -112,17 +115,25 @@ jobs:
           
           app_target = project.targets.find { |t| t.name == 'App' }
           
+          profile_uuid = ENV['PROFILE_UUID']
+          team_id = ENV['APPLE_TEAM_ID']
+          
+          puts "Team ID: #{team_id}"
+          puts "Profile UUID: #{profile_uuid}"
+          
           if app_target
             app_target.build_configurations.each do |config|
               config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
-              config.build_settings['DEVELOPMENT_TEAM'] = ENV['APPLE_TEAM_ID']
+              config.build_settings['DEVELOPMENT_TEAM'] = team_id
               config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
               config.build_settings['CODE_SIGN_IDENTITY[sdk=iphoneos*]'] = 'Apple Distribution'
-              config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = 'RunConnect AppStore'
+              # Utiliser l'UUID du profil au lieu du nom
+              config.build_settings['PROVISIONING_PROFILE'] = profile_uuid
+              config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = ''
             end
             
             project.save
-            puts "✅ Signing configured for App target"
+            puts "✅ Signing configured for App target with UUID: #{profile_uuid}"
           else
             puts "❌ App target not found!"
             exit 1
