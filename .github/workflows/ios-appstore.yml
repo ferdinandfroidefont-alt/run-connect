@@ -36,9 +36,17 @@ jobs:
 
       - name: 🔧 Update Bundle Identifier
         run: |
-          # Modifier le bundle ID dans le projet Xcode
-          sed -i '' 's/app.runconnect/com.ferdi.runconnect/g' \
+          sed -i '' 's/app.lovable.[^"]*\|io\.ionic\.starter/com.ferdi.runconnect/g' \
             ios/App/App.xcodeproj/project.pbxproj
+
+      - name: 💎 Setup Ruby & xcodeproj gem
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: 📦 Install xcodeproj gem
+        run: gem install xcodeproj
 
       - name: 🔐 Setup signing keychain
         env:
@@ -90,28 +98,47 @@ jobs:
           cp profile.mobileprovision \
             ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
-      - name: 🏗️ Build iOS archive
+      - name: 🔧 Configure App signing
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd ios/App
           
-          # Créer un xcconfig pour appliquer le signing UNIQUEMENT à l'app (pas aux Pods)
-          cat > Manual.xcconfig << EOF
-          CODE_SIGN_STYLE = Manual
-          DEVELOPMENT_TEAM = ${APPLE_TEAM_ID}
-          CODE_SIGN_IDENTITY = Apple Distribution
-          PROVISIONING_PROFILE_SPECIFIER = RunConnect AppStore
-          EOF
+          ruby << 'RUBY_SCRIPT'
+          require 'xcodeproj'
           
-          # Build avec le xcconfig uniquement pour le scheme App
+          project_path = 'App.xcodeproj'
+          project = Xcodeproj::Project.open(project_path)
+          
+          app_target = project.targets.find { |t| t.name == 'App' }
+          
+          if app_target
+            app_target.build_configurations.each do |config|
+              config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+              config.build_settings['DEVELOPMENT_TEAM'] = ENV['APPLE_TEAM_ID']
+              config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
+              config.build_settings['CODE_SIGN_IDENTITY[sdk=iphoneos*]'] = 'Apple Distribution'
+              config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = 'RunConnect AppStore'
+            end
+            
+            project.save
+            puts "✅ Signing configured for App target"
+          else
+            puts "❌ App target not found!"
+            exit 1
+          end
+          RUBY_SCRIPT
+
+      - name: 🏗️ Build iOS archive
+        run: |
+          cd ios/App
+          
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath build/App.xcarchive \
             -destination "generic/platform=iOS" \
-            -xcconfig Manual.xcconfig \
             COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: 📦 Export IPA
