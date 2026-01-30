@@ -68,7 +68,6 @@ jobs:
           $OPENSSL_BIN pkcs12 -in certificate_original.p12 -info -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
 
           # 🔄 Convertir le P12 vers un format compatible macOS (legacy algorithm)
-          # Ceci résout l'erreur "MAC verification failed" sur les runners macOS récents
           $OPENSSL_BIN pkcs12 -in certificate_original.p12 -out certificate.pem -nodes -passin pass:"$IOS_CERTIFICATE_PASSWORD"
           $OPENSSL_BIN pkcs12 -export -in certificate.pem -out certificate.p12 -passout pass:"$IOS_CERTIFICATE_PASSWORD" -legacy
           rm certificate.pem certificate_original.p12
@@ -79,30 +78,45 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
           
-          # Installer provisioning profile (decode PROPRE)
+          # Installer provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+          
+          # Extraire l'UUID du profil
           PROFILE_UUID=$(security cms -D -i profile.mobileprovision | \
             grep -A1 UUID | grep string | sed 's/.*<string>\(.*\)<\/string>/\1/')
+          echo "PROFILE_UUID=$PROFILE_UUID" >> $GITHUB_ENV
+          
           cp profile.mobileprovision \
             ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
       - name: 🏗️ Build iOS archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd ios/App
           
+          # Créer un xcconfig pour appliquer le signing UNIQUEMENT à l'app (pas aux Pods)
+          cat > Manual.xcconfig << EOF
+          CODE_SIGN_STYLE = Manual
+          DEVELOPMENT_TEAM = ${APPLE_TEAM_ID}
+          CODE_SIGN_IDENTITY = Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER = RunConnect AppStore
+          EOF
+          
+          # Build avec le xcconfig uniquement pour le scheme App
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath build/App.xcarchive \
             -destination "generic/platform=iOS" \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="RunConnect AppStore"
+            -xcconfig Manual.xcconfig \
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: 📦 Export IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd ios/App
           
@@ -114,11 +128,18 @@ jobs:
             <key>method</key>
             <string>app-store</string>
             <key>teamID</key>
-            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <string>${APPLE_TEAM_ID}</string>
             <key>uploadSymbols</key>
             <true/>
             <key>compileBitcode</key>
             <false/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.ferdi.runconnect</key>
+              <string>RunConnect AppStore</string>
+            </dict>
           </dict>
           </plist>
           EOF
