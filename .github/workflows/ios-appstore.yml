@@ -48,6 +48,10 @@ jobs:
         run: |
           set -e
 
+          # Installer OpenSSL 3 (supporte le flag -legacy, contrairement à LibreSSL)
+          brew install openssl@3
+          OPENSSL_BIN=$(brew --prefix openssl@3)/bin/openssl
+
           # Créer keychain temporaire
           KEYCHAIN_NAME="build.keychain"
           KEYCHAIN_PASSWORD="temp_password_$(date +%s)"
@@ -61,12 +65,12 @@ jobs:
           printf '%s' "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > certificate_original.p12
 
           # ✅ TEST: vérifier que le .p12 + mot de passe matchent
-          openssl pkcs12 -in certificate_original.p12 -info -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+          $OPENSSL_BIN pkcs12 -in certificate_original.p12 -info -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
 
           # 🔄 Convertir le P12 vers un format compatible macOS (legacy algorithm)
           # Ceci résout l'erreur "MAC verification failed" sur les runners macOS récents
-          openssl pkcs12 -in certificate_original.p12 -out certificate.pem -nodes -passin pass:"$IOS_CERTIFICATE_PASSWORD"
-          openssl pkcs12 -export -in certificate.pem -out certificate.p12 -passout pass:"$IOS_CERTIFICATE_PASSWORD" -legacy
+          $OPENSSL_BIN pkcs12 -in certificate_original.p12 -out certificate.pem -nodes -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+          $OPENSSL_BIN pkcs12 -export -in certificate.pem -out certificate.p12 -passout pass:"$IOS_CERTIFICATE_PASSWORD" -legacy
           rm certificate.pem certificate_original.p12
 
           # Import dans keychain
