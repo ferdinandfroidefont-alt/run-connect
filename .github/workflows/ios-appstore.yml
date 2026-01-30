@@ -57,19 +57,20 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
           security set-keychain-settings -t 3600 -u "$KEYCHAIN_NAME"
           
-          # Décoder certificat (plus fiable que echo)
+          # Importer certificat (decode PROPRE)
           printf '%s' "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
 
-          # Vérifier que le mot de passe déchiffre bien le .p12 (sinon on stop ici)
-          openssl pkcs12 -info -in certificate.p12 -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
-          
-          # Importer certificat
+          # ✅ TEST: vérifier que le .p12 + mot de passe matchent AVANT import keychain
+          # Si ça échoue ici -> ton secret P12_BASE64 ou ton PASSWORD ne correspondent pas
+          openssl pkcs12 -in certificate.p12 -info -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+
+          # Import dans keychain
           security import certificate.p12 -k "$KEYCHAIN_NAME" \
-            -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
+            -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
           
-          # Installer provisioning profile
+          # Installer provisioning profile (decode PROPRE)
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
           PROFILE_UUID=$(security cms -D -i profile.mobileprovision | \
@@ -131,7 +132,7 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           # Décoder la clé API
-          echo "$ASC_KEY_P8" | base64 --decode > AuthKey.p8
+          printf '%s' "$ASC_KEY_P8" | base64 --decode > AuthKey.p8
           
           gem install fastlane
           
