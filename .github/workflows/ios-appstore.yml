@@ -46,26 +46,32 @@ jobs:
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
         run: |
+          set -e
+
           # Créer keychain temporaire
           KEYCHAIN_NAME="build.keychain"
           KEYCHAIN_PASSWORD="temp_password_$(date +%s)"
-
+          
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
           security default-keychain -s "$KEYCHAIN_NAME"
-          security list-keychains -s "$KEYCHAIN_NAME"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
           security set-keychain-settings -t 3600 -u "$KEYCHAIN_NAME"
+          
+          # Décoder certificat (plus fiable que echo)
+          printf '%s' "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
 
+          # Vérifier que le mot de passe déchiffre bien le .p12 (sinon on stop ici)
+          openssl pkcs12 -info -in certificate.p12 -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+          
           # Importer certificat
-          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
           security import certificate.p12 -k "$KEYCHAIN_NAME" \
-            -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+            -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
           security set-key-partition-list -S apple-tool:,apple: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
-
+          
           # Installer provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
           PROFILE_UUID=$(security cms -D -i profile.mobileprovision | \
             grep -A1 UUID | grep string | sed 's/.*<string>\(.*\)<\/string>/\1/')
           cp profile.mobileprovision \
@@ -74,7 +80,7 @@ jobs:
       - name: 🏗️ Build iOS archive
         run: |
           cd ios/App
-
+          
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
@@ -89,7 +95,7 @@ jobs:
       - name: 📦 Export IPA
         run: |
           cd ios/App
-
+          
           cat > ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -97,19 +103,8 @@ jobs:
           <dict>
             <key>method</key>
             <string>app-store</string>
-
             <key>teamID</key>
             <string>${{ secrets.APPLE_TEAM_ID }}</string>
-
-            <key>signingStyle</key>
-            <string>manual</string>
-
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>com.ferdi.runconnect</key>
-              <string>RunConnect AppStore</string>
-            </dict>
-
             <key>uploadSymbols</key>
             <true/>
             <key>compileBitcode</key>
@@ -117,7 +112,7 @@ jobs:
           </dict>
           </plist>
           EOF
-
+          
           xcodebuild -exportArchive \
             -archivePath build/App.xcarchive \
             -exportPath build/ipa \
@@ -137,21 +132,11 @@ jobs:
         run: |
           # Décoder la clé API
           echo "$ASC_KEY_P8" | base64 --decode > AuthKey.p8
-
-          # Créer un api_key.json (pilot attend un JSON, pas un .p8 seul)
-          cat > api_key.json << EOF
-          {
-            "key_id": "$ASC_KEY_ID",
-            "issuer_id": "$ASC_ISSUER_ID",
-            "key": "$(cat AuthKey.p8 | sed 's/$/\\n/' | tr -d '\n')",
-            "in_house": false
-          }
-          EOF
-
+          
           gem install fastlane
-
+          
           fastlane pilot upload \
-            --api_key_path api_key.json \
+            --api_key_path AuthKey.p8 \
             --ipa ios/App/build/ipa/App.ipa \
             --skip_waiting_for_build_processing true
 
@@ -159,4 +144,4 @@ jobs:
         if: always()
         run: |
           security delete-keychain build.keychain || true
-          rm -f certificate.p12 profile.mobileprovision AuthKey.p8 api_key.json
+          rm -f certificate.p12 profile.mobileprovision AuthKey.p8
