@@ -1,332 +1,138 @@
-name: Créer Android WebView AAB
+name: iOS App Store (Capacitor) -> TestFlight
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-ios:
+    runs-on: macos-14
     timeout-minutes: 45
 
     steps:
-      - name: 📥 Cloner le dépôt
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Installer Java (JDK 17)
-        uses: actions/setup-java@v4
+      - name: 🧰 Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
         with:
-          distribution: temurin
-          java-version: 17
+          xcode-version: "15.4"
 
-      - name: ⚙️ Installer SDK Android
-        uses: android-actions/setup-android@v3
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-      - name: 📦 Accepter les licences & installer les outils
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build web app
+        run: npm run build
+
+      - name: 🍏 Add / Sync iOS (Capacitor)
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
+          npx cap add ios || true
+          npx cap sync ios
 
-      - name: 🛠️ Créer projet WebView Android minimal
+      # ---------- SIGNING : certificate + provisioning profile ----------
+      - name: 🔐 Setup signing keychain
+        env:
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
         run: |
           set -e
-          mkdir -p android-webview/app/src/main/java/app/runconnect
-          mkdir -p android-webview/app/src/main/res/values
-          mkdir -p android-webview/app/src/main/res/xml
-          mkdir -p android-webview/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p android-webview/app/src/main/res/drawable
 
-          cat > android-webview/settings.gradle <<'EOF'
-          pluginManagement {
-            repositories {
-              maven { url 'https://maven.aliyun.com/repository/public' }
-              maven { url 'https://maven.aliyun.com/repository/google' }
-              google()
-              mavenCentral()
-              gradlePluginPortal()
-            }
-          }
-          dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-            repositories { 
-              maven { url 'https://maven.aliyun.com/repository/public' }
-              maven { url 'https://maven.aliyun.com/repository/google' }
-              google()
-              mavenCentral()
-            }
-          }
-          rootProject.name = "RunConnect"
-          include(":app")
-          EOF
+          # Create temp files
+          CERT_P12_PATH="$RUNNER_TEMP/ios_distribution.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
 
-          cat > android-webview/build.gradle <<'EOF'
-          buildscript {
-            repositories {
-              maven { url 'https://maven.aliyun.com/repository/public' }
-              maven { url 'https://maven.aliyun.com/repository/google' }
-              google()
-              mavenCentral()
-            }
-            dependencies {
-              classpath 'com.android.tools.build:gradle:8.2.1'
-              classpath 'com.google.gms:google-services:4.4.0'
-            }
-          }
+          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_P12_PATH"
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
 
-          allprojects {
-            repositories {
-              maven { url 'https://maven.aliyun.com/repository/public' }
-              maven { url 'https://maven.aliyun.com/repository/google' }
-              google()
-              mavenCentral()
-            }
-          }
+          # Create keychain
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
 
-          task clean(type: Delete) {
-            delete rootProject.buildDir
-          }
-          EOF
+          # Import certificate
+          security import "$CERT_P12_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN_PATH"
 
-          cat > android-webview/app/build.gradle <<'EOF'
-          plugins { 
-            id 'com.android.application'
-            id 'com.google.gms.google-services'
-          }
+          # Install provisioning profile
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$(security cms -D -i "$PROFILE_PATH")")
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
 
-          android {
-            namespace "app.runconnect"
-            compileSdk 35
+          echo "✅ Installed provisioning profile UUID: $UUID"
 
-            signingConfigs {
-              release {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-              debug {
-                storeFile file("${rootDir}/keystore.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-              }
-            }
-
-            defaultConfig {
-              applicationId "app.runconnect"
-              minSdk 24
-              targetSdk 35
-              versionCode 182
-              versionName "1.5.0"
-              
-              buildConfigField "String", "START_URL", "\"https://run-connect.lovable.app\""
-              buildConfigField "boolean", "IS_AAB_BUILD", "true"
-            }
-
-            buildTypes {
-              release {
-                minifyEnabled false
-                proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                signingConfig signingConfigs.release
-              }
-              debug {
-                signingConfig signingConfigs.debug
-              }
-            }
-
-            compileOptions {
-              sourceCompatibility JavaVersion.VERSION_17
-              targetCompatibility JavaVersion.VERSION_17
-            }
-
-            buildFeatures {
-              buildConfig true
-            }
-          }
-
-          dependencies {
-            implementation 'androidx.appcompat:appcompat:1.7.0'
-            implementation 'com.google.android.material:material:1.12.0'
-            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'androidx.core:core:1.13.1'
-            implementation 'androidx.activity:activity:1.9.2'
-            implementation 'androidx.webkit:webkit:1.11.0'
-            
-            implementation platform('com.google.firebase:firebase-bom:32.7.0')
-            implementation 'com.google.firebase:firebase-messaging'
-            implementation 'com.google.firebase:firebase-analytics'
-            
-            implementation 'com.google.android.gms:play-services-auth:21.0.0'
-            
-            implementation 'androidx.browser:browser:1.8.0'
-            implementation 'com.capacitorjs:core:6.1.2'
-          }
-          EOF
-
-          mkdir -p android-webview/gradle/wrapper
-          cat > android-webview/gradle/wrapper/gradle-wrapper.properties <<'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          EOF
-
-          cat > android-webview/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
-
-          cp -r android/app/src/main/java/app/runconnect/* android-webview/app/src/main/java/app/runconnect/
-          
-          sed -i 's|private final String START_URL = System.getProperty.*|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
-          sed -i 's|private final String START_URL = ".*";|private final String START_URL = BuildConfig.START_URL;|' android-webview/app/src/main/java/app/runconnect/MainActivity.java
-          
-          if grep -q "setSupportMultipleWindows" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
-            echo "✅ setSupportMultipleWindows détecté"
-          else
-            echo "⚠️ ATTENTION: setSupportMultipleWindows manquant - ajout automatique"
-            sed -i '/setDomStorageEnabled(true);/a \        s.setSupportMultipleWindows(true);' android-webview/app/src/main/java/app/runconnect/MainActivity.java
-          fi
-
-          if grep -q "onCreateWindow" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
-            echo "✅ onCreateWindow détecté"
-          else
-            echo "❌ ERREUR: onCreateWindow manquant dans MainActivity.java !"
-            exit 1
-          fi
-          
-          # 🎯 Android 15/16 Fix: Vérifier que setupImmersiveMode existe
-          if grep -q "setupImmersiveMode" android-webview/app/src/main/java/app/runconnect/MainActivity.java; then
-            echo "✅ Android 15/16 fix (setupImmersiveMode) détecté"
-          else
-            echo "⚠️ ATTENTION: setupImmersiveMode manquant - Android 15/16 pourrait crasher"
-          fi
-          
-          # 🎯 Android 16 Fix: Créer le fichier values-v35/styles.xml
-          echo "📁 Création du style Android 16 OptOutEdgeToEdgeEnforcement..."
-          mkdir -p android-webview/app/src/main/res/values-v35
-          cat > android-webview/app/src/main/res/values-v35/styles.xml << 'STYLES_V35'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="OptOutEdgeToEdgeEnforcement">
-                  <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
-              </style>
-          </resources>
-          STYLES_V35
-          echo "✅ values-v35/styles.xml créé"
-          
-          cp android/app/src/main/AndroidManifest.xml android-webview/app/src/main/AndroidManifest.xml
-
-          echo "📁 Copie des ressources du splash screen..."
-          
-          # Copier styles.xml complet (contient SplashTheme)
-          cp android/app/src/main/res/values/styles.xml android-webview/app/src/main/res/values/styles.xml
-          
-          # Copier colors.xml (colorPrimary, progressBarBlue, etc.)
-          cp android/app/src/main/res/values/colors.xml android-webview/app/src/main/res/values/colors.xml
-          
-          # Copier les drawables du splash
-          mkdir -p android-webview/app/src/main/res/drawable
-          cp android/app/src/main/res/drawable/splash_background.xml android-webview/app/src/main/res/drawable/
-          cp android/app/src/main/res/drawable/progress_bar_custom.xml android-webview/app/src/main/res/drawable/
-          cp android/app/src/main/res/drawable/splash_gradient.xml android-webview/app/src/main/res/drawable/
-          cp android/app/src/main/res/drawable/shimmer_progress_bar.xml android-webview/app/src/main/res/drawable/
-          cp android/app/src/main/res/drawable/logo_glow.xml android-webview/app/src/main/res/drawable/
-          
-          # Copier les layouts du splash
-          mkdir -p android-webview/app/src/main/res/layout
-          cp android/app/src/main/res/layout/activity_splash.xml android-webview/app/src/main/res/layout/
-          cp android/app/src/main/res/layout/activity_main.xml android-webview/app/src/main/res/layout/
-          
-          # Copier les animations du splash
-          mkdir -p android-webview/app/src/main/res/anim
-          cp android/app/src/main/res/anim/pulse_animation.xml android-webview/app/src/main/res/anim/
-          cp android/app/src/main/res/anim/fade_in_text.xml android-webview/app/src/main/res/anim/
-          cp android/app/src/main/res/anim/fade_in_title.xml android-webview/app/src/main/res/anim/
-          cp android/app/src/main/res/anim/fade_in_progress.xml android-webview/app/src/main/res/anim/
-          cp android/app/src/main/res/anim/shimmer_animation.xml android-webview/app/src/main/res/anim/
-          
-          echo "✅ Ressources du splash screen copiées avec succès"
-
-          cat > android-webview/app/src/main/res/values/strings.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-            <string name="app_name">RunConnect</string>
-            <string name="title_activity_main">RunConnect</string>
-            <string name="package_name">app.runconnect</string>
-            <string name="custom_url_scheme">app.runconnect</string>
-            <string name="default_web_client_id">220304658307-dhf5bgbrogt9cfhj7c6l6pden8ofdmd0.apps.googleusercontent.com</string>
-          </resources>
-          EOF
-
-          cat > android-webview/app/src/main/res/xml/file_paths.xml <<'EOF'
-          <paths xmlns:android="http://schemas.android.com/apk/res/android">
-              <external-path name="external_files" path="." />
-          </paths>
-          EOF
-
-          # 📱 Copier toutes les icônes mipmap depuis les vraies icônes de l'app
-          echo "📱 Copie des icônes officielles depuis mipmap..."
-          mkdir -p android-webview/app/src/main/res/mipmap-mdpi
-          mkdir -p android-webview/app/src/main/res/mipmap-hdpi
-          mkdir -p android-webview/app/src/main/res/mipmap-xhdpi
-          mkdir -p android-webview/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android-webview/app/src/main/res/mipmap-xxxhdpi
-
-          cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-mdpi/
-          cp android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-mdpi/
-          
-          cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-hdpi/
-          cp android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-hdpi/
-          
-          cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-xhdpi/
-          cp android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-xhdpi/
-          
-          cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-xxhdpi/
-          cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-xxhdpi/
-          
-          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android-webview/app/src/main/res/mipmap-xxxhdpi/
-          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png android-webview/app/src/main/res/mipmap-xxxhdpi/
-          
-          echo "✅ Icônes officielles copiées avec succès"
-
-      - name: 🔐 Restaurer le keystore
-        working-directory: android-webview
-        env:
-          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+      # ---------- BUILD + EXPORT ----------
+      - name: 📦 Install CocoaPods
         run: |
-          echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
+          cd ios/App
+          pod install --repo-update
 
-      - name: 🔍 Afficher empreintes SHA du keystore
-        working-directory: android-webview
+      - name: 🧾 Create ExportOptions.plist (UUID)
         env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          IOS_PROVISION_PROFILE_UUID: ${{ secrets.IOS_PROVISION_PROFILE_UUID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
         run: |
-          echo "📋 Empreintes du certificat pour Firebase:"
-          keytool -list -v -keystore keystore.jks -alias "$ANDROID_KEYSTORE_ALIAS" -storepass "$ANDROID_KEYSTORE_PASSWORD" | grep -E "(SHA1|SHA256)"
+          set -e
+          cat > $RUNNER_TEMP/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>stripSwiftSymbols</key><true/>
+            <key>compileBitcode</key><false/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${IOS_BUNDLE_ID}</key><string>${IOS_PROVISION_PROFILE_UUID}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          echo "✅ ExportOptions.plist created"
 
-      - name: 🔧 Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.4"
-
-      - name: 🔨 Build AAB (Gradle)
-        working-directory: android-webview
+      - name: 🏗️ Build iOS archive
         env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
         run: |
-          echo "🎯 Construction de l'AAB avec Gradle 8.4..."
-          gradle :app:bundleRelease --no-daemon
+          set -e
+          cd ios/App
 
-      - name: 📦 Télécharger l'AAB
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            clean archive \
+            CODE_SIGN_STYLE=Manual
+
+      - name: 📤 Export IPA
+        run: |
+          set -e
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: 📦 Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: runconnect-release
-          path: |
-            android-webview/app/build/outputs/bundle/release/app-release.aab
-            android-webview/keystore.jks
+          name: ios-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+
+      # ---------- UPLOAD TESTFLIGHT (App Store Connect API Key) ----------
+      - name: 🚀 Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ runner.temp }}/export/*.ipa
+          issuer-id: ${{ secrets.ASC_ISSUER_ID }}
+          api-key-id: ${{ secrets.ASC_KEY_ID }}
+          api-private-key: ${{ secrets.ASC_API_KEY_P8 }}
