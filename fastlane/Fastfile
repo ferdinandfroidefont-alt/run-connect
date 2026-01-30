@@ -1,0 +1,36 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload to TestFlight"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: "AuthKey.p8",
+      duration: 1200,
+      in_house: false
+    )
+    
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      ipa: "ios/App/build/ipa/App.ipa"
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :release do
+    # Build the app
+    build_ios_app(
+      workspace: "ios/App/App.xcworkspace",
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "ios/App/build/ipa",
+      output_name: "App.ipa"
+    )
+    
+    # Upload to TestFlight
+    beta
+  end
+end

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.runconnect',
+  appId: 'com.ferdi.runconnect',
   appName: 'RunConnect',
   webDir: 'dist',
   bundledWebRuntime: false,
