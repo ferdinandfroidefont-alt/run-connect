@@ -1,281 +1,384 @@
 
-# Constructeur de Séance Intelligent
+# Pipeline CI/CD iOS App Store — Publication Automatique via GitHub Actions
 
 ## Vue d'ensemble
-Transformer la page "Détails" du wizard de création de séance en un constructeur intelligent permettant de créer des séances simples (footing) ou des séances structurées complexes (fractionné avec blocs multiples). L'UI suivra le design iOS Settings / Apple Fitness.
+
+Ce plan met en place un pipeline GitHub Actions complet qui :
+- Build l'application iOS (Capacitor WebView) sur un runner macOS
+- Signe automatiquement l'application avec vos certificats Apple
+- Upload directement sur TestFlight/App Store Connect
+- Fonctionne **sans Mac local** — tout est automatisé
 
 ---
 
 ## Architecture de la solution
 
-### 1. Nouveau type de données : Blocs de séance
-
-**Ajout dans `src/components/session-creation/types.ts`** :
-
-```typescript
-// Types de blocs disponibles
-type BlockType = 'warmup' | 'interval' | 'recovery' | 'cooldown' | 'tempo' | 'steady';
-
-interface SessionBlock {
-  id: string;
-  type: BlockType;
-  // Pour échauffement/retour au calme
-  duration?: string;      // "15" (minutes) ou "1500" (mètres)
-  durationType?: 'time' | 'distance';
-  intensity?: string;     // z1, z2, z3, z4, z5
-  pace?: string;          // "5:30" min/km
-  
-  // Pour séries (interval)
-  repetitions?: number;   // 10
-  effortDuration?: string;
-  effortType?: 'time' | 'distance';
-  effortIntensity?: string;
-  effortPace?: string;
-  recoveryDuration?: string;
-  recoveryType?: 'trot' | 'marche' | 'statique';
-}
-
-// Nouveau champ dans SessionFormData
-interface SessionFormData {
-  // ... champs existants
-  session_mode: 'simple' | 'structured';
-  blocks: SessionBlock[];
-}
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    GitHub Actions (macos-latest)                │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Checkout code                                               │
+│  2. Setup Node.js + Install dependencies                        │
+│  3. Build web app (npm run build → dist/)                       │
+│  4. Generate iOS project (npx cap add ios + sync)               │
+│  5. Configure signing (certificates + provisioning)             │
+│  6. Build IPA (xcodebuild archive + export)                     │
+│  7. Upload to TestFlight (Fastlane pilot)                       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 2. Nouveau design de DetailsStep
+## Secrets GitHub requis (à ajouter dans le repo)
 
-**Refonte complète avec les sections suivantes** :
-
-#### Header simplifié
-- Titre de la séance (obligatoire)
-- Switch iOS "Séance simple / Séance structurée"
-
-#### Section conditionnelle : Séance Simple
-- Intensité (Z1-Z5)
-- Distance + D+
-- Allure générale
-- Terrain
-
-#### Section conditionnelle : Séance Structurée
-- **Constructeur de blocs** (liste empilée style Apple)
-- Bouton "Ajouter un bloc"
-- Pas d'allure générale (calculée par bloc)
-
-#### Sections communes
-- Lien vers itinéraire (nouveau)
-- Participants max
-- Visibilité (amis / public)
-- Club
-- Image & Notes
-
----
-
-### 3. Composant SessionBlockBuilder
-
-**Nouveau fichier : `src/components/session-creation/SessionBlockBuilder.tsx`**
-
-Liste verticale de blocs avec design iOS :
-- Cartes arrondies blanches
-- Icônes par type de bloc
-- Drag & drop pour réordonner (optionnel)
-- Bouton supprimer sur chaque bloc
-
-**Types de blocs disponibles** :
-| Type | Icône | Champs |
-|------|-------|--------|
-| Échauffement | 🔥 | Durée, Intensité, Allure |
-| Série/Fractionné | ⚡ | Répétitions, Effort (dist/temps), Récup, Intensité |
-| Bloc constant | 🏃 | Durée/Distance, Intensité, Allure |
-| Retour au calme | ❄️ | Durée, Intensité, Allure |
-
----
-
-### 4. Composant RouteSelector
-
-**Nouveau fichier : `src/components/session-creation/RouteSelector.tsx`**
-
-Sélecteur d'itinéraire existant :
-- Liste des itinéraires créés par l'utilisateur
-- Affichage miniature + stats
-- Auto-remplissage : Distance, D+, Terrain
-
-Lorsqu'un itinéraire est sélectionné :
-- `distance_km` → valeur de route.total_distance
-- `elevation_gain` → valeur de route.total_elevation_gain
-- Champs passent en mode "Auto" (badge)
-
----
-
-### 5. Adaptation automatique selon le sport
-
-**Logique conditionnelle** :
-
-| Sport | Allure | Distance | D+ | Terrain | Puissance |
-|-------|--------|----------|----|---------|-----------| 
-| Course | min/km | ✓ | ✓ | ✓ | - |
-| Trail | min/km | ✓ | ✓ | ✓ | - |
-| Vélo | km/h | ✓ | ✓ | - | Watts |
-| Natation | min/100m | ✓ (m) | - | - | - |
-| Autre | - | - | - | - | - |
-
-Implémentation via helper `getFieldsForActivity(activityType)`.
+| Secret | Description |
+|--------|-------------|
+| `ASC_KEY_ID` | App Store Connect API Key ID |
+| `ASC_ISSUER_ID` | App Store Connect Issuer ID |
+| `ASC_KEY_P8` | Contenu du fichier .p8 (clé API) encodé en base64 |
+| `APPLE_TEAM_ID` | Team ID Apple Developer (ex: ABC123XYZ) |
+| `IOS_CERTIFICATE_P12_BASE64` | Certificat de distribution .p12 encodé en base64 |
+| `IOS_CERTIFICATE_PASSWORD` | Mot de passe du certificat .p12 |
+| `IOS_PROVISIONING_PROFILE_BASE64` | Profil de provisioning App Store encodé en base64 |
 
 ---
 
 ## Fichiers à créer
 
-| Fichier | Description |
-|---------|-------------|
-| `src/components/session-creation/SessionBlockBuilder.tsx` | Composant constructeur de blocs |
-| `src/components/session-creation/SessionBlock.tsx` | Composant individuel pour un bloc |
-| `src/components/session-creation/RouteSelector.tsx` | Sélecteur d'itinéraire avec auto-fill |
-| `src/components/session-creation/SessionModeSwitch.tsx` | Switch Simple/Structurée style iOS |
+### 1. Workflow GitHub Actions
 
----
+**Fichier : `.github/workflows/ios-appstore.yml`**
 
-## Fichiers à modifier
+Ce workflow :
+- Tourne sur `macos-latest` (Xcode 16.x préinstallé)
+- Installe Node.js et les dépendances
+- Build l'app web avec Vite
+- Génère le projet iOS avec Capacitor
+- Configure le signing via keychain temporaire
+- Archive et exporte l'IPA
+- Upload sur TestFlight avec Fastlane
 
-| Fichier | Modifications |
-|---------|---------------|
-| `src/components/session-creation/types.ts` | Ajouter types Block, session_mode, etc. |
-| `src/components/session-creation/steps/DetailsStep.tsx` | Refonte complète avec design iOS |
-| `src/components/session-creation/useSessionWizard.ts` | Gestion des blocs |
-| `src/components/session-creation/CreateSessionWizard.tsx` | Sérialisation des blocs pour la DB |
+### 2. Configuration Fastlane
+
+**Fichier : `fastlane/Fastfile`**
+
+Lane `beta` qui :
+- Configure l'API Key App Store Connect
+- Upload l'IPA sur TestFlight
+- Skip l'attente du processing (optionnel)
+
+**Fichier : `fastlane/Appfile`**
+
+Contient le bundle ID et le team ID
+
+### 3. Configuration iOS
+
+**Fichier : `ios/App/App/Info.plist`** (patches)
+
+Permissions requises pour l'App Store :
+- Géolocalisation
+- Caméra
+- Notifications push
+- Deep linking OAuth
 
 ---
 
 ## Détails techniques
 
-### Structure de données des blocs
+### Workflow complet `.github/workflows/ios-appstore.yml`
+
+```yaml
+name: Build & Upload iOS to TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Build number (auto-increment if empty)'
+        required: false
+        default: ''
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔨 Build web app
+        run: npm run build
+
+      - name: 📱 Add iOS platform
+        run: |
+          npx cap add ios || true
+          npx cap sync ios
+
+      - name: 🔧 Update Bundle Identifier
+        run: |
+          # Modifier le bundle ID dans le projet Xcode
+          sed -i '' 's/app.runconnect/com.ferdi.runconnect/g' \
+            ios/App/App.xcodeproj/project.pbxproj
+
+      - name: 🔐 Setup signing keychain
+        env:
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          # Créer keychain temporaire
+          KEYCHAIN_NAME="build.keychain"
+          KEYCHAIN_PASSWORD="temp_password_$(date +%s)"
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security default-keychain -s "$KEYCHAIN_NAME"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security set-keychain-settings -t 3600 -u "$KEYCHAIN_NAME"
+          
+          # Importer certificat
+          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 -k "$KEYCHAIN_NAME" \
+            -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          
+          # Installer provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+          PROFILE_UUID=$(security cms -D -i profile.mobileprovision | \
+            grep -A1 UUID | grep string | sed 's/.*<string>\(.*\)<\/string>/\1/')
+          cp profile.mobileprovision \
+            ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
+
+      - name: 🏗️ Build iOS archive
+        run: |
+          cd ios/App
+          
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/App.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="RunConnect AppStore"
+
+      - name: 📦 Export IPA
+        run: |
+          cd ios/App
+          
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" 
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+          
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportPath build/ipa \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: 💎 Setup Ruby & Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: 📤 Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          # Décoder la clé API
+          echo "$ASC_KEY_P8" | base64 --decode > AuthKey.p8
+          
+          gem install fastlane
+          
+          fastlane pilot upload \
+            --api_key_path AuthKey.p8 \
+            --ipa ios/App/build/ipa/App.ipa \
+            --skip_waiting_for_build_processing true
+
+      - name: 🧹 Cleanup
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+          rm -f certificate.p12 profile.mobileprovision AuthKey.p8
+```
+
+### Configuration Fastlane
+
+**`fastlane/Fastfile`** :
+```ruby
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload to TestFlight"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: "AuthKey.p8",
+      duration: 1200,
+      in_house: false
+    )
+    
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      ipa: "ios/App/build/ipa/App.ipa"
+    )
+  end
+end
+```
+
+**`fastlane/Appfile`** :
+```ruby
+app_identifier("com.ferdi.runconnect")
+apple_id("votre-email@example.com")
+team_id(ENV["APPLE_TEAM_ID"])
+```
+
+**`Gemfile`** (à la racine) :
+```ruby
+source "https://rubygems.org"
+gem "fastlane"
+```
+
+---
+
+## Mise à jour `capacitor.config.ts`
+
+Modifier le fichier pour utiliser le bundle ID iOS demandé :
 
 ```typescript
-// Exemple : 10x400m
-const exampleBlocks: SessionBlock[] = [
-  {
-    id: 'block-1',
-    type: 'warmup',
-    duration: '15',
-    durationType: 'time',
-    intensity: 'z2',
-    pace: '5:30'
-  },
-  {
-    id: 'block-2',
-    type: 'interval',
-    repetitions: 10,
-    effortDuration: '400',
-    effortType: 'distance',
-    effortIntensity: 'z5',
-    effortPace: '3:30',
-    recoveryDuration: '90',
-    recoveryType: 'trot'
-  },
-  {
-    id: 'block-3',
-    type: 'cooldown',
-    duration: '10',
-    durationType: 'time',
-    intensity: 'z1',
-    pace: '6:00'
-  }
-];
-```
-
-### Stockage en base de données
-
-Option 1 - Sérialisation JSON dans le champ `description` (simple)
-Option 2 - Nouveau champ `session_blocks` de type JSONB (recommandé)
-
-Migration DB nécessaire :
-```sql
-ALTER TABLE sessions ADD COLUMN session_blocks jsonb DEFAULT NULL;
-ALTER TABLE sessions ADD COLUMN session_mode text DEFAULT 'simple';
-```
-
-### Calcul automatique du niveau
-
-Le niveau (1-6) est recalculé à partir des blocs :
-- Prend l'intensité la plus élevée des blocs
-- Considère les allures d'effort des séries
-- Plus le volume à haute intensité est élevé, plus le niveau monte
-
----
-
-## Design UI (style iOS Settings)
-
-### Palette de couleurs des blocs
-
-| Type | Couleur de fond | Icône |
-|------|-----------------|-------|
-| Échauffement | `bg-green-500/10` | Timer vert |
-| Série | `bg-orange-500/10` | Flame orange |
-| Récup | `bg-blue-500/10` | Pause bleue |
-| Retour au calme | `bg-purple-500/10` | Timer violet |
-
-### Spacing et arrondis
-
-- Cartes : `rounded-xl` (12px)
-- Sections : `rounded-2xl` (16px)
-- Padding sections : `p-4`
-- Gap entre éléments : `gap-3`
-
-### Switch Mode (style iOS)
-
-```tsx
-<div className="bg-secondary rounded-xl p-1 flex">
-  <button 
-    className={cn(
-      "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
-      sessionMode === 'simple' 
-        ? "bg-white shadow-sm" 
-        : "text-muted-foreground"
-    )}
-  >
-    Simple
-  </button>
-  <button 
-    className={cn(
-      "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
-      sessionMode === 'structured' 
-        ? "bg-white shadow-sm" 
-        : "text-muted-foreground"
-    )}
-  >
-    Structurée
-  </button>
-</div>
+const config: CapacitorConfig = {
+  appId: 'com.ferdi.runconnect', // Changé pour iOS
+  appName: 'RunConnect',
+  webDir: 'dist',
+  // ... reste de la config
+};
 ```
 
 ---
 
-## Flux utilisateur
+## Prérequis Apple Developer (à faire manuellement)
+
+### 1. Créer l'App ID
+Dans Apple Developer Portal :
+- Identifiers → App IDs → (+)
+- Bundle ID : `com.ferdi.runconnect`
+- Capabilities : Push Notifications, Sign In with Apple (si besoin)
+
+### 2. Créer le certificat de distribution
+- Certificates → (+)
+- Apple Distribution
+- Télécharger et exporter en .p12
+
+### 3. Créer le profil de provisioning
+- Profiles → (+)
+- App Store Distribution
+- Sélectionner l'App ID et le certificat
+- Télécharger
+
+### 4. Créer l'API Key App Store Connect
+- App Store Connect → Users and Access → Keys
+- (+) Créer une clé avec rôle "App Manager"
+- Télécharger le .p8
+
+### 5. Créer l'app dans App Store Connect
+- My Apps → (+)
+- Bundle ID : `com.ferdi.runconnect`
+- Nom : RunConnect
+
+---
+
+## Encodage des secrets pour GitHub
+
+```bash
+# Certificat .p12
+base64 -i certificate.p12 | pbcopy
+
+# Profil de provisioning
+base64 -i profile.mobileprovision | pbcopy
+
+# Clé API .p8
+base64 -i AuthKey_XXXXXXX.p8 | pbcopy
+```
+
+---
+
+## Structure finale des fichiers
 
 ```
-1. Utilisateur arrive sur Détails
+.github/
+└── workflows/
+    ├── build-aab.yml          # Android (existant)
+    └── ios-appstore.yml       # iOS (nouveau)
+
+fastlane/
+├── Appfile                    # Nouveau
+└── Fastfile                   # Nouveau
+
+Gemfile                        # Nouveau
+capacitor.config.ts            # Modifié (bundle ID iOS)
+```
+
+---
+
+## Flux de publication
+
+```text
+1. Développeur fait un push ou déclenche manuellement le workflow
    ↓
-2. Switch "Simple / Structurée" visible en haut
+2. GitHub Actions (macos-latest) démarre
    ↓
-3a. Mode Simple → Champs classiques (intensité, distance, allure)
+3. Build web app (Vite → dist/)
    ↓
-3b. Mode Structurée → Constructeur de blocs
+4. Génère projet iOS (Capacitor)
    ↓
-4. Section Itinéraire (optionnel)
-   → Sélection → Auto-fill distance/D+
+5. Configure signing (keychain + certificats)
    ↓
-5. Sections communes (participants, visibilité, club)
+6. Build archive Xcode
    ↓
-6. Aperçu → Soumission
+7. Export IPA (méthode app-store)
+   ↓
+8. Upload TestFlight (Fastlane pilot)
+   ↓
+9. Build disponible dans App Store Connect !
 ```
 
 ---
 
 ## Résultat attendu
 
-1. **Switch en haut** : Bascule fluide entre séance simple et structurée
-2. **Constructeur de blocs** : Interface empilée style Apple pour créer des séances complexes
-3. **Adaptation automatique** : Champs dynamiques selon le sport sélectionné
-4. **Lien itinéraire** : Sélection d'un tracé existant avec auto-remplissage
-5. **Design premium** : Cohérent avec iOS Settings, espacements généreux, animations fluides
+- **Aucun Mac nécessaire** pour publier
+- **Workflow manuel** (workflow_dispatch) déclenché depuis GitHub
+- **Upload automatique** sur TestFlight
+- **Compatible** avec la révision Apple App Store
+- **Parallèle** au workflow Android existant
