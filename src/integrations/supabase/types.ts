@@ -908,6 +908,7 @@ export type Database = {
           description: string | null
           distance_km: number | null
           friends_only: boolean | null
+          hidden_from_users: string[] | null
           id: string
           image_url: string | null
           intensity: string | null
@@ -930,6 +931,7 @@ export type Database = {
           session_type: string
           title: string
           updated_at: string
+          visibility_type: string | null
         }
         Insert: {
           activity_type: string
@@ -940,6 +942,7 @@ export type Database = {
           description?: string | null
           distance_km?: number | null
           friends_only?: boolean | null
+          hidden_from_users?: string[] | null
           id?: string
           image_url?: string | null
           intensity?: string | null
@@ -962,6 +965,7 @@ export type Database = {
           session_type: string
           title: string
           updated_at?: string
+          visibility_type?: string | null
         }
         Update: {
           activity_type?: string
@@ -972,6 +976,7 @@ export type Database = {
           description?: string | null
           distance_km?: number | null
           friends_only?: boolean | null
+          hidden_from_users?: string[] | null
           id?: string
           image_url?: string | null
           intensity?: string | null
@@ -994,6 +999,7 @@ export type Database = {
           session_type?: string
           title?: string
           updated_at?: string
+          visibility_type?: string | null
         }
         Relationships: [
           {

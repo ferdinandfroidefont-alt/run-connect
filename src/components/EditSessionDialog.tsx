@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, ImagePlus, X, Upload } from "lucide-react";
+import { Calendar, Clock, MapPin, ImagePlus, X, Upload, Eye } from "lucide-react";
+import { VisibilitySelector, VisibilityType } from "@/components/session-creation/VisibilitySelector";
 
 interface EditSessionDialogProps {
   isOpen: boolean;
@@ -18,12 +19,13 @@ interface EditSessionDialogProps {
 }
 
 export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }: EditSessionDialogProps) => {
-  const { user } = useAuth();
+  const { user, subscriptionInfo } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const isPremium = subscriptionInfo?.subscribed || false;
   
   const [formData, setFormData] = useState({
     title: "",
@@ -43,6 +45,9 @@ export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }
     location_lat: "",
     location_lng: "",
     image_url: "",
+    club_id: null as string | null,
+    visibility_type: "friends" as VisibilityType,
+    hidden_from_users: [] as string[],
   });
 
   useEffect(() => {
@@ -71,6 +76,9 @@ export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }
         location_lat: session.location_lat?.toString() || "",
         location_lng: session.location_lng?.toString() || "",
         image_url: session.image_url || "",
+        club_id: session.club_id || null,
+        visibility_type: session.visibility_type || "friends",
+        hidden_from_users: session.hidden_from_users || [],
       });
       setImagePreview(session.image_url || null);
     }
@@ -188,6 +196,11 @@ export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }
           location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
           location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
           image_url: imageUrl || null,
+          // Visibility fields
+          visibility_type: formData.visibility_type,
+          hidden_from_users: formData.hidden_from_users,
+          friends_only: formData.visibility_type === 'friends',
+          club_id: formData.club_id,
         })
         .eq('id', session.id);
 
@@ -514,8 +527,24 @@ export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }
             </>
           )}
 
+          {/* Visibility */}
+          <div className="border-t pt-4">
+            <Label className="flex items-center gap-2 mb-3">
+              <Eye className="h-4 w-4" />
+              Visibilité de la séance
+            </Label>
+            <VisibilitySelector
+              visibilityType={formData.visibility_type}
+              hiddenFromUsers={formData.hidden_from_users}
+              isPremium={isPremium}
+              onVisibilityChange={(type) => setFormData(prev => ({ ...prev, visibility_type: type }))}
+              onHiddenUsersChange={(userIds) => setFormData(prev => ({ ...prev, hidden_from_users: userIds }))}
+              clubId={formData.club_id}
+            />
+          </div>
+
           {/* Image */}
-          <div>
+          <div className="border-t pt-4">
             <Label>Image de la séance</Label>
             <div className="space-y-2">
               {imagePreview && (

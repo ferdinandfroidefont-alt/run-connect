@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, UserCheck } from 'lucide-react';
+import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, Eye, EyeOff, Building2, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SessionFormData, SelectedLocation, ACTIVITY_TYPES } from '../types';
+import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType } from '../types';
 import { cn } from '@/lib/utils';
 
 interface ConfirmStepProps {
@@ -13,6 +13,32 @@ interface ConfirmStepProps {
   onSubmit: () => void;
   onBack: () => void;
 }
+
+const getVisibilityLabel = (type: VisibilityType, hiddenCount: number) => {
+  switch (type) {
+    case 'friends':
+      return hiddenCount > 0 ? `Amis (${hiddenCount} masqué${hiddenCount > 1 ? 's' : ''})` : 'Amis';
+    case 'club':
+      return 'Club';
+    case 'public':
+      return 'Public';
+    default:
+      return 'Amis';
+  }
+};
+
+const getVisibilityIcon = (type: VisibilityType) => {
+  switch (type) {
+    case 'friends':
+      return Users;
+    case 'club':
+      return Building2;
+    case 'public':
+      return Globe;
+    default:
+      return Users;
+  }
+};
 
 export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   formData,
@@ -123,11 +149,20 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   <span>{formData.distance_km} km</span>
                 </div>
               )}
+              {/* Visibility indicator */}
               <div className="flex items-center gap-2 text-sm">
-                <UserCheck className="w-4 h-4 text-muted-foreground" />
-                <span>{formData.friends_only ? 'Amis' : 'Public'}</span>
+                {React.createElement(getVisibilityIcon(formData.visibility_type), { className: "w-4 h-4 text-muted-foreground" })}
+                <span>{getVisibilityLabel(formData.visibility_type, formData.hidden_from_users?.length || 0)}</span>
               </div>
             </div>
+
+            {/* Hidden users warning */}
+            {formData.visibility_type === 'friends' && formData.hidden_from_users?.length > 0 && (
+              <div className="pt-2 border-t border-white/10 flex items-center gap-2 text-xs text-amber-500">
+                <EyeOff className="w-3.5 h-3.5" />
+                <span>{formData.hidden_from_users.length} ami{formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance</span>
+              </div>
+            )}
 
             {/* Description */}
             {formData.description && (

@@ -1,4 +1,5 @@
 export type BlockType = 'warmup' | 'interval' | 'cooldown' | 'steady';
+export type VisibilityType = 'friends' | 'club' | 'public';
 
 export interface SessionBlock {
   id: string;
@@ -52,6 +53,9 @@ export interface SessionFormData {
   session_mode: SessionMode;
   blocks: SessionBlock[];
   route_id: string | null;
+  // Visibility fields
+  visibility_type: VisibilityType;
+  hidden_from_users: string[];
 }
 
 export interface SelectedLocation {
@@ -170,6 +174,9 @@ export const DEFAULT_FORM_DATA: SessionFormData = {
   session_mode: "simple",
   blocks: [],
   route_id: null,
+  // Visibility defaults
+  visibility_type: "friends",
+  hidden_from_users: [],
 };
 
 // Helper function to check if activity supports pace fields
