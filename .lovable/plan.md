@@ -1,105 +1,221 @@
 
 
-# Correction du Pipeline iOS — Ajout des descriptions de permissions Info.plist
+# Système de Visibilité Avancé pour les Séances
 
-## Problème identifié
+## Résumé
 
-Apple rejette le build car le fichier `Info.plist` ne contient pas les descriptions obligatoires pour les permissions sensibles :
-
-### Erreurs OBLIGATOIRES (bloquantes)
-| Clé manquante | Description |
-|---------------|-------------|
-| `NSContactsUsageDescription` | Accès aux contacts |
-| `NSPhotoLibraryUsageDescription` | Accès à la galerie photo |
-
-### Avertissements (recommandés)
-| Clé manquante | Description |
-|---------------|-------------|
-| `NSLocationWhenInUseUsageDescription` | Géolocalisation en premier plan |
-| `NSLocationAlwaysAndWhenInUseUsageDescription` | Géolocalisation en arrière-plan |
-
-## Cause
-
-Le dossier `ios/` est généré dynamiquement par `npx cap add ios` dans le workflow. Le `Info.plist` par défaut de Capacitor ne contient pas ces descriptions.
-
-## Solution
-
-Ajouter une étape dans le workflow qui injecte les clés de permissions dans le fichier `Info.plist` après la génération du projet iOS.
+Ajouter un système de visibilité premium style Réglages iPhone permettant de définir qui peut voir chaque séance, avec 3 niveaux de visibilité et la possibilité de masquer pour des amis spécifiques via une barre de recherche.
 
 ---
 
-## Changement à effectuer
+## Fonctionnalités à implémenter
 
-### Fichier : `.github/workflows/ios-appstore.yml`
+### 1. Options de Visibilité (3 niveaux)
 
-Ajouter une nouvelle étape **après** "Add iOS platform" et **avant** "Update Bundle Identifier" :
+| Option | Description | Badge | Premium |
+|--------|-------------|-------|---------|
+| **Amis uniquement** | Visible par vos amis acceptés | ✅ Recommandé | Non |
+| **Club** | Visible par les membres d'un club sélectionné | - | Non |
+| **Tout le monde** | Visible publiquement dans Découvrir | 👑 Premium | **Oui** |
 
-```yaml
-- name: 📝 Configure Info.plist permissions
-  run: |
-    INFO_PLIST="ios/App/App/Info.plist"
-    
-    # Contacts
-    /usr/libexec/PlistBuddy -c "Add :NSContactsUsageDescription string 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Set :NSContactsUsageDescription 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST"
-    
-    # Photo Library (lecture)
-    /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST"
-    
-    # Photo Library (écriture)
-    /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST"
-    
-    # Location (en utilisation)
-    /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST"
-    
-    # Location (toujours)
-    /usr/libexec/PlistBuddy -c "Add :NSLocationAlwaysAndWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Set :NSLocationAlwaysAndWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST"
-    
-    # Camera
-    /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST"
-    
-    echo "✅ Info.plist permissions configured"
-    
-    # Afficher les clés pour vérification
-    echo "📋 Permissions in Info.plist:"
-    /usr/libexec/PlistBuddy -c "Print :NSContactsUsageDescription" "$INFO_PLIST"
-    /usr/libexec/PlistBuddy -c "Print :NSPhotoLibraryUsageDescription" "$INFO_PLIST"
-    /usr/libexec/PlistBuddy -c "Print :NSLocationWhenInUseUsageDescription" "$INFO_PLIST"
+### 2. Masquer pour des amis spécifiques
+
+- Barre de recherche pour filtrer parmi vos amis
+- Sélection multiple des personnes à exclure
+- Les personnes masquées ne verront pas la séance
+
+### 3. Modification depuis "Mes séances"
+
+- Section visibilité dans EditSessionDialog
+- Même interface que la création
+- Changements immédiats
+
+---
+
+## Changements Base de Données
+
+### Nouvelle colonne `sessions`
+
+```sql
+ALTER TABLE sessions 
+ADD COLUMN visibility_type TEXT DEFAULT 'friends' 
+CHECK (visibility_type IN ('friends', 'club', 'public'));
+
+ALTER TABLE sessions 
+ADD COLUMN hidden_from_users UUID[] DEFAULT '{}';
+```
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `visibility_type` | TEXT | 'friends' / 'club' / 'public' |
+| `hidden_from_users` | UUID[] | Liste des user_id qui ne verront pas la séance |
+
+---
+
+## Modifications des Fichiers
+
+### 1. Types (`src/components/session-creation/types.ts`)
+
+Ajouter les nouveaux champs au `SessionFormData` :
+
+```typescript
+export type VisibilityType = 'friends' | 'club' | 'public';
+
+export interface SessionFormData {
+  // ... existing fields
+  visibility_type: VisibilityType;
+  hidden_from_users: string[];
+}
+```
+
+### 2. Nouveau composant (`src/components/session-creation/VisibilitySelector.tsx`)
+
+Composant style Réglages iPhone avec :
+
+- **Section "Qui peut voir"** : 3 options radio avec icônes colorées
+  - 👥 Amis uniquement (vert, badge "Recommandé")
+  - 🏢 Club (bleu)
+  - 🌍 Tout le monde (orange, badge "Premium" + lock si non premium)
+
+- **Section "Masquer pour"** : 
+  - Barre de recherche avec icône 🔍
+  - Liste scrollable des amis avec avatar et checkbox
+  - Compteur "X personnes masquées"
+
+### 3. ConfirmStep (`src/components/session-creation/steps/ConfirmStep.tsx`)
+
+- Intégrer `VisibilitySelector` en remplacement du simple toggle
+- Afficher le résumé de la visibilité dans l'aperçu
+
+### 4. DetailsStep (`src/components/session-creation/steps/DetailsStep.tsx`)
+
+- Supprimer l'ancien toggle "Amis uniquement"
+- Remplacer par le nouveau `VisibilitySelector`
+- Lier au club selector existant
+
+### 5. CreateSessionWizard (`src/components/session-creation/CreateSessionWizard.tsx`)
+
+- Mettre à jour handleSubmit pour envoyer `visibility_type` et `hidden_from_users`
+- Logique de validation premium pour "public"
+
+### 6. EditSessionDialog (`src/components/EditSessionDialog.tsx`)
+
+- Ajouter la section visibilité avec le même composant
+- Charger les valeurs existantes
+- Permettre la modification
+
+### 7. InteractiveMap (`src/components/InteractiveMap.tsx`)
+
+- Modifier la logique de filtrage pour respecter `visibility_type`
+- Exclure les sessions où l'utilisateur est dans `hidden_from_users`
+
+### 8. useSessionWizard (`src/components/session-creation/useSessionWizard.ts`)
+
+- Ajouter `visibility_type` et `hidden_from_users` au state
+
+---
+
+## Design UI (Style iOS Réglages)
+
+### VisibilitySelector - Vue principale
+
+```
+┌─────────────────────────────────────────┐
+│  QUI PEUT VOIR                          │
+├─────────────────────────────────────────┤
+│ ┌────────────────────────────────────┐  │
+│ │ 👥 Amis uniquement    [Recommandé] │  │
+│ │    Visible par vos amis     ○──●   │  │
+│ ├────────────────────────────────────┤  │
+│ │ 🏢 Club                            │  │
+│ │    Visible par le club       ●──○  │  │
+│ ├────────────────────────────────────┤  │
+│ │ 🌍 Tout le monde        👑 Premium │  │
+│ │    Visible dans Découvrir    ●──○  │  │
+│ └────────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│  MASQUER POUR (OPTIONNEL)               │
+├─────────────────────────────────────────┤
+│ ┌────────────────────────────────────┐  │
+│ │ 🔍 Rechercher un ami...            │  │
+│ └────────────────────────────────────┘  │
+│ ┌────────────────────────────────────┐  │
+│ │ 👤 Marie Dupont              ☐     │  │
+│ ├────────────────────────────────────┤  │
+│ │ 👤 Pierre Martin             ☑     │  │
+│ ├────────────────────────────────────┤  │
+│ │ 👤 Sophie Bernard            ☐     │  │
+│ └────────────────────────────────────┘  │
+│         1 personne masquée              │
+└─────────────────────────────────────────┘
+```
+
+### Composants UI utilisés
+
+- `IOSListGroup` et `IOSListItem` pour le style natif
+- `Switch` ou `RadioGroup` pour les options de visibilité
+- `Input` avec icône de recherche
+- `Checkbox` pour la sélection des amis à masquer
+- `Avatar` pour les photos de profil
+
+---
+
+## Logique de Filtrage (Backend)
+
+### Règles de visibilité dans InteractiveMap
+
+```typescript
+// Filtrer les sessions visibles
+visibleSessions = sessions.filter(session => {
+  // Toujours voir ses propres sessions
+  if (session.organizer_id === user.id) return true;
+  
+  // Vérifier si masqué pour cet utilisateur
+  if (session.hidden_from_users?.includes(user.id)) return false;
+  
+  switch (session.visibility_type) {
+    case 'friends':
+      return friendIds.includes(session.organizer_id);
+    case 'club':
+      return userClubIds.includes(session.club_id);
+    case 'public':
+      return true;
+    default:
+      return false;
+  }
+});
 ```
 
 ---
 
-## Résumé des permissions ajoutées
+## Migration des données existantes
 
-| Clé | Description en français |
-|-----|------------------------|
-| `NSContactsUsageDescription` | "RunConnect a besoin d'accéder à vos contacts pour trouver vos amis qui utilisent l'application et les inviter à rejoindre vos sessions." |
-| `NSPhotoLibraryUsageDescription` | "RunConnect a besoin d'accéder à vos photos pour définir votre photo de profil." |
-| `NSPhotoLibraryAddUsageDescription` | "RunConnect a besoin d'accéder à vos photos pour enregistrer des images." |
-| `NSLocationWhenInUseUsageDescription` | "RunConnect a besoin d'accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours." |
-| `NSLocationAlwaysAndWhenInUseUsageDescription` | "RunConnect a besoin d'accéder à votre position en arrière-plan pour suivre vos sessions d'entraînement." |
-| `NSCameraUsageDescription` | "RunConnect a besoin d'accéder à la caméra pour prendre des photos de profil." |
+Pour les sessions existantes avec `friends_only` :
+
+```sql
+UPDATE sessions 
+SET visibility_type = CASE 
+  WHEN friends_only = true THEN 'friends'
+  ELSE 'public'
+END
+WHERE visibility_type IS NULL;
+```
 
 ---
 
-## Détail technique
+## Récapitulatif des fichiers à modifier/créer
 
-### Pourquoi utiliser `PlistBuddy` ?
-
-- `PlistBuddy` est l'outil officiel Apple pour modifier les fichiers `.plist`
-- La syntaxe `Add ... || Set ...` permet de créer la clé si elle n'existe pas, ou de la mettre à jour si elle existe déjà
-- Les apostrophes dans les textes français sont échappées avec `'\''`
-
-### Position dans le workflow
-
-L'étape sera insérée entre :
-1. `📱 Add iOS platform` (ligne 37-40)
-2. `🔧 Update Bundle Identifier` (ligne 42-45)
-
-Cela garantit que le `Info.plist` existe avant modification et que les changements sont inclus dans le build.
+| Fichier | Action |
+|---------|--------|
+| `src/components/session-creation/types.ts` | Modifier |
+| `src/components/session-creation/VisibilitySelector.tsx` | **Créer** |
+| `src/components/session-creation/steps/ConfirmStep.tsx` | Modifier |
+| `src/components/session-creation/steps/DetailsStep.tsx` | Modifier |
+| `src/components/session-creation/useSessionWizard.ts` | Modifier |
+| `src/components/session-creation/CreateSessionWizard.tsx` | Modifier |
+| `src/components/EditSessionDialog.tsx` | Modifier |
+| `src/components/InteractiveMap.tsx` | Modifier |
+| Migration SQL | Créer |
 
