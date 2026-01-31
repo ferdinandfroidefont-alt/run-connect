@@ -101,11 +101,17 @@ jobs:
       - name: 🔧 Configure App signing
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          PROFILE_UUID: ${{ env.PROFILE_UUID }}
         run: |
           cd ios/App
           
           echo "Using Profile UUID: $PROFILE_UUID"
+          echo "Using Team ID: $APPLE_TEAM_ID"
+          
+          # Vérifier que PROFILE_UUID est défini
+          if [ -z "$PROFILE_UUID" ]; then
+            echo "❌ ERROR: PROFILE_UUID is empty!"
+            exit 1
+          fi
           
           ruby << RUBY_SCRIPT
           require 'xcodeproj'
