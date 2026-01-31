@@ -204,16 +204,27 @@ jobs:
             -exportPath "$RUNNER_TEMP/export" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
 
+      # ✅ AJOUT: localiser l’IPA (chemin exact)
+      - name: 📍 Locate IPA
+        run: |
+          echo "Files in export:"
+          ls -la "${{ runner.temp }}/export" || true
+          IPA_PATH=$(ls -1 "${{ runner.temp }}/export"/*.ipa | head -n 1)
+          echo "IPA_PATH=$IPA_PATH" >> $GITHUB_ENV
+          echo "✅ IPA_PATH=$IPA_PATH"
+
+      # ✅ MODIF: plus de wildcard, on utilise le chemin exact
       - name: 📦 Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
-          path: ${{ runner.temp }}/export/*.ipa
+          path: ${{ env.IPA_PATH }}
 
+      # ✅ MODIF: plus de wildcard, on utilise le chemin exact
       - name: 🚀 Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
-          app-path: ${{ runner.temp }}/export/*.ipa
+          app-path: ${{ env.IPA_PATH }}
           issuer-id: ${{ secrets.ASC_ISSUER_ID }}
           api-key-id: ${{ secrets.ASC_KEY_ID }}
           api-private-key: ${{ secrets.ASC_API_KEY_P8 }}
