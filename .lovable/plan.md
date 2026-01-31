@@ -1,320 +1,51 @@
 
 
-# Correction complète du Pipeline iOS — Version robuste et fiable
+# Correction du Pipeline iOS — Mise à jour vers Xcode 16
 
-## Analyse du problème
+## Problème identifié
 
-Le workflow actuel a plusieurs problèmes :
+L'erreur est très claire :
 
-1. **Décodage base64 incorrect** : `echo -n "$VAR" | base64 --decode -o` peut échouer sur certaines versions de macOS
-2. **Extraction UUID fragile** : La commande `security cms -D` peut échouer silencieusement
-3. **Transmission de variable entre étapes** : `$GITHUB_ENV` n'est pas toujours fiable entre étapes
-4. **Pas de version Xcode fixée** : `macos-latest` peut changer de version Xcode
+> **SDK version issue. This app was built with the iOS 17.5 SDK. All iOS and iPadOS apps must be built with the iOS 18 SDK or later, included in Xcode 16 or later.**
 
-## Solution proposée
+Le workflow utilise actuellement **Xcode 15.4** (ligne 23) qui inclut le SDK iOS 17.5. Apple exige maintenant le **SDK iOS 18** (Xcode 16+) pour soumettre des apps sur l'App Store.
 
-Je vais réécrire le workflow en utilisant les meilleures pratiques observées dans le workflow `build-aab.yml` et les recommandations GitHub officielles.
+## Solution
 
----
+Mettre à jour la version de Xcode de `15.4` vers `16.2` (dernière version stable disponible sur `macos-14`).
 
-## Changements majeurs
+## Changement à effectuer
 
-### 1. Fixer la version de macOS et Xcode
+### Fichier : `.github/workflows/ios-appstore.yml`
 
-```yaml
-runs-on: macos-14
-# + Ajouter setup-xcode pour garantir une version stable
-```
-
-### 2. Utiliser `$RUNNER_TEMP` pour tous les fichiers temporaires
-
-Au lieu de créer des fichiers dans le répertoire courant, utiliser `$RUNNER_TEMP` qui est nettoyé automatiquement.
-
-### 3. Simplifier le décodage base64
-
-```bash
-# Méthode GitHub officielle
-echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_PATH"
-```
-
-### 4. Extraire l'UUID avec PlistBuddy via stdin (plus fiable)
-
-```bash
-UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$(security cms -D -i "$PROFILE_PATH")")
-```
-
-### 5. Sauvegarder l'UUID dans `$GITHUB_OUTPUT` au lieu de `$GITHUB_ENV`
-
-```bash
-echo "profile_uuid=$UUID" >> $GITHUB_OUTPUT
-```
-
-Puis y accéder via `${{ steps.keychain.outputs.profile_uuid }}`
-
-### 6. Ajouter une étape CocoaPods explicite
-
-Les projets Capacitor avec dépendances natives nécessitent `pod install`.
-
----
-
-## Workflow complet révisé
+**Ligne 23** - Changer la version de Xcode :
 
 ```yaml
-name: Build & Upload iOS to TestFlight
+# Avant
+xcode-version: "15.4"
 
-on:
-  workflow_dispatch:
-    inputs:
-      build_number:
-        description: 'Build number (auto-increment if empty)'
-        required: false
-        default: ''
-
-jobs:
-  build-ios:
-    runs-on: macos-14
-    timeout-minutes: 60
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🧰 Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: "15.4"
-
-      - name: ⚙️ Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: 📦 Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: 🔨 Build web app
-        run: npm run build
-
-      - name: 📱 Add iOS platform
-        run: |
-          npx cap add ios || true
-          npx cap sync ios
-
-      - name: 🔧 Update Bundle Identifier
-        run: |
-          sed -i '' 's/app.lovable.[^"]*\|io\.ionic\.starter/com.ferdi.runconnect/g' \
-            ios/App/App.xcodeproj/project.pbxproj
-
-      - name: 💎 Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-
-      - name: 📦 Install xcodeproj gem
-        run: gem install xcodeproj
-
-      - name: 🔐 Setup signing keychain
-        id: keychain
-        env:
-          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-        run: |
-          set -e
-          
-          # Définir les chemins
-          CERT_PATH="$RUNNER_TEMP/certificate.p12"
-          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
-          
-          # Décoder le certificat et le profil
-          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_PATH"
-          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
-          
-          # Vérifier les fichiers
-          echo "📋 Certificate size: $(wc -c < "$CERT_PATH") bytes"
-          echo "📋 Profile size: $(wc -c < "$PROFILE_PATH") bytes"
-          
-          # Créer le keychain
-          security create-keychain -p "" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "" "$KEYCHAIN_PATH"
-          security list-keychains -d user -s "$KEYCHAIN_PATH"
-          
-          # Importer le certificat
-          security import "$CERT_PATH" \
-            -P "$IOS_CERTIFICATE_PASSWORD" \
-            -A -t cert -f pkcs12 \
-            -k "$KEYCHAIN_PATH"
-          
-          security set-key-partition-list \
-            -S apple-tool:,apple:,codesign: \
-            -s -k "" "$KEYCHAIN_PATH"
-          
-          # Extraire l'UUID du profil
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$(security cms -D -i "$PROFILE_PATH")")
-          
-          echo "📋 Profile UUID: $PROFILE_UUID"
-          
-          if [ -z "$PROFILE_UUID" ]; then
-            echo "❌ ERROR: Failed to extract UUID"
-            exit 1
-          fi
-          
-          # Installer le profil
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
-          
-          # Exporter l'UUID pour les étapes suivantes
-          echo "profile_uuid=$PROFILE_UUID" >> $GITHUB_OUTPUT
-          echo "keychain_path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
-          
-          echo "✅ Keychain and profile configured"
-
-      - name: 🔧 Configure App signing
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          PROFILE_UUID: ${{ steps.keychain.outputs.profile_uuid }}
-        run: |
-          cd ios/App
-          
-          echo "📋 Team ID: $APPLE_TEAM_ID"
-          echo "📋 Profile UUID: $PROFILE_UUID"
-          
-          ruby << 'RUBY_SCRIPT'
-          require 'xcodeproj'
-          
-          project = Xcodeproj::Project.open('App.xcodeproj')
-          app_target = project.targets.find { |t| t.name == 'App' }
-          
-          unless app_target
-            puts "❌ App target not found!"
-            exit 1
-          end
-          
-          team_id = ENV['APPLE_TEAM_ID']
-          profile_uuid = ENV['PROFILE_UUID']
-          
-          app_target.build_configurations.each do |config|
-            config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
-            config.build_settings['DEVELOPMENT_TEAM'] = team_id
-            config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
-            config.build_settings['CODE_SIGN_IDENTITY[sdk=iphoneos*]'] = 'Apple Distribution'
-            config.build_settings['PROVISIONING_PROFILE'] = profile_uuid
-            config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = ''
-          end
-          
-          project.save
-          puts "✅ Signing configured for App target"
-          RUBY_SCRIPT
-
-      - name: 📦 Install CocoaPods
-        run: |
-          cd ios/App
-          pod install --repo-update
-
-      - name: 🏗️ Build iOS archive
-        run: |
-          cd ios/App
-          
-          xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -destination "generic/platform=iOS" \
-            clean archive \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            CODE_SIGN_STYLE=Manual
-
-      - name: 📦 Export IPA
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          PROFILE_UUID: ${{ steps.keychain.outputs.profile_uuid }}
-        run: |
-          cat > "$RUNNER_TEMP/ExportOptions.plist" << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>teamID</key>
-            <string>${APPLE_TEAM_ID}</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>stripSwiftSymbols</key>
-            <true/>
-            <key>uploadSymbols</key>
-            <true/>
-            <key>compileBitcode</key>
-            <false/>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>com.ferdi.runconnect</key>
-              <string>${PROFILE_UUID}</string>
-            </dict>
-          </dict>
-          </plist>
-          EOF
-          
-          xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -exportPath "$RUNNER_TEMP/export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
-
-      - name: 📦 Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
-          path: ${{ runner.temp }}/export/*.ipa
-
-      - name: 🚀 Upload to TestFlight
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-path: ${{ runner.temp }}/export/*.ipa
-          issuer-id: ${{ secrets.ASC_ISSUER_ID }}
-          api-key-id: ${{ secrets.ASC_KEY_ID }}
-          api-private-key: ${{ secrets.ASC_API_KEY_P8 }}
-
-      - name: 🧹 Cleanup
-        if: always()
-        run: |
-          security delete-keychain "${{ steps.keychain.outputs.keychain_path }}" || true
+# Après
+xcode-version: "16.2"
 ```
 
----
+## Versions Xcode disponibles sur macos-14
 
-## Résumé des améliorations
+| Version | SDK iOS | Statut |
+|---------|---------|--------|
+| 15.4 | iOS 17.5 | ❌ Rejeté par Apple |
+| 16.0 | iOS 18.0 | ✅ Accepté |
+| 16.1 | iOS 18.1 | ✅ Accepté |
+| 16.2 | iOS 18.2 | ✅ Recommandé |
 
-| Aspect | Avant | Après |
-|--------|-------|-------|
-| Runner macOS | `macos-latest` (variable) | `macos-14` (fixe) |
-| Version Xcode | Non fixée | `15.4` via setup-xcode |
-| Fichiers temporaires | Répertoire courant | `$RUNNER_TEMP` |
-| Transmission UUID | `$GITHUB_ENV` (fragile) | `$GITHUB_OUTPUT` + `steps.*.outputs` |
-| CocoaPods | Implicite | Étape explicite |
-| Upload TestFlight | Fastlane (gem) | Action officielle Apple |
-| Décodage base64 | `printf` + pipe | `echo` direct |
-| Keychain password | Complexe | Vide (plus simple en CI) |
-| Cleanup | Fichiers épars | Automatique via `$RUNNER_TEMP` |
+Je recommande **Xcode 16.2** car c'est la version la plus récente et stable.
 
----
+## Impact
 
-## Secrets requis
+- **Build** : Le projet sera compilé avec iOS 18 SDK
+- **Compatibilité** : L'app restera compatible avec les versions iOS antérieures (selon votre `Deployment Target`)
+- **TestFlight** : L'upload passera la validation Apple
 
-Vérifier que ces secrets sont configurés dans GitHub :
+## Note importante
 
-| Secret | Description |
-|--------|-------------|
-| `IOS_CERTIFICATE_P12_BASE64` | Certificat Apple Distribution encodé en base64 |
-| `IOS_CERTIFICATE_PASSWORD` | Mot de passe du certificat P12 |
-| `IOS_PROVISIONING_PROFILE_BASE64` | Profil App Store encodé en base64 |
-| `APPLE_TEAM_ID` | Team ID Apple (ex: `ABC123XYZ`) |
-| `ASC_ISSUER_ID` | App Store Connect Issuer ID |
-| `ASC_KEY_ID` | App Store Connect API Key ID |
-| `ASC_API_KEY_P8` | Clé API P8 encodée en base64 |
+Si votre provisioning profile a été créé avec un ancien SDK, il devrait quand même fonctionner. Les profils sont liés au Bundle ID et Team, pas à la version du SDK.
 
