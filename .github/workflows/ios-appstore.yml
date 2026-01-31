@@ -39,6 +39,42 @@ jobs:
           npx cap add ios || true
           npx cap sync ios
 
+      - name: 📝 Configure Info.plist permissions
+        run: |
+          INFO_PLIST="ios/App/App/Info.plist"
+          
+          # Contacts
+          /usr/libexec/PlistBuddy -c "Add :NSContactsUsageDescription string 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSContactsUsageDescription 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST"
+          
+          # Photo Library (lecture)
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST"
+          
+          # Photo Library (écriture)
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST"
+          
+          # Location (en utilisation)
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST"
+          
+          # Location (toujours)
+          /usr/libexec/PlistBuddy -c "Add :NSLocationAlwaysAndWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSLocationAlwaysAndWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST"
+          
+          # Camera
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST"
+          
+          echo "✅ Info.plist permissions configured"
+          
+          # Afficher les clés pour vérification
+          echo "📋 Permissions in Info.plist:"
+          /usr/libexec/PlistBuddy -c "Print :NSContactsUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSPhotoLibraryUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSLocationWhenInUseUsageDescription" "$INFO_PLIST"
+
       - name: 🔧 Update Bundle Identifier
         run: |
           sed -i '' 's/app.lovable.[^"]*\|io\.ionic\.starter/com.ferdi.runconnect/g' \
