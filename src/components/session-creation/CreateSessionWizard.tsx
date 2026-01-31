@@ -141,7 +141,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
     const { formData, selectedLocation, selectedImage, selectedRoute, routeMode } = wizard;
 
     // Check premium for public sessions
-    if (!formData.friends_only && !subscriptionInfo?.subscribed) {
+    if (formData.visibility_type === 'public' && !subscriptionInfo?.subscribed) {
       toast({
         title: "Abonnement requis",
         description: "Les séances publiques nécessitent un abonnement premium",
@@ -181,7 +181,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           interval_pace_unit: formData.pace_unit || 'speed',
           interval_count: formData.interval_count ? parseInt(formData.interval_count) : null,
           current_participants: 0,
-          friends_only: formData.friends_only,
+          friends_only: formData.visibility_type === 'friends',
           image_url: imageUrl,
           route_id: formData.route_id || (routeMode === 'existing' && selectedRoute ? selectedRoute : null),
           club_id: formData.club_id,
@@ -192,6 +192,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           session_blocks: formData.blocks && formData.blocks.length > 0 
             ? JSON.parse(JSON.stringify(formData.blocks)) 
             : null,
+          // New visibility fields
+          visibility_type: formData.visibility_type || 'friends',
+          hidden_from_users: formData.hidden_from_users || [],
         }])
         .select()
         .single();

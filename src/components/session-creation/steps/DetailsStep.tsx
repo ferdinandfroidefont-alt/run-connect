@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, UserCheck, Gauge, Mountain, Flame } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, Gauge, Mountain, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   SessionFormData, 
@@ -15,6 +14,7 @@ import {
   TERRAIN_TYPES,
   SessionBlock,
   SessionMode,
+  VisibilityType,
   isEnduranceActivity,
   isRunningActivity,
   isCyclingActivity,
@@ -26,6 +26,7 @@ import { ClubSelector } from '@/components/ClubSelector';
 import { SessionModeSwitch } from '../SessionModeSwitch';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
+import { VisibilitySelector } from '../VisibilitySelector';
 import { cn } from '@/lib/utils';
 
 interface DetailsStepProps {
@@ -243,7 +244,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </div>
         )}
 
-        {/* Participants & Visibility */}
+        {/* Visibility & Participants */}
         <div className="bg-card rounded-2xl p-4 space-y-4">
           {/* Max participants */}
           <div>
@@ -262,29 +263,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             />
           </div>
 
-          {/* Friends only toggle */}
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Amis uniquement</p>
-                <p className="text-xs text-muted-foreground">
-                  {formData.friends_only ? "Visible par vos amis" : isPremium ? "Visible par tous" : "Premium requis"}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={formData.friends_only}
-              onCheckedChange={(checked) => {
-                if (!checked && !isPremium) return;
-                onFormDataChange({ friends_only: checked });
-              }}
-            />
-          </div>
-
-          {/* Club */}
+          {/* Club selector - moved before visibility */}
           <div>
             <Label className="text-sm font-medium flex items-center gap-1.5 mb-2">
               <Users className="w-4 h-4 text-blue-500" />
@@ -292,9 +271,31 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             </Label>
             <ClubSelector
               selectedClubId={formData.club_id}
-              onClubSelect={(clubId) => onFormDataChange({ club_id: clubId })}
+              onClubSelect={(clubId) => {
+                onFormDataChange({ club_id: clubId });
+                // Auto-switch to club visibility if a club is selected
+                if (clubId && formData.visibility_type !== 'club') {
+                  onFormDataChange({ visibility_type: 'club' });
+                }
+              }}
             />
           </div>
+        </div>
+
+        {/* Visibility Selector - iOS Style */}
+        <div className="bg-card rounded-2xl p-4">
+          <VisibilitySelector
+            visibilityType={formData.visibility_type}
+            hiddenFromUsers={formData.hidden_from_users}
+            isPremium={isPremium}
+            onVisibilityChange={(type: VisibilityType) => {
+              onFormDataChange({ visibility_type: type });
+              // Sync friends_only for backwards compatibility
+              onFormDataChange({ friends_only: type === 'friends' });
+            }}
+            onHiddenUsersChange={(userIds) => onFormDataChange({ hidden_from_users: userIds })}
+            clubId={formData.club_id}
+          />
         </div>
 
         {/* Image & Notes */}
