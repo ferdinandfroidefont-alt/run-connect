@@ -67,7 +67,12 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST"
           
+          # Encryption exemption declaration (uses only standard Apple encryption: HTTPS, TLS, Firebase Auth)
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$INFO_PLIST"
+          
           echo "✅ Info.plist permissions configured"
+          echo "✅ Encryption exemption declared"
           
           # Afficher les clés pour vérification
           echo "📋 Permissions in Info.plist:"
