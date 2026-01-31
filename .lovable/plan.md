@@ -1,51 +1,105 @@
 
 
-# Correction du Pipeline iOS — Mise à jour vers Xcode 16
+# Correction du Pipeline iOS — Ajout des descriptions de permissions Info.plist
 
 ## Problème identifié
 
-L'erreur est très claire :
+Apple rejette le build car le fichier `Info.plist` ne contient pas les descriptions obligatoires pour les permissions sensibles :
 
-> **SDK version issue. This app was built with the iOS 17.5 SDK. All iOS and iPadOS apps must be built with the iOS 18 SDK or later, included in Xcode 16 or later.**
+### Erreurs OBLIGATOIRES (bloquantes)
+| Clé manquante | Description |
+|---------------|-------------|
+| `NSContactsUsageDescription` | Accès aux contacts |
+| `NSPhotoLibraryUsageDescription` | Accès à la galerie photo |
 
-Le workflow utilise actuellement **Xcode 15.4** (ligne 23) qui inclut le SDK iOS 17.5. Apple exige maintenant le **SDK iOS 18** (Xcode 16+) pour soumettre des apps sur l'App Store.
+### Avertissements (recommandés)
+| Clé manquante | Description |
+|---------------|-------------|
+| `NSLocationWhenInUseUsageDescription` | Géolocalisation en premier plan |
+| `NSLocationAlwaysAndWhenInUseUsageDescription` | Géolocalisation en arrière-plan |
+
+## Cause
+
+Le dossier `ios/` est généré dynamiquement par `npx cap add ios` dans le workflow. Le `Info.plist` par défaut de Capacitor ne contient pas ces descriptions.
 
 ## Solution
 
-Mettre à jour la version de Xcode de `15.4` vers `16.2` (dernière version stable disponible sur `macos-14`).
+Ajouter une étape dans le workflow qui injecte les clés de permissions dans le fichier `Info.plist` après la génération du projet iOS.
+
+---
 
 ## Changement à effectuer
 
 ### Fichier : `.github/workflows/ios-appstore.yml`
 
-**Ligne 23** - Changer la version de Xcode :
+Ajouter une nouvelle étape **après** "Add iOS platform" et **avant** "Update Bundle Identifier" :
 
 ```yaml
-# Avant
-xcode-version: "15.4"
-
-# Après
-xcode-version: "16.2"
+- name: 📝 Configure Info.plist permissions
+  run: |
+    INFO_PLIST="ios/App/App/Info.plist"
+    
+    # Contacts
+    /usr/libexec/PlistBuddy -c "Add :NSContactsUsageDescription string 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :NSContactsUsageDescription 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST"
+    
+    # Photo Library (lecture)
+    /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST"
+    
+    # Photo Library (écriture)
+    /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST"
+    
+    # Location (en utilisation)
+    /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST"
+    
+    # Location (toujours)
+    /usr/libexec/PlistBuddy -c "Add :NSLocationAlwaysAndWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :NSLocationAlwaysAndWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST"
+    
+    # Camera
+    /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST"
+    
+    echo "✅ Info.plist permissions configured"
+    
+    # Afficher les clés pour vérification
+    echo "📋 Permissions in Info.plist:"
+    /usr/libexec/PlistBuddy -c "Print :NSContactsUsageDescription" "$INFO_PLIST"
+    /usr/libexec/PlistBuddy -c "Print :NSPhotoLibraryUsageDescription" "$INFO_PLIST"
+    /usr/libexec/PlistBuddy -c "Print :NSLocationWhenInUseUsageDescription" "$INFO_PLIST"
 ```
 
-## Versions Xcode disponibles sur macos-14
+---
 
-| Version | SDK iOS | Statut |
-|---------|---------|--------|
-| 15.4 | iOS 17.5 | ❌ Rejeté par Apple |
-| 16.0 | iOS 18.0 | ✅ Accepté |
-| 16.1 | iOS 18.1 | ✅ Accepté |
-| 16.2 | iOS 18.2 | ✅ Recommandé |
+## Résumé des permissions ajoutées
 
-Je recommande **Xcode 16.2** car c'est la version la plus récente et stable.
+| Clé | Description en français |
+|-----|------------------------|
+| `NSContactsUsageDescription` | "RunConnect a besoin d'accéder à vos contacts pour trouver vos amis qui utilisent l'application et les inviter à rejoindre vos sessions." |
+| `NSPhotoLibraryUsageDescription` | "RunConnect a besoin d'accéder à vos photos pour définir votre photo de profil." |
+| `NSPhotoLibraryAddUsageDescription` | "RunConnect a besoin d'accéder à vos photos pour enregistrer des images." |
+| `NSLocationWhenInUseUsageDescription` | "RunConnect a besoin d'accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours." |
+| `NSLocationAlwaysAndWhenInUseUsageDescription` | "RunConnect a besoin d'accéder à votre position en arrière-plan pour suivre vos sessions d'entraînement." |
+| `NSCameraUsageDescription` | "RunConnect a besoin d'accéder à la caméra pour prendre des photos de profil." |
 
-## Impact
+---
 
-- **Build** : Le projet sera compilé avec iOS 18 SDK
-- **Compatibilité** : L'app restera compatible avec les versions iOS antérieures (selon votre `Deployment Target`)
-- **TestFlight** : L'upload passera la validation Apple
+## Détail technique
 
-## Note importante
+### Pourquoi utiliser `PlistBuddy` ?
 
-Si votre provisioning profile a été créé avec un ancien SDK, il devrait quand même fonctionner. Les profils sont liés au Bundle ID et Team, pas à la version du SDK.
+- `PlistBuddy` est l'outil officiel Apple pour modifier les fichiers `.plist`
+- La syntaxe `Add ... || Set ...` permet de créer la clé si elle n'existe pas, ou de la mettre à jour si elle existe déjà
+- Les apostrophes dans les textes français sont échappées avec `'\''`
+
+### Position dans le workflow
+
+L'étape sera insérée entre :
+1. `📱 Add iOS platform` (ligne 37-40)
+2. `🔧 Update Bundle Identifier` (ligne 42-45)
+
+Cela garantit que le `Info.plist` existe avant modification et que les changements sont inclus dans le build.
 
