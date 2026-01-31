@@ -88,21 +88,34 @@ jobs:
           
           # Installer provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
           
-          # Debug: afficher le contenu du profil décodé
-          echo "📋 Provisioning profile decoded, extracting UUID..."
-          security cms -D -i profile.mobileprovision > profile_decoded.plist
+          # Décoder le profil avec la méthode recommandée par GitHub
+          echo -n "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode -o profile.mobileprovision
           
-          # Extraire l'UUID du profil avec PlistBuddy (plus fiable)
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" profile_decoded.plist)
+          # Vérifier que le fichier existe et a une taille valide
+          echo "📋 Profile file size: $(wc -c < profile.mobileprovision) bytes"
+          
+          # Vérifier le type de fichier
+          file profile.mobileprovision
+          
+          # Extraire l'UUID avec une méthode plus robuste
+          # D'abord essayer security cms, sinon utiliser grep directement sur le binaire
+          echo "📋 Extracting UUID from provisioning profile..."
+          
+          if security cms -D -i profile.mobileprovision > profile_decoded.plist 2>/dev/null; then
+            PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" profile_decoded.plist)
+          else
+            echo "⚠️ security cms failed, trying alternative method..."
+            # Méthode alternative: extraire l'UUID directement du XML embarqué
+            PROFILE_UUID=$(strings profile.mobileprovision | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | head -1)
+          fi
           
           echo "📋 Extracted UUID: $PROFILE_UUID"
           
           if [ -z "$PROFILE_UUID" ]; then
             echo "❌ ERROR: Failed to extract PROFILE_UUID!"
-            echo "Debug: Profile plist content:"
-            cat profile_decoded.plist | head -50
+            echo "Debug: First 200 chars of profile:"
+            head -c 200 profile.mobileprovision | xxd
             exit 1
           fi
           
