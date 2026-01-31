@@ -39,6 +39,27 @@ jobs:
           npx cap add ios || true
           npx cap sync ios
 
+      - name: 🔢 Set build number
+        run: |
+          # Use GitHub run number as build number (auto-increments with each workflow run)
+          BUILD_NUMBER="${{ github.run_number }}"
+          
+          # If user provided a specific build number, use that instead
+          if [ -n "${{ github.event.inputs.build_number }}" ]; then
+            BUILD_NUMBER="${{ github.event.inputs.build_number }}"
+          fi
+          
+          echo "📋 Setting build number to: $BUILD_NUMBER"
+          
+          # Update Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "ios/App/App/Info.plist"
+          
+          # Also update project.pbxproj for consistency
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" \
+            ios/App/App.xcodeproj/project.pbxproj
+          
+          echo "✅ Build number set to $BUILD_NUMBER"
+
       - name: 📝 Configure Info.plist permissions
         run: |
           INFO_PLIST="ios/App/App/Info.plist"
