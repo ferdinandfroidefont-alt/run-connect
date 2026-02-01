@@ -158,16 +158,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // Nettoyer complètement le stockage local
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('sb-dbptgehpknjsoisirviz-auth-token');
+      console.log('🚪 [AUTH] Starting signOut...');
+      
+      // 1. D'abord déconnecter côté serveur
+      await supabase.auth.signOut({ scope: 'global' });
+      
+      // 2. Nettoyer TOUS les tokens Supabase du localStorage
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase') || key.includes('sb-'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      console.log('🗑️ [AUTH] Removed localStorage keys:', keysToRemove);
+      
+      // 3. Vider sessionStorage
       sessionStorage.clear();
       
-      await supabase.auth.signOut({ scope: 'global' });
+      // 4. Réinitialiser les états React
+      setUser(null);
+      setSession(null);
+      setSubscriptionInfo(null);
+      
+      console.log('✅ [AUTH] SignOut complete, redirecting...');
+      
+      // 5. Forcer un rechargement complet pour vider la mémoire React
       window.location.href = '/auth';
     } catch (error) {
-      console.error('Error signing out:', error);
-      // Forcer la redirection même en cas d'erreur
+      console.error('❌ [AUTH] Error signing out:', error);
+      // Forcer le nettoyage et la redirection même en cas d'erreur
+      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = '/auth';
     }
   };
