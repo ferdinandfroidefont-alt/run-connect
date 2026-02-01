@@ -1,24 +1,24 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, ArrowLeft, ChevronRight } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ProfileSetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   email: string;
-  onComplete?: () => void; // Optionnel pour les utilisateurs existants
+  onComplete?: () => void;
 }
 
 export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
@@ -39,127 +39,49 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const { selectFromGallery, loading: cameraLoading } = useCamera();
 
   const handleFileSelection = (file: File) => {
-    console.log('📸 File selection attempt:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      userAgent: navigator.userAgent
-    });
-    
-    // Vérifier le type de fichier
     if (!file.type.startsWith('image/')) {
-      console.error('❌ Invalid file type:', file.type);
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un fichier image.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
       return;
     }
-
-    // Vérifier la taille du fichier (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Erreur",
-        description: "La taille du fichier ne doit pas dépasser 5MB.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Taille max: 5MB.", variant: "destructive" });
       return;
     }
 
-    // Try/catch sur FileReader pour éviter les crashs
-    try {
-      const reader = new FileReader();
-      
-      reader.onerror = (error) => {
-        console.error('❌ FileReader error:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de lire le fichier image.",
-          variant: "destructive",
-        });
-      };
-      
-      reader.onload = (e) => {
-        try {
-          const imageSrc = e.target?.result as string;
-          if (!imageSrc) {
-            throw new Error('Image source vide');
-          }
-          setOriginalImageSrc(imageSrc);
-          setShowCropEditor(true);
-          console.log('✅ Image chargée avec succès');
-        } catch (loadError) {
-          console.error('❌ Erreur traitement image:', loadError);
-          toast({
-            title: "Erreur",
-            description: "Impossible de traiter l'image.",
-            variant: "destructive",
-          });
-        }
-      };
-      
-      reader.readAsDataURL(file);
-    } catch (readerError) {
-      console.error('❌ FileReader creation error:', readerError);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'initialiser le lecteur de fichier.",
-        variant: "destructive",
-      });
-    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageSrc = e.target?.result as string;
+      if (imageSrc) {
+        setOriginalImageSrc(imageSrc);
+        setShowCropEditor(true);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleCropComplete = (croppedImageBlob: Blob) => {
-    // Créer un fichier à partir du blob croppé
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
     setAvatarFile(croppedFile);
-    
-    // Créer l'URL de prévisualisation
-    const previewUrl = URL.createObjectURL(croppedImageBlob);
-    setAvatarPreview(previewUrl);
-    
+    setAvatarPreview(URL.createObjectURL(croppedImageBlob));
     setShowCropEditor(false);
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
-      console.log('🚀 Starting avatar upload:', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type
-      });
-      
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Math.random()}.${fileExt}`;
-      const filePath = `${userId}/${fileName}`; // Mettre dans un dossier avec l'ID utilisateur
-
-      console.log('📁 Upload path:', filePath);
+      const filePath = `${userId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
 
-      if (uploadError) {
-        console.error('❌ Upload error:', uploadError);
-        toast({
-          title: "Erreur d'upload",
-          description: `Impossible d'uploader l'image: ${uploadError.message}`,
-          variant: "destructive",
-        });
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      console.log('✅ Upload successful');
-
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      console.log('🔗 Public URL generated:', data.publicUrl);
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
       return data.publicUrl;
     } catch (error) {
-      console.error('❌ Erreur upload avatar:', error);
+      console.error('Upload error:', error);
       return null;
     }
   };
@@ -168,97 +90,26 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     e.preventDefault();
     
     if (!avatarFile) {
-      toast({
-        title: "Erreur",
-        description: "La photo de profil est obligatoire.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "La photo de profil est obligatoire.", variant: "destructive" });
       return;
     }
-    
-    if (!username.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le nom d'utilisateur est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!displayName.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le nom d'affichage est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-
-    if (!age || parseInt(age) < 13) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez avoir au moins 13 ans pour utiliser cette application.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!phone.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le numéro de téléphone est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!bio.trim()) {
-      toast({
-        title: "Erreur",
-        description: "La présentation est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!password || password.length < 6) {
-      toast({
-        title: "Erreur",
-        description: "Le mot de passe doit contenir au moins 6 caractères.",
-        variant: "destructive",
-      });
+    if (!username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6) {
+      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
       return;
     }
     
     setIsLoading(true);
 
     try {
-      // Upload avatar si fourni
-      let uploadedUrl = null;
-      if (avatarFile) {
-        uploadedUrl = await uploadAvatar(avatarFile);
-        if (!uploadedUrl) {
-          toast({
-            title: "Erreur",
-            description: "Impossible d'uploader la photo de profil.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
+      const uploadedUrl = await uploadAvatar(avatarFile);
+      if (!uploadedUrl) {
+        toast({ title: "Erreur", description: "Impossible d'uploader la photo.", variant: "destructive" });
+        setIsLoading(false);
+        return;
       }
 
-      // Mettre à jour le mot de passe de l'utilisateur
-      const { error: passwordError } = await supabase.auth.updateUser({
-        password: password
-      });
+      await supabase.auth.updateUser({ password });
 
-      if (passwordError) {
-        throw passwordError;
-      }
-
-      // Vérifier l'unicité du nom d'utilisateur
       const { data: existingUser } = await supabase
         .from('profiles')
         .select('id')
@@ -267,327 +118,251 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         .maybeSingle();
 
       if (existingUser) {
-        toast({
-          title: "Nom d'utilisateur déjà pris",
-          description: "Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.",
-          variant: "destructive",
-        });
+        toast({ title: "Nom d'utilisateur déjà pris", description: "Choisissez-en un autre.", variant: "destructive" });
         setIsLoading(false);
         return;
       }
 
-      // Vérifier si le profil existe déjà
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
         .eq('user_id', userId)
         .maybeSingle();
 
+      const profileData = {
+        username: username.trim(),
+        display_name: displayName.trim(),
+        age: parseInt(age),
+        phone: phone.trim(),
+        bio: bio.trim(),
+        avatar_url: uploadedUrl,
+      };
+
       if (existingProfile) {
-        // Mettre à jour le profil existant
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            username: username.trim(),
-            display_name: displayName.trim() || username.trim(),
-            age: age ? parseInt(age) : null,
-            phone: phone.trim() || null,
-            bio: bio.trim() || null,
-            avatar_url: uploadedUrl,
-          })
-          .eq('user_id', userId);
-
-        if (error) throw error;
-
-        // Vérification immédiate après l'update pour système anti-blocage
-        console.log('✅ Profile updated, verifying avatar URL in database...');
-        const { data: verifyProfile } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('user_id', userId)
-          .single();
-
-        console.log('🔍 Avatar URL in database:', verifyProfile?.avatar_url);
-
-        if (!verifyProfile?.avatar_url) {
-          console.error('⚠️ Avatar URL not found in database after update!');
-          // Ne pas bloquer, mais logger l'erreur pour diagnostic
-        }
+        await supabase.from('profiles').update(profileData).eq('user_id', userId);
       } else {
-        // Créer un nouveau profil
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: userId,
-            username: username.trim(),
-            display_name: displayName.trim() || username.trim(),
-            age: age ? parseInt(age) : null,
-            phone: phone.trim() || null,
-            bio: bio.trim() || null,
-            avatar_url: uploadedUrl,
-          });
-
-        if (error) throw error;
+        await supabase.from('profiles').insert({ user_id: userId, ...profileData });
       }
 
       toast({
-        title: "Profil mis à jour avec succès !",
-        description: onComplete ? "Votre profil a été complété." : "Bienvenue dans RunConnect !",
+        title: "Profil créé !",
+        description: "Bienvenue dans RunConnect !"
       });
 
       onOpenChange(false);
-      
       if (onComplete) {
-        // Pour les utilisateurs existants, appeler onComplete
         onComplete();
       } else {
-        // Pour les nouveaux utilisateurs, rediriger
         window.location.href = '/';
       }
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleSelectPhoto = async () => {
+    try {
+      const file = await selectFromGallery();
+      if (file) handleFileSelection(file);
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error?.message || "Impossible d'accéder à la galerie", variant: "destructive" });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>Finaliser votre profil</DialogTitle>
-              <DialogDescription>
-                Complétez ces informations pour finaliser votre inscription
-              </DialogDescription>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                onOpenChange(false);
-                setTimeout(() => {
-                  navigate('/auth');
-                }, 100);
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Déjà connecté ?
-            </Button>
-          </div>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-background pr-2" style={{ scrollbarWidth: 'thin' }}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Photo de profil */}
-          <div className="flex flex-col items-center space-y-2">
-            <div className="relative">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarPreview} />
-                <AvatarFallback>
-                  {displayName && displayName.length > 0 
-                    ? displayName[0].toUpperCase() 
-                    : email && email.length > 0 
-                      ? email[0].toUpperCase() 
-                      : "U"
-                  }
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            
-            <div className="flex gap-2">
+      <DialogContent fullScreen className="p-0 gap-0 bg-secondary">
+        <div className="flex flex-col h-full">
+          {/* iOS Header */}
+          <div className="bg-card border-b border-border">
+            <div className="flex items-center justify-between px-4 h-[56px]">
               <Button
-                type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={async (e) => {
-                  // preventDefault explicite pour éviter comportements par défaut
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  console.log('📱 Camera button clicked, using Capacitor');
-                  try {
-                    const file = await selectFromGallery();
-                    
-                    if (!file) {
-                      console.warn('⚠️ Aucun fichier sélectionné (annulation ou erreur)');
-                      toast({
-                        title: "Annulé",
-                        description: "Aucune photo sélectionnée",
-                      });
-                      return;
-                    }
-                    
-                    console.log('📸 File selected via Capacitor:', {
-                      name: file.name,
-                      size: file.size,
-                      type: file.type
-                    });
-                    
-                    handleFileSelection(file);
-                  } catch (error: any) {
-                    console.error('❌ Error selecting from gallery:', {
-                      error,
-                      message: error?.message,
-                      stack: error?.stack,
-                      name: error?.name
-                    });
-                    
-                    toast({
-                      title: "Erreur",
-                      description: error?.message || "Impossible d'accéder à la galerie",
-                      variant: "destructive"
-                    });
-                  }
-                }}
-                className="text-xs"
-                disabled={cameraLoading}
+                onClick={() => { onOpenChange(false); navigate('/auth'); }}
+                className="text-[15px] text-primary"
               >
-                <Camera className="h-3 w-3 mr-1" />
-                {cameraLoading ? 'Chargement...' : 'Choisir une photo'}
+                Déjà connecté ?
               </Button>
-              
-              {/* Bouton alternatif pour iOS/téléphones problématiques */}
-              <label 
-                htmlFor="avatar-upload-input"
-                className="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 py-2 cursor-pointer"
-              >
-                📱 Alternative
-              </label>
+              <h1 className="text-[17px] font-semibold">Créer mon profil</h1>
+              <div className="w-20" />
             </div>
-            
-            <input
-              id="avatar-upload-input"
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture={/iPhone|iPad|iPod/i.test(navigator.userAgent) ? undefined : "environment"}
-              onChange={(e) => {
-                console.log('📱 Direct input change triggered');
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleFileSelection(file);
-                }
-              }}
-              className="sr-only"
-              style={{ display: 'none' }}
-            />
-            <p className="text-xs text-muted-foreground">Photo de profil (obligatoire)</p>
           </div>
 
-          {/* Nom d'utilisateur */}
-          <div className="space-y-2">
-            <Label htmlFor="username">Nom d'utilisateur *</Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={email.split('@')[0]}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Uniquement des lettres, chiffres et underscores
-            </p>
-          </div>
+          <ScrollArea className="flex-1">
+            <form onSubmit={handleSubmit} className="px-4 py-6 space-y-6">
+              {/* Avatar Section */}
+              <div className="flex flex-col items-center">
+                <div className="relative">
+                  <Avatar className="h-24 w-24 ring-4 ring-primary/20">
+                    <AvatarImage src={avatarPreview} />
+                    <AvatarFallback className="bg-secondary text-2xl">
+                      {displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    type="button"
+                    onClick={handleSelectPhoto}
+                    disabled={cameraLoading}
+                    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-lg"
+                  >
+                    <Camera className="h-4 w-4 text-white" />
+                  </button>
+                </div>
+                <p className="text-[13px] text-muted-foreground mt-2">Photo de profil *</p>
+                
+                {/* Alternative input for problematic devices */}
+                <label className="mt-2 text-[13px] text-primary cursor-pointer">
+                  📱 Sélection alternative
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelection(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
 
-          {/* Nom d'affichage */}
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Nom complet *</Label>
-            <Input
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Votre nom complet"
-              required
-            />
-          </div>
+              {/* Form Fields */}
+              <div className="space-y-2">
+                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+                  Informations
+                </h3>
+                <div className="bg-card rounded-[10px] overflow-hidden">
+                  {/* Username */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                      <User className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Nom d'utilisateur *"
+                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                      required
+                    />
+                  </div>
+                  <div className="h-px bg-border ml-[54px]" />
 
-          {/* Mot de passe */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 6 caractères"
-              required
-              minLength={6}
-            />
-          </div>
+                  {/* Display Name */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+                      <User className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Input
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Nom complet *"
+                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                      required
+                    />
+                  </div>
+                  <div className="h-px bg-border ml-[54px]" />
 
-          {/* Âge */}
-          <div className="space-y-2">
-            <Label htmlFor="age">Âge *</Label>
-            <Input
-              id="age"
-              type="number"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              placeholder="25"
-              min="13"
-              max="120"
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Vous devez avoir au moins 13 ans
-            </p>
-          </div>
+                  {/* Password */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                      <Lock className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Mot de passe (min. 6 car.) *"
+                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="h-px bg-border ml-[54px]" />
 
-          {/* Téléphone */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Téléphone *</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="06 12 34 56 78"
-              required
-            />
-          </div>
+                  {/* Age */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                      <Calendar className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Input
+                      type="number"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="Âge (min. 13 ans) *"
+                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                      min="13"
+                      max="120"
+                      required
+                    />
+                  </div>
+                  <div className="h-px bg-border ml-[54px]" />
 
-          {/* Bio */}
-          <div className="space-y-2">
-            <Label htmlFor="bio">Présentation *</Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Parlez-nous de vous, vos sports favoris..."
-              className="resize-none"
-              rows={3}
-              required
-            />
-          </div>
+                  {/* Phone */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                      <Phone className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Téléphone *"
+                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
 
-          {/* Code de parrainage */}
-          <ReferralCodeInput />
+              {/* Bio */}
+              <div className="space-y-2">
+                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+                  Présentation
+                </h3>
+                <div className="bg-card rounded-[10px] overflow-hidden">
+                  <div className="flex items-start gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#8E8E93] flex items-center justify-center mt-1">
+                      <FileText className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="Parlez-nous de vous, vos sports favoris... *"
+                      className="flex-1 border-0 bg-transparent p-0 resize-none min-h-[80px] focus-visible:ring-0"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !avatarFile || !username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirmer et créer mon compte
-            </Button>
-            
-            <p className="text-xs text-muted-foreground text-center">
-              * Champs obligatoires
-            </p>
-          </div>
-          </form>
+              {/* Referral Code */}
+              <div className="space-y-2">
+                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+                  Code de parrainage (optionnel)
+                </h3>
+                <div className="bg-card rounded-[10px] p-4">
+                  <ReferralCodeInput />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                className="w-full h-12 rounded-[10px]"
+                disabled={isLoading || !avatarFile || !username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Créer mon compte
+              </Button>
+
+              <p className="text-[13px] text-muted-foreground text-center">* Champs obligatoires</p>
+            </form>
+          </ScrollArea>
         </div>
 
-        {/* Image Crop Editor */}
         <ImageCropEditor
           open={showCropEditor}
           onClose={() => setShowCropEditor(false)}
