@@ -1491,11 +1491,8 @@ const Messages = () => {
       <>
         <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
-          {/* iOS Status Bar Spacer */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full h-6 bg-card z-50"></div>
-          
           {/* iOS Header */}
-          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-card border-b border-border z-50">
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-card border-b border-border z-50">
             <div className="flex items-center justify-between px-4 py-3">
               <button
                 onClick={() => setSelectedConversation(null)}
