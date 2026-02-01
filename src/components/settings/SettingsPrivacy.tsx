@@ -83,155 +83,58 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full"
+      className="flex flex-col h-full bg-secondary"
     >
-      {/* Header */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
-        <div className="flex items-center gap-3 p-4">
+      {/* iOS Header */}
+      <div className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 h-[56px]">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-muted/50"
+            className="h-9 w-9 rounded-full"
             onClick={onBack}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Confidentialité</h2>
-          </div>
+          <h1 className="text-[17px] font-semibold">Confidentialité</h1>
+          <div className="w-9" />
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-4 py-6 space-y-4">
-          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-            {/* RGPD */}
-            <AlertDialog>
-              <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">RGPD / Données personnelles</label>
-                    <p className="text-xs text-muted-foreground">Gestion de vos données</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={profile?.rgpd_accepted || false}
-                  onCheckedChange={(checked) => {
-                    if (!checked) {
-                      const trigger = document.getElementById('rgpd-revoke-trigger');
-                      trigger?.click();
-                    }
-                  }}
-                />
-              </div>
-              <AlertDialogTrigger id="rgpd-revoke-trigger" className="hidden" />
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Retirer votre consentement RGPD ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Vous serez déconnecté immédiatement et devrez accepter à nouveau les conditions.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleRevokeConsent}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Confirmer
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            {/* Security Rules */}
-            <AlertDialog>
-              <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                    <Shield className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">Règles de sécurité</label>
-                    <p className="text-xs text-muted-foreground">Règles d'utilisation</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={profile?.security_rules_accepted || false}
-                  onCheckedChange={(checked) => {
-                    if (!checked) {
-                      const trigger = document.getElementById('security-revoke-trigger');
-                      trigger?.click();
-                    }
-                  }}
-                />
-              </div>
-              <AlertDialogTrigger id="security-revoke-trigger" className="hidden" />
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Retirer votre acceptation des règles ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Vous serez déconnecté immédiatement et devrez accepter à nouveau les conditions.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleRevokeConsent}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Confirmer
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            {/* Privacy Policy */}
-            <button 
-              onClick={() => {
-                navigate('/privacy');
-                onClose();
-              }}
-              className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center">
-                  <Info className="h-5 w-5 text-white" />
-                </div>
-                <div className="flex-1 text-left">
-                  <span className="text-sm font-medium">Politique de confidentialité</span>
-                  <p className="text-xs text-muted-foreground">Consulter notre politique complète</p>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
-
-            {/* Revoke all */}
-            {profile?.rgpd_accepted && profile?.security_rules_accepted && (
+        <div className="px-4 py-6 space-y-6">
+          {/* Consents */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Consentements
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {/* RGPD */}
               <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button className="w-full flex items-center justify-between p-4 hover:bg-destructive/5 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
-                        <Shield className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <span className="text-sm font-medium text-destructive">Révoquer mon consentement</span>
-                        <p className="text-xs text-muted-foreground">Vous serez déconnecté</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-destructive" />
-                  </button>
-                </AlertDialogTrigger>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+                    <FileText className="h-[18px] w-[18px] text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[15px] font-medium">RGPD / Données personnelles</p>
+                    <p className="text-[13px] text-muted-foreground">Gestion de vos données</p>
+                  </div>
+                  <Switch
+                    checked={profile?.rgpd_accepted || false}
+                    onCheckedChange={(checked) => {
+                      if (!checked) {
+                        const trigger = document.getElementById('rgpd-revoke-trigger');
+                        trigger?.click();
+                      }
+                    }}
+                  />
+                </div>
+                <AlertDialogTrigger id="rgpd-revoke-trigger" className="hidden" />
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Révoquer votre consentement ?</AlertDialogTitle>
+                    <AlertDialogTitle>Retirer votre consentement RGPD ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Vous serez déconnecté et devrez accepter à nouveau les conditions.
+                      Vous serez déconnecté immédiatement et devrez accepter à nouveau les conditions.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -240,13 +143,123 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                       onClick={handleRevokeConsent}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      Révoquer
+                      Confirmer
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            )}
+
+              <div className="h-px bg-border ml-[54px]" />
+
+              {/* Security Rules */}
+              <AlertDialog>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                    <Shield className="h-[18px] w-[18px] text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[15px] font-medium">Règles de sécurité</p>
+                    <p className="text-[13px] text-muted-foreground">Règles d'utilisation</p>
+                  </div>
+                  <Switch
+                    checked={profile?.security_rules_accepted || false}
+                    onCheckedChange={(checked) => {
+                      if (!checked) {
+                        const trigger = document.getElementById('security-revoke-trigger');
+                        trigger?.click();
+                      }
+                    }}
+                  />
+                </div>
+                <AlertDialogTrigger id="security-revoke-trigger" className="hidden" />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Retirer votre acceptation des règles ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Vous serez déconnecté immédiatement et devrez accepter à nouveau les conditions.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleRevokeConsent}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Confirmer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
+
+          {/* Legal Links */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Documents légaux
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {/* Privacy Policy */}
+              <button 
+                onClick={() => {
+                  navigate('/privacy');
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+              >
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#8E8E93] flex items-center justify-center">
+                  <Info className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Politique de confidentialité</p>
+                  <p className="text-[13px] text-muted-foreground">Consulter notre politique</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+              </button>
+            </div>
+          </div>
+
+          {/* Revoke All */}
+          {profile?.rgpd_accepted && profile?.security_rules_accepted && (
+            <div className="space-y-2">
+              <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+                Zone de danger
+              </h3>
+              <div className="bg-card rounded-[10px] overflow-hidden">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="w-full flex items-center gap-3 px-4 py-3 active:bg-destructive/5 transition-colors">
+                      <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                        <Shield className="h-[18px] w-[18px] text-white" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-[15px] font-medium text-destructive">Révoquer mon consentement</p>
+                        <p className="text-[13px] text-muted-foreground">Vous serez déconnecté</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-destructive/50" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Révoquer votre consentement ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Vous serez déconnecté et devrez accepter à nouveau les conditions.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleRevokeConsent}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Révoquer
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </motion.div>

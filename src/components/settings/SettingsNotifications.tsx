@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, Bug, ArrowLeft } from "lucide-react";
+import { Bell, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, Bug, ArrowLeft, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -130,13 +130,13 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   };
 
   const notificationItems = [
-    { key: 'notif_follow_request', icon: Users, label: 'Demandes de suivi', desc: 'Push quand quelqu\'un vous suit' },
-    { key: 'notif_message', icon: MessageCircle, label: 'Messages', desc: 'Push pour les nouveaux messages' },
-    { key: 'notif_session_request', icon: Play, label: 'Demandes de session', desc: 'Push pour les demandes de participation' },
-    { key: 'notif_friend_session', icon: Users, label: 'Sessions d\'amis', desc: 'Push quand vos amis créent une session', premium: true },
-    { key: 'notif_club_invitation', icon: Users, label: 'Invitations de club', desc: 'Quand on vous invite à rejoindre un club' },
-    { key: 'notif_session_accepted', icon: CheckCircle, label: 'Participants à vos sessions', desc: 'Quand quelqu\'un rejoint votre session' },
-    { key: 'notif_presence_confirmed', icon: UserCheck, label: 'Confirmation de présence', desc: 'Quand l\'organisateur confirme votre présence' },
+    { key: 'notif_follow_request', icon: Users, color: 'bg-[#007AFF]', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
+    { key: 'notif_message', icon: MessageCircle, color: 'bg-[#34C759]', label: 'Messages', desc: 'Nouveaux messages reçus' },
+    { key: 'notif_session_request', icon: Play, color: 'bg-[#FF9500]', label: 'Demandes de session', desc: 'Demandes de participation' },
+    { key: 'notif_friend_session', icon: Users, color: 'bg-[#5856D6]', label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
+    { key: 'notif_club_invitation', icon: Users, color: 'bg-[#FF3B30]', label: 'Invitations de club', desc: 'Invitations à rejoindre un club' },
+    { key: 'notif_session_accepted', icon: CheckCircle, color: 'bg-[#34C759]', label: 'Participants acceptés', desc: 'Quelqu\'un rejoint votre session' },
+    { key: 'notif_presence_confirmed', icon: UserCheck, color: 'bg-[#007AFF]', label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
   ];
 
   return (
@@ -145,125 +145,135 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full"
+      className="flex flex-col h-full bg-secondary"
     >
-      {/* Header */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
-        <div className="flex items-center gap-3 p-4">
+      {/* iOS Header */}
+      <div className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 h-[56px]">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-muted/50"
+            className="h-9 w-9 rounded-full"
             onClick={onBack}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Notifications</h2>
-          </div>
+          <h1 className="text-[17px] font-semibold">Notifications</h1>
+          <div className="w-9" />
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-4 py-6 space-y-4">
-          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-            {/* Main toggle */}
-            <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center">
-                  <Smartphone className="h-5 w-5 text-white" />
+        <div className="px-4 py-6 space-y-6">
+          {/* Main Toggle */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Notifications Push
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                  <Smartphone className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">
-                  <label className="text-sm font-medium">Notifications push</label>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[15px] font-medium">Notifications push</p>
+                  <p className="text-[13px] text-muted-foreground">
                     {profile?.notifications_enabled ? "Activées" : "Désactivées"}
                   </p>
                 </div>
-              </div>
-              <Switch
-                checked={profile?.notifications_enabled === true}
-                onCheckedChange={(checked) => updatePrivacySettings('notifications_enabled', checked)}
-              />
-            </div>
-
-            {/* Warning if disabled */}
-            {profile?.notifications_enabled === false && (
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400">
-                <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                  ⚠️ Notifications désactivées. Les préférences ci-dessous sont inactives.
-                </p>
-              </div>
-            )}
-
-            {/* Android permissions */}
-            {!isRegistered && isNative && profile?.notifications_enabled === true && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1">
-                    <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <div className="flex-1">
-                      <label className="text-sm font-medium text-blue-800 dark:text-blue-200">Autoriser les notifications système</label>
-                      <p className="text-xs text-blue-600 dark:text-blue-300">Activez les permissions Android</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="h-8 text-xs bg-blue-600 hover:bg-blue-700"
-                    onClick={handleNotificationToggle}
-                  >
-                    Autoriser
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Test notification */}
-            {profile?.notifications_enabled === true && (
-              <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                    <Bug className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">Tester les notifications</label>
-                    <p className="text-xs text-muted-foreground">Envoyer une notification de test</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 text-xs text-primary hover:text-primary hover:bg-primary/10"
-                  onClick={testNotification}
-                >
-                  Tester
-                </Button>
-              </div>
-            )}
-
-            {/* Individual toggles */}
-            {notificationItems.map((item) => (
-              <div key={item.key} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-3 flex-1">
-                  <item.icon className="h-5 w-5 text-muted-foreground" />
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">
-                      {item.label}
-                      {item.premium && profile?.is_premium && (
-                        <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">PREMIUM</span>
-                      )}
-                    </label>
-                    <p className="text-xs text-muted-foreground">{item.desc}</p>
-                  </div>
-                </div>
                 <Switch
-                  checked={(profile as any)?.[item.key] === true}
-                  onCheckedChange={(checked) => updatePrivacySettings(item.key, checked)}
-                  disabled={profile?.notifications_enabled !== true || (item.premium && !profile?.is_premium)}
+                  checked={profile?.notifications_enabled === true}
+                  onCheckedChange={(checked) => updatePrivacySettings('notifications_enabled', checked)}
                 />
               </div>
-            ))}
+
+              {/* Warning if disabled */}
+              {profile?.notifications_enabled === false && (
+                <>
+                  <div className="h-px bg-border" />
+                  <div className="px-4 py-3 bg-[#FF9500]/10">
+                    <p className="text-[13px] text-[#FF9500]">
+                      ⚠️ Les préférences ci-dessous sont inactives
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Android permissions */}
+              {!isRegistered && isNative && profile?.notifications_enabled === true && (
+                <>
+                  <div className="h-px bg-border" />
+                  <button 
+                    onClick={handleNotificationToggle}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-[#007AFF]/10 active:bg-[#007AFF]/20 transition-colors"
+                  >
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                      <Bell className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-[15px] font-medium text-[#007AFF]">Autoriser les notifications</p>
+                      <p className="text-[13px] text-[#007AFF]/70">Activez les permissions Android</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-[#007AFF]/50" />
+                  </button>
+                </>
+              )}
+
+              {/* Test notification */}
+              {profile?.notifications_enabled === true && (
+                <>
+                  <div className="h-px bg-border ml-[54px]" />
+                  <button 
+                    onClick={testNotification}
+                    className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                  >
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                      <Bug className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-[15px] font-medium">Tester les notifications</p>
+                      <p className="text-[13px] text-muted-foreground">Envoyer une notification de test</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Individual Toggles */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Types de notifications
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {notificationItems.map((item, index) => (
+                <div key={item.key}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className={`h-[30px] w-[30px] rounded-[7px] ${item.color} flex items-center justify-center`}>
+                      <item.icon className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[15px] font-medium">{item.label}</p>
+                        {item.premium && profile?.is_premium && (
+                          <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-medium">
+                            PREMIUM
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[13px] text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <Switch
+                      checked={(profile as any)?.[item.key] === true}
+                      onCheckedChange={(checked) => updatePrivacySettings(item.key, checked)}
+                      disabled={profile?.notifications_enabled !== true || (item.premium && !profile?.is_premium)}
+                    />
+                  </div>
+                  {index < notificationItems.length - 1 && <div className="h-px bg-border ml-[54px]" />}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </ScrollArea>

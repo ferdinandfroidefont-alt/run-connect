@@ -74,159 +74,169 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full"
+      className="flex flex-col h-full bg-secondary"
     >
-      {/* Header */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
-        <div className="flex items-center gap-3 p-4">
+      {/* iOS Header */}
+      <div className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 h-[56px]">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-muted/50"
+            className="h-9 w-9 rounded-full"
             onClick={onBack}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Aide & Support</h2>
-          </div>
+          <h1 className="text-[17px] font-semibold">Aide & Support</h1>
+          <div className="w-9" />
         </div>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="px-4 py-6 space-y-6">
-          {/* Mentions légales */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
+          {/* Legal */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Mentions légales
             </h3>
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
+            <div className="bg-card rounded-[10px] overflow-hidden">
               <button 
                 onClick={() => { onClose(); navigate('/about'); }}
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                    <Info className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-sm font-medium">À propos</span>
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                  <Info className="h-[18px] w-[18px] text-white" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">À propos</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
+
+              <div className="h-px bg-border ml-[54px]" />
+
               <button 
                 onClick={() => { onClose(); navigate('/terms'); }}
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-sm font-medium">Conditions d'utilisation</span>
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                  <FileText className="h-[18px] w-[18px] text-white" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Conditions d'utilisation</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
+
+              <div className="h-px bg-border ml-[54px]" />
+
               <button 
                 onClick={() => { onClose(); navigate('/privacy'); }}
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                    <Shield className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-sm font-medium">Politique de confidentialité</span>
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+                  <Shield className="h-[18px] w-[18px] text-white" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Politique de confidentialité</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
             </div>
           </div>
 
           {/* Support */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
-              Support
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Assistance
             </h3>
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-              {/* Restart Tutorial Button */}
+            <div className="bg-card rounded-[10px] overflow-hidden">
               <button 
                 onClick={handleRestartTutorial}
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                    <GraduationCap className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-sm font-medium">{t('tutorial.restartTutorial')}</span>
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                  <GraduationCap className="h-[18px] w-[18px] text-white" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">{t('tutorial.restartTutorial')}</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
-              {/* Contact Support */}
-              <div className="p-6 text-center space-y-4">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mx-auto">
-                  <Mail className="h-8 w-8 text-white" />
+              <div className="h-px bg-border ml-[54px]" />
+
+              {/* Contact */}
+              <a 
+                href="mailto:ferdinand.froidefont@gmail.com"
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+              >
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                  <Mail className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Besoin d'aide ?</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Notre équipe est là pour vous aider
-                  </p>
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Contacter le support</p>
+                  <p className="text-[13px] text-muted-foreground">ferdinand.froidefont@gmail.com</p>
                 </div>
-                <a 
-                  href="mailto:ferdinand.froidefont@gmail.com"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                >
-                  <Mail className="h-4 w-4" />
-                  <span className="text-sm font-medium">ferdinand.froidefont@gmail.com</span>
-                </a>
-              </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+              </a>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">
-              Actions
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Compte
             </h3>
-            <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-              {/* Sign Out */}
+            <div className="bg-card rounded-[10px] overflow-hidden">
               <button 
                 onClick={handleSignOut}
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
-                    <LogOut className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-sm font-medium">Se déconnecter</span>
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                  <LogOut className="h-[18px] w-[18px] text-white" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Se déconnecter</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
               {/* Creator Mode */}
               {user?.email === 'ferdinand.froidefont@gmail.com' && (
-                <button className="w-full flex items-center justify-between p-4 hover:bg-primary/5 transition-colors bg-primary/5">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                      <Settings className="h-5 w-5 text-white" />
+                <>
+                  <div className="h-px bg-border ml-[54px]" />
+                  <button className="w-full flex items-center gap-3 px-4 py-3 bg-primary/5 active:bg-primary/10 transition-colors">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                      <Settings className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <span className="text-sm font-medium text-primary">Créateur</span>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-primary" />
-                </button>
+                    <div className="flex-1 text-left">
+                      <p className="text-[15px] font-medium text-primary">Créateur</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-primary/50" />
+                  </button>
+                </>
               )}
+            </div>
+          </div>
 
-              {/* Delete Account */}
+          {/* Danger Zone */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Zone de danger
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <button className="w-full flex items-center justify-between p-4 hover:bg-destructive/5 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center">
-                        <Trash2 className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-sm font-medium text-destructive">Supprimer mon compte</span>
+                  <button className="w-full flex items-center gap-3 px-4 py-3 active:bg-destructive/5 transition-colors">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                      <Trash2 className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <ChevronRight className="h-5 w-5 text-destructive" />
+                    <div className="flex-1 text-left">
+                      <p className="text-[15px] font-medium text-destructive">Supprimer mon compte</p>
+                      <p className="text-[13px] text-muted-foreground">Action irréversible</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-destructive/50" />
                   </button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>

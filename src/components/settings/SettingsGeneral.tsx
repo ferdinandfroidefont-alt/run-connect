@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Sun, Moon, Key, Settings, Loader2, ArrowLeft } from "lucide-react";
+import { Languages, Sun, Moon, Key, Settings, Loader2, ArrowLeft, ChevronRight, MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { languages, Language } from "@/lib/translations";
@@ -64,112 +64,128 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full"
+      className="flex flex-col h-full bg-secondary"
     >
-      {/* Header */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/80 border-b border-border/50">
-        <div className="flex items-center gap-3 p-4">
+      {/* iOS Header */}
+      <div className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 h-[56px]">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-muted/50"
+            className="h-9 w-9 rounded-full"
             onClick={onBack}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Général</h2>
-          </div>
+          <h1 className="text-[17px] font-semibold">Général</h1>
+          <div className="w-9" />
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-4 py-6 space-y-4">
-          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden divide-y divide-border/30">
-            {/* Language Selector */}
-            <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                  <Languages className="h-5 w-5 text-white" />
+        <div className="px-4 py-6 space-y-6">
+          {/* Language & Theme */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Apparence
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {/* Language Selector */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                  <Languages className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">
-                  <label className="text-sm font-medium">Langue</label>
-                  <p className="text-xs text-muted-foreground">Choisir la langue de l'application</p>
+                  <p className="text-[15px] font-medium">Langue</p>
                 </div>
+                <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
+                  <SelectTrigger className="w-[120px] h-9 text-[13px] border-0 bg-secondary/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]" sideOffset={5}>
+                    {Object.entries(languages).map(([code, { nativeName }]) => (
+                      <SelectItem key={code} value={code}>{nativeName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                <SelectTrigger className="w-[120px] h-9 text-xs border-border/50 bg-background/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]" sideOffset={5}>
-                  {Object.entries(languages).map(([code, { nativeName }]) => (
-                    <SelectItem key={code} value={code}>{nativeName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            {/* Theme Toggle */}
-            <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                  {theme === 'dark' ? <Moon className="h-5 w-5 text-white" /> : <Sun className="h-5 w-5 text-white" />}
-                </div>
-                <div className="flex-1">
-                  <label className="text-sm font-medium">Mode {theme === 'dark' ? 'sombre' : 'clair'}</label>
-                  <p className="text-xs text-muted-foreground">Basculer entre thème clair et sombre</p>
-                </div>
-              </div>
-              <Switch
-                checked={theme === 'dark'}
-                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-              />
-            </div>
+              <div className="h-px bg-border ml-[54px]" />
 
-            {/* Password Reset */}
-            <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Key className="h-5 w-5 text-white" />
+              {/* Theme Toggle */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                  {theme === 'dark' ? (
+                    <Moon className="h-[18px] w-[18px] text-white" />
+                  ) : (
+                    <Sun className="h-[18px] w-[18px] text-white" />
+                  )}
                 </div>
                 <div className="flex-1">
-                  <label className="text-sm font-medium">Mot de passe</label>
-                  <p className="text-xs text-muted-foreground">Réinitialiser votre mot de passe</p>
+                  <p className="text-[15px] font-medium">Mode {theme === 'dark' ? 'sombre' : 'clair'}</p>
                 </div>
+                <Switch
+                  checked={theme === 'dark'}
+                  onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                />
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-9 text-xs text-primary hover:text-primary hover:bg-primary/10"
+            </div>
+          </div>
+
+          {/* Account */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Compte
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {/* Password Reset */}
+              <button 
                 onClick={handlePasswordReset}
                 disabled={isChangingPassword}
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors disabled:opacity-50"
               >
-                {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Changer'}
-              </Button>
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                  {isChangingPassword ? (
+                    <Loader2 className="h-[18px] w-[18px] text-white animate-spin" />
+                  ) : (
+                    <Key className="h-[18px] w-[18px] text-white" />
+                  )}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Mot de passe</p>
+                  <p className="text-[13px] text-muted-foreground">Réinitialiser par email</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+              </button>
             </div>
+          </div>
 
-            {/* Long Press to Create Session */}
-            <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                  <Settings className="h-5 w-5 text-white" />
+          {/* Map Settings */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Carte
+            </h3>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {/* Long Press to Create Session */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+                  <MapPin className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">
-                  <label className="text-sm font-medium">Appui long sur la carte</label>
-                  <p className="text-xs text-muted-foreground">Créer une session en appuyant longuement</p>
+                  <p className="text-[15px] font-medium">Appui long sur la carte</p>
+                  <p className="text-[13px] text-muted-foreground">Créer une session rapidement</p>
                 </div>
+                <Switch
+                  checked={localStorage.getItem('enableLongPressCreate') === 'true'}
+                  onCheckedChange={(checked) => {
+                    localStorage.setItem('enableLongPressCreate', checked.toString());
+                    toast({
+                      title: "Paramètre mis à jour",
+                      description: checked ? "Appui long activé" : "Appui long désactivé"
+                    });
+                  }}
+                />
               </div>
-              <Switch
-                checked={localStorage.getItem('enableLongPressCreate') === 'true'}
-                onCheckedChange={(checked) => {
-                  localStorage.setItem('enableLongPressCreate', checked.toString());
-                  toast({
-                    title: "Paramètre mis à jour",
-                    description: checked ? "Appui long activé" : "Appui long désactivé"
-                  });
-                }}
-              />
             </div>
           </div>
         </div>
