@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award } from "lucide-react";
+import { Award, Lock, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Badge {
   icon: string;
@@ -12,38 +12,50 @@ interface BadgesToUnlockCardProps {
 }
 
 export const BadgesToUnlockCard = ({ badges }: BadgesToUnlockCardProps) => {
-  // Badges par défaut pour la démo
   const defaultBadges: Badge[] = [
-    { icon: "🔥", name: "Streak Master", remaining: "Reste 2 sessions" },
-    { icon: "💪", name: "Iron Man", remaining: "Reste 5 sessions" },
-    { icon: "🎖️", name: "Hero", remaining: "Reste 10 points" },
-    { icon: "👑", name: "Legend", remaining: "Reste 25 badges" }
+    { icon: "🔥", name: "Streak Master", remaining: "2 sessions" },
+    { icon: "💪", name: "Iron Man", remaining: "5 sessions" },
+    { icon: "🎖️", name: "Hero", remaining: "10 points" },
+    { icon: "👑", name: "Legend", remaining: "25 badges" }
   ];
 
   const activeBadges = badges || defaultBadges;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Award className="h-5 w-5 text-primary" />
-          Badges à débloquer
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 pt-0">
-        <div className="grid grid-cols-4 gap-2">
-          {activeBadges.map((badge, index) => (
-            <div 
-              key={index}
-              className="bg-card/50 rounded-lg p-2 flex flex-col items-center justify-center border border-border/50 hover:border-primary/30 transition-all cursor-pointer"
-            >
-              <span className="text-2xl mb-1">{badge.icon}</span>
-              <p className="text-xs font-medium text-center line-clamp-1">{badge.name}</p>
-              <p className="text-[10px] text-muted-foreground text-center mt-0.5">{badge.remaining}</p>
-            </div>
-          ))}
+    <div className="bg-card rounded-[10px] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+        <div className="h-[30px] w-[30px] rounded-[7px] bg-yellow-500 flex items-center justify-center">
+          <Award className="h-[18px] w-[18px] text-white" />
         </div>
-      </CardContent>
-    </Card>
+        <span className="text-[17px] font-semibold text-foreground">Badges à débloquer</span>
+      </div>
+
+      {/* Badges List */}
+      {activeBadges.map((badge, index) => {
+        const isLast = index === activeBadges.length - 1;
+        
+        return (
+          <div key={index}>
+            <div className="flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors cursor-pointer">
+              <div className="h-[40px] w-[40px] rounded-[10px] bg-secondary/80 flex items-center justify-center relative">
+                <span className="text-xl opacity-50">{badge.icon}</span>
+                <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-muted flex items-center justify-center">
+                  <Lock className="h-2.5 w-2.5 text-muted-foreground" />
+                </div>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-medium text-foreground">{badge.name}</p>
+                <p className="text-[13px] text-muted-foreground">Reste {badge.remaining}</p>
+              </div>
+              
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" />
+            </div>
+            {!isLast && <div className="h-px bg-border ml-[66px]" />}
+          </div>
+        );
+      })}
+    </div>
   );
 };
