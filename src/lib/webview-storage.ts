@@ -40,4 +40,23 @@ export class WebViewStorage {
       throw error;
     }
   }
+
+  /**
+   * Nettoie tous les tokens Supabase du localStorage
+   * Utile pour forcer une déconnexion propre
+   */
+  clearAllSupabaseKeys(): void {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('supabase') || key.includes('sb-'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log(`🗑️ [WebViewStorage] Removed Supabase key: ${key}`);
+    });
+    console.log(`✅ [WebViewStorage] Cleared ${keysToRemove.length} Supabase keys`);
+  }
 }

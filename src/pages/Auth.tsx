@@ -135,6 +135,10 @@ const Auth = () => {
       setIsLoading(true);
       console.log('🔥 [GOOGLE AUTH] Starting...');
       
+      // ✅ Nettoyer toute session existante avant nouvelle connexion
+      console.log('🧹 [AUTH] Cleaning existing session before Google login...');
+      await supabase.auth.signOut({ scope: 'local' });
+      
       const isNativeAvailable = await isNativeGoogleSignInAvailable();
       console.log('🔥 [GOOGLE AUTH] Native available:', isNativeAvailable);
       
@@ -285,6 +289,10 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // ✅ Nettoyer toute session existante avant vérification OTP
+      console.log('🧹 [AUTH] Cleaning existing session before OTP verification...');
+      await supabase.auth.signOut({ scope: 'local' });
+      
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
@@ -331,6 +339,10 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // ✅ Nettoyer toute session existante avant nouvelle connexion
+      console.log('🧹 [AUTH] Cleaning existing session before new login...');
+      await supabase.auth.signOut({ scope: 'local' });
+      
       let emailToUse = usernameOrEmail;
       
       if (!usernameOrEmail.includes('@')) {
