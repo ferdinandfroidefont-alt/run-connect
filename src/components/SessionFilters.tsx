@@ -98,7 +98,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
       {/* Header cliquable - toujours visible */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between px-3 py-3 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl min-h-[44px]"
+        className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
       >
         {isOpen ? (
           <>
