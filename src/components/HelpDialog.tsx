@@ -1,12 +1,9 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { 
   Bell, 
   Settings, 
@@ -33,407 +30,359 @@ import {
   Crown,
   Volume2,
   Sun,
-  Moon,
   Key,
-  Mail,
-  Upload,
-  Send,
   Image,
   Paperclip,
   UserPlus,
   Phone,
-  Clock,
   Filter,
-  Save,
-  X,
-  MoreVertical
+  ArrowLeft,
+  ChevronRight,
+  Lightbulb
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface HelpDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface FeatureItem {
+  icon: React.ReactNode;
+  color: string;
+  title: string;
+  description: string;
+}
+
+const FeatureRow = ({ item, isLast }: { item: FeatureItem; isLast: boolean }) => (
+  <>
+    <div className="flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors">
+      <div className={`h-[30px] w-[30px] rounded-[7px] ${item.color} flex items-center justify-center shrink-0`}>
+        {item.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[15px] font-medium text-foreground">{item.title}</p>
+        <p className="text-[13px] text-muted-foreground leading-snug">{item.description}</p>
+      </div>
+      <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0" />
+    </div>
+    {!isLast && <div className="h-px bg-border ml-[54px]" />}
+  </>
+);
+
+const FeatureSection = ({ title, emoji, features }: { title: string; emoji: string; features: FeatureItem[] }) => (
+  <div className="space-y-2">
+    <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+      {emoji} {title}
+    </h3>
+    <div className="bg-card rounded-[10px] overflow-hidden">
+      {features.map((item, index) => (
+        <FeatureRow key={index} item={item} isLast={index === features.length - 1} />
+      ))}
+    </div>
+  </div>
+);
+
 export const HelpDialog = ({ isOpen, onClose }: HelpDialogProps) => {
-  const mapFeatures = [
+  const mapFeatures: FeatureItem[] = [
     {
-      icon: <Search className="h-5 w-5 text-primary" />,
+      icon: <Search className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#007AFF]",
       title: "Barre de recherche",
-      description: "Recherchez un lieu spécifique ou une séance par son nom. Utilisez l'autocomplétion pour trouver rapidement votre destination."
+      description: "Recherchez un lieu ou une séance par son nom"
     },
     {
-      icon: <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-xs text-white font-semibold">U</div>,
-      title: "Avatar utilisateur",
-      description: "Votre photo de profil s'affiche au centre. Cliquez dessus pour accéder rapidement à vos informations."
-    },
-    {
-      icon: <Bell className="h-5 w-5 text-primary" />,
+      icon: <Bell className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF3B30]",
       title: "Notifications",
-      description: "Consultez vos notifications : demandes de participation aux séances, demandes d'amis, acceptations, etc. Un badge rouge indique les nouvelles notifications."
+      description: "Demandes, acceptations et nouveaux messages"
     },
     {
-      icon: <HelpCircle className="h-5 w-5 text-primary" />,
-      title: "Aide",
-      description: "Ce bouton ! Il affiche toutes les fonctionnalités disponibles dans l'application."
-    },
-    {
-      icon: <Settings className="h-5 w-5 text-primary" />,
+      icon: <Settings className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#8E8E93]",
       title: "Paramètres",
-      description: "Accédez à votre profil, modifiez vos informations, gérez vos paramètres de confidentialité et votre abonnement."
+      description: "Profil, confidentialité et abonnement"
     },
     {
-      icon: <Calendar className="h-5 w-5 text-primary" />,
+      icon: <Calendar className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF9500]",
       title: "Calendrier",
-      description: "Filtrez les séances par date. Cliquez sur le calendrier pour sélectionner un jour spécifique et voir uniquement les séances de cette date."
+      description: "Filtrer les séances par date"
     },
     {
-      icon: <Users className="h-5 w-5 text-primary" />,
+      icon: <Users className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#34C759]",
       title: "Filtre amis",
-      description: "Activez ce filtre pour voir uniquement les séances créées par vos amis ou les personnes que vous suivez."
+      description: "Voir uniquement les séances de vos amis"
     },
     {
-      icon: <div className="w-5 h-5 bg-primary rounded text-xs text-white flex items-center justify-center font-semibold">C</div>,
-      title: "Sélecteur de club",
-      description: "Filtrez les séances par club. Rejoignez un club pour participer à des activités organisées en groupe."
-    },
-    {
-      icon: <Plus className="h-5 w-5 text-primary" />,
+      icon: <Plus className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#007AFF]",
       title: "Créer une séance",
-      description: "Organisez votre propre séance sportive ! Choisissez l'activité, le type, l'intensité, l'heure et invitez d'autres participants."
+      description: "Organiser votre propre activité sportive"
     },
     {
-      icon: <PenTool className="h-5 w-5 text-primary" />,
+      icon: <PenTool className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#5856D6]",
       title: "Créer un itinéraire",
-      description: "Dessinez un parcours personnalisé sur la carte. Cliquez sur des points pour créer votre trajet avec calcul automatique de distance et dénivelé."
+      description: "Dessiner un parcours personnalisé"
     },
     {
-      icon: <MapPin className="h-5 w-5 text-primary" />,
+      icon: <MapPin className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF3B30]",
       title: "Ma position",
-      description: "Centrez la carte sur votre position actuelle. Nécessite l'autorisation de géolocalisation."
+      description: "Centrer la carte sur votre position"
     },
     {
-      icon: <Map className="h-5 w-5 text-primary" />,
+      icon: <Map className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#34C759]",
       title: "Style de carte",
-      description: "Changez l'apparence de la carte : vue classique, satellite, terrain, ou mode sombre selon vos préférences."
+      description: "Classique, satellite, terrain ou sombre"
     },
     {
-      icon: <ZoomIn className="h-5 w-5 text-primary" />,
+      icon: <ZoomIn className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#8E8E93]",
       title: "Contrôles de zoom",
-      description: "Zoomez ou dézoomez sur la carte. Utilisez aussi la molette de souris ou les gestes tactiles."
+      description: "Zoomer ou dézoomer sur la carte"
     },
     {
-      icon: <Eye className="h-5 w-5 text-primary" />,
+      icon: <Eye className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#007AFF]",
       title: "Vue 3D/Satellite",
-      description: "Basculez entre la vue classique et la vue satellite pour une perspective différente de la zone."
+      description: "Basculer entre les vues de la carte"
     }
   ];
 
-  const profileFeatures = [
+  const profileFeatures: FeatureItem[] = [
     {
-      icon: <User className="h-5 w-5 text-primary" />,
+      icon: <User className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#007AFF]",
       title: "Mon Profil",
-      description: "Gérez votre profil : nom d'utilisateur, photo, bio, âge et informations personnelles."
+      description: "Gérer vos informations personnelles"
     },
     {
-      icon: <Camera className="h-5 w-5 text-primary" />,
+      icon: <Camera className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#5856D6]",
       title: "Photo de profil",
-      description: "Changez votre photo de profil. Recadrez et ajustez votre image avant de la sauvegarder."
+      description: "Changer et recadrer votre photo"
     },
     {
-      icon: <Heart className="h-5 w-5 text-primary" />,
+      icon: <Heart className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF3B30]",
       title: "Abonnés & Abonnements",
-      description: "Consultez vos abonnés et les personnes que vous suivez. Cliquez sur les avatars pour voir leur profil."
+      description: "Consulter vos connexions sociales"
     },
     {
-      icon: <Trophy className="h-5 w-5 text-primary" />,
+      icon: <Trophy className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FFCC00]",
       title: "Records personnels",
-      description: "Enregistrez vos meilleurs temps et distances en course, vélo, natation et marche."
+      description: "Vos meilleurs temps et distances"
     },
     {
-      icon: <Route className="h-5 w-5 text-primary" />,
+      icon: <Route className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#34C759]",
       title: "Mes itinéraires",
-      description: "Consultez, modifiez et supprimez vos itinéraires créés. Partagez vos parcours favoris."
+      description: "Gérer vos parcours créés"
     },
     {
-      icon: <Share2 className="h-5 w-5 text-primary" />,
+      icon: <Share2 className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF9500]",
       title: "Partage de profil",
-      description: "Partagez votre profil avec d'autres utilisateurs via un lien ou un QR code."
+      description: "Partager via lien ou QR code"
     },
     {
-      icon: <Shield className="h-5 w-5 text-primary" />,
+      icon: <Shield className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#34C759]",
       title: "Confidentialité",
-      description: "Gérez vos paramètres de confidentialité : profil privé, statut en ligne, suggestions d'amis."
+      description: "Profil privé, statut en ligne..."
     },
     {
-      icon: <Crown className="h-5 w-5 text-primary" />,
+      icon: <Crown className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FFCC00]",
       title: "Abonnement Premium",
-      description: "Accédez aux fonctionnalités premium : fonctionnalités avancées, classements exclusifs."
+      description: "Fonctionnalités avancées"
     }
   ];
 
-  const messageFeatures = [
+  const messageFeatures: FeatureItem[] = [
     {
-      icon: <MessageCircle className="h-5 w-5 text-primary" />,
+      icon: <MessageCircle className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#007AFF]",
       title: "Conversations privées",
-      description: "Échangez des messages privés avec vos amis. Les messages sont organisés par conversation."
+      description: "Messages privés avec vos amis"
     },
     {
-      icon: <Users className="h-5 w-5 text-primary" />,
+      icon: <Users className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#5856D6]",
       title: "Clubs de discussion",
-      description: "Créez ou rejoignez des clubs pour discuter en groupe. Gérez les membres et organisez des activités."
+      description: "Créer ou rejoindre des groupes"
     },
     {
-      icon: <Search className="h-5 w-5 text-primary" />,
+      icon: <Search className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#8E8E93]",
       title: "Recherche d'utilisateurs",
-      description: "Trouvez des utilisateurs par nom ou pseudo pour commencer une conversation ou les suivre."
+      description: "Trouver des personnes par nom"
     },
     {
-      icon: <UserPlus className="h-5 w-5 text-primary" />,
+      icon: <UserPlus className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#34C759]",
       title: "Suggestions d'amis",
-      description: "Découvrez des amis grâce à vos contacts téléphoniques et aux amis communs."
+      description: "Découvrir via contacts et amis"
     },
     {
-      icon: <Image className="h-5 w-5 text-primary" />,
+      icon: <Image className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF9500]",
       title: "Partage de médias",
-      description: "Partagez des photos, images et fichiers dans vos conversations privées et de groupe."
+      description: "Photos et fichiers dans les chats"
     },
     {
-      icon: <Paperclip className="h-5 w-5 text-primary" />,
+      icon: <Paperclip className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#007AFF]",
       title: "Partage de séances",
-      description: "Partagez directement des séances sportives dans vos messages avec un aperçu interactif."
+      description: "Envoyer des séances dans vos messages"
     },
     {
-      icon: <Phone className="h-5 w-5 text-primary" />,
+      icon: <Phone className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#34C759]",
       title: "Accès aux contacts",
-      description: "Autorisez l'accès à vos contacts pour trouver facilement vos amis qui utilisent l'app."
+      description: "Trouver vos amis sur l'app"
     }
   ];
 
-  const sessionFeatures = [
+  const sessionFeatures: FeatureItem[] = [
     {
-      icon: <Calendar className="h-5 w-5 text-primary" />,
+      icon: <Calendar className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#007AFF]",
       title: "Mes Séances",
-      description: "Consultez toutes vos séances organisées : à venir, terminées ou en cours."
+      description: "Toutes vos séances organisées"
     },
     {
-      icon: <Edit className="h-5 w-5 text-primary" />,
+      icon: <Edit className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF9500]",
       title: "Modification de séances",
-      description: "Modifiez les détails de vos séances : titre, description, type d'activité, lieu et participants max."
+      description: "Modifier titre, lieu, participants..."
     },
     {
-      icon: <Upload className="h-5 w-5 text-primary" />,
-      title: "Images de séances",
-      description: "Ajoutez ou changez l'image de vos séances pour les rendre plus attractives."
-    },
-    {
-      icon: <Users className="h-5 w-5 text-primary" />,
+      icon: <Users className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#5856D6]",
       title: "Gestion des participants",
-      description: "Consultez la liste des participants inscrits à vos séances avec leurs profils."
+      description: "Liste des inscrits à vos séances"
     },
     {
-      icon: <Trash2 className="h-5 w-5 text-primary" />,
+      icon: <Trash2 className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF3B30]",
       title: "Suppression de séances",
-      description: "Supprimez définitivement vos séances si nécessaire. Cette action est irréversible."
+      description: "Supprimer définitivement"
     },
     {
-      icon: <Filter className="h-5 w-5 text-primary" />,
+      icon: <Filter className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#8E8E93]",
       title: "Filtres de séances",
-      description: "Filtrez vos séances par statut : toutes, à venir, ou terminées pour une meilleure organisation."
+      description: "Trier par statut ou date"
     },
     {
-      icon: <Route className="h-5 w-5 text-primary" />,
+      icon: <Route className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#34C759]",
       title: "Gestion d'itinéraires",
-      description: "Consultez, modifiez et supprimez vos itinéraires créés. Organisez vos parcours favoris."
+      description: "Vos parcours favoris"
     }
   ];
 
-  const generalFeatures = [
+  const generalFeatures: FeatureItem[] = [
     {
-      icon: <Bell className="h-5 w-5 text-primary" />,
+      icon: <Bell className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF3B30]",
       title: "Notifications push",
-      description: "Recevez des notifications pour les demandes d'amis, invitations aux séances et nouveaux messages."
+      description: "Alertes pour messages et invitations"
     },
     {
-      icon: <Sun className="h-5 w-5 text-primary" />,
-      title: "Thème sombre/clair", 
-      description: "Basculez entre le mode sombre et clair selon vos préférences visuelles."
+      icon: <Sun className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FF9500]",
+      title: "Thème sombre/clair",
+      description: "Changer l'apparence de l'app"
     },
     {
-      icon: <Volume2 className="h-5 w-5 text-primary" />,
+      icon: <Volume2 className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#5856D6]",
       title: "Sons de l'interface",
-      description: "Activez ou désactivez les sons des interactions dans l'application."
+      description: "Activer ou désactiver les sons"
     },
     {
-      icon: <Key className="h-5 w-5 text-primary" />,
+      icon: <Key className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#8E8E93]",
       title: "Changement de mot de passe",
-      description: "Réinitialisez votre mot de passe en recevant un email de confirmation."
+      description: "Réinitialiser via email"
     },
     {
-      icon: <Trophy className="h-5 w-5 text-primary" />,
+      icon: <Trophy className="h-[18px] w-[18px] text-white" />,
+      color: "bg-[#FFCC00]",
       title: "Classements",
-      description: "Consultez les classements global, saisonnier et entre amis basés sur vos points d'activité."
+      description: "Global, saisonnier et entre amis"
     }
   ];
 
-  const interactionTips = [
-    "💡 Double-cliquez sur la carte pour créer une séance à cet endroit",
-    "💡 Cliquez sur un marqueur pour voir les détails d'une séance", 
-    "💡 Maintenez appuyé sur mobile pour créer une séance",
-    "💡 Cliquez sur les avatars dans les listes pour voir les profils utilisateurs",
-    "💡 Utilisez les filtres pour trouver exactement ce que vous cherchez",
-    "💡 Glissez vers la gauche/droite dans les conversations pour accéder aux actions rapides",
-    "💡 Le badge rouge sur Messages indique le nombre de messages non lus",
-    "💡 Autorisez les notifications pour ne rater aucune invitation ou message"
+  const tips = [
+    "Double-cliquez sur la carte pour créer une séance",
+    "Cliquez sur un marqueur pour voir les détails",
+    "Maintenez appuyé sur mobile pour créer une séance",
+    "Le badge rouge indique les messages non lus",
+    "Autorisez les notifications pour ne rien rater"
   ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-primary" />
-            Guide des fonctionnalités
-          </DialogTitle>
-          <DialogDescription>
-            Découvrez toutes les fonctionnalités disponibles dans RunConnect
-          </DialogDescription>
-        </DialogHeader>
-        
-        <ScrollArea className="h-[60vh] pr-4">
-          <div className="space-y-6">
-            {/* Fonctionnalités de la carte */}
-            <div>
-              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-                🗺️ Page Carte
-              </h3>
-              <div className="space-y-3">
-                {mapFeatures.map((item, index) => (
-                  <div key={index} className="flex gap-3 p-3 rounded-lg bg-muted/30">
-                    <div className="flex-shrink-0 mt-1">
-                      {item.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Fonctionnalités du profil */}
-            <div>
-              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-                👤 Page Profil
-              </h3>
-              <div className="space-y-3">
-                {profileFeatures.map((item, index) => (
-                  <div key={index} className="flex gap-3 p-3 rounded-lg bg-muted/30">
-                    <div className="flex-shrink-0 mt-1">
-                      {item.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Fonctionnalités des messages */}
-            <div>
-              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-                💬 Page Messages
-              </h3>
-              <div className="space-y-3">
-                {messageFeatures.map((item, index) => (
-                  <div key={index} className="flex gap-3 p-3 rounded-lg bg-muted/30">
-                    <div className="flex-shrink-0 mt-1">
-                      {item.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Fonctionnalités des séances */}
-            <div>
-              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-                🚴‍♂️ Page Mes Séances
-              </h3>
-              <div className="space-y-3">
-                {sessionFeatures.map((item, index) => (
-                  <div key={index} className="flex gap-3 p-3 rounded-lg bg-muted/30">
-                    <div className="flex-shrink-0 mt-1">
-                      {item.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Fonctionnalités générales */}
-            <div>
-              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-                ⚙️ Fonctionnalités Générales
-              </h3>
-              <div className="space-y-3">
-                {generalFeatures.map((item, index) => (
-                  <div key={index} className="flex gap-3 p-3 rounded-lg bg-muted/30">
-                    <div className="flex-shrink-0 mt-1">
-                      {item.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm flex items-center gap-2">
-                <span>💡</span>
-                Conseils d'utilisation
-              </h4>
-              {interactionTips.map((tip, index) => (
-                <p key={index} className="text-sm text-muted-foreground pl-6">
-                  {tip}
-                </p>
-              ))}
+      <DialogContent fullScreen className="p-0 gap-0 bg-secondary">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col h-full"
+        >
+          {/* iOS Header */}
+          <div className="sticky top-0 z-10 bg-card border-b border-border">
+            <div className="flex items-center justify-between px-4 h-[56px]">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={onClose}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-[17px] font-semibold">Guide des fonctionnalités</h1>
+              <div className="w-9" />
             </div>
           </div>
-        </ScrollArea>
+
+          <ScrollArea className="flex-1">
+            <div className="px-4 py-6 space-y-6">
+              <FeatureSection title="Page Carte" emoji="🗺️" features={mapFeatures} />
+              <FeatureSection title="Page Profil" emoji="👤" features={profileFeatures} />
+              <FeatureSection title="Page Messages" emoji="💬" features={messageFeatures} />
+              <FeatureSection title="Mes Séances" emoji="🚴‍♂️" features={sessionFeatures} />
+              <FeatureSection title="Fonctionnalités Générales" emoji="⚙️" features={generalFeatures} />
+
+              {/* Tips Section */}
+              <div className="space-y-2">
+                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+                  💡 Conseils
+                </h3>
+                <div className="bg-card rounded-[10px] overflow-hidden">
+                  {tips.map((tip, index) => (
+                    <div key={index}>
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FFCC00] flex items-center justify-center shrink-0">
+                          <Lightbulb className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <p className="text-[15px] text-foreground">{tip}</p>
+                      </div>
+                      {index < tips.length - 1 && <div className="h-px bg-border ml-[54px]" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );
