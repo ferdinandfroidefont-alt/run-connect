@@ -12,13 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
-import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
+import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserActivityChart } from "@/components/UserActivityChart";
+
 import { ReliabilityBadge } from "@/components/ReliabilityBadge";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 interface Profile {
@@ -490,14 +489,8 @@ export const ProfileDialog = ({
                 </div>
               </div>
 
-              {/* Mon Classement */}
-              {user?.id && <ProfileRankCard userId={user.id} />}
-
-              {/* Badges gagnés */}
-              {user?.id && <EarnedBadgesSection userId={user.id} />}
-
-              {/* Activité récente */}
-              {user?.id && <UserActivityChart userId={user.id} username={profile?.username} />}
+              {/* Classement, Badges & Activités - iOS Style Group */}
+              {user?.id && <ProfileStatsGroup userId={user.id} />}
 
               {/* Informations personnelles - Section editing */}
               {isEditing ? (
