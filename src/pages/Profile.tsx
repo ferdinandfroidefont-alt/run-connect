@@ -29,6 +29,7 @@ import { ReliabilityBadge } from "@/components/ReliabilityBadge";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ProfileRankBadgeCompact } from "@/components/profile/ProfileRankBadgeCompact";
 interface Profile {
   username: string;
   display_name: string | null;
@@ -591,112 +592,143 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto p-4 space-y-6">
-        {/* Avatar Section - iOS Style */}
-        <div className="flex flex-col items-center pt-4">
-          <div className="relative mb-3">
-            <Avatar className="h-[100px] w-[100px] ring-2 ring-border">
+      <div className="max-w-md mx-auto p-4 space-y-4">
+        {/* Profile Header - iOS Style */}
+        <div className="flex flex-col items-center pt-2">
+          {/* Username at top without @ */}
+          <p className="text-[15px] font-medium text-muted-foreground mb-3">
+            {profile?.username}
+          </p>
+          
+          {/* Avatar */}
+          <div className="relative mb-2">
+            <Avatar className="h-[88px] w-[88px] ring-2 ring-border">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
               <AvatarFallback className="text-2xl bg-secondary">
                 {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-            {isEditing && !isViewingOtherUser && <button type="button" onClick={async () => {
-            try {
-              const file = await selectFromGallery();
-              if (file) {
-                handleAvatarChange({
-                  target: {
-                    files: [file]
+            {isEditing && !isViewingOtherUser && (
+              <button 
+                type="button" 
+                onClick={async () => {
+                  try {
+                    const file = await selectFromGallery();
+                    if (file) {
+                      handleAvatarChange({ target: { files: [file] } } as any);
+                    }
+                  } catch (error) {
+                    console.error('❌ Erreur sélection galerie:', error);
+                    toast({
+                      title: "Erreur",
+                      description: "Impossible d'accéder à la galerie",
+                      variant: "destructive"
+                    });
                   }
-                } as any);
-              }
-            } catch (error) {
-              console.error('❌ Erreur sélection galerie:', error);
-              toast({
-                title: "Erreur",
-                description: "Impossible d'accéder à la galerie",
-                variant: "destructive"
-              });
-            }
-          }} disabled={cameraLoading} className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                <Camera className="h-4 w-4" />
-              </button>}
+                }} 
+                disabled={cameraLoading} 
+                className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
           
-          {isEditing && !isViewingOtherUser && <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />}
+          {isEditing && !isViewingOtherUser && (
+            <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
+          )}
           
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-[22px] font-bold text-foreground">{profile?.username || profile?.display_name}</h2>
-            {(profile?.is_premium || subscriptionInfo?.subscribed) && <Crown className="h-5 w-5 text-yellow-500" />}
+          {/* Display Name (Prénom Nom) */}
+          <div className="flex items-center gap-1.5 mb-1">
+            <h2 className="text-[20px] font-bold text-foreground">
+              {profile?.display_name || profile?.username}
+            </h2>
+            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+              <Crown className="h-4 w-4 text-yellow-500" />
+            )}
           </div>
           
-          {profile?.display_name && profile.display_name !== profile.username && <p className="text-[15px] text-muted-foreground mb-2">{profile.display_name}</p>}
-          
-          {/* Badges */}
-          <div className="flex flex-wrap justify-center gap-2 mb-3">
-            {profile?.is_admin && <Badge className="bg-red-100 text-red-800 border-red-200 text-[11px]">
+          {/* Status Badges - Compact */}
+          <div className="flex flex-wrap justify-center gap-1.5 mb-3">
+            {profile?.is_admin && (
+              <Badge className="bg-red-100 text-red-700 border-0 text-[11px] px-2 py-0.5">
                 Admin
-              </Badge>}
-            {(profile?.is_premium || subscriptionInfo?.subscribed) && <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[11px]">
+              </Badge>
+            )}
+            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+              <Badge className="bg-orange-100 text-orange-700 border-0 text-[11px] px-2 py-0.5">
                 {subscriptionInfo?.subscription_tier || 'Premium'}
-              </Badge>}
+              </Badge>
+            )}
+            {profile?.strava_connected && profile?.strava_verified_at && (
+              <Badge className="bg-orange-100 text-orange-700 border-0 text-[11px] px-2 py-0.5">
+                Strava ✓
+              </Badge>
+            )}
+            {profile?.instagram_connected && profile?.instagram_verified_at && (
+              <Badge className="bg-pink-100 text-pink-700 border-0 text-[11px] px-2 py-0.5">
+                Instagram ✓
+              </Badge>
+            )}
           </div>
           
-          {/* Verified Badges */}
-          {(() => {
-          const isStravaVerified = profile?.strava_connected && profile?.strava_verified_at;
-          const isInstagramVerified = profile?.instagram_connected && profile?.instagram_verified_at;
-          if (isStravaVerified || isInstagramVerified) {
-            return <div className="flex flex-wrap justify-center gap-2 mb-3">
-                  {isStravaVerified && <button onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-orange-100 text-orange-800">
-                      <Award className="h-3 w-3" />
-                      Strava
-                    </button>}
-                  {isInstagramVerified && <button onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-pink-100 text-pink-800">
-                      <Award className="h-3 w-3" />
-                      Instagram
-                    </button>}
-                </div>;
-          }
-          return null;
-        })()}
-          
-          {/* Stats Row */}
-          <div className="flex items-center justify-center gap-8 py-3">
-            <button onClick={() => {
-            setFollowDialogType('followers');
-            setShowFollowDialog(true);
-          }} className="text-center">
-              <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
-              <p className="text-[13px] text-muted-foreground">Abonnés</p>
+          {/* Stats Row - Compact */}
+          <div className="flex items-center gap-6 py-2">
+            <button 
+              onClick={() => {
+                setFollowDialogType('followers');
+                setShowFollowDialog(true);
+              }} 
+              className="text-center"
+            >
+              <p className="text-[18px] font-bold text-foreground">{followerCount}</p>
+              <p className="text-[12px] text-muted-foreground">Abonnés</p>
             </button>
-            <div className="w-px h-8 bg-border" />
-            <button onClick={() => {
-            setFollowDialogType('following');
-            setShowFollowDialog(true);
-          }} className="text-center">
-              <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
-              <p className="text-[13px] text-muted-foreground">Abonnements</p>
+            <div className="w-px h-6 bg-border" />
+            <button 
+              onClick={() => {
+                setFollowDialogType('following');
+                setShowFollowDialog(true);
+              }} 
+              className="text-center"
+            >
+              <p className="text-[18px] font-bold text-foreground">{followingCount}</p>
+              <p className="text-[12px] text-muted-foreground">Abonnements</p>
             </button>
+            <div className="w-px h-6 bg-border" />
+            <div className="text-center">
+              <p className="text-[18px] font-bold text-foreground">{totalSessionsCreated}</p>
+              <p className="text-[12px] text-muted-foreground">Séances</p>
+            </div>
           </div>
           
-          {/* Reliability Badge */}
-          <div className="w-full max-w-[200px]">
+          {/* Reliability Badge - Compact */}
+          <div className="w-full max-w-[180px] mt-1">
             <ReliabilityBadge rate={reliabilityRate} onClick={() => setShowReliabilityDetails(true)} />
           </div>
           
-          {/* Premium Button or Report Button */}
-          {!isViewingOtherUser && !subscriptionInfo?.subscribed && <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-3 gap-2">
-              <Crown className="h-4 w-4" />
+          {/* Action Buttons */}
+          {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
+            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-2 gap-1.5 h-8 text-[13px]">
+              <Crown className="h-3.5 w-3.5" />
               Devenir Premium
-            </Button>}
+            </Button>
+          )}
           
-          {isViewingOtherUser && <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
-              <Flag className="h-4 w-4" />
+          {isViewingOtherUser && (
+            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 text-[13px]">
+              <Flag className="h-3.5 w-3.5" />
               Signaler
-            </Button>}
+            </Button>
+          )}
         </div>
+
+        {/* Classement & Badges - Compact iOS Style */}
+        <ProfileRankBadgeCompact 
+          userId={viewingUserId || user?.id || ''} 
+          onRankClick={() => navigate('/leaderboard')}
+          onBadgesClick={() => {}}
+        />
 
         {/* iOS List Groups */}
         
