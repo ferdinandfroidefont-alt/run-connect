@@ -30,6 +30,7 @@ import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog"
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ProfileRankBadgeCompact } from "@/components/profile/ProfileRankBadgeCompact";
+import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 interface Profile {
   username: string;
   display_name: string | null;
@@ -723,12 +724,16 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Classement & Badges - Compact iOS Style */}
-        <ProfileRankBadgeCompact 
-          userId={viewingUserId || user?.id || ''} 
-          onRankClick={() => navigate('/leaderboard')}
-          onBadgesClick={() => {}}
-        />
+        {/* Classement, Badges & Activités - iOS Style Group */}
+        {!isViewingOtherUser ? (
+          <ProfileStatsGroup userId={user?.id || ''} />
+        ) : (
+          <ProfileRankBadgeCompact 
+            userId={viewingUserId || ''} 
+            onRankClick={() => navigate('/leaderboard')}
+            onBadgesClick={() => {}}
+          />
+        )}
 
         {/* iOS List Groups */}
         
@@ -814,8 +819,8 @@ const Profile = () => {
         walking_records: profile.walking_records
       }} />}
 
-        {/* Activity Chart */}
-        {(viewingUserId || user?.id) && <UserActivityChart userId={viewingUserId || user?.id || ''} username={profile?.username} />}
+        {/* Activity Chart - Only for other users (own profile has it in ProfileStatsGroup) */}
+        {isViewingOtherUser && viewingUserId && <UserActivityChart userId={viewingUserId} username={profile?.username} />}
 
         {/* Common Clubs - Other Users */}
         {isViewingOtherUser && commonClubs.length > 0 && <div>
