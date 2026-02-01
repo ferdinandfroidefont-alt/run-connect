@@ -385,10 +385,11 @@ export const ProfileDialog = ({
           
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-6">
-              {/* Avatar Section - iOS Style */}
-              <div className="flex flex-col items-center pt-4">
-                <div className="relative mb-3">
-                  <Avatar className="h-[100px] w-[100px] ring-2 ring-border">
+              {/* Profile Header - iOS Style */}
+              <div className="flex flex-col items-center pt-6 pb-4">
+                {/* Avatar with shadow */}
+                <div className="relative mb-4">
+                  <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
                     <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
                     <AvatarFallback className="text-2xl bg-secondary">
                       {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
@@ -415,77 +416,82 @@ export const ProfileDialog = ({
                         }
                       }} 
                       disabled={cameraLoading} 
-                      className="absolute bottom-0 right-0 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
+                      className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
                     >
-                      <Camera className="h-4 w-4" />
+                      <Camera className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
                 
-                {/* Username + Crown */}
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-[22px] font-bold text-foreground">@{profile?.username}</h2>
+                {/* Display Name (Primary) */}
+                <h2 className="text-[22px] font-bold text-foreground leading-tight">
+                  {profile?.display_name || profile?.username || "Utilisateur"}
+                </h2>
+                
+                {/* Username (Secondary) */}
+                <p className="text-[14px] text-muted-foreground mt-0.5">
+                  @{profile?.username}
+                </p>
+                
+                {/* Status Badges - Inline */}
+                <div className="flex items-center gap-1.5 mt-2">
                   {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                    <Crown className="h-5 w-5 text-yellow-500" />
+                    <div className="flex items-center gap-1 bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded-full">
+                      <Crown className="h-3 w-3" />
+                      <span className="text-[11px] font-semibold">Premium</span>
+                    </div>
+                  )}
+                  {profile?.is_admin && (
+                    <div className="flex items-center gap-1 bg-red-500/15 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full">
+                      <Shield className="h-3 w-3" />
+                      <span className="text-[11px] font-semibold">Admin</span>
+                    </div>
+                  )}
+                  {profile?.strava_connected && profile?.strava_verified_at && (
+                    <div className="flex items-center gap-1 bg-orange-500/15 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full">
+                      <Zap className="h-3 w-3" />
+                      <span className="text-[11px] font-semibold">Strava</span>
+                    </div>
+                  )}
+                  {profile?.instagram_connected && profile?.instagram_verified_at && (
+                    <div className="flex items-center gap-1 bg-pink-500/15 text-pink-600 dark:text-pink-400 px-2 py-0.5 rounded-full">
+                      <Instagram className="h-3 w-3" />
+                    </div>
                   )}
                 </div>
                 
-                {/* Badges - iOS Style Pills */}
-                {(profile?.is_admin || (profile?.strava_connected && profile?.strava_verified_at) || (profile?.instagram_connected && profile?.instagram_verified_at)) && (
-                  <div className="flex flex-wrap justify-center gap-2 mb-3">
-                    {profile?.is_admin && (
-                      <div className="flex items-center gap-1.5 bg-red-500/10 text-red-600 px-3 py-1 rounded-full">
-                        <Shield className="h-3.5 w-3.5" />
-                        <span className="text-xs font-medium">Admin</span>
-                      </div>
-                    )}
-                    {profile?.strava_connected && profile?.strava_verified_at && (
-                      <div className="flex items-center gap-1.5 bg-orange-500/10 text-orange-600 px-3 py-1 rounded-full">
-                        <Zap className="h-3.5 w-3.5" />
-                        <span className="text-xs font-medium">Strava</span>
-                      </div>
-                    )}
-                    {profile?.instagram_connected && profile?.instagram_verified_at && (
-                      <div className="flex items-center gap-1.5 bg-pink-500/10 text-pink-600 px-3 py-1 rounded-full">
-                        <Instagram className="h-3.5 w-3.5" />
-                        <span className="text-xs font-medium">Instagram</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
                 {/* Bio */}
                 {profile?.bio && (
-                  <p className="text-center text-muted-foreground text-[15px] max-w-md mx-auto mb-3 line-clamp-2">
+                  <p className="text-center text-muted-foreground text-[14px] max-w-[280px] mt-3 line-clamp-2">
                     {profile.bio}
                   </p>
                 )}
-                
-                {/* Stats Row */}
-                <div className="flex items-center justify-center gap-8 py-3">
+              </div>
+
+              {/* Stats Card - iOS Style */}
+              <div className="bg-card rounded-[12px] mx-0 overflow-hidden">
+                <div className="flex items-center divide-x divide-border">
                   <button
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-                    className="text-center"
+                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
                   >
                     <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
-                    <p className="text-[13px] text-muted-foreground">Abonnés</p>
+                    <p className="text-[12px] text-muted-foreground">Abonnés</p>
                   </button>
-                  <div className="w-px h-8 bg-border" />
                   <button
                     onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-                    className="text-center"
+                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
                   >
                     <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
-                    <p className="text-[13px] text-muted-foreground">Abonnements</p>
+                    <p className="text-[12px] text-muted-foreground">Abonnements</p>
                   </button>
-                </div>
-                
-                {/* Reliability Badge */}
-                <div className="w-full max-w-[200px]">
-                  <ReliabilityBadge 
-                    rate={reliabilityRate}
+                  <button
                     onClick={() => setShowReliabilityDialog(true)}
-                  />
+                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
+                  >
+                    <p className="text-[20px] font-bold text-foreground">{reliabilityRate}%</p>
+                    <p className="text-[12px] text-muted-foreground">Fiabilité</p>
+                  </button>
                 </div>
               </div>
 
