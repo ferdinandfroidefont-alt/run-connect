@@ -593,18 +593,13 @@ const Profile = () => {
       </div>
 
       <div className="max-w-md mx-auto p-4 space-y-4">
-        {/* Profile Header - iOS Style */}
-        <div className="flex flex-col items-center pt-2">
-          {/* Username at top without @ */}
-          <p className="text-[15px] font-medium text-muted-foreground mb-3">
-            {profile?.username}
-          </p>
-          
-          {/* Avatar */}
-          <div className="relative mb-2">
-            <Avatar className="h-[88px] w-[88px] ring-2 ring-border">
+        {/* Profile Header - iOS Style Premium */}
+        <div className="flex flex-col items-center pt-4 pb-2">
+          {/* Avatar with subtle shadow */}
+          <div className="relative mb-3">
+            <Avatar className="h-20 w-20 ring-[3px] ring-white shadow-lg">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="text-2xl bg-secondary">
+              <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
                 {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
@@ -627,7 +622,7 @@ const Profile = () => {
                   }
                 }} 
                 disabled={cameraLoading} 
-                className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
+                className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
               >
                 <Camera className="h-3.5 w-3.5" />
               </button>
@@ -638,9 +633,9 @@ const Profile = () => {
             <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
           )}
           
-          {/* Display Name (Prénom Nom) */}
-          <div className="flex items-center gap-1.5 mb-1">
-            <h2 className="text-[20px] font-bold text-foreground">
+          {/* Display Name - Primary */}
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <h2 className="text-[22px] font-bold text-foreground">
               {profile?.display_name || profile?.username}
             </h2>
             {(profile?.is_premium || subscriptionInfo?.subscribed) && (
@@ -648,75 +643,80 @@ const Profile = () => {
             )}
           </div>
           
-          {/* Status Badges - Compact */}
-          <div className="flex flex-wrap justify-center gap-1.5 mb-3">
+          {/* Username - Secondary */}
+          <p className="text-[14px] text-muted-foreground mb-2">
+            @{profile?.username}
+          </p>
+          
+          {/* Status Badges - Compact Inline */}
+          <div className="flex flex-wrap justify-center gap-1.5 mb-4">
             {profile?.is_admin && (
-              <Badge className="bg-red-100 text-red-700 border-0 text-[11px] px-2 py-0.5">
+              <Badge className="bg-red-100 text-red-700 border-0 text-[11px] px-2 py-0.5 font-medium">
                 Admin
               </Badge>
             )}
             {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-              <Badge className="bg-orange-100 text-orange-700 border-0 text-[11px] px-2 py-0.5">
+              <Badge className="bg-orange-100 text-orange-700 border-0 text-[11px] px-2 py-0.5 font-medium">
                 {subscriptionInfo?.subscription_tier || 'Premium'}
               </Badge>
             )}
             {profile?.strava_connected && profile?.strava_verified_at && (
-              <Badge className="bg-orange-100 text-orange-700 border-0 text-[11px] px-2 py-0.5">
+              <Badge className="bg-orange-100 text-orange-600 border-0 text-[11px] px-2 py-0.5 font-medium">
                 Strava ✓
               </Badge>
             )}
             {profile?.instagram_connected && profile?.instagram_verified_at && (
-              <Badge className="bg-pink-100 text-pink-700 border-0 text-[11px] px-2 py-0.5">
+              <Badge className="bg-pink-100 text-pink-600 border-0 text-[11px] px-2 py-0.5 font-medium">
                 Instagram ✓
               </Badge>
             )}
           </div>
           
-          {/* Stats Row - Compact */}
-          <div className="flex items-center gap-6 py-2">
+          {/* Stats Row - Instagram/Strava Style */}
+          <div className="flex items-center justify-center gap-8 py-3 w-full">
             <button 
               onClick={() => {
                 setFollowDialogType('followers');
                 setShowFollowDialog(true);
               }} 
-              className="text-center"
+              className="text-center min-w-[60px] active:opacity-70 transition-opacity"
             >
-              <p className="text-[18px] font-bold text-foreground">{followerCount}</p>
-              <p className="text-[12px] text-muted-foreground">Abonnés</p>
+              <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnés</p>
             </button>
-            <div className="w-px h-6 bg-border" />
+            <div className="w-px h-8 bg-border/60" />
             <button 
               onClick={() => {
                 setFollowDialogType('following');
                 setShowFollowDialog(true);
               }} 
-              className="text-center"
+              className="text-center min-w-[60px] active:opacity-70 transition-opacity"
             >
-              <p className="text-[18px] font-bold text-foreground">{followingCount}</p>
-              <p className="text-[12px] text-muted-foreground">Abonnements</p>
+              <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnements</p>
             </button>
-            <div className="w-px h-6 bg-border" />
-            <div className="text-center">
-              <p className="text-[18px] font-bold text-foreground">{totalSessionsCreated}</p>
-              <p className="text-[12px] text-muted-foreground">Séances</p>
+            <div className="w-px h-8 bg-border/60" />
+            <div className="text-center min-w-[60px]">
+              <p className="text-[20px] font-bold text-foreground">{totalSessionsCreated}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Séances</p>
             </div>
           </div>
           
           {/* Reliability Badge - Compact */}
-          <div className="w-full max-w-[180px] mt-1">
+          <div className="w-full max-w-[160px] mt-2">
             <ReliabilityBadge rate={reliabilityRate} onClick={() => setShowReliabilityDetails(true)} />
           </div>
           
           {/* Action Buttons */}
           {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-2 gap-1.5 h-8 text-[13px]">
+            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-3 gap-1.5 h-8 text-[13px]">
               <Crown className="h-3.5 w-3.5" />
               Devenir Premium
             </Button>
           )}
           
           {isViewingOtherUser && (
-            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 text-[13px]">
+            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 text-[13px]">
               <Flag className="h-3.5 w-3.5" />
               Signaler
             </Button>
