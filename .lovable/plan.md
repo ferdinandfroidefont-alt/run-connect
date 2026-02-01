@@ -1,98 +1,111 @@
 
-# Plan : Debugging Connexion Google Mobile - Investigation approfondie
+# Plan : Correction Google Sign-In Mobile - Erreur Captcha
 
-## Diagnostic Actuel
+## Probleme Identifie
 
-La fonction `firebase-auth` est maintenant deployee avec les headers CORS complets et repond correctement aux tests serveur. Les logs montrent que la fonction fonctionne.
+Les logs de la fonction edge montrent clairement l'erreur :
 
-L'erreur "edge function returned a non 2xx status code" peut venir de plusieurs sources :
-
-1. **Cache WebView Android** - L'ancien code sans headers CORS est encore en cache
-2. **Erreur cote client** - Le token Firebase n'est pas correctement recupere avant l'appel
-3. **Probleme de timing** - La requete echoue avant d'envoyer le token
-
----
-
-## Actions Recommandees
-
-### Etape 1 : Forcer le nettoyage du cache WebView
-
-Vous devez **desinstaller completement l'application** de votre telephone et la reinstaller pour vider le cache WebView.
-
-### Etape 2 : Ajouter du debugging cote client
-
-Je vais modifier le fichier `Auth.tsx` pour ajouter des logs detailles qui nous montreront exactement ou l'erreur se produit :
-
-**Fichier : `src/pages/Auth.tsx` (lignes 133-176)**
-
-```typescript
-const handleGoogleAuth = async () => {
-  try {
-    setIsLoading(true);
-    console.log('🔥 [GOOGLE AUTH] Starting...');
-    
-    const isNativeAvailable = await isNativeGoogleSignInAvailable();
-    console.log('🔥 [GOOGLE AUTH] Native available:', isNativeAvailable);
-    
-    if (isNativeAvailable) {
-      try {
-        console.log('🔥 [GOOGLE AUTH] Calling googleSignIn()...');
-        const result = await googleSignIn();
-        console.log('🔥 [GOOGLE AUTH] Got result:', { 
-          hasToken: !!result.idToken, 
-          tokenLength: result.idToken?.length,
-          email: result.email 
-        });
-        
-        console.log('🔥 [GOOGLE AUTH] Calling firebase-auth edge function...');
-        const { data, error } = await supabase.functions.invoke('firebase-auth', {
-          body: { idToken: result.idToken }
-        });
-        
-        console.log('🔥 [GOOGLE AUTH] Edge function response:', { data, error });
-        
-        if (error) {
-          console.error('🔥 [GOOGLE AUTH] Edge function error:', error);
-          throw error;
-        }
-        // ... reste du code
-      } catch (nativeError: any) {
-        console.error('🔥 [GOOGLE AUTH] Native error:', nativeError);
-        toast({
-          title: "Erreur Google Sign-In",
-          description: nativeError.message || "Erreur lors de l'authentification",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    // ...
-  } catch (error: any) {
-    console.error('🔥 [GOOGLE AUTH] Global error:', error);
-    // ...
-  }
-};
+```
+AuthApiError: captcha verification process failed
 ```
 
-### Etape 3 : Verifier le toast d'erreur exact
+Le probleme n'est PAS les headers CORS. Le projet Supabase a le **captcha active** pour les connexions par mot de passe. La fonction `firebase-auth` utilise `signInWithPassword` avec un client `anon` qui declenche la verification captcha - mais aucun token captcha n'est fourni.
 
-L'erreur actuelle est "edge function returned a non 2xx status code". Si le probleme persiste apres reinstallation, le message d'erreur detaille dans les logs nous dira exactement ce qui echoue.
+## Cause Technique
 
----
+Dans `supabase/functions/firebase-auth/index.ts` (lignes 164-174) :
+
+```typescript
+// Client ANON - declenche le captcha
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_ANON_KEY') ?? ''  // <-- PROBLEME : client anon
+);
+
+const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+  email: tokenInfo.email,
+  password: tempPassword,  // <-- Echoue car captcha requis
+});
+```
+
+## Solution
+
+Utiliser le client **service_role** (deja cree dans la fonction) pour generer les tokens de session directement via l'API Admin, sans passer par `signInWithPassword`.
+
+Supabase permet de generer des sessions via `auth.admin.generateLink` ou en creant des tokens JWT manuellement. La meilleure approche est d'utiliser `auth.admin.generateLink` avec `type: 'magiclink'` puis d'echanger le lien contre une session.
+
+**Alternative plus simple** : Utiliser `supabase.auth.admin.generateLink` pour creer un lien de connexion, puis extraire le token pour creer une session.
+
+### Modification du fichier : `supabase/functions/firebase-auth/index.ts`
+
+**Avant (lignes 164-179) :**
+```typescript
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+);
+
+console.log('[FIREBASE AUTH] Signing in with temporary password');
+const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+  email: tokenInfo.email,
+  password: tempPassword,
+});
+```
+
+**Apres :**
+```typescript
+// Utiliser generateLink pour obtenir un token sans captcha
+console.log('[FIREBASE AUTH] Generating magic link for session...');
+const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+  type: 'magiclink',
+  email: tokenInfo.email,
+  options: {
+    redirectTo: Deno.env.get('SUPABASE_URL')
+  }
+});
+
+if (linkError || !linkData) {
+  console.error('[FIREBASE AUTH] Error generating link:', linkError);
+  throw linkError || new Error('Failed to generate magic link');
+}
+
+// Extraire le token du lien et l'echanger contre une session
+const url = new URL(linkData.properties.action_link);
+const token_hash = url.searchParams.get('token_hash');
+const type = url.searchParams.get('type');
+
+if (!token_hash) {
+  throw new Error('No token_hash in generated link');
+}
+
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+);
+
+const { data: sessionData, error: sessionError } = await supabaseClient.auth.verifyOtp({
+  token_hash,
+  type: 'magiclink'
+});
+
+if (sessionError || !sessionData.session) {
+  console.error('[FIREBASE AUTH] Error verifying OTP:', sessionError);
+  throw sessionError || new Error('Failed to create session');
+}
+
+const signInData = sessionData;
+```
 
 ## Resume des Modifications
 
 | Fichier | Modification |
-|---------|-------------|
-| `src/pages/Auth.tsx` | Ajouter des console.log detailles dans handleGoogleAuth |
+|---------|--------------|
+| `supabase/functions/firebase-auth/index.ts` | Remplacer `signInWithPassword` par `generateLink` + `verifyOtp` pour contourner le captcha |
 
----
+## Pourquoi ca marche sur Web ?
 
-## Instructions pour Tester
+Sur le web, la connexion Google utilise `signInWithOAuth` qui passe par le flow OAuth natif de Supabase - pas de captcha requis. Sur mobile, le flow passe par Firebase ID Token puis la fonction edge qui tente un `signInWithPassword` - ce qui declenche le captcha.
 
-1. **Desinstallez l'application** de votre telephone Android
-2. **Reinstallez-la** depuis le store ou reconstruisez l'APK
-3. **Essayez de vous connecter avec Google**
-4. **Si ca echoue encore**, ouvrez les outils de dev (si possible) ou relancez l'app et envoyez-moi le message d'erreur exact
+## Deploiement
 
-La fonction edge est maintenant correctement deployee - le probleme est probablement un cache WebView cote mobile.
+Apres modification, la fonction sera automatiquement redeployee. Pas besoin de desinstaller/reinstaller l'app car le probleme etait cote serveur.
