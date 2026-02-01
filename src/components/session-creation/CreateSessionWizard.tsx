@@ -324,6 +324,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             selectedLocation={wizard.selectedLocation}
             imagePreview={wizard.imagePreview}
             loading={loading || uploadingImage}
+            isPremium={subscriptionInfo?.subscribed || false}
+            onFormDataChange={wizard.updateFormData}
             onSubmit={handleSubmit}
             onBack={wizard.goToPreviousStep}
           />

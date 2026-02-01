@@ -14,7 +14,6 @@ import {
   TERRAIN_TYPES,
   SessionBlock,
   SessionMode,
-  VisibilityType,
   isEnduranceActivity,
   isRunningActivity,
   isCyclingActivity,
@@ -26,7 +25,6 @@ import { ClubSelector } from '@/components/ClubSelector';
 import { SessionModeSwitch } from '../SessionModeSwitch';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
-import { VisibilitySelector } from '../VisibilitySelector';
 import { cn } from '@/lib/utils';
 
 interface DetailsStepProps {
@@ -282,21 +280,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </div>
         </div>
 
-        {/* Visibility Selector - iOS Style */}
-        <div className="bg-card rounded-2xl p-4">
-          <VisibilitySelector
-            visibilityType={formData.visibility_type}
-            hiddenFromUsers={formData.hidden_from_users}
-            isPremium={isPremium}
-            onVisibilityChange={(type: VisibilityType) => {
-              onFormDataChange({ visibility_type: type });
-              // Sync friends_only for backwards compatibility
-              onFormDataChange({ friends_only: type === 'friends' });
-            }}
-            onHiddenUsersChange={(userIds) => onFormDataChange({ hidden_from_users: userIds })}
-            clubId={formData.club_id}
-          />
-        </div>
 
         {/* Image & Notes */}
         <div className="bg-card rounded-2xl p-4 space-y-4">
