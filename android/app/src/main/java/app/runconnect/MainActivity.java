@@ -239,6 +239,12 @@ public class MainActivity extends AppCompatActivity {
         splashProgressBar = findViewById(R.id.splash_progress_bar);
         splashProgressText = findViewById(R.id.splash_progress_text);
         
+        // 🎯 MASQUER LE SPLASH NATIF IMMÉDIATEMENT - Le LoadingScreen React prend le relais
+        if (splashOverlay != null) {
+            splashOverlay.setVisibility(android.view.View.GONE);
+            Log.d(TAG, "✅ Native splash hidden - React LoadingScreen will handle loading");
+        }
+        
         // Fond bleu pendant le chargement pour éviter l'écran blanc
         webView.setBackgroundColor(0xFF5B7CFF); // Couleur colorPrimary (corrigée)
         
