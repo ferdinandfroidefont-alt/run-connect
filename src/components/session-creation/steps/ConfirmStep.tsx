@@ -1,8 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, Eye, EyeOff, Building2, Globe } from 'lucide-react';
+import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType } from '../types';
+import { VisibilitySelector } from '../VisibilitySelector';
 import { cn } from '@/lib/utils';
 
 interface ConfirmStepProps {
@@ -10,6 +12,8 @@ interface ConfirmStepProps {
   selectedLocation: SelectedLocation | null;
   imagePreview: string | null;
   loading: boolean;
+  isPremium: boolean;
+  onFormDataChange: (updates: Partial<SessionFormData>) => void;
   onSubmit: () => void;
   onBack: () => void;
 }
@@ -45,10 +49,28 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   selectedLocation,
   imagePreview,
   loading,
+  isPremium,
+  onFormDataChange,
   onSubmit,
   onBack,
 }) => {
+  const navigate = useNavigate();
   const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
+
+  const handleVisibilityChange = (type: VisibilityType) => {
+    // If user selects public and is not premium, redirect to subscription page
+    if (type === 'public' && !isPremium) {
+      navigate('/subscription');
+      return;
+    }
+    onFormDataChange({ visibility_type: type });
+    // Sync friends_only for backwards compatibility
+    onFormDataChange({ friends_only: type === 'friends' });
+  };
+
+  const handleHiddenUsersChange = (userIds: string[]) => {
+    onFormDataChange({ hidden_from_users: userIds });
+  };
 
   return (
     <motion.div
@@ -58,53 +80,54 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
       className="flex flex-col h-full"
     >
       {/* Header */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-4">
         <motion.div
-          className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center"
+          className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', bounce: 0.5 }}
         >
-          <span className="text-4xl">{activity?.icon || '🏃'}</span>
+          <span className="text-3xl">{activity?.icon || '🏃'}</span>
         </motion.div>
-        <h2 className="text-2xl font-bold text-foreground">Prêt à créer ?</h2>
-        <p className="text-muted-foreground mt-2">Vérifiez les détails de votre séance</p>
+        <h2 className="text-xl font-bold text-foreground">Prêt à créer ?</h2>
+        <p className="text-sm text-muted-foreground mt-1">Vérifiez les détails et la visibilité</p>
       </div>
 
-      {/* Session preview card */}
+      {/* Content */}
       <motion.div
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto space-y-4"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
+        {/* Session preview card */}
         <div className="rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 overflow-hidden">
           {/* Image */}
           {imagePreview && (
-            <div className="relative h-40">
+            <div className="relative h-32">
               <img src={imagePreview} alt="Session" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             </div>
           )}
 
           {/* Content */}
-          <div className="p-4 space-y-4">
+          <div className="p-4 space-y-3">
             {/* Title & Activity */}
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">{activity?.icon}</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xl">{activity?.icon}</span>
+                <span className="text-xs text-muted-foreground">
                   {activity?.label.replace(/^[^\s]+\s/, '')}
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-foreground">{formData.title}</h3>
+              <h3 className="text-lg font-bold text-foreground">{formData.title}</h3>
             </div>
 
             {/* Location */}
             {selectedLocation && (
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-4 h-4 text-primary" />
+              <div className="flex items-start gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">Lieu</p>
@@ -115,9 +138,9 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
 
             {/* Date/Time */}
             {formData.scheduled_at && (
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-4 h-4 text-primary" />
+              <div className="flex items-start gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground">Date & Heure</p>
@@ -138,40 +161,40 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             {/* Stats row */}
             <div className="flex gap-4 pt-2 border-t border-white/10">
               {formData.max_participants && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>{formData.max_participants} max</span>
                 </div>
               )}
               {formData.distance_km && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Ruler className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Ruler className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>{formData.distance_km} km</span>
                 </div>
               )}
-              {/* Visibility indicator */}
-              <div className="flex items-center gap-2 text-sm">
-                {React.createElement(getVisibilityIcon(formData.visibility_type), { className: "w-4 h-4 text-muted-foreground" })}
-                <span>{getVisibilityLabel(formData.visibility_type, formData.hidden_from_users?.length || 0)}</span>
-              </div>
             </div>
-
-            {/* Hidden users warning */}
-            {formData.visibility_type === 'friends' && formData.hidden_from_users?.length > 0 && (
-              <div className="pt-2 border-t border-white/10 flex items-center gap-2 text-xs text-amber-500">
-                <EyeOff className="w-3.5 h-3.5" />
-                <span>{formData.hidden_from_users.length} ami{formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance</span>
-              </div>
-            )}
-
-            {/* Description */}
-            {formData.description && (
-              <div className="pt-2 border-t border-white/10">
-                <p className="text-sm text-muted-foreground">{formData.description}</p>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Visibility Selector - iOS Style */}
+        <div className="bg-card rounded-2xl p-4">
+          <VisibilitySelector
+            visibilityType={formData.visibility_type}
+            hiddenFromUsers={formData.hidden_from_users}
+            isPremium={isPremium}
+            onVisibilityChange={handleVisibilityChange}
+            onHiddenUsersChange={handleHiddenUsersChange}
+            clubId={formData.club_id}
+          />
+        </div>
+
+        {/* Hidden users warning */}
+        {formData.visibility_type === 'friends' && formData.hidden_from_users?.length > 0 && (
+          <div className="px-2 flex items-center gap-2 text-xs text-amber-500">
+            <EyeOff className="w-3.5 h-3.5" />
+            <span>{formData.hidden_from_users.length} ami{formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance</span>
+          </div>
+        )}
       </motion.div>
 
       {/* Navigation */}
