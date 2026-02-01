@@ -17,12 +17,12 @@ interface Badge {
 }
 
 const getRankBadge = (points: number) => {
-  if (points >= 5000) return { emoji: "💎", name: "Diamant", color: "bg-cyan-500" };
-  if (points >= 3000) return { emoji: "💍", name: "Platine", color: "bg-purple-500" };
-  if (points >= 2000) return { emoji: "🥇", name: "Or", color: "bg-yellow-500" };
-  if (points >= 1000) return { emoji: "🥈", name: "Argent", color: "bg-gray-400" };
-  if (points >= 500) return { emoji: "🥉", name: "Bronze", color: "bg-orange-500" };
-  return { emoji: "⭐", name: "Novice", color: "bg-blue-500" };
+  if (points >= 5000) return { emoji: "💎", name: "Diamant", color: "from-cyan-400 to-cyan-600" };
+  if (points >= 3000) return { emoji: "💍", name: "Platine", color: "from-purple-400 to-purple-600" };
+  if (points >= 2000) return { emoji: "🥇", name: "Or", color: "from-yellow-400 to-yellow-600" };
+  if (points >= 1000) return { emoji: "🥈", name: "Argent", color: "from-gray-300 to-gray-500" };
+  if (points >= 500) return { emoji: "🥉", name: "Bronze", color: "from-orange-400 to-orange-600" };
+  return { emoji: "⭐", name: "Novice", color: "from-blue-400 to-blue-600" };
 };
 
 export const ProfileRankBadgeCompact = ({ 
@@ -86,9 +86,9 @@ export const ProfileRankBadgeCompact = ({
   if (loading) {
     return (
       <div className="bg-card rounded-[10px] overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="h-[30px] w-[30px] rounded-[7px] bg-secondary animate-pulse" />
-          <div className="flex-1 h-5 bg-secondary rounded animate-pulse" />
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <div className="h-7 w-7 rounded-[6px] bg-secondary animate-pulse" />
+          <div className="flex-1 h-4 bg-secondary rounded animate-pulse" />
         </div>
       </div>
     );
@@ -99,73 +99,76 @@ export const ProfileRankBadgeCompact = ({
       {/* Classement Row */}
       <button
         onClick={onRankClick}
-        className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-2.5 active:bg-secondary/50 transition-colors"
       >
-        <div className={cn("h-[30px] w-[30px] rounded-[7px] flex items-center justify-center", badge.color)}>
-          <Trophy className="h-[18px] w-[18px] text-white" />
+        <div className={cn(
+          "h-7 w-7 rounded-[6px] flex items-center justify-center bg-gradient-to-br shadow-sm",
+          badge.color
+        )}>
+          <Trophy className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-[17px] text-foreground">Classement</span>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary">
-              <span className="text-lg">{badge.emoji}</span>
-              <span className="text-[13px] font-medium text-foreground">{badge.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[15px] text-foreground">Classement</span>
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-secondary/80">
+              <span className="text-sm">{badge.emoji}</span>
+              <span className="text-[11px] font-medium text-muted-foreground">{badge.name}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[17px] font-semibold text-primary">#{rank}</span>
-            <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-[15px] font-semibold text-primary">#{rank}</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
           </div>
         </div>
       </button>
 
-      <div className="h-px bg-border ml-[54px]" />
+      <div className="h-px bg-border/50 ml-[52px]" />
 
       {/* Points Row */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
-          <span className="text-white text-sm font-bold">XP</span>
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <div className="h-7 w-7 rounded-[6px] bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-sm">
+          <span className="text-white text-[11px] font-bold">XP</span>
         </div>
         <div className="flex-1 flex items-center justify-between">
-          <span className="text-[17px] text-foreground">Points</span>
-          <span className="text-[17px] font-semibold text-foreground">{points.toLocaleString()}</span>
+          <span className="text-[15px] text-foreground">Points</span>
+          <span className="text-[15px] font-semibold text-foreground">{points.toLocaleString()}</span>
         </div>
       </div>
 
-      <div className="h-px bg-border ml-[54px]" />
+      <div className="h-px bg-border/50 ml-[52px]" />
 
       {/* Badges Row */}
       <button
         onClick={onBadgesClick}
-        className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-2.5 active:bg-secondary/50 transition-colors"
       >
-        <div className="h-[30px] w-[30px] rounded-[7px] bg-yellow-500 flex items-center justify-center">
-          <Medal className="h-[18px] w-[18px] text-white" />
+        <div className="h-7 w-7 rounded-[6px] bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-sm">
+          <Medal className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 flex items-center justify-between">
-          <span className="text-[17px] text-foreground">Badges</span>
-          <div className="flex items-center gap-2">
+          <span className="text-[15px] text-foreground">Badges</span>
+          <div className="flex items-center gap-1.5">
             {badges.length > 0 ? (
-              <div className="flex -space-x-1">
+              <div className="flex -space-x-1.5">
                 {badges.slice(0, 4).map((b, i) => (
                   <div
                     key={b.id}
-                    className="h-6 w-6 rounded-full bg-yellow-100 border-2 border-card flex items-center justify-center text-sm"
+                    className="h-5 w-5 rounded-full bg-yellow-50 border border-yellow-200 flex items-center justify-center text-xs shadow-sm"
                     style={{ zIndex: 4 - i }}
                   >
                     {b.badge_icon || "🏅"}
                   </div>
                 ))}
                 {badges.length > 4 && (
-                  <div className="h-6 w-6 rounded-full bg-secondary border-2 border-card flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                  <div className="h-5 w-5 rounded-full bg-secondary border border-border flex items-center justify-center text-[9px] font-medium text-muted-foreground">
                     +{badges.length - 4}
                   </div>
                 )}
               </div>
             ) : (
-              <span className="text-[15px] text-muted-foreground">Aucun</span>
+              <span className="text-[13px] text-muted-foreground">Aucun</span>
             )}
-            <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
           </div>
         </div>
       </button>
