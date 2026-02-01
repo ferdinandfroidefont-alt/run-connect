@@ -161,22 +161,53 @@ serve(async (req) => {
       throw new Error('Failed to create or retrieve user');
     }
 
-    // 3. Générer une session Supabase en se connectant avec le mot de passe temporaire
+    // 3. Générer une session Supabase via magic link (contourne le captcha)
+    console.log('🔐 [FIREBASE AUTH] Generating magic link for session...');
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: tokenInfo.email,
+    });
+
+    if (linkError || !linkData) {
+      console.error('❌ [FIREBASE AUTH] Error generating link:', linkError);
+      throw linkError || new Error('Failed to generate magic link');
+    }
+
+    console.log('✅ [FIREBASE AUTH] Magic link generated');
+
+    // Extraire le token du lien et l'échanger contre une session
+    const actionLink = linkData.properties?.action_link;
+    if (!actionLink) {
+      console.error('❌ [FIREBASE AUTH] No action_link in response');
+      throw new Error('No action_link in generated link');
+    }
+
+    const url = new URL(actionLink);
+    const token_hash = url.searchParams.get('token');
+    
+    if (!token_hash) {
+      console.error('❌ [FIREBASE AUTH] No token in link URL:', actionLink);
+      throw new Error('No token in generated link');
+    }
+
+    console.log('🔑 [FIREBASE AUTH] Token extracted, verifying OTP...');
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    console.log('🔐 [FIREBASE AUTH] Signing in with temporary password');
-    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
-      email: tokenInfo.email,
-      password: tempPassword,
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.verifyOtp({
+      token_hash,
+      type: 'magiclink'
     });
 
-    if (signInError || !signInData.session) {
-      console.error('❌ [FIREBASE AUTH] Error signing in:', signInError);
-      throw signInError || new Error('Failed to create session');
+    if (sessionError || !sessionData.session) {
+      console.error('❌ [FIREBASE AUTH] Error verifying OTP:', sessionError);
+      throw sessionError || new Error('Failed to create session');
     }
+
+    const signInData = sessionData;
 
     console.log('✅ [FIREBASE AUTH] Session created successfully with valid tokens');
     console.log('🎫 [FIREBASE AUTH] Access token length:', signInData.session.access_token.length);
