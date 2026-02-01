@@ -61,7 +61,6 @@ export default function Search() {
       <div 
         className={`fixed inset-0 z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{ 
-          paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)'
         }}
       >
