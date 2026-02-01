@@ -133,18 +133,38 @@ const Auth = () => {
   const handleGoogleAuth = async () => {
     try {
       setIsLoading(true);
+      console.log('🔥 [GOOGLE AUTH] Starting...');
+      
       const isNativeAvailable = await isNativeGoogleSignInAvailable();
+      console.log('🔥 [GOOGLE AUTH] Native available:', isNativeAvailable);
       
       if (isNativeAvailable) {
         try {
-          const { idToken } = await googleSignIn();
-          const { data, error } = await supabase.functions.invoke('firebase-auth', {
-            body: { idToken }
+          console.log('🔥 [GOOGLE AUTH] Calling googleSignIn()...');
+          const result = await googleSignIn();
+          console.log('🔥 [GOOGLE AUTH] Got result:', { 
+            hasToken: !!result.idToken, 
+            tokenLength: result.idToken?.length,
+            email: result.email 
           });
           
-          if (error) throw error;
-          if (!data?.session) throw new Error('No session returned');
+          console.log('🔥 [GOOGLE AUTH] Calling firebase-auth edge function...');
+          const { data, error } = await supabase.functions.invoke('firebase-auth', {
+            body: { idToken: result.idToken }
+          });
           
+          console.log('🔥 [GOOGLE AUTH] Edge function response:', { data, error });
+          
+          if (error) {
+            console.error('🔥 [GOOGLE AUTH] Edge function error details:', JSON.stringify(error));
+            throw error;
+          }
+          if (!data?.session) {
+            console.error('🔥 [GOOGLE AUTH] No session returned:', data);
+            throw new Error('No session returned');
+          }
+          
+          console.log('🔥 [GOOGLE AUTH] Setting session...');
           await supabase.auth.setSession({
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token
@@ -167,6 +187,9 @@ const Auth = () => {
           }
           return;
         } catch (nativeError: any) {
+          console.error('🔥 [GOOGLE AUTH] Native error:', nativeError);
+          console.error('🔥 [GOOGLE AUTH] Error message:', nativeError.message);
+          console.error('🔥 [GOOGLE AUTH] Error stack:', nativeError.stack);
           toast({
             title: "Erreur Google Sign-In",
             description: nativeError.message || "Erreur lors de l'authentification",
@@ -176,6 +199,7 @@ const Auth = () => {
         }
       }
 
+      console.log('🔥 [GOOGLE AUTH] Using OAuth fallback (web)...');
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -185,6 +209,7 @@ const Auth = () => {
       });
       if (error) throw error;
     } catch (error: any) {
+      console.error('🔥 [GOOGLE AUTH] Global error:', error);
       toast({
         title: "Erreur",
         description: error.message,
