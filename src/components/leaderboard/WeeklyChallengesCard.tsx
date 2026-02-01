@@ -1,14 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { 
   Target, Users, Calendar, Award, Trophy, UserPlus, 
-  MessageCircle, Mic, Image, Heart, Flag, Clock
+  MessageCircle, Mic, Image, Heart, Flag, Clock, ChevronRight
 } from "lucide-react";
 import { useWeeklyChallenges } from "@/hooks/useWeeklyChallenges";
 import { useChallengeNotifications } from "@/hooks/useChallengeNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, any> = {
   Target,
@@ -34,7 +34,6 @@ export const WeeklyChallengesCard = () => {
       const now = new Date();
       const nextMonday = new Date(now);
       
-      // Calculer le prochain lundi à 00:00
       const daysUntilMonday = (8 - now.getDay()) % 7 || 7;
       nextMonday.setDate(now.getDate() + daysUntilMonday);
       nextMonday.setHours(0, 0, 0, 0);
@@ -43,78 +42,70 @@ export const WeeklyChallengesCard = () => {
       
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       
-      return `${days} jour${days > 1 ? 's' : ''} ${hours}h ${minutes} minute${minutes > 1 ? 's' : ''} ${seconds} seconde${seconds > 1 ? 's' : ''}`;
+      return `${days}j ${hours}h`;
     };
 
     setTimeLeft(calculateTimeLeft());
     const interval = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
-    }, 1000);
+    }, 60000); // Update every minute
 
     return () => clearInterval(interval);
   }, []);
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Défis de la semaine
-          </CardTitle>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-            <Clock className="h-3.5 w-3.5" />
-            <span>Se termine dans : {timeLeft}</span>
+      <div className="bg-card rounded-[10px] overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+          <div className="h-[30px] w-[30px] rounded-[7px] bg-secondary animate-pulse" />
+          <div className="flex-1 h-5 bg-secondary rounded animate-pulse" />
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="px-4 py-3">
+            <Skeleton className="h-16 w-full" />
           </div>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     );
   }
 
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Défis de la semaine
-          </CardTitle>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-            <Clock className="h-3.5 w-3.5" />
-            <span>Se termine dans : {timeLeft}</span>
-          </div>
-        </CardHeader>
-      <CardContent className="p-3 pt-0 space-y-3">
-        {challenges.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground text-sm">
-            Aucun défi actif pour le moment
-          </div>
-        ) : (
-          challenges.map((challenge) => {
-            const Icon = iconMap[challenge.icon] || Target;
-            const progressPercentage = (challenge.progress / challenge.target) * 100;
-            const isCompleted = challenge.progress >= challenge.target;
+  return (
+    <div className="bg-card rounded-[10px] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+        <div className="h-[30px] w-[30px] rounded-[7px] bg-red-500 flex items-center justify-center">
+          <Target className="h-[18px] w-[18px] text-white" />
+        </div>
+        <div className="flex-1">
+          <span className="text-[17px] font-semibold text-foreground">Défis de la semaine</span>
+        </div>
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-secondary">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[13px] text-muted-foreground">{timeLeft}</span>
+        </div>
+      </div>
 
-            const isJustCompleted = completedChallenge === challenge.id;
-            const isAlmostDone = almostDoneChallenge === challenge.id;
+      {/* Challenges List */}
+      {challenges.length === 0 ? (
+        <div className="px-4 py-6 text-center text-muted-foreground text-[15px]">
+          Aucun défi actif pour le moment
+        </div>
+      ) : (
+        challenges.map((challenge, index) => {
+          const Icon = iconMap[challenge.icon] || Target;
+          const progressPercentage = (challenge.progress / challenge.target) * 100;
+          const isCompleted = challenge.progress >= challenge.target;
+          const isJustCompleted = completedChallenge === challenge.id;
+          const isAlmostDone = almostDoneChallenge === challenge.id;
+          const isLast = index === challenges.length - 1;
 
-            return (
+          return (
+            <div key={challenge.id}>
               <motion.div 
-                key={challenge.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`bg-card/50 rounded-lg p-3 border transition-all relative overflow-hidden ${
-                  isCompleted 
-                    ? 'border-green-500/50 bg-green-500/5' 
-                    : 'border-border/50 hover:border-primary/30'
-                }`}
+                className="relative px-4 py-3"
               >
                 <AnimatePresence>
                   {isJustCompleted && (
@@ -133,57 +124,76 @@ export const WeeklyChallengesCard = () => {
                       animate={{ opacity: [0, 1, 0] }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 1, repeat: 2 }}
-                      className="absolute inset-0 border-2 border-orange-500/50 rounded-lg pointer-events-none"
+                      className="absolute inset-0 border-2 border-orange-500/50 rounded-lg pointer-events-none mx-4"
                     />
                   )}
                 </AnimatePresence>
-                <div className="flex items-start gap-2 mb-2">
-                  <Icon className={`h-4 w-4 shrink-0 mt-0.5 ${
-                    isCompleted ? 'text-green-500' : 'text-primary'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${
-                      isCompleted ? 'text-green-500' : ''
-                    }`}>
-                      {challenge.title}
-                    </p>
-                    {challenge.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {challenge.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      +{challenge.reward} points
-                    </p>
+
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    "h-[30px] w-[30px] rounded-[7px] flex items-center justify-center shrink-0 mt-0.5",
+                    isCompleted ? "bg-green-500" : "bg-primary"
+                  )}>
+                    <Icon className="h-[18px] w-[18px] text-white" />
                   </div>
-                  {isCompleted && (
-                    <motion.span
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ 
-                        scale: isJustCompleted ? [1, 1.3, 1] : 1,
-                        rotate: 0
-                      }}
-                      transition={{ duration: 0.6, type: "spring" }}
-                      className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium"
-                    >
-                      ✓ Terminé
-                    </motion.span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <Progress 
-                    value={Math.min(progressPercentage, 100)} 
-                    className={`h-1.5 ${isCompleted ? '[&>div]:bg-green-500' : ''}`}
-                  />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {challenge.progress}/{challenge.target}
-                  </p>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "text-[15px] font-medium",
+                          isCompleted ? "text-green-600" : "text-foreground"
+                        )}>
+                          {challenge.title}
+                        </p>
+                        {challenge.description && (
+                          <p className="text-[13px] text-muted-foreground mt-0.5 line-clamp-2">
+                            {challenge.description}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {isCompleted ? (
+                        <motion.span
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ 
+                            scale: isJustCompleted ? [1, 1.3, 1] : 1,
+                            rotate: 0
+                          }}
+                          transition={{ duration: 0.6, type: "spring" }}
+                          className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium shrink-0"
+                        >
+                          ✓ Terminé
+                        </motion.span>
+                      ) : (
+                        <span className="text-[13px] font-medium text-primary shrink-0">
+                          +{challenge.reward} pts
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 space-y-1">
+                      <Progress 
+                        value={Math.min(progressPercentage, 100)} 
+                        className={cn("h-2", isCompleted ? "[&>div]:bg-green-500" : "")}
+                      />
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-muted-foreground">
+                          {challenge.progress}/{challenge.target}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {Math.round(progressPercentage)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
-            );
-          })
-        )}
-      </CardContent>
-    </Card>
+              {!isLast && <div className="h-px bg-border ml-[54px]" />}
+            </div>
+          );
+        })
+      )}
+    </div>
   );
 };

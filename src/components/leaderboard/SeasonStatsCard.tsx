@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Trophy, Award, Target } from "lucide-react";
+import { Trophy, Calendar, Target, Award, UserPlus, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SeasonStatsCardProps {
   sessionsJoined: number;
@@ -17,38 +17,78 @@ export const SeasonStatsCard = ({
   friendsReferred
 }: SeasonStatsCardProps) => {
   const stats = [
-    { icon: Trophy, label: "Rejointes", value: sessionsJoined, color: "text-blue-500" },
-    { icon: Calendar, label: "Créées", value: sessionsCreated, color: "text-green-500" },
-    { icon: Target, label: "Points", value: totalPoints.toLocaleString(), color: "text-purple-500" },
-    { icon: Award, label: "Badges", value: badgesWon, color: "text-yellow-500" },
-    { icon: Trophy, label: "Parrainés", value: friendsReferred, color: "text-pink-500" },
+    { 
+      icon: Trophy, 
+      label: "Séances rejointes", 
+      value: sessionsJoined,
+      iconBg: "bg-blue-500",
+      onClick: () => {}
+    },
+    { 
+      icon: Calendar, 
+      label: "Séances créées", 
+      value: sessionsCreated,
+      iconBg: "bg-green-500",
+      onClick: () => {}
+    },
+    { 
+      icon: Target, 
+      label: "Points saison", 
+      value: totalPoints.toLocaleString(),
+      iconBg: "bg-purple-500",
+      onClick: () => {}
+    },
+    { 
+      icon: Award, 
+      label: "Badges gagnés", 
+      value: badgesWon,
+      iconBg: "bg-yellow-500",
+      onClick: () => {}
+    },
+    { 
+      icon: UserPlus, 
+      label: "Amis parrainés", 
+      value: friendsReferred,
+      iconBg: "bg-pink-500",
+      onClick: () => {}
+    },
   ];
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          Ma Saison
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 pt-0">
-        <div className="grid grid-cols-3 gap-2">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <div 
-                key={index}
-                className="bg-card/50 rounded-lg p-2 flex flex-col items-center justify-center border border-border/50 hover:border-primary/30 transition-all"
-              >
-                <Icon className={`h-5 w-5 ${stat.color} mb-1`} />
-                <p className="text-lg font-bold">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            );
-          })}
+    <div className="bg-card rounded-[10px] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+        <div className="h-[30px] w-[30px] rounded-[7px] bg-orange-500 flex items-center justify-center">
+          <Calendar className="h-[18px] w-[18px] text-white" />
         </div>
-      </CardContent>
-    </Card>
+        <span className="text-[17px] font-semibold text-foreground">Ma Saison</span>
+      </div>
+
+      {/* Stats List */}
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        const isLast = index === stats.length - 1;
+        
+        return (
+          <div key={index}>
+            <div
+              className="flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors cursor-pointer"
+            >
+              <div className={cn("h-[30px] w-[30px] rounded-[7px] flex items-center justify-center", stat.iconBg)}>
+                <Icon className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1 flex items-center justify-between">
+                <span className="text-[17px] text-foreground">{stat.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[17px] font-semibold text-foreground">{stat.value}</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                </div>
+              </div>
+            </div>
+            {!isLast && <div className="h-px bg-border ml-[54px]" />}
+          </div>
+        );
+      })}
+    </div>
   );
 };
