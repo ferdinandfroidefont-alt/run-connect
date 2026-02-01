@@ -12,6 +12,19 @@ export const isReallyNative = (): boolean => {
     return true;
   }
   
+  // ✅ Détection AndroidBridge (injecté par MainActivity.java)
+  // C'est le critère le plus fiable pour Android WebView
+  if (typeof (window as any).AndroidBridge !== 'undefined') {
+    console.log('🤖 [NATIVE] AndroidBridge détecté - mode natif confirmé');
+    return true;
+  }
+  
+  // ✅ Détection via fcmToken injecté (indicateur Android natif)
+  if (typeof (window as any).fcmToken !== 'undefined') {
+    console.log('🔔 [NATIVE] fcmToken détecté - mode natif confirmé');
+    return true;
+  }
+  
   return false;
 };
 
