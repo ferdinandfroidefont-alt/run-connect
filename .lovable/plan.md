@@ -1,79 +1,132 @@
 
-# Plan : Correction détection native intermittente pour notifications push
+
+# Plan : Correction du changement de compte - Session précédente persistante
 
 ## Problème identifié
 
-La fonction `isReallyNative()` dans `src/lib/nativeDetection.ts` ne vérifie **pas** la présence de `AndroidBridge`, qui est pourtant l'indicateur le plus fiable pour détecter l'app Android native.
+Quand vous vous déconnectez et vous connectez avec un autre compte, vous restez connecté à l'ancien compte. C'est un problème de nettoyage incomplet de la session.
 
-**Code actuel :**
+## Causes techniques
+
+### 1. Nettoyage incomplet du localStorage dans `signOut()`
+
+**Fichier : `src/hooks/useAuth.tsx` (lignes 159-173)**
+
+Le code actuel :
 ```typescript
-export const isReallyNative = (): boolean => {
-  if ((window as any).CapacitorForceNative === true) {
-    return true;
+const signOut = async () => {
+  try {
+    localStorage.removeItem('supabase.auth.token');
+    localStorage.removeItem('sb-dbptgehpknjsoisirviz-auth-token');
+    sessionStorage.clear();
+    
+    await supabase.auth.signOut({ scope: 'global' });
+    window.location.href = '/auth';
+  } catch (error) {
+    // ...
   }
-  if (Capacitor.isNativePlatform()) {
-    return true;
-  }
-  return false;  // ❌ Pas de vérification AndroidBridge !
 };
 ```
 
-**Problème :** Quand `CapacitorForceNative` n'est pas encore injecté et que `Capacitor.isNativePlatform()` retourne `false` (bug AAB Play Store), la détection échoue même si `AndroidBridge` est disponible.
+**Problème** : La déconnexion est appelée APRÈS le nettoyage du localStorage, donc les tokens peuvent être recréés par Supabase avant la redirection.
+
+### 2. Pas de nettoyage avant connexion
+
+**Fichier : `src/pages/Auth.tsx` (lignes 330-361)**
+
+Quand l'utilisateur se connecte avec `signInWithPassword`, le code ne nettoie pas l'ancienne session avant d'en créer une nouvelle.
+
+### 3. État React non réinitialisé
+
+Les contextes `AuthProvider` et `UserProfileProvider` gardent l'ancien état en mémoire même après `signOut` car la page ne se recharge pas toujours correctement sur mobile.
 
 ---
 
 ## Solution
 
-Mettre à jour `isReallyNative()` pour inclure la vérification de `AndroidBridge` comme critère supplémentaire, aligné avec la logique déjà présente dans `main.tsx` et `usePushNotifications.tsx`.
-
-### Modification du fichier : `src/lib/nativeDetection.ts`
+### Modification 1 : Améliorer `signOut` dans `useAuth.tsx`
 
 ```typescript
-import { Capacitor } from '@capacitor/core';
-
-// ✅ DÉTECTION MULTI-PLATEFORME : Android + iOS
-export const isReallyNative = (): boolean => {
-  // Flag déjà défini par main.tsx
-  if ((window as any).CapacitorForceNative === true) {
-    return true;
+const signOut = async () => {
+  try {
+    console.log('🚪 [AUTH] Starting signOut...');
+    
+    // 1. D'abord déconnecter côté serveur
+    await supabase.auth.signOut({ scope: 'global' });
+    
+    // 2. Nettoyer TOUS les tokens Supabase du localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('supabase') || key.includes('sb-'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // 3. Vider sessionStorage
+    sessionStorage.clear();
+    
+    // 4. Réinitialiser les états React
+    setUser(null);
+    setSession(null);
+    setSubscriptionInfo(null);
+    
+    console.log('✅ [AUTH] SignOut complete, redirecting...');
+    
+    // 5. Forcer un rechargement complet pour vider la mémoire React
+    window.location.href = '/auth';
+  } catch (error) {
+    console.error('❌ [AUTH] Error signing out:', error);
+    // Forcer le nettoyage et la redirection même en cas d'erreur
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = '/auth';
   }
-  
-  // Détection Capacitor native (fonctionne pour iOS et Android)
-  if (Capacitor.isNativePlatform()) {
-    return true;
-  }
-  
-  // ✅ NOUVEAU: Détection AndroidBridge (injecté par MainActivity.java)
-  // C'est le critère le plus fiable pour Android WebView
-  if (typeof (window as any).AndroidBridge !== 'undefined') {
-    console.log('🤖 [NATIVE] AndroidBridge détecté - mode natif confirmé');
-    return true;
-  }
-  
-  // ✅ NOUVEAU: Détection via fcmToken injecté (indicateur Android natif)
-  if (typeof (window as any).fcmToken !== 'undefined') {
-    console.log('🔔 [NATIVE] fcmToken détecté - mode natif confirmé');
-    return true;
-  }
-  
-  return false;
 };
 ```
 
----
+### Modification 2 : Nettoyer avant nouvelle connexion dans `Auth.tsx`
 
-## Impact
+Dans `handleUsernameOrEmailSignin` (ligne 330), ajouter un nettoyage préalable :
 
-Cette correction affecte tous les composants qui utilisent `isReallyNative()` :
+```typescript
+const handleUsernameOrEmailSignin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  try {
+    // ✅ NOUVEAU: Nettoyer toute session existante avant connexion
+    console.log('🧹 [AUTH] Cleaning existing session before new login...');
+    await supabase.auth.signOut({ scope: 'local' });
+    
+    let emailToUse = usernameOrEmail;
+    // ... reste du code
+  }
+};
+```
 
-| Fichier | Utilisation |
-|---------|-------------|
-| `src/components/ui/use-toast.ts` | Filtrage des toasts sur Android |
-| `src/components/ui/sonner.tsx` | Filtrage des toasts Sonner |
-| `src/components/ui/enhanced-toast.tsx` | Filtrage des toasts améliorés |
-| `src/lib/nativeInit.ts` | Initialisation native |
+Même modification pour `handleGoogleAuth` et `handleOtpSubmit`.
 
-La correction garantit que même si `CapacitorForceNative` ou `Capacitor.isNativePlatform()` ne sont pas encore prêts, la présence de `AndroidBridge` ou `fcmToken` déclenche correctement le mode natif.
+### Modification 3 : Améliorer le `WebViewStorage`
+
+Ajouter une méthode pour nettoyer tous les tokens Supabase :
+
+```typescript
+// Dans src/lib/webview-storage.ts
+clearAllSupabaseKeys(): void {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.includes('supabase') || key.includes('sb-'))) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+    console.log(`🗑️ [WebViewStorage] Removed: ${key}`);
+  });
+}
+```
 
 ---
 
@@ -81,4 +134,16 @@ La correction garantit que même si `CapacitorForceNative` ou `Capacitor.isNativ
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/lib/nativeDetection.ts` | Ajouter vérification `AndroidBridge` et `fcmToken` dans `isReallyNative()` |
+| `src/hooks/useAuth.tsx` | Améliorer `signOut()` pour nettoyer tous les tokens, réinitialiser les états React, et déconnecter AVANT le nettoyage |
+| `src/pages/Auth.tsx` | Ajouter `signOut({ scope: 'local' })` avant chaque nouvelle connexion |
+| `src/lib/webview-storage.ts` | Ajouter méthode `clearAllSupabaseKeys()` |
+
+---
+
+## Pourquoi ça marche
+
+1. **Ordre correct** : Déconnexion serveur AVANT nettoyage local
+2. **Nettoyage complet** : Tous les tokens Supabase sont supprimés (pas juste 2 clés spécifiques)
+3. **Prévention** : Nettoyage avant nouvelle connexion pour éviter les conflits
+4. **États React** : Réinitialisation explicite des states avant redirection
+
