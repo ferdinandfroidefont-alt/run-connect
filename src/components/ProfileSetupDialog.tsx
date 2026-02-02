@@ -34,17 +34,34 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
+  const [forceRenderKey, setForceRenderKey] = useState(0); // Force re-render sur Android
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Refs pour le cleanup (évite les closures stales)
+  // Refs pour persister les données (crucial pour Android WebView)
   const avatarPreviewRef = useRef<string>("");
+  const avatarFileRef = useRef<File | null>(null);
   const originalImageSrcRef = useRef<string>("");
 
-  // Sync refs avec state
+  // Sync refs avec state ET restaurer si state perdu (Android WebView bug)
   useEffect(() => {
-    avatarPreviewRef.current = avatarPreview;
+    if (avatarPreview) {
+      avatarPreviewRef.current = avatarPreview;
+    } else if (avatarPreviewRef.current && !avatarPreview) {
+      // State perdu mais ref existe = restaurer
+      console.log('📸 [ProfileSetup] Restauration avatarPreview depuis ref');
+      setAvatarPreview(avatarPreviewRef.current);
+    }
   }, [avatarPreview]);
+
+  useEffect(() => {
+    if (avatarFile) {
+      avatarFileRef.current = avatarFile;
+    } else if (avatarFileRef.current && !avatarFile) {
+      console.log('📸 [ProfileSetup] Restauration avatarFile depuis ref');
+      setAvatarFile(avatarFileRef.current);
+    }
+  }, [avatarFile]);
 
   useEffect(() => {
     originalImageSrcRef.current = originalImageSrc;
@@ -58,8 +75,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   // Cleanup des object URLs au démontage pour éviter les fuites mémoire
   useEffect(() => {
     return () => {
-      if (avatarPreviewRef.current) URL.revokeObjectURL(avatarPreviewRef.current);
-      if (originalImageSrcRef.current) URL.revokeObjectURL(originalImageSrcRef.current);
+      // Ne pas révoquer si on a encore besoin de la preview
+      // Le cleanup sera fait au prochain changement de photo ou à la soumission
     };
   }, []);
 
@@ -86,14 +103,21 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   };
 
   const handleCropComplete = (croppedImageBlob: Blob) => {
+    console.log('📸 [ProfileSetup] handleCropComplete appelé, blob size:', croppedImageBlob.size);
+    
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
     
     // Créer la nouvelle preview URL
     const newPreviewUrl = URL.createObjectURL(croppedImageBlob);
     console.log('📸 [ProfileSetup] Preview URL créée:', newPreviewUrl);
     
-    // Révoquer l'ancienne preview si elle existe
-    if (avatarPreview) {
+    // IMPORTANT: Mettre à jour les refs IMMÉDIATEMENT (avant tout state update)
+    // Cela garantit que même si le state se réinitialise, on peut restaurer
+    avatarPreviewRef.current = newPreviewUrl;
+    avatarFileRef.current = croppedFile;
+    
+    // Révoquer l'ancienne preview si elle existe (mais pas la nouvelle!)
+    if (avatarPreview && avatarPreview !== newPreviewUrl) {
       URL.revokeObjectURL(avatarPreview);
     }
     
@@ -102,18 +126,17 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       URL.revokeObjectURL(originalImageSrc);
     }
     
-    // IMPORTANT: Mettre à jour les états dans le bon ordre
-    // 1. D'abord définir le fichier et la preview
-    setAvatarFile(croppedFile);
-    setAvatarPreview(newPreviewUrl);
+    // Fermer le dialog AVANT de mettre à jour les states pour éviter race condition
+    setShowCropEditor(false);
     
-    // 2. Réinitialiser l'originalImageSrc
-    setOriginalImageSrc('');
-    
-    // 3. Fermer le dialog en dernier (utiliser requestAnimationFrame pour garantir le render)
-    requestAnimationFrame(() => {
-      setShowCropEditor(false);
-    });
+    // Utiliser setTimeout pour garantir que le dialog est fermé avant d'update les states
+    setTimeout(() => {
+      setAvatarFile(croppedFile);
+      setAvatarPreview(newPreviewUrl);
+      setOriginalImageSrc('');
+      setForceRenderKey(prev => prev + 1); // Force re-render
+      console.log('📸 [ProfileSetup] States mis à jour après fermeture dialog');
+    }, 50);
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
@@ -265,8 +288,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               {/* Avatar Section */}
               <div className="flex flex-col items-center">
                 <div className="relative">
-                  <Avatar key={avatarPreview || 'no-avatar'} className="h-24 w-24 ring-4 ring-primary/20">
-                    <AvatarImage src={avatarPreview} />
+                  <Avatar key={`avatar-${forceRenderKey}-${avatarPreview ? 'has-img' : 'no-img'}`} className="h-24 w-24 ring-4 ring-primary/20">
+                    <AvatarImage 
+                      src={avatarPreview || avatarPreviewRef.current} 
+                      onLoad={() => console.log('📸 [ProfileSetup] Avatar image chargée')}
+                      onError={() => console.log('📸 [ProfileSetup] Avatar image erreur')}
+                    />
                     <AvatarFallback className="bg-secondary text-2xl">
                       {displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || "?"}
                     </AvatarFallback>
