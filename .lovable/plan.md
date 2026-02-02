@@ -1,236 +1,138 @@
 
-# Plan : Correction sélection photo de profil sur mobile Android
+# Plan : Correction définitive de la sélection photo de profil sur Android
 
 ## Problème identifié
 
-Quand l'utilisateur sélectionne une photo depuis la galerie pendant la création de compte sur Android, la photo ne s'affiche pas. Le fichier est bien sélectionné côté Android natif (`onActivityResult` dans `MainActivity.java`), mais l'événement `onchange` JavaScript n'est pas capté correctement par la WebView.
+Le fichier sélectionné dans la galerie ne revient pas à l'application. L'erreur "aucune photo sélectionnée" s'affiche alors que l'utilisateur a bien choisi une image.
 
-## Cause technique
+## Cause racine
 
-L'ordre des événements sur Android WebView :
-1. Utilisateur sélectionne une image dans la galerie
-2. Android envoie l'URI via `filePathCallback.onReceiveValue(results)`
-3. Les événements `focus`/`visibilitychange` se déclenchent IMMÉDIATEMENT
-4. L'événement `onchange` de l'input est retardé (timing variable selon l'appareil)
-5. Après 3 secondes, le code vérifie `input.files` mais celui-ci peut encore être vide
+Le code actuel dans `useCamera.tsx` crée un élément `<input type="file">` **dynamiquement** avec `document.createElement('input')`. Sur Android WebView, les inputs créés dynamiquement ont des problèmes de timing avec l'événement `onchange` - le callback WebView (`filePathCallback.onReceiveValue`) n'est pas correctement relié à l'input créé après coup.
 
-## Solution en 2 parties
+**Ce qui fonctionne** : L'input "sélection alternative" dans `ProfileSetupDialog.tsx` qui est **déclaré directement dans le JSX React** avec un `ref` et un `onChange` standard.
 
-### Partie 1 : Améliorer le timing côté JavaScript
+## Solution : Utiliser un input React standard au lieu d'un input dynamique
 
-**Fichier : `src/hooks/useCamera.tsx`**
+### Approche
 
-Modifications :
-1. Augmenter le délai d'attente après `focus`/`visibilitychange` à 5 secondes
-2. Ajouter une vérification en boucle (polling) au lieu d'une vérification unique
-3. Utiliser `MutationObserver` pour détecter quand le fichier est assigné
+1. **Supprimer la création dynamique d'input** dans `useCamera.tsx`
+2. **Utiliser un input React avec ref** dans `ProfileSetupDialog.tsx` comme méthode principale
+3. **Le hook `useCamera` retourne une méthode qui accepte un inputRef** plutôt que de créer son propre input
 
-```typescript
-const selectFromGalleryWeb = async (): Promise<File | null> => {
-  return new Promise((resolve) => {
-    console.log('🌐 [GALLERY-WEB] Ouverture input file web...');
-    
-    // Supprimer tout input résiduel
-    const existingInputs = document.querySelectorAll('input[type="file"][data-gallery-picker]');
-    existingInputs.forEach(el => el.remove());
-    
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.setAttribute('data-gallery-picker', 'true');
-    
-    // Style visible mais hors écran
-    input.style.position = 'fixed';
-    input.style.top = '0';
-    input.style.left = '0';
-    input.style.opacity = '0.01';
-    input.style.width = '1px';
-    input.style.height = '1px';
-    input.style.zIndex = '999999';
-    
-    document.body.appendChild(input);
-    
-    let resolved = false;
-    let pollIntervalId: NodeJS.Timeout | null = null;
-    
-    const doResolve = (file: File | null, source: string) => {
-      if (resolved) return;
-      resolved = true;
-      clearTimeout(timeoutId);
-      if (pollIntervalId) clearInterval(pollIntervalId);
-      console.log(`🌐 [GALLERY-WEB] Résolution via ${source}:`, file ? file.name : 'null');
-      
-      setTimeout(() => {
-        try { input.remove(); } catch (e) { /* ignore */ }
-      }, 200);
-      
-      resolve(file);
-    };
-    
-    // Timeout global de 90 secondes
-    const timeoutId = setTimeout(() => {
-      console.warn('⏱️ [GALLERY-WEB] Timeout sélection galerie (90s)');
-      doResolve(null, 'timeout');
-    }, 90000);
-    
-    // POLLING: Vérifier input.files toutes les 500ms pendant 10 secondes max
-    const startPolling = () => {
-      if (pollIntervalId) return;
-      
-      let pollCount = 0;
-      const maxPolls = 20; // 10 secondes max (20 * 500ms)
-      
-      pollIntervalId = setInterval(() => {
-        pollCount++;
-        console.log(`🔄 [GALLERY-WEB] Poll #${pollCount}: files=${input.files?.length || 0}`);
-        
-        if (input.files && input.files.length > 0) {
-          console.log('✅ [GALLERY-WEB] Fichier détecté via polling:', input.files[0].name);
-          doResolve(input.files[0], 'polling');
-          return;
-        }
-        
-        if (pollCount >= maxPolls) {
-          console.log('ℹ️ [GALLERY-WEB] Polling terminé sans fichier');
-          if (pollIntervalId) clearInterval(pollIntervalId);
-          pollIntervalId = null;
-          doResolve(null, 'polling-timeout');
-        }
-      }, 500);
-    };
-    
-    // onchange reste prioritaire
-    input.onchange = (event) => {
-      console.log('🔄 [GALLERY-WEB] onchange déclenché');
-      const file = (event.target as HTMLInputElement).files?.[0];
-      
-      if (file) {
-        console.log('✅ [GALLERY-WEB] Fichier via onchange:', file.name, file.size);
-        doResolve(file, 'onchange');
-      } else {
-        console.warn('⚠️ [GALLERY-WEB] onchange sans fichier');
-        // Ne pas résoudre null ici, laisser le polling continuer
-      }
-    };
-    
-    // Détecter le retour de l'app et démarrer le polling
-    const handleVisibilityOrFocus = () => {
-      if (resolved) return;
-      console.log('🔄 [GALLERY-WEB] App revenue au premier plan, démarrage polling...');
-      startPolling();
-    };
-    
-    window.addEventListener('focus', handleVisibilityOrFocus, { once: true });
-    
-    const visibilityHandler = () => {
-      if (document.visibilityState === 'visible') {
-        handleVisibilityOrFocus();
-        document.removeEventListener('visibilitychange', visibilityHandler);
-      }
-    };
-    document.addEventListener('visibilitychange', visibilityHandler);
-    
-    input.onerror = (error) => {
-      console.error('❌ [GALLERY-WEB] Erreur input file:', error);
-      doResolve(null, 'error');
-    };
-    
-    // Cliquer sur l'input après un court délai
-    setTimeout(() => {
-      try {
-        input.click();
-        console.log('✅ [GALLERY-WEB] Input file cliqué');
-      } catch (clickError) {
-        console.error('❌ [GALLERY-WEB] Erreur click input:', clickError);
-        doResolve(null, 'click-error');
-      }
-    }, 150);
-  });
-};
-```
+### Modification 1 : Simplifier `ProfileSetupDialog.tsx`
 
-### Partie 2 : Améliorer le feedback utilisateur
-
-**Fichier : `src/components/ProfileSetupDialog.tsx`**
-
-Ajouter un état de chargement visible pendant la sélection de photo :
-
-```typescript
-const handleSelectPhoto = async () => {
-  try {
-    console.log('📸 [ProfileSetup] Début sélection photo...');
-    
-    // Afficher un indicateur de chargement
-    toast({
-      title: "Sélection en cours...",
-      description: "Veuillez patienter après avoir choisi votre photo",
-    });
-    
-    const file = await selectFromGallery();
-    console.log('📸 [ProfileSetup] Fichier reçu:', file ? { name: file.name, size: file.size } : 'null');
-    
-    if (file) {
-      handleFileSelection(file);
-      toast({
-        title: "Photo sélectionnée !",
-        description: "Vous pouvez maintenant recadrer votre photo",
-      });
-    } else {
-      console.log('📸 [ProfileSetup] Aucun fichier sélectionné');
-      toast({
-        title: "Aucune photo",
-        description: "Aucune photo n'a été sélectionnée. Réessayez ou utilisez la sélection alternative.",
-        variant: "destructive"
-      });
-    }
-  } catch (error: any) {
-    console.error('📸 [ProfileSetup] Erreur:', error);
-    toast({ 
-      title: "Erreur", 
-      description: error?.message || "Impossible d'accéder à la galerie. Utilisez la sélection alternative.", 
-      variant: "destructive" 
-    });
-  }
-};
-```
-
-### Partie 3 : Améliorer le bouton de sélection alternative
-
-Rendre le bouton de sélection alternative plus visible :
+Utiliser directement l'input React existant comme méthode principale (pas comme "alternative") :
 
 ```tsx
-{/* Bouton de sélection alternative plus visible */}
-<Button
-  type="button"
-  variant="outline"
-  size="sm"
-  onClick={() => fileInputRef.current?.click()}
-  className="mt-2"
->
-  📱 Sélection alternative (si la galerie ne fonctionne pas)
-</Button>
+// Avant (bouton principal qui appelle useCamera)
+<button onClick={handleSelectPhoto}>
+  <Camera />
+</button>
+
+// Après (bouton principal qui clique directement sur l'input React)
+<button onClick={() => fileInputRef.current?.click()}>
+  <Camera />
+</button>
+```
+
+Le flux devient :
+1. Utilisateur clique sur l'icône caméra
+2. L'input React natif (`ref={fileInputRef}`) reçoit le clic
+3. Android `onShowFileChooser` s'ouvre
+4. Utilisateur sélectionne une image
+5. `filePathCallback.onReceiveValue(uri)` est appelé par Android
+6. L'événement `onChange` de l'input React se déclenche
+7. Le fichier est récupéré via `e.target.files[0]`
+
+### Modification 2 : Mettre à jour `ProfileSetupDialog.tsx`
+
+```typescript
+// État pour le loading pendant la sélection
+const [isSelectingPhoto, setIsSelectingPhoto] = useState(false);
+
+// Handler simplifié qui utilise l'input React natif
+const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  setIsSelectingPhoto(false);
+  
+  if (file) {
+    console.log('📸 [ProfileSetup] Fichier reçu via input React:', file.name);
+    handleFileSelection(file);
+  } else {
+    console.log('📸 [ProfileSetup] Aucun fichier sélectionné');
+    toast({
+      title: "Aucune photo",
+      description: "Veuillez réessayer",
+      variant: "destructive"
+    });
+  }
+  
+  // Reset l'input pour permettre de re-sélectionner le même fichier
+  e.target.value = '';
+};
+
+// Clic sur le bouton principal
+const handleCameraButtonClick = () => {
+  setIsSelectingPhoto(true);
+  fileInputRef.current?.click();
+};
+```
+
+### Modification 3 : JSX mis à jour
+
+```tsx
+{/* Avatar avec bouton caméra */}
+<div className="relative">
+  <Avatar className="h-24 w-24 ring-4 ring-primary/20">
+    <AvatarImage src={avatarPreview} />
+    <AvatarFallback>...</AvatarFallback>
+  </Avatar>
+  <button
+    type="button"
+    onClick={handleCameraButtonClick}
+    disabled={isSelectingPhoto}
+    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-lg"
+  >
+    {isSelectingPhoto ? (
+      <Loader2 className="h-4 w-4 text-white animate-spin" />
+    ) : (
+      <Camera className="h-4 w-4 text-white" />
+    )}
+  </button>
+</div>
+
+{/* Input React UNIQUE - C'est lui qui reçoit le fichier */}
 <input
   ref={fileInputRef}
   type="file"
   accept="image/*"
-  onChange={(e) => {
-    const file = e.target.files?.[0];
-    if (file) handleFileSelection(file);
-  }}
+  onChange={handlePhotoInputChange}
   className="hidden"
 />
 ```
+
+### Modification 4 : Supprimer la dépendance à `useCamera` pour la galerie
+
+Le hook `useCamera` reste disponible pour la prise de photo avec l'appareil photo, mais la sélection galerie utilise maintenant l'input React natif.
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/hooks/useCamera.tsx` | Remplacer la vérification unique par un système de polling qui vérifie `input.files` toutes les 500ms pendant 10 secondes après le retour de l'app |
-| `src/components/ProfileSetupDialog.tsx` | Ajouter des toasts de feedback et améliorer le bouton de sélection alternative |
+| `src/components/ProfileSetupDialog.tsx` | Remplacer l'appel à `selectFromGallery()` par un clic direct sur l'input React natif. Supprimer le bouton "sélection alternative" devenu inutile. |
 
 ## Pourquoi cette solution fonctionne
 
-1. **Polling** : Au lieu d'attendre un délai fixe (3s), on vérifie régulièrement si le fichier est disponible
-2. **Timing adaptatif** : Le polling s'arrête dès qu'un fichier est détecté (pas de délai inutile)
-3. **Robustesse** : Si `onchange` se déclenche, il prend la priorité ; sinon le polling récupère le fichier
-4. **Fallback visible** : Le bouton de sélection alternative est plus accessible si tout échoue
+1. **Input dans le DOM React** : L'input est rendu par React et existe dans le DOM avant le clic - Android WebView le reconnaît correctement
+2. **Pas de création dynamique** : Élimine les problèmes de timing entre `document.createElement` et `filePathCallback`
+3. **onChange standard** : React gère correctement l'événement sans polling ni workarounds
+4. **Testé fonctionnel** : Le bouton "sélection alternative" utilise cette même approche et fonctionne
+5. **Simple et maintenable** : Code beaucoup plus simple, moins de risques de bugs
+
+## Impact sur les autres composants
+
+Le hook `useCamera` peut rester en place pour :
+- La prise de photo avec l'appareil (`takePicture`)
+- Les autres écrans qui utilisent déjà des inputs React natifs
+
+Pour les autres composants qui utilisent `selectFromGallery`, la même approche peut être appliquée progressivement.
