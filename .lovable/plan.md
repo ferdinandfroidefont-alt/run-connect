@@ -1,153 +1,144 @@
 
-# Plan : Correction du bug critique de la photo de profil
+# Plan de correction définitive : Bug photo de profil Android
 
-## Problème identifié
+## Diagnostic approfondi
 
-En analysant le code, j'ai trouvé **plusieurs causes potentielles** qui peuvent empêcher l'affichage de la photo :
+J'ai identifié **DEUX causes racines** du rechargement de page après sélection de photo :
 
-### 1. Problème du `onClose` dans `ImageCropEditor`
-Dans `ImageCropEditor.tsx`, ligne 118-119, quand on clique sur "Valider" :
+### Cause 1 : Reload automatique dans `main.tsx`
 ```typescript
-onCropComplete(blob);
-onClose();  // ← Appelé IMMÉDIATEMENT après onCropComplete
+// main.tsx, lignes 96-106
+if (!isNative) {
+  setTimeout(() => {
+    if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
+      console.log('🔥 CORRECTION: AndroidBridge détecté en retard, activation mode natif');
+      (window as any).CapacitorForceNative = true;
+      (window as any).nativeModeActivated = true;
+      console.log('🔄 Rechargement de la page pour activer le mode natif...');
+      window.location.reload();  // ← CECI CAUSE LE PROBLÈME
+    }
+  }, 500);
+}
 ```
 
-Le `onClose()` dans le dialog peut déclencher une mise à jour du state parent AVANT que `setAvatarPreview()` soit complètement traité, causant un conflit de re-render.
+Quand l'utilisateur sélectionne une photo :
+1. L'activité MainActivity passe en arrière-plan (sélecteur de fichier)
+2. L'utilisateur choisit la photo et revient
+3. Le timer de 500ms peut se déclencher et recharger la page
+4. Tous les états React sont perdus, y compris l'URL de la photo
 
-### 2. Problème potentiel avec `onClose` du dialog
-Le `onOpenChange={onClose}` du Dialog dans `ImageCropEditor` peut être déclenché lors du clic sur "Valider", et le `onClose` callback du parent (`setShowCropEditor(false)`) peut interférer avec les autres updates de state.
+### Cause 2 : Reload dans `MainActivity.java` → `injectAABFlags()`
+```java
+// MainActivity.java, lignes 1088-1091
+"if (window.reactAlreadyLoaded && !window.nativeModeActivated) {" +
+"  console.log('🔥 CORRECTION TARDIVE: React déjà chargé, reload nécessaire');" +
+"  window.location.reload();" +
+"}"
+```
 
-### 3. Double appel de `onClose`
-Dans `getCroppedImg()` :
-- `onCropComplete(blob)` appelle `handleCropComplete` qui fait `setShowCropEditor(false)`
-- Ensuite `onClose()` est appelé aussi, qui fait également `setShowCropEditor(false)`
+Ce code dans `injectAABFlags` est appelé à plusieurs moments :
+- `onPageStarted` (ligne 510)
+- `onPageFinished` (ligne 523)
+- Au démarrage (lignes 621, 645)
 
-Ces appels redondants peuvent causer des re-renders inattendus.
+Si les conditions sont réunies lors du retour de la galerie, un reload peut être déclenché.
 
-### 4. État `isSelectingPhoto` qui reste parfois "true"
-Si le crop editor se ferme de manière inattendue, `isSelectingPhoto` peut rester `true` et bloquer des interactions.
+## Solution en 3 parties
 
-## Solution
+### Partie 1 : Modifier `main.tsx` pour éviter le reload pendant la sélection de fichier
 
-### Modification 1 : `ImageCropEditor.tsx` - Supprimer le double appel de `onClose`
-
-Le `onCropComplete` du parent gère déjà la fermeture du dialog. Le `onClose()` dans `getCroppedImg` est redondant :
+Ajouter un flag `window.fileSelectionInProgress` qui empêche le reload automatique quand un file picker est ouvert.
 
 ```typescript
 // AVANT
-canvas.toBlob(
-  (blob) => {
-    if (blob) {
-      onCropComplete(blob);
-      onClose();  // ← Redondant !
+if (!isNative) {
+  setTimeout(() => {
+    if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
+      window.location.reload();
     }
-    setIsProcessing(false);
-  },
-  'image/jpeg',
-  0.9
-);
+  }, 500);
+}
 
 // APRÈS
-canvas.toBlob(
-  (blob) => {
-    if (blob) {
-      onCropComplete(blob);
-      // Ne PAS appeler onClose() ici - c'est handleCropComplete qui gère la fermeture
+if (!isNative) {
+  setTimeout(() => {
+    if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
+      // ✅ NE PAS RECHARGER si une sélection de fichier est en cours
+      if ((window as any).fileSelectionInProgress) {
+        console.log('⏸️ Reload différé - sélection de fichier en cours');
+        return;
+      }
+      console.log('🔄 Rechargement pour activer le mode natif...');
+      window.location.reload();
     }
-    setIsProcessing(false);
-  },
-  'image/jpeg',
-  0.9
-);
+  }, 500);
+}
 ```
 
-### Modification 2 : `ProfileSetupDialog.tsx` - Séquencer les updates de state
+### Partie 2 : Modifier `ProfileSetupDialog.tsx` pour marquer la sélection en cours
 
-Utiliser une logique qui garantit que la preview est définie AVANT de fermer le dialog :
+Définir le flag `window.fileSelectionInProgress` avant d'ouvrir le file picker et le retirer après la sélection/annulation.
 
 ```typescript
-const handleCropComplete = (croppedImageBlob: Blob) => {
-  const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
-  
-  // Créer la nouvelle preview URL
-  const newPreviewUrl = URL.createObjectURL(croppedImageBlob);
-  console.log('📸 [ProfileSetup] Preview URL créée:', newPreviewUrl);
-  
-  // Révoquer l'ancienne preview si elle existe
-  if (avatarPreview) {
-    URL.revokeObjectURL(avatarPreview);
-  }
-  
-  // Révoquer l'URL de l'image originale
-  if (originalImageSrc) {
-    URL.revokeObjectURL(originalImageSrc);
-  }
-  
-  // IMPORTANT: Mettre à jour les états dans le bon ordre
-  // 1. D'abord définir le fichier et la preview
-  setAvatarFile(croppedFile);
-  setAvatarPreview(newPreviewUrl);
-  
-  // 2. Réinitialiser l'originalImageSrc
-  setOriginalImageSrc('');
-  
-  // 3. Fermer le dialog en dernier (utiliser un micro-délai pour garantir le render)
-  requestAnimationFrame(() => {
-    setShowCropEditor(false);
-  });
+// Dans handleCameraButtonClick
+const handleCameraButtonClick = () => {
+  console.log('📸 [ProfileSetup] Clic bouton caméra');
+  (window as any).fileSelectionInProgress = true;  // ✅ BLOQUER LE RELOAD
+  setIsSelectingPhoto(true);
+  fileInputRef.current?.click();
+};
+
+// Dans handlePhotoInputChange
+const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  (window as any).fileSelectionInProgress = false;  // ✅ DÉBLOQUER
+  setIsSelectingPhoto(false);
+  // ...reste du code
 };
 ```
 
-### Modification 3 : Ajouter une key dynamique à l'Avatar
+### Partie 3 : Modifier `MainActivity.java` pour supprimer le reload conditionnel
 
-Pour forcer le re-render de l'Avatar quand `avatarPreview` change :
+Le reload automatique dans `injectAABFlags` est trop agressif. On le retire car il cause plus de problèmes qu'il n'en résout.
 
-```tsx
-<Avatar key={avatarPreview || 'no-avatar'} className="h-24 w-24 ring-4 ring-primary/20">
-  <AvatarImage src={avatarPreview} />
-  <AvatarFallback className="bg-secondary text-2xl">
-    {displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || "?"}
-  </AvatarFallback>
-</Avatar>
-```
+```java
+// AVANT (lignes 1077-1091)
+String jsCode = "window.CapacitorForceNative = true; " +
+               // ...autres flags...
+               "if (window.reactAlreadyLoaded && !window.nativeModeActivated) {" +
+               "  console.log('🔥 CORRECTION TARDIVE: React déjà chargé, reload nécessaire');" +
+               "  window.location.reload();" +
+               "}";
 
-### Modification 4 : Améliorer le logging pour diagnostic
-
-Ajouter des logs à chaque étape critique pour diagnostiquer sur Android :
-
-```typescript
-useEffect(() => {
-  console.log('📸 [ProfileSetup] avatarPreview changé:', avatarPreview?.substring(0, 50) || 'vide');
-}, [avatarPreview]);
-```
-
-### Modification 5 : Empêcher le dialog de se fermer accidentellement
-
-Dans `ImageCropEditor`, désactiver la fermeture par clic extérieur pendant le traitement :
-
-```tsx
-<Dialog 
-  open={open} 
-  onOpenChange={(isOpen) => {
-    // Ne pas permettre la fermeture pendant le traitement
-    if (!isProcessing && !isOpen) {
-      onClose();
-    }
-  }}
->
+// APRÈS
+String jsCode = "window.CapacitorForceNative = true; " +
+               "window.isAABBuild = true; " +
+               "window.AndroidNativeEnvironment = true; " +
+               "window.capacitorReady = true; " +
+               "window.nativeModeActivated = true; " +  // ✅ DÉFINIR AUSSI nativeModeActivated
+               "console.log('🚀 [NIVEAU 28] Flags AAB injectés:', {" +
+               "  CapacitorForceNative: window.CapacitorForceNative, " +
+               "  nativeModeActivated: window.nativeModeActivated" +
+               "});";
+// ✅ SUPPRESSION du bloc if/reload
 ```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/ImageCropEditor.tsx` | Supprimer `onClose()` redondant dans `getCroppedImg`, protéger contre fermeture accidentelle |
-| `src/components/ProfileSetupDialog.tsx` | Séquencer les updates de state, ajouter key sur Avatar, améliorer logging |
+| `src/main.tsx` | Ajouter condition `!window.fileSelectionInProgress` avant le reload |
+| `src/components/ProfileSetupDialog.tsx` | Définir `window.fileSelectionInProgress = true/false` au clic caméra et au retour |
+| `android/app/src/main/java/app/runconnect/MainActivity.java` | Supprimer la logique de reload conditionnel dans `injectAABFlags()` et toujours définir `nativeModeActivated = true` |
 
 ## Pourquoi cette solution fonctionne
 
-1. **Pas de double fermeture** : Le `onCropComplete` gère tout, pas besoin d'appeler `onClose` en plus
-2. **Séquence garantie** : `requestAnimationFrame` s'assure que les renders sont faits dans l'ordre
-3. **Key dynamique** : Force React à recréer le composant Avatar quand la preview change
-4. **Protection anti-fermeture** : Empêche le dialog de se fermer par erreur pendant le traitement
-5. **Logging détaillé** : Permet de diagnostiquer le problème exact sur Android
+1. **Flag de protection** : `fileSelectionInProgress` empêche tout reload pendant que l'utilisateur est dans la galerie
+2. **Suppression du reload agressif** : En supprimant le reload conditionnel dans le code Java, on évite les rechargements intempestifs
+3. **Définition précoce de `nativeModeActivated`** : En le définissant toujours à `true` dans l'injection Java, la condition JavaScript ne sera plus jamais vraie
+
+## Impact
+
+- ✅ Aucun reload après sélection de photo
+- ✅ La preview de l'image apparaît immédiatement
+- ✅ Le formulaire n'est pas réinitialisé
+- ✅ Le mode natif reste activé normalement pour les autres fonctionnalités
