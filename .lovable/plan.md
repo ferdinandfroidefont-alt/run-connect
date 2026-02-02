@@ -1,216 +1,148 @@
 
 
-# Correction définitive : Bug photo de profil Android WebView
+# Correction définitive : Bug photo de profil Android WebView - NIVEAU 31
 
-## Diagnostic approfondi (ce que j'ai trouvé)
+## Diagnostic final
 
-Après analyse complète du code, j'ai identifié **la vraie cause racine** qui persiste malgré les corrections précédentes :
+Après analyse approfondie, j'ai identifié **pourquoi les corrections précédentes ne fonctionnent pas** :
 
-### LE VRAI PROBLÈME : WebView recharge la page quand on revient de la galerie
+### Le problème exact
 
-Sur Android WebView, quand l'application passe en arrière-plan (galerie ouverte) puis revient au premier plan, **le système Android peut "recréer" l'activité** si la mémoire est insuffisante. Cela cause :
-1. La WebView recharge entièrement la page
-2. Tous les états React sont perdus (y compris `avatarPreview`, `avatarFile`, etc.)
-3. Le flag `fileSelectionInProgress` est perdu aussi
+L'image est sauvegardée dans IndexedDB **SEULEMENT APRÈS le crop** (ligne 185 de `handleCropComplete`). 
 
-Le problème n'est pas dans le code JavaScript mais dans le **cycle de vie Android**. Les corrections précédentes protégeaient contre les reloads explicites mais pas contre la recréation d'activité.
+Mais voici ce qui se passe réellement sur Android :
+1. L'utilisateur clique sur le bouton caméra
+2. `handleCameraButtonClick` sauvegarde le formulaire dans `sessionStorage` ✅
+3. La galerie s'ouvre → Android peut détruire l'activité
+4. L'utilisateur sélectionne une photo
+5. **LA PAGE SE RECHARGE** (Android recrée l'activité)
+6. `handlePhotoInputChange` n'est **JAMAIS appelé** car l'input a été recréé
+7. Le fichier sélectionné est perdu **AVANT** d'arriver à `handleCropComplete`
+8. IndexedDB est vide → rien à restaurer
 
-### Preuve dans les logs Java (lignes 812-846)
-```java
-// onActivityResult reçoit bien le fichier
-Log.d(TAG, "🖼️✅ [FILE CHOOSER] Fichier sélectionné: " + dataString);
-filePathCallback.onReceiveValue(results); // L'URI est bien transmise
-```
+### Pourquoi les mécanismes actuels échouent
 
-Le problème arrive **APRÈS** : la WebView reçoit le fichier mais React a été réinitialisé.
+| Mécanisme | Problème |
+|-----------|----------|
+| `sessionStorage` pour le formulaire | ✅ Fonctionne |
+| IndexedDB dans `handleCropComplete` | ❌ Jamais atteint - le fichier est perdu AVANT |
+| `webView.saveState()` dans Java | ❌ Ne préserve pas le contenu JavaScript, seulement l'URL |
+| `fileSelectionInProgress` flag | ❌ Perdu au reload de la page |
 
-## Solution en 3 parties
+### La vraie cause
 
-### Partie 1 : Sauvegarder l'état du formulaire dans `sessionStorage` avant d'ouvrir la galerie
+Sur Android WebView, quand l'activité est recréée :
+- L'événement `onReceiveValue(results)` du Java transmet l'URI au moteur WebView
+- MAIS le JavaScript (React) a été complètement réinitialisé
+- L'input file a été recréé sans l'événement `onChange` en attente
+- Le fichier est "dans les limbes" - transmis mais jamais reçu par React
 
-Avant d'ouvrir le file picker, sauvegarder tous les champs du formulaire :
+## Solution en 2 parties
 
-```typescript
-// ProfileSetupDialog.tsx - Dans handleCameraButtonClick
-const handleCameraButtonClick = () => {
-  // Sauvegarder l'état du formulaire AVANT d'ouvrir la galerie
-  // (au cas où Android recrée l'activité)
-  const formState = {
-    username,
-    displayName,
-    birthDate,
-    phone,
-    bio,
-    password,
-    timestamp: Date.now()
-  };
-  sessionStorage.setItem('profileSetupFormState', JSON.stringify(formState));
-  
-  (window as any).fileSelectionInProgress = true;
-  setIsSelectingPhoto(true);
-  fileInputRef.current?.click();
-};
-```
+### Partie 1 : Sauvegarder l'image IMMÉDIATEMENT dans `handleFileSelection`
 
-### Partie 2 : Restaurer l'état du formulaire au montage du composant
-
-Au montage, vérifier si un état sauvegardé existe et le restaurer :
+L'image doit être stockée dans IndexedDB **DÈS** qu'elle est sélectionnée, pas après le crop :
 
 ```typescript
-// ProfileSetupDialog.tsx - Nouveau useEffect
-useEffect(() => {
-  const savedState = sessionStorage.getItem('profileSetupFormState');
-  if (savedState) {
-    try {
-      const formState = JSON.parse(savedState);
-      // Vérifier que la sauvegarde est récente (moins de 5 minutes)
-      if (Date.now() - formState.timestamp < 5 * 60 * 1000) {
-        console.log('📸 [ProfileSetup] Restauration état formulaire depuis sessionStorage');
-        setUsername(formState.username || '');
-        setDisplayName(formState.displayName || '');
-        setBirthDate(formState.birthDate || '');
-        setPhone(formState.phone || '');
-        setBio(formState.bio || '');
-        setPassword(formState.password || '');
-      }
-    } catch (e) {
-      console.error('Erreur restauration état:', e);
-    }
-    // Nettoyer après restauration
-    sessionStorage.removeItem('profileSetupFormState');
+// ProfileSetupDialog.tsx - handleFileSelection MODIFIÉ
+const handleFileSelection = async (file: File) => {
+  if (!file.type.startsWith('image/')) {
+    toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
+    return;
   }
-}, []);
+  
+  // 🔥 NOUVEAU: Sauvegarder l'image IMMÉDIATEMENT dans IndexedDB
+  // Avant même d'ouvrir le crop editor - survie au reload
+  try {
+    await saveImageToIndexedDB('pendingOriginalImage', file);
+    console.log('📸 [ProfileSetup] Image ORIGINALE sauvegardée dans IndexedDB');
+  } catch (e) {
+    console.warn('📸 [ProfileSetup] Échec sauvegarde image originale:', e);
+  }
+  
+  const objectUrl = URL.createObjectURL(file);
+  setOriginalImageSrc(objectUrl);
+  setShowCropEditor(true);
+};
 ```
 
-### Partie 3 : Persister la photo sélectionnée dans `IndexedDB` (solution robuste)
+### Partie 2 : Restaurer l'image originale et rouvrir le crop editor
 
-Le `sessionStorage` ne peut pas stocker des fichiers. Pour la photo, on utilise une approche différente : stocker l'image dans IndexedDB avant le crop, et la restaurer si nécessaire.
+Au montage du composant, vérifier s'il y a une image originale en attente (non croppée) :
 
 ```typescript
-// Nouvelle fonction utilitaire pour sauvegarder/restaurer l'image
-const saveImageToIndexedDB = async (key: string, blob: Blob): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('ProfileSetupDB', 1);
-    request.onupgradeneeded = (e) => {
-      const db = (e.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('images')) {
-        db.createObjectStore('images');
-      }
-    };
-    request.onsuccess = (e) => {
-      const db = (e.target as IDBOpenDBRequest).result;
-      const tx = db.transaction('images', 'readwrite');
-      tx.objectStore('images').put(blob, key);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    };
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const loadImageFromIndexedDB = async (key: string): Promise<Blob | null> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('ProfileSetupDB', 1);
-    request.onsuccess = (e) => {
-      const db = (e.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('images')) {
-        resolve(null);
-        return;
-      }
-      const tx = db.transaction('images', 'readonly');
-      const getRequest = tx.objectStore('images').get(key);
-      getRequest.onsuccess = () => resolve(getRequest.result || null);
-      getRequest.onerror = () => reject(getRequest.error);
-    };
-    request.onerror = () => reject(request.error);
-  });
-};
-
-// Dans handleCropComplete, sauvegarder l'image croppée
-const handleCropComplete = async (croppedImageBlob: Blob) => {
-  // Sauvegarder dans IndexedDB pour survie au reload
-  await saveImageToIndexedDB('pendingAvatar', croppedImageBlob);
-  // ... reste du code
-};
-
-// Au montage, vérifier s'il y a une image en attente
+// ProfileSetupDialog.tsx - Dans le useEffect de restauration
 useEffect(() => {
-  const restorePendingAvatar = async () => {
-    const pendingBlob = await loadImageFromIndexedDB('pendingAvatar');
-    if (pendingBlob) {
-      console.log('📸 [ProfileSetup] Restauration avatar depuis IndexedDB');
-      const file = new File([pendingBlob], 'avatar.jpg', { type: 'image/jpeg' });
-      const previewUrl = URL.createObjectURL(pendingBlob);
-      setAvatarFile(file);
-      setAvatarPreview(previewUrl);
-      avatarFileRef.current = file;
-      avatarPreviewRef.current = previewUrl;
-      // Nettoyer IndexedDB après restauration
-      deleteImageFromIndexedDB('pendingAvatar');
+  const restoreState = async () => {
+    // ... restauration formulaire existante ...
+    
+    // 1. D'abord vérifier s'il y a une image CROPPÉE (déjà finalisée)
+    const pendingCropped = await loadImageFromIndexedDB('pendingAvatar');
+    if (pendingCropped && pendingCropped.size > 0) {
+      // Image croppée trouvée → l'afficher directement
+      // ... code existant ...
+      return; // Ne pas continuer
+    }
+    
+    // 2. NOUVEAU: Sinon vérifier s'il y a une image ORIGINALE (non croppée)
+    const pendingOriginal = await loadImageFromIndexedDB('pendingOriginalImage');
+    if (pendingOriginal && pendingOriginal.size > 0) {
+      console.log('📸 [ProfileSetup] Image ORIGINALE trouvée - réouverture crop editor');
+      const objectUrl = URL.createObjectURL(pendingOriginal);
+      setOriginalImageSrc(objectUrl);
+      setShowCropEditor(true); // Rouvrir l'éditeur de crop
     }
   };
-  restorePendingAvatar();
+  
+  restoreState();
 }, []);
 ```
 
-### Partie 4 : Empêcher Android de recréer l'activité (côté Java)
+### Partie 3 : Nettoyer l'image originale après le crop
 
-Dans `MainActivity.java`, ajouter un flag pour empêcher la destruction pendant la sélection de fichier :
+Dans `handleCropComplete`, supprimer l'image originale puisqu'on a maintenant l'image croppée :
 
-```java
-// MainActivity.java - Ajouter un flag
-private boolean isFileChooserOpen = false;
-
-// Dans onShowFileChooser
-@Override
-public boolean onShowFileChooser(...) {
-    isFileChooserOpen = true;
-    // ... reste du code
-}
-
-// Dans onActivityResult pour FILE_CHOOSER_REQUEST_CODE
-if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
-    isFileChooserOpen = false;
-    // ... reste du code
-}
-
-// Modifier onSaveInstanceState pour préserver l'état WebView
-@Override
-protected void onSaveInstanceState(Bundle outState) {
-    super.onSaveInstanceState(outState);
-    if (webView != null && isFileChooserOpen) {
-        webView.saveState(outState);
-        Log.d(TAG, "💾 État WebView sauvegardé (file chooser ouvert)");
-    }
-}
-
-// Restaurer l'état dans onCreate si disponible
-if (savedInstanceState != null && webView != null) {
-    webView.restoreState(savedInstanceState);
-    Log.d(TAG, "💾 État WebView restauré depuis savedInstanceState");
-}
+```typescript
+// ProfileSetupDialog.tsx - handleCropComplete MODIFIÉ
+const handleCropComplete = async (croppedImageBlob: Blob) => {
+  // ... code existant de sauvegarde image croppée ...
+  
+  // 🔥 NOUVEAU: Supprimer l'image originale de IndexedDB
+  try {
+    await deleteImageFromIndexedDB('pendingOriginalImage');
+    console.log('📸 [ProfileSetup] Image originale supprimée de IndexedDB');
+  } catch (e) {
+    // Ignorer l'erreur
+  }
+  
+  // ... reste du code ...
+};
 ```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/ProfileSetupDialog.tsx` | Sauvegarder/restaurer état formulaire dans sessionStorage + image dans IndexedDB |
-| `android/app/src/main/java/app/runconnect/MainActivity.java` | Gérer saveState/restoreState de WebView pendant file chooser |
+| `src/components/ProfileSetupDialog.tsx` | Sauvegarder l'image dans IndexedDB DÈS la sélection (pas après crop), restaurer et rouvrir le crop editor si nécessaire |
+
+## Flux corrigé
+
+1. Utilisateur clique bouton caméra → formulaire sauvegardé en sessionStorage
+2. Galerie s'ouvre
+3. Utilisateur sélectionne image → `handleFileSelection` → **image sauvegardée IMMÉDIATEMENT dans IndexedDB**
+4. Crop editor s'ouvre
+5. **SI Android recrée l'activité ici** → page rechargée
+6. `useEffect` de restauration :
+   - Restaure le formulaire depuis sessionStorage ✅
+   - Trouve l'image originale dans IndexedDB ✅
+   - Rouvre automatiquement le crop editor ✅
+7. Utilisateur finit le crop → image croppée remplace l'originale dans IndexedDB
+8. Tout fonctionne !
 
 ## Pourquoi cette solution est définitive
 
-1. **sessionStorage** : Survit aux reloads de page mais pas à la fermeture du navigateur/app - parfait pour notre cas
-2. **IndexedDB** : Stockage persistant pour les fichiers binaires (images)
-3. **WebView saveState** : Empêche Android de perdre l'état JavaScript pendant le file picker
-4. **Double protection** : JavaScript ET Java travaillent ensemble
-
-## Comportement attendu après correction
-
-1. Utilisateur clique sur le bouton caméra
-2. État du formulaire + flag sauvegardés
-3. Galerie s'ouvre
-4. Si Android recrée l'activité (mémoire) → WebView restaurée + état récupéré depuis sessionStorage/IndexedDB
-5. Si pas de recréation → comportement normal
-6. Photo sélectionnée → crop → preview affichée → tout fonctionne !
+1. **Sauvegarde précoce** : L'image est stockée **AVANT** le point où le reload peut arriver
+2. **Double stockage** : Image originale + image croppée = couverture complète
+3. **Restauration intelligente** : Le crop editor se rouvre automatiquement si nécessaire
+4. **Aucune perte possible** : Peu importe quand Android recharge la page, l'image est récupérable
 
