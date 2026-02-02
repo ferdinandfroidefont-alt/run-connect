@@ -108,7 +108,9 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshProfile = async () => {
-    setLoading(true);
+    // NE PAS remettre loading à true pour éviter les flashs et les boucles
+    // Le rechargement se fait en arrière-plan
+    console.log('🔄 [UserProfile] Rafraîchissement du profil en arrière-plan...');
     await loadProfile();
   };
 

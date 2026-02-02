@@ -163,11 +163,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // 1. D'abord déconnecter côté serveur
       await supabase.auth.signOut({ scope: 'global' });
       
-      // 2. Nettoyer TOUS les tokens Supabase du localStorage
+      // 2. Nettoyer TOUS les tokens Supabase + flags de consentement du localStorage
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.includes('supabase') || key.includes('sb-'))) {
+        if (key && (key.includes('supabase') || key.includes('sb-') || key.startsWith('consent_'))) {
           keysToRemove.push(key);
         }
       }
