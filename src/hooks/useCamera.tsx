@@ -230,7 +230,7 @@ export const useCamera = () => {
     return null;
   };
 
-  // Stratégie web améliorée pour WebView Android
+  // Stratégie web améliorée pour WebView Android avec polling
   const selectFromGalleryWeb = async (): Promise<File | null> => {
     return new Promise((resolve) => {
       console.log('🌐 [GALLERY-WEB] Ouverture input file web...');
@@ -257,12 +257,13 @@ export const useCamera = () => {
       document.body.appendChild(input);
       
       let resolved = false;
-      let focusHandled = false;
+      let pollIntervalId: ReturnType<typeof setInterval> | null = null;
       
       const doResolve = (file: File | null, source: string) => {
         if (resolved) return;
         resolved = true;
         clearTimeout(timeoutId);
+        if (pollIntervalId) clearInterval(pollIntervalId);
         console.log(`🌐 [GALLERY-WEB] Résolution via ${source}:`, file ? file.name : 'null');
         
         // Nettoyer l'input après un court délai
@@ -273,11 +274,37 @@ export const useCamera = () => {
         resolve(file);
       };
       
-      // Timeout de 90 secondes (augmenté pour les appareils lents)
+      // Timeout global de 90 secondes
       const timeoutId = setTimeout(() => {
         console.warn('⏱️ [GALLERY-WEB] Timeout sélection galerie (90s)');
         doResolve(null, 'timeout');
       }, 90000);
+      
+      // POLLING: Vérifier input.files toutes les 500ms pendant 10 secondes max
+      const startPolling = () => {
+        if (pollIntervalId) return;
+        
+        let pollCount = 0;
+        const maxPolls = 20; // 10 secondes max (20 * 500ms)
+        
+        pollIntervalId = setInterval(() => {
+          pollCount++;
+          console.log(`🔄 [GALLERY-WEB] Poll #${pollCount}: files=${input.files?.length || 0}`);
+          
+          if (input.files && input.files.length > 0) {
+            console.log('✅ [GALLERY-WEB] Fichier détecté via polling:', input.files[0].name);
+            doResolve(input.files[0], 'polling');
+            return;
+          }
+          
+          if (pollCount >= maxPolls) {
+            console.log('ℹ️ [GALLERY-WEB] Polling terminé sans fichier');
+            if (pollIntervalId) clearInterval(pollIntervalId);
+            pollIntervalId = null;
+            doResolve(null, 'polling-timeout');
+          }
+        }, 500);
+      };
       
       // 🔥 IMPORTANT: L'événement onchange est prioritaire
       input.onchange = (event) => {
@@ -293,34 +320,15 @@ export const useCamera = () => {
           doResolve(file, 'onchange');
         } else {
           console.warn('⚠️ [GALLERY-WEB] onchange sans fichier');
-          doResolve(null, 'onchange-empty');
+          // Ne pas résoudre null ici, laisser le polling continuer
         }
       };
       
-      // Détecter annulation via focus/visibilitychange (Android WebView)
-      // 🔥 DÉLAI AUGMENTÉ À 3 SECONDES pour les appareils lents
+      // Détecter le retour de l'app et démarrer le polling
       const handleVisibilityOrFocus = () => {
-        if (focusHandled || resolved) return;
-        focusHandled = true;
-        
-        console.log('🔄 [GALLERY-WEB] App revenue au premier plan, attente onchange...');
-        
-        // Attendre 3 secondes pour laisser le temps à onchange de se déclencher
-        setTimeout(() => {
-          if (resolved) {
-            console.log('🔄 [GALLERY-WEB] Déjà résolu pendant l\'attente');
-            return;
-          }
-          
-          // Vérifier une dernière fois si un fichier a été sélectionné
-          if (input.files && input.files.length > 0) {
-            console.log('✅ [GALLERY-WEB] Fichier trouvé après focus:', input.files[0].name);
-            doResolve(input.files[0], 'focus-check');
-          } else {
-            console.log('ℹ️ [GALLERY-WEB] Sélection annulée (pas de fichier après 3s)');
-            doResolve(null, 'focus-cancel');
-          }
-        }, 3000); // 3 secondes au lieu de 500ms
+        if (resolved) return;
+        console.log('🔄 [GALLERY-WEB] App revenue au premier plan, démarrage polling...');
+        startPolling();
       };
       
       // Écouter les deux événements pour détecter le retour de l'app

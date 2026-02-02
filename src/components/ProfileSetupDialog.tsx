@@ -165,17 +165,37 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const handleSelectPhoto = async () => {
     try {
       console.log('📸 [ProfileSetup] Début sélection photo...');
+      
+      // Afficher un indicateur de chargement
+      toast({
+        title: "Sélection en cours...",
+        description: "Veuillez patienter après avoir choisi votre photo",
+      });
+      
       const file = await selectFromGallery();
       console.log('📸 [ProfileSetup] Fichier reçu:', file ? { name: file.name, size: file.size } : 'null');
       
       if (file) {
         handleFileSelection(file);
+        toast({
+          title: "Photo sélectionnée !",
+          description: "Vous pouvez maintenant recadrer votre photo",
+        });
       } else {
         console.log('📸 [ProfileSetup] Aucun fichier sélectionné');
+        toast({
+          title: "Aucune photo",
+          description: "Aucune photo n'a été sélectionnée. Réessayez ou utilisez la sélection alternative.",
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       console.error('📸 [ProfileSetup] Erreur:', error);
-      toast({ title: "Erreur", description: error?.message || "Impossible d'accéder à la galerie", variant: "destructive" });
+      toast({ 
+        title: "Erreur", 
+        description: error?.message || "Impossible d'accéder à la galerie. Utilisez la sélection alternative.", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -221,20 +241,26 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 </div>
                 <p className="text-[13px] text-muted-foreground mt-2">Photo de profil *</p>
                 
-                {/* Alternative input for problematic devices */}
-                <label className="mt-2 text-[13px] text-primary cursor-pointer">
-                  📱 Sélection alternative
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileSelection(file);
-                    }}
-                    className="hidden"
-                  />
-                </label>
+                {/* Alternative input for problematic devices - more visible */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-3"
+                >
+                  📱 Sélection alternative (si la galerie ne fonctionne pas)
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelection(file);
+                  }}
+                  className="hidden"
+                />
               </div>
 
               {/* Form Fields */}
