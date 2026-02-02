@@ -16,6 +16,7 @@ import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB 
 // Key constants for storage
 const FORM_STATE_KEY = 'profileSetupFormState';
 const PENDING_AVATAR_KEY = 'pendingAvatar';
+const PENDING_ORIGINAL_KEY = 'pendingOriginalImage'; // Image AVANT crop
 
 interface ProfileSetupDialogProps {
   open: boolean;
@@ -87,13 +88,13 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         console.error('📸 [ProfileSetup] Erreur restauration formulaire:', e);
       }
       
-      // 2. Restaurer l'image depuis IndexedDB
+      // 2. D'abord vérifier s'il y a une image CROPPÉE (déjà finalisée)
       try {
-        const pendingBlob = await loadImageFromIndexedDB(PENDING_AVATAR_KEY);
-        if (pendingBlob && pendingBlob.size > 0) {
-          console.log('📸 [ProfileSetup] Restauration avatar depuis IndexedDB, size:', pendingBlob.size);
-          const file = new File([pendingBlob], 'avatar.jpg', { type: 'image/jpeg' });
-          const previewUrl = URL.createObjectURL(pendingBlob);
+        const pendingCropped = await loadImageFromIndexedDB(PENDING_AVATAR_KEY);
+        if (pendingCropped && pendingCropped.size > 0) {
+          console.log('📸 [ProfileSetup] Restauration avatar CROPPÉ depuis IndexedDB, size:', pendingCropped.size);
+          const file = new File([pendingCropped], 'avatar.jpg', { type: 'image/jpeg' });
+          const previewUrl = URL.createObjectURL(pendingCropped);
           
           setAvatarFile(file);
           setAvatarPreview(previewUrl);
@@ -103,10 +104,32 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           
           // Nettoyer IndexedDB après restauration réussie
           await deleteImageFromIndexedDB(PENDING_AVATAR_KEY);
-          console.log('📸 [ProfileSetup] Avatar restauré et IndexedDB nettoyé');
+          await deleteImageFromIndexedDB(PENDING_ORIGINAL_KEY); // Nettoyer aussi l'originale
+          console.log('📸 [ProfileSetup] Avatar croppé restauré et IndexedDB nettoyé');
+          setIsRestoring(false);
+          return; // Sortir - on a trouvé une image croppée
         }
       } catch (e) {
-        console.error('📸 [ProfileSetup] Erreur restauration image:', e);
+        console.error('📸 [ProfileSetup] Erreur restauration image croppée:', e);
+      }
+      
+      // 3. 🔥 NIVEAU 31: Sinon vérifier s'il y a une image ORIGINALE (non croppée)
+      try {
+        const pendingOriginal = await loadImageFromIndexedDB(PENDING_ORIGINAL_KEY);
+        if (pendingOriginal && pendingOriginal.size > 0) {
+          console.log('📸 [ProfileSetup] Image ORIGINALE trouvée dans IndexedDB - réouverture crop editor');
+          const objectUrl = URL.createObjectURL(pendingOriginal);
+          setOriginalImageSrc(objectUrl);
+          originalImageSrcRef.current = objectUrl;
+          
+          // Petit délai pour s'assurer que le composant est monté
+          setTimeout(() => {
+            setShowCropEditor(true);
+            console.log('📸 [ProfileSetup] Crop editor rouvert automatiquement');
+          }, 100);
+        }
+      } catch (e) {
+        console.error('📸 [ProfileSetup] Erreur restauration image originale:', e);
       }
       
       setIsRestoring(false);
@@ -152,7 +175,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     };
   }, []);
 
-  const handleFileSelection = (file: File) => {
+  const handleFileSelection = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
       return;
@@ -160,6 +183,15 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     if (file.size > 100 * 1024 * 1024) {
       toast({ title: "Erreur", description: "Taille max: 100MB.", variant: "destructive" });
       return;
+    }
+
+    // 🔥 NIVEAU 31: Sauvegarder l'image IMMÉDIATEMENT dans IndexedDB
+    // AVANT d'ouvrir le crop editor - survie au reload Android
+    try {
+      await saveImageToIndexedDB(PENDING_ORIGINAL_KEY, file);
+      console.log('📸 [ProfileSetup] Image ORIGINALE sauvegardée dans IndexedDB IMMÉDIATEMENT');
+    } catch (e) {
+      console.warn('📸 [ProfileSetup] Échec sauvegarde image originale:', e);
     }
 
     // Révoquer l'ancienne URL si elle existe
@@ -183,9 +215,17 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     // 🔄 PARTIE 2: Sauvegarder dans IndexedDB IMMÉDIATEMENT pour survie au reload
     try {
       await saveImageToIndexedDB(PENDING_AVATAR_KEY, croppedImageBlob);
-      console.log('📸 [ProfileSetup] Image sauvegardée dans IndexedDB');
+      console.log('📸 [ProfileSetup] Image CROPPÉE sauvegardée dans IndexedDB');
     } catch (e) {
       console.warn('📸 [ProfileSetup] Échec sauvegarde IndexedDB (non critique):', e);
+    }
+    
+    // 🔥 NIVEAU 31: Supprimer l'image originale maintenant qu'on a la croppée
+    try {
+      await deleteImageFromIndexedDB(PENDING_ORIGINAL_KEY);
+      console.log('📸 [ProfileSetup] Image originale supprimée de IndexedDB');
+    } catch (e) {
+      // Ignorer l'erreur
     }
     
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
