@@ -1074,21 +1074,22 @@ public class MainActivity extends AppCompatActivity {
     private void injectAABFlags(WebView view) {
         Log.d(TAG, "🚀 Injection des flags AAB");
         
-        // 🔥 NIVEAU 28: Auto-reload intelligent si React déjà chargé
+        // 🔥 NIVEAU 29: Injection des flags SANS reload conditionnel
+        // Le reload était trop agressif et causait des pertes de données lors de la sélection de fichiers
+        // On définit maintenant nativeModeActivated = true directement pour éviter tout reload intempestif
         String jsCode = "window.CapacitorForceNative = true; " +
                        "window.isAABBuild = true; " +
                        "window.AndroidNativeEnvironment = true; " +
                        "window.capacitorReady = true; " +
-                       "console.log('🚀 [NIVEAU 28] Flags AAB injectés:', {" +
+                       "window.nativeModeActivated = true; " +  // ✅ DÉFINI IMMÉDIATEMENT
+                       "console.log('🚀 [NIVEAU 29] Flags AAB injectés (sans reload):', {" +
                        "  CapacitorForceNative: window.CapacitorForceNative, " +
                        "  isAABBuild: window.isAABBuild, " +
                        "  AndroidNativeEnvironment: window.AndroidNativeEnvironment, " +
-                       "  capacitorReady: window.capacitorReady" +
-                       "}); " +
-                       "if (window.reactAlreadyLoaded && !window.nativeModeActivated) {" +
-                       "  console.log('🔥 CORRECTION TARDIVE: React déjà chargé, reload nécessaire');" +
-                       "  window.location.reload();" +
-                       "}";
+                       "  capacitorReady: window.capacitorReady, " +
+                       "  nativeModeActivated: window.nativeModeActivated" +
+                       "});";
+        // ✅ SUPPRESSION du bloc if/reload qui causait les rechargements intempestifs
         
         view.evaluateJavascript(jsCode, null);
     }

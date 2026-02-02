@@ -95,6 +95,16 @@ const isNative = detectNativeImmediately();
 if (!isNative) {
   setTimeout(() => {
     if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
+      // ✅ NIVEAU 29: NE PAS RECHARGER si une sélection de fichier est en cours
+      // Cela évite le bug de perte de photo après sélection dans la galerie
+      if ((window as any).fileSelectionInProgress) {
+        console.log('⏸️ Reload différé - sélection de fichier en cours');
+        // Définir les flags sans recharger
+        (window as any).CapacitorForceNative = true;
+        (window as any).nativeModeActivated = true;
+        return;
+      }
+      
       console.log('🔥 CORRECTION: AndroidBridge détecté en retard, activation mode natif');
       (window as any).CapacitorForceNative = true;
       (window as any).nativeModeActivated = true;
