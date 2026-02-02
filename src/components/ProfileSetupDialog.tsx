@@ -11,6 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
+
+// Key constants for storage
+const FORM_STATE_KEY = 'profileSetupFormState';
+const PENDING_AVATAR_KEY = 'pendingAvatar';
 
 interface ProfileSetupDialogProps {
   open: boolean;
@@ -18,6 +23,16 @@ interface ProfileSetupDialogProps {
   userId: string;
   email: string;
   onComplete?: () => void;
+}
+
+interface FormState {
+  username: string;
+  displayName: string;
+  birthDate: string;
+  phone: string;
+  bio: string;
+  password: string;
+  timestamp: number;
 }
 
 export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
@@ -35,7 +50,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
-  const [forceRenderKey, setForceRenderKey] = useState(0); // Force re-render sur Android
+  const [forceRenderKey, setForceRenderKey] = useState(0);
+  const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -43,6 +59,61 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const avatarPreviewRef = useRef<string>("");
   const avatarFileRef = useRef<File | null>(null);
   const originalImageSrcRef = useRef<string>("");
+
+  // 🔄 PARTIE 1: Restaurer l'état du formulaire et l'image au montage
+  useEffect(() => {
+    const restoreState = async () => {
+      console.log('📸 [ProfileSetup] Démarrage restauration état...');
+      
+      // 1. Restaurer les champs du formulaire depuis sessionStorage
+      try {
+        const savedState = sessionStorage.getItem(FORM_STATE_KEY);
+        if (savedState) {
+          const formState: FormState = JSON.parse(savedState);
+          // Vérifier que la sauvegarde est récente (moins de 10 minutes)
+          if (Date.now() - formState.timestamp < 10 * 60 * 1000) {
+            console.log('📸 [ProfileSetup] Restauration formulaire depuis sessionStorage');
+            setUsername(formState.username || '');
+            setDisplayName(formState.displayName || '');
+            setBirthDate(formState.birthDate || '');
+            setPhone(formState.phone || '');
+            setBio(formState.bio || '');
+            setPassword(formState.password || '');
+          }
+          // Nettoyer après restauration
+          sessionStorage.removeItem(FORM_STATE_KEY);
+        }
+      } catch (e) {
+        console.error('📸 [ProfileSetup] Erreur restauration formulaire:', e);
+      }
+      
+      // 2. Restaurer l'image depuis IndexedDB
+      try {
+        const pendingBlob = await loadImageFromIndexedDB(PENDING_AVATAR_KEY);
+        if (pendingBlob && pendingBlob.size > 0) {
+          console.log('📸 [ProfileSetup] Restauration avatar depuis IndexedDB, size:', pendingBlob.size);
+          const file = new File([pendingBlob], 'avatar.jpg', { type: 'image/jpeg' });
+          const previewUrl = URL.createObjectURL(pendingBlob);
+          
+          setAvatarFile(file);
+          setAvatarPreview(previewUrl);
+          avatarFileRef.current = file;
+          avatarPreviewRef.current = previewUrl;
+          setForceRenderKey(prev => prev + 1);
+          
+          // Nettoyer IndexedDB après restauration réussie
+          await deleteImageFromIndexedDB(PENDING_AVATAR_KEY);
+          console.log('📸 [ProfileSetup] Avatar restauré et IndexedDB nettoyé');
+        }
+      } catch (e) {
+        console.error('📸 [ProfileSetup] Erreur restauration image:', e);
+      }
+      
+      setIsRestoring(false);
+    };
+    
+    restoreState();
+  }, []);
 
   // Sync refs avec state ET restaurer si state perdu (Android WebView bug)
   useEffect(() => {
@@ -103,11 +174,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     setShowCropEditor(true);
   };
 
-  const handleCropComplete = (croppedImageBlob: Blob) => {
+  const handleCropComplete = async (croppedImageBlob: Blob) => {
     console.log('📸 [ProfileSetup] handleCropComplete appelé, blob size:', croppedImageBlob.size);
     
     // ✅ NIVEAU 29: S'assurer que le flag de protection est retiré
     (window as any).fileSelectionInProgress = false;
+    
+    // 🔄 PARTIE 2: Sauvegarder dans IndexedDB IMMÉDIATEMENT pour survie au reload
+    try {
+      await saveImageToIndexedDB(PENDING_AVATAR_KEY, croppedImageBlob);
+      console.log('📸 [ProfileSetup] Image sauvegardée dans IndexedDB');
+    } catch (e) {
+      console.warn('📸 [ProfileSetup] Échec sauvegarde IndexedDB (non critique):', e);
+    }
     
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
     
@@ -140,6 +219,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       setOriginalImageSrc('');
       setForceRenderKey(prev => prev + 1); // Force re-render
       console.log('📸 [ProfileSetup] States mis à jour après fermeture dialog');
+      
+      // Nettoyer le sessionStorage maintenant que la photo est appliquée
+      sessionStorage.removeItem(FORM_STATE_KEY);
     }, 50);
   };
 
@@ -235,6 +317,15 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         await supabase.from('profiles').insert({ user_id: userId, ...profileData });
       }
 
+      // 🔄 Nettoyer IndexedDB et sessionStorage après succès
+      try {
+        await deleteImageFromIndexedDB(PENDING_AVATAR_KEY);
+        sessionStorage.removeItem(FORM_STATE_KEY);
+        console.log('📸 [ProfileSetup] Cleanup IndexedDB/sessionStorage après succès');
+      } catch (e) {
+        console.warn('📸 [ProfileSetup] Cleanup warning:', e);
+      }
+
       toast({
         title: "Profil créé !",
         description: "Bienvenue dans RunConnect !"
@@ -281,6 +372,20 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   // Clic sur le bouton caméra - déclenche l'input React natif
   const handleCameraButtonClick = () => {
     console.log('📸 [ProfileSetup] Clic bouton caméra - ouverture input React natif');
+    
+    // 🔄 PARTIE 3: Sauvegarder l'état du formulaire AVANT d'ouvrir la galerie
+    // Au cas où Android recrée l'activité et recharge la WebView
+    const formState: FormState = {
+      username,
+      displayName,
+      birthDate,
+      phone,
+      bio,
+      password,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(formState));
+    console.log('📸 [ProfileSetup] État formulaire sauvegardé dans sessionStorage');
     
     // ✅ NIVEAU 29: Définir le flag de protection contre le reload automatique
     // Cela empêche main.tsx de recharger la page pendant la sélection de fichier

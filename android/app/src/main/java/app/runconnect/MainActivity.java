@@ -69,6 +69,9 @@ public class MainActivity extends AppCompatActivity {
     private final String START_URL = "https://run-connect.lovable.app";
     private GoogleSignInClient mGoogleSignInClient; // 🔥 Client Google Sign-In
     
+    // 🔄 NIVEAU 30: Flag pour savoir si le file chooser est ouvert (protection WebView state)
+    private boolean isFileChooserOpen = false;
+    
     // Cache mémoire pour les contacts (évite relecture à chaque appel)
     private static class ContactsCache {
         private String cachedData = null;
@@ -346,6 +349,9 @@ public class MainActivity extends AppCompatActivity {
             ) {
                 Log.d(TAG, "🖼️ [FILE CHOOSER] onShowFileChooser appelé");
                 
+                // 🔄 NIVEAU 30: Marquer que le file chooser est ouvert
+                isFileChooserOpen = true;
+                
                 // Si un callback existe déjà, l'annuler
                 if (MainActivity.this.filePathCallback != null) {
                     MainActivity.this.filePathCallback.onReceiveValue(null);
@@ -366,6 +372,7 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     Log.e(TAG, "🖼️❌ [FILE CHOOSER] Erreur ouverture galerie", e);
                     MainActivity.this.filePathCallback = null;
+                    isFileChooserOpen = false; // Reset si erreur
                     return false;
                 }
             }
@@ -816,6 +823,9 @@ public class MainActivity extends AppCompatActivity {
         // 🖼️ GÉRER LE RÉSULTAT DU FILE CHOOSER
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             Log.d(TAG, "🖼️ [FILE CHOOSER] onActivityResult - requestCode=" + requestCode + ", resultCode=" + resultCode);
+            
+            // 🔄 NIVEAU 30: Reset le flag file chooser
+            isFileChooserOpen = false;
             
             if (filePathCallback == null) {
                 Log.w(TAG, "🖼️⚠️ [FILE CHOOSER] filePathCallback est null");
@@ -2214,5 +2224,40 @@ public class MainActivity extends AppCompatActivity {
         }
         
         return false;
+    }
+    
+    /**
+     * 🔄 NIVEAU 30: Sauvegarder l'état de la WebView quand Android recrée l'activité
+     * Critique pour éviter la perte d'état lors du retour de la galerie
+     */
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        
+        // Sauvegarder l'état du file chooser
+        outState.putBoolean("isFileChooserOpen", isFileChooserOpen);
+        
+        // Si le file chooser est ouvert, sauvegarder l'état de la WebView
+        if (webView != null) {
+            webView.saveState(outState);
+            Log.d(TAG, "💾 [STATE] WebView state saved (fileChooserOpen=" + isFileChooserOpen + ")");
+        }
+    }
+    
+    /**
+     * 🔄 NIVEAU 30: Restaurer l'état après recréation d'activité
+     */
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        
+        if (savedInstanceState != null) {
+            isFileChooserOpen = savedInstanceState.getBoolean("isFileChooserOpen", false);
+            
+            if (webView != null) {
+                webView.restoreState(savedInstanceState);
+                Log.d(TAG, "💾 [STATE] WebView state restored (fileChooserOpen=" + isFileChooserOpen + ")");
+            }
+        }
     }
 }
