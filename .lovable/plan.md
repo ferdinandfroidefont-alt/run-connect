@@ -1,138 +1,169 @@
 
-# Plan : Correction définitive de la sélection photo de profil sur Android
+# Plan : Correction définitive du chargement de photo de profil sur Android
 
 ## Problème identifié
 
-Le fichier sélectionné dans la galerie ne revient pas à l'application. L'erreur "aucune photo sélectionnée" s'affiche alors que l'utilisateur a bien choisi une image.
+Quand l'utilisateur sélectionne une photo depuis la galerie sur Android :
+1. ✅ Le fichier est bien récupéré via l'input React natif
+2. ✅ Le `FileReader` génère une data URL base64
+3. ✅ Le dialog `ImageCropEditor` s'ouvre avec `showCropEditor = true`
+4. ❌ **L'image ne s'affiche pas** dans le composant de crop - le `<img>` ne charge pas la data URL
 
 ## Cause racine
 
-Le code actuel dans `useCamera.tsx` crée un élément `<input type="file">` **dynamiquement** avec `document.createElement('input')`. Sur Android WebView, les inputs créés dynamiquement ont des problèmes de timing avec l'événement `onchange` - le callback WebView (`filePathCallback.onReceiveValue`) n'est pas correctement relié à l'input créé après coup.
+Sur Android WebView, les images générées par `FileReader.readAsDataURL()` peuvent avoir des problèmes :
+- **Mémoire limitée** : Les data URLs base64 sont 33% plus grandes que le fichier original
+- **Corruption de données** : Certaines WebViews ont des bugs avec les longs data URLs
+- **Encodage incorrect** : Le MIME type peut être mal détecté
 
-**Ce qui fonctionne** : L'input "sélection alternative" dans `ProfileSetupDialog.tsx` qui est **déclaré directement dans le JSX React** avec un `ref` et un `onChange` standard.
+## Solution : Utiliser `URL.createObjectURL()` au lieu de `FileReader.readAsDataURL()`
 
-## Solution : Utiliser un input React standard au lieu d'un input dynamique
+`URL.createObjectURL()` crée une référence blob locale (ex: `blob:http://...`) qui est :
+- Plus léger en mémoire
+- Plus fiable sur Android WebView
+- Plus rapide à créer
 
-### Approche
+### Modification 1 : `ProfileSetupDialog.tsx`
 
-1. **Supprimer la création dynamique d'input** dans `useCamera.tsx`
-2. **Utiliser un input React avec ref** dans `ProfileSetupDialog.tsx` comme méthode principale
-3. **Le hook `useCamera` retourne une méthode qui accepte un inputRef** plutôt que de créer son propre input
-
-### Modification 1 : Simplifier `ProfileSetupDialog.tsx`
-
-Utiliser directement l'input React existant comme méthode principale (pas comme "alternative") :
-
-```tsx
-// Avant (bouton principal qui appelle useCamera)
-<button onClick={handleSelectPhoto}>
-  <Camera />
-</button>
-
-// Après (bouton principal qui clique directement sur l'input React)
-<button onClick={() => fileInputRef.current?.click()}>
-  <Camera />
-</button>
-```
-
-Le flux devient :
-1. Utilisateur clique sur l'icône caméra
-2. L'input React natif (`ref={fileInputRef}`) reçoit le clic
-3. Android `onShowFileChooser` s'ouvre
-4. Utilisateur sélectionne une image
-5. `filePathCallback.onReceiveValue(uri)` est appelé par Android
-6. L'événement `onChange` de l'input React se déclenche
-7. Le fichier est récupéré via `e.target.files[0]`
-
-### Modification 2 : Mettre à jour `ProfileSetupDialog.tsx`
+Remplacer le `FileReader` par `URL.createObjectURL()` :
 
 ```typescript
-// État pour le loading pendant la sélection
-const [isSelectingPhoto, setIsSelectingPhoto] = useState(false);
+// AVANT (FileReader - problématique sur Android)
+const handleFileSelection = (file: File) => {
+  if (!file.type.startsWith('image/')) { ... }
+  if (file.size > 5 * 1024 * 1024) { ... }
 
-// Handler simplifié qui utilise l'input React natif
-const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  setIsSelectingPhoto(false);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const imageSrc = e.target?.result as string;
+    if (imageSrc) {
+      setOriginalImageSrc(imageSrc);
+      setShowCropEditor(true);
+    }
+  };
+  reader.readAsDataURL(file);
+};
+
+// APRÈS (URL.createObjectURL - fiable sur Android)
+const handleFileSelection = (file: File) => {
+  if (!file.type.startsWith('image/')) { ... }
+  if (file.size > 5 * 1024 * 1024) { ... }
+
+  // Créer une URL blob directe - plus fiable sur Android WebView
+  const objectUrl = URL.createObjectURL(file);
+  console.log('📸 [ProfileSetup] Object URL créée:', objectUrl);
+  setOriginalImageSrc(objectUrl);
+  setShowCropEditor(true);
+};
+```
+
+### Modification 2 : Ajouter un nettoyage mémoire
+
+Révoquer les object URLs quand elles ne sont plus nécessaires pour éviter les fuites mémoire :
+
+```typescript
+// Dans handleCropComplete
+const handleCropComplete = (croppedImageBlob: Blob) => {
+  const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
+  setAvatarFile(croppedFile);
   
-  if (file) {
-    console.log('📸 [ProfileSetup] Fichier reçu via input React:', file.name);
-    handleFileSelection(file);
-  } else {
-    console.log('📸 [ProfileSetup] Aucun fichier sélectionné');
-    toast({
-      title: "Aucune photo",
-      description: "Veuillez réessayer",
-      variant: "destructive"
-    });
+  // Révoquer l'ancienne preview si elle existe
+  if (avatarPreview) {
+    URL.revokeObjectURL(avatarPreview);
   }
   
-  // Reset l'input pour permettre de re-sélectionner le même fichier
-  e.target.value = '';
+  setAvatarPreview(URL.createObjectURL(croppedImageBlob));
+  
+  // Révoquer l'URL de l'image originale
+  if (originalImageSrc) {
+    URL.revokeObjectURL(originalImageSrc);
+    setOriginalImageSrc('');
+  }
+  
+  setShowCropEditor(false);
 };
 
-// Clic sur le bouton principal
-const handleCameraButtonClick = () => {
-  setIsSelectingPhoto(true);
-  fileInputRef.current?.click();
-};
+// Ajouter un useEffect pour cleanup au démontage
+useEffect(() => {
+  return () => {
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    if (originalImageSrc) URL.revokeObjectURL(originalImageSrc);
+  };
+}, []);
 ```
 
-### Modification 3 : JSX mis à jour
+### Modification 3 : Améliorer `ImageCropEditor.tsx` pour détecter les erreurs de chargement
 
-```tsx
-{/* Avatar avec bouton caméra */}
-<div className="relative">
-  <Avatar className="h-24 w-24 ring-4 ring-primary/20">
-    <AvatarImage src={avatarPreview} />
-    <AvatarFallback>...</AvatarFallback>
-  </Avatar>
-  <button
-    type="button"
-    onClick={handleCameraButtonClick}
-    disabled={isSelectingPhoto}
-    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-lg"
-  >
-    {isSelectingPhoto ? (
-      <Loader2 className="h-4 w-4 text-white animate-spin" />
-    ) : (
-      <Camera className="h-4 w-4 text-white" />
-    )}
-  </button>
-</div>
+Ajouter une gestion d'erreur sur le chargement de l'image :
 
-{/* Input React UNIQUE - C'est lui qui reçoit le fichier */}
-<input
-  ref={fileInputRef}
-  type="file"
-  accept="image/*"
-  onChange={handlePhotoInputChange}
-  className="hidden"
+```typescript
+const [imageLoadError, setImageLoadError] = useState(false);
+const [imageLoaded, setImageLoaded] = useState(false);
+
+function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+  console.log('📸 [CropEditor] Image chargée avec succès');
+  setImageLoaded(true);
+  setImageLoadError(false);
+  const { width, height } = e.currentTarget;
+  setCrop(centerAspectCrop(width, height, 1));
+}
+
+function onImageError(e: React.SyntheticEvent<HTMLImageElement>) {
+  console.error('📸 [CropEditor] Erreur chargement image:', e);
+  setImageLoadError(true);
+}
+
+// Dans le JSX
+<img
+  ref={imgRef}
+  alt="Crop me"
+  src={imageSrc}
+  style={{ maxWidth: '100%', maxHeight: '60vh', display: 'block' }}
+  onLoad={onImageLoad}
+  onError={onImageError}
 />
+
+{imageLoadError && (
+  <div className="text-center p-4">
+    <p className="text-destructive">Impossible de charger l'image</p>
+    <Button variant="outline" onClick={onClose}>Réessayer</Button>
+  </div>
+)}
 ```
 
-### Modification 4 : Supprimer la dépendance à `useCamera` pour la galerie
+### Modification 4 : Ajouter un état de chargement visible
 
-Le hook `useCamera` reste disponible pour la prise de photo avec l'appareil photo, mais la sélection galerie utilise maintenant l'input React natif.
+Afficher un loader pendant que l'image charge :
+
+```typescript
+{!imageLoaded && !imageLoadError && (
+  <div className="flex items-center justify-center p-8">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <span className="ml-2">Chargement de l'image...</span>
+  </div>
+)}
+```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/ProfileSetupDialog.tsx` | Remplacer l'appel à `selectFromGallery()` par un clic direct sur l'input React natif. Supprimer le bouton "sélection alternative" devenu inutile. |
+| `src/components/ProfileSetupDialog.tsx` | Remplacer `FileReader.readAsDataURL()` par `URL.createObjectURL()` + cleanup mémoire |
+| `src/components/ImageCropEditor.tsx` | Ajouter gestion d'erreur `onError` + état de chargement visible |
 
 ## Pourquoi cette solution fonctionne
 
-1. **Input dans le DOM React** : L'input est rendu par React et existe dans le DOM avant le clic - Android WebView le reconnaît correctement
-2. **Pas de création dynamique** : Élimine les problèmes de timing entre `document.createElement` et `filePathCallback`
-3. **onChange standard** : React gère correctement l'événement sans polling ni workarounds
-4. **Testé fonctionnel** : Le bouton "sélection alternative" utilise cette même approche et fonctionne
-5. **Simple et maintenable** : Code beaucoup plus simple, moins de risques de bugs
+1. **`URL.createObjectURL()`** crée une référence directe au fichier en mémoire, sans encodage base64
+2. **Plus léger** : Pas de conversion, pas d'augmentation de taille
+3. **Plus fiable** : Utilisé par la plupart des bibliothèques d'upload modernes
+4. **Détection d'erreurs** : Si l'image ne charge pas, on le sait et on peut agir
+5. **Cleanup mémoire** : Évite les fuites avec `URL.revokeObjectURL()`
 
 ## Impact sur les autres composants
 
-Le hook `useCamera` peut rester en place pour :
-- La prise de photo avec l'appareil (`takePicture`)
-- Les autres écrans qui utilisent déjà des inputs React natifs
+Cette correction devrait aussi être appliquée à :
+- `src/components/ProfileDialog.tsx` 
+- `src/pages/Profile.tsx`
+- `src/components/EditClubDialog.tsx`
 
-Pour les autres composants qui utilisent `selectFromGallery`, la même approche peut être appliquée progressivement.
+Tous utilisent le même pattern `FileReader.readAsDataURL()` qui peut causer le même problème.
