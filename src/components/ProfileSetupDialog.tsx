@@ -9,8 +9,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, ArrowLeft, ChevronRight } from "lucide-react";
-import { useCamera } from "@/hooks/useCamera";
+import { Camera, Loader2, User, Lock, Phone, FileText, Calendar } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ProfileSetupDialogProps {
@@ -24,6 +23,7 @@ interface ProfileSetupDialogProps {
 export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSelectingPhoto, setIsSelectingPhoto] = useState(false);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [age, setAge] = useState("");
@@ -36,7 +36,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { selectFromGallery, loading: cameraLoading } = useCamera();
 
   const handleFileSelection = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -162,41 +161,32 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     }
   };
 
-  const handleSelectPhoto = async () => {
-    try {
-      console.log('📸 [ProfileSetup] Début sélection photo...');
-      
-      // Afficher un indicateur de chargement
-      toast({
-        title: "Sélection en cours...",
-        description: "Veuillez patienter après avoir choisi votre photo",
+  // Handler pour l'input React natif - méthode principale et fiable sur Android WebView
+  const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📸 [ProfileSetup] onChange input React déclenché');
+    const file = e.target.files?.[0];
+    setIsSelectingPhoto(false);
+    
+    if (file) {
+      console.log('📸 [ProfileSetup] Fichier reçu via input React:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
       });
-      
-      const file = await selectFromGallery();
-      console.log('📸 [ProfileSetup] Fichier reçu:', file ? { name: file.name, size: file.size } : 'null');
-      
-      if (file) {
-        handleFileSelection(file);
-        toast({
-          title: "Photo sélectionnée !",
-          description: "Vous pouvez maintenant recadrer votre photo",
-        });
-      } else {
-        console.log('📸 [ProfileSetup] Aucun fichier sélectionné');
-        toast({
-          title: "Aucune photo",
-          description: "Aucune photo n'a été sélectionnée. Réessayez ou utilisez la sélection alternative.",
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      console.error('📸 [ProfileSetup] Erreur:', error);
-      toast({ 
-        title: "Erreur", 
-        description: error?.message || "Impossible d'accéder à la galerie. Utilisez la sélection alternative.", 
-        variant: "destructive" 
-      });
+      handleFileSelection(file);
+    } else {
+      console.log('📸 [ProfileSetup] onChange sans fichier (annulation probable)');
     }
+    
+    // Reset l'input pour permettre de re-sélectionner le même fichier
+    e.target.value = '';
+  };
+
+  // Clic sur le bouton caméra - déclenche l'input React natif
+  const handleCameraButtonClick = () => {
+    console.log('📸 [ProfileSetup] Clic bouton caméra - ouverture input React natif');
+    setIsSelectingPhoto(true);
+    fileInputRef.current?.click();
   };
 
   return (
@@ -232,33 +222,25 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   </Avatar>
                   <button
                     type="button"
-                    onClick={handleSelectPhoto}
-                    disabled={cameraLoading}
+                    onClick={handleCameraButtonClick}
+                    disabled={isSelectingPhoto}
                     className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-lg"
                   >
-                    <Camera className="h-4 w-4 text-white" />
+                    {isSelectingPhoto ? (
+                      <Loader2 className="h-4 w-4 text-white animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 text-white" />
+                    )}
                   </button>
                 </div>
                 <p className="text-[13px] text-muted-foreground mt-2">Photo de profil *</p>
                 
-                {/* Alternative input for problematic devices - more visible */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mt-3"
-                >
-                  📱 Sélection alternative (si la galerie ne fonctionne pas)
-                </Button>
+                {/* Input React UNIQUE - C'est lui qui reçoit le fichier de manière fiable sur Android WebView */}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelection(file);
-                  }}
+                  onChange={handlePhotoInputChange}
                   className="hidden"
                 />
               </div>
