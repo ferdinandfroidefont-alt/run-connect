@@ -317,23 +317,54 @@ export const useCamera = () => {
     return null;
   };
 
-  // Stratégie web
+  // Stratégie web améliorée pour WebView Android
   const selectFromGalleryWeb = async (): Promise<File | null> => {
     return new Promise((resolve) => {
       console.log('🌐 Ouverture input file web...');
       
+      // Supprimer tout input résiduel
+      const existingInputs = document.querySelectorAll('input[type="file"][data-gallery-picker]');
+      existingInputs.forEach(el => el.remove());
+      
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
+      input.setAttribute('data-gallery-picker', 'true');
+      
+      // Style pour rendre l'input visible sur Android WebView (requis pour certains appareils)
+      input.style.position = 'fixed';
+      input.style.top = '0';
+      input.style.left = '0';
+      input.style.opacity = '0.01';
+      input.style.width = '1px';
+      input.style.height = '1px';
+      input.style.zIndex = '999999';
+      
+      // Ajouter au DOM AVANT de cliquer (requis pour Android WebView)
+      document.body.appendChild(input);
+      
+      let resolved = false;
       
       // Timeout réduit à 60 secondes
       const timeoutId = setTimeout(() => {
-        console.warn('⏱️ Timeout sélection galerie (60s)');
-        resolve(null);
-      }, 60000); // 60 secondes au lieu de 90
+        if (!resolved) {
+          resolved = true;
+          console.warn('⏱️ Timeout sélection galerie (60s)');
+          input.remove();
+          resolve(null);
+        }
+      }, 60000);
+      
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        setTimeout(() => input.remove(), 100);
+      };
       
       input.onchange = (event) => {
-        clearTimeout(timeoutId);
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        
         const file = (event.target as HTMLInputElement).files?.[0];
         
         if (file) {
@@ -349,27 +380,45 @@ export const useCamera = () => {
         }
       };
       
-      input.oncancel = () => {
-        clearTimeout(timeoutId);
-        console.log('ℹ️ Sélection web annulée');
-        resolve(null);
+      // Détecter annulation via focus (Android WebView)
+      const handleFocus = () => {
+        // Délai pour laisser le temps à onchange de se déclencher
+        setTimeout(() => {
+          if (!resolved && input.files?.length === 0) {
+            resolved = true;
+            cleanup();
+            console.log('ℹ️ Sélection web annulée (focus)');
+            resolve(null);
+          }
+        }, 500);
       };
       
-      // Gestion d'erreur sur le click
+      window.addEventListener('focus', handleFocus, { once: true });
+      
       input.onerror = (error) => {
-        clearTimeout(timeoutId);
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        window.removeEventListener('focus', handleFocus);
         console.error('❌ Erreur input file:', error);
         resolve(null);
       };
       
-      try {
-        input.click();
-        console.log('✅ Input file cliqué');
-      } catch (clickError) {
-        clearTimeout(timeoutId);
-        console.error('❌ Erreur click input:', clickError);
-        resolve(null);
-      }
+      // Délai avant click pour Android WebView
+      setTimeout(() => {
+        try {
+          input.click();
+          console.log('✅ Input file cliqué');
+        } catch (clickError) {
+          if (!resolved) {
+            resolved = true;
+            cleanup();
+            window.removeEventListener('focus', handleFocus);
+            console.error('❌ Erreur click input:', clickError);
+            resolve(null);
+          }
+        }
+      }, 100);
     });
   };
 
