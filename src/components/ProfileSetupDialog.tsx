@@ -423,12 +423,26 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         description: "Bienvenue dans RunConnect !"
       });
 
+      // 🔥 NIVEAU 32: Redirection FORCÉE et DIRECTE - ne pas dépendre du callback parent
+      console.log('✅ [ProfileSetup] Profil créé avec succès - redirection FORCÉE vers /');
+      
+      // Fermer le dialog
       onOpenChange(false);
+      
+      // Appeler le callback parent si présent (pour nettoyage)
       if (onComplete) {
-        onComplete();
-      } else {
-        window.location.href = '/';
+        try {
+          onComplete();
+        } catch (e) {
+          console.warn('⚠️ [ProfileSetup] Erreur callback onComplete:', e);
+        }
       }
+      
+      // 🔥 REDIRECTION DIRECTE - s'exécute TOUJOURS après un délai
+      setTimeout(() => {
+        console.log('🚀 [ProfileSetup] Exécution redirection vers /');
+        window.location.href = '/';
+      }, 300);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
