@@ -66,6 +66,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     const restoreState = async () => {
       console.log('📸 [ProfileSetup] Démarrage restauration état...');
       
+      // Vérifier si on revient d'une sélection de photo (flag persistant)
+      const wasSelectingPhoto = sessionStorage.getItem('photoSelectionInProgress') === 'true';
+      if (wasSelectingPhoto) {
+        console.log('📸 [ProfileSetup] Flag photoSelectionInProgress détecté - page rechargée pendant sélection');
+      }
+      
       // 1. Restaurer les champs du formulaire depuis sessionStorage
       try {
         const savedState = sessionStorage.getItem(FORM_STATE_KEY);
@@ -81,8 +87,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             setBio(formState.bio || '');
             setPassword(formState.password || '');
           }
-          // Nettoyer après restauration
-          sessionStorage.removeItem(FORM_STATE_KEY);
+          // NE PAS nettoyer - on garde pour la prochaine tentative
         }
       } catch (e) {
         console.error('📸 [ProfileSetup] Erreur restauration formulaire:', e);
@@ -104,8 +109,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           
           // Nettoyer IndexedDB après restauration réussie
           await deleteImageFromIndexedDB(PENDING_AVATAR_KEY);
-          await deleteImageFromIndexedDB(PENDING_ORIGINAL_KEY); // Nettoyer aussi l'originale
-          console.log('📸 [ProfileSetup] Avatar croppé restauré et IndexedDB nettoyé');
+          await deleteImageFromIndexedDB(PENDING_ORIGINAL_KEY);
+          sessionStorage.removeItem('photoSelectionInProgress');
+          sessionStorage.removeItem(FORM_STATE_KEY);
+          console.log('📸 [ProfileSetup] Avatar croppé restauré et storage nettoyé');
           setIsRestoring(false);
           return; // Sortir - on a trouvé une image croppée
         }
@@ -113,23 +120,43 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         console.error('📸 [ProfileSetup] Erreur restauration image croppée:', e);
       }
       
-      // 3. 🔥 NIVEAU 31: Sinon vérifier s'il y a une image ORIGINALE (non croppée)
-      try {
-        const pendingOriginal = await loadImageFromIndexedDB(PENDING_ORIGINAL_KEY);
-        if (pendingOriginal && pendingOriginal.size > 0) {
-          console.log('📸 [ProfileSetup] Image ORIGINALE trouvée dans IndexedDB - réouverture crop editor');
-          const objectUrl = URL.createObjectURL(pendingOriginal);
-          setOriginalImageSrc(objectUrl);
-          originalImageSrcRef.current = objectUrl;
-          
-          // Petit délai pour s'assurer que le composant est monté
-          setTimeout(() => {
+      // 3. 🔥 NIVEAU 31 RENFORCÉ: Vérifier l'image ORIGINALE avec retry
+      const tryRestoreOriginal = async (attempt: number = 1): Promise<boolean> => {
+        try {
+          console.log(`📸 [ProfileSetup] Tentative ${attempt}/3 de restauration image originale...`);
+          const pendingOriginal = await loadImageFromIndexedDB(PENDING_ORIGINAL_KEY);
+          if (pendingOriginal && pendingOriginal.size > 0) {
+            console.log('📸 [ProfileSetup] Image ORIGINALE trouvée, size:', pendingOriginal.size);
+            const objectUrl = URL.createObjectURL(pendingOriginal);
+            setOriginalImageSrc(objectUrl);
+            originalImageSrcRef.current = objectUrl;
+            
+            // Délai pour s'assurer que le composant est bien monté
+            await new Promise(resolve => setTimeout(resolve, 200));
             setShowCropEditor(true);
             console.log('📸 [ProfileSetup] Crop editor rouvert automatiquement');
-          }, 100);
+            return true;
+          }
+        } catch (e) {
+          console.error(`📸 [ProfileSetup] Erreur tentative ${attempt}:`, e);
         }
-      } catch (e) {
-        console.error('📸 [ProfileSetup] Erreur restauration image originale:', e);
+        return false;
+      };
+      
+      // Essayer 3 fois avec délai croissant
+      let restored = await tryRestoreOriginal(1);
+      if (!restored && wasSelectingPhoto) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        restored = await tryRestoreOriginal(2);
+      }
+      if (!restored && wasSelectingPhoto) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        restored = await tryRestoreOriginal(3);
+      }
+      
+      // Nettoyer le flag si pas de restauration
+      if (!restored) {
+        sessionStorage.removeItem('photoSelectionInProgress');
       }
       
       setIsRestoring(false);
@@ -177,21 +204,45 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
   const handleFileSelection = async (file: File) => {
     if (!file.type.startsWith('image/')) {
+      sessionStorage.removeItem('photoSelectionInProgress');
       toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
       return;
     }
     if (file.size > 100 * 1024 * 1024) {
+      sessionStorage.removeItem('photoSelectionInProgress');
       toast({ title: "Erreur", description: "Taille max: 100MB.", variant: "destructive" });
       return;
     }
 
-    // 🔥 NIVEAU 31: Sauvegarder l'image IMMÉDIATEMENT dans IndexedDB
-    // AVANT d'ouvrir le crop editor - survie au reload Android
-    try {
-      await saveImageToIndexedDB(PENDING_ORIGINAL_KEY, file);
-      console.log('📸 [ProfileSetup] Image ORIGINALE sauvegardée dans IndexedDB IMMÉDIATEMENT');
-    } catch (e) {
-      console.warn('📸 [ProfileSetup] Échec sauvegarde image originale:', e);
+    // 🔥 NIVEAU 31 RENFORCÉ: Sauvegarder AVEC RETRY et ATTENDRE la confirmation
+    const saveWithRetry = async (attempts: number = 3): Promise<boolean> => {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          console.log(`📸 [ProfileSetup] Sauvegarde image originale, tentative ${i + 1}/${attempts}...`);
+          await saveImageToIndexedDB(PENDING_ORIGINAL_KEY, file);
+          
+          // VÉRIFIER que la sauvegarde a réussi en relisant
+          const verify = await loadImageFromIndexedDB(PENDING_ORIGINAL_KEY);
+          if (verify && verify.size > 0) {
+            console.log('📸 [ProfileSetup] ✅ Image ORIGINALE sauvegardée ET VÉRIFIÉE, size:', verify.size);
+            return true;
+          }
+          console.warn(`📸 [ProfileSetup] ⚠️ Vérification échouée tentative ${i + 1}`);
+        } catch (e) {
+          console.warn(`📸 [ProfileSetup] Échec tentative ${i + 1}:`, e);
+        }
+        // Petit délai avant retry
+        if (i < attempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      return false;
+    };
+    
+    const saved = await saveWithRetry(3);
+    if (!saved) {
+      console.error('📸 [ProfileSetup] ❌ Impossible de sauvegarder dans IndexedDB après 3 tentatives');
+      // Continuer quand même - ça fonctionnera si pas de reload
     }
 
     // Révoquer l'ancienne URL si elle existe
@@ -203,6 +254,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     const objectUrl = URL.createObjectURL(file);
     console.log('📸 [ProfileSetup] Object URL créée:', objectUrl);
     setOriginalImageSrc(objectUrl);
+    originalImageSrcRef.current = objectUrl;
     setShowCropEditor(true);
   };
 
@@ -403,6 +455,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       handleFileSelection(file);
     } else {
       console.log('📸 [ProfileSetup] onChange sans fichier (annulation probable)');
+      // Nettoyer le flag si annulation
+      sessionStorage.removeItem('photoSelectionInProgress');
     }
     
     // Reset l'input pour permettre de re-sélectionner le même fichier
@@ -425,7 +479,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       timestamp: Date.now()
     };
     sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(formState));
-    console.log('📸 [ProfileSetup] État formulaire sauvegardé dans sessionStorage');
+    
+    // 🔥 NIVEAU 31 RENFORCÉ: Flag PERSISTANT pour savoir qu'une sélection est en cours
+    // Ce flag survit au reload car c'est sessionStorage (pas window)
+    sessionStorage.setItem('photoSelectionInProgress', 'true');
+    console.log('📸 [ProfileSetup] État formulaire + flag sélection sauvegardés');
     
     // ✅ NIVEAU 29: Définir le flag de protection contre le reload automatique
     // Cela empêche main.tsx de recharger la page pendant la sélection de fichier
