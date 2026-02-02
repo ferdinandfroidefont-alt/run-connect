@@ -827,6 +827,15 @@ const Auth = () => {
         onOpenChange={setShowProfileSetup}
         userId={newUserId}
         email={email}
+        onComplete={() => {
+          // 🔥 Redirection forcée après création du profil
+          console.log('✅ Profil créé - redirection vers /');
+          setShowProfileSetup(false);
+          // Utiliser setTimeout pour s'assurer que le dialog est fermé
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 100);
+        }}
       />
     </div>
   );
