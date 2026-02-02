@@ -27,7 +27,11 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
     try {
       console.log('📝 [Consent] Enregistrement du consentement pour user:', userId);
       
-      // 1. Mettre à jour le profil
+      // 1. Stocker en localStorage IMMÉDIATEMENT pour éviter la boucle
+      localStorage.setItem(`consent_${userId}`, 'true');
+      console.log('✅ [Consent] Consentement sauvegardé en localStorage');
+      
+      // 2. Mettre à jour le profil en base
       const { data: updatedProfile, error } = await supabase
         .from('profiles')
         .update({ 
@@ -40,41 +44,21 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
 
       if (error) throw error;
 
-      console.log('✅ [Consent] Mise à jour réussie:', updatedProfile);
-
-      // 2. Vérifier que les données sont bien lisibles (RLS check)
-      const { data: verified, error: verifyError } = await supabase
-        .from('profiles')
-        .select('rgpd_accepted, security_rules_accepted')
-        .eq('user_id', userId)
-        .single();
-
-      if (verifyError || !verified) {
-        console.error('❌ [Consent] Vérification échouée:', verifyError);
-        throw new Error('Consentement enregistré mais profil non lisible - vérifiez RLS');
-      }
-
-      if (!verified.rgpd_accepted || !verified.security_rules_accepted) {
-        console.error('❌ [Consent] Données non mises à jour:', verified);
-        throw new Error('Les données de consentement ne sont pas correctement enregistrées');
-      }
-
-      console.log('✅ [Consent] Vérification réussie, rafraîchissement du profil...');
+      console.log('✅ [Consent] Mise à jour Supabase réussie:', updatedProfile);
 
       toast({
         title: "Consentement enregistré",
         description: "Bienvenue sur RunConnect !",
       });
 
-      // 3. Rafraîchir le profil et attendre un peu pour que le contexte se mette à jour
-      await onComplete();
+      // 3. Notifier le parent - la fermeture est garantie par localStorage + état local
+      onComplete();
       
-      // 4. Forcer un petit délai pour laisser le contexte React se mettre à jour
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      console.log('✅ [Consent] Profil rechargé, le dialog devrait se fermer');
+      console.log('✅ [Consent] onComplete appelé, le dialog se ferme');
     } catch (error: any) {
       console.error('❌ [Consent] Erreur sauvegarde consentement:', error);
+      // En cas d'erreur, retirer le localStorage pour permettre une nouvelle tentative
+      localStorage.removeItem(`consent_${userId}`);
       toast({
         title: "Erreur",
         description: error.message || "Impossible d'enregistrer votre consentement. Réessayez.",
