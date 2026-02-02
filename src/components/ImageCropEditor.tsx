@@ -116,7 +116,7 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
       (blob) => {
         if (blob) {
           onCropComplete(blob);
-          onClose();
+          // Ne PAS appeler onClose() ici - c'est handleCropComplete du parent qui gère la fermeture
         }
         setIsProcessing(false);
       },
@@ -133,7 +133,15 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        // Ne pas permettre la fermeture pendant le traitement
+        if (!isProcessing && !isOpen) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Recadrer votre photo de profil</DialogTitle>

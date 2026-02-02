@@ -50,6 +50,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     originalImageSrcRef.current = originalImageSrc;
   }, [originalImageSrc]);
 
+  // Log pour diagnostic Android
+  useEffect(() => {
+    console.log('📸 [ProfileSetup] avatarPreview changé:', avatarPreview?.substring(0, 50) || 'vide');
+  }, [avatarPreview]);
+
   // Cleanup des object URLs au démontage pour éviter les fuites mémoire
   useEffect(() => {
     return () => {
@@ -82,22 +87,33 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
   const handleCropComplete = (croppedImageBlob: Blob) => {
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
-    setAvatarFile(croppedFile);
+    
+    // Créer la nouvelle preview URL
+    const newPreviewUrl = URL.createObjectURL(croppedImageBlob);
+    console.log('📸 [ProfileSetup] Preview URL créée:', newPreviewUrl);
     
     // Révoquer l'ancienne preview si elle existe
     if (avatarPreview) {
       URL.revokeObjectURL(avatarPreview);
     }
     
-    setAvatarPreview(URL.createObjectURL(croppedImageBlob));
-    
     // Révoquer l'URL de l'image originale
     if (originalImageSrc) {
       URL.revokeObjectURL(originalImageSrc);
-      setOriginalImageSrc('');
     }
     
-    setShowCropEditor(false);
+    // IMPORTANT: Mettre à jour les états dans le bon ordre
+    // 1. D'abord définir le fichier et la preview
+    setAvatarFile(croppedFile);
+    setAvatarPreview(newPreviewUrl);
+    
+    // 2. Réinitialiser l'originalImageSrc
+    setOriginalImageSrc('');
+    
+    // 3. Fermer le dialog en dernier (utiliser requestAnimationFrame pour garantir le render)
+    requestAnimationFrame(() => {
+      setShowCropEditor(false);
+    });
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
@@ -249,7 +265,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               {/* Avatar Section */}
               <div className="flex flex-col items-center">
                 <div className="relative">
-                  <Avatar className="h-24 w-24 ring-4 ring-primary/20">
+                  <Avatar key={avatarPreview || 'no-avatar'} className="h-24 w-24 ring-4 ring-primary/20">
                     <AvatarImage src={avatarPreview} />
                     <AvatarFallback className="bg-secondary text-2xl">
                       {displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || "?"}
