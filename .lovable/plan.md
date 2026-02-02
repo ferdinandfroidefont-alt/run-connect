@@ -1,169 +1,153 @@
 
-# Plan : Correction définitive du chargement de photo de profil sur Android
+# Plan : Correction du bug critique de la photo de profil
 
 ## Problème identifié
 
-Quand l'utilisateur sélectionne une photo depuis la galerie sur Android :
-1. ✅ Le fichier est bien récupéré via l'input React natif
-2. ✅ Le `FileReader` génère une data URL base64
-3. ✅ Le dialog `ImageCropEditor` s'ouvre avec `showCropEditor = true`
-4. ❌ **L'image ne s'affiche pas** dans le composant de crop - le `<img>` ne charge pas la data URL
+En analysant le code, j'ai trouvé **plusieurs causes potentielles** qui peuvent empêcher l'affichage de la photo :
 
-## Cause racine
-
-Sur Android WebView, les images générées par `FileReader.readAsDataURL()` peuvent avoir des problèmes :
-- **Mémoire limitée** : Les data URLs base64 sont 33% plus grandes que le fichier original
-- **Corruption de données** : Certaines WebViews ont des bugs avec les longs data URLs
-- **Encodage incorrect** : Le MIME type peut être mal détecté
-
-## Solution : Utiliser `URL.createObjectURL()` au lieu de `FileReader.readAsDataURL()`
-
-`URL.createObjectURL()` crée une référence blob locale (ex: `blob:http://...`) qui est :
-- Plus léger en mémoire
-- Plus fiable sur Android WebView
-- Plus rapide à créer
-
-### Modification 1 : `ProfileSetupDialog.tsx`
-
-Remplacer le `FileReader` par `URL.createObjectURL()` :
-
+### 1. Problème du `onClose` dans `ImageCropEditor`
+Dans `ImageCropEditor.tsx`, ligne 118-119, quand on clique sur "Valider" :
 ```typescript
-// AVANT (FileReader - problématique sur Android)
-const handleFileSelection = (file: File) => {
-  if (!file.type.startsWith('image/')) { ... }
-  if (file.size > 5 * 1024 * 1024) { ... }
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const imageSrc = e.target?.result as string;
-    if (imageSrc) {
-      setOriginalImageSrc(imageSrc);
-      setShowCropEditor(true);
-    }
-  };
-  reader.readAsDataURL(file);
-};
-
-// APRÈS (URL.createObjectURL - fiable sur Android)
-const handleFileSelection = (file: File) => {
-  if (!file.type.startsWith('image/')) { ... }
-  if (file.size > 5 * 1024 * 1024) { ... }
-
-  // Créer une URL blob directe - plus fiable sur Android WebView
-  const objectUrl = URL.createObjectURL(file);
-  console.log('📸 [ProfileSetup] Object URL créée:', objectUrl);
-  setOriginalImageSrc(objectUrl);
-  setShowCropEditor(true);
-};
+onCropComplete(blob);
+onClose();  // ← Appelé IMMÉDIATEMENT après onCropComplete
 ```
 
-### Modification 2 : Ajouter un nettoyage mémoire
+Le `onClose()` dans le dialog peut déclencher une mise à jour du state parent AVANT que `setAvatarPreview()` soit complètement traité, causant un conflit de re-render.
 
-Révoquer les object URLs quand elles ne sont plus nécessaires pour éviter les fuites mémoire :
+### 2. Problème potentiel avec `onClose` du dialog
+Le `onOpenChange={onClose}` du Dialog dans `ImageCropEditor` peut être déclenché lors du clic sur "Valider", et le `onClose` callback du parent (`setShowCropEditor(false)`) peut interférer avec les autres updates de state.
+
+### 3. Double appel de `onClose`
+Dans `getCroppedImg()` :
+- `onCropComplete(blob)` appelle `handleCropComplete` qui fait `setShowCropEditor(false)`
+- Ensuite `onClose()` est appelé aussi, qui fait également `setShowCropEditor(false)`
+
+Ces appels redondants peuvent causer des re-renders inattendus.
+
+### 4. État `isSelectingPhoto` qui reste parfois "true"
+Si le crop editor se ferme de manière inattendue, `isSelectingPhoto` peut rester `true` et bloquer des interactions.
+
+## Solution
+
+### Modification 1 : `ImageCropEditor.tsx` - Supprimer le double appel de `onClose`
+
+Le `onCropComplete` du parent gère déjà la fermeture du dialog. Le `onClose()` dans `getCroppedImg` est redondant :
 
 ```typescript
-// Dans handleCropComplete
+// AVANT
+canvas.toBlob(
+  (blob) => {
+    if (blob) {
+      onCropComplete(blob);
+      onClose();  // ← Redondant !
+    }
+    setIsProcessing(false);
+  },
+  'image/jpeg',
+  0.9
+);
+
+// APRÈS
+canvas.toBlob(
+  (blob) => {
+    if (blob) {
+      onCropComplete(blob);
+      // Ne PAS appeler onClose() ici - c'est handleCropComplete qui gère la fermeture
+    }
+    setIsProcessing(false);
+  },
+  'image/jpeg',
+  0.9
+);
+```
+
+### Modification 2 : `ProfileSetupDialog.tsx` - Séquencer les updates de state
+
+Utiliser une logique qui garantit que la preview est définie AVANT de fermer le dialog :
+
+```typescript
 const handleCropComplete = (croppedImageBlob: Blob) => {
   const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
-  setAvatarFile(croppedFile);
+  
+  // Créer la nouvelle preview URL
+  const newPreviewUrl = URL.createObjectURL(croppedImageBlob);
+  console.log('📸 [ProfileSetup] Preview URL créée:', newPreviewUrl);
   
   // Révoquer l'ancienne preview si elle existe
   if (avatarPreview) {
     URL.revokeObjectURL(avatarPreview);
   }
   
-  setAvatarPreview(URL.createObjectURL(croppedImageBlob));
-  
   // Révoquer l'URL de l'image originale
   if (originalImageSrc) {
     URL.revokeObjectURL(originalImageSrc);
-    setOriginalImageSrc('');
   }
   
-  setShowCropEditor(false);
+  // IMPORTANT: Mettre à jour les états dans le bon ordre
+  // 1. D'abord définir le fichier et la preview
+  setAvatarFile(croppedFile);
+  setAvatarPreview(newPreviewUrl);
+  
+  // 2. Réinitialiser l'originalImageSrc
+  setOriginalImageSrc('');
+  
+  // 3. Fermer le dialog en dernier (utiliser un micro-délai pour garantir le render)
+  requestAnimationFrame(() => {
+    setShowCropEditor(false);
+  });
 };
+```
 
-// Ajouter un useEffect pour cleanup au démontage
+### Modification 3 : Ajouter une key dynamique à l'Avatar
+
+Pour forcer le re-render de l'Avatar quand `avatarPreview` change :
+
+```tsx
+<Avatar key={avatarPreview || 'no-avatar'} className="h-24 w-24 ring-4 ring-primary/20">
+  <AvatarImage src={avatarPreview} />
+  <AvatarFallback className="bg-secondary text-2xl">
+    {displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || "?"}
+  </AvatarFallback>
+</Avatar>
+```
+
+### Modification 4 : Améliorer le logging pour diagnostic
+
+Ajouter des logs à chaque étape critique pour diagnostiquer sur Android :
+
+```typescript
 useEffect(() => {
-  return () => {
-    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-    if (originalImageSrc) URL.revokeObjectURL(originalImageSrc);
-  };
-}, []);
+  console.log('📸 [ProfileSetup] avatarPreview changé:', avatarPreview?.substring(0, 50) || 'vide');
+}, [avatarPreview]);
 ```
 
-### Modification 3 : Améliorer `ImageCropEditor.tsx` pour détecter les erreurs de chargement
+### Modification 5 : Empêcher le dialog de se fermer accidentellement
 
-Ajouter une gestion d'erreur sur le chargement de l'image :
+Dans `ImageCropEditor`, désactiver la fermeture par clic extérieur pendant le traitement :
 
-```typescript
-const [imageLoadError, setImageLoadError] = useState(false);
-const [imageLoaded, setImageLoaded] = useState(false);
-
-function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-  console.log('📸 [CropEditor] Image chargée avec succès');
-  setImageLoaded(true);
-  setImageLoadError(false);
-  const { width, height } = e.currentTarget;
-  setCrop(centerAspectCrop(width, height, 1));
-}
-
-function onImageError(e: React.SyntheticEvent<HTMLImageElement>) {
-  console.error('📸 [CropEditor] Erreur chargement image:', e);
-  setImageLoadError(true);
-}
-
-// Dans le JSX
-<img
-  ref={imgRef}
-  alt="Crop me"
-  src={imageSrc}
-  style={{ maxWidth: '100%', maxHeight: '60vh', display: 'block' }}
-  onLoad={onImageLoad}
-  onError={onImageError}
-/>
-
-{imageLoadError && (
-  <div className="text-center p-4">
-    <p className="text-destructive">Impossible de charger l'image</p>
-    <Button variant="outline" onClick={onClose}>Réessayer</Button>
-  </div>
-)}
-```
-
-### Modification 4 : Ajouter un état de chargement visible
-
-Afficher un loader pendant que l'image charge :
-
-```typescript
-{!imageLoaded && !imageLoadError && (
-  <div className="flex items-center justify-center p-8">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    <span className="ml-2">Chargement de l'image...</span>
-  </div>
-)}
+```tsx
+<Dialog 
+  open={open} 
+  onOpenChange={(isOpen) => {
+    // Ne pas permettre la fermeture pendant le traitement
+    if (!isProcessing && !isOpen) {
+      onClose();
+    }
+  }}
+>
 ```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/ProfileSetupDialog.tsx` | Remplacer `FileReader.readAsDataURL()` par `URL.createObjectURL()` + cleanup mémoire |
-| `src/components/ImageCropEditor.tsx` | Ajouter gestion d'erreur `onError` + état de chargement visible |
+| `src/components/ImageCropEditor.tsx` | Supprimer `onClose()` redondant dans `getCroppedImg`, protéger contre fermeture accidentelle |
+| `src/components/ProfileSetupDialog.tsx` | Séquencer les updates de state, ajouter key sur Avatar, améliorer logging |
 
 ## Pourquoi cette solution fonctionne
 
-1. **`URL.createObjectURL()`** crée une référence directe au fichier en mémoire, sans encodage base64
-2. **Plus léger** : Pas de conversion, pas d'augmentation de taille
-3. **Plus fiable** : Utilisé par la plupart des bibliothèques d'upload modernes
-4. **Détection d'erreurs** : Si l'image ne charge pas, on le sait et on peut agir
-5. **Cleanup mémoire** : Évite les fuites avec `URL.revokeObjectURL()`
-
-## Impact sur les autres composants
-
-Cette correction devrait aussi être appliquée à :
-- `src/components/ProfileDialog.tsx` 
-- `src/pages/Profile.tsx`
-- `src/components/EditClubDialog.tsx`
-
-Tous utilisent le même pattern `FileReader.readAsDataURL()` qui peut causer le même problème.
+1. **Pas de double fermeture** : Le `onCropComplete` gère tout, pas besoin d'appeler `onClose` en plus
+2. **Séquence garantie** : `requestAnimationFrame` s'assure que les renders sont faits dans l'ordre
+3. **Key dynamique** : Force React à recréer le composant Avatar quand la preview change
+4. **Protection anti-fermeture** : Empêche le dialog de se fermer par erreur pendant le traitement
+5. **Logging détaillé** : Permet de diagnostiquer le problème exact sur Android
