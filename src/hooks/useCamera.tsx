@@ -154,122 +154,35 @@ export const useCamera = () => {
     console.log('🖼️ DÉBUT SÉLECTION GALERIE...');
     
     try {
-      // Détecter si on est dans une WebView native Android (détection améliorée)
+      // Détecter si on est dans une WebView native Android
       const isAndroidWebView = 
         /Android.*WebView/.test(navigator.userAgent) || 
         /wv/.test(navigator.userAgent) ||
         (window as any).AndroidBridge !== undefined ||
-        (window as any).webkit !== undefined ||
         document.URL.startsWith('file://');
 
       console.log('🔍 Détection WebView:', {
-        userAgent: navigator.userAgent,
+        userAgent: navigator.userAgent.substring(0, 100),
         isWebView: isAndroidWebView,
-        hasAndroidBridge: !!(window as any).AndroidBridge,
-        hasWebkit: !!(window as any).webkit,
-        documentURL: document.URL
+        hasAndroidBridge: !!(window as any).AndroidBridge
       });
       
-      if (isAndroidWebView) {
-        console.log('📱 Mode WebView native Android détecté');
-        // Utiliser input file HTML qui déclenchera onShowFileChooser dans MainActivity
-        return await selectFromGalleryWeb();
-      }
-      
-      // Mode Capacitor/Web standard
-      const isNative = await nativeManager.ensureNativeStatus();
-      
-      if (!isNative) {
-        console.log('🌐 Mode web - input file');
-        return await selectFromGalleryWeb();
-      }
-      
-      // Capacitor Camera (pour les builds Capacitor standards)
-      console.log('🔄 Tentative Capacitor Camera...');
-      try {
-        const permissions = await Camera.requestPermissions();
-        console.log('📱 Permissions:', permissions);
-        
-        if (permissions.photos === 'granted' || permissions.photos === 'limited') {
-          const result = await Camera.getPhoto({
-            quality: 90,
-            allowEditing: false,
-            resultType: CameraResultType.DataUrl,
-            source: CameraSource.Photos,
-            promptLabelHeader: 'Sélectionner une photo',
-            promptLabelCancel: 'Annuler',
-            promptLabelPhoto: 'Depuis la galerie',
-          });
-          
-          if (result.dataUrl) {
-            const response = await fetch(result.dataUrl);
-            const blob = await response.blob();
-            const file = new File([blob], 'gallery-photo.jpg', { type: 'image/jpeg' });
-            console.log('✅ Photo via Capacitor:', file.size, 'bytes');
-            return file;
-          }
-        }
-      } catch (capacitorError) {
-        console.log('❌ Capacitor échoué, fallback web:', capacitorError);
-      }
-      
-      // Fallback web
+      // 🔥 STRATÉGIE UNIFIÉE : Toujours utiliser l'input file HTML
+      // Car c'est la seule méthode qui fonctionne de manière fiable sur Android WebView
+      // L'événement onShowFileChooser dans MainActivity.java gère l'ouverture de la galerie
+      console.log('📱 Utilisation input file HTML (compatible WebView Android)');
       return await selectFromGalleryWeb();
       
     } catch (error: any) {
       console.error('🖼️❌ ERREUR:', error);
-      
-      // Ne plus lancer d'erreur, retourner null à la place pour éviter les crashs
-      if (error.name === 'NotAllowedError' || error.message?.includes('permission')) {
-        console.error('❌ Permission refusée');
-        return null;
-      } else if (error.message?.includes('timeout')) {
-        console.error('❌ Timeout');
-        return null;
-      } else {
-        console.error('❌ Erreur inconnue');
-        return null;
-      }
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Détection stratégie fabricant améliorée
-  const detectManufacturerStrategy = (device: any): string => {
-    const manufacturer = device?.manufacturer?.toLowerCase() || '';
-    const brand = device?.brand?.toLowerCase() || '';
-    const model = device?.model?.toLowerCase() || '';
-    
-    if (manufacturer.includes('xiaomi') || brand.includes('xiaomi') || 
-        model.includes('redmi') || model.includes('poco') || device?.isMIUI) {
-      return 'miui';
-    }
-    
-    if (manufacturer.includes('samsung') || brand.includes('samsung')) {
-      return 'samsung';
-    }
-    
-    if (manufacturer.includes('huawei') || manufacturer.includes('honor') || 
-        brand.includes('huawei') || brand.includes('honor')) {
-      return 'huawei';
-    }
-    
-    if (manufacturer.includes('oneplus') || brand.includes('oneplus')) {
-      return 'oneplus';
-    }
-    
-    if (manufacturer.includes('oppo') || manufacturer.includes('realme') ||
-        brand.includes('oppo') || brand.includes('realme')) {
-      return 'oppo';
-    }
-    
-    if (manufacturer.includes('lg') || manufacturer.includes('lge')) {
-      return 'lg';
-    }
-    
-    return 'standard';
-  };
+  // Note: Manufacturer strategy detection kept for potential future use
+  // but simplified approach uses HTML input file for all Android WebViews
 
   // Stratégie par version Android
   const selectFromGalleryVersionSpecific = async (version: string, strategy?: string): Promise<File | null> => {
@@ -320,7 +233,7 @@ export const useCamera = () => {
   // Stratégie web améliorée pour WebView Android
   const selectFromGalleryWeb = async (): Promise<File | null> => {
     return new Promise((resolve) => {
-      console.log('🌐 Ouverture input file web...');
+      console.log('🌐 [GALLERY-WEB] Ouverture input file web...');
       
       // Supprimer tout input résiduel
       const existingInputs = document.querySelectorAll('input[type="file"][data-gallery-picker]');
@@ -344,81 +257,98 @@ export const useCamera = () => {
       document.body.appendChild(input);
       
       let resolved = false;
+      let focusHandled = false;
       
-      // Timeout réduit à 60 secondes
-      const timeoutId = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          console.warn('⏱️ Timeout sélection galerie (60s)');
-          input.remove();
-          resolve(null);
-        }
-      }, 60000);
-      
-      const cleanup = () => {
-        clearTimeout(timeoutId);
-        setTimeout(() => input.remove(), 100);
-      };
-      
-      input.onchange = (event) => {
+      const doResolve = (file: File | null, source: string) => {
         if (resolved) return;
         resolved = true;
-        cleanup();
+        clearTimeout(timeoutId);
+        console.log(`🌐 [GALLERY-WEB] Résolution via ${source}:`, file ? file.name : 'null');
         
+        // Nettoyer l'input après un court délai
+        setTimeout(() => {
+          try { input.remove(); } catch (e) { /* ignore */ }
+        }, 200);
+        
+        resolve(file);
+      };
+      
+      // Timeout de 90 secondes (augmenté pour les appareils lents)
+      const timeoutId = setTimeout(() => {
+        console.warn('⏱️ [GALLERY-WEB] Timeout sélection galerie (90s)');
+        doResolve(null, 'timeout');
+      }, 90000);
+      
+      // 🔥 IMPORTANT: L'événement onchange est prioritaire
+      input.onchange = (event) => {
+        console.log('🔄 [GALLERY-WEB] onchange déclenché');
         const file = (event.target as HTMLInputElement).files?.[0];
         
         if (file) {
-          console.log('✅ Fichier web sélectionné:', {
+          console.log('✅ [GALLERY-WEB] Fichier sélectionné:', {
             name: file.name,
             size: file.size,
             type: file.type
           });
-          resolve(file);
+          doResolve(file, 'onchange');
         } else {
-          console.warn('⚠️ Aucun fichier dans input');
-          resolve(null);
+          console.warn('⚠️ [GALLERY-WEB] onchange sans fichier');
+          doResolve(null, 'onchange-empty');
         }
       };
       
-      // Détecter annulation via focus (Android WebView)
-      const handleFocus = () => {
-        // Délai pour laisser le temps à onchange de se déclencher
+      // Détecter annulation via focus/visibilitychange (Android WebView)
+      // 🔥 DÉLAI AUGMENTÉ À 3 SECONDES pour les appareils lents
+      const handleVisibilityOrFocus = () => {
+        if (focusHandled || resolved) return;
+        focusHandled = true;
+        
+        console.log('🔄 [GALLERY-WEB] App revenue au premier plan, attente onchange...');
+        
+        // Attendre 3 secondes pour laisser le temps à onchange de se déclencher
         setTimeout(() => {
-          if (!resolved && input.files?.length === 0) {
-            resolved = true;
-            cleanup();
-            console.log('ℹ️ Sélection web annulée (focus)');
-            resolve(null);
+          if (resolved) {
+            console.log('🔄 [GALLERY-WEB] Déjà résolu pendant l\'attente');
+            return;
           }
-        }, 500);
+          
+          // Vérifier une dernière fois si un fichier a été sélectionné
+          if (input.files && input.files.length > 0) {
+            console.log('✅ [GALLERY-WEB] Fichier trouvé après focus:', input.files[0].name);
+            doResolve(input.files[0], 'focus-check');
+          } else {
+            console.log('ℹ️ [GALLERY-WEB] Sélection annulée (pas de fichier après 3s)');
+            doResolve(null, 'focus-cancel');
+          }
+        }, 3000); // 3 secondes au lieu de 500ms
       };
       
-      window.addEventListener('focus', handleFocus, { once: true });
+      // Écouter les deux événements pour détecter le retour de l'app
+      window.addEventListener('focus', handleVisibilityOrFocus, { once: true });
+      
+      const visibilityHandler = () => {
+        if (document.visibilityState === 'visible') {
+          handleVisibilityOrFocus();
+          document.removeEventListener('visibilitychange', visibilityHandler);
+        }
+      };
+      document.addEventListener('visibilitychange', visibilityHandler);
       
       input.onerror = (error) => {
-        if (resolved) return;
-        resolved = true;
-        cleanup();
-        window.removeEventListener('focus', handleFocus);
-        console.error('❌ Erreur input file:', error);
-        resolve(null);
+        console.error('❌ [GALLERY-WEB] Erreur input file:', error);
+        doResolve(null, 'error');
       };
       
       // Délai avant click pour Android WebView
       setTimeout(() => {
         try {
           input.click();
-          console.log('✅ Input file cliqué');
+          console.log('✅ [GALLERY-WEB] Input file cliqué');
         } catch (clickError) {
-          if (!resolved) {
-            resolved = true;
-            cleanup();
-            window.removeEventListener('focus', handleFocus);
-            console.error('❌ Erreur click input:', clickError);
-            resolve(null);
-          }
+          console.error('❌ [GALLERY-WEB] Erreur click input:', clickError);
+          doResolve(null, 'click-error');
         }
-      }, 100);
+      }, 150);
     });
   };
 
