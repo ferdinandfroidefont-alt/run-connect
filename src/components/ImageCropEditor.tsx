@@ -41,12 +41,29 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Reset états quand l'image source change
+  React.useEffect(() => {
+    setImageLoaded(false);
+    setImageLoadError(false);
+  }, [imageSrc]);
+
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    console.log('📸 [CropEditor] Image chargée avec succès');
+    setImageLoaded(true);
+    setImageLoadError(false);
     const { width, height } = e.currentTarget;
     setCrop(centerAspectCrop(width, height, 1)); // Aspect ratio 1:1 pour un cercle
+  }
+
+  function onImageError(e: React.SyntheticEvent<HTMLImageElement>) {
+    console.error('📸 [CropEditor] Erreur chargement image:', imageSrc?.substring(0, 50));
+    setImageLoadError(true);
+    setImageLoaded(false);
   }
 
   const getCroppedImg = useCallback(async () => {
@@ -124,7 +141,24 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
 
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="flex-1 flex items-center justify-center p-4 min-h-0">
-            <div className="max-w-full max-h-full overflow-auto">
+            {/* État de chargement */}
+            {!imageLoaded && !imageLoadError && (
+              <div className="flex flex-col items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 mt-2 text-muted-foreground">Chargement de l'image...</span>
+              </div>
+            )}
+
+            {/* Erreur de chargement */}
+            {imageLoadError && (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <p className="text-destructive mb-4">Impossible de charger l'image</p>
+                <Button variant="outline" onClick={onClose}>Réessayer</Button>
+              </div>
+            )}
+
+            {/* Éditeur de crop - visible seulement quand l'image est chargée */}
+            <div className={`max-w-full max-h-full overflow-auto ${!imageLoaded || imageLoadError ? 'hidden' : ''}`}>
               <ReactCrop
                 crop={crop}
                 onChange={(pixelCrop, percentCrop) => setCrop(percentCrop)}
@@ -143,6 +177,7 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
                     display: 'block'
                   }}
                   onLoad={onImageLoad}
+                  onError={onImageError}
                 />
               </ReactCrop>
             </div>
