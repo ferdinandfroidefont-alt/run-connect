@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,14 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Cleanup des object URLs au démontage pour éviter les fuites mémoire
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+      if (originalImageSrc) URL.revokeObjectURL(originalImageSrc);
+    };
+  }, []);
+
   const handleFileSelection = (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
@@ -47,21 +55,35 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageSrc = e.target?.result as string;
-      if (imageSrc) {
-        setOriginalImageSrc(imageSrc);
-        setShowCropEditor(true);
-      }
-    };
-    reader.readAsDataURL(file);
+    // Révoquer l'ancienne URL si elle existe
+    if (originalImageSrc) {
+      URL.revokeObjectURL(originalImageSrc);
+    }
+
+    // URL.createObjectURL est plus fiable que FileReader.readAsDataURL sur Android WebView
+    const objectUrl = URL.createObjectURL(file);
+    console.log('📸 [ProfileSetup] Object URL créée:', objectUrl);
+    setOriginalImageSrc(objectUrl);
+    setShowCropEditor(true);
   };
 
   const handleCropComplete = (croppedImageBlob: Blob) => {
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
     setAvatarFile(croppedFile);
+    
+    // Révoquer l'ancienne preview si elle existe
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    
     setAvatarPreview(URL.createObjectURL(croppedImageBlob));
+    
+    // Révoquer l'URL de l'image originale
+    if (originalImageSrc) {
+      URL.revokeObjectURL(originalImageSrc);
+      setOriginalImageSrc('');
+    }
+    
     setShowCropEditor(false);
   };
 
