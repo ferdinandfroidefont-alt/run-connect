@@ -105,6 +105,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const handleCropComplete = (croppedImageBlob: Blob) => {
     console.log('📸 [ProfileSetup] handleCropComplete appelé, blob size:', croppedImageBlob.size);
     
+    // ✅ NIVEAU 29: S'assurer que le flag de protection est retiré
+    (window as any).fileSelectionInProgress = false;
+    
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
     
     // Créer la nouvelle preview URL
@@ -238,6 +241,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   // Handler pour l'input React natif - méthode principale et fiable sur Android WebView
   const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('📸 [ProfileSetup] onChange input React déclenché');
+    
+    // ✅ NIVEAU 29: Retirer le flag de protection contre le reload
+    (window as any).fileSelectionInProgress = false;
+    
     const file = e.target.files?.[0];
     setIsSelectingPhoto(false);
     
@@ -259,6 +266,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   // Clic sur le bouton caméra - déclenche l'input React natif
   const handleCameraButtonClick = () => {
     console.log('📸 [ProfileSetup] Clic bouton caméra - ouverture input React natif');
+    
+    // ✅ NIVEAU 29: Définir le flag de protection contre le reload automatique
+    // Cela empêche main.tsx de recharger la page pendant la sélection de fichier
+    (window as any).fileSelectionInProgress = true;
+    
     setIsSelectingPhoto(true);
     fileInputRef.current?.click();
   };
