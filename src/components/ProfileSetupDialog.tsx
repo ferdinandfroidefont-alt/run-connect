@@ -37,11 +37,24 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Refs pour le cleanup (évite les closures stales)
+  const avatarPreviewRef = useRef<string>("");
+  const originalImageSrcRef = useRef<string>("");
+
+  // Sync refs avec state
+  useEffect(() => {
+    avatarPreviewRef.current = avatarPreview;
+  }, [avatarPreview]);
+
+  useEffect(() => {
+    originalImageSrcRef.current = originalImageSrc;
+  }, [originalImageSrc]);
+
   // Cleanup des object URLs au démontage pour éviter les fuites mémoire
   useEffect(() => {
     return () => {
-      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-      if (originalImageSrc) URL.revokeObjectURL(originalImageSrc);
+      if (avatarPreviewRef.current) URL.revokeObjectURL(avatarPreviewRef.current);
+      if (originalImageSrcRef.current) URL.revokeObjectURL(originalImageSrcRef.current);
     };
   }, []);
 
