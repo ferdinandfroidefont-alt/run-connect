@@ -9,7 +9,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, User, Lock, Phone, FileText, Calendar } from "lucide-react";
+import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ProfileSetupDialogProps {
@@ -26,7 +26,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [isSelectingPhoto, setIsSelectingPhoto] = useState(false);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [age, setAge] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
@@ -162,6 +163,20 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     }
   };
 
+  // Calcul de l'âge à partir de la date de naissance
+  const calculateAge = (birthDateStr: string): number => {
+    const today = new Date();
+    const birth = new Date(birthDateStr);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const calculatedAge = birthDate ? calculateAge(birthDate) : 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -169,7 +184,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       toast({ title: "Erreur", description: "La photo de profil est obligatoire.", variant: "destructive" });
       return;
     }
-    if (!username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6) {
+    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6) {
       toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
       return;
     }
@@ -208,7 +223,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       const profileData = {
         username: username.trim(),
         display_name: displayName.trim(),
-        age: parseInt(age),
+        age: calculatedAge,
         phone: phone.trim(),
         bio: bio.trim(),
         avatar_url: uploadedUrl,
@@ -376,33 +391,47 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
                       <Lock className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <Input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mot de passe (min. 6 car.) *"
-                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
-                      required
-                      minLength={6}
-                    />
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Mot de passe (min. 6 car.) *"
+                        className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-1 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="h-px bg-border ml-[54px]" />
 
-                  {/* Age */}
+                  {/* Date de naissance */}
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
                       <Calendar className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <Input
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      placeholder="Âge (min. 13 ans) *"
-                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
-                      min="13"
-                      max="120"
-                      required
-                    />
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        type="date"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                        max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
+                        required
+                      />
+                      {birthDate && (
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          {calculatedAge} ans
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="h-px bg-border ml-[54px]" />
 
@@ -458,7 +487,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               <Button
                 type="submit"
                 className="w-full h-12 rounded-[10px]"
-                disabled={isLoading || !avatarFile || !username.trim() || !displayName.trim() || !age || parseInt(age) < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
+                disabled={isLoading || !avatarFile || !username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Créer mon compte
