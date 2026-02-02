@@ -164,9 +164,17 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
   const handleSelectPhoto = async () => {
     try {
+      console.log('📸 [ProfileSetup] Début sélection photo...');
       const file = await selectFromGallery();
-      if (file) handleFileSelection(file);
+      console.log('📸 [ProfileSetup] Fichier reçu:', file ? { name: file.name, size: file.size } : 'null');
+      
+      if (file) {
+        handleFileSelection(file);
+      } else {
+        console.log('📸 [ProfileSetup] Aucun fichier sélectionné');
+      }
     } catch (error: any) {
+      console.error('📸 [ProfileSetup] Erreur:', error);
       toast({ title: "Erreur", description: error?.message || "Impossible d'accéder à la galerie", variant: "destructive" });
     }
   };
