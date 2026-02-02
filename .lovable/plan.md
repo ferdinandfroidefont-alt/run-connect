@@ -1,173 +1,216 @@
 
-# Plan de correction : Bug RGPD boucle infinie
 
-## Diagnostic approfondi
+# Correction définitive : Bug photo de profil Android WebView
 
-J'ai identifié **3 causes racines** qui créent la boucle infinie et l'incohérence :
+## Diagnostic approfondi (ce que j'ai trouvé)
 
-### Cause 1 : Race condition dans `refreshProfile`
-Dans `UserProfileContext.tsx`, la fonction `refreshProfile` recharge le profil mais met `setLoading(true)` **avant** le rechargement :
+Après analyse complète du code, j'ai identifié **la vraie cause racine** qui persiste malgré les corrections précédentes :
 
-```typescript
-const refreshProfile = async () => {
-  setLoading(true);   // ← PROBLÈME : remet loading à true
-  await loadProfile();
-};
+### LE VRAI PROBLÈME : WebView recharge la page quand on revient de la galerie
+
+Sur Android WebView, quand l'application passe en arrière-plan (galerie ouverte) puis revient au premier plan, **le système Android peut "recréer" l'activité** si la mémoire est insuffisante. Cela cause :
+1. La WebView recharge entièrement la page
+2. Tous les états React sont perdus (y compris `avatarPreview`, `avatarFile`, etc.)
+3. Le flag `fileSelectionInProgress` est perdu aussi
+
+Le problème n'est pas dans le code JavaScript mais dans le **cycle de vie Android**. Les corrections précédentes protégeaient contre les reloads explicites mais pas contre la recréation d'activité.
+
+### Preuve dans les logs Java (lignes 812-846)
+```java
+// onActivityResult reçoit bien le fichier
+Log.d(TAG, "🖼️✅ [FILE CHOOSER] Fichier sélectionné: " + dataString);
+filePathCallback.onReceiveValue(results); // L'URI est bien transmise
 ```
 
-Le flux actuel :
-1. Utilisateur clique "Accepter"
-2. `handleAccept` → update Supabase → `onComplete()` (= `refreshProfile`)
-3. `refreshProfile` → `setLoading(true)` → profile rechargé
-4. `Layout` détecte `profileLoading = true` → affiche écran vide
-5. Quand le profil est rechargé, le contexte React n'a pas encore le nouveau profil
-6. Le temps réel n'a pas encore propagé la mise à jour
-7. `needsConsent` reste `true` → boucle !
+Le problème arrive **APRÈS** : la WebView reçoit le fichier mais React a été réinitialisé.
 
-### Cause 2 : Le temps réel peut NE PAS être écouté
-Dans `UserProfileContext.tsx`, le subscription temps réel est établi APRÈS que le profile soit chargé. Si le profil n'existe pas encore ou si la subscription échoue, les mises à jour ne sont pas propagées.
+## Solution en 3 parties
 
-### Cause 3 : Problème de cache/état dans `refreshProfile`
-Le `await loadProfile()` peut retourner l'ancienne version du profil si Supabase n'a pas encore fini de propager l'update, ou si le cache du client Supabase retourne les anciennes données.
+### Partie 1 : Sauvegarder l'état du formulaire dans `sessionStorage` avant d'ouvrir la galerie
 
-### Cause 4 : Condition `needsConsent` incorrecte
-```typescript
-const needsConsent = userProfile && 
-  (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
-```
-
-Cette condition est vérifiée **à chaque render** de Layout. Si `refreshProfile` déclenche un re-render avant que les nouvelles données arrivent, la condition reste vraie.
-
-## Solution complète
-
-### Partie 1 : Ajouter un état local `consentCompleted` dans Layout
-
-Au lieu de se fier uniquement à `userProfile.rgpd_accepted`, ajouter un état local qui persiste dans la session :
+Avant d'ouvrir le file picker, sauvegarder tous les champs du formulaire :
 
 ```typescript
-// Layout.tsx
-const [consentCompleted, setConsentCompleted] = useState(false);
-
-// Vérifier localStorage au montage
-useEffect(() => {
-  const cachedConsent = localStorage.getItem(`consent_${user?.id}`);
-  if (cachedConsent === 'true') {
-    setConsentCompleted(true);
-  }
-}, [user?.id]);
-
-// Si consentCompleted est true, ne jamais afficher le dialog
-const needsConsent = userProfile && 
-  !consentCompleted &&
-  (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
-
-// Callback pour ConsentDialog
-const handleConsentComplete = async () => {
-  // Stocker en local pour éviter la boucle
-  localStorage.setItem(`consent_${user?.id}`, 'true');
-  setConsentCompleted(true);
-  await refreshProfile();
-};
-```
-
-### Partie 2 : Modifier ConsentDialog pour une fermeture garantie
-
-```typescript
-// ConsentDialog.tsx
-const handleAccept = async () => {
-  // ...update Supabase...
+// ProfileSetupDialog.tsx - Dans handleCameraButtonClick
+const handleCameraButtonClick = () => {
+  // Sauvegarder l'état du formulaire AVANT d'ouvrir la galerie
+  // (au cas où Android recrée l'activité)
+  const formState = {
+    username,
+    displayName,
+    birthDate,
+    phone,
+    bio,
+    password,
+    timestamp: Date.now()
+  };
+  sessionStorage.setItem('profileSetupFormState', JSON.stringify(formState));
   
-  // Stocker en localStorage AVANT d'appeler onComplete
-  localStorage.setItem(`consent_${userId}`, 'true');
-  
-  // Puis notifier le parent
-  onComplete();
+  (window as any).fileSelectionInProgress = true;
+  setIsSelectingPhoto(true);
+  fileInputRef.current?.click();
 };
 ```
 
-### Partie 3 : Améliorer refreshProfile pour éviter les états incohérents
+### Partie 2 : Restaurer l'état du formulaire au montage du composant
+
+Au montage, vérifier si un état sauvegardé existe et le restaurer :
 
 ```typescript
-// UserProfileContext.tsx
-const refreshProfile = async () => {
-  // NE PAS mettre loading à true pour éviter les flashs
-  // Juste recharger le profil en arrière-plan
-  await loadProfile();
-};
-```
-
-### Partie 4 : Forcer un délai avant de vérifier needsConsent
-
-Dans `Layout.tsx`, après le chargement initial, attendre que les données soient stables :
-
-```typescript
-const [isInitialized, setIsInitialized] = useState(false);
-
+// ProfileSetupDialog.tsx - Nouveau useEffect
 useEffect(() => {
-  if (userProfile && !profileLoading) {
-    // Attendre un tick pour s'assurer que le temps réel a propagé
-    const timer = setTimeout(() => {
-      setIsInitialized(true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }
-}, [userProfile, profileLoading]);
-
-// Ne vérifier le consentement qu'après initialisation
-const needsConsent = isInitialized && userProfile && 
-  !consentCompleted &&
-  (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
-```
-
-### Partie 5 : Nettoyer le cache localStorage à la déconnexion
-
-```typescript
-// useAuth.tsx - signOut
-const signOut = async () => {
-  // Nettoyer aussi les flags de consentement
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith('consent_')) {
-      localStorage.removeItem(key);
+  const savedState = sessionStorage.getItem('profileSetupFormState');
+  if (savedState) {
+    try {
+      const formState = JSON.parse(savedState);
+      // Vérifier que la sauvegarde est récente (moins de 5 minutes)
+      if (Date.now() - formState.timestamp < 5 * 60 * 1000) {
+        console.log('📸 [ProfileSetup] Restauration état formulaire depuis sessionStorage');
+        setUsername(formState.username || '');
+        setDisplayName(formState.displayName || '');
+        setBirthDate(formState.birthDate || '');
+        setPhone(formState.phone || '');
+        setBio(formState.bio || '');
+        setPassword(formState.password || '');
+      }
+    } catch (e) {
+      console.error('Erreur restauration état:', e);
     }
+    // Nettoyer après restauration
+    sessionStorage.removeItem('profileSetupFormState');
+  }
+}, []);
+```
+
+### Partie 3 : Persister la photo sélectionnée dans `IndexedDB` (solution robuste)
+
+Le `sessionStorage` ne peut pas stocker des fichiers. Pour la photo, on utilise une approche différente : stocker l'image dans IndexedDB avant le crop, et la restaurer si nécessaire.
+
+```typescript
+// Nouvelle fonction utilitaire pour sauvegarder/restaurer l'image
+const saveImageToIndexedDB = async (key: string, blob: Blob): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('ProfileSetupDB', 1);
+    request.onupgradeneeded = (e) => {
+      const db = (e.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains('images')) {
+        db.createObjectStore('images');
+      }
+    };
+    request.onsuccess = (e) => {
+      const db = (e.target as IDBOpenDBRequest).result;
+      const tx = db.transaction('images', 'readwrite');
+      tx.objectStore('images').put(blob, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
   });
-  // ...reste du code
 };
+
+const loadImageFromIndexedDB = async (key: string): Promise<Blob | null> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('ProfileSetupDB', 1);
+    request.onsuccess = (e) => {
+      const db = (e.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains('images')) {
+        resolve(null);
+        return;
+      }
+      const tx = db.transaction('images', 'readonly');
+      const getRequest = tx.objectStore('images').get(key);
+      getRequest.onsuccess = () => resolve(getRequest.result || null);
+      getRequest.onerror = () => reject(getRequest.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+};
+
+// Dans handleCropComplete, sauvegarder l'image croppée
+const handleCropComplete = async (croppedImageBlob: Blob) => {
+  // Sauvegarder dans IndexedDB pour survie au reload
+  await saveImageToIndexedDB('pendingAvatar', croppedImageBlob);
+  // ... reste du code
+};
+
+// Au montage, vérifier s'il y a une image en attente
+useEffect(() => {
+  const restorePendingAvatar = async () => {
+    const pendingBlob = await loadImageFromIndexedDB('pendingAvatar');
+    if (pendingBlob) {
+      console.log('📸 [ProfileSetup] Restauration avatar depuis IndexedDB');
+      const file = new File([pendingBlob], 'avatar.jpg', { type: 'image/jpeg' });
+      const previewUrl = URL.createObjectURL(pendingBlob);
+      setAvatarFile(file);
+      setAvatarPreview(previewUrl);
+      avatarFileRef.current = file;
+      avatarPreviewRef.current = previewUrl;
+      // Nettoyer IndexedDB après restauration
+      deleteImageFromIndexedDB('pendingAvatar');
+    }
+  };
+  restorePendingAvatar();
+}, []);
+```
+
+### Partie 4 : Empêcher Android de recréer l'activité (côté Java)
+
+Dans `MainActivity.java`, ajouter un flag pour empêcher la destruction pendant la sélection de fichier :
+
+```java
+// MainActivity.java - Ajouter un flag
+private boolean isFileChooserOpen = false;
+
+// Dans onShowFileChooser
+@Override
+public boolean onShowFileChooser(...) {
+    isFileChooserOpen = true;
+    // ... reste du code
+}
+
+// Dans onActivityResult pour FILE_CHOOSER_REQUEST_CODE
+if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+    isFileChooserOpen = false;
+    // ... reste du code
+}
+
+// Modifier onSaveInstanceState pour préserver l'état WebView
+@Override
+protected void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    if (webView != null && isFileChooserOpen) {
+        webView.saveState(outState);
+        Log.d(TAG, "💾 État WebView sauvegardé (file chooser ouvert)");
+    }
+}
+
+// Restaurer l'état dans onCreate si disponible
+if (savedInstanceState != null && webView != null) {
+    webView.restoreState(savedInstanceState);
+    Log.d(TAG, "💾 État WebView restauré depuis savedInstanceState");
+}
 ```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/Layout.tsx` | Ajouter état `consentCompleted` avec cache localStorage, ne vérifier qu'après initialisation |
-| `src/components/ConsentDialog.tsx` | Stocker le consentement en localStorage avant d'appeler `onComplete` |
-| `src/contexts/UserProfileContext.tsx` | Ne pas remettre `loading` à true dans `refreshProfile` pour éviter les flashs |
-| `src/hooks/useAuth.tsx` | Nettoyer les flags `consent_*` à la déconnexion |
+| `src/components/ProfileSetupDialog.tsx` | Sauvegarder/restaurer état formulaire dans sessionStorage + image dans IndexedDB |
+| `android/app/src/main/java/app/runconnect/MainActivity.java` | Gérer saveState/restoreState de WebView pendant file chooser |
 
-## Comportement attendu après fix
+## Pourquoi cette solution est définitive
 
-1. **Premier lancement** : 
-   - Pas de `consent_userId` en localStorage
-   - Profil avec `rgpd_accepted = false`
-   - → Dialog RGPD s'affiche
+1. **sessionStorage** : Survit aux reloads de page mais pas à la fermeture du navigateur/app - parfait pour notre cas
+2. **IndexedDB** : Stockage persistant pour les fichiers binaires (images)
+3. **WebView saveState** : Empêche Android de perdre l'état JavaScript pendant le file picker
+4. **Double protection** : JavaScript ET Java travaillent ensemble
 
-2. **Après "Accepter"** :
-   - `localStorage.setItem('consent_userId', 'true')` immédiatement
-   - `consentCompleted = true` localement
-   - Update Supabase en parallèle
-   - → Dialog se ferme immédiatement, pas de boucle
+## Comportement attendu après correction
 
-3. **Après désinstallation/réinstallation** :
-   - localStorage est vidé
-   - Si l'utilisateur a un compte avec `rgpd_accepted = true` en base, pas de dialog
-   - Si `rgpd_accepted = false` en base, dialog s'affiche
+1. Utilisateur clique sur le bouton caméra
+2. État du formulaire + flag sauvegardés
+3. Galerie s'ouvre
+4. Si Android recrée l'activité (mémoire) → WebView restaurée + état récupéré depuis sessionStorage/IndexedDB
+5. Si pas de recréation → comportement normal
+6. Photo sélectionnée → crop → preview affichée → tout fonctionne !
 
-4. **Changement de compte** :
-   - À la déconnexion, les `consent_*` sont nettoyés
-   - Le nouveau compte vérifiera son propre état
-
-## Pourquoi cette solution fonctionne
-
-1. **Double vérification** : Le localStorage évite la boucle car il est lu de manière synchrone
-2. **Source de vérité** : Supabase reste la source de vérité, le localStorage n'est qu'un cache de session
-3. **Pas de race condition** : On ne dépend plus de `refreshProfile` pour fermer le dialog
-4. **Comportement cohérent** : La logique gère correctement tous les cas (réinstallation, changement de compte, etc.)
