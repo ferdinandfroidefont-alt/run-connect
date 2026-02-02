@@ -63,8 +63,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Erreur", description: "Taille max: 5MB.", variant: "destructive" });
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Erreur", description: "Taille max: 10MB.", variant: "destructive" });
       return;
     }
 
