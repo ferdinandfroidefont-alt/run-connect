@@ -1,149 +1,236 @@
 
-
-# Plan : Correction du changement de compte - Session précédente persistante
+# Plan : Correction sélection photo de profil sur mobile Android
 
 ## Problème identifié
 
-Quand vous vous déconnectez et vous connectez avec un autre compte, vous restez connecté à l'ancien compte. C'est un problème de nettoyage incomplet de la session.
+Quand l'utilisateur sélectionne une photo depuis la galerie pendant la création de compte sur Android, la photo ne s'affiche pas. Le fichier est bien sélectionné côté Android natif (`onActivityResult` dans `MainActivity.java`), mais l'événement `onchange` JavaScript n'est pas capté correctement par la WebView.
 
-## Causes techniques
+## Cause technique
 
-### 1. Nettoyage incomplet du localStorage dans `signOut()`
+L'ordre des événements sur Android WebView :
+1. Utilisateur sélectionne une image dans la galerie
+2. Android envoie l'URI via `filePathCallback.onReceiveValue(results)`
+3. Les événements `focus`/`visibilitychange` se déclenchent IMMÉDIATEMENT
+4. L'événement `onchange` de l'input est retardé (timing variable selon l'appareil)
+5. Après 3 secondes, le code vérifie `input.files` mais celui-ci peut encore être vide
 
-**Fichier : `src/hooks/useAuth.tsx` (lignes 159-173)**
+## Solution en 2 parties
 
-Le code actuel :
-```typescript
-const signOut = async () => {
-  try {
-    localStorage.removeItem('supabase.auth.token');
-    localStorage.removeItem('sb-dbptgehpknjsoisirviz-auth-token');
-    sessionStorage.clear();
-    
-    await supabase.auth.signOut({ scope: 'global' });
-    window.location.href = '/auth';
-  } catch (error) {
-    // ...
-  }
-};
-```
+### Partie 1 : Améliorer le timing côté JavaScript
 
-**Problème** : La déconnexion est appelée APRÈS le nettoyage du localStorage, donc les tokens peuvent être recréés par Supabase avant la redirection.
+**Fichier : `src/hooks/useCamera.tsx`**
 
-### 2. Pas de nettoyage avant connexion
-
-**Fichier : `src/pages/Auth.tsx` (lignes 330-361)**
-
-Quand l'utilisateur se connecte avec `signInWithPassword`, le code ne nettoie pas l'ancienne session avant d'en créer une nouvelle.
-
-### 3. État React non réinitialisé
-
-Les contextes `AuthProvider` et `UserProfileProvider` gardent l'ancien état en mémoire même après `signOut` car la page ne se recharge pas toujours correctement sur mobile.
-
----
-
-## Solution
-
-### Modification 1 : Améliorer `signOut` dans `useAuth.tsx`
+Modifications :
+1. Augmenter le délai d'attente après `focus`/`visibilitychange` à 5 secondes
+2. Ajouter une vérification en boucle (polling) au lieu d'une vérification unique
+3. Utiliser `MutationObserver` pour détecter quand le fichier est assigné
 
 ```typescript
-const signOut = async () => {
-  try {
-    console.log('🚪 [AUTH] Starting signOut...');
+const selectFromGalleryWeb = async (): Promise<File | null> => {
+  return new Promise((resolve) => {
+    console.log('🌐 [GALLERY-WEB] Ouverture input file web...');
     
-    // 1. D'abord déconnecter côté serveur
-    await supabase.auth.signOut({ scope: 'global' });
+    // Supprimer tout input résiduel
+    const existingInputs = document.querySelectorAll('input[type="file"][data-gallery-picker]');
+    existingInputs.forEach(el => el.remove());
     
-    // 2. Nettoyer TOUS les tokens Supabase du localStorage
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.includes('supabase') || key.includes('sb-'))) {
-        keysToRemove.push(key);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.setAttribute('data-gallery-picker', 'true');
+    
+    // Style visible mais hors écran
+    input.style.position = 'fixed';
+    input.style.top = '0';
+    input.style.left = '0';
+    input.style.opacity = '0.01';
+    input.style.width = '1px';
+    input.style.height = '1px';
+    input.style.zIndex = '999999';
+    
+    document.body.appendChild(input);
+    
+    let resolved = false;
+    let pollIntervalId: NodeJS.Timeout | null = null;
+    
+    const doResolve = (file: File | null, source: string) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
+      if (pollIntervalId) clearInterval(pollIntervalId);
+      console.log(`🌐 [GALLERY-WEB] Résolution via ${source}:`, file ? file.name : 'null');
+      
+      setTimeout(() => {
+        try { input.remove(); } catch (e) { /* ignore */ }
+      }, 200);
+      
+      resolve(file);
+    };
+    
+    // Timeout global de 90 secondes
+    const timeoutId = setTimeout(() => {
+      console.warn('⏱️ [GALLERY-WEB] Timeout sélection galerie (90s)');
+      doResolve(null, 'timeout');
+    }, 90000);
+    
+    // POLLING: Vérifier input.files toutes les 500ms pendant 10 secondes max
+    const startPolling = () => {
+      if (pollIntervalId) return;
+      
+      let pollCount = 0;
+      const maxPolls = 20; // 10 secondes max (20 * 500ms)
+      
+      pollIntervalId = setInterval(() => {
+        pollCount++;
+        console.log(`🔄 [GALLERY-WEB] Poll #${pollCount}: files=${input.files?.length || 0}`);
+        
+        if (input.files && input.files.length > 0) {
+          console.log('✅ [GALLERY-WEB] Fichier détecté via polling:', input.files[0].name);
+          doResolve(input.files[0], 'polling');
+          return;
+        }
+        
+        if (pollCount >= maxPolls) {
+          console.log('ℹ️ [GALLERY-WEB] Polling terminé sans fichier');
+          if (pollIntervalId) clearInterval(pollIntervalId);
+          pollIntervalId = null;
+          doResolve(null, 'polling-timeout');
+        }
+      }, 500);
+    };
+    
+    // onchange reste prioritaire
+    input.onchange = (event) => {
+      console.log('🔄 [GALLERY-WEB] onchange déclenché');
+      const file = (event.target as HTMLInputElement).files?.[0];
+      
+      if (file) {
+        console.log('✅ [GALLERY-WEB] Fichier via onchange:', file.name, file.size);
+        doResolve(file, 'onchange');
+      } else {
+        console.warn('⚠️ [GALLERY-WEB] onchange sans fichier');
+        // Ne pas résoudre null ici, laisser le polling continuer
       }
-    }
-    keysToRemove.forEach(key => localStorage.removeItem(key));
+    };
     
-    // 3. Vider sessionStorage
-    sessionStorage.clear();
+    // Détecter le retour de l'app et démarrer le polling
+    const handleVisibilityOrFocus = () => {
+      if (resolved) return;
+      console.log('🔄 [GALLERY-WEB] App revenue au premier plan, démarrage polling...');
+      startPolling();
+    };
     
-    // 4. Réinitialiser les états React
-    setUser(null);
-    setSession(null);
-    setSubscriptionInfo(null);
+    window.addEventListener('focus', handleVisibilityOrFocus, { once: true });
     
-    console.log('✅ [AUTH] SignOut complete, redirecting...');
+    const visibilityHandler = () => {
+      if (document.visibilityState === 'visible') {
+        handleVisibilityOrFocus();
+        document.removeEventListener('visibilitychange', visibilityHandler);
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
     
-    // 5. Forcer un rechargement complet pour vider la mémoire React
-    window.location.href = '/auth';
-  } catch (error) {
-    console.error('❌ [AUTH] Error signing out:', error);
-    // Forcer le nettoyage et la redirection même en cas d'erreur
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.href = '/auth';
-  }
-};
-```
-
-### Modification 2 : Nettoyer avant nouvelle connexion dans `Auth.tsx`
-
-Dans `handleUsernameOrEmailSignin` (ligne 330), ajouter un nettoyage préalable :
-
-```typescript
-const handleUsernameOrEmailSignin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  try {
-    // ✅ NOUVEAU: Nettoyer toute session existante avant connexion
-    console.log('🧹 [AUTH] Cleaning existing session before new login...');
-    await supabase.auth.signOut({ scope: 'local' });
+    input.onerror = (error) => {
+      console.error('❌ [GALLERY-WEB] Erreur input file:', error);
+      doResolve(null, 'error');
+    };
     
-    let emailToUse = usernameOrEmail;
-    // ... reste du code
-  }
-};
-```
-
-Même modification pour `handleGoogleAuth` et `handleOtpSubmit`.
-
-### Modification 3 : Améliorer le `WebViewStorage`
-
-Ajouter une méthode pour nettoyer tous les tokens Supabase :
-
-```typescript
-// Dans src/lib/webview-storage.ts
-clearAllSupabaseKeys(): void {
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && (key.includes('supabase') || key.includes('sb-'))) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach(key => {
-    localStorage.removeItem(key);
-    console.log(`🗑️ [WebViewStorage] Removed: ${key}`);
+    // Cliquer sur l'input après un court délai
+    setTimeout(() => {
+      try {
+        input.click();
+        console.log('✅ [GALLERY-WEB] Input file cliqué');
+      } catch (clickError) {
+        console.error('❌ [GALLERY-WEB] Erreur click input:', clickError);
+        doResolve(null, 'click-error');
+      }
+    }, 150);
   });
-}
+};
 ```
 
----
+### Partie 2 : Améliorer le feedback utilisateur
+
+**Fichier : `src/components/ProfileSetupDialog.tsx`**
+
+Ajouter un état de chargement visible pendant la sélection de photo :
+
+```typescript
+const handleSelectPhoto = async () => {
+  try {
+    console.log('📸 [ProfileSetup] Début sélection photo...');
+    
+    // Afficher un indicateur de chargement
+    toast({
+      title: "Sélection en cours...",
+      description: "Veuillez patienter après avoir choisi votre photo",
+    });
+    
+    const file = await selectFromGallery();
+    console.log('📸 [ProfileSetup] Fichier reçu:', file ? { name: file.name, size: file.size } : 'null');
+    
+    if (file) {
+      handleFileSelection(file);
+      toast({
+        title: "Photo sélectionnée !",
+        description: "Vous pouvez maintenant recadrer votre photo",
+      });
+    } else {
+      console.log('📸 [ProfileSetup] Aucun fichier sélectionné');
+      toast({
+        title: "Aucune photo",
+        description: "Aucune photo n'a été sélectionnée. Réessayez ou utilisez la sélection alternative.",
+        variant: "destructive"
+      });
+    }
+  } catch (error: any) {
+    console.error('📸 [ProfileSetup] Erreur:', error);
+    toast({ 
+      title: "Erreur", 
+      description: error?.message || "Impossible d'accéder à la galerie. Utilisez la sélection alternative.", 
+      variant: "destructive" 
+    });
+  }
+};
+```
+
+### Partie 3 : Améliorer le bouton de sélection alternative
+
+Rendre le bouton de sélection alternative plus visible :
+
+```tsx
+{/* Bouton de sélection alternative plus visible */}
+<Button
+  type="button"
+  variant="outline"
+  size="sm"
+  onClick={() => fileInputRef.current?.click()}
+  className="mt-2"
+>
+  📱 Sélection alternative (si la galerie ne fonctionne pas)
+</Button>
+<input
+  ref={fileInputRef}
+  type="file"
+  accept="image/*"
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelection(file);
+  }}
+  className="hidden"
+/>
+```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/hooks/useAuth.tsx` | Améliorer `signOut()` pour nettoyer tous les tokens, réinitialiser les états React, et déconnecter AVANT le nettoyage |
-| `src/pages/Auth.tsx` | Ajouter `signOut({ scope: 'local' })` avant chaque nouvelle connexion |
-| `src/lib/webview-storage.ts` | Ajouter méthode `clearAllSupabaseKeys()` |
+| `src/hooks/useCamera.tsx` | Remplacer la vérification unique par un système de polling qui vérifie `input.files` toutes les 500ms pendant 10 secondes après le retour de l'app |
+| `src/components/ProfileSetupDialog.tsx` | Ajouter des toasts de feedback et améliorer le bouton de sélection alternative |
 
----
+## Pourquoi cette solution fonctionne
 
-## Pourquoi ça marche
-
-1. **Ordre correct** : Déconnexion serveur AVANT nettoyage local
-2. **Nettoyage complet** : Tous les tokens Supabase sont supprimés (pas juste 2 clés spécifiques)
-3. **Prévention** : Nettoyage avant nouvelle connexion pour éviter les conflits
-4. **États React** : Réinitialisation explicite des states avant redirection
-
+1. **Polling** : Au lieu d'attendre un délai fixe (3s), on vérifie régulièrement si le fichier est disponible
+2. **Timing adaptatif** : Le polling s'arrête dès qu'un fichier est détecté (pas de délai inutile)
+3. **Robustesse** : Si `onchange` se déclenche, il prend la priorité ; sinon le polling récupère le fichier
+4. **Fallback visible** : Le bouton de sélection alternative est plus accessible si tout échoue
