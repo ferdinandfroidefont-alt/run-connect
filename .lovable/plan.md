@@ -1,144 +1,173 @@
 
-# Plan de correction définitive : Bug photo de profil Android
+# Plan de correction : Bug RGPD boucle infinie
 
 ## Diagnostic approfondi
 
-J'ai identifié **DEUX causes racines** du rechargement de page après sélection de photo :
+J'ai identifié **3 causes racines** qui créent la boucle infinie et l'incohérence :
 
-### Cause 1 : Reload automatique dans `main.tsx`
-```typescript
-// main.tsx, lignes 96-106
-if (!isNative) {
-  setTimeout(() => {
-    if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
-      console.log('🔥 CORRECTION: AndroidBridge détecté en retard, activation mode natif');
-      (window as any).CapacitorForceNative = true;
-      (window as any).nativeModeActivated = true;
-      console.log('🔄 Rechargement de la page pour activer le mode natif...');
-      window.location.reload();  // ← CECI CAUSE LE PROBLÈME
-    }
-  }, 500);
-}
-```
-
-Quand l'utilisateur sélectionne une photo :
-1. L'activité MainActivity passe en arrière-plan (sélecteur de fichier)
-2. L'utilisateur choisit la photo et revient
-3. Le timer de 500ms peut se déclencher et recharger la page
-4. Tous les états React sont perdus, y compris l'URL de la photo
-
-### Cause 2 : Reload dans `MainActivity.java` → `injectAABFlags()`
-```java
-// MainActivity.java, lignes 1088-1091
-"if (window.reactAlreadyLoaded && !window.nativeModeActivated) {" +
-"  console.log('🔥 CORRECTION TARDIVE: React déjà chargé, reload nécessaire');" +
-"  window.location.reload();" +
-"}"
-```
-
-Ce code dans `injectAABFlags` est appelé à plusieurs moments :
-- `onPageStarted` (ligne 510)
-- `onPageFinished` (ligne 523)
-- Au démarrage (lignes 621, 645)
-
-Si les conditions sont réunies lors du retour de la galerie, un reload peut être déclenché.
-
-## Solution en 3 parties
-
-### Partie 1 : Modifier `main.tsx` pour éviter le reload pendant la sélection de fichier
-
-Ajouter un flag `window.fileSelectionInProgress` qui empêche le reload automatique quand un file picker est ouvert.
+### Cause 1 : Race condition dans `refreshProfile`
+Dans `UserProfileContext.tsx`, la fonction `refreshProfile` recharge le profil mais met `setLoading(true)` **avant** le rechargement :
 
 ```typescript
-// AVANT
-if (!isNative) {
-  setTimeout(() => {
-    if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
-      window.location.reload();
-    }
-  }, 500);
-}
-
-// APRÈS
-if (!isNative) {
-  setTimeout(() => {
-    if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
-      // ✅ NE PAS RECHARGER si une sélection de fichier est en cours
-      if ((window as any).fileSelectionInProgress) {
-        console.log('⏸️ Reload différé - sélection de fichier en cours');
-        return;
-      }
-      console.log('🔄 Rechargement pour activer le mode natif...');
-      window.location.reload();
-    }
-  }, 500);
-}
-```
-
-### Partie 2 : Modifier `ProfileSetupDialog.tsx` pour marquer la sélection en cours
-
-Définir le flag `window.fileSelectionInProgress` avant d'ouvrir le file picker et le retirer après la sélection/annulation.
-
-```typescript
-// Dans handleCameraButtonClick
-const handleCameraButtonClick = () => {
-  console.log('📸 [ProfileSetup] Clic bouton caméra');
-  (window as any).fileSelectionInProgress = true;  // ✅ BLOQUER LE RELOAD
-  setIsSelectingPhoto(true);
-  fileInputRef.current?.click();
+const refreshProfile = async () => {
+  setLoading(true);   // ← PROBLÈME : remet loading à true
+  await loadProfile();
 };
+```
 
-// Dans handlePhotoInputChange
-const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  (window as any).fileSelectionInProgress = false;  // ✅ DÉBLOQUER
-  setIsSelectingPhoto(false);
+Le flux actuel :
+1. Utilisateur clique "Accepter"
+2. `handleAccept` → update Supabase → `onComplete()` (= `refreshProfile`)
+3. `refreshProfile` → `setLoading(true)` → profile rechargé
+4. `Layout` détecte `profileLoading = true` → affiche écran vide
+5. Quand le profil est rechargé, le contexte React n'a pas encore le nouveau profil
+6. Le temps réel n'a pas encore propagé la mise à jour
+7. `needsConsent` reste `true` → boucle !
+
+### Cause 2 : Le temps réel peut NE PAS être écouté
+Dans `UserProfileContext.tsx`, le subscription temps réel est établi APRÈS que le profile soit chargé. Si le profil n'existe pas encore ou si la subscription échoue, les mises à jour ne sont pas propagées.
+
+### Cause 3 : Problème de cache/état dans `refreshProfile`
+Le `await loadProfile()` peut retourner l'ancienne version du profil si Supabase n'a pas encore fini de propager l'update, ou si le cache du client Supabase retourne les anciennes données.
+
+### Cause 4 : Condition `needsConsent` incorrecte
+```typescript
+const needsConsent = userProfile && 
+  (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
+```
+
+Cette condition est vérifiée **à chaque render** de Layout. Si `refreshProfile` déclenche un re-render avant que les nouvelles données arrivent, la condition reste vraie.
+
+## Solution complète
+
+### Partie 1 : Ajouter un état local `consentCompleted` dans Layout
+
+Au lieu de se fier uniquement à `userProfile.rgpd_accepted`, ajouter un état local qui persiste dans la session :
+
+```typescript
+// Layout.tsx
+const [consentCompleted, setConsentCompleted] = useState(false);
+
+// Vérifier localStorage au montage
+useEffect(() => {
+  const cachedConsent = localStorage.getItem(`consent_${user?.id}`);
+  if (cachedConsent === 'true') {
+    setConsentCompleted(true);
+  }
+}, [user?.id]);
+
+// Si consentCompleted est true, ne jamais afficher le dialog
+const needsConsent = userProfile && 
+  !consentCompleted &&
+  (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
+
+// Callback pour ConsentDialog
+const handleConsentComplete = async () => {
+  // Stocker en local pour éviter la boucle
+  localStorage.setItem(`consent_${user?.id}`, 'true');
+  setConsentCompleted(true);
+  await refreshProfile();
+};
+```
+
+### Partie 2 : Modifier ConsentDialog pour une fermeture garantie
+
+```typescript
+// ConsentDialog.tsx
+const handleAccept = async () => {
+  // ...update Supabase...
+  
+  // Stocker en localStorage AVANT d'appeler onComplete
+  localStorage.setItem(`consent_${userId}`, 'true');
+  
+  // Puis notifier le parent
+  onComplete();
+};
+```
+
+### Partie 3 : Améliorer refreshProfile pour éviter les états incohérents
+
+```typescript
+// UserProfileContext.tsx
+const refreshProfile = async () => {
+  // NE PAS mettre loading à true pour éviter les flashs
+  // Juste recharger le profil en arrière-plan
+  await loadProfile();
+};
+```
+
+### Partie 4 : Forcer un délai avant de vérifier needsConsent
+
+Dans `Layout.tsx`, après le chargement initial, attendre que les données soient stables :
+
+```typescript
+const [isInitialized, setIsInitialized] = useState(false);
+
+useEffect(() => {
+  if (userProfile && !profileLoading) {
+    // Attendre un tick pour s'assurer que le temps réel a propagé
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }
+}, [userProfile, profileLoading]);
+
+// Ne vérifier le consentement qu'après initialisation
+const needsConsent = isInitialized && userProfile && 
+  !consentCompleted &&
+  (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
+```
+
+### Partie 5 : Nettoyer le cache localStorage à la déconnexion
+
+```typescript
+// useAuth.tsx - signOut
+const signOut = async () => {
+  // Nettoyer aussi les flags de consentement
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('consent_')) {
+      localStorage.removeItem(key);
+    }
+  });
   // ...reste du code
 };
-```
-
-### Partie 3 : Modifier `MainActivity.java` pour supprimer le reload conditionnel
-
-Le reload automatique dans `injectAABFlags` est trop agressif. On le retire car il cause plus de problèmes qu'il n'en résout.
-
-```java
-// AVANT (lignes 1077-1091)
-String jsCode = "window.CapacitorForceNative = true; " +
-               // ...autres flags...
-               "if (window.reactAlreadyLoaded && !window.nativeModeActivated) {" +
-               "  console.log('🔥 CORRECTION TARDIVE: React déjà chargé, reload nécessaire');" +
-               "  window.location.reload();" +
-               "}";
-
-// APRÈS
-String jsCode = "window.CapacitorForceNative = true; " +
-               "window.isAABBuild = true; " +
-               "window.AndroidNativeEnvironment = true; " +
-               "window.capacitorReady = true; " +
-               "window.nativeModeActivated = true; " +  // ✅ DÉFINIR AUSSI nativeModeActivated
-               "console.log('🚀 [NIVEAU 28] Flags AAB injectés:', {" +
-               "  CapacitorForceNative: window.CapacitorForceNative, " +
-               "  nativeModeActivated: window.nativeModeActivated" +
-               "});";
-// ✅ SUPPRESSION du bloc if/reload
 ```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/main.tsx` | Ajouter condition `!window.fileSelectionInProgress` avant le reload |
-| `src/components/ProfileSetupDialog.tsx` | Définir `window.fileSelectionInProgress = true/false` au clic caméra et au retour |
-| `android/app/src/main/java/app/runconnect/MainActivity.java` | Supprimer la logique de reload conditionnel dans `injectAABFlags()` et toujours définir `nativeModeActivated = true` |
+| `src/components/Layout.tsx` | Ajouter état `consentCompleted` avec cache localStorage, ne vérifier qu'après initialisation |
+| `src/components/ConsentDialog.tsx` | Stocker le consentement en localStorage avant d'appeler `onComplete` |
+| `src/contexts/UserProfileContext.tsx` | Ne pas remettre `loading` à true dans `refreshProfile` pour éviter les flashs |
+| `src/hooks/useAuth.tsx` | Nettoyer les flags `consent_*` à la déconnexion |
+
+## Comportement attendu après fix
+
+1. **Premier lancement** : 
+   - Pas de `consent_userId` en localStorage
+   - Profil avec `rgpd_accepted = false`
+   - → Dialog RGPD s'affiche
+
+2. **Après "Accepter"** :
+   - `localStorage.setItem('consent_userId', 'true')` immédiatement
+   - `consentCompleted = true` localement
+   - Update Supabase en parallèle
+   - → Dialog se ferme immédiatement, pas de boucle
+
+3. **Après désinstallation/réinstallation** :
+   - localStorage est vidé
+   - Si l'utilisateur a un compte avec `rgpd_accepted = true` en base, pas de dialog
+   - Si `rgpd_accepted = false` en base, dialog s'affiche
+
+4. **Changement de compte** :
+   - À la déconnexion, les `consent_*` sont nettoyés
+   - Le nouveau compte vérifiera son propre état
 
 ## Pourquoi cette solution fonctionne
 
-1. **Flag de protection** : `fileSelectionInProgress` empêche tout reload pendant que l'utilisateur est dans la galerie
-2. **Suppression du reload agressif** : En supprimant le reload conditionnel dans le code Java, on évite les rechargements intempestifs
-3. **Définition précoce de `nativeModeActivated`** : En le définissant toujours à `true` dans l'injection Java, la condition JavaScript ne sera plus jamais vraie
-
-## Impact
-
-- ✅ Aucun reload après sélection de photo
-- ✅ La preview de l'image apparaît immédiatement
-- ✅ Le formulaire n'est pas réinitialisé
-- ✅ Le mode natif reste activé normalement pour les autres fonctionnalités
+1. **Double vérification** : Le localStorage évite la boucle car il est lu de manière synchrone
+2. **Source de vérité** : Supabase reste la source de vérité, le localStorage n'est qu'un cache de session
+3. **Pas de race condition** : On ne dépend plus de `refreshProfile` pour fermer le dialog
+4. **Comportement cohérent** : La logique gère correctement tous les cas (réinstallation, changement de compte, etc.)
