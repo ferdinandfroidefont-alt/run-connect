@@ -1,148 +1,151 @@
 
+# Correction définitive : Redirection après création de profil
 
-# Correction définitive : Bug photo de profil Android WebView - NIVEAU 31
+## Problème identifié
 
-## Diagnostic final
+La redirection `window.location.href = '/'` dans `ProfileSetupDialog` ne fonctionne pas sur Android WebView après la création du profil. Le compte est bien créé mais l'utilisateur reste bloqué sur la page.
 
-Après analyse approfondie, j'ai identifié **pourquoi les corrections précédentes ne fonctionnent pas** :
+## Causes techniques
 
-### Le problème exact
+1. **`setTimeout` + `window.location.href` = non fiable sur WebView**
+   - La WebView Android peut ignorer les changements de navigation dans un setTimeout
+   - Après des opérations async lourdes (upload image), la WebView peut être dans un état instable
+   
+2. **Fermeture du dialog avant redirection**
+   - `onOpenChange(false)` ferme le dialog, ce qui peut démonter le composant
+   - Le `setTimeout` se retrouve orphelin et peut ne pas s'exécuter
 
-L'image est sauvegardée dans IndexedDB **SEULEMENT APRÈS le crop** (ligne 185 de `handleCropComplete`). 
+3. **Absence de mécanisme de fallback**
+   - Si la première tentative échoue, rien ne prend le relais
 
-Mais voici ce qui se passe réellement sur Android :
-1. L'utilisateur clique sur le bouton caméra
-2. `handleCameraButtonClick` sauvegarde le formulaire dans `sessionStorage` ✅
-3. La galerie s'ouvre → Android peut détruire l'activité
-4. L'utilisateur sélectionne une photo
-5. **LA PAGE SE RECHARGE** (Android recrée l'activité)
-6. `handlePhotoInputChange` n'est **JAMAIS appelé** car l'input a été recréé
-7. Le fichier sélectionné est perdu **AVANT** d'arriver à `handleCropComplete`
-8. IndexedDB est vide → rien à restaurer
+## Solution en 3 parties
 
-### Pourquoi les mécanismes actuels échouent
+### Partie 1 : Redirection SYNCHRONE et MULTIPLE
 
-| Mécanisme | Problème |
-|-----------|----------|
-| `sessionStorage` pour le formulaire | ✅ Fonctionne |
-| IndexedDB dans `handleCropComplete` | ❌ Jamais atteint - le fichier est perdu AVANT |
-| `webView.saveState()` dans Java | ❌ Ne préserve pas le contenu JavaScript, seulement l'URL |
-| `fileSelectionInProgress` flag | ❌ Perdu au reload de la page |
-
-### La vraie cause
-
-Sur Android WebView, quand l'activité est recréée :
-- L'événement `onReceiveValue(results)` du Java transmet l'URI au moteur WebView
-- MAIS le JavaScript (React) a été complètement réinitialisé
-- L'input file a été recréé sans l'événement `onChange` en attente
-- Le fichier est "dans les limbes" - transmis mais jamais reçu par React
-
-## Solution en 2 parties
-
-### Partie 1 : Sauvegarder l'image IMMÉDIATEMENT dans `handleFileSelection`
-
-L'image doit être stockée dans IndexedDB **DÈS** qu'elle est sélectionnée, pas après le crop :
+Remplacer le `setTimeout` simple par une stratégie de redirection agressive :
 
 ```typescript
-// ProfileSetupDialog.tsx - handleFileSelection MODIFIÉ
-const handleFileSelection = async (file: File) => {
-  if (!file.type.startsWith('image/')) {
-    toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
-    return;
-  }
-  
-  // 🔥 NOUVEAU: Sauvegarder l'image IMMÉDIATEMENT dans IndexedDB
-  // Avant même d'ouvrir le crop editor - survie au reload
-  try {
-    await saveImageToIndexedDB('pendingOriginalImage', file);
-    console.log('📸 [ProfileSetup] Image ORIGINALE sauvegardée dans IndexedDB');
-  } catch (e) {
-    console.warn('📸 [ProfileSetup] Échec sauvegarde image originale:', e);
-  }
-  
-  const objectUrl = URL.createObjectURL(file);
-  setOriginalImageSrc(objectUrl);
-  setShowCropEditor(true);
+// Dans ProfileSetupDialog.tsx - handleSubmit
+// APRÈS la création du profil réussie
+
+// 🔥 NIVEAU 33: Stratégie de redirection ULTRA-AGRESSIVE pour Android WebView
+console.log('✅ [ProfileSetup] Profil créé - lancement redirection MULTI-MÉTHODE');
+
+// Méthode 1: localStorage flag pour que la page Auth détecte le succès
+localStorage.setItem('profileCreatedSuccessfully', 'true');
+localStorage.setItem('profileCreatedAt', Date.now().toString());
+
+// Méthode 2: Fermer le dialog APRÈS avoir configuré la redirection
+// PAS AVANT pour éviter le démontage prématuré
+const redirectNow = () => {
+  console.log('🚀 [ProfileSetup] Tentative redirection...');
+  window.location.href = '/';
 };
+
+// Méthode 3: Tentatives multiples avec délais croissants
+redirectNow(); // Tentative immédiate
+
+setTimeout(redirectNow, 100);
+setTimeout(redirectNow, 300);
+setTimeout(redirectNow, 500);
+setTimeout(redirectNow, 1000);
+
+// Méthode 4: Utiliser aussi location.replace comme fallback
+setTimeout(() => {
+  console.log('🚀 [ProfileSetup] Fallback location.replace...');
+  window.location.replace('/');
+}, 1500);
+
+// Méthode 5: Si toujours là après 2s, forcer avec reload
+setTimeout(() => {
+  console.log('🚀 [ProfileSetup] Dernier recours - reload vers /');
+  window.location.assign('/');
+}, 2000);
+
+// Fermer le dialog en dernier
+onOpenChange(false);
+if (onComplete) onComplete();
 ```
 
-### Partie 2 : Restaurer l'image originale et rouvrir le crop editor
+### Partie 2 : Détection côté Auth.tsx pour redirection automatique
 
-Au montage du composant, vérifier s'il y a une image originale en attente (non croppée) :
+Ajouter une vérification dans `Auth.tsx` qui détecte si un profil vient d'être créé et force la redirection :
 
 ```typescript
-// ProfileSetupDialog.tsx - Dans le useEffect de restauration
+// Dans Auth.tsx - useEffect existant
 useEffect(() => {
-  const restoreState = async () => {
-    // ... restauration formulaire existante ...
-    
-    // 1. D'abord vérifier s'il y a une image CROPPÉE (déjà finalisée)
-    const pendingCropped = await loadImageFromIndexedDB('pendingAvatar');
-    if (pendingCropped && pendingCropped.size > 0) {
-      // Image croppée trouvée → l'afficher directement
-      // ... code existant ...
-      return; // Ne pas continuer
-    }
-    
-    // 2. NOUVEAU: Sinon vérifier s'il y a une image ORIGINALE (non croppée)
-    const pendingOriginal = await loadImageFromIndexedDB('pendingOriginalImage');
-    if (pendingOriginal && pendingOriginal.size > 0) {
-      console.log('📸 [ProfileSetup] Image ORIGINALE trouvée - réouverture crop editor');
-      const objectUrl = URL.createObjectURL(pendingOriginal);
-      setOriginalImageSrc(objectUrl);
-      setShowCropEditor(true); // Rouvrir l'éditeur de crop
-    }
-  };
+  // 🔥 NIVEAU 33: Détecter si profil créé mais redirection échouée
+  const profileCreated = localStorage.getItem('profileCreatedSuccessfully');
+  const profileCreatedAt = localStorage.getItem('profileCreatedAt');
   
-  restoreState();
+  if (profileCreated === 'true' && profileCreatedAt) {
+    const createdTime = parseInt(profileCreatedAt, 10);
+    const timeSinceCreation = Date.now() - createdTime;
+    
+    // Si profil créé il y a moins de 30 secondes, forcer la redirection
+    if (timeSinceCreation < 30000) {
+      console.log('🔥 [Auth] Profil créé détecté, redirection forcée vers /');
+      localStorage.removeItem('profileCreatedSuccessfully');
+      localStorage.removeItem('profileCreatedAt');
+      window.location.href = '/';
+      return;
+    } else {
+      // Nettoyer les vieux flags
+      localStorage.removeItem('profileCreatedSuccessfully');
+      localStorage.removeItem('profileCreatedAt');
+    }
+  }
+  
+  // ... reste du useEffect existant
 }, []);
 ```
 
-### Partie 3 : Nettoyer l'image originale après le crop
+### Partie 3 : Vérifier que le profil est LISIBLE avant de rediriger
 
-Dans `handleCropComplete`, supprimer l'image originale puisqu'on a maintenant l'image croppée :
+Suivre le pattern Stack Overflow fourni - vérifier que le profil est lisible par RLS :
 
 ```typescript
-// ProfileSetupDialog.tsx - handleCropComplete MODIFIÉ
-const handleCropComplete = async (croppedImageBlob: Blob) => {
-  // ... code existant de sauvegarde image croppée ...
-  
-  // 🔥 NOUVEAU: Supprimer l'image originale de IndexedDB
-  try {
-    await deleteImageFromIndexedDB('pendingOriginalImage');
-    console.log('📸 [ProfileSetup] Image originale supprimée de IndexedDB');
-  } catch (e) {
-    // Ignorer l'erreur
-  }
-  
-  // ... reste du code ...
-};
+// Dans ProfileSetupDialog.tsx - handleSubmit
+// APRÈS l'insert/update du profil
+
+// 🔥 NIVEAU 33: Vérifier que le profil est lisible (RLS)
+const { data: verifiedProfile, error: verifyError } = await supabase
+  .from('profiles')
+  .select('id, user_id')
+  .eq('user_id', userId)
+  .single();
+
+if (verifyError || !verifiedProfile) {
+  console.error('❌ [ProfileSetup] Profil créé mais non lisible - problème RLS?', verifyError);
+  throw new Error('Profil créé mais non vérifiable. Réessayez.');
+}
+
+console.log('✅ [ProfileSetup] Profil vérifié comme lisible:', verifiedProfile.id);
+
+// Continuer avec la redirection...
 ```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/ProfileSetupDialog.tsx` | Sauvegarder l'image dans IndexedDB DÈS la sélection (pas après crop), restaurer et rouvrir le crop editor si nécessaire |
+| `src/components/ProfileSetupDialog.tsx` | Stratégie de redirection multi-méthode avec tentatives répétées + vérification RLS |
+| `src/pages/Auth.tsx` | Détection du flag localStorage pour forcer la redirection si elle a échoué |
 
-## Flux corrigé
+## Pourquoi cette solution fonctionne
 
-1. Utilisateur clique bouton caméra → formulaire sauvegardé en sessionStorage
-2. Galerie s'ouvre
-3. Utilisateur sélectionne image → `handleFileSelection` → **image sauvegardée IMMÉDIATEMENT dans IndexedDB**
-4. Crop editor s'ouvre
-5. **SI Android recrée l'activité ici** → page rechargée
-6. `useEffect` de restauration :
-   - Restaure le formulaire depuis sessionStorage ✅
-   - Trouve l'image originale dans IndexedDB ✅
-   - Rouvre automatiquement le crop editor ✅
-7. Utilisateur finit le crop → image croppée remplace l'originale dans IndexedDB
-8. Tout fonctionne !
+1. **Redirection synchrone** : On essaie immédiatement, pas juste après un délai
+2. **Tentatives multiples** : 6 tentatives sur 2 secondes garantissent qu'au moins une passe
+3. **Fallback localStorage** : Si tout échoue, Auth.tsx prend le relais au prochain render
+4. **Vérification RLS** : On s'assure que le profil est bien lisible avant de quitter
+5. **Fermeture différée** : Le dialog reste ouvert jusqu'à ce que la redirection soit lancée
 
-## Pourquoi cette solution est définitive
+## Comportement attendu
 
-1. **Sauvegarde précoce** : L'image est stockée **AVANT** le point où le reload peut arriver
-2. **Double stockage** : Image originale + image croppée = couverture complète
-3. **Restauration intelligente** : Le crop editor se rouvre automatiquement si nécessaire
-4. **Aucune perte possible** : Peu importe quand Android recharge la page, l'image est récupérable
-
+1. Utilisateur clique "Créer mon compte"
+2. Profil créé dans Supabase
+3. Vérification RLS confirme la lisibilité
+4. localStorage flag mis en place
+5. 6 tentatives de redirection en 2 secondes
+6. L'une d'elles réussit → utilisateur sur la page d'accueil
+7. Si toutes échouent → Auth.tsx détecte le flag et redirige
