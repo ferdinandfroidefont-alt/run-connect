@@ -33,6 +33,28 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // 🔥 NIVEAU 33: Détecter si profil créé mais redirection échouée
+    const profileCreated = localStorage.getItem('profileCreatedSuccessfully');
+    const profileCreatedAt = localStorage.getItem('profileCreatedAt');
+    
+    if (profileCreated === 'true' && profileCreatedAt) {
+      const createdTime = parseInt(profileCreatedAt, 10);
+      const timeSinceCreation = Date.now() - createdTime;
+      
+      // Si profil créé il y a moins de 30 secondes, forcer la redirection
+      if (timeSinceCreation < 30000) {
+        console.log('🔥 [Auth] Profil créé détecté, redirection forcée vers /');
+        localStorage.removeItem('profileCreatedSuccessfully');
+        localStorage.removeItem('profileCreatedAt');
+        window.location.href = '/';
+        return;
+      } else {
+        // Nettoyer les vieux flags
+        localStorage.removeItem('profileCreatedSuccessfully');
+        localStorage.removeItem('profileCreatedAt');
+      }
+    }
+
     const cleanExpiredSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
