@@ -1,151 +1,103 @@
 
-# Correction définitive : Redirection après création de profil
 
-## Problème identifié
+# Refonte Complète : Page Conversation Style iMessage
 
-La redirection `window.location.href = '/'` dans `ProfileSetupDialog` ne fonctionne pas sur Android WebView après la création du profil. Le compte est bien créé mais l'utilisateur reste bloqué sur la page.
+## Analyse de l'image de référence
 
-## Causes techniques
+L'image montre un design iMessage iOS avec :
+- **Header** : Bouton retour (chevron simple), avatar circulaire centré avec nom en dessous, icône appel vidéo à droite
+- **Messages** : Bulles bleues (expéditeur) / grises (reçues) avec coins arrondis style iOS
+- **Images** : Affichées dans des coins arrondis larges, intégrées dans le flux
+- **Emojis** : Affichage grand format sans bulle quand seul emoji
+- **Input** : Zone de saisie minimaliste avec "+" à gauche, "iMessage" au centre, micro à droite
+- **Fond** : Blanc/gris clair très épuré
 
-1. **`setTimeout` + `window.location.href` = non fiable sur WebView**
-   - La WebView Android peut ignorer les changements de navigation dans un setTimeout
-   - Après des opérations async lourdes (upload image), la WebView peut être dans un état instable
-   
-2. **Fermeture du dialog avant redirection**
-   - `onOpenChange(false)` ferme le dialog, ce qui peut démonter le composant
-   - Le `setTimeout` se retrouve orphelin et peut ne pas s'exécuter
+## Modifications prévues
 
-3. **Absence de mécanisme de fallback**
-   - Si la première tentative échoue, rien ne prend le relais
+### 1. Header de conversation (style iMessage natif)
 
-## Solution en 3 parties
+**Avant** : Header avec "Retour" texte, avatar à côté du nom, menu options
 
-### Partie 1 : Redirection SYNCHRONE et MULTIPLE
+**Après** :
+- Chevron retour simple (sans texte) à gauche
+- Avatar centré (plus grand, 40px) avec nom en dessous
+- Le nom devient cliquable pour accéder au profil
+- Suppression du menu "..." pour désencombrer (accessible via tap sur l'avatar/nom)
 
-Remplacer le `setTimeout` simple par une stratégie de redirection agressive :
-
-```typescript
-// Dans ProfileSetupDialog.tsx - handleSubmit
-// APRÈS la création du profil réussie
-
-// 🔥 NIVEAU 33: Stratégie de redirection ULTRA-AGRESSIVE pour Android WebView
-console.log('✅ [ProfileSetup] Profil créé - lancement redirection MULTI-MÉTHODE');
-
-// Méthode 1: localStorage flag pour que la page Auth détecte le succès
-localStorage.setItem('profileCreatedSuccessfully', 'true');
-localStorage.setItem('profileCreatedAt', Date.now().toString());
-
-// Méthode 2: Fermer le dialog APRÈS avoir configuré la redirection
-// PAS AVANT pour éviter le démontage prématuré
-const redirectNow = () => {
-  console.log('🚀 [ProfileSetup] Tentative redirection...');
-  window.location.href = '/';
-};
-
-// Méthode 3: Tentatives multiples avec délais croissants
-redirectNow(); // Tentative immédiate
-
-setTimeout(redirectNow, 100);
-setTimeout(redirectNow, 300);
-setTimeout(redirectNow, 500);
-setTimeout(redirectNow, 1000);
-
-// Méthode 4: Utiliser aussi location.replace comme fallback
-setTimeout(() => {
-  console.log('🚀 [ProfileSetup] Fallback location.replace...');
-  window.location.replace('/');
-}, 1500);
-
-// Méthode 5: Si toujours là après 2s, forcer avec reload
-setTimeout(() => {
-  console.log('🚀 [ProfileSetup] Dernier recours - reload vers /');
-  window.location.assign('/');
-}, 2000);
-
-// Fermer le dialog en dernier
-onOpenChange(false);
-if (onComplete) onComplete();
+```
+[<]          [Avatar]          [ⓘ]
+              Orkun
 ```
 
-### Partie 2 : Détection côté Auth.tsx pour redirection automatique
+### 2. Zone de messages (style iMessage pur)
 
-Ajouter une vérification dans `Auth.tsx` qui détecte si un profil vient d'être créé et force la redirection :
+**Bulles de messages redessinées** :
+- Messages envoyés : Bleu iOS (#007AFF), coins arrondis 18px, queue de bulle iOS
+- Messages reçus : Gris clair (#E5E5EA), coins arrondis 18px
+- Suppression des ombres et effets "glass"
+- Padding interne optimisé (12px horizontal, 8px vertical)
+- Largeur max : 75% de l'écran
 
-```typescript
-// Dans Auth.tsx - useEffect existant
-useEffect(() => {
-  // 🔥 NIVEAU 33: Détecter si profil créé mais redirection échouée
-  const profileCreated = localStorage.getItem('profileCreatedSuccessfully');
-  const profileCreatedAt = localStorage.getItem('profileCreatedAt');
-  
-  if (profileCreated === 'true' && profileCreatedAt) {
-    const createdTime = parseInt(profileCreatedAt, 10);
-    const timeSinceCreation = Date.now() - createdTime;
-    
-    // Si profil créé il y a moins de 30 secondes, forcer la redirection
-    if (timeSinceCreation < 30000) {
-      console.log('🔥 [Auth] Profil créé détecté, redirection forcée vers /');
-      localStorage.removeItem('profileCreatedSuccessfully');
-      localStorage.removeItem('profileCreatedAt');
-      window.location.href = '/';
-      return;
-    } else {
-      // Nettoyer les vieux flags
-      localStorage.removeItem('profileCreatedSuccessfully');
-      localStorage.removeItem('profileCreatedAt');
-    }
-  }
-  
-  // ... reste du useEffect existant
-}, []);
+**Timestamps** :
+- Masqués par défaut
+- Apparaissent au tap sur le message
+- Style pilule centré pour les séparateurs de date
+
+**Avatars** :
+- Masqués pour les messages de l'utilisateur
+- Affichés uniquement pour les messages reçus dans les groupes
+- Cachés dans les conversations 1-to-1 (style iMessage)
+
+### 3. Zone de saisie (style iMessage)
+
+**Nouveau design** :
+```
+[+]  |  iMessage...  |  [🎤]
 ```
 
-### Partie 3 : Vérifier que le profil est LISIBLE avant de rediriger
+- Bouton "+" à gauche (ouvre les options : galerie, fichier, emoji)
+- Champ de saisie central avec placeholder "iMessage"
+- Bouton micro à droite (devient flèche d'envoi quand texte présent)
+- Fond gris très clair (#F2F2F7) avec bordure subtile
+- Coins arrondis 20px
 
-Suivre le pattern Stack Overflow fourni - vérifier que le profil est lisible par RLS :
+### 4. Fond et couleurs
 
-```typescript
-// Dans ProfileSetupDialog.tsx - handleSubmit
-// APRÈS l'insert/update du profil
+- Fond de conversation : Blanc pur (#FFFFFF)
+- Messages envoyés : Bleu iOS (#007AFF)
+- Messages reçus : Gris iOS (#E5E5EA)
+- Texte envoyé : Blanc
+- Texte reçu : Noir
 
-// 🔥 NIVEAU 33: Vérifier que le profil est lisible (RLS)
-const { data: verifiedProfile, error: verifyError } = await supabase
-  .from('profiles')
-  .select('id, user_id')
-  .eq('user_id', userId)
-  .single();
-
-if (verifyError || !verifiedProfile) {
-  console.error('❌ [ProfileSetup] Profil créé mais non lisible - problème RLS?', verifyError);
-  throw new Error('Profil créé mais non vérifiable. Réessayez.');
-}
-
-console.log('✅ [ProfileSetup] Profil vérifié comme lisible:', verifiedProfile.id);
-
-// Continuer avec la redirection...
-```
-
-## Résumé des modifications
+## Résumé technique
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/ProfileSetupDialog.tsx` | Stratégie de redirection multi-méthode avec tentatives répétées + vérification RLS |
-| `src/pages/Auth.tsx` | Détection du flag localStorage pour forcer la redirection si elle a échoué |
+| `src/pages/Messages.tsx` | Refonte complète de la section conversation (header, messages, input) |
+| `src/hooks/useConversationTheme.tsx` | Mise à jour du thème par défaut pour correspondre à iMessage |
+| `src/components/MessageTimestamp.tsx` | Style des timestamps en pilule iOS |
+| `src/components/TypingIndicator.tsx` | Style discret type iMessage |
 
-## Pourquoi cette solution fonctionne
+## Fonctionnalités préservées
 
-1. **Redirection synchrone** : On essaie immédiatement, pas juste après un délai
-2. **Tentatives multiples** : 6 tentatives sur 2 secondes garantissent qu'au moins une passe
-3. **Fallback localStorage** : Si tout échoue, Auth.tsx prend le relais au prochain render
-4. **Vérification RLS** : On s'assure que le profil est bien lisible avant de quitter
-5. **Fermeture différée** : Le dialog reste ouvert jusqu'à ce que la redirection soit lancée
+Toutes les fonctionnalités actuelles sont conservées :
+- Bouton retour (simplifié en chevron)
+- Envoi de messages texte
+- Partage d'images et fichiers
+- Messages vocaux
+- Sélecteur d'emojis
+- Indicateur de frappe
+- Status de lecture (vu/lu)
+- Partage de sessions
+- Suppression de messages
+- Accès au profil (via tap sur avatar/nom)
+- Gestion des groupes/clubs
 
-## Comportement attendu
+## Aperçu visuel du résultat
 
-1. Utilisateur clique "Créer mon compte"
-2. Profil créé dans Supabase
-3. Vérification RLS confirme la lisibilité
-4. localStorage flag mis en place
-5. 6 tentatives de redirection en 2 secondes
-6. L'une d'elles réussit → utilisateur sur la page d'accueil
-7. Si toutes échouent → Auth.tsx détecte le flag et redirige
+Le design final ressemblera exactement à l'application iMessage iOS avec :
+- Look épuré et minimaliste
+- Bulles de messages reconnaissables
+- Zone de saisie discrète
+- Navigation intuitive
+
