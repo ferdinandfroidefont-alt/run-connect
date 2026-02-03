@@ -1487,101 +1487,85 @@ const Messages = () => {
   }
 
   if (selectedConversation) {
+    const isDirectMessage = !selectedConversation.is_group;
+    
     return (
       <>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-white">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
-          {/* iOS Header */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-card border-b border-border z-50">
-            <div className="flex items-center justify-between px-4 py-3">
+          {/* iMessage Style Header */}
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-[#F9F9F9] border-b border-[#E5E5EA] z-50">
+            <div className="flex items-center px-2 py-2">
+              {/* Back button - Left */}
               <button
                 onClick={() => setSelectedConversation(null)}
-                className="flex items-center gap-1 text-primary shrink-0"
+                className="flex items-center text-[#007AFF] shrink-0 p-2 -ml-2"
               >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+                <ArrowLeft className="h-6 w-6" strokeWidth={2.5} />
               </button>
               
-              <div className="flex-1 flex items-center justify-center gap-2 mx-2">
+              {/* Center - Avatar and Name (stacked) */}
+              <div className="flex-1 flex flex-col items-center justify-center -ml-4">
                 {selectedConversation.is_group ? (
-                  <>
-                    <Avatar 
-                      className="h-8 w-8 cursor-pointer"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const clubData = selectedConversation;
-                        setSelectedConversation(null);
-                        setTimeout(() => {
-                          setGroupInfoData(clubData);
-                          setShowGroupInfo(true);
-                        }, 100);
-                      }}
-                    >
+                  <div 
+                    className="flex flex-col items-center cursor-pointer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const clubData = selectedConversation;
+                      setSelectedConversation(null);
+                      setTimeout(() => {
+                        setGroupInfoData(clubData);
+                        setShowGroupInfo(true);
+                      }, 100);
+                    }}
+                  >
+                    <Avatar className="h-9 w-9">
                       <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-[#E5E5EA] text-[#8E8E93]">
                         <Users className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
-                    <div 
-                      className="cursor-pointer text-center"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const clubData = selectedConversation;
-                        setSelectedConversation(null);
-                        setTimeout(() => {
-                          setGroupInfoData(clubData);
-                          setShowGroupInfo(true);
-                        }, 100);
-                      }}
-                    >
-                      <p className="font-semibold text-[15px] text-foreground">{selectedConversation.group_name}</p>
-                    </div>
-                  </>
+                    <p className="font-semibold text-[13px] text-black mt-0.5">{selectedConversation.group_name}</p>
+                  </div>
                 ) : (
-                  <>
+                  <div 
+                    className="flex flex-col items-center cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
+                    }}
+                  >
                     <div className="relative">
-                      <Avatar 
-                        className="h-8 w-8 cursor-pointer"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
-                        }}
-                      >
+                      <Avatar className="h-9 w-9">
                         <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                        <AvatarFallback className="bg-secondary text-[13px]">
+                        <AvatarFallback className="bg-[#E5E5EA] text-[#8E8E93] text-[13px]">
                           {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} className="w-2 h-2" />
                     </div>
-                    <p 
-                      className="font-semibold text-[15px] text-foreground cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
-                      }}
-                    >
+                    <p className="font-semibold text-[13px] text-black mt-0.5">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
                     </p>
-                  </>
+                  </div>
                 )}
               </div>
 
+              {/* Right - Info button */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
+                  <button className="p-2 text-[#007AFF] shrink-0">
+                    <MoreVertical className="h-5 w-5" />
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-background border border-border">
+                <DropdownMenuContent align="end" className="w-56 bg-white border border-[#E5E5EA] rounded-[14px] shadow-lg">
                   {!selectedConversation.is_group && (
                     <DropdownMenuItem 
                       onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
+                      className="py-3"
                     >
-                      <User className="h-4 w-4 mr-2" />
+                      <User className="h-4 w-4 mr-3 text-[#007AFF]" />
                       Voir le profil
                     </DropdownMenuItem>
                   )}
@@ -1591,42 +1575,43 @@ const Messages = () => {
                       setSelectedConversation(null);
                       setShowCreateGroup(true);
                     }}
+                    className="py-3"
                   >
-                    <Users className="h-4 w-4 mr-2" />
-                    Créer un chat de groupe
+                    <Users className="h-4 w-4 mr-3 text-[#007AFF]" />
+                    Créer un groupe
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
                     onClick={() => setIsMuted(!isMuted)}
-                    className="justify-between"
+                    className="py-3 justify-between"
                   >
                     <div className="flex items-center">
-                      <span className="mr-2">{isMuted ? "🔔" : "🔕"}</span>
+                      <span className="mr-3 text-lg">{isMuted ? "🔔" : "🔕"}</span>
                       <span>Notifications</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {isMuted ? "Activées" : "Désactivées"}
+                    <span className="text-xs text-[#8E8E93]">
+                      {isMuted ? "On" : "Off"}
                     </span>
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
                     onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-                    className="justify-between"
+                    className="py-3 justify-between"
                   >
                     <div className="flex items-center">
-                      <span className="mr-2">📌</span>
+                      <span className="mr-3 text-lg">📌</span>
                       <span>Épingler</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-[#8E8E93]">
                       {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
                     </span>
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
                     onClick={() => confirmDeleteConversation()}
-                    className="text-destructive focus:text-destructive"
+                    className="py-3 text-[#FF3B30] focus:text-[#FF3B30]"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-4 w-4 mr-3" />
                     {selectedConversation.is_group && selectedConversation.created_by !== user?.id 
                       ? "Quitter le club" 
                       : "Supprimer"
@@ -1637,14 +1622,21 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* Messages - Scrollable area with top margin for fixed header - Ajusté pour nouveau header */}
-          <div className="pt-[72px] flex-1 overflow-y-auto min-h-0">
-            <div className={`h-full px-4 pt-4 pb-4 space-y-1.5 ${getThemeClasses().background}`} style={{borderBottom: 'none', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'}}>
+          {/* Messages - iMessage style scrollable area */}
+          <div className="pt-[76px] flex-1 overflow-y-auto min-h-0">
+            <div className={`h-full px-3 pt-2 pb-2 space-y-0.5 ${getThemeClasses().background}`} style={{paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))'}}>
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
                 const showHeader = shouldShowSectionHeader(message, previousMessage);
                 const showIndividualTime = visibleTimestamps.has(message.id);
+                const isDirectMessage = !selectedConversation.is_group;
+                
+                // Check if this is a consecutive message from same sender
+                const isSameSender = previousMessage && previousMessage.sender_id === message.sender_id;
+                const isWithin5Minutes = previousMessage && 
+                  (new Date(message.created_at).getTime() - new Date(previousMessage.created_at).getTime()) < 5 * 60 * 1000;
+                const shouldShowSenderInfo = !isOwnMessage && !isDirectMessage && (!isSameSender || !isWithin5Minutes || showHeader);
                 
                 const toggleTimestamp = () => {
                   setVisibleTimestamps(prev => {
@@ -1665,93 +1657,74 @@ const Messages = () => {
                     )}
                     
                     <div
-                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}
-                      onMouseEnter={() => setVisibleTimestamps(prev => new Set(prev).add(message.id))}
-                      onMouseLeave={() => setVisibleTimestamps(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(message.id);
-                        return newSet;
-                      })}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} py-0.5`}
                       onClick={toggleTimestamp}
                     >
-                      <div className={`max-w-[70%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
-                        {!isOwnMessage && (
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="relative">
-                                <Avatar 
-                                  className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAvatarClick(message.sender.avatar_url, message.sender.username || message.sender.display_name || "Utilisateur");
-                                  }}
-                                >
-                                <AvatarImage src={message.sender.avatar_url || ""} />
-                                <AvatarFallback>
-                                  {(message.sender.username || message.sender.display_name || "").charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <OnlineStatus userId={message.sender.user_id} className="w-2 h-2" />
-                            </div>
-                            <span className="text-xs text-muted-foreground">
+                      <div className={`max-w-[75%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
+                        {/* Show sender info only for groups, not for DMs (iMessage style) */}
+                        {shouldShowSenderInfo && (
+                          <div className="flex items-center gap-2 mb-1 ml-1">
+                            <span className="text-[11px] text-[#8E8E93] font-medium">
                               {message.sender.username || message.sender.display_name}
                             </span>
                           </div>
                         )}
                         
-                         {/* Individual timestamp - appears on hover/click */}
+                        {/* Individual timestamp - iMessage style pill */}
                         {showIndividualTime && (
-                          <div className={`absolute -bottom-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
-                            <div className="bg-background/90 border text-foreground text-xs px-2 py-1 rounded backdrop-blur-sm shadow-sm">
+                          <div className={`absolute -bottom-5 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
+                            <span className="text-[11px] text-[#8E8E93]">
                               {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
-                            </div>
+                            </span>
                           </div>
                         )}
                         
-                        <div className="relative group space-y-1">
-                          {/* Delete button for own messages (only if not deleted) */}
+                        <div className="relative group">
+                          {/* Delete button for own messages */}
                           {isOwnMessage && !message.deleted_at && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground z-10"
-                              onClick={() => {
-                                if (confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
+                              className="absolute -top-1 -right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity bg-[#FF3B30] hover:bg-[#FF3B30]/90 text-white z-10 rounded-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Supprimer ce message ?")) {
                                   handleDeleteMessage(message.id);
                                 }
                               }}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <X className="h-3 w-3" />
                             </Button>
                           )}
 
-                          {/* Image ALWAYS outside bubble - Instagram style */}
+                          {/* Image - iMessage rounded style */}
                           {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
                             <img 
                               src={message.file_url} 
                               alt=""
-                              className="max-w-full h-auto rounded-xl"
-                              style={{ maxHeight: '200px' }}
+                              className="max-w-full h-auto rounded-[18px]"
+                              style={{ maxHeight: '240px' }}
                             />
                           )}
                           
-                          {/* Emoji-only messages - No bubble, large display */}
+                          {/* Emoji-only messages - Large display without bubble */}
                           {message.content && !message.deleted_at && isOnlyEmojis(message.content) && !message.message_type && !message.file_url && (
-                            <div className="py-1">
-                              <p className="text-4xl leading-tight">{message.content}</p>
+                            <div className="py-0.5">
+                              <p className="text-[42px] leading-tight">{message.content}</p>
                             </div>
                           )}
 
-                          {/* Bubble only if there's non-image, non-emoji-only content */}
+                          {/* iMessage bubble */}
                           {(message.message_type === 'session' || 
                             (message.file_url && !message.file_type?.startsWith('image/')) ||
                             (message.content && !message.content.match(/^(Image partagée)$/i) && !isOnlyEmojis(message.content)) ||
                             message.deleted_at) && (
                             <div
-                              className={`rounded-2xl p-2 transition-all duration-200 ${
+                              className={`rounded-[18px] px-3 py-2 ${
                                 isOwnMessage
                                   ? getThemeClasses().ownMessage
                                   : getThemeClasses().otherMessage
-                              } ${showIndividualTime ? 'shadow-2xl scale-[1.02]' : ''}`}
+                              }`}
                             >
                               {/* Show deleted message */}
                               {message.deleted_at ? (
@@ -1948,9 +1921,9 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Message input - Sticky at bottom (follows keyboard) - Descendu légèrement */}
+          {/* iMessage Style Input */}
           <div 
-            className="sticky bottom-0 w-full px-3 py-2 bg-background/95 backdrop-blur-sm border-t border-border/30 z-40 keyboard-input-container"
+            className="sticky bottom-0 w-full px-2 py-2 bg-[#F9F9F9] border-t border-[#E5E5EA] z-40 keyboard-input-container"
             style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
           >
             {/* Emoji Picker */}
@@ -1959,179 +1932,161 @@ const Messages = () => {
                 ref={emojiPickerRef}
                 className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
               >
-                <div className="glass-primary backdrop-blur-xl rounded-2xl p-2 shadow-2xl border border-border/30">
+                <div className="bg-white rounded-2xl shadow-xl border border-[#E5E5EA]">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
-                    theme={Theme.AUTO}
+                    theme={Theme.LIGHT}
                     width={320}
                     height={400}
-                    searchPlaceHolder="Rechercher un emoji..."
+                    searchPlaceHolder="Rechercher..."
                     previewConfig={{ showPreview: false }}
                   />
                 </div>
               </div>
             )}
             
-            <div className="glass-primary backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-border/30">
             {uploadProgress && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg mb-2">
-                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm text-muted-foreground">{uploadProgress}</span>
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#E5E5EA] rounded-full mb-2 mx-2">
+                <div className="w-3 h-3 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+                <span className="text-[13px] text-[#8E8E93]">{uploadProgress}</span>
               </div>
             )}
-              <div className="flex gap-2">
-                {!isRecording && (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="*/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.size > 50 * 1024 * 1024) {
+            
+            <div className="flex items-center gap-2">
+              {!isRecording && (
+                <>
+                  {/* Plus button - opens attachment options */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button 
+                        className="w-8 h-8 flex items-center justify-center text-[#007AFF] shrink-0"
+                        disabled={isLoading}
+                      >
+                        <Plus className="h-6 w-6" strokeWidth={2} />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48 bg-white border border-[#E5E5EA] rounded-[14px] shadow-lg">
+                      <DropdownMenuItem 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="py-3"
+                      >
+                        <Paperclip className="h-4 w-4 mr-3 text-[#007AFF]" />
+                        Fichier
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={async () => {
+                          try {
+                            const file = await selectFromGallery();
+                            if (file) uploadFile(file);
+                          } catch (error) {
                             toast({
-                              title: "Fichier trop volumineux",
-                              description: "La taille maximale est de 50 MB",
+                              title: "Erreur",
+                              description: "Impossible d'accéder à la galerie",
                               variant: "destructive"
                             });
-                            return;
                           }
-                          uploadFile(file);
-                        }
-                      }}
-                      className="hidden"
-                      disabled={isLoading}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
-                      disabled={isLoading}
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        console.log('🖼️ Bouton Image cliqué');
-                        try {
-                          const file = await selectFromGallery();
-                          if (file) {
-                            console.log('📸 Fichier sélectionné:', file.name);
-                            uploadFile(file);
-                          } else {
-                            toast({
-                              title: "Aucun fichier",
-                              description: "Aucune image sélectionnée",
-                              variant: "default"
-                            });
-                          }
-                        } catch (error: any) {
-                          console.error('❌ Erreur sélection galerie:', error);
-                          let errorMessage = "Impossible d'accéder à la galerie. Vérifiez les permissions.";
-                          if (error.message === 'PERMISSION_DENIED') {
-                            errorMessage = "Permission refusée. Activez l'accès à la galerie dans les paramètres.";
-                          } else if (error.message === 'TIMEOUT') {
-                            errorMessage = "Délai d'attente dépassé. Réessayez.";
-                          }
+                        }}
+                        className="py-3"
+                      >
+                        <Image className="h-4 w-4 mr-3 text-[#34C759]" />
+                        Photo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="py-3"
+                      >
+                        <Smile className="h-4 w-4 mr-3 text-[#FF9500]" />
+                        Emoji
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="*/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 50 * 1024 * 1024) {
                           toast({
-                            title: "Erreur",
-                            description: errorMessage,
+                            title: "Fichier trop volumineux",
+                            description: "La taille maximale est de 50 MB",
                             variant: "destructive"
                           });
+                          return;
                         }
-                      }}
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
-                      disabled={isLoading}
-                    >
-                      <Image className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`px-3 glass-card border-border/40 hover:bg-background/60 transition-all duration-200 ${
-                        showEmojiPicker ? 'bg-primary/20 border-primary/40 shadow-lg shadow-primary/20' : ''
-                      }`}
-                      disabled={isLoading}
-                    >
-                      <Smile className="h-4 w-4" />
-                    </Button>
-                    <Input
-                      placeholder="Tapez votre message..."
+                        uploadFile(file);
+                      }
+                    }}
+                    className="hidden"
+                    disabled={isLoading}
+                  />
+                  
+                  {/* iMessage input field */}
+                  <div className="flex-1 flex items-center bg-white border border-[#E5E5EA] rounded-full px-4 py-2">
+                    <input
+                      type="text"
+                      placeholder="iMessage"
                       value={newMessage}
                       onChange={(e) => {
                         setNewMessage(e.target.value);
                         handleTyping();
                       }}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 glass-card border-border/40 focus:border-primary/60 bg-background/40"
+                      className="flex-1 bg-transparent text-[17px] text-black placeholder:text-[#8E8E93] outline-none"
+                      disabled={isLoading}
                     />
-                    <Button
+                  </div>
+                  
+                  {/* Send or Mic button */}
+                  {newMessage.trim() ? (
+                    <button
                       onClick={sendMessage}
                       disabled={loading || !newMessage.trim()}
-                      size="sm"
-                      className="px-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-primary/50 transition-all duration-200"
+                      className="w-8 h-8 flex items-center justify-center bg-[#007AFF] rounded-full shrink-0 disabled:opacity-50"
                     >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                    <Button
+                      <Send className="h-4 w-4 text-white" />
+                    </button>
+                  ) : (
+                    <button
                       onClick={handleVoiceRecording}
                       disabled={loading}
-                      size="sm"
-                      variant="outline"
-                      className="px-3 glass-card border-border/40 hover:bg-background/60"
+                      className="w-8 h-8 flex items-center justify-center text-[#007AFF] shrink-0"
                     >
-                      <Mic className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
-                
-                {isRecording && (
-                  <>
-                    <div className="flex-1 flex items-center gap-3 glass-card bg-red-500/20 border border-red-500/50 rounded-xl px-4 py-2 backdrop-blur-md shadow-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-sm font-medium text-red-500">
-                        {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-                      </span>
-                    </div>
-                    <span className="text-sm text-muted-foreground flex-1">
-                      Enregistrement en cours...
+                      <Mic className="h-6 w-6" />
+                    </button>
+                  )}
+                </>
+              )}
+              
+              {isRecording && (
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="flex-1 flex items-center gap-2 bg-[#FFEBEE] border border-[#FF3B30]/30 rounded-full px-4 py-2">
+                    <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full animate-pulse" />
+                    <span className="text-[15px] font-medium text-[#FF3B30]">
+                      {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                    </span>
+                    <span className="text-[13px] text-[#8E8E93] flex-1">
+                      Enregistrement...
                     </span>
                   </div>
-                  <Button
+                  <button
                     onClick={cancelRecording}
-                    size="sm"
-                    variant="outline"
-                    className="px-3"
+                    className="w-8 h-8 flex items-center justify-center text-[#8E8E93]"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <Button
+                    <X className="h-5 w-5" />
+                  </button>
+                  <button
                     onClick={handleVoiceRecording}
-                    size="sm"
-                    className="px-3 bg-red-500 hover:bg-red-600"
+                    className="w-8 h-8 flex items-center justify-center bg-[#FF3B30] rounded-full"
                   >
-                    <Square className="h-4 w-4" />
-                  </Button>
-                  </>
-                )}
-              </div>
+                    <Square className="h-4 w-4 text-white" />
+                  </button>
+                </div>
+              )}
             </div>
-            
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="*/*"
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={loading}
-            />
           </div>
         </div>
       </div>
