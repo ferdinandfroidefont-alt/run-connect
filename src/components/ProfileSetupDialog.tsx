@@ -409,6 +409,20 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         await supabase.from('profiles').insert({ user_id: userId, ...profileData });
       }
 
+      // 🔥 NIVEAU 33: Vérifier que le profil est LISIBLE (RLS)
+      const { data: verifiedProfile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('id, user_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (verifyError || !verifiedProfile) {
+        console.error('❌ [ProfileSetup] Profil créé mais non lisible - problème RLS?', verifyError);
+        throw new Error('Profil créé mais non vérifiable. Réessayez.');
+      }
+
+      console.log('✅ [ProfileSetup] Profil vérifié comme lisible:', verifiedProfile.id);
+
       // 🔄 Nettoyer IndexedDB et sessionStorage après succès
       try {
         await deleteImageFromIndexedDB(PENDING_AVATAR_KEY);
@@ -423,26 +437,42 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         description: "Bienvenue dans RunConnect !"
       });
 
-      // 🔥 NIVEAU 32: Redirection FORCÉE et DIRECTE - ne pas dépendre du callback parent
-      console.log('✅ [ProfileSetup] Profil créé avec succès - redirection FORCÉE vers /');
-      
-      // Fermer le dialog
-      onOpenChange(false);
-      
-      // Appeler le callback parent si présent (pour nettoyage)
-      if (onComplete) {
-        try {
-          onComplete();
-        } catch (e) {
-          console.warn('⚠️ [ProfileSetup] Erreur callback onComplete:', e);
-        }
-      }
-      
-      // 🔥 REDIRECTION DIRECTE - s'exécute TOUJOURS après un délai
-      setTimeout(() => {
-        console.log('🚀 [ProfileSetup] Exécution redirection vers /');
+      // 🔥 NIVEAU 33: Stratégie de redirection ULTRA-AGRESSIVE pour Android WebView
+      console.log('✅ [ProfileSetup] Profil créé - lancement redirection MULTI-MÉTHODE');
+
+      // Méthode 1: localStorage flag pour que la page Auth détecte le succès
+      localStorage.setItem('profileCreatedSuccessfully', 'true');
+      localStorage.setItem('profileCreatedAt', Date.now().toString());
+
+      // Méthode 2: Fonction de redirection
+      const redirectNow = () => {
+        console.log('🚀 [ProfileSetup] Tentative redirection...');
         window.location.href = '/';
-      }, 300);
+      };
+
+      // Méthode 3: Tentatives multiples avec délais croissants
+      redirectNow(); // Tentative immédiate
+
+      setTimeout(redirectNow, 100);
+      setTimeout(redirectNow, 300);
+      setTimeout(redirectNow, 500);
+      setTimeout(redirectNow, 1000);
+
+      // Méthode 4: Utiliser aussi location.replace comme fallback
+      setTimeout(() => {
+        console.log('🚀 [ProfileSetup] Fallback location.replace...');
+        window.location.replace('/');
+      }, 1500);
+
+      // Méthode 5: Si toujours là après 2s, forcer avec assign
+      setTimeout(() => {
+        console.log('🚀 [ProfileSetup] Dernier recours - assign vers /');
+        window.location.assign('/');
+      }, 2000);
+
+      // Fermer le dialog en dernier
+      onOpenChange(false);
+      if (onComplete) onComplete();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
