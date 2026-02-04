@@ -618,15 +618,10 @@ export const ProfileDialog = ({
                       </div>
                     </>
                   )}
-                  <div className="p-4 border-t border-border">
-                    <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
-                      Modifier mon profil
-                    </Button>
-                  </div>
                 </div>
               )}
 
-              {/* Mes Parcours Section */}
+              {/* Mes Parcours Section - MOVED ABOVE */}
               <div>
                 <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
                   Mes Parcours
@@ -681,6 +676,15 @@ export const ProfileDialog = ({
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
                 </button>
+              </div>
+
+              {/* Modifier mon profil - MOVED TO BOTTOM */}
+              <div className="bg-card rounded-[10px] overflow-hidden">
+                <div className="p-4">
+                  <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
+                    Modifier mon profil
+                  </Button>
+                </div>
               </div>
             </div>
           </ScrollArea>
