@@ -733,8 +733,15 @@ const Profile = () => {
             </div>
           </div>
           
+          {/* Bio - Juste sous les stats */}
+          {profile?.bio && (
+            <p className="text-[14px] text-muted-foreground text-center max-w-[280px] mt-3 leading-relaxed">
+              {profile.bio}
+            </p>
+          )}
+          
           {/* Reliability Badge - Compact */}
-          <div className="w-full max-w-[160px] mt-2">
+          <div className="w-full max-w-[160px] mt-3">
             <ReliabilityBadge rate={reliabilityRate} onClick={() => setShowReliabilityDetails(true)} />
           </div>
           
@@ -832,13 +839,6 @@ const Profile = () => {
               </div>}
           </div>}
 
-        {/* Bio Section - Other Users */}
-        {isViewingOtherUser && profile?.bio && <div className="bg-card rounded-[10px] overflow-hidden">
-            <div className="px-4 py-3">
-              <p className="text-[13px] text-muted-foreground uppercase tracking-wide mb-2">Bio</p>
-              <p className="text-[15px] text-foreground">{profile.bio}</p>
-            </div>
-          </div>}
 
         {/* Records Section - For other users */}
         {isViewingOtherUser && profile && <PersonalRecords records={{
