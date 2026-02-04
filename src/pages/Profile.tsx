@@ -840,17 +840,25 @@ const Profile = () => {
           </div>}
 
 
-        {/* Records Section - For other users */}
-        {isViewingOtherUser && profile && <PersonalRecords records={{
-        running_records: profile.running_records,
-        cycling_records: profile.cycling_records,
-        swimming_records: profile.swimming_records,
-        triathlon_records: profile.triathlon_records,
-        walking_records: profile.walking_records
-      }} />}
-
-        {/* Activity Chart - Only for other users (own profile has it in ProfileStatsGroup) */}
-        {isViewingOtherUser && viewingUserId && <UserActivityChart userId={viewingUserId} username={profile?.username} />}
+        {/* Stats Section - For other users (iOS Inset Grouped) */}
+        {isViewingOtherUser && profile && viewingUserId && (
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            {/* Records Row */}
+            <div className="relative">
+              <PersonalRecords records={{
+                running_records: profile.running_records,
+                cycling_records: profile.cycling_records,
+                swimming_records: profile.swimming_records,
+                triathlon_records: profile.triathlon_records,
+                walking_records: profile.walking_records
+              }} />
+              <div className="absolute bottom-0 left-[54px] right-0 h-px bg-border" />
+            </div>
+            
+            {/* Activity Row */}
+            <UserActivityChart userId={viewingUserId} username={profile?.username} />
+          </div>
+        )}
 
         {/* Common Clubs - Other Users */}
         {isViewingOtherUser && commonClubs.length > 0 && <div>
