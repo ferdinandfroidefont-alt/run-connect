@@ -11,6 +11,9 @@ export interface TutorialStep {
   disableBeacon?: boolean;
 }
 
+// Custom event name for tutorial restart
+const TUTORIAL_RESTART_EVENT = 'tutorial-restart';
+
 export const useTutorial = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -18,42 +21,59 @@ export const useTutorial = () => {
   const [loading, setLoading] = useState(true);
 
   // Check if user has completed the tutorial
-  useEffect(() => {
-    const checkTutorialStatus = async () => {
-      if (!user) {
+  const checkTutorialStatus = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('tutorial_completed, onboarding_completed')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking tutorial status:', error);
         setLoading(false);
         return;
       }
 
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('tutorial_completed, onboarding_completed')
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error checking tutorial status:', error);
-          setLoading(false);
-          return;
-        }
-
-        // Show tutorial only if onboarding is complete but tutorial is not
-        if (profile?.onboarding_completed && !profile?.tutorial_completed) {
-          // Small delay to ensure UI is ready
-          setTimeout(() => {
-            setShouldShowTutorial(true);
-          }, 1000);
-        }
-      } catch (error) {
-        console.error('Error in checkTutorialStatus:', error);
-      } finally {
-        setLoading(false);
+      // Show tutorial only if onboarding is complete but tutorial is not
+      if (profile?.onboarding_completed && !profile?.tutorial_completed) {
+        // Small delay to ensure UI is ready
+        setTimeout(() => {
+          setShouldShowTutorial(true);
+        }, 500);
+      } else {
+        setShouldShowTutorial(false);
       }
+    } catch (error) {
+      console.error('Error in checkTutorialStatus:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Initial check on mount
+  useEffect(() => {
+    checkTutorialStatus();
+  }, [checkTutorialStatus]);
+
+  // 🔥 Listen for tutorial restart event from other components
+  useEffect(() => {
+    const handleTutorialRestart = () => {
+      console.log('🎯 [TUTORIAL] Received restart event, showing tutorial immediately');
+      setShouldShowTutorial(true);
     };
 
-    checkTutorialStatus();
-  }, [user]);
+    window.addEventListener(TUTORIAL_RESTART_EVENT, handleTutorialRestart);
+    
+    return () => {
+      window.removeEventListener(TUTORIAL_RESTART_EVENT, handleTutorialRestart);
+    };
+  }, []);
 
   // Tutorial steps with translations
   const tutorialSteps: TutorialStep[] = [
@@ -118,7 +138,7 @@ export const useTutorial = () => {
     }
   }, [user]);
 
-  // Restart tutorial (for settings)
+  // Restart tutorial (for settings) - dispatches global event
   const restartTutorial = useCallback(async () => {
     if (!user) return;
 
@@ -128,6 +148,11 @@ export const useTutorial = () => {
         .update({ tutorial_completed: false })
         .eq('user_id', user.id);
 
+      // 🔥 Dispatch global event so other useTutorial instances can react
+      console.log('🎯 [TUTORIAL] Dispatching restart event');
+      window.dispatchEvent(new CustomEvent(TUTORIAL_RESTART_EVENT));
+      
+      // Also update local state
       setShouldShowTutorial(true);
     } catch (error) {
       console.error('Error restarting tutorial:', error);
