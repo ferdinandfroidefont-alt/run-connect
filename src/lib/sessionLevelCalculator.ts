@@ -73,27 +73,33 @@ export function parsePaceToMinPerKm(pace: string): number | null {
 function getPacePoints(paceMinPerKm: number | null): number {
   if (paceMinPerKm === null) return 8;
   
-  if (paceMinPerKm <= 2.75) return 60;      // <= 2'45/km (élite)
-  if (paceMinPerKm <= 3.00) return 55;      // <= 3'00/km
-  if (paceMinPerKm <= 3.25) return 50;      // <= 3'15/km
-  if (paceMinPerKm <= 3.50) return 44;      // <= 3'30/km
-  if (paceMinPerKm <= 3.75) return 38;      // <= 3'45/km
-  if (paceMinPerKm <= 4.08) return 30;      // <= 4'05/km
-  if (paceMinPerKm <= 4.50) return 22;      // <= 4'30/km
-  if (paceMinPerKm <= 5.00) return 14;      // <= 5'00/km
-  return 8;                                  // > 5'00/km
+  // Table de points révisée pour mieux refléter la difficulté réelle
+  // 3:00/km est une allure élite/semi-pro en fractionné court
+  if (paceMinPerKm <= 2.75) return 100;     // <= 2'45/km (élite mondial)
+  if (paceMinPerKm <= 3.00) return 85;      // <= 3'00/km (élite/semi-pro)
+  if (paceMinPerKm <= 3.25) return 70;      // <= 3'15/km (performance)
+  if (paceMinPerKm <= 3.50) return 55;      // <= 3'30/km (avancé+)
+  if (paceMinPerKm <= 3.75) return 45;      // <= 3'45/km (avancé)
+  if (paceMinPerKm <= 4.08) return 35;      // <= 4'05/km (intermédiaire+)
+  if (paceMinPerKm <= 4.50) return 25;      // <= 4'30/km (intermédiaire)
+  if (paceMinPerKm <= 5.00) return 18;      // <= 5'00/km (loisir+)
+  if (paceMinPerKm <= 5.50) return 12;      // <= 5'30/km (loisir)
+  if (paceMinPerKm <= 6.00) return 8;       // <= 6'00/km (débutant+)
+  return 5;                                  // > 6'00/km (débutant)
 }
 
 /**
  * Calcule les structurePts basés sur hardMinutes
+ * Ajusté pour mieux valoriser les séances courtes mais intenses
  */
 function getStructurePoints(hardMinutes: number): number {
-  if (hardMinutes >= 50) return 35;
-  if (hardMinutes >= 40) return 30;
-  if (hardMinutes >= 30) return 24;
-  if (hardMinutes >= 20) return 16;
-  if (hardMinutes >= 10) return 8;
-  return 0;
+  if (hardMinutes >= 50) return 40;
+  if (hardMinutes >= 40) return 35;
+  if (hardMinutes >= 30) return 28;
+  if (hardMinutes >= 20) return 22;
+  if (hardMinutes >= 10) return 15;   // 10x300m = ~10min d'effort, important!
+  if (hardMinutes >= 5) return 10;    // 5min d'effort
+  return 3;
 }
 
 /**
@@ -245,16 +251,24 @@ export function calculateSessionLevel(formData: Partial<SessionFormData>): Sessi
   
   const isStructured = session_mode === 'structured' && blocks.length > 0;
   
+  // Check for interval data (legacy fractionné or simple mode)
+  const hasIntervalData = formData.interval_pace && formData.interval_distance && formData.interval_count;
+  
   // ============ STEP 1: Determine paces ============
   
   // avgPaceMinPerKm: allure générale
   const avgPaceMinPerKm = parsePaceToMinPerKm(pace_general || '');
   
-  // bestPaceMinPerKm: meilleure allure (from blocks if structured, else avgPace)
+  // bestPaceMinPerKm: meilleure allure (from blocks, interval data, or avgPace)
   let bestPaceMinPerKm: number | null;
   if (isStructured) {
     bestPaceMinPerKm = getBestPaceFromBlocks(blocks);
-    // Fallback to avgPace if no pace found in blocks
+    if (bestPaceMinPerKm === null) {
+      bestPaceMinPerKm = avgPaceMinPerKm;
+    }
+  } else if (hasIntervalData) {
+    // Use interval pace for fractionné sessions
+    bestPaceMinPerKm = parsePaceToMinPerKm(formData.interval_pace || '');
     if (bestPaceMinPerKm === null) {
       bestPaceMinPerKm = avgPaceMinPerKm;
     }
@@ -269,6 +283,16 @@ export function calculateSessionLevel(formData: Partial<SessionFormData>): Sessi
   
   if (isStructured) {
     hardMinutes = getHardMinutesFromBlocks(blocks);
+  } else if (hasIntervalData) {
+    // Calculate hard minutes from interval data
+    // interval_distance is in km, interval_count is number of reps
+    const intervalDistanceKm = parseFloat(String(formData.interval_distance)) || 0;
+    const intervalCount = parseInt(String(formData.interval_count)) || 0;
+    const intervalPaceMinPerKm = parsePaceToMinPerKm(formData.interval_pace || '') || 4;
+    
+    // Total hard distance in km, then convert to time
+    const totalHardDistanceKm = intervalDistanceKm * intervalCount;
+    hardMinutes = totalHardDistanceKm * intervalPaceMinPerKm;
   } else {
     // Simple mode: check intensity
     const isHighIntensity = intensity && HIGH_INTENSITY_ZONES.includes(intensity.toLowerCase());
@@ -300,20 +324,23 @@ export function calculateSessionLevel(formData: Partial<SessionFormData>): Sessi
   const totalScore = 0.7 * speedScore + 0.3 * loadScore;
   
   // ============ STEP 6: Convert score to level ============
+  // Seuils ajustés pour mieux refléter la difficulté réelle
+  // 10x300m à 3:00/km → pacePoints=85, hardFactor≈0.5(10min), speedScore≈42
+  // + loadScore (volumePts + structurePts) → totalScore ≈ 35-50 → niveau 4-5
   
   let level: SessionLevel;
-  if (totalScore < 20) {
-    level = 1;
-  } else if (totalScore < 35) {
-    level = 2;
-  } else if (totalScore < 50) {
-    level = 3;
-  } else if (totalScore < 65) {
-    level = 4;
-  } else if (totalScore < 80) {
-    level = 5;
+  if (totalScore < 15) {
+    level = 1;   // Débutant
+  } else if (totalScore < 28) {
+    level = 2;   // Loisir  
+  } else if (totalScore < 42) {
+    level = 3;   // Intermédiaire
+  } else if (totalScore < 58) {
+    level = 4;   // Avancé
+  } else if (totalScore < 75) {
+    level = 5;   // Performance
   } else {
-    level = 6;
+    level = 6;   // Élite
   }
   
   // ============ STEP 7: Level 6 guard (very rare) ============

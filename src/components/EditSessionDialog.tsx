@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, MapPin, ImagePlus, X, Upload, Eye } from "lucide-react";
 import { VisibilitySelector, VisibilityType } from "@/components/session-creation/VisibilitySelector";
+import { calculateSessionLevel } from "@/lib/sessionLevelCalculator";
 
 interface EditSessionDialogProps {
   isOpen: boolean;
@@ -176,6 +177,17 @@ export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }
         setUploadingImage(false);
       }
 
+      // Recalculate session level based on updated data
+      const calculatedLevel = calculateSessionLevel({
+        activity_type: formData.activity_type,
+        session_type: formData.session_type,
+        pace_general: formData.pace_general,
+        distance_km: formData.distance_km,
+        interval_distance: formData.interval_distance,
+        interval_pace: formData.interval_pace,
+        interval_count: formData.interval_count,
+      });
+
       const { error } = await supabase
         .from('sessions')
         .update({
@@ -196,6 +208,8 @@ export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }
           location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
           location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
           image_url: imageUrl || null,
+          // Recalculated level
+          calculated_level: calculatedLevel,
           // Visibility fields
           visibility_type: formData.visibility_type,
           hidden_from_users: formData.hidden_from_users,
