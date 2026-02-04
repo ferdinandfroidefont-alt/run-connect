@@ -674,9 +674,13 @@ const Profile = () => {
           
           {/* Status Badges - Compact Inline */}
           <div className="flex flex-wrap justify-center gap-1.5 mb-4">
-            {isAdmin && (
+            {isAdmin ? (
               <Badge className="bg-red-100 text-red-700 border-0 text-[11px] px-2 py-0.5 font-medium">
                 Admin
+              </Badge>
+            ) : (
+              <Badge className="bg-muted text-muted-foreground border-0 text-[11px] px-2 py-0.5 font-medium">
+                Membre
               </Badge>
             )}
             {(profile?.is_premium || subscriptionInfo?.subscribed) && (
