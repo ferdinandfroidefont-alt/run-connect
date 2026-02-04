@@ -5,7 +5,7 @@ ext {
     // 📱 Versions SDK - Compatibilité maximale
     minSdkVersion = 23            // Android 6.0 Marshmallow (99% des appareils)
     compileSdkVersion = 35        // Android 15 (dernière version stable)
-    targetSdkVersion = 34         // Android 14 (cible recommandée)
+    targetSdkVersion = 35         // Android 15 (exigé par Google Play depuis août 2025)
     
     // 📦 Versions des dépendances AndroidX
     androidxAppCompatVersion = '1.6.1'
@@ -20,6 +20,6 @@ ext {
     androidxEspressoCoreVersion = '3.5.1'
     
     // 🏷️ Version de l'application
-    versionCode = 15
-    versionName = "1.4.0"
+    versionCode = 16
+    versionName = "1.5.0"
 }
