@@ -16,7 +16,7 @@ import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
 import { SessionQuestions } from "./SessionQuestions";
 import { SessionLevelBadge } from "./SessionLevelBadge";
-import { EditSessionDialog } from "./EditSessionDialog";
+import { CreateSessionWizard } from "./session-creation/CreateSessionWizard";
 import { useAdMob } from '@/hooks/useAdMob';
 import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
@@ -976,15 +976,17 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit Session Dialog */}
-      <EditSessionDialog
+      {/* Edit Session Wizard */}
+      <CreateSessionWizard
         isOpen={showEditDialog}
         onClose={() => setShowEditDialog(false)}
-        onSessionUpdated={() => {
+        onSessionCreated={() => {
           setShowEditDialog(false);
           onSessionUpdated();
         }}
-        session={session}
+        map={null}
+        editSession={session}
+        isEditMode={true}
       />
     </Dialog>
   );
