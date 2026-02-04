@@ -1,18 +1,81 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SessionFormData, SelectedLocation, WizardStep, WIZARD_STEPS, DEFAULT_FORM_DATA, SessionBlock, SessionMode } from './types';
 
 interface UseSessionWizardProps {
   presetLocation?: { lat: number; lng: number } | null;
+  initialSession?: any; // Session data for edit mode
+  isEditMode?: boolean;
 }
 
-export const useSessionWizard = ({ presetLocation }: UseSessionWizardProps = {}) => {
-  const [currentStep, setCurrentStep] = useState<WizardStep>('location');
+export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = false }: UseSessionWizardProps = {}) => {
+  // In edit mode, start at activity step (skip location since it's already set)
+  const [currentStep, setCurrentStep] = useState<WizardStep>(isEditMode ? 'activity' : 'location');
   const [formData, setFormData] = useState<SessionFormData>(DEFAULT_FORM_DATA);
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string>('');
   const [routeMode, setRouteMode] = useState<'new' | 'existing'>('new');
+
+  // Initialize with session data in edit mode
+  useEffect(() => {
+    if (isEditMode && initialSession) {
+      // Convert scheduled_at to datetime-local format
+      const scheduledDate = new Date(initialSession.scheduled_at);
+      const localDateTime = new Date(scheduledDate.getTime() - scheduledDate.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+
+      setFormData({
+        title: initialSession.title || '',
+        description: initialSession.description || '',
+        activity_type: initialSession.activity_type || '',
+        session_type: initialSession.session_type || '',
+        scheduled_at: localDateTime,
+        max_participants: initialSession.max_participants?.toString() || '',
+        distance_km: initialSession.distance_km?.toString() || '',
+        pace_general: initialSession.pace_general || '',
+        pace_unit: initialSession.pace_unit || 'speed',
+        interval_unit: 'distance',
+        interval_distance: initialSession.interval_distance?.toString() || '',
+        interval_pace: initialSession.interval_pace || '',
+        interval_count: initialSession.interval_count?.toString() || '',
+        location_name: initialSession.location_name || '',
+        friends_only: initialSession.friends_only ?? true,
+        image_url: initialSession.image_url || '',
+        club_id: initialSession.club_id || null,
+        warmup_duration: '',
+        warmup_pace: '',
+        cooldown_duration: '',
+        cooldown_pace: '',
+        recovery_duration: '',
+        recovery_type: 'trot',
+        intensity: initialSession.intensity || '',
+        terrain_type: '',
+        elevation_gain: '',
+        session_mode: initialSession.session_mode || 'simple',
+        blocks: initialSession.session_blocks || [],
+        route_id: initialSession.route_id || null,
+        visibility_type: initialSession.visibility_type || 'friends',
+        hidden_from_users: initialSession.hidden_from_users || [],
+      });
+
+      setSelectedLocation({
+        lat: initialSession.location_lat,
+        lng: initialSession.location_lng,
+        name: initialSession.location_name,
+      });
+
+      if (initialSession.image_url) {
+        setImagePreview(initialSession.image_url);
+      }
+
+      if (initialSession.route_id) {
+        setSelectedRoute(initialSession.route_id);
+        setRouteMode('existing');
+      }
+    }
+  }, [isEditMode, initialSession]);
 
   const currentStepIndex = WIZARD_STEPS.indexOf(currentStep);
   const isFirstStep = currentStepIndex === 0;
@@ -68,14 +131,16 @@ export const useSessionWizard = ({ presetLocation }: UseSessionWizardProps = {})
   }, []);
 
   const resetWizard = useCallback(() => {
-    setCurrentStep('location');
-    setFormData(DEFAULT_FORM_DATA);
-    setSelectedLocation(null);
-    setSelectedImage(null);
-    setImagePreview(null);
-    setSelectedRoute('');
-    setRouteMode('new');
-  }, []);
+    setCurrentStep(isEditMode ? 'activity' : 'location');
+    if (!isEditMode) {
+      setFormData(DEFAULT_FORM_DATA);
+      setSelectedLocation(null);
+      setSelectedImage(null);
+      setImagePreview(null);
+      setSelectedRoute('');
+      setRouteMode('new');
+    }
+  }, [isEditMode]);
 
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {

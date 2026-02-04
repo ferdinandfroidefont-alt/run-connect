@@ -32,6 +32,9 @@ interface CreateSessionWizardProps {
   map: google.maps.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
   onCreateRoute?: () => void;
+  // Edit mode props
+  editSession?: any;
+  isEditMode?: boolean;
 }
 
 export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
@@ -41,6 +44,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   map,
   presetLocation,
   onCreateRoute,
+  editSession,
+  isEditMode = false,
 }) => {
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
@@ -50,7 +55,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const wizard = useSessionWizard({ presetLocation });
+  const wizard = useSessionWizard({ presetLocation, initialSession: editSession, isEditMode });
 
   // Handle preset location
   useEffect(() => {
@@ -152,7 +157,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
     setLoading(true);
     try {
-      let imageUrl = null;
+      let imageUrl = formData.image_url || null;
       if (selectedImage) {
         imageUrl = await uploadImage(selectedImage);
       }
@@ -160,49 +165,75 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
       // Calculate session level automatically (only for endurance sports)
       const calculatedLevel = calculateSessionLevel(formData);
 
-      const { data: sessionData, error } = await supabase
-        .from('sessions')
-        .insert([{
-          organizer_id: user.id,
-          title: formData.title,
-          description: formData.description,
-          activity_type: formData.activity_type,
-          session_type: formData.session_type,
-          location_lat: selectedLocation.lat,
-          location_lng: selectedLocation.lng,
-          location_name: formData.location_name,
-          scheduled_at: formData.scheduled_at,
-          max_participants: parseInt(formData.max_participants) || null,
-          distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null,
-          pace_general: formData.pace_general || null,
-          pace_unit: formData.pace_unit || 'speed',
-          interval_distance: formData.interval_distance ? parseFloat(formData.interval_distance) : null,
-          interval_pace: formData.interval_pace || null,
-          interval_pace_unit: formData.pace_unit || 'speed',
-          interval_count: formData.interval_count ? parseInt(formData.interval_count) : null,
-          current_participants: 0,
-          friends_only: formData.visibility_type === 'friends',
-          image_url: imageUrl,
-          route_id: formData.route_id || (routeMode === 'existing' && selectedRoute ? selectedRoute : null),
-          club_id: formData.club_id,
-          // Only set calculated_level for endurance sports, null for others
-          calculated_level: calculatedLevel,
-          // New fields for intelligent builder
-          session_mode: formData.session_mode || 'simple',
-          session_blocks: formData.blocks && formData.blocks.length > 0 
-            ? JSON.parse(JSON.stringify(formData.blocks)) 
-            : null,
-          // New visibility fields
-          visibility_type: formData.visibility_type || 'friends',
-          hidden_from_users: formData.hidden_from_users || [],
-        }])
-        .select()
-        .single();
+      const sessionPayload = {
+        title: formData.title,
+        description: formData.description,
+        activity_type: formData.activity_type,
+        session_type: formData.session_type,
+        location_lat: selectedLocation.lat,
+        location_lng: selectedLocation.lng,
+        location_name: formData.location_name,
+        scheduled_at: formData.scheduled_at,
+        max_participants: parseInt(formData.max_participants) || null,
+        distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null,
+        pace_general: formData.pace_general || null,
+        pace_unit: formData.pace_unit || 'speed',
+        interval_distance: formData.interval_distance ? parseFloat(formData.interval_distance) : null,
+        interval_pace: formData.interval_pace || null,
+        interval_pace_unit: formData.pace_unit || 'speed',
+        interval_count: formData.interval_count ? parseInt(formData.interval_count) : null,
+        friends_only: formData.visibility_type === 'friends',
+        image_url: imageUrl,
+        route_id: formData.route_id || (routeMode === 'existing' && selectedRoute ? selectedRoute : null),
+        club_id: formData.club_id,
+        calculated_level: calculatedLevel,
+        session_mode: formData.session_mode || 'simple',
+        session_blocks: formData.blocks && formData.blocks.length > 0 
+          ? JSON.parse(JSON.stringify(formData.blocks)) 
+          : null,
+        visibility_type: formData.visibility_type || 'friends',
+        hidden_from_users: formData.hidden_from_users || [],
+        intensity: formData.intensity || null,
+      };
 
-      if (error) throw error;
+      let sessionData;
 
-      // Send notifications to friends
-      if (formData.friends_only && sessionData) {
+      if (isEditMode && editSession) {
+        // UPDATE existing session
+        const { data, error } = await supabase
+          .from('sessions')
+          .update(sessionPayload)
+          .eq('id', editSession.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        sessionData = data;
+
+        toast({ title: "Séance modifiée avec succès ! ✅" });
+      } else {
+        // INSERT new session
+        const { data, error } = await supabase
+          .from('sessions')
+          .insert([{
+            ...sessionPayload,
+            organizer_id: user.id,
+            current_participants: 0,
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        sessionData = data;
+
+        toast({ title: "Séance créée avec succès ! 🎉" });
+        showAdAfterSessionCreation();
+      }
+
+      if (!sessionData) throw new Error("Session data not returned");
+
+      // Send notifications to friends (only for new sessions)
+      if (!isEditMode && formData.friends_only && sessionData) {
         try {
           const { data: followers } = await supabase
             .from('user_follows')
@@ -231,9 +262,6 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           console.error('Notification error:', notifError);
         }
       }
-
-      toast({ title: "Séance créée avec succès ! 🎉" });
-      showAdAfterSessionCreation();
 
       // Call session created callback immediately with session ID
       console.log('🎯 Calling onSessionCreated with sessionId:', sessionData.id);
@@ -348,7 +376,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
               <X className="h-5 w-5" />
               <span className="text-[17px]">Fermer</span>
             </button>
-            <h1 className="text-[17px] font-semibold text-foreground">Créer une séance</h1>
+            <h1 className="text-[17px] font-semibold text-foreground">
+              {isEditMode ? 'Modifier la séance' : 'Créer une séance'}
+            </h1>
             <div className="w-16" />
           </div>
         </div>
