@@ -1,7 +1,7 @@
 import { RouteDialog } from '@/components/RouteDialog';
 import { RouteCard } from '@/components/RouteCard';
 import { RouteEditDialog } from '@/components/RouteEditDialog';
-import { EditSessionDialog } from '@/components/EditSessionDialog';
+import { CreateSessionWizard } from '@/components/session-creation/CreateSessionWizard';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -478,11 +478,13 @@ export default function MySessions() {
           </div>
         </div>
 
-        <EditSessionDialog
+        <CreateSessionWizard
           isOpen={isEditSessionDialogOpen}
           onClose={() => setIsEditSessionDialogOpen(false)}
-          session={selectedSession}
-          onSessionUpdated={handleSessionUpdated}
+          onSessionCreated={handleSessionUpdated}
+          map={null}
+          editSession={selectedSession}
+          isEditMode={true}
         />
 
         <ProfilePreviewDialog
