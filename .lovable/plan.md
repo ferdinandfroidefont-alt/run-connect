@@ -1,103 +1,68 @@
 
+# 🚨 Mise à jour vers Android 15 (API 35) pour Google Play
 
-# Refonte Complète : Page Conversation Style iMessage
+## Problème identifié
 
-## Analyse de l'image de référence
+Google Play Console exige maintenant que toutes les applications ciblent **Android 15 (API 35)** depuis le 31 août 2025. Ton application cible actuellement **API 34**, ce qui :
+- Bloque les nouvelles mises à jour sur le Play Store
+- Empêche certains utilisateurs (comme ton ami avec le Galaxy S24) d'installer l'app
 
-L'image montre un design iMessage iOS avec :
-- **Header** : Bouton retour (chevron simple), avatar circulaire centré avec nom en dessous, icône appel vidéo à droite
-- **Messages** : Bulles bleues (expéditeur) / grises (reçues) avec coins arrondis style iOS
-- **Images** : Affichées dans des coins arrondis larges, intégrées dans le flux
-- **Emojis** : Affichage grand format sans bulle quand seul emoji
-- **Input** : Zone de saisie minimaliste avec "+" à gauche, "iMessage" au centre, micro à droite
-- **Fond** : Blanc/gris clair très épuré
+## Modifications à effectuer
 
-## Modifications prévues
-
-### 1. Header de conversation (style iMessage natif)
-
-**Avant** : Header avec "Retour" texte, avatar à côté du nom, menu options
-
-**Après** :
-- Chevron retour simple (sans texte) à gauche
-- Avatar centré (plus grand, 40px) avec nom en dessous
-- Le nom devient cliquable pour accéder au profil
-- Suppression du menu "..." pour désencombrer (accessible via tap sur l'avatar/nom)
-
-```
-[<]          [Avatar]          [ⓘ]
-              Orkun
+### 1. Mettre à jour `android/variables.gradle`
+Changer `targetSdkVersion` de 34 à 35 :
+```gradle
+targetSdkVersion = 35  // Android 15 (exigé par Google Play)
 ```
 
-### 2. Zone de messages (style iMessage pur)
-
-**Bulles de messages redessinées** :
-- Messages envoyés : Bleu iOS (#007AFF), coins arrondis 18px, queue de bulle iOS
-- Messages reçus : Gris clair (#E5E5EA), coins arrondis 18px
-- Suppression des ombres et effets "glass"
-- Padding interne optimisé (12px horizontal, 8px vertical)
-- Largeur max : 75% de l'écran
-
-**Timestamps** :
-- Masqués par défaut
-- Apparaissent au tap sur le message
-- Style pilule centré pour les séparateurs de date
-
-**Avatars** :
-- Masqués pour les messages de l'utilisateur
-- Affichés uniquement pour les messages reçus dans les groupes
-- Cachés dans les conversations 1-to-1 (style iMessage)
-
-### 3. Zone de saisie (style iMessage)
-
-**Nouveau design** :
-```
-[+]  |  iMessage...  |  [🎤]
+### 2. Mettre à jour `android-webview/app/build.gradle`
+Ce fichier utilise des valeurs en dur (pas les variables). Il faut mettre à jour :
+```gradle
+compileSdk 35    // était 34
+targetSdk 35     // était 34
+versionCode 16   // incrémenter pour la nouvelle version
+versionName "1.5.0"
 ```
 
-- Bouton "+" à gauche (ouvre les options : galerie, fichier, emoji)
-- Champ de saisie central avec placeholder "iMessage"
-- Bouton micro à droite (devient flèche d'envoi quand texte présent)
-- Fond gris très clair (#F2F2F7) avec bordure subtile
-- Coins arrondis 20px
+### 3. Créer le dossier `android-webview/app/src/main/res/values-v35/`
+Copier le fichier `styles.xml` pour Android 15+ avec l'opt-out de l'edge-to-edge obligatoire :
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="OptOutEdgeToEdgeEnforcement">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+        <item name="android:statusBarColor">@color/systemBarBlack</item>
+        <item name="android:navigationBarColor">@color/systemBarBlack</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>
+```
 
-### 4. Fond et couleurs
+### 4. Incrémenter la version dans `android/variables.gradle`
+```gradle
+versionCode = 16   // était 15
+versionName = "1.5.0"  // était 1.4.0
+```
 
-- Fond de conversation : Blanc pur (#FFFFFF)
-- Messages envoyés : Bleu iOS (#007AFF)
-- Messages reçus : Gris iOS (#E5E5EA)
-- Texte envoyé : Blanc
-- Texte reçu : Noir
+---
 
-## Résumé technique
+## Détails techniques
 
+### Pourquoi c'est nécessaire ?
+- **Android 15 (API 35)** impose le mode "edge-to-edge" par défaut
+- Sans l'opt-out (`windowOptOutEdgeToEdgeEnforcement`), les barres système deviendraient transparentes
+- Le fichier `values-v35/styles.xml` permet de garder les barres noires
+
+### Fichiers modifiés
 | Fichier | Modification |
 |---------|--------------|
-| `src/pages/Messages.tsx` | Refonte complète de la section conversation (header, messages, input) |
-| `src/hooks/useConversationTheme.tsx` | Mise à jour du thème par défaut pour correspondre à iMessage |
-| `src/components/MessageTimestamp.tsx` | Style des timestamps en pilule iOS |
-| `src/components/TypingIndicator.tsx` | Style discret type iMessage |
+| `android/variables.gradle` | targetSdkVersion 34 → 35, versionCode 15 → 16 |
+| `android-webview/app/build.gradle` | compileSdk/targetSdk 34 → 35, version 1.0.0 → 1.5.0 |
+| `android-webview/app/src/main/res/values-v35/styles.xml` | **Nouveau fichier** pour Android 15+ |
 
-## Fonctionnalités préservées
-
-Toutes les fonctionnalités actuelles sont conservées :
-- Bouton retour (simplifié en chevron)
-- Envoi de messages texte
-- Partage d'images et fichiers
-- Messages vocaux
-- Sélecteur d'emojis
-- Indicateur de frappe
-- Status de lecture (vu/lu)
-- Partage de sessions
-- Suppression de messages
-- Accès au profil (via tap sur avatar/nom)
-- Gestion des groupes/clubs
-
-## Aperçu visuel du résultat
-
-Le design final ressemblera exactement à l'application iMessage iOS avec :
-- Look épuré et minimaliste
-- Bulles de messages reconnaissables
-- Zone de saisie discrète
-- Navigation intuitive
-
+### Après l'implémentation
+Tu devras :
+1. Git pull le projet
+2. Rebuild l'AAB via GitHub Actions
+3. Uploader la nouvelle version sur Google Play Console
