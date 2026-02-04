@@ -662,7 +662,8 @@ const Profile = () => {
             <h2 className="text-[22px] font-bold text-foreground">
               {profile?.display_name || profile?.username}
             </h2>
-            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+            {/* Couronne uniquement si le profil visualisé est premium */}
+            {profile?.is_premium && (
               <Crown className="h-4 w-4 text-yellow-500" />
             )}
           </div>
@@ -674,6 +675,7 @@ const Profile = () => {
           
           {/* Status Badges - Compact Inline */}
           <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+            {/* Badge Admin uniquement si le profil visualisé est admin, sinon Membre */}
             {isAdmin ? (
               <Badge className="bg-red-100 text-red-700 border-0 text-[11px] px-2 py-0.5 font-medium">
                 Admin
@@ -683,9 +685,10 @@ const Profile = () => {
                 Membre
               </Badge>
             )}
-            {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+            {/* Badge Premium uniquement basé sur le profil, pas sur subscriptionInfo de l'utilisateur connecté */}
+            {profile?.is_premium && (
               <Badge className="bg-orange-100 text-orange-700 border-0 text-[11px] px-2 py-0.5 font-medium">
-                {subscriptionInfo?.subscription_tier || 'Premium'}
+                Premium
               </Badge>
             )}
             {profile?.strava_connected && profile?.strava_verified_at && (
