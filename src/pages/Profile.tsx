@@ -114,6 +114,7 @@ const Profile = () => {
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   const {
     toast
   } = useToast();
@@ -300,6 +301,28 @@ const Profile = () => {
       console.error('Error fetching reliability rate:', error);
     }
   };
+
+  // Vérifier le rôle admin via la fonction sécurisée has_role
+  const fetchAdminStatus = async () => {
+    const targetUserId = viewingUserId || user?.id;
+    if (!targetUserId) return;
+    try {
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: targetUserId,
+        _role: 'admin'
+      });
+      if (error) throw error;
+      setIsAdmin(data === true);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
+
+  // Appeler fetchAdminStatus quand l'utilisateur change
+  useEffect(() => {
+    fetchAdminStatus();
+  }, [user?.id, viewingUserId]);
   const deleteRoute = async (routeId: string) => {
     try {
       const {
@@ -651,7 +674,7 @@ const Profile = () => {
           
           {/* Status Badges - Compact Inline */}
           <div className="flex flex-wrap justify-center gap-1.5 mb-4">
-            {profile?.is_admin && (
+            {isAdmin && (
               <Badge className="bg-red-100 text-red-700 border-0 text-[11px] px-2 py-0.5 font-medium">
                 Admin
               </Badge>
