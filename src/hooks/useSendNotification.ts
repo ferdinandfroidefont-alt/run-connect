@@ -24,6 +24,28 @@ export const useSendNotification = () => {
     try {
       console.log('📱 [PUSH] Envoi notification push:', { userId, title, type });
       
+      // 🔥 IMPORTANT: Refresh session before calling edge function
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData?.session) {
+        console.error('❌ [PUSH] Session Supabase non disponible:', sessionError);
+        
+        // Try to refresh the session
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData?.session) {
+          console.error('❌ [PUSH] Impossible de rafraîchir la session:', refreshError);
+          setLastPushError({
+            stage: 'SESSION_REFRESH',
+            reason: 'Session expirée et impossible à rafraîchir',
+            token: null
+          });
+          return false;
+        }
+        
+        console.log('✅ [PUSH] Session rafraîchie avec succès');
+      }
+      
       const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: userId,
@@ -37,7 +59,39 @@ export const useSendNotification = () => {
       if (error) {
         console.error('❌ [PUSH] Erreur edge function:', error);
         
-        // 🔥 NOUVEAU : Parser le contexte de l'erreur
+        // 🔥 Si erreur 401, tenter un refresh et réessayer
+        if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+          console.log('🔄 [PUSH] Tentative de refresh session après 401...');
+          
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (!refreshError && refreshData?.session) {
+            console.log('✅ [PUSH] Session rafraîchie, nouvelle tentative...');
+            
+            // Retry the call
+            const { data: retryResult, error: retryError } = await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: userId,
+                title,
+                body,
+                type,
+                data: data || {}
+              }
+            });
+            
+            if (!retryError && retryResult) {
+              console.log('✅ [PUSH] Notification envoyée après retry:', retryResult);
+              setLastPushError({
+                stage: retryResult.stage || 'SUCCESS_RETRY',
+                reason: retryResult.reason || 'OK',
+                token: retryResult.push_token ?? null
+              });
+              return retryResult?.fcm_sent === true;
+            }
+          }
+        }
+        
+        // Parser le contexte de l'erreur
         try {
           const errorContext = error.context as any;
           const responseText = await errorContext?.response?.text();
@@ -46,7 +100,6 @@ export const useSendNotification = () => {
             const errorData = JSON.parse(responseText);
             console.error('🧠 Détail erreur Edge Function:', errorData);
             
-            // Stocker le diagnostic
             setLastPushError({
               stage: errorData.stage || 'UNKNOWN',
               reason: errorData.reason || error.message,
@@ -65,7 +118,7 @@ export const useSendNotification = () => {
         return false;
       }
 
-      // 🔥 NOUVEAU : Stocker aussi le diagnostic en cas de succès
+      // Stocker le diagnostic en cas de succès
       if (result) {
         setLastPushError({
           stage: result.stage || 'SUCCESS',
