@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Loader2 } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Loader2, BarChart3 } from "lucide-react";
 import { format, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface UserActivityChartProps {
   userId: string;
@@ -30,11 +30,9 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
     try {
       setLoading(true);
       
-      // Calculer la date de début (8 semaines en arrière)
       const weeksAgo = 8;
       const startDate = startOfWeek(subWeeks(new Date(), weeksAgo), { locale: fr });
       
-      // Récupérer les séances créées par semaine
       const { data: createdSessions, error: createdError } = await supabase
         .from('sessions')
         .select('scheduled_at')
@@ -43,7 +41,6 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
 
       if (createdError) throw createdError;
 
-      // Récupérer les séances rejointes par semaine
       const { data: joinedSessions, error: joinedError } = await supabase
         .from('session_participants')
         .select('joined_at, sessions!inner(scheduled_at)')
@@ -52,10 +49,8 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
 
       if (joinedError) throw joinedError;
 
-      // Créer un tableau pour chaque semaine
       const weeklyData: Map<string, WeeklyActivity> = new Map();
       
-      // Initialiser les 8 dernières semaines
       for (let i = weeksAgo - 1; i >= 0; i--) {
         const weekStart = startOfWeek(subWeeks(new Date(), i), { locale: fr });
         const weekKey = format(weekStart, 'yyyy-MM-dd');
@@ -69,7 +64,6 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
         });
       }
 
-      // Compter les séances créées par semaine
       createdSessions?.forEach(session => {
         const weekStart = startOfWeek(new Date(session.scheduled_at), { locale: fr });
         const weekKey = format(weekStart, 'yyyy-MM-dd');
@@ -79,7 +73,6 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
         }
       });
 
-      // Compter les séances rejointes par semaine
       joinedSessions?.forEach(participant => {
         const weekStart = startOfWeek(new Date(participant.joined_at), { locale: fr });
         const weekKey = format(weekStart, 'yyyy-MM-dd');
@@ -89,7 +82,6 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
         }
       });
 
-      // Convertir la Map en tableau trié
       const sortedData = Array.from(weeklyData.values()).sort((a, b) => 
         a.week.localeCompare(b.week)
       );
@@ -102,92 +94,112 @@ export const UserActivityChart = ({ userId, username }: UserActivityChartProps) 
     }
   };
 
-  if (loading) {
-    return (
-      <Card className="animate-fade-in">
-        <CardHeader>
-          <p className="text-sm text-muted-foreground">
-            Séances créées et rejointes sur les 8 dernières semaines
-          </p>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const totalCreated = data.reduce((sum, d) => sum + d.sessionsCreated, 0);
+  const totalJoined = data.reduce((sum, d) => sum + d.sessionsJoined, 0);
 
   const maxValue = Math.max(
     ...data.map(d => Math.max(d.sessionsCreated, d.sessionsJoined)),
-    5 // Minimum pour avoir un graphique lisible
+    5
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <h3 className="text-lg font-bold">📊 Activités récentes</h3>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={180}>
-          <LineChart
-            data={data}
-            margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-            <XAxis 
-              dataKey="weekLabel" 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '11px' }}
-            />
-            <YAxis 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '11px' }}
-              domain={[0, maxValue]}
-              allowDecimals={false}
-            />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                padding: '8px 12px'
-              }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="sessionsCreated" 
-              stroke="hsl(217, 91%, 60%)" 
-              strokeWidth={2}
-              name="Créées"
-              dot={{ fill: 'hsl(217, 91%, 60%)', r: 3 }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="sessionsJoined" 
-              stroke="hsl(142, 71%, 45%)" 
-              strokeWidth={2}
-              name="Rejointes"
-              dot={{ fill: 'hsl(142, 71%, 45%)', r: 3 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-        
-        <div className="flex justify-around mt-3 pt-3 border-t text-sm">
-          <div className="text-center">
-            <div className="text-xl font-bold text-primary">
-              🔵 {data.reduce((sum, d) => sum + d.sessionsCreated, 0)}
+    <div className="space-y-2">
+      {/* Header */}
+      <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4">
+        Activités récentes
+      </p>
+      
+      {/* iOS Inset Grouped Card */}
+      <div className="bg-card rounded-[10px] overflow-hidden">
+        {/* Header Row */}
+        <div className="relative">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center flex-shrink-0">
+              <BarChart3 className="h-[18px] w-[18px] text-white" />
             </div>
-            <div className="text-xs text-muted-foreground">créées</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[17px] text-foreground">8 dernières semaines</p>
+              <p className="text-[13px] text-muted-foreground">
+                {totalCreated + totalJoined} séances au total
+              </p>
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-green-600">
-              🟢 {data.reduce((sum, d) => sum + d.sessionsJoined, 0)}
+          <div className="absolute bottom-0 left-[54px] right-0 h-px bg-border" />
+        </div>
+
+        {/* Chart */}
+        <div className="px-4 py-3">
+          {loading ? (
+            <div className="flex items-center justify-center h-[140px]">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            <div className="text-xs text-muted-foreground">rejointes</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={140}>
+              <LineChart
+                data={data}
+                margin={{ top: 5, right: 5, left: -25, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <XAxis 
+                  dataKey="weekLabel" 
+                  stroke="hsl(var(--muted-foreground))"
+                  style={{ fontSize: '10px' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  stroke="hsl(var(--muted-foreground))"
+                  style={{ fontSize: '10px' }}
+                  domain={[0, maxValue]}
+                  allowDecimals={false}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '12px'
+                  }}
+                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="sessionsCreated" 
+                  stroke="#007AFF" 
+                  strokeWidth={2}
+                  name="Créées"
+                  dot={{ fill: '#007AFF', r: 3 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="sessionsJoined" 
+                  stroke="#34C759" 
+                  strokeWidth={2}
+                  name="Rejointes"
+                  dot={{ fill: '#34C759', r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="absolute left-[54px] right-0 h-px bg-border" />
+
+        {/* Stats Row */}
+        <div className="flex border-t border-border">
+          <div className="flex-1 py-3 text-center border-r border-border">
+            <div className="text-[20px] font-bold text-[#007AFF]">{totalCreated}</div>
+            <div className="text-[11px] text-muted-foreground">créées</div>
+          </div>
+          <div className="flex-1 py-3 text-center">
+            <div className="text-[20px] font-bold text-[#34C759]">{totalJoined}</div>
+            <div className="text-[11px] text-muted-foreground">rejointes</div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
