@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
@@ -627,6 +627,28 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     </div>
                     <div className="flex-1">
                       <p className="text-[15px] text-foreground">{session.location_name}</p>
+                      <div className="flex gap-3 mt-2">
+                        <button
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(session.location_name);
+                            toast({ title: 'Adresse copiée !' });
+                          }}
+                          className="text-[13px] text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Copy className="h-3 w-3" />
+                          Copier
+                        </button>
+                        <button
+                          onClick={() => {
+                            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.location_name)}`;
+                            window.open(mapsUrl, '_blank');
+                          }}
+                          className="text-[13px] text-primary hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Google Maps
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
