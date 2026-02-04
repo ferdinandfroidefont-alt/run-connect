@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
@@ -16,12 +16,29 @@ import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
 import { SessionQuestions } from "./SessionQuestions";
 import { SessionLevelBadge } from "./SessionLevelBadge";
+import { EditSessionDialog } from "./EditSessionDialog";
 import { useAdMob } from '@/hooks/useAdMob';
 import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
+
+interface SessionBlock {
+  id: string;
+  type: 'warmup' | 'interval' | 'cooldown' | 'steady';
+  duration?: string;
+  durationType?: 'time' | 'distance';
+  intensity?: string;
+  pace?: string;
+  repetitions?: number;
+  effortDuration?: string;
+  effortType?: 'time' | 'distance';
+  effortIntensity?: string;
+  effortPace?: string;
+  recoveryDuration?: string;
+  recoveryType?: 'trot' | 'marche' | 'statique';
+}
 
 interface Session {
   id: string;
@@ -46,6 +63,8 @@ interface Session {
   interval_pace_unit?: string;
   interval_count?: number;
   calculated_level?: number;
+  session_mode?: 'simple' | 'structured';
+  session_blocks?: SessionBlock[];
   profiles: {
     username: string;
     display_name: string;
@@ -120,6 +139,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showCancelRequestConfirm, setShowCancelRequestConfirm] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Hide bottom nav when dialog opens
   useEffect(() => {
@@ -499,24 +519,24 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               </div>
             </div>
 
-            {/* Fractionné Info */}
-            {session.session_type === 'fractionne' && (session.interval_distance || session.interval_pace || session.interval_count) && (
+            {/* Fractionné Info (mode simple) */}
+            {session.session_type === 'fractionne' && !session.session_blocks?.length && (session.interval_distance || session.interval_pace || session.interval_count) && (
               <div className="mt-6 mx-4">
                 <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Fractionné</p>
                 <div className="bg-background rounded-xl overflow-hidden">
                   {session.interval_count && session.interval_distance && (
                     <SettingsRow
-                      icon={Route}
+                      icon={Repeat}
                       iconBg="bg-[#FF9500]"
                       label="Séries"
-                      value={`${session.interval_count} × ${session.interval_distance} km`}
+                      value={`${session.interval_count} × ${session.interval_distance < 1 ? `${Math.round(session.interval_distance * 1000)}m` : `${session.interval_distance} km`}`}
                     />
                   )}
                   {session.interval_pace && (
                     <>
                       <SettingsSeparator />
                       <SettingsRow
-                        icon={Clock}
+                        icon={Timer}
                         iconBg="bg-[#FF3B30]"
                         label="Allure"
                         value={
@@ -531,6 +551,67 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       />
                     </>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Structured Blocks (mode structuré) */}
+            {session.session_blocks && session.session_blocks.length > 0 && (
+              <div className="mt-6 mx-4">
+                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Programmation</p>
+                <div className="bg-background rounded-xl overflow-hidden divide-y divide-border">
+                  {(session.session_blocks as SessionBlock[]).map((block, index) => {
+                    const getBlockIcon = () => {
+                      switch (block.type) {
+                        case 'warmup': return Flame;
+                        case 'cooldown': return Snowflake;
+                        case 'interval': return Repeat;
+                        default: return Timer;
+                      }
+                    };
+                    const getBlockColor = () => {
+                      switch (block.type) {
+                        case 'warmup': return 'bg-[#34C759]';
+                        case 'cooldown': return 'bg-[#5856D6]';
+                        case 'interval': return 'bg-[#FF9500]';
+                        default: return 'bg-[#007AFF]';
+                      }
+                    };
+                    const getBlockLabel = () => {
+                      switch (block.type) {
+                        case 'warmup': return 'Échauffement';
+                        case 'cooldown': return 'Retour au calme';
+                        case 'interval': return 'Séries';
+                        default: return 'Bloc constant';
+                      }
+                    };
+                    const getBlockValue = () => {
+                      if (block.type === 'interval') {
+                        const reps = block.repetitions || 1;
+                        const effort = block.effortDuration || '0';
+                        const effortUnit = block.effortType === 'time' ? 's' : 'm';
+                        const pace = block.effortPace ? ` à ${block.effortPace}/km` : '';
+                        const recovery = block.recoveryDuration ? ` r${block.recoveryDuration}s ${block.recoveryType || ''}` : '';
+                        return `${reps}×${effort}${effortUnit}${pace}${recovery}`;
+                      } else {
+                        const duration = block.duration || '0';
+                        const unit = block.durationType === 'time' ? 'min' : 'm';
+                        const pace = block.pace ? ` à ${block.pace}/km` : '';
+                        return `${duration}${unit}${pace}`;
+                      }
+                    };
+
+                    const Icon = getBlockIcon();
+                    return (
+                      <SettingsRow
+                        key={block.id || index}
+                        icon={Icon}
+                        iconBg={getBlockColor()}
+                        label={getBlockLabel()}
+                        value={getBlockValue()}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -647,12 +728,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 {isOrganizer ? (
                   <>
                     <SettingsSeparator />
-                    <div className="px-4 py-3 flex items-center gap-3">
+                    <button
+                      onClick={() => setShowEditDialog(true)}
+                      className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
+                    >
                       <div className="w-8 h-8 rounded-lg bg-[#007AFF] flex items-center justify-center">
-                        <User className="h-4 w-4 text-white" />
+                        <Pencil className="h-4 w-4 text-white" />
                       </div>
-                      <span className="text-[15px] text-primary font-medium">Votre séance</span>
-                    </div>
+                      <span className="text-[15px] text-foreground">Modifier la séance</span>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                    </button>
                     {!isScheduled && (
                       <>
                         <SettingsSeparator />
@@ -890,6 +975,17 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Session Dialog */}
+      <EditSessionDialog
+        isOpen={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        onSessionUpdated={() => {
+          setShowEditDialog(false);
+          onSessionUpdated();
+        }}
+        session={session}
+      />
     </Dialog>
   );
 };
