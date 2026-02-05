@@ -212,21 +212,52 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
         toast({ title: "Séance modifiée avec succès ! ✅" });
       } else {
-        // INSERT new session
-        const { data, error } = await supabase
-          .from('sessions')
-          .insert([{
+        // INSERT new session(s) - handle recurrence
+        const isRecurring = formData.recurrence_type === 'weekly' && formData.recurrence_count > 1;
+        const sessionsToCreate = [];
+        
+        // Base session
+        const baseDate = new Date(formData.scheduled_at);
+        
+        if (isRecurring) {
+          // Create multiple sessions for each week
+          for (let i = 0; i < formData.recurrence_count; i++) {
+            const sessionDate = new Date(baseDate);
+            sessionDate.setDate(sessionDate.getDate() + (i * 7)); // Add weeks
+            
+            sessionsToCreate.push({
+              ...sessionPayload,
+              scheduled_at: sessionDate.toISOString(),
+              title: i === 0 ? formData.title : `${formData.title} (${i + 1}/${formData.recurrence_count})`,
+              organizer_id: user.id,
+              current_participants: 0,
+            });
+          }
+        } else {
+          // Single session
+          sessionsToCreate.push({
             ...sessionPayload,
             organizer_id: user.id,
             current_participants: 0,
-          }])
-          .select()
-          .single();
+          });
+        }
+
+        const { data, error } = await supabase
+          .from('sessions')
+          .insert(sessionsToCreate)
+          .select();
 
         if (error) throw error;
-        sessionData = data;
+        sessionData = data?.[0]; // Use first session for callbacks
 
-        toast({ title: "Séance créée avec succès ! 🎉" });
+        if (isRecurring) {
+          toast({ 
+            title: `${formData.recurrence_count} séances créées ! 🎉`,
+            description: `Récurrence hebdomadaire configurée`
+          });
+        } else {
+          toast({ title: "Séance créée avec succès ! 🎉" });
+        }
         showAdAfterSessionCreation();
       }
 

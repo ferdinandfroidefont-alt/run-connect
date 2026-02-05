@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink, Files } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
@@ -140,6 +140,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showCancelRequestConfirm, setShowCancelRequestConfirm] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [duplicateSessionData, setDuplicateSessionData] = useState<any>(null);
 
   // Hide bottom nav when dialog opens
   useEffect(() => {
@@ -760,6 +762,38 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       <span className="text-[15px] text-foreground">Modifier la séance</span>
                       <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
                     </button>
+                    <SettingsSeparator />
+                    <button
+                      onClick={() => {
+                        // Prepare duplicate data: copy all fields except id, reset date to tomorrow same time
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        const originalDate = new Date(session.scheduled_at);
+                        tomorrow.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
+                        
+                        const duplicateData = {
+                          ...session,
+                          title: `${session.title} (copie)`,
+                          scheduled_at: tomorrow.toISOString(),
+                          // Reset participant counts for new session
+                          current_participants: 0,
+                        };
+                        // Remove id so wizard creates a new session
+                        delete duplicateData.id;
+                        delete duplicateData.profiles;
+                        delete duplicateData.routes;
+                        
+                        setDuplicateSessionData(duplicateData);
+                        setShowDuplicateDialog(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-[#5856D6] flex items-center justify-center">
+                        <Files className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-[15px] text-foreground">Dupliquer la séance</span>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                    </button>
                     {!isScheduled && (
                       <>
                         <SettingsSeparator />
@@ -1009,6 +1043,24 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         map={null}
         editSession={session}
         isEditMode={true}
+      />
+
+      {/* Duplicate Session Wizard */}
+      <CreateSessionWizard
+        isOpen={showDuplicateDialog}
+        onClose={() => {
+          setShowDuplicateDialog(false);
+          setDuplicateSessionData(null);
+        }}
+        onSessionCreated={() => {
+          setShowDuplicateDialog(false);
+          setDuplicateSessionData(null);
+          onSessionUpdated();
+          onClose();
+        }}
+        map={null}
+        editSession={duplicateSessionData}
+        isEditMode={false}
       />
     </Dialog>
   );
