@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe } from 'lucide-react';
+import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType } from '../types';
+import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType, RecurrenceType } from '../types';
 import { VisibilitySelector } from '../VisibilitySelector';
+import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
 
 interface ConfirmStepProps {
@@ -70,6 +71,14 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
 
   const handleHiddenUsersChange = (userIds: string[]) => {
     onFormDataChange({ hidden_from_users: userIds });
+  };
+
+  const handleRecurrenceTypeChange = (type: RecurrenceType) => {
+    onFormDataChange({ recurrence_type: type });
+  };
+
+  const handleRecurrenceCountChange = (count: number) => {
+    onFormDataChange({ recurrence_count: count });
   };
 
   return (
@@ -195,6 +204,24 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             <span>{formData.hidden_from_users.length} ami{formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance</span>
           </div>
         )}
+
+        {/* Recurrence Selector - iOS Style */}
+        <div className="bg-card rounded-2xl p-4">
+          <RecurrenceSelector
+            recurrenceType={formData.recurrence_type}
+            recurrenceCount={formData.recurrence_count}
+            onRecurrenceTypeChange={handleRecurrenceTypeChange}
+            onRecurrenceCountChange={handleRecurrenceCountChange}
+          />
+        </div>
+
+        {/* Recurrence info */}
+        {formData.recurrence_type === 'weekly' && (
+          <div className="px-2 flex items-center gap-2 text-xs text-primary">
+            <Repeat className="w-3.5 h-3.5" />
+            <span>{formData.recurrence_count} séances seront créées automatiquement</span>
+          </div>
+        )}
       </motion.div>
 
       {/* Navigation */}
@@ -212,7 +239,10 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
           ) : (
             <>
               <Check className="w-5 h-5 mr-2" />
-              Créer la séance
+              {formData.recurrence_type === 'weekly' 
+                ? `Créer ${formData.recurrence_count} séances`
+                : 'Créer la séance'
+              }
             </>
           )}
         </Button>

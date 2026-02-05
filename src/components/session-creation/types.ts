@@ -1,5 +1,6 @@
 export type BlockType = 'warmup' | 'interval' | 'cooldown' | 'steady';
 export type VisibilityType = 'friends' | 'club' | 'public';
+export type RecurrenceType = 'none' | 'weekly';
 
 export interface SessionBlock {
   id: string;
@@ -56,6 +57,9 @@ export interface SessionFormData {
   // Visibility fields
   visibility_type: VisibilityType;
   hidden_from_users: string[];
+  // Recurrence fields
+  recurrence_type: RecurrenceType;
+  recurrence_count: number; // Number of weeks to repeat
 }
 
 export interface SelectedLocation {
@@ -177,6 +181,9 @@ export const DEFAULT_FORM_DATA: SessionFormData = {
   // Visibility defaults
   visibility_type: "friends",
   hidden_from_users: [],
+  // Recurrence defaults
+  recurrence_type: "none",
+  recurrence_count: 4,
 };
 
 // Helper function to check if activity supports pace fields

@@ -57,6 +57,7 @@ import { fr } from "date-fns/locale";
 import { MessageSectionHeader, shouldShowSectionHeader } from "../components/MessageTimestamp";
 import { useConversationTheme } from "@/hooks/useConversationTheme";
 import { TypingIndicator } from "@/components/TypingIndicator";
+import { MessageReactions, useMessageReactionPicker } from "@/components/MessageReactions";
 
 interface Profile {
   user_id: string;
@@ -108,6 +109,11 @@ interface Message {
     max_participants: number;
     current_participants: number;
   };
+  reactions?: Array<{
+    id: string;
+    emoji: string;
+    user_id: string;
+  }>;
 }
 
 const Messages = () => {
@@ -147,6 +153,7 @@ const Messages = () => {
   const { isRecording, recordingDuration, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
   const { selectFromGallery, loading: cameraLoading } = useCamera();
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const { activeMessageId: reactionPickerMessageId, togglePicker: toggleReactionPicker, closePicker: closeReactionPicker } = useMessageReactionPicker();
   
   // Long press & multi-select states
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
@@ -337,7 +344,7 @@ const Messages = () => {
 
       if (error) throw error;
 
-      // Get sender profiles separately
+      // Get sender profiles and reactions separately
       const messagesWithProfiles = await Promise.all(
         (messagesData || []).map(async (message) => {
           const { data: profile } = await supabase
@@ -346,6 +353,12 @@ const Messages = () => {
             .eq('user_id', message.sender_id)
             .single();
 
+          // Load reactions for this message
+          const { data: reactions } = await supabase
+            .from('message_reactions')
+            .select('id, emoji, user_id')
+            .eq('message_id', message.id);
+
           return {
             ...message,
             sender: profile || {
@@ -353,7 +366,8 @@ const Messages = () => {
               username: 'Utilisateur inconnu',
               display_name: 'Utilisateur inconnu',
               avatar_url: null
-            }
+            },
+            reactions: reactions || []
           };
         })
       );
@@ -1838,6 +1852,16 @@ const Messages = () => {
                             </div>
                           )}
                         </div>
+
+                        {/* Message Reactions */}
+                        {!message.deleted_at && (
+                          <MessageReactions
+                            messageId={message.id}
+                            reactions={message.reactions || []}
+                            onReactionChange={() => loadMessages(selectedConversation!.id)}
+                            isOwnMessage={isOwnMessage}
+                          />
+                        )}
 
                        </div>
                      </div>

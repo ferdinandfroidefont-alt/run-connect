@@ -58,6 +58,8 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
         route_id: initialSession.route_id || null,
         visibility_type: initialSession.visibility_type || 'friends',
         hidden_from_users: initialSession.hidden_from_users || [],
+        recurrence_type: initialSession.recurrence_type || 'none',
+        recurrence_count: initialSession.recurrence_count || 4,
       });
 
       setSelectedLocation({
