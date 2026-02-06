@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus, CalendarDays, List } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +20,8 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
+import { OrganizerStatsCard } from '@/components/OrganizerStatsCard';
+import { SessionCalendarView } from '@/components/SessionCalendarView';
 
 interface UserSession {
   id: string;
@@ -68,6 +70,7 @@ export default function MySessions() {
   const { openCreateRoute } = useAppContext();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
+  const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [routes, setRoutes] = useState<UserRoute[]>([]);
@@ -537,29 +540,59 @@ export default function MySessions() {
         <div className="p-4">
           {currentView === 'sessions' ? (
             <>
-              {/* Filter Pills */}
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-                {[
-                  { key: 'all', label: 'Toutes' },
-                  { key: 'upcoming', label: 'À venir' },
-                  { key: 'completed', label: 'Terminées' }
-                ].map((f) => (
+              {/* Organizer Stats */}
+              <OrganizerStatsCard />
+
+              {/* Display Mode Toggle */}
+              <div className="flex items-center justify-between mb-4">
+                {/* Filter Pills */}
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {[
+                    { key: 'all', label: 'Toutes' },
+                    { key: 'upcoming', label: 'À venir' },
+                    { key: 'completed', label: 'Terminées' }
+                  ].map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setFilter(f.key as any)}
+                      className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
+                        filter === f.key
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card text-muted-foreground'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                {/* List/Calendar toggle */}
+                <div className="flex bg-card rounded-lg p-0.5 ml-2 shrink-0">
                   <button
-                    key={f.key}
-                    onClick={() => setFilter(f.key as any)}
-                    className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
-                      filter === f.key
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card text-muted-foreground'
+                    onClick={() => setSessionsDisplayMode('list')}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      sessionsDisplayMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
                     }`}
                   >
-                    {f.label}
+                    <List className="h-4 w-4" />
                   </button>
-                ))}
+                  <button
+                    onClick={() => setSessionsDisplayMode('calendar')}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      sessionsDisplayMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* Sessions List */}
-              {loading ? (
+              {/* Sessions Display */}
+              {sessionsDisplayMode === 'calendar' ? (
+                <SessionCalendarView
+                  sessions={filteredSessions}
+                  onSessionClick={handleSessionClick}
+                />
+              ) : loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="bg-card rounded-[10px] p-4 animate-pulse">
