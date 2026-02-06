@@ -58,6 +58,7 @@ import { MessageSectionHeader, shouldShowSectionHeader } from "../components/Mes
 import { useConversationTheme } from "@/hooks/useConversationTheme";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { MessageReactions, useMessageReactionPicker } from "@/components/MessageReactions";
+import { ReplyPreview, ReplyBubble } from "@/components/MessageReply";
 
 interface Profile {
   user_id: string;
@@ -114,6 +115,12 @@ interface Message {
     emoji: string;
     user_id: string;
   }>;
+  reply_to_id?: string | null;
+  reply_to?: {
+    id: string;
+    content: string;
+    sender: Profile;
+  } | null;
 }
 
 const Messages = () => {
@@ -154,7 +161,7 @@ const Messages = () => {
   const { selectFromGallery, loading: cameraLoading } = useCamera();
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const { activeMessageId: reactionPickerMessageId, togglePicker: toggleReactionPicker, closePicker: closeReactionPicker } = useMessageReactionPicker();
-  
+  const [replyTo, setReplyTo] = useState<{ id: string; content: string; senderName: string } | null>(null);
   // Long press & multi-select states
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
@@ -359,6 +366,30 @@ const Messages = () => {
             .select('id, emoji, user_id')
             .eq('message_id', message.id);
 
+          // Load reply-to message if exists
+          let replyToData = null;
+          if (message.reply_to_id) {
+            const { data: replyMsg } = await supabase
+              .from('messages')
+              .select('id, content, sender_id')
+              .eq('id', message.reply_to_id)
+              .single();
+            
+            if (replyMsg) {
+              const { data: replySenderProfile } = await supabase
+                .from('profiles')
+                .select('user_id, username, display_name, avatar_url')
+                .eq('user_id', replyMsg.sender_id)
+                .single();
+              
+              replyToData = {
+                id: replyMsg.id,
+                content: replyMsg.content,
+                sender: replySenderProfile || { user_id: replyMsg.sender_id, username: 'Inconnu', display_name: 'Inconnu', avatar_url: null }
+              };
+            }
+          }
+
           return {
             ...message,
             sender: profile || {
@@ -367,7 +398,8 @@ const Messages = () => {
               display_name: 'Utilisateur inconnu',
               avatar_url: null
             },
-            reactions: reactions || []
+            reactions: reactions || [],
+            reply_to: replyToData
           };
         })
       );
@@ -652,13 +684,17 @@ const Messages = () => {
 
     setLoading(true);
     try {
-      const { data: newMessageData, error } = await supabase
-        .from('messages')
-        .insert([{
+      const insertData: any = {
           conversation_id: selectedConversation.id,
           sender_id: user.id,
           content: newMessage.trim()
-        }])
+        };
+      if (replyTo) {
+        insertData.reply_to_id = replyTo.id;
+      }
+      const { data: newMessageData, error } = await supabase
+        .from('messages')
+        .insert([insertData])
         .select()
         .single();
 
@@ -710,6 +746,7 @@ const Messages = () => {
       }
 
       setNewMessage("");
+      setReplyTo(null);
       loadMessages(selectedConversation.id);
       loadConversations();
     } catch (error: any) {
@@ -1732,7 +1769,8 @@ const Messages = () => {
                           {(message.message_type === 'session' || 
                             (message.file_url && !message.file_type?.startsWith('image/')) ||
                             (message.content && !message.content.match(/^(Image partagée)$/i) && !isOnlyEmojis(message.content)) ||
-                            message.deleted_at) && (
+                            message.deleted_at ||
+                            message.reply_to) && (
                             <div
                               className={`rounded-[18px] px-3 py-2 ${
                                 isOwnMessage
@@ -1740,6 +1778,14 @@ const Messages = () => {
                                   : getThemeClasses().otherMessage
                               }`}
                             >
+                              {/* Reply context */}
+                              {message.reply_to && !message.deleted_at && (
+                                <ReplyBubble
+                                  replyContent={message.reply_to.content}
+                                  replySenderName={message.reply_to.sender.username || message.reply_to.sender.display_name}
+                                  isOwnMessage={isOwnMessage}
+                                />
+                              )}
                               {/* Show deleted message */}
                               {message.deleted_at ? (
                                 <p className="text-sm italic text-muted-foreground">Message supprimé</p>
@@ -1853,14 +1899,32 @@ const Messages = () => {
                           )}
                         </div>
 
-                        {/* Message Reactions */}
+                        {/* Reply + Reactions */}
                         {!message.deleted_at && (
-                          <MessageReactions
-                            messageId={message.id}
-                            reactions={message.reactions || []}
-                            onReactionChange={() => loadMessages(selectedConversation!.id)}
-                            isOwnMessage={isOwnMessage}
-                          />
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReplyTo({
+                                  id: message.id,
+                                  content: message.content || (message.file_url ? '📎 Pièce jointe' : ''),
+                                  senderName: message.sender.username || message.sender.display_name
+                                });
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-secondary transition-all"
+                              title="Répondre"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                <polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                              </svg>
+                            </button>
+                            <MessageReactions
+                              messageId={message.id}
+                              reactions={message.reactions || []}
+                              onReactionChange={() => loadMessages(selectedConversation!.id)}
+                              isOwnMessage={isOwnMessage}
+                            />
+                          </div>
                         )}
 
                        </div>
@@ -1945,11 +2009,19 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-          {/* iMessage Style Input */}
+           {/* iMessage Style Input */}
           <div 
             className="sticky bottom-0 w-full px-2 py-2 bg-[#F9F9F9] border-t border-[#E5E5EA] z-40 keyboard-input-container"
             style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
           >
+            {/* Reply Preview */}
+            {replyTo && (
+              <ReplyPreview
+                replyTo={replyTo}
+                onCancel={() => setReplyTo(null)}
+              />
+            )}
+
             {/* Emoji Picker */}
             {showEmojiPicker && (
               <div 
