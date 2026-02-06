@@ -17,6 +17,8 @@ import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
 import { ScrollToMyRankButton } from "@/components/leaderboard/ScrollToMyRankButton";
 import { WeeklyChallengesCard } from "@/components/leaderboard/WeeklyChallengesCard";
 import { BadgesToUnlockCard } from "@/components/leaderboard/BadgesToUnlockCard";
+import { ProgressionChart } from "@/components/leaderboard/ProgressionChart";
+import { StreakBadge } from "@/components/StreakBadge";
 import { useAppContext } from "@/contexts/AppContext";
 
 interface LeaderboardUser {
@@ -569,6 +571,12 @@ const Leaderboard = () => {
             userRank={getUserRank(userPoints)}
           />
         )}
+
+        {/* Streak */}
+        {user && <StreakBadge userId={user.id} variant="full" />}
+
+        {/* Progression Chart */}
+        <ProgressionChart />
 
         {/* Statistiques de la saison */}
         {seasonStats && (

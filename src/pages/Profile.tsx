@@ -31,6 +31,7 @@ import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ProfileRankBadgeCompact } from "@/components/profile/ProfileRankBadgeCompact";
 import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
+import { StreakBadge } from "@/components/StreakBadge";
 interface Profile {
   username: string;
   display_name: string | null;
@@ -760,6 +761,10 @@ const Profile = () => {
             </Button>
           )}
         </div>
+
+        {/* Streak Badge */}
+        {!isViewingOtherUser && user && <StreakBadge userId={user.id} variant="full" />}
+        {isViewingOtherUser && viewingUserId && <StreakBadge userId={viewingUserId} variant="full" />}
 
         {/* Classement, Badges & Activités - iOS Style Group */}
         {!isViewingOtherUser ? (

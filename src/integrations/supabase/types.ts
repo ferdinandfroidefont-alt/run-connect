@@ -780,6 +780,39 @@ export type Database = {
           },
         ]
       }
+      score_history: {
+        Row: {
+          id: string
+          rank: number | null
+          recorded_at: string
+          seasonal_points: number
+          total_points: number
+          user_id: string
+          week_start: string
+          weekly_points: number
+        }
+        Insert: {
+          id?: string
+          rank?: number | null
+          recorded_at?: string
+          seasonal_points?: number
+          total_points?: number
+          user_id: string
+          week_start?: string
+          weekly_points?: number
+        }
+        Update: {
+          id?: string
+          rank?: number | null
+          recorded_at?: string
+          seasonal_points?: number
+          total_points?: number
+          user_id?: string
+          week_start?: string
+          weekly_points?: number
+        }
+        Relationships: []
+      }
       session_comments: {
         Row: {
           content: string
@@ -1627,6 +1660,7 @@ export type Database = {
         Args: { new_user_id: string; referral_code_param: string }
         Returns: boolean
       }
+      record_weekly_score_snapshot: { Args: never; Returns: undefined }
       remove_user_points:
         | {
             Args: { points_to_remove: number; user_id_param: string }
