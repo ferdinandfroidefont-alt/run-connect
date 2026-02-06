@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink, Files } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink, Files, CalendarPlus } from "lucide-react";
+import { downloadICSFile, openGoogleCalendarLink } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
@@ -738,6 +739,56 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             <div className="mt-6 mx-4">
               <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Actions</p>
               <div className="bg-background rounded-xl overflow-hidden">
+                {/* Export Calendar */}
+                <button
+                  onClick={() => {
+                    const event = {
+                      title: session.title,
+                      description: session.description || '',
+                      location: session.location_name,
+                      startDate: new Date(session.scheduled_at),
+                      durationMinutes: 60,
+                      organizer: session.profiles.username || session.profiles.display_name,
+                    };
+                    downloadICSFile(event);
+                    toast({ title: 'Fichier .ics téléchargé !' });
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#FF9500] flex items-center justify-center">
+                    <CalendarPlus className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-[15px] text-foreground">Exporter vers le calendrier</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                </button>
+
+                <SettingsSeparator />
+
+                {/* Google Calendar */}
+                <button
+                  onClick={() => {
+                    const event = {
+                      title: session.title,
+                      description: session.description || '',
+                      location: session.location_name,
+                      startDate: new Date(session.scheduled_at),
+                      durationMinutes: 60,
+                      organizer: session.profiles.username || session.profiles.display_name,
+                    };
+                    openGoogleCalendarLink(event);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#4285F4] flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-[15px] text-foreground">Google Calendar</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
+                </button>
+
+                <SettingsSeparator />
+
+                {/* Share */}
                 <button
                   onClick={() => setShowShareDialog(true)}
                   className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
