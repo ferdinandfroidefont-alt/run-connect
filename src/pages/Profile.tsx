@@ -32,6 +32,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { ProfileRankBadgeCompact } from "@/components/profile/ProfileRankBadgeCompact";
 import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { StreakBadge } from "@/components/StreakBadge";
+import { ActivityTimeline } from "@/components/profile/ActivityTimeline";
+import { PersonalGoals } from "@/components/profile/PersonalGoals";
 interface Profile {
   username: string;
   display_name: string | null;
@@ -766,6 +768,9 @@ const Profile = () => {
         {!isViewingOtherUser && user && <StreakBadge userId={user.id} variant="full" />}
         {isViewingOtherUser && viewingUserId && <StreakBadge userId={viewingUserId} variant="full" />}
 
+        {/* Objectifs personnels - Own profile only */}
+        {!isViewingOtherUser && <PersonalGoals />}
+
         {/* Classement, Badges & Activités - iOS Style Group */}
         {!isViewingOtherUser ? (
           <ProfileStatsGroup userId={user?.id || ''} />
@@ -908,6 +913,9 @@ const Profile = () => {
                 </div>)}
             </div>
           </div>}
+
+        {/* Historique d'activité */}
+        <ActivityTimeline userId={viewingUserId || user?.id || ''} />
 
         {/* Routes Section - For all profiles */}
         <div>
