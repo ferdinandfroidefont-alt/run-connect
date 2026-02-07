@@ -10,6 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams } from "react-router-dom";
 import { useEffect, useState } from 'react';
 import { nativeManager } from '@/lib/nativeInit';
+import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
 
 const Index = () => {
   const { user } = useAuth();
@@ -30,6 +31,9 @@ const Index = () => {
   const [searchParams] = useSearchParams();
   const [showPermissionTester, setShowPermissionTester] = useState(false);
   const [nativeStatus, setNativeStatus] = useState<boolean | null>(null);
+
+  // Activer les notifications de dépassement au classement
+  useLeaderboardNotifications();
 
   useEffect(() => {
     const checkNativeStatus = async () => {
