@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,8 @@ export const useFollow = () => {
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
+  // Guard against concurrent follow requests per target user
+  const pendingRequestsRef = useRef(new Set<string>());
 
   const checkFollowStatus = useCallback(async (targetUserId: string): Promise<FollowStatus> => {
     if (!user || !targetUserId || user.id === targetUserId) {
@@ -54,8 +56,15 @@ export const useFollow = () => {
   const sendFollowRequest = useCallback(async (targetUserId: string): Promise<boolean> => {
     if (!user || !targetUserId) return false;
 
+    // ✅ FIX: Prevent concurrent requests to same user (rapid taps on mobile)
+    if (pendingRequestsRef.current.has(targetUserId)) {
+      console.log('⚠️ Follow request already in progress for:', targetUserId);
+      return false;
+    }
+
     try {
       setLoading(true);
+      pendingRequestsRef.current.add(targetUserId);
 
       // Check if already exists
       const { data: existing } = await supabase
@@ -81,28 +90,37 @@ export const useFollow = () => {
           status: 'pending'
         });
 
-      if (error) throw error;
+      if (error) {
+        // Handle unique constraint violation gracefully
+        if (error.code === '23505') {
+          console.log('⚠️ Follow request already exists (unique constraint)');
+          toast({ title: "Demande déjà envoyée" });
+          return false;
+        }
+        throw error;
+      }
 
-      // Get my profile for notification
-      const { data: myProfile } = await supabase
+      // Get my profile for notification (fire and forget - don't block)
+      supabase
         .from('profiles')
         .select('display_name, username, avatar_url')
         .eq('user_id', user.id)
-        .single();
-
-      if (myProfile) {
-        await sendPushNotification(
-          targetUserId,
-          'Nouvelle demande de suivi',
-          `${myProfile.display_name || myProfile.username} souhaite vous suivre`,
-          'follow_request',
-          {
-            follower_id: user.id,
-            follower_name: myProfile.display_name || myProfile.username,
-            follower_avatar: myProfile.avatar_url
+        .single()
+        .then(({ data: myProfile }) => {
+          if (myProfile) {
+            sendPushNotification(
+              targetUserId,
+              'Nouvelle demande de suivi',
+              `${myProfile.display_name || myProfile.username} souhaite vous suivre`,
+              'follow_request',
+              {
+                follower_id: user.id,
+                follower_name: myProfile.display_name || myProfile.username,
+                follower_avatar: myProfile.avatar_url
+              }
+            );
           }
-        );
-      }
+        });
 
       toast({ title: "Demande de suivi envoyée" });
       return true;
@@ -116,6 +134,7 @@ export const useFollow = () => {
       return false;
     } finally {
       setLoading(false);
+      pendingRequestsRef.current.delete(targetUserId);
     }
   }, [user, toast, sendPushNotification]);
 
@@ -164,22 +183,23 @@ export const useFollow = () => {
 
       if (error) throw error;
 
-      // Get my profile for notification
-      const { data: myProfile } = await supabase
+      // ✅ FIX: Fire-and-forget notification - don't block acceptance
+      supabase
         .from('profiles')
         .select('display_name, username')
         .eq('user_id', user.id)
-        .single();
-
-      if (myProfile) {
-        await sendPushNotification(
-          followerId,
-          'Demande acceptée ! 🎉',
-          `${myProfile.display_name || myProfile.username} a accepté votre demande. Vous pouvez maintenant lui envoyer des messages !`,
-          'follow_accepted',
-          { accepted_by: user.id, can_message: true }
-        );
-      }
+        .single()
+        .then(({ data: myProfile }) => {
+          if (myProfile) {
+            sendPushNotification(
+              followerId,
+              'Demande acceptée ! 🎉',
+              `${myProfile.display_name || myProfile.username} a accepté votre demande. Vous pouvez maintenant lui envoyer des messages !`,
+              'follow_accepted',
+              { accepted_by: user.id, can_message: true }
+            );
+          }
+        });
 
       toast({ title: "Demande de suivi acceptée" });
       return true;
@@ -271,13 +291,14 @@ export const useFollow = () => {
 
       if (error) throw error;
 
-      await sendPushNotification(
+      // ✅ FIX: Fire-and-forget notification
+      sendPushNotification(
         followerUserId,
         'Abonné supprimé',
         'Un utilisateur a supprimé votre abonnement',
         'follower_removed',
         { removed_by: user.id }
-      );
+      ).catch(err => console.warn('Push notification failed:', err));
 
       toast({ title: "Abonné supprimé" });
       return true;
