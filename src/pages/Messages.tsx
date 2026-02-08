@@ -682,15 +682,22 @@ const Messages = () => {
   const sendMessage = async () => {
     if (!user || !selectedConversation || !newMessage.trim()) return;
 
+    const messageContent = newMessage.trim();
+    const currentReplyTo = replyTo;
+    
+    // ✅ FIX: Clear input immediately for responsive UX
+    setNewMessage("");
+    setReplyTo(null);
+
     setLoading(true);
     try {
       const insertData: any = {
           conversation_id: selectedConversation.id,
           sender_id: user.id,
-          content: newMessage.trim()
+          content: messageContent
         };
-      if (replyTo) {
-        insertData.reply_to_id = replyTo.id;
+      if (currentReplyTo) {
+        insertData.reply_to_id = currentReplyTo.id;
       }
       const { data: newMessageData, error } = await supabase
         .from('messages')
@@ -706,50 +713,50 @@ const Messages = () => {
         .update({ updated_at: new Date().toISOString() })
         .eq('id', selectedConversation.id);
 
-      // Send push notification to recipient(s)
+      // ✅ FIX: Fire-and-forget push notifications - don't block message sending
       if (selectedConversation.is_group) {
-        // For group chats, notify all members except sender
         const members = selectedConversation.group_members || [];
         for (const member of members) {
           if (member.user_id !== user.id) {
-            await sendPushNotification(
+            sendPushNotification(
               member.user_id,
               selectedConversation.group_name || 'Message de groupe',
-              newMessage.trim().substring(0, 100),
+              messageContent.substring(0, 100),
               'message',
               {
                 sender_name: user.email?.split('@')[0] || 'Quelqu\'un',
-                message_preview: newMessage.trim(),
+                message_preview: messageContent,
                 conversation_id: selectedConversation.id,
                 group_name: selectedConversation.group_name
               }
-            );
+            ).catch(err => console.warn('Push notification failed:', err));
           }
         }
       } else {
-        // For direct messages, notify the other participant
         const recipientId = selectedConversation.participant_1 === user.id
           ? selectedConversation.participant_2
           : selectedConversation.participant_1;
         
-        await sendPushNotification(
+        sendPushNotification(
           recipientId,
           'Nouveau message',
-          newMessage.trim().substring(0, 100),
+          messageContent.substring(0, 100),
           'message',
           {
             sender_name: user.email?.split('@')[0] || 'Quelqu\'un',
-            message_preview: newMessage.trim(),
+            message_preview: messageContent,
             conversation_id: selectedConversation.id
           }
-        );
+        ).catch(err => console.warn('Push notification failed:', err));
       }
 
-      setNewMessage("");
-      setReplyTo(null);
+      // Reload messages from DB (realtime should also fire)
       loadMessages(selectedConversation.id);
       loadConversations();
     } catch (error: any) {
+      // ✅ FIX: Restore message content on error so user can retry
+      setNewMessage(messageContent);
+      setReplyTo(currentReplyTo);
       toast({ title: "Erreur", description: "Impossible d'envoyer le message", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -1461,10 +1468,19 @@ const Messages = () => {
           console.log('✏️ Message updated via realtime:', payload.new);
           const updatedMessage = payload.new as any;
           
-          // Update message in state (for deleted messages or read status)
+          // ✅ FIX: Only update DB-level fields, preserve enriched client data (sender, reactions, reply_to)
           setMessages(prev => prev.map(m => 
             m.id === updatedMessage.id 
-              ? { ...m, ...updatedMessage }
+              ? { 
+                  ...m, 
+                  content: updatedMessage.content,
+                  read_at: updatedMessage.read_at,
+                  deleted_at: updatedMessage.deleted_at,
+                  file_url: updatedMessage.file_url,
+                  file_type: updatedMessage.file_type,
+                  file_name: updatedMessage.file_name,
+                  message_type: updatedMessage.message_type,
+                }
               : m
           ));
         }
