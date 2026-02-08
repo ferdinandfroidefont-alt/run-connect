@@ -403,25 +403,47 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         avatar_url: uploadedUrl,
       };
 
+      // ✅ FIX: Capture and check errors from UPDATE/INSERT
       if (existingProfile) {
-        await supabase.from('profiles').update(profileData).eq('user_id', userId);
+        const { error: updateError } = await supabase.from('profiles').update(profileData).eq('user_id', userId);
+        if (updateError) {
+          console.error('❌ [ProfileSetup] UPDATE failed:', updateError);
+          throw new Error('Impossible de mettre à jour le profil: ' + updateError.message);
+        }
       } else {
-        await supabase.from('profiles').insert({ user_id: userId, ...profileData });
+        const { error: insertError } = await supabase.from('profiles').insert({ user_id: userId, ...profileData });
+        if (insertError) {
+          console.error('❌ [ProfileSetup] INSERT failed:', insertError);
+          throw new Error('Impossible de créer le profil: ' + insertError.message);
+        }
       }
 
-      // 🔥 NIVEAU 33: Vérifier que le profil est LISIBLE (RLS)
+      // ✅ FIX: Verify actual field values, not just row existence
       const { data: verifiedProfile, error: verifyError } = await supabase
         .from('profiles')
-        .select('id, user_id')
+        .select('id, user_id, username, display_name, avatar_url, age, phone, bio')
         .eq('user_id', userId)
         .single();
 
       if (verifyError || !verifiedProfile) {
-        console.error('❌ [ProfileSetup] Profil créé mais non lisible - problème RLS?', verifyError);
+        console.error('❌ [ProfileSetup] Profil non lisible après save:', verifyError);
         throw new Error('Profil créé mais non vérifiable. Réessayez.');
       }
 
-      console.log('✅ [ProfileSetup] Profil vérifié comme lisible:', verifiedProfile.id);
+      // Check that all required fields are actually populated
+      const fieldsOk = verifiedProfile.username?.trim() &&
+        verifiedProfile.display_name?.trim() &&
+        verifiedProfile.avatar_url?.trim() &&
+        verifiedProfile.age &&
+        verifiedProfile.phone?.trim() &&
+        verifiedProfile.bio?.trim();
+
+      if (!fieldsOk) {
+        console.error('❌ [ProfileSetup] Champs vides après save:', verifiedProfile);
+        throw new Error('Le profil a été sauvegardé mais certains champs sont vides. Réessayez.');
+      }
+
+      console.log('✅ [ProfileSetup] Profil vérifié avec tous les champs:', verifiedProfile.id);
 
       // 🔄 Nettoyer IndexedDB et sessionStorage après succès
       try {
@@ -432,45 +454,41 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         console.warn('📸 [ProfileSetup] Cleanup warning:', e);
       }
 
+      // ✅ FIX: Set localStorage safety flag to prevent re-showing dialog
+      localStorage.setItem(`profileSetupCompleted_${userId}`, Date.now().toString());
+      localStorage.setItem('profileCreatedSuccessfully', 'true');
+      localStorage.setItem('profileCreatedAt', Date.now().toString());
+
       toast({
         title: "Profil créé !",
         description: "Bienvenue dans RunConnect !"
       });
 
-      // 🔥 NIVEAU 33: Stratégie de redirection ULTRA-AGRESSIVE pour Android WebView
-      console.log('✅ [ProfileSetup] Profil créé - lancement redirection MULTI-MÉTHODE');
+      // ✅ FIX: Only use aggressive redirect when on Auth page
+      const isOnAuthPage = window.location.pathname === '/auth';
 
-      // Méthode 1: localStorage flag pour que la page Auth détecte le succès
-      localStorage.setItem('profileCreatedSuccessfully', 'true');
-      localStorage.setItem('profileCreatedAt', Date.now().toString());
+      if (isOnAuthPage) {
+        // On Auth page: need to navigate away
+        console.log('✅ [ProfileSetup] Sur /auth - redirection vers /');
+        
+        const redirectNow = () => {
+          window.location.href = '/';
+        };
 
-      // Méthode 2: Fonction de redirection
-      const redirectNow = () => {
-        console.log('🚀 [ProfileSetup] Tentative redirection...');
-        window.location.href = '/';
-      };
+        redirectNow();
+        setTimeout(redirectNow, 100);
+        setTimeout(redirectNow, 300);
+        setTimeout(redirectNow, 500);
+        setTimeout(redirectNow, 1000);
 
-      // Méthode 3: Tentatives multiples avec délais croissants
-      redirectNow(); // Tentative immédiate
+        setTimeout(() => { window.location.replace('/'); }, 1500);
+        setTimeout(() => { window.location.assign('/'); }, 2000);
+      } else {
+        // Already on Index page: just close dialog via React state
+        console.log('✅ [ProfileSetup] Déjà sur / - fermeture dialog via React state');
+      }
 
-      setTimeout(redirectNow, 100);
-      setTimeout(redirectNow, 300);
-      setTimeout(redirectNow, 500);
-      setTimeout(redirectNow, 1000);
-
-      // Méthode 4: Utiliser aussi location.replace comme fallback
-      setTimeout(() => {
-        console.log('🚀 [ProfileSetup] Fallback location.replace...');
-        window.location.replace('/');
-      }, 1500);
-
-      // Méthode 5: Si toujours là après 2s, forcer avec assign
-      setTimeout(() => {
-        console.log('🚀 [ProfileSetup] Dernier recours - assign vers /');
-        window.location.assign('/');
-      }, 2000);
-
-      // Fermer le dialog en dernier
+      // Close dialog and signal completion
       onOpenChange(false);
       if (onComplete) onComplete();
     } catch (error: any) {

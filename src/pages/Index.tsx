@@ -20,7 +20,8 @@ const Index = () => {
     needsProfileSetup,
     loading, 
     completeOnboarding,
-    completeProfileSetup
+    completeProfileSetup,
+    recheckOnboarding
   } = useOnboarding();
   const {
     shouldShowTutorial,
@@ -89,7 +90,10 @@ const Index = () => {
           onOpenChange={() => {}} // Empêche la fermeture manuelle
           userId={user.id}
           email={user.email || ''}
-          onComplete={completeProfileSetup}
+          onComplete={() => {
+            completeProfileSetup();
+            recheckOnboarding();
+          }}
         />
       )}
       
