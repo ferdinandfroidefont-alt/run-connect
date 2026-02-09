@@ -69,13 +69,13 @@ export const FeedActions = ({
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-white/[0.02]">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
         <div className="flex items-center gap-1">
           {/* Like Button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={handleLike}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
           >
             <motion.div
               animate={isAnimating ? { scale: [1, 1.4, 1] } : {}}
@@ -96,7 +96,7 @@ export const FeedActions = ({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onComment}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
           >
             <MessageCircle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
             <span className="text-sm font-medium text-muted-foreground">
@@ -108,7 +108,7 @@ export const FeedActions = ({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onShare}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
           >
             <Share2 className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
           </motion.button>
@@ -118,7 +118,7 @@ export const FeedActions = ({
         <Button
           onClick={onJoin}
           size="sm"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 shadow-lg shadow-primary/20 font-medium"
+          className="ios-gradient-btn text-primary-foreground rounded-full px-5 shadow-lg shadow-primary/25 font-medium"
         >
           <UserPlus className="h-4 w-4 mr-1.5" />
           Rejoindre

@@ -265,3 +265,10 @@
 .pulse-marker-animation {
   animation: newSessionPulse 0.8s ease-in-out infinite;
 }
+
+/* iOS Tinted Utilities */
+.ios-tinted-blue { background: hsl(211 100% 50% / 0.12); color: hsl(211 100% 50%); }
+.ios-tinted-green { background: hsl(142 76% 36% / 0.12); color: hsl(142 76% 36%); }
+.ios-tinted-red { background: hsl(0 100% 59% / 0.12); color: hsl(0 100% 59%); }
+.ios-tinted-orange { background: hsl(28 100% 50% / 0.12); color: hsl(28 100% 50%); }
+.ios-gradient-btn { background: linear-gradient(180deg, hsl(211 100% 55%) 0%, hsl(211 100% 45%) 100%); }
