@@ -17,6 +17,7 @@ export const OrganizerStatsCard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<OrganizerStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (user) fetchStats();
@@ -133,33 +134,41 @@ export const OrganizerStatsCard = () => {
 
   return (
     <div className="bg-card rounded-[10px] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      {/* Header - clickable */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-secondary transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
         <div className="h-[30px] w-[30px] rounded-[7px] bg-indigo-500 flex items-center justify-center">
           <TrendingUp className="h-[18px] w-[18px] text-white" />
         </div>
-        <span className="text-[17px] font-semibold text-foreground">Statistiques organisateur</span>
+        <span className="text-[17px] font-semibold text-foreground flex-1">Statistiques organisateur</span>
+        <ChevronRight className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200", expanded && "rotate-90")} />
       </div>
 
-      {/* Stats */}
-      {statItems.map((item, index) => {
-        const Icon = item.icon;
-        const isLast = index === statItems.length - 1;
-        return (
-          <div key={index}>
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div className={cn("h-[30px] w-[30px] rounded-[7px] flex items-center justify-center", item.iconBg)}>
-                <Icon className="h-[18px] w-[18px] text-white" />
+      {/* Stats - collapsible */}
+      {expanded && (
+        <>
+          {statItems.map((item, index) => {
+            const Icon = item.icon;
+            const isLast = index === statItems.length - 1;
+            return (
+              <div key={index}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className={cn("h-[30px] w-[30px] rounded-[7px] flex items-center justify-center", item.iconBg)}>
+                    <Icon className="h-[18px] w-[18px] text-white" />
+                  </div>
+                  <div className="flex-1 flex items-center justify-between">
+                    <span className="text-[17px] text-foreground">{item.label}</span>
+                    <span className="text-[17px] font-semibold text-foreground">{item.value}</span>
+                  </div>
+                </div>
+                {!isLast && <div className="h-px bg-border ml-[54px]" />}
               </div>
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-[17px] text-foreground">{item.label}</span>
-                <span className="text-[17px] font-semibold text-foreground">{item.value}</span>
-              </div>
-            </div>
-            {!isLast && <div className="h-px bg-border ml-[54px]" />}
-          </div>
-        );
-      })}
+            );
+          })}
+        </>
+      )}
     </div>
   );
 };
