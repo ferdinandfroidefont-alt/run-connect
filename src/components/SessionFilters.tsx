@@ -155,7 +155,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
                   <Button
                     key={activity.id}
                     onClick={() => toggleActivityType(activity.id)}
-                    variant={filters.activity_types.includes(activity.id) ? "default" : "outline"}
+                    variant={filters.activity_types.includes(activity.id) ? "default" : "tinted"}
                     size="sm"
                     className="justify-start text-xs h-8"
                   >
