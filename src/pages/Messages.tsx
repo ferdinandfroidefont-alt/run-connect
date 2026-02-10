@@ -132,6 +132,7 @@ const Messages = () => {
   const { setHideBottomNav } = useAppContext();
   const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationSearch, setConversationSearch] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -496,14 +497,26 @@ const Messages = () => {
     });
   };
 
-  // Sort conversations with pinned first
-  const sortedConversations = [...conversations].sort((a, b) => {
-    const aPinned = pinnedConversations.has(a.id);
-    const bPinned = pinnedConversations.has(b.id);
-    if (aPinned && !bPinned) return -1;
-    if (!aPinned && bPinned) return 1;
-    return 0;
-  });
+  // Filter and sort conversations
+  const filteredAndSortedConversations = [...conversations]
+    .filter(conv => {
+      if (!conversationSearch.trim()) return true;
+      const query = conversationSearch.toLowerCase();
+      if (conv.is_group) {
+        return conv.group_name?.toLowerCase().includes(query);
+      }
+      return (
+        conv.other_participant?.username?.toLowerCase().includes(query) ||
+        conv.other_participant?.display_name?.toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      const aPinned = pinnedConversations.has(a.id);
+      const bPinned = pinnedConversations.has(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
 
   const handleLongPressEnd = () => {
     if (longPressTimer) {
@@ -2253,7 +2266,17 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-3">
+          {/* Search Conversations */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher une conversation..."
+              value={conversationSearch}
+              onChange={(e) => setConversationSearch(e.target.value)}
+              className="pl-9 h-9 bg-secondary border-0 rounded-[10px] text-[15px] placeholder:text-muted-foreground"
+            />
+          </div>
           {/* Quick Search Buttons */}
           <div className="bg-card rounded-[10px] p-3">
             <div className="grid grid-cols-5 gap-2">
@@ -2325,7 +2348,7 @@ const Messages = () => {
               </div>
             ) : (
               <div>
-                {sortedConversations.map((conversation, index) => (
+                {filteredAndSortedConversations.map((conversation, index) => (
                   <SwipeableConversationItem
                     key={conversation.id}
                     isPinned={pinnedConversations.has(conversation.id)}
@@ -2407,7 +2430,19 @@ const Messages = () => {
                             </p>
                           </div>
                           <span className="text-[13px] text-muted-foreground flex-shrink-0 ml-2">
-                            {format(new Date(conversation.updated_at), 'dd/MM', { locale: fr })}
+                            {(() => {
+                              const date = new Date(conversation.last_message_date || conversation.updated_at);
+                              const now = new Date();
+                              const diffMs = now.getTime() - date.getTime();
+                              const diffMin = Math.floor(diffMs / 60000);
+                              const diffH = Math.floor(diffMs / 3600000);
+                              const diffD = Math.floor(diffMs / 86400000);
+                              if (diffMin < 1) return "à l'instant";
+                              if (diffMin < 60) return `${diffMin} min`;
+                              if (diffH < 24) return `${diffH}h`;
+                              if (diffD < 7) return format(date, 'EEEE', { locale: fr });
+                              return format(date, 'dd/MM', { locale: fr });
+                            })()}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
@@ -2436,7 +2471,7 @@ const Messages = () => {
                             )}
                           </p>
                           {conversation.unread_count > 0 && (
-                            <div className="h-5 min-w-5 px-1.5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-2">
+                            <div className="h-5 min-w-5 px-1.5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-2 animate-[pulse_2s_ease-in-out_infinite]">
                               <span className="text-[11px] font-semibold text-primary-foreground">
                                 {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                               </span>
@@ -2446,7 +2481,7 @@ const Messages = () => {
                       </div>
                       
                       {/* iOS-style inset separator */}
-                      {index < sortedConversations.length - 1 && (
+                      {index < filteredAndSortedConversations.length - 1 && (
                         <div className="absolute bottom-0 left-[76px] right-0 h-px bg-border" />
                       )}
                     </div>
