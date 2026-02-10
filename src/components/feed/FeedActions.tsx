@@ -69,7 +69,7 @@ export const FeedActions = ({
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-white/[0.02]">
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-1">
           {/* Like Button */}
           <motion.button

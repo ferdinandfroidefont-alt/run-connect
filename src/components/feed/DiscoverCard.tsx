@@ -31,9 +31,25 @@ export const DiscoverCard = ({ session, onJoin }: DiscoverCardProps) => {
     }
   };
 
+  const getActivityPastel = (activityType: string) => {
+    switch (activityType) {
+      case 'running': return 'ios-pastel-orange';
+      case 'trail': return 'ios-pastel-green';
+      case 'cycling': return 'ios-pastel-blue';
+      case 'mtb': return 'ios-pastel-indigo';
+      case 'walking': return 'ios-pastel-yellow';
+      case 'football': return 'ios-pastel-green';
+      case 'basketball': return 'ios-pastel-orange';
+      case 'swimming': return 'ios-pastel-cyan';
+      case 'tennis': return 'ios-pastel-purple';
+      case 'petanque': return 'ios-pastel-pink';
+      default: return 'ios-pastel-blue';
+    }
+  };
+
   return (
     <>
-      <div className="bg-card border border-border rounded-[10px] overflow-hidden">
+      <div className={cn("rounded-[14px] overflow-hidden border-0", getActivityPastel(session.activity_type))}>
         <div className="p-4 space-y-3">
           {/* Header */}
           <div className="flex justify-between items-start">
@@ -116,11 +132,11 @@ export const DiscoverCard = ({ session, onJoin }: DiscoverCardProps) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-3 border-t border-border flex gap-2">
+          <div className="pt-3 border-t border-foreground/5 flex gap-2">
             <Button
               onClick={() => onJoin(session)}
               size="sm"
-              className="flex-1 h-10 rounded-[8px]"
+              className="flex-1 h-10 rounded-full ios-gradient-btn text-white shadow-lg shadow-primary/25 border-0"
             >
               <UserPlus className="h-4 w-4 mr-2" />
               {session.friends_only ? "Demander" : "Rejoindre"}
@@ -128,8 +144,8 @@ export const DiscoverCard = ({ session, onJoin }: DiscoverCardProps) => {
             <Button
               onClick={() => setShowShareDialog(true)}
               size="sm"
-              variant="outline"
-              className="h-10 w-10 p-0 rounded-[8px]"
+              variant="ghost"
+              className="h-10 w-10 p-0 rounded-full bg-foreground/5 active:bg-foreground/10"
             >
               <Share2 className="h-4 w-4" />
             </Button>

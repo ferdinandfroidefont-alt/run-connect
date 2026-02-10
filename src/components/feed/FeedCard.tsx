@@ -33,6 +33,19 @@ const activityLabels: Record<string, string> = {
   'petanque': 'Pétanque'
 };
 
+const activityPastelMap: Record<string, string> = {
+  'running': 'ios-pastel-orange',
+  'trail': 'ios-pastel-green',
+  'cycling': 'ios-pastel-blue',
+  'mtb': 'ios-pastel-indigo',
+  'walking': 'ios-pastel-yellow',
+  'football': 'ios-pastel-green',
+  'basketball': 'ios-pastel-orange',
+  'swimming': 'ios-pastel-cyan',
+  'tennis': 'ios-pastel-purple',
+  'petanque': 'ios-pastel-pink',
+};
+
 export const FeedCard = ({
   session,
   onLike,
@@ -103,7 +116,7 @@ export const FeedCard = ({
   const activityLabel = activityLabels[session.activity_type] || session.activity_type;
 
   return (
-    <div className="bg-card border-b border-border">
+    <div className={`rounded-[14px] mx-3 mb-3 overflow-hidden ${activityPastelMap[session.activity_type] || 'ios-pastel-blue'}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
