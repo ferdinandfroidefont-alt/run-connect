@@ -9,17 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground rounded-[10px] active:opacity-70 shadow-sm shadow-primary/25",
+        default: "bg-primary text-primary-foreground rounded-[10px] active:opacity-70",
         destructive: "bg-destructive text-destructive-foreground rounded-[10px] active:opacity-70",
         outline: "border border-border bg-background text-foreground rounded-[10px] active:bg-secondary",
         secondary: "bg-secondary text-foreground rounded-[10px] active:opacity-70",
         ghost: "text-primary rounded-[10px] active:bg-secondary",
         link: "text-primary underline-offset-4 hover:underline",
-        tinted: "bg-primary/10 text-primary rounded-full active:bg-primary/20",
       },
       size: {
         default: "h-[50px] px-5",
-        sm: "h-[36px] px-4 text-[15px] rounded-full",
+        sm: "h-[36px] px-4 text-[15px]",
         lg: "h-[56px] px-6",
         icon: "h-[44px] w-[44px]",
       },

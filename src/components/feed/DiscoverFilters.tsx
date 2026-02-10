@@ -50,10 +50,10 @@ export const DiscoverFilters = ({
                 key={activity.value}
                 onClick={() => toggleActivity(activity.value)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all",
+                  "flex items-center gap-2 px-3 py-2 rounded-full border text-[13px] font-medium whitespace-nowrap transition-colors",
                   selectedActivities.includes(activity.value)
-                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                    : "bg-primary/10 text-primary"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border"
                 )}
               >
                 <ActivityIcon activityType={activity.value} size="sm" />
