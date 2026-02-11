@@ -540,9 +540,6 @@ export default function MySessions() {
         <div className="p-4">
           {currentView === 'sessions' ? (
             <>
-              {/* Organizer Stats */}
-              <OrganizerStatsCard />
-
               {/* Display Mode Toggle */}
               <div className="flex items-center justify-between mb-4">
                 {/* Filter Pills */}
@@ -656,6 +653,13 @@ export default function MySessions() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Organizer Stats - Bottom section */}
+              {sessions.length > 0 && (
+                <div className="mt-6">
+                  <OrganizerStatsCard />
                 </div>
               )}
             </>
