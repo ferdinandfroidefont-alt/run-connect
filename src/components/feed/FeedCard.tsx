@@ -18,6 +18,7 @@ interface FeedCardProps {
   onUnlike: (sessionId: string) => void;
   onAddComment: (sessionId: string, content: string) => void;
   onJoinSession: (sessionId: string) => void;
+  index?: number;
 }
 
 const activityLabels: Record<string, string> = {
@@ -51,7 +52,8 @@ export const FeedCard = ({
   onLike,
   onUnlike,
   onAddComment,
-  onJoinSession
+  onJoinSession,
+  index = 0
 }: FeedCardProps) => {
   const [showComments, setShowComments] = useState(false);
   
@@ -116,7 +118,10 @@ export const FeedCard = ({
   const activityLabel = activityLabels[session.activity_type] || session.activity_type;
 
   return (
-    <div className={`rounded-[14px] mx-3 mb-3 overflow-hidden ${activityPastelMap[session.activity_type] || 'ios-pastel-blue'}`}>
+    <div 
+      className={`rounded-[14px] mx-3 mb-3 overflow-hidden ${activityPastelMap[session.activity_type] || 'ios-pastel-blue'} animate-fade-in`}
+      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">

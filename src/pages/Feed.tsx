@@ -117,7 +117,7 @@ export default function Feed() {
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 text-[13px] text-muted-foreground active:text-foreground bg-card border border-border rounded-full transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-[13px] text-muted-foreground active:text-foreground bg-card border border-border rounded-full transition-all active:scale-95"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           {isRefreshing ? 'Actualisation...' : 'Actualiser'}
@@ -130,27 +130,33 @@ export default function Feed() {
           // Friends Feed
           <>
             {loading && feedItems.length === 0 ? (
-              // Loading skeleton
-              <div className="space-y-0">
+              // Skeleton loaders
+              <div className="space-y-3 px-3 pt-2">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="border-b border-border p-4 space-y-3">
+                  <div key={i} className="rounded-[14px] bg-card border border-border p-4 space-y-3 animate-fade-in" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-secondary animate-pulse" />
-                      <div className="space-y-1.5">
-                        <div className="h-3 w-24 bg-secondary rounded animate-pulse" />
-                        <div className="h-2 w-16 bg-secondary rounded animate-pulse" />
+                      <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-3.5 w-28 bg-muted rounded-full animate-pulse" />
+                        <div className="h-2.5 w-16 bg-muted rounded-full animate-pulse" />
                       </div>
+                      <div className="h-6 w-16 bg-muted rounded-full animate-pulse" />
                     </div>
-                    <div className="h-4 w-3/4 bg-secondary rounded animate-pulse" />
-                    <div className="h-32 bg-secondary rounded-[10px] animate-pulse" />
+                    <div className="h-5 w-3/4 bg-muted rounded-full animate-pulse" />
+                    <div className="flex gap-3">
+                      <div className="h-4 w-24 bg-muted rounded-full animate-pulse" />
+                      <div className="h-4 w-16 bg-muted rounded-full animate-pulse" />
+                    </div>
+                    <div className="h-12 bg-muted rounded-[10px] animate-pulse" />
+                    <div className="h-32 bg-muted rounded-[10px] animate-pulse" />
                   </div>
                 ))}
               </div>
             ) : feedItems.length === 0 ? (
               <FeedEmptyState />
             ) : (
-              <>
-                {feedItems.map((session) => (
+              <div className="pt-1">
+                {feedItems.map((session, index) => (
                   <FeedCard
                     key={session.id}
                     session={session}
@@ -158,9 +164,10 @@ export default function Feed() {
                     onUnlike={unlikeSession}
                     onAddComment={addComment}
                     onJoinSession={handleJoinSession}
+                    index={index}
                   />
                 ))}
-              </>
+              </div>
             )}
 
             {/* Infinite scroll trigger */}
@@ -174,7 +181,7 @@ export default function Feed() {
             {!hasMore && feedItems.length > 0 && (
               <div className="py-8 text-center">
                 <p className="text-[13px] text-muted-foreground">
-                  Vous êtes à jour !
+                  Vous êtes à jour ! ✨
                 </p>
               </div>
             )}
@@ -198,11 +205,12 @@ export default function Feed() {
               </div>
             ) : (
               <div className="p-4 space-y-3">
-                {discoverSessions.map((session) => (
+                {discoverSessions.map((session, index) => (
                   <DiscoverCard
                     key={session.id}
                     session={session}
                     onJoin={joinSession}
+                    index={index}
                   />
                 ))}
               </div>
