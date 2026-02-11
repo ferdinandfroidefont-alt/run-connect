@@ -12,94 +12,94 @@ import {
 
 interface ActivityIconConfig {
   icon: LucideIcon;
-  gradient: string;
-  shadow: string;
+  bgColor: string;
+  iconColor: string;
   label: string;
 }
 
 const activityConfig: Record<string, ActivityIconConfig> = {
   course: {
     icon: Footprints,
-    gradient: "linear-gradient(145deg, #FF6B6B 0%, #EE3B3B 50%, #CC2929 100%)",
-    shadow: "0 4px 12px rgba(238, 59, 59, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-red-500",
+    iconColor: "text-white",
     label: "Course"
   },
   running: {
     icon: Footprints,
-    gradient: "linear-gradient(145deg, #FF6B6B 0%, #EE3B3B 50%, #CC2929 100%)",
-    shadow: "0 4px 12px rgba(238, 59, 59, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-red-500",
+    iconColor: "text-white",
     label: "Course"
   },
   velo: {
     icon: Bike,
-    gradient: "linear-gradient(145deg, #5AC8FA 0%, #007AFF 50%, #0055D4 100%)",
-    shadow: "0 4px 12px rgba(0, 122, 255, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-blue-500",
+    iconColor: "text-white",
     label: "Vélo"
   },
   cycling: {
     icon: Bike,
-    gradient: "linear-gradient(145deg, #5AC8FA 0%, #007AFF 50%, #0055D4 100%)",
-    shadow: "0 4px 12px rgba(0, 122, 255, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-blue-500",
+    iconColor: "text-white",
     label: "Vélo"
   },
   marche: {
     icon: PersonStanding,
-    gradient: "linear-gradient(145deg, #5AF0A8 0%, #34C759 50%, #248A3D 100%)",
-    shadow: "0 4px 12px rgba(52, 199, 89, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-green-500",
+    iconColor: "text-white",
     label: "Marche"
   },
   walking: {
     icon: PersonStanding,
-    gradient: "linear-gradient(145deg, #5AF0A8 0%, #34C759 50%, #248A3D 100%)",
-    shadow: "0 4px 12px rgba(52, 199, 89, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-green-500",
+    iconColor: "text-white",
     label: "Marche"
   },
   natation: {
     icon: Waves,
-    gradient: "linear-gradient(145deg, #70D7FF 0%, #32ADE6 50%, #1A8FC4 100%)",
-    shadow: "0 4px 12px rgba(50, 173, 230, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-cyan-500",
+    iconColor: "text-white",
     label: "Natation"
   },
   swimming: {
     icon: Waves,
-    gradient: "linear-gradient(145deg, #70D7FF 0%, #32ADE6 50%, #1A8FC4 100%)",
-    shadow: "0 4px 12px rgba(50, 173, 230, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-cyan-500",
+    iconColor: "text-white",
     label: "Natation"
   },
   basketball: {
     icon: Circle,
-    gradient: "linear-gradient(145deg, #FFB340 0%, #FF9500 50%, #CC7700 100%)",
-    shadow: "0 4px 12px rgba(255, 149, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-orange-500",
+    iconColor: "text-white",
     label: "Basketball"
   },
   football: {
     icon: Circle,
-    gradient: "linear-gradient(145deg, #4ADE80 0%, #22C55E 50%, #15803D 100%)",
-    shadow: "0 4px 12px rgba(34, 197, 94, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-emerald-600",
+    iconColor: "text-white",
     label: "Football"
   },
   petanque: {
     icon: Target,
-    gradient: "linear-gradient(145deg, #D4A574 0%, #A0826D 50%, #7A5C4F 100%)",
-    shadow: "0 4px 12px rgba(160, 130, 109, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-amber-700",
+    iconColor: "text-white",
     label: "Pétanque"
   },
   tennis: {
     icon: Circle,
-    gradient: "linear-gradient(145deg, #FFE066 0%, #FFCC00 50%, #D4AA00 100%)",
-    shadow: "0 4px 12px rgba(255, 204, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-yellow-500",
+    iconColor: "text-white",
     label: "Tennis"
   },
   musculation: {
     icon: Dumbbell,
-    gradient: "linear-gradient(145deg, #BF7AF0 0%, #AF52DE 50%, #8944B3 100%)",
-    shadow: "0 4px 12px rgba(175, 82, 222, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-purple-500",
+    iconColor: "text-white",
     label: "Musculation"
   },
   randonnee: {
     icon: Mountain,
-    gradient: "linear-gradient(145deg, #6DD5C0 0%, #30B0A0 50%, #1F8A7D 100%)",
-    shadow: "0 4px 12px rgba(48, 176, 160, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+    bgColor: "bg-teal-600",
+    iconColor: "text-white",
     label: "Randonnée"
   }
 };
@@ -115,9 +115,9 @@ export const ActivityIcon = ({ activityType, size = "md", className = "" }: Acti
   const Icon = config.icon;
   
   const sizeClasses = {
-    sm: "h-8 w-8 rounded-[7px]",
+    sm: "h-8 w-8 rounded-md",
     md: "h-10 w-10 rounded-[10px]",
-    lg: "h-12 w-12 rounded-[12px]"
+    lg: "h-12 w-12 rounded-xl"
   };
   
   const iconSizes = {
@@ -127,21 +127,8 @@ export const ActivityIcon = ({ activityType, size = "md", className = "" }: Acti
   };
   
   return (
-    <div 
-      className={`${sizeClasses[size]} flex items-center justify-center flex-shrink-0 relative overflow-hidden ${className}`}
-      style={{ 
-        background: config.gradient,
-        boxShadow: config.shadow,
-      }}
-    >
-      {/* iOS glossy highlight */}
-      <div 
-        className="absolute inset-x-0 top-0 h-[45%] rounded-t-[inherit] pointer-events-none"
-        style={{
-          background: "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.05) 100%)",
-        }}
-      />
-      <Icon className={`${iconSizes[size]} text-white relative z-10 drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]`} strokeWidth={2.2} />
+    <div className={`${sizeClasses[size]} ${config.bgColor} flex items-center justify-center flex-shrink-0 ${className}`}>
+      <Icon className={`${iconSizes[size]} ${config.iconColor}`} />
     </div>
   );
 };
