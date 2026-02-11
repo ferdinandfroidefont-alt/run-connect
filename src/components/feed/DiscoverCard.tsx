@@ -16,9 +16,10 @@ import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 interface DiscoverCardProps {
   session: DiscoverSession;
   onJoin: (session: DiscoverSession) => void;
+  index?: number;
 }
 
-export const DiscoverCard = ({ session, onJoin }: DiscoverCardProps) => {
+export const DiscoverCard = ({ session, onJoin, index = 0 }: DiscoverCardProps) => {
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
 
@@ -49,7 +50,10 @@ export const DiscoverCard = ({ session, onJoin }: DiscoverCardProps) => {
 
   return (
     <>
-      <div className={cn("rounded-[14px] overflow-hidden border-0", getActivityPastel(session.activity_type))}>
+      <div 
+        className={cn("rounded-[14px] overflow-hidden border-0 animate-fade-in", getActivityPastel(session.activity_type))}
+        style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
+      >
         <div className="p-4 space-y-3">
           {/* Header */}
           <div className="flex justify-between items-start">
