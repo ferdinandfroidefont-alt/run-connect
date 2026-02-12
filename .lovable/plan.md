@@ -1,72 +1,66 @@
 
 
-# Refonte Style iOS - Boutons, Badges et Etiquettes
+# Rendre RunConnect solide comme une app mondiale
 
-## Objectif
-Transformer les boutons, badges et etiquettes de l'app vers un style iOS plus riche et vibrant, inspire de l'image fournie : boutons pilule avec degrades subtils, etiquettes colorees avec icones, et badges aux teintes douces.
+## Le probleme
 
-## Changements prevus
+L'app a un bon design de base (style iOS, couleurs pastel, typographie SF Pro), mais plusieurs details cassent l'impression de solidite :
 
-### 1. Bouton principal (`src/components/ui/button.tsx`)
-- Ajouter un leger degrade sur le variant `default` (bleu iOS plus vivant)
-- Ajouter un nouveau variant `tinted` : fond teinte leger (ex: `bg-primary/10 text-primary`) pour les boutons d'action secondaires style iOS
-- Affiner les coins arrondis pour un aspect plus pilule (`rounded-full`) sur le variant `sm`
-- Ajouter une ombre coloree subtile sur le bouton principal (`shadow-sm shadow-primary/20`)
+1. **Pas de transitions entre les pages** -- les pages apparaissent brutalement, sans animation
+2. **Pas de skeleton loaders partout** -- certaines pages (Messages, Leaderboard, Profile) montrent un ecran vide ou un simple spinner pendant le chargement
+3. **Inconsistances visuelles** -- le fond du header Messages est `#F9F9F9` code en dur, pas la variable CSS ; les couleurs sont hardcodees (`#007AFF`, `#E5E5EA`) au lieu d'utiliser le design system
+4. **Pas de micro-interactions** -- les boutons n'ont pas de feedback tactile (haptic), pas de `active:scale-95` generalise
+5. **Le loading screen initial** change de phrase toutes les 500ms (trop rapide, stressant) et la barre avance artificiellement
+6. **Pas de safe area padding** sur les headers (encoche iPhone)
+7. **La bottom nav** n'a pas de backdrop blur (les apps pro comme Instagram utilisent `backdrop-blur`)
+8. **Les empty states** sont trop simples (juste une icone + texte, pas d'illustration ni de CTA clair)
 
-### 2. Badges et etiquettes (`src/components/ui/badge.tsx`)
-- Ajouter un variant `tinted` avec fond teinte transparent et texte colore (style chips iOS)
-- Ajouter des variants colores : `success` (vert), `warning` (orange), `info` (bleu) avec leurs teintes respectives
-- Augmenter legerement le padding et la taille de texte pour un aspect plus genereux
+## Plan d'action -- 7 ameliorations ciblees
 
-### 3. Boutons d'action du Feed (`src/components/feed/FeedActions.tsx`)
-- Remplacer le fond transparent des boutons like/comment/share par des fonds teintes subtils
-- Donner au bouton "Rejoindre" un degrade bleu plus iOS avec ombre portee coloree
+### 1. Transitions de pages fluides
+Ajouter un wrapper `PageTransition` avec un fade-in subtil (200ms) autour de chaque page dans `Layout.tsx`. Toutes les pages apparaitront avec une animation douce au lieu d'un affichage brut.
 
-### 4. Filtres et chips (`src/components/feed/DiscoverFilters.tsx`)
-- Passer les chips d'activite a un style plus genereux : padding plus large, fond teinte colore, coins full-round
-- Etat actif avec fond colore plein et ombre douce
+### 2. Bottom Navigation premium
+- Ajouter `backdrop-blur-xl` + `bg-background/80` pour un effet verre depoli
+- Ajouter `active:scale-90 transition-transform` sur chaque bouton de navigation
+- Ajouter un indicateur de page active (un petit point sous l'icone au lieu de juste changer la couleur)
 
-### 5. Filtres de session (`src/components/SessionFilters.tsx`)
-- Meme traitement que DiscoverFilters : chips arrondis, teintes colorees, transitions douces
+### 3. Skeleton loaders sur Messages
+Remplacer le spinner de chargement des conversations par des squelettes realistes (avatar rond + 2 lignes de texte), exactement comme iMessage au chargement.
 
-### 6. Variables CSS (`src/index.css`)
-- Ajouter des utilitaires pour les fonds teintes iOS : `.ios-tinted-blue`, `.ios-tinted-green`, `.ios-tinted-red`, etc.
-- Ajouter un style de bouton degrade `.ios-gradient-btn`
+### 4. Micro-interactions globales
+- Ajouter `active:scale-[0.97]` sur toutes les cartes cliquables
+- Ajouter `transition-all duration-150` sur les elements interactifs
+- Vibration haptique (via `navigator.vibrate(1)`) au tap sur les boutons principaux
 
-## Fichiers a modifier
+### 5. Loading screen plus pro
+- Ralentir les phrases (1.5s au lieu de 500ms)
+- Ajouter un effet de fondu entre les phrases
+- Rendre la progression plus naturelle (ease-out au lieu de lineaire)
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/components/ui/button.tsx` | Nouveau variant `tinted`, ombre coloree sur `default`, `rounded-full` sur `sm` |
-| `src/components/ui/badge.tsx` | Variants `tinted`, `success`, `warning`, `info` avec fonds teintes |
-| `src/components/feed/FeedActions.tsx` | Boutons avec fonds teintes, "Rejoindre" avec degrade et ombre |
-| `src/components/feed/DiscoverFilters.tsx` | Chips plus genereux, fonds teintes colores |
-| `src/components/SessionFilters.tsx` | Chips activite avec style iOS teinte |
-| `src/index.css` | Utilitaires CSS pour teintes et degrades iOS |
+### 6. Headers avec safe area
+Ajouter `pt-safe` (padding-top pour l'encoche) sur tous les headers fixes (Messages, Feed, Leaderboard) pour que le contenu ne passe jamais sous l'encoche.
+
+### 7. Nettoyage des couleurs hardcodees
+Remplacer les couleurs codees en dur (`#007AFF`, `#E5E5EA`, `#8E8E93`, `#F9F9F9`) par les variables CSS du design system (`text-primary`, `border-border`, `text-muted-foreground`, `bg-secondary`) pour garantir la coherence et preparer le dark mode.
+
+---
 
 ## Details techniques
 
-**button.tsx** - Ajouts :
-- Variant `default` : ajout `shadow-sm shadow-primary/25` pour l'ombre coloree
-- Nouveau variant `tinted` : `bg-primary/10 text-primary font-semibold rounded-full active:bg-primary/20`
-- Size `sm` passe a `rounded-full` au lieu de `rounded-[10px]`
+### Fichiers modifies
 
-**badge.tsx** - Ajouts de variants :
-- `tinted` : `border-transparent bg-primary/12 text-primary`
-- `success` : `border-transparent bg-green-500/12 text-green-600`
-- `warning` : `border-transparent bg-orange-500/12 text-orange-600`
-- `info` : `border-transparent bg-blue-500/12 text-blue-600`
-- Padding augmente a `px-3 py-1` et texte a `text-[13px]`
+| Fichier | Modification |
+|---------|-------------|
+| `src/components/Layout.tsx` | Wrapper PageTransition avec animate-fade-in |
+| `src/components/BottomNavigation.tsx` | Backdrop blur, active states, dot indicator |
+| `src/pages/Messages.tsx` | Skeleton loaders, remplacement couleurs hardcodees, safe area header |
+| `src/pages/Feed.tsx` | Safe area header |
+| `src/pages/Leaderboard.tsx` | Safe area header |
+| `src/components/LoadingScreen.tsx` | Ralentir phrases, smooth progression |
+| `src/components/feed/FeedHeader.tsx` | Safe area padding |
+| `src/index.css` | Classe utilitaire PageTransition |
 
-**index.css** - Utilitaires :
-```css
-.ios-tinted-blue { background: hsl(211 100% 50% / 0.12); color: hsl(211 100% 50%); }
-.ios-tinted-green { background: hsl(142 76% 36% / 0.12); color: hsl(142 76% 36%); }
-.ios-tinted-red { background: hsl(0 100% 59% / 0.12); color: hsl(0 100% 59%); }
-.ios-tinted-orange { background: hsl(28 100% 50% / 0.12); color: hsl(28 100% 50%); }
-.ios-gradient-btn { background: linear-gradient(180deg, hsl(211 100% 55%) 0%, hsl(211 100% 45%) 100%); }
-```
-
-## Resultat attendu
-L'app conserve son fond blanc iOS clean mais les elements interactifs (boutons, badges, filtres, chips) deviennent plus vivants et colores avec des teintes douces et des degrades subtils, comme dans le screenshot iOS fourni.
+### Pas de nouvelles dependances
+Tout est fait avec Tailwind CSS et les animations deja en place.
 
