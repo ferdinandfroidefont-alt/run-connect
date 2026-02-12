@@ -90,6 +90,7 @@ export const SessionPreviewPopup = ({
   };
 
   const activityConfig = getActivityConfig(session.activity_type);
+  const ActivityIconComponent = activityConfig.icon;
 
   return (
     <AnimatePresence>
@@ -150,8 +151,8 @@ export const SessionPreviewPopup = ({
                   </div>
                   
                   {/* Activity badge */}
-                  <div className="rounded-xl overflow-hidden">
-                    <img src={activityConfig.image} alt={activityConfig.label} className="h-9 w-9 object-cover" />
+                  <div className={`${getActivityColor(session.activity_type)} p-2 rounded-xl`}>
+                    <ActivityIconComponent className="h-5 w-5 text-white" />
                   </div>
                 </div>
                 
