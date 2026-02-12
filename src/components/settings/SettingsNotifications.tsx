@@ -130,13 +130,13 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   };
 
   const notificationItems = [
-    { key: 'notif_follow_request', icon: Users, color: 'bg-[#007AFF]', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
-    { key: 'notif_message', icon: MessageCircle, color: 'bg-[#34C759]', label: 'Messages', desc: 'Nouveaux messages reçus' },
-    { key: 'notif_session_request', icon: Play, color: 'bg-[#FF9500]', label: 'Demandes de session', desc: 'Demandes de participation' },
-    { key: 'notif_friend_session', icon: Users, color: 'bg-[#5856D6]', label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
-    { key: 'notif_club_invitation', icon: Users, color: 'bg-[#FF3B30]', label: 'Invitations de club', desc: 'Invitations à rejoindre un club' },
-    { key: 'notif_session_accepted', icon: CheckCircle, color: 'bg-[#34C759]', label: 'Participants acceptés', desc: 'Quelqu\'un rejoint votre session' },
-    { key: 'notif_presence_confirmed', icon: UserCheck, color: 'bg-[#007AFF]', label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
+    { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
+    { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
+    { key: 'notif_session_request', icon: Play, color: 'bg-orange-500', label: 'Demandes de session', desc: 'Demandes de participation' },
+    { key: 'notif_friend_session', icon: Users, color: 'bg-violet-500', label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
+    { key: 'notif_club_invitation', icon: Users, color: 'bg-destructive', label: 'Invitations de club', desc: 'Invitations à rejoindre un club' },
+    { key: 'notif_session_accepted', icon: CheckCircle, color: 'bg-green-500', label: 'Participants acceptés', desc: 'Quelqu\'un rejoint votre session' },
+    { key: 'notif_presence_confirmed', icon: UserCheck, color: 'bg-primary', label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
   ];
 
   return (
@@ -191,8 +191,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
               {profile?.notifications_enabled === false && (
                 <>
                   <div className="h-px bg-border" />
-                  <div className="px-4 py-3 bg-[#FF9500]/10">
-                    <p className="text-[13px] text-[#FF9500]">
+                  <div className="px-4 py-3 bg-orange-500/10">
+                    <p className="text-[13px] text-orange-500">
                       ⚠️ Les préférences ci-dessous sont inactives
                     </p>
                   </div>
@@ -200,21 +200,21 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
               )}
 
               {/* Android permissions */}
-              {!isRegistered && isNative && profile?.notifications_enabled === true && (
+               {!isRegistered && isNative && profile?.notifications_enabled === true && (
                 <>
                   <div className="h-px bg-border" />
                   <button 
                     onClick={handleNotificationToggle}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-[#007AFF]/10 active:bg-[#007AFF]/20 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-primary/10 active:bg-primary/20 transition-colors"
                   >
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
-                      <Bell className="h-[18px] w-[18px] text-white" />
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-primary flex items-center justify-center">
+                      <Bell className="h-[18px] w-[18px] text-primary-foreground" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="text-[15px] font-medium text-[#007AFF]">Autoriser les notifications</p>
-                      <p className="text-[13px] text-[#007AFF]/70">Activez les permissions Android</p>
+                      <p className="text-[15px] font-medium text-primary">Autoriser les notifications</p>
+                      <p className="text-[13px] text-primary/70">Activez les permissions Android</p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-[#007AFF]/50" />
+                    <ChevronRight className="h-5 w-5 text-primary/50" />
                   </button>
                 </>
               )}

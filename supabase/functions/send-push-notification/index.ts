@@ -1,10 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// CORS Headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 interface NotificationPayload {
@@ -15,7 +14,6 @@ interface NotificationPayload {
   type?: string;
 }
 
-// Firebase service account interface 
 interface FirebaseServiceAccount {
   type: string;
   project_id: string;
@@ -29,122 +27,81 @@ interface FirebaseServiceAccount {
   client_x509_cert_url: string;
 }
 
-// Simple JWT creation for Firebase using Web Crypto API
-async function createFirebaseJWT(serviceAccount: FirebaseServiceAccount): Promise<string> {
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT',
-  };
+// ─── Firebase access token cache (50min TTL) ─────────────
+let cachedAccessToken: string | null = null;
+let cachedTokenExpiry: number = 0;
 
+async function createFirebaseJWT(sa: FirebaseServiceAccount): Promise<string> {
+  const header = { alg: 'RS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   const payload = {
-    iss: serviceAccount.client_email,
+    iss: sa.client_email,
     scope: 'https://www.googleapis.com/auth/firebase.messaging',
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
-    exp: now + 3600, // 1 hour
+    exp: now + 3600,
   };
 
-  // Base64URL encode helper
-  const base64UrlEncode = (obj: any): string => {
-    const jsonString = JSON.stringify(obj);
-    const base64 = btoa(jsonString);
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const b64url = (obj: any): string => {
+    const b64 = btoa(JSON.stringify(obj));
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   };
 
-  const encodedHeader = base64UrlEncode(header);
-  const encodedPayload = base64UrlEncode(payload); 
-  const message = `${encodedHeader}.${encodedPayload}`;
+  const message = `${b64url(header)}.${b64url(payload)}`;
 
-  try {
-    // Clean and prepare the private key
-    const privateKeyPem = serviceAccount.private_key
-      .replace(/\\n/g, '\n')
-      .replace(/-----BEGIN PRIVATE KEY-----/, '')
-      .replace(/-----END PRIVATE KEY-----/, '')
-      .replace(/\n/g, '');
+  const pem = sa.private_key
+    .replace(/\\n/g, '\n')
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\n/g, '');
 
-    // Convert base64 to ArrayBuffer
-    const binaryDer = Uint8Array.from(atob(privateKeyPem), c => c.charCodeAt(0));
+  const der = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(message));
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
-    // Import the private key
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      binaryDer,
-      {
-        name: 'RSASSA-PKCS1-v1_5',
-        hash: 'SHA-256',
-      },
-      false,
-      ['sign']
-    );
-
-    // Sign the message
-    const signature = await crypto.subtle.sign(
-      'RSASSA-PKCS1-v1_5',
-      privateKey,
-      new TextEncoder().encode(message)
-    );
-
-    // Convert signature to base64url
-    const signatureArray = new Uint8Array(signature);
-    const signatureB64 = btoa(String.fromCharCode(...signatureArray));
-    const signatureB64Url = signatureB64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-    return `${message}.${signatureB64Url}`;
-  } catch (error) {
-    console.error('❌ Error creating JWT:', error);
-    throw new Error(`JWT creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  return `${message}.${sigB64}`;
 }
 
-// Get Firebase access token 
-async function getFirebaseAccessToken(serviceAccount: FirebaseServiceAccount): Promise<string> {
-  try {
-    console.log('🔑 Creating Firebase JWT...');
-    const jwt = await createFirebaseJWT(serviceAccount);
-    console.log('✅ JWT created, length:', jwt.length);
-    console.log('📋 JWT preview:', jwt.substring(0, 50) + '...');
-    
-    console.log('🔑 Requesting Firebase access token from OAuth2...');
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        assertion: jwt,
-      }),
-    });
-
-    const tokenData = await response.json();
-
-    if (!response.ok) {
-      console.error('❌ OAuth2 token request failed');
-      console.error('📋 Status:', response.status, response.statusText);
-      console.error('📋 Response:', JSON.stringify(tokenData, null, 2));
-      throw new Error(`Token request failed: ${JSON.stringify(tokenData)}`);
-    }
-
-    console.log('✅ Firebase access token obtained');
-    console.log('📋 Token length:', tokenData.access_token?.length || 0);
-    console.log('📋 Token type:', tokenData.token_type);
-    console.log('📋 Expires in:', tokenData.expires_in, 'seconds');
-    return tokenData.access_token;
-  } catch (error) {
-    console.error('❌ Error getting Firebase access token:', error);
-    throw error;
+async function getFirebaseAccessToken(sa: FirebaseServiceAccount): Promise<string> {
+  // Return cached token if still valid (50min margin)
+  if (cachedAccessToken && Date.now() < cachedTokenExpiry) {
+    console.log('✅ [AUTH] Using cached Firebase token');
+    return cachedAccessToken;
   }
+
+  console.log('🔑 [AUTH] Generating new Firebase access token...');
+  const jwt = await createFirebaseJWT(sa);
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+    }),
+  });
+
+  const tokenData = await response.json();
+  if (!response.ok) {
+    console.error('❌ [AUTH] OAuth2 failed:', response.status, JSON.stringify(tokenData));
+    throw new Error(`Token request failed: ${JSON.stringify(tokenData)}`);
+  }
+
+  cachedAccessToken = tokenData.access_token;
+  // Cache for 50 minutes (token valid for 60min)
+  cachedTokenExpiry = Date.now() + 50 * 60 * 1000;
+  console.log('✅ [AUTH] Firebase token obtained and cached');
+
+  return cachedAccessToken!;
 }
 
-// Send FCM notification with retry
 async function sendFCMNotification(
-  accessToken: string, 
-  projectId: string, 
-  token: string, 
-  title: string, 
-  body: string, 
+  accessToken: string,
+  projectId: string,
+  token: string,
+  title: string,
+  body: string,
   data?: any,
   retryCount: number = 0,
   maxRetries: number = 3
@@ -152,14 +109,9 @@ async function sendFCMNotification(
   try {
     const fcmPayload = {
       message: {
-        token: token,
-        notification: {
-          title,
-          body,
-        },
-        data: data ? Object.fromEntries(
-          Object.entries(data).map(([k, v]) => [k, String(v)])
-        ) : {},
+        token,
+        notification: { title, body },
+        data: data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) : {},
         android: {
           priority: 'high',
           notification: {
@@ -171,123 +123,80 @@ async function sendFCMNotification(
         },
         apns: {
           payload: {
-            aps: {
-              alert: {
-                title,
-                body
-              },
-              sound: 'default',
-              badge: 1
-            }
+            aps: { alert: { title, body }, sound: 'default', badge: 1 }
           }
         }
       }
     };
 
-    console.log('🚀 Sending FCM notification to project:', projectId);
-    console.log('📱 Token preview:', token.substring(0, 20) + '...');
+    console.log('🚀 [FCM] Sending to project:', projectId, '| token:', token.substring(0, 20) + '...');
 
     const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(fcmPayload),
     });
 
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error('❌ [FCM] Send failed');
-      console.error('📋 Status:', response.status, response.statusText);
-      console.error('📋 Response Data:', JSON.stringify(responseData, null, 2));
-      console.error('📋 Token preview:', token.substring(0, 30) + '...');
-      console.error('📋 Project ID:', projectId);
-      console.error('📋 Attempt:', retryCount + 1, '/', maxRetries);
-      
-      // Log du payload FCM envoyé (pour debug)
-      console.error('📋 FCM Payload sent:', JSON.stringify({
-        message: {
-          token: token.substring(0, 30) + '...',
-          notification: { title, body },
-          android: {
-            priority: 'high',
-            notification: {
-              channel_id: 'runconnect_channel'
-            }
-          }
-        }
-      }, null, 2));
-      
-      // 🔥 DETECT UNREGISTERED TOKEN (404 error)
+      console.error('❌ [FCM] Failed:', response.status, JSON.stringify(responseData));
+
+      // UNREGISTERED token → clean up
       if (response.status === 404 && responseData?.error?.details?.[0]?.errorCode === 'UNREGISTERED') {
-        console.error('🗑️ [FCM] Token UNREGISTERED → Marking for cleanup');
-        // Return a special object to signal token cleanup is needed
+        console.log('🗑️ [FCM] Token UNREGISTERED → cleanup needed');
         return { unregistered: true, token };
       }
-      
-      // Retry logic for transient errors (5xx, network issues)
+
+      // Retry on transient errors
       if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
-        const delay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
-        console.log(`🔄 Retrying FCM send in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        console.log(`🔄 [FCM] Retry in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delay));
         return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
       }
-      
+
       return false;
     }
 
-    console.log('✅ FCM notification sent successfully:', responseData.name);
+    console.log('✅ [FCM] Sent:', responseData.name);
     return true;
   } catch (error) {
-    console.error('❌ FCM send error:', error);
-    
-    // Retry on network errors
+    console.error('❌ [FCM] Exception:', error);
     if (retryCount < maxRetries) {
       const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-      console.log(`🔄 Retrying FCM send after error in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise(r => setTimeout(r, delay));
       return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
     }
-    
     return false;
   }
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // 🆕 LOG D'ENTRÉE (AVANT TOUT)
-    console.log('🚀 [ENTRY] Edge function called');
-    console.log('🔐 [AUTH] Authorization header present:', !!req.headers.get('authorization'));
-    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    );
 
-    const { user_id, title, body, data, type }: NotificationPayload = await req.json()
-    
-    console.log('📦 [PAYLOAD] Received:', { user_id, title, body, type })
+    const { user_id, title, body, data, type }: NotificationPayload = await req.json();
 
     if (!user_id || !title || !body) {
       return new Response(
         JSON.stringify({ error: 'user_id, title et body sont requis' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    console.log('🔔 Processing push notification:', { user_id, title, body, type })
+    console.log('🔔 [ENTRY] Notification:', { user_id: user_id.substring(0, 8) + '...', title, type });
 
-    // 1. Get Firebase service account from environment
-    const firebaseServiceAccountJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
-    if (!firebaseServiceAccountJson) {
-      console.error('❌ Firebase service account not configured');
+    // 1. Firebase service account
+    const saJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (!saJson) {
       return new Response(
         JSON.stringify({ error: 'Firebase service account not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -296,363 +205,183 @@ serve(async (req) => {
 
     let serviceAccount: FirebaseServiceAccount;
     try {
-      serviceAccount = JSON.parse(firebaseServiceAccountJson);
-      console.log('✅ Firebase service account loaded');
-      console.log('📋 Project ID:', serviceAccount.project_id);
-      console.log('📋 Client Email:', serviceAccount.client_email);
-      console.log('📋 Private Key ID:', serviceAccount.private_key_id);
-      console.log('📋 Private Key present:', !!serviceAccount.private_key);
-      console.log('📋 Private Key length:', serviceAccount.private_key?.length || 0);
-      console.log('📋 Private Key starts with:', serviceAccount.private_key?.substring(0, 30) + '...');
-    } catch (error) {
-      console.error('❌ Invalid Firebase service account JSON:', error);
-      console.error('📋 Raw JSON length:', firebaseServiceAccountJson?.length || 0);
-      console.error('📋 JSON preview:', firebaseServiceAccountJson?.substring(0, 100) + '...');
+      serviceAccount = JSON.parse(saJson);
+    } catch {
       return new Response(
-        JSON.stringify({ error: 'Invalid Firebase service account configuration' }),
+        JSON.stringify({ error: 'Invalid Firebase service account JSON' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // 2. Get user profile and push token
+    // 2. Get profile
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('push_token, notifications_enabled, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
       .eq('user_id', user_id)
-      .single()
+      .single();
 
     if (profileError || !profile) {
-      console.log('❌ User profile not found:', profileError)
       return new Response(
-        JSON.stringify({ 
-          error: 'Utilisateur non trouvé',
-          stage: 'PROFILE_FETCH',
-          reason: 'Le profil utilisateur n\'existe pas dans la base de données',
-          push_token: null
-        }),
+        JSON.stringify({ error: 'Utilisateur non trouvé', stage: 'PROFILE_FETCH', push_token: null }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    // 3. Check if notifications are enabled FIRST (before DB insert)
+    // 3. Check global notifications
     if (!profile.notifications_enabled) {
-      console.log('⚠️ [PREF] notifications_enabled = false → Skip notification')
       return new Response(
-        JSON.stringify({ 
-          message: 'Notifications désactivées pour cet utilisateur', 
-          skipped: true,
-          stage: 'PREFS_DISABLED',
-          reason: 'Les notifications sont désactivées dans les préférences utilisateur',
-          push_token: profile.push_token || null
-        }),
+        JSON.stringify({ message: 'Notifications désactivées', skipped: true, stage: 'PREFS_DISABLED', push_token: profile.push_token }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    // 4. Check notification preferences by type BEFORE creating notification
-    const checkPreference = (notificationType: string): boolean => {
-      switch (notificationType) {
-        case 'message':
-          return profile.notif_message === true
-        case 'session_request':
-          return profile.notif_session_request === true  
-        case 'follow_request':
-          return profile.notif_follow_request === true
-        case 'friend_session':
-          return profile.notif_friend_session === true
-        case 'club_invitation':
-          return profile.notif_club_invitation === true
-        case 'session_accepted':
-          return profile.notif_session_accepted === true
-        case 'presence_confirmed':
-          return profile.notif_presence_confirmed === true
-        default:
-          return true // Default enabled for other types
-      }
-    }
+    // 4. Check per-type preferences
+    const prefMap: Record<string, boolean | null> = {
+      message: profile.notif_message,
+      session_request: profile.notif_session_request,
+      follow_request: profile.notif_follow_request,
+      friend_session: profile.notif_friend_session,
+      club_invitation: profile.notif_club_invitation,
+      session_accepted: profile.notif_session_accepted,
+      presence_confirmed: profile.notif_presence_confirmed,
+    };
 
-    if (type && !checkPreference(type)) {
-      console.log(`⚠️ [PREF] notif_${type} = false → Skip notification`)
+    if (type && type in prefMap && prefMap[type] === false) {
       return new Response(
-        JSON.stringify({ 
-          message: `Notifications ${type} désactivées`, 
-          skipped: true,
-          stage: 'PREFS_DISABLED',
-          reason: `Les notifications de type '${type}' sont désactivées dans les préférences utilisateur`,
-          push_token: profile.push_token || null
-        }),
+        JSON.stringify({ message: `Notifications ${type} désactivées`, skipped: true, stage: 'PREFS_DISABLED', push_token: profile.push_token }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    // 5. Vérifier si c'est un appareil mobile avec push_token AVANT l'INSERT
-    const hasPushToken = profile.push_token && profile.push_token.length > 50;
-
-    if (!hasPushToken) {
-      console.log('⚠️ [TOKEN] No valid push_token → Skipping notification (web browser or no FCM registration)')
+    // 5. Check push token
+    if (!profile.push_token || profile.push_token.length < 50) {
       return new Response(
-        JSON.stringify({ 
-          success: false,
-          message: 'Pas de token FCM (navigateur web ou notifications non activées)',
-          web_only: true,
-          stage: 'TOKEN_CHECK',
-          reason: 'Aucun token FCM trouvé. L\'app n\'est peut-être pas installée, ou Firebase n\'a pas généré de token.',
-          push_token: profile.push_token || null
-        }),
+        JSON.stringify({ success: false, message: 'Pas de token FCM', web_only: true, stage: 'TOKEN_CHECK', push_token: null }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    // 6. Create notification record ONLY if we have a push token
-    const { data: notificationData, error: notifError } = await supabaseClient
+    // 6. Create notification record
+    const { data: notifData, error: notifError } = await supabaseClient
       .from('notifications')
-      .insert({
-        user_id,
-        title,
-        message: body,
-        type: type || 'info',
-        data: data || {}
-      })
+      .insert({ user_id, title, message: body, type: type || 'info', data: data || {} })
       .select('id')
-      .single()
+      .single();
 
-    let notificationId: string | null = null;
     if (notifError) {
-      console.error('❌ [DB] Error creating notification:', notifError)
       return new Response(
-        JSON.stringify({ 
-          error: 'Erreur lors de la création de la notification en base',
-          stage: 'DB_INSERT',
-          reason: 'Échec de l\'insertion de la notification dans la base de données',
-          push_token: profile.push_token || null
-        }),
+        JSON.stringify({ error: 'Erreur création notification', stage: 'DB_INSERT', push_token: profile.push_token }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } else {
-      notificationId = notificationData?.id;
-      console.log('✅ [DB] Notification saved with ID:', notificationId)
+      );
     }
 
-    // 7. Get Firebase access token and send FCM push notification
-    console.log('🔐 [AUTH] Getting Firebase access token...');
-    console.log('📋 [AUTH] Project ID:', serviceAccount.project_id);
-    console.log('📋 [AUTH] Client email:', serviceAccount.client_email);
-    
-    // Customize notification content based on type
+    const notificationId = notifData?.id;
+
+    // 7. Customize content by type
     let finalTitle = title;
     let finalBody = body;
-    let fcmData = { ...data, type: type || 'info' };
+    const fcmData = { ...data, type: type || 'info' };
 
-    // Handle different notification types with enhanced messaging
     if (type && data) {
       switch (type) {
         case 'message':
           finalTitle = 'Nouveau message';
           finalBody = `${data.sender_name || 'Quelqu\'un'} vous a envoyé un message`;
-          if (data.message_preview) {
-            finalBody += `: ${data.message_preview.length > 50 ? data.message_preview.substring(0, 50) + '...' : data.message_preview}`;
-          }
+          if (data.message_preview) finalBody += `: ${data.message_preview.substring(0, 50)}`;
           break;
-          
         case 'friend_session':
           finalTitle = 'Session d\'ami créée';
-          finalBody = `${data.organizer_name || 'Un ami'} a créé une session: ${data.session_title || 'Session'}`;
+          finalBody = `${data.organizer_name || 'Un ami'} a créé: ${data.session_title || 'Session'}`;
           break;
-          
         case 'follow_request':
           finalTitle = 'Demande de suivi';
           finalBody = `${data.follower_name || 'Quelqu\'un'} souhaite vous suivre`;
           break;
-          
         case 'session_request':
           finalTitle = 'Demande de participation';
           finalBody = `${data.requester_name || 'Quelqu\'un'} souhaite rejoindre votre session`;
           break;
-          
         case 'club_invitation':
           finalTitle = 'Invitation à un club';
           finalBody = `${data.inviter_name || 'Quelqu\'un'} vous invite à rejoindre "${data.club_name || 'un club'}"`;
           break;
-          
         case 'session_accepted':
           finalTitle = 'Session acceptée';
-          finalBody = `${data.participant_name || 'Quelqu\'un'} a rejoint votre session: ${data.session_title || 'Session'}`;
+          finalBody = `${data.participant_name || 'Quelqu\'un'} a rejoint: ${data.session_title || 'Session'}`;
           break;
-          
         case 'presence_confirmed':
           finalTitle = 'Présence confirmée';
-          finalBody = `${data.organizer_name || 'L\'organisateur'} a confirmé votre présence à: ${data.session_title || 'Session'}`;
-          break;
-          
-        default:
-          // Use original payload values
+          finalBody = `${data.organizer_name || 'L\'organisateur'} a confirmé votre présence`;
           break;
       }
     }
-    
+
+    // 8. Send FCM
     try {
-      console.log('1️⃣ [FCM] Génération du JWT Firebase...');
       const accessToken = await getFirebaseAccessToken(serviceAccount);
-      console.log('✅ [FCM] Access token obtenu, longueur:', accessToken.length);
-      console.log('📋 [FCM] Token preview:', accessToken.substring(0, 50) + '...');
-      
-      console.log('2️⃣ [FCM] Envoi de la notification...');
-      console.log('📋 [FCM] Project ID:', serviceAccount.project_id);
-      console.log('📋 [FCM] Push token (user):', profile.push_token.substring(0, 30) + '...');
-      console.log('📋 [FCM] Full token length:', profile.push_token.length);
-      console.log('📋 [FCM] Channel ID: runconnect_channel');
-      console.log('📋 [FCM] Title:', finalTitle);
-      console.log('📋 [FCM] Body preview:', finalBody.substring(0, 100));
-      console.log('📋 [FCM] Data:', JSON.stringify(fcmData));
-      
-      console.log('3️⃣ [FCM] Appel API FCM...');
+      console.log('📤 [FCM] Sending | channel: high_importance_channel | title:', finalTitle);
+
       const fcmResult = await sendFCMNotification(
-        accessToken,
-        serviceAccount.project_id,
-        profile.push_token,
-        finalTitle,
-        finalBody,
-        fcmData
+        accessToken, serviceAccount.project_id, profile.push_token, finalTitle, finalBody, fcmData
       );
-      
-      // 🔥 Handle UNREGISTERED token cleanup
+
+      // Handle UNREGISTERED token
       if (typeof fcmResult === 'object' && fcmResult.unregistered) {
-        console.log('🗑️ [CLEANUP] Removing invalid push_token from database');
-        try {
-          await supabaseClient
-            .from('profiles')
-            .update({ push_token: null, push_token_updated_at: null })
-            .eq('user_id', user_id);
-          console.log('✅ [CLEANUP] Invalid token removed from database');
-        } catch (cleanupErr) {
-          console.error('❌ [CLEANUP] Failed to remove invalid token:', cleanupErr);
-        }
-        
-        // Log the failed attempt
+        console.log('🗑️ [CLEANUP] Removing invalid token');
+        await supabaseClient.from('profiles').update({ push_token: null, push_token_updated_at: null }).eq('user_id', user_id);
+
         if (notificationId) {
-          try {
-            await supabaseClient
-              .from('notification_logs')
-              .insert({
-                notification_id: notificationId,
-                user_id,
-                push_token: profile.push_token,
-                fcm_success: false,
-                fcm_error: 'UNREGISTERED - Token cleaned from database',
-                fcm_response: { error: 'UNREGISTERED', type, title: finalTitle }
-              });
-          } catch (logErr) {
-            console.error('❌ Failed to log notification:', logErr);
-          }
+          await supabaseClient.from('notification_logs').insert({
+            notification_id: notificationId, user_id, push_token: profile.push_token,
+            fcm_success: false, fcm_error: 'UNREGISTERED', fcm_response: { error: 'UNREGISTERED', type }
+          }).catch(() => {});
         }
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'Token FCM invalide, nettoyé de la base',
-            token_cleaned: true,
-            stage: 'FCM_UNREGISTERED',
-            reason: 'Token UNREGISTERED supprimé (app désinstallée ou token expiré)',
-            push_token: profile.push_token
-          }),
+          JSON.stringify({ success: false, message: 'Token invalide, nettoyé', token_cleaned: true, stage: 'FCM_UNREGISTERED', push_token: profile.push_token }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const fcmSuccess = typeof fcmResult === 'boolean' ? fcmResult : false;
-      console.log('📊 [FCM] Result:', fcmSuccess ? '✅ SUCCESS' : '❌ FAILED');
 
-      // Log notification attempt
+      // Log attempt
       if (notificationId) {
-        try {
-          await supabaseClient
-            .from('notification_logs')
-            .insert({
-              notification_id: notificationId,
-              user_id,
-              push_token: profile.push_token,
-              fcm_success: fcmSuccess,
-              fcm_error: fcmSuccess ? null : 'FCM send failed',
-              fcm_response: { type, title: finalTitle, body: finalBody }
-            });
-          console.log('✅ [LOG] Notification logged');
-        } catch (logErr) {
-          console.error('❌ [LOG] Failed to log notification:', logErr);
-        }
+        await supabaseClient.from('notification_logs').insert({
+          notification_id: notificationId, user_id, push_token: profile.push_token,
+          fcm_success: fcmSuccess, fcm_error: fcmSuccess ? null : 'FCM send failed',
+          fcm_response: { type, title: finalTitle }
+        }).catch(() => {});
       }
 
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: fcmSuccess ? 'Notification push envoyée avec succès' : 'Notification créée, échec envoi push',
-          fcm_sent: fcmSuccess,
-          token_preview: profile.push_token.substring(0, 20) + '...',
-          type,
-          preferences_checked: true,
-          project_id: serviceAccount.project_id,
-          stage: fcmSuccess ? 'FCM_SEND' : 'FCM_FAILED',
-          reason: fcmSuccess ? 'Notification FCM envoyée avec succès' : 'Échec de l\'envoi FCM',
-          push_token: profile.push_token
+        JSON.stringify({
+          success: true, fcm_sent: fcmSuccess, type, stage: fcmSuccess ? 'FCM_SEND' : 'FCM_FAILED',
+          reason: fcmSuccess ? 'OK' : 'FCM send failed', push_token: profile.push_token
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     } catch (fcmError) {
-      console.error('❌ [FCM ERROR] Exception lors de l\'envoi FCM');
-      console.error('📋 [FCM ERROR] Error type:', typeof fcmError);
-      console.error('📋 [FCM ERROR] Error message:', fcmError instanceof Error ? fcmError.message : String(fcmError));
-      console.error('📋 [FCM ERROR] Full error:', fcmError);
-      console.error('📋 [FCM ERROR] Stack trace:', fcmError instanceof Error ? fcmError.stack : 'N/A');
-      
-      // Log the error
+      console.error('❌ [FCM] Exception:', fcmError);
+
       if (notificationId) {
-        try {
-          await supabaseClient
-            .from('notification_logs')
-            .insert({
-              notification_id: notificationId,
-              user_id,
-              push_token: profile.push_token,
-              fcm_success: false,
-              fcm_error: String(fcmError),
-              fcm_response: { error: String(fcmError) }
-            });
-        } catch (logErr) {
-          console.error('❌ Failed to log error:', logErr);
-        }
+        await supabaseClient.from('notification_logs').insert({
+          notification_id: notificationId, user_id, push_token: profile.push_token,
+          fcm_success: false, fcm_error: String(fcmError), fcm_response: { error: String(fcmError) }
+        }).catch(() => {});
       }
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Notification créée en base, erreur envoi push',
-          fcm_sent: false,
-          fcm_error: String(fcmError),
-          type,
-          stage: 'FCM_EXCEPTION',
-          reason: `Exception lors de l'envoi FCM: ${fcmError instanceof Error ? fcmError.message : String(fcmError)}`,
-          push_token: profile.push_token
-        }),
+        JSON.stringify({ success: true, fcm_sent: false, fcm_error: String(fcmError), stage: 'FCM_EXCEPTION', push_token: profile.push_token }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
   } catch (error) {
-    console.error('❌ [GENERAL ERROR] Exception globale dans la fonction');
-    console.error('📋 [GENERAL ERROR] Error type:', typeof error);
-    console.error('📋 [GENERAL ERROR] Error message:', error instanceof Error ? error.message : String(error));
-    console.error('📋 [GENERAL ERROR] Full error:', error);
-    console.error('📋 [GENERAL ERROR] Stack trace:', error instanceof Error ? error.stack : 'N/A');
-    
+    console.error('❌ [GENERAL] Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Erreur serveur interne', 
-        details: error instanceof Error ? error.message : String(error),
-        type: typeof error,
-        stage: 'GENERAL_ERROR',
-        reason: `Exception globale: ${error instanceof Error ? error.message : String(error)}`,
-        push_token: null
-      }),
+      JSON.stringify({ error: 'Erreur serveur interne', details: String(error), stage: 'GENERAL_ERROR', push_token: null }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
   }
-})
+});
