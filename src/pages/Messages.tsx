@@ -1571,15 +1571,15 @@ const Messages = () => {
     
     return (
       <>
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-background">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* iMessage Style Header */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-[#F9F9F9] border-b border-[#E5E5EA] z-50">
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-secondary border-b border-border z-50">
             <div className="flex items-center px-2 py-2">
               {/* Back button - Left */}
               <button
                 onClick={() => setSelectedConversation(null)}
-                className="flex items-center text-[#007AFF] shrink-0 p-2 -ml-2"
+                className="flex items-center text-primary shrink-0 p-2 -ml-2"
               >
                 <ArrowLeft className="h-6 w-6" strokeWidth={2.5} />
               </button>
@@ -1602,11 +1602,11 @@ const Messages = () => {
                   >
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                      <AvatarFallback className="bg-[#E5E5EA] text-[#8E8E93]">
+                      <AvatarFallback className="bg-border text-muted-foreground">
                         <Users className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
-                    <p className="font-semibold text-[13px] text-black mt-0.5">{selectedConversation.group_name}</p>
+                    <p className="font-semibold text-[13px] text-foreground mt-0.5">{selectedConversation.group_name}</p>
                   </div>
                 ) : (
                   <div 
@@ -1619,13 +1619,13 @@ const Messages = () => {
                     <div className="relative">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                        <AvatarFallback className="bg-[#E5E5EA] text-[#8E8E93] text-[13px]">
+                        <AvatarFallback className="bg-border text-muted-foreground text-[13px]">
                           {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} className="w-2 h-2" />
                     </div>
-                    <p className="font-semibold text-[13px] text-black mt-0.5">
+                    <p className="font-semibold text-[13px] text-foreground mt-0.5">
                       {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
                     </p>
                   </div>
@@ -1635,17 +1635,17 @@ const Messages = () => {
               {/* Right - Info button */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-2 text-[#007AFF] shrink-0">
+                  <button className="p-2 text-primary shrink-0">
                     <MoreVertical className="h-5 w-5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white border border-[#E5E5EA] rounded-[14px] shadow-lg">
+                <DropdownMenuContent align="end" className="w-56 bg-card border border-border rounded-[14px] shadow-lg">
                   {!selectedConversation.is_group && (
                     <DropdownMenuItem 
                       onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
                       className="py-3"
                     >
-                      <User className="h-4 w-4 mr-3 text-[#007AFF]" />
+                      <User className="h-4 w-4 mr-3 text-primary" />
                       Voir le profil
                     </DropdownMenuItem>
                   )}
@@ -1657,7 +1657,7 @@ const Messages = () => {
                     }}
                     className="py-3"
                   >
-                    <Users className="h-4 w-4 mr-3 text-[#007AFF]" />
+                    <Users className="h-4 w-4 mr-3 text-primary" />
                     Créer un groupe
                   </DropdownMenuItem>
                   
@@ -1669,7 +1669,7 @@ const Messages = () => {
                       <span className="mr-3 text-lg">{isMuted ? "🔔" : "🔕"}</span>
                       <span>Notifications</span>
                     </div>
-                    <span className="text-xs text-[#8E8E93]">
+                     <span className="text-xs text-muted-foreground">
                       {isMuted ? "On" : "Off"}
                     </span>
                   </DropdownMenuItem>
@@ -1682,14 +1682,14 @@ const Messages = () => {
                       <span className="mr-3 text-lg">📌</span>
                       <span>Épingler</span>
                     </div>
-                    <span className="text-xs text-[#8E8E93]">
+                    <span className="text-xs text-muted-foreground">
                       {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
                     </span>
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
                     onClick={() => confirmDeleteConversation()}
-                    className="py-3 text-[#FF3B30] focus:text-[#FF3B30]"
+                    className="py-3 text-destructive focus:text-destructive"
                   >
                     <Trash2 className="h-4 w-4 mr-3" />
                     {selectedConversation.is_group && selectedConversation.created_by !== user?.id 
@@ -1744,7 +1744,7 @@ const Messages = () => {
                         {/* Show sender info only for groups, not for DMs (iMessage style) */}
                         {shouldShowSenderInfo && (
                           <div className="flex items-center gap-2 mb-1 ml-1">
-                            <span className="text-[11px] text-[#8E8E93] font-medium">
+                            <span className="text-[11px] text-muted-foreground font-medium">
                               {message.sender.username || message.sender.display_name}
                             </span>
                           </div>
@@ -1753,7 +1753,7 @@ const Messages = () => {
                         {/* Individual timestamp - iMessage style pill */}
                         {showIndividualTime && (
                           <div className={`absolute -bottom-5 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
-                            <span className="text-[11px] text-[#8E8E93]">
+                            <span className="text-[11px] text-muted-foreground">
                               {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
                             </span>
                           </div>
@@ -1853,8 +1853,8 @@ const Messages = () => {
                                           <span className="text-xs text-muted-foreground truncate">{message.session.location_name}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <div className="w-5 h-5 rounded-md bg-[#007AFF]/10 flex items-center justify-center">
-                                            <Users className="h-3 w-3 text-[#007AFF]" />
+                                          <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center">
+                                            <Users className="h-3 w-3 text-primary" />
                                           </div>
                                           <span className="text-xs text-muted-foreground">{message.session.current_participants}/{message.session.max_participants} participants</span>
                                         </div>
@@ -2040,7 +2040,7 @@ const Messages = () => {
 
            {/* iMessage Style Input */}
           <div 
-            className="sticky bottom-0 w-full px-2 py-2 bg-[#F9F9F9] border-t border-[#E5E5EA] z-40 keyboard-input-container"
+            className="sticky bottom-0 w-full px-2 py-2 bg-secondary border-t border-border z-40 keyboard-input-container"
             style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
           >
             {/* Reply Preview */}
@@ -2057,7 +2057,7 @@ const Messages = () => {
                 ref={emojiPickerRef}
                 className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
               >
-                <div className="bg-white rounded-2xl shadow-xl border border-[#E5E5EA]">
+                <div className="bg-card rounded-2xl shadow-xl border border-border">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
                     theme={Theme.LIGHT}
@@ -2071,9 +2071,9 @@ const Messages = () => {
             )}
             
             {uploadProgress && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-[#E5E5EA] rounded-full mb-2 mx-2">
-                <div className="w-3 h-3 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
-                <span className="text-[13px] text-[#8E8E93]">{uploadProgress}</span>
+               <div className="flex items-center gap-2 px-4 py-2 bg-border rounded-full mb-2 mx-2">
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
               </div>
             )}
             
@@ -2084,18 +2084,18 @@ const Messages = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button 
-                        className="w-8 h-8 flex items-center justify-center text-[#007AFF] shrink-0"
+                         className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
                         disabled={isLoading}
                       >
                         <Plus className="h-6 w-6" strokeWidth={2} />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48 bg-white border border-[#E5E5EA] rounded-[14px] shadow-lg">
+                    <DropdownMenuContent align="start" className="w-48 bg-card border border-border rounded-[14px] shadow-lg">
                       <DropdownMenuItem 
                         onClick={() => fileInputRef.current?.click()}
                         className="py-3"
                       >
-                        <Paperclip className="h-4 w-4 mr-3 text-[#007AFF]" />
+                        <Paperclip className="h-4 w-4 mr-3 text-primary" />
                         Fichier
                       </DropdownMenuItem>
                       <DropdownMenuItem 
@@ -2150,7 +2150,7 @@ const Messages = () => {
                   />
                   
                   {/* iMessage input field */}
-                  <div className="flex-1 flex items-center bg-white border border-[#E5E5EA] rounded-full px-4 py-2">
+                  <div className="flex-1 flex items-center bg-card border border-border rounded-full px-4 py-2">
                     <input
                       type="text"
                       placeholder="iMessage"
@@ -2160,7 +2160,7 @@ const Messages = () => {
                         handleTyping();
                       }}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 bg-transparent text-[17px] text-black placeholder:text-[#8E8E93] outline-none"
+                      className="flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground outline-none"
                       disabled={isLoading}
                     />
                   </div>
@@ -2170,7 +2170,7 @@ const Messages = () => {
                     <button
                       onClick={sendMessage}
                       disabled={loading || !newMessage.trim()}
-                      className="w-8 h-8 flex items-center justify-center bg-[#007AFF] rounded-full shrink-0 disabled:opacity-50"
+                      className="w-8 h-8 flex items-center justify-center bg-primary rounded-full shrink-0 disabled:opacity-50"
                     >
                       <Send className="h-4 w-4 text-white" />
                     </button>
@@ -2178,7 +2178,7 @@ const Messages = () => {
                     <button
                       onClick={handleVoiceRecording}
                       disabled={loading}
-                      className="w-8 h-8 flex items-center justify-center text-[#007AFF] shrink-0"
+                      className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
                     >
                       <Mic className="h-6 w-6" />
                     </button>
@@ -2187,25 +2187,25 @@ const Messages = () => {
               )}
               
               {isRecording && (
-                <div className="flex-1 flex items-center gap-3">
-                  <div className="flex-1 flex items-center gap-2 bg-[#FFEBEE] border border-[#FF3B30]/30 rounded-full px-4 py-2">
-                    <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full animate-pulse" />
-                    <span className="text-[15px] font-medium text-[#FF3B30]">
-                      {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-                    </span>
-                    <span className="text-[13px] text-[#8E8E93] flex-1">
+                 <div className="flex-1 flex items-center gap-3">
+                   <div className="flex-1 flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-full px-4 py-2">
+                     <div className="w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
+                     <span className="text-[15px] font-medium text-destructive">
+                       {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                     </span>
+                     <span className="text-[13px] text-muted-foreground flex-1">
                       Enregistrement...
                     </span>
                   </div>
                   <button
                     onClick={cancelRecording}
-                    className="w-8 h-8 flex items-center justify-center text-[#8E8E93]"
+                    className="w-8 h-8 flex items-center justify-center text-muted-foreground"
                   >
                     <X className="h-5 w-5" />
                   </button>
                   <button
                     onClick={handleVoiceRecording}
-                    className="w-8 h-8 flex items-center justify-center bg-[#FF3B30] rounded-full"
+                    className="w-8 h-8 flex items-center justify-center bg-destructive rounded-full"
                   >
                     <Square className="h-4 w-4 text-white" />
                   </button>
@@ -2224,7 +2224,7 @@ const Messages = () => {
       <div className="min-h-screen bg-secondary">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
+          <div className="px-4 pt-4 pt-safe pb-4 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
                 <Button

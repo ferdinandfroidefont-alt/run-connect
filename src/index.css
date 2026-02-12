@@ -180,6 +180,11 @@
   }
 }
 
+/* Shimmer animation for skeleton loaders */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
 /* iOS Animations - Subtle and fast */
 @keyframes fadeIn {
   from { opacity: 0; }
