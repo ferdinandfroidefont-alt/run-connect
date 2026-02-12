@@ -1,66 +1,95 @@
 
+# Refonte du systeme de notifications push
 
-# Rendre RunConnect solide comme une app mondiale
+## Diagnostic : problemes identifies
 
-## Le probleme
+### 1. Fichier monstre ingerable (1362 lignes)
+`usePushNotifications.tsx` fait 1362 lignes avec 7+ useEffects qui font tous la meme chose : verifier le token, le sauvegarder, le recuperer. C'est du code spaghetti avec des mecanismes de retry qui se marchent dessus.
 
-L'app a un bon design de base (style iOS, couleurs pastel, typographie SF Pro), mais plusieurs details cassent l'impression de solidite :
+### 2. Inconsistance channel_id
+- Le payload FCM dans l'edge function utilise correctement `high_importance_channel` (ligne 169)
+- Mais le log de debug a la ligne 503 affiche `runconnect_channel` et le log d'erreur ligne 216 aussi
+- Le `MessagingService.java` utilise `high_importance_channel` -- c'est correct
+- Ces logs trompeurs peuvent causer de la confusion lors du debug
 
-1. **Pas de transitions entre les pages** -- les pages apparaissent brutalement, sans animation
-2. **Pas de skeleton loaders partout** -- certaines pages (Messages, Leaderboard, Profile) montrent un ecran vide ou un simple spinner pendant le chargement
-3. **Inconsistances visuelles** -- le fond du header Messages est `#F9F9F9` code en dur, pas la variable CSS ; les couleurs sont hardcodees (`#007AFF`, `#E5E5EA`) au lieu d'utiliser le design system
-4. **Pas de micro-interactions** -- les boutons n'ont pas de feedback tactile (haptic), pas de `active:scale-95` generalise
-5. **Le loading screen initial** change de phrase toutes les 500ms (trop rapide, stressant) et la barre avance artificiellement
-6. **Pas de safe area padding** sur les headers (encoche iPhone)
-7. **La bottom nav** n'a pas de backdrop blur (les apps pro comme Instagram utilisent `backdrop-blur`)
-8. **Les empty states** sont trop simples (juste une icone + texte, pas d'illustration ni de CTA clair)
+### 3. Boucles de retry redondantes
+Le hook a 5 mecanismes de recovery qui se chevauchent :
+- `pendingToken` useEffect (ligne 982)
+- `userAuthenticatedWithFCMToken` listener (ligne 991)
+- `ensureFCMTokenSaved` avec retry 2s (ligne 1022)
+- `fcmTokenReady` listener (ligne 1089)
+- `initializePushNotifications` au montage (ligne 1186)
 
-## Plan d'action -- 7 ameliorations ciblees
+Resultat : le token est parfois sauvegarde 3 fois en parallele, et les toasts "Token FCM recupere" apparaissent de maniere intempestive.
 
-### 1. Transitions de pages fluides
-Ajouter un wrapper `PageTransition` avec un fade-in subtil (200ms) autour de chaque page dans `Layout.tsx`. Toutes les pages apparaitront avec une animation douce au lieu d'un affichage brut.
+### 4. Logs excessifs en production
+Plus de 100 `console.log` et `console.error` dans le hook -- acceptable en debug mais pas pour une app mondiale.
 
-### 2. Bottom Navigation premium
-- Ajouter `backdrop-blur-xl` + `bg-background/80` pour un effet verre depoli
-- Ajouter `active:scale-90 transition-transform` sur chaque bouton de navigation
-- Ajouter un indicateur de page active (un petit point sous l'icone au lieu de juste changer la couleur)
-
-### 3. Skeleton loaders sur Messages
-Remplacer le spinner de chargement des conversations par des squelettes realistes (avatar rond + 2 lignes de texte), exactement comme iMessage au chargement.
-
-### 4. Micro-interactions globales
-- Ajouter `active:scale-[0.97]` sur toutes les cartes cliquables
-- Ajouter `transition-all duration-150` sur les elements interactifs
-- Vibration haptique (via `navigator.vibrate(1)`) au tap sur les boutons principaux
-
-### 5. Loading screen plus pro
-- Ralentir les phrases (1.5s au lieu de 500ms)
-- Ajouter un effet de fondu entre les phrases
-- Rendre la progression plus naturelle (ease-out au lieu de lineaire)
-
-### 6. Headers avec safe area
-Ajouter `pt-safe` (padding-top pour l'encoche) sur tous les headers fixes (Messages, Feed, Leaderboard) pour que le contenu ne passe jamais sous l'encoche.
-
-### 7. Nettoyage des couleurs hardcodees
-Remplacer les couleurs codees en dur (`#007AFF`, `#E5E5EA`, `#8E8E93`, `#F9F9F9`) par les variables CSS du design system (`text-primary`, `border-border`, `text-muted-foreground`, `bg-secondary`) pour garantir la coherence et preparer le dark mode.
+### 5. Edge function solide mais perfectible
+- Le nettoyage des tokens UNREGISTERED est bon
+- Le retry avec backoff exponentiel est bon
+- Manque : cache du Firebase access token (regenere a chaque appel = ~500ms perdu)
 
 ---
 
-## Details techniques
+## Plan de correction
 
-### Fichiers modifies
+### Etape 1 : Simplifier usePushNotifications.tsx
+Reduire de 1362 a ~400 lignes en :
+- Fusionnant les 5 mecanismes de recovery en un seul flux clair : `init -> check permissions -> get token -> save token`
+- Supprimant les useEffects redondants (garder 3 max : init, token recovery, app resume)
+- Remplacant les 100+ console.log par un helper `log()` qui ne log qu'en mode debug
+- Gardant la logique de detection native mais en la simplifiant (un seul check au lieu de re-verifier 20 fois)
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/components/Layout.tsx` | Wrapper PageTransition avec animate-fade-in |
-| `src/components/BottomNavigation.tsx` | Backdrop blur, active states, dot indicator |
-| `src/pages/Messages.tsx` | Skeleton loaders, remplacement couleurs hardcodees, safe area header |
-| `src/pages/Feed.tsx` | Safe area header |
-| `src/pages/Leaderboard.tsx` | Safe area header |
-| `src/components/LoadingScreen.tsx` | Ralentir phrases, smooth progression |
-| `src/components/feed/FeedHeader.tsx` | Safe area padding |
-| `src/index.css` | Classe utilitaire PageTransition |
+Architecture cible du hook :
 
-### Pas de nouvelles dependances
-Tout est fait avec Tailwind CSS et les animations deja en place.
+```text
+usePushNotifications
+  |
+  |-- useEffect #1 : Init (une seule fois)
+  |     check permissions -> setup listeners -> register si granted
+  |
+  |-- useEffect #2 : Token recovery (quand user change)
+  |     si user + isNative + pas de token -> verifier window.fcmToken -> sauvegarder
+  |
+  |-- useEffect #3 : App resume
+  |     quand app revient au premier plan -> re-verifier token
+  |
+  |-- savePushToken() : simplifie, un seul try/catch, pas de retry RLS infini
+  |-- requestPermissions() : garde la logique iOS/Android
+  |-- testNotification() : simplifie
+```
 
+### Etape 2 : Corriger les logs channel_id dans l'edge function
+- Ligne 169 : `channel_id: 'high_importance_channel'` -- deja correct, ne pas toucher
+- Ligne 216 et 503 : corriger les logs de debug pour afficher `high_importance_channel` au lieu de `runconnect_channel`
+
+### Etape 3 : Cache du Firebase access token dans l'edge function
+Ajouter un cache en memoire du token OAuth2 Firebase (expire apres 50 min au lieu de 1h par securite). Cela evite de regenerer un JWT + appeler Google OAuth2 a chaque notification.
+
+### Etape 4 : Supprimer les toasts intempestifs
+- Supprimer le toast "Token FCM recupere" qui s'affiche a chaque demarrage
+- Supprimer le toast "Session non prete, retry dans 2s"
+- Garder uniquement les toasts explicitement declenches par l'utilisateur (bouton test, activation manuelle)
+
+### Etape 5 : Nettoyage SettingsNotifications
+- Remplacer les couleurs hardcodees (`#007AFF`, `#FF3B30`, etc.) par les variables du design system
+- Coherence avec le nettoyage fait sur Messages.tsx
+
+---
+
+## Fichiers modifies
+
+| Fichier | Action |
+|---------|--------|
+| `src/hooks/usePushNotifications.tsx` | Refonte complete (~400 lignes au lieu de 1362) |
+| `supabase/functions/send-push-notification/index.ts` | Fix logs channel_id + cache token Firebase |
+| `src/components/settings/SettingsNotifications.tsx` | Nettoyage couleurs hardcodees |
+| `src/hooks/useSendNotification.ts` | Inchange (deja propre) |
+
+## Ce qui ne change PAS
+- `MessagingService.java` -- deja correct, zone protegee
+- `AndroidManifest.xml` -- zone protegee
+- `google-services.json` -- zone protegee
+- L'architecture globale (UI -> Edge Function -> FCM) reste identique
+- Les preferences de notification par type restent identiques
