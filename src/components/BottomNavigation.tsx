@@ -64,22 +64,23 @@ export const BottomNavigation = () => {
   if (hideBottomNav) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background pb-2">
-      <div className="h-px bg-border" />
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl pb-2">
+      <div className="h-px bg-border/50" />
       <div className="grid grid-cols-5 items-center h-[72px]">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const tutorialId = path === '/my-sessions' ? 'nav-sessions' : undefined;
           return (
-            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-1" data-tutorial={tutorialId}>
+            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-1 active:scale-90 transition-transform" data-tutorial={tutorialId}>
               <Icon className={`h-7 w-7 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className={`text-xs mt-1 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
+              <span className={`text-[10px] mt-0.5 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
+              {isActive && <div className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
             </button>
           );
         })}
 
         <div className="flex items-center justify-center">
-          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-14 w-14 rounded-full bg-primary flex items-center justify-center active:opacity-70 shadow-lg" data-tutorial="create-session">
+          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-14 w-14 rounded-full bg-primary flex items-center justify-center active:scale-90 transition-transform shadow-lg" data-tutorial="create-session">
             <Plus className="h-7 w-7 text-primary-foreground" strokeWidth={2.5} />
           </button>
         </div>
@@ -89,12 +90,13 @@ export const BottomNavigation = () => {
           const showBadge = path === '/messages' && totalUnreadCount > 0;
           const tutorialId = path === '/messages' ? 'nav-messages' : path === '/feed' ? 'nav-feed' : undefined;
           return (
-            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-1 relative" data-tutorial={tutorialId}>
+            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-1 relative active:scale-90 transition-transform" data-tutorial={tutorialId}>
               <div className="relative">
                 <Icon className={`h-7 w-7 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
                 {showBadge && <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-destructive text-destructive-foreground text-[11px] font-semibold rounded-full px-1">{totalUnreadCount > 99 ? '99+' : totalUnreadCount}</span>}
               </div>
-              <span className={`text-xs mt-1 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
+              <span className={`text-[10px] mt-0.5 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
+              {isActive && <div className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
             </button>
           );
         })}

@@ -18,23 +18,31 @@ interface LoadingScreenProps {
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [progress, setProgress] = useState(0);
   const [currentPhrase, setCurrentPhrase] = useState(loadingPhrases[0]);
+  const [phraseOpacity, setPhraseOpacity] = useState(1);
 
   useEffect(() => {
-    // Progress animation
+    // Smooth eased progress
+    let elapsed = 0;
+    const duration = 2800;
     const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 50);
+      elapsed += 30;
+      const t = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setProgress(Math.round(eased * 100));
+      if (t >= 1) clearInterval(progressInterval);
+    }, 30);
 
-    // Change phrase every 500ms
+    // Change phrase every 1.5s with fade
+    let phraseIndex = 0;
     const phraseInterval = setInterval(() => {
-      setCurrentPhrase(loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)]);
-    }, 500);
+      setPhraseOpacity(0);
+      setTimeout(() => {
+        phraseIndex = (phraseIndex + 1) % loadingPhrases.length;
+        setCurrentPhrase(loadingPhrases[phraseIndex]);
+        setPhraseOpacity(1);
+      }, 200);
+    }, 1500);
 
     return () => {
       clearInterval(progressInterval);
@@ -90,7 +98,10 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
         
         {/* Status phrase and percentage */}
         <div className="flex flex-col items-center gap-1">
-          <p className="text-muted-foreground text-[13px] text-center">
+          <p 
+            className="text-muted-foreground text-[13px] text-center transition-opacity duration-200"
+            style={{ opacity: phraseOpacity }}
+          >
             {currentPhrase}
           </p>
           <p className="text-primary text-[15px] font-semibold">
