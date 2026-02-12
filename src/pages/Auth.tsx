@@ -41,12 +41,18 @@ const Auth = () => {
       const createdTime = parseInt(profileCreatedAt, 10);
       const timeSinceCreation = Date.now() - createdTime;
       
-      // Si profil créé il y a moins de 30 secondes, forcer la redirection
+      // Si profil créé il y a moins de 30 secondes, vérifier la session puis rediriger
       if (timeSinceCreation < 30000) {
-        console.log('🔥 [Auth] Profil créé détecté, redirection forcée vers /');
-        localStorage.removeItem('profileCreatedSuccessfully');
-        localStorage.removeItem('profileCreatedAt');
-        window.location.href = '/';
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          localStorage.removeItem('profileCreatedSuccessfully');
+          localStorage.removeItem('profileCreatedAt');
+          if (session) {
+            console.log('🔥 [Auth] Profil créé + session active, redirection vers /');
+            window.location.href = '/';
+          } else {
+            console.log('⚠️ [Auth] Profil créé mais pas de session, l\'utilisateur doit se reconnecter');
+          }
+        });
         return;
       } else {
         // Nettoyer les vieux flags
@@ -311,9 +317,7 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // ✅ Nettoyer toute session existante avant vérification OTP
-      console.log('🧹 [AUTH] Cleaning existing session before OTP verification...');
-      await supabase.auth.signOut({ scope: 'local' });
+      // Note: Ne PAS faire signOut avant verifyOtp - cela détruit la session et empêche la persistance
       
       const { data, error } = await supabase.auth.verifyOtp({
         email,
@@ -850,13 +854,9 @@ const Auth = () => {
         userId={newUserId}
         email={email}
         onComplete={() => {
-          // 🔥 Redirection forcée après création du profil
-          console.log('✅ Profil créé - redirection vers /');
+          console.log('✅ Profil créé - redirection directe vers /');
           setShowProfileSetup(false);
-          // Utiliser setTimeout pour s'assurer que le dialog est fermé
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 100);
+          window.location.href = '/';
         }}
       />
     </div>

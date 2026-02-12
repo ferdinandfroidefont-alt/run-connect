@@ -464,33 +464,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         description: "Bienvenue dans RunConnect !"
       });
 
-      // ✅ FIX: Only use aggressive redirect when on Auth page
-      const isOnAuthPage = window.location.pathname === '/auth';
-
-      if (isOnAuthPage) {
-        // On Auth page: need to navigate away
-        console.log('✅ [ProfileSetup] Sur /auth - redirection vers /');
-        
-        const redirectNow = () => {
-          window.location.href = '/';
-        };
-
-        redirectNow();
-        setTimeout(redirectNow, 100);
-        setTimeout(redirectNow, 300);
-        setTimeout(redirectNow, 500);
-        setTimeout(redirectNow, 1000);
-
-        setTimeout(() => { window.location.replace('/'); }, 1500);
-        setTimeout(() => { window.location.assign('/'); }, 2000);
-      } else {
-        // Already on Index page: just close dialog via React state
-        console.log('✅ [ProfileSetup] Déjà sur / - fermeture dialog via React state');
-      }
-
-      // Close dialog and signal completion
+      // ✅ FIX: Déléguer la redirection au callback onComplete (géré par Auth.tsx)
+      // Un seul point de redirection = pas de race condition
+      console.log('✅ [ProfileSetup] Profil créé, délégation redirect à onComplete');
       onOpenChange(false);
-      if (onComplete) onComplete();
+      if (onComplete) {
+        onComplete();
+      } else {
+        // Fallback si pas de onComplete (ne devrait pas arriver)
+        window.location.href = '/';
+      }
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
