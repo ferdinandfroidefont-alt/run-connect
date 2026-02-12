@@ -1,95 +1,81 @@
 
-# Refonte du systeme de notifications push
 
-## Diagnostic : problemes identifies
+# Fix : Redirection bloquee apres creation de compte
 
-### 1. Fichier monstre ingerable (1362 lignes)
-`usePushNotifications.tsx` fait 1362 lignes avec 7+ useEffects qui font tous la meme chose : verifier le token, le sauvegarder, le recuperer. C'est du code spaghetti avec des mecanismes de retry qui se marchent dessus.
+## Probleme identifie
 
-### 2. Inconsistance channel_id
-- Le payload FCM dans l'edge function utilise correctement `high_importance_channel` (ligne 169)
-- Mais le log de debug a la ligne 503 affiche `runconnect_channel` et le log d'erreur ligne 216 aussi
-- Le `MessagingService.java` utilise `high_importance_channel` -- c'est correct
-- Ces logs trompeurs peuvent causer de la confusion lors du debug
+Apres avoir rempli le formulaire de creation de profil (`ProfileSetupDialog`), le profil est bien cree en base mais l'utilisateur reste bloque sur la page de creation. Le redirect vers `/` echoue silencieusement.
 
-### 3. Boucles de retry redondantes
-Le hook a 5 mecanismes de recovery qui se chevauchent :
-- `pendingToken` useEffect (ligne 982)
-- `userAuthenticatedWithFCMToken` listener (ligne 991)
-- `ensureFCMTokenSaved` avec retry 2s (ligne 1022)
-- `fcmTokenReady` listener (ligne 1089)
-- `initializePushNotifications` au montage (ligne 1186)
+### Causes racines
 
-Resultat : le token est parfois sauvegarde 3 fois en parallele, et les toasts "Token FCM recupere" apparaissent de maniere intempestive.
+1. **Chaos de redirections concurrentes** : `ProfileSetupDialog.handleSubmit()` (lignes 474-485) lance 6 tentatives de redirect (`href`, `replace`, `assign`) avec des `setTimeout` espaces de 100ms a 2s. Simultanement, le callback `onComplete` dans `Auth.tsx` (ligne 857) lance un 7eme redirect. Ces appels concurrents peuvent s'annuler ou creer des conditions de course.
 
-### 4. Logs excessifs en production
-Plus de 100 `console.log` et `console.error` dans le hook -- acceptable en debug mais pas pour une app mondiale.
+2. **`signOut` avant `verifyOtp`** (ligne 316 de Auth.tsx) : Appeler `signOut({ scope: 'local' })` juste avant la verification OTP detruit la session locale. Si `verifyOtp` echoue silencieusement a re-persister la session (surtout avec le WebViewStorage custom), le redirect vers `/` echoue car `Layout.tsx` ne trouve pas de session et renvoie vers `/auth`.
 
-### 5. Edge function solide mais perfectible
-- Le nettoyage des tokens UNREGISTERED est bon
-- Le retry avec backoff exponentiel est bon
-- Manque : cache du Firebase access token (regenere a chaque appel = ~500ms perdu)
+3. **Race condition dialog/state** : `onOpenChange(false)` est appele en meme temps que `onComplete()` et les redirects. Le dialog peut se fermer avant que le redirect ne s'execute, ou React peut re-render et perdre le contexte.
 
----
+## Solution
 
-## Plan de correction
+### Etape 1 : Supprimer le `signOut` avant `verifyOtp` dans Auth.tsx
+Le nettoyage de session local avant verification OTP n'est pas necessaire et peut casser la persistence. La verification OTP cree elle-meme une nouvelle session propre.
 
-### Etape 1 : Simplifier usePushNotifications.tsx
-Reduire de 1362 a ~400 lignes en :
-- Fusionnant les 5 mecanismes de recovery en un seul flux clair : `init -> check permissions -> get token -> save token`
-- Supprimant les useEffects redondants (garder 3 max : init, token recovery, app resume)
-- Remplacant les 100+ console.log par un helper `log()` qui ne log qu'en mode debug
-- Gardant la logique de detection native mais en la simplifiant (un seul check au lieu de re-verifier 20 fois)
+**Fichier** : `src/pages/Auth.tsx` (lignes 314-316)
+- Supprimer les 2 lignes `console.log` + `await supabase.auth.signOut({ scope: 'local' })` dans `handleOtpSubmit`
 
-Architecture cible du hook :
+### Etape 2 : Simplifier la redirection dans ProfileSetupDialog
+Remplacer les 6 tentatives de redirect (lignes 474-485) par un redirect unique et fiable. Si le premier echoue, utiliser un fallback a 500ms.
 
+**Fichier** : `src/components/ProfileSetupDialog.tsx` (lignes 468-493)
 ```text
-usePushNotifications
-  |
-  |-- useEffect #1 : Init (une seule fois)
-  |     check permissions -> setup listeners -> register si granted
-  |
-  |-- useEffect #2 : Token recovery (quand user change)
-  |     si user + isNative + pas de token -> verifier window.fcmToken -> sauvegarder
-  |
-  |-- useEffect #3 : App resume
-  |     quand app revient au premier plan -> re-verifier token
-  |
-  |-- savePushToken() : simplifie, un seul try/catch, pas de retry RLS infini
-  |-- requestPermissions() : garde la logique iOS/Android
-  |-- testNotification() : simplifie
+// AVANT : 6 redirects concurrents
+redirectNow();
+setTimeout(redirectNow, 100);
+setTimeout(redirectNow, 300);
+...
+
+// APRES : un seul redirect propre
+onOpenChange(false);
+if (onComplete) onComplete();
+// Le redirect est gere par onComplete dans Auth.tsx
 ```
 
-### Etape 2 : Corriger les logs channel_id dans l'edge function
-- Ligne 169 : `channel_id: 'high_importance_channel'` -- deja correct, ne pas toucher
-- Ligne 216 et 503 : corriger les logs de debug pour afficher `high_importance_channel` au lieu de `runconnect_channel`
+### Etape 3 : Renforcer le callback onComplete dans Auth.tsx
+Simplifier le callback pour faire un redirect unique et direct, sans setTimeout imbrique.
 
-### Etape 3 : Cache du Firebase access token dans l'edge function
-Ajouter un cache en memoire du token OAuth2 Firebase (expire apres 50 min au lieu de 1h par securite). Cela evite de regenerer un JWT + appeler Google OAuth2 a chaque notification.
+**Fichier** : `src/pages/Auth.tsx` (lignes 852-860)
+```text
+// AVANT
+onComplete={() => {
+  setShowProfileSetup(false);
+  setTimeout(() => { window.location.href = '/'; }, 100);
+}}
 
-### Etape 4 : Supprimer les toasts intempestifs
-- Supprimer le toast "Token FCM recupere" qui s'affiche a chaque demarrage
-- Supprimer le toast "Session non prete, retry dans 2s"
-- Garder uniquement les toasts explicitement declenches par l'utilisateur (bouton test, activation manuelle)
+// APRES
+onComplete={() => {
+  setShowProfileSetup(false);
+  window.location.href = '/';
+}}
+```
 
-### Etape 5 : Nettoyage SettingsNotifications
-- Remplacer les couleurs hardcodees (`#007AFF`, `#FF3B30`, etc.) par les variables du design system
-- Coherence avec le nettoyage fait sur Messages.tsx
+### Etape 4 : Ajouter un filet de securite dans le useEffect initial de Auth.tsx
+Le useEffect existant (lignes 36-56) detecte deja `profileCreatedSuccessfully` en localStorage mais ne verifie pas la session. Ajouter une verification de session pour etre sur que le redirect peut fonctionner.
+
+**Fichier** : `src/pages/Auth.tsx` (lignes 40-49)
+- Ajouter un check `supabase.auth.getSession()` avant le redirect force
+- Si pas de session mais profil cree, laisser l'utilisateur se reconnecter au lieu de boucler
 
 ---
 
 ## Fichiers modifies
 
-| Fichier | Action |
-|---------|--------|
-| `src/hooks/usePushNotifications.tsx` | Refonte complete (~400 lignes au lieu de 1362) |
-| `supabase/functions/send-push-notification/index.ts` | Fix logs channel_id + cache token Firebase |
-| `src/components/settings/SettingsNotifications.tsx` | Nettoyage couleurs hardcodees |
-| `src/hooks/useSendNotification.ts` | Inchange (deja propre) |
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/Auth.tsx` | Supprimer signOut avant verifyOtp, simplifier onComplete callback, renforcer filet de securite |
+| `src/components/ProfileSetupDialog.tsx` | Supprimer les 6 redirects concurrents, deleguer le redirect a onComplete |
 
 ## Ce qui ne change PAS
-- `MessagingService.java` -- deja correct, zone protegee
-- `AndroidManifest.xml` -- zone protegee
-- `google-services.json` -- zone protegee
-- L'architecture globale (UI -> Edge Function -> FCM) reste identique
-- Les preferences de notification par type restent identiques
+- La logique de creation de profil (insert/update + verification)
+- Le upload d'avatar
+- La persistence IndexedDB/sessionStorage pour Android
+- La detection du flag `profileCreatedSuccessfully` en localStorage
+
