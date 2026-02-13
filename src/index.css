@@ -224,6 +224,29 @@
   .ios-section-header {
     @apply text-[13px] font-normal text-muted-foreground uppercase tracking-wide px-4 py-2;
   }
+
+  /* Background Pattern */
+  .bg-pattern {
+    position: relative;
+  }
+  .bg-pattern::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/patterns/sports-pattern.png');
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .dark .bg-pattern::before {
+    opacity: 0.06;
+  }
+  :not(.dark) .bg-pattern::before {
+    filter: invert(1);
+    opacity: 0.04;
+  }
 }
 
 /* Shimmer animation for skeleton loaders */
