@@ -59,7 +59,9 @@ export interface SessionFormData {
   hidden_from_users: string[];
   // Recurrence fields
   recurrence_type: RecurrenceType;
-  recurrence_count: number; // Number of weeks to repeat
+  recurrence_count: number;
+  // Live tracking
+  live_tracking_enabled: boolean;
 }
 
 export interface SelectedLocation {
@@ -184,6 +186,7 @@ export const DEFAULT_FORM_DATA: SessionFormData = {
   // Recurrence defaults
   recurrence_type: "none",
   recurrence_count: 4,
+  live_tracking_enabled: false,
 };
 
 // Helper function to check if activity supports pace fields

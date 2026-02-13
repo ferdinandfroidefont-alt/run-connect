@@ -24,6 +24,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
+import { RateSessionDialog } from './RateSessionDialog';
+import { OrganizerRatingBadge } from './OrganizerRatingBadge';
+import { LiveTrackingControls } from './LiveTrackingControls';
+import { LiveTrackingMap } from './LiveTrackingMap';
+import { useLiveTracking } from '@/hooks/useLiveTracking';
 
 interface SessionBlock {
   id: string;
@@ -143,6 +148,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [duplicateSessionData, setDuplicateSessionData] = useState<any>(null);
+  const [showRateDialog, setShowRateDialog] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
 
   // Hide bottom nav when dialog opens
   useEffect(() => {
@@ -175,6 +182,25 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       setIsParticipant(!!participantData);
       setGpsValidated(participantData?.confirmed_by_gps || false);
+
+      // Check if user already rated this session
+      const { data: ratingData } = await supabase
+        .from('session_ratings' as any)
+        .select('id')
+        .eq('session_id', session.id)
+        .eq('reviewer_id', user.id)
+        .maybeSingle();
+
+      setHasRated(!!ratingData);
+
+      // Auto-show rating dialog for past sessions the user participated in but hasn't rated
+      const sessionDate = new Date(session.scheduled_at);
+      const twoHoursAfter = new Date(sessionDate.getTime() + 2 * 60 * 60 * 1000);
+      const isPastSession = new Date() > twoHoursAfter;
+      
+      if (isPastSession && participantData?.confirmed_by_gps && !ratingData && user.id !== session.organizer_id) {
+        setTimeout(() => setShowRateDialog(true), 500);
+      }
     };
 
     checkUserStatus();
@@ -988,6 +1014,17 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       <ProfilePreviewDialog
         userId={showOrganizerProfile ? session.organizer_id : null}
         onClose={() => setShowOrganizerProfile(false)}
+      />
+
+      {/* Rate Session Dialog */}
+      <RateSessionDialog
+        open={showRateDialog}
+        onOpenChange={setShowRateDialog}
+        sessionId={session.id}
+        organizerId={session.organizer_id}
+        organizerName={session.profiles.username || session.profiles.display_name}
+        userId={user?.id || ''}
+        onRated={() => setHasRated(true)}
       />
 
       <ShareSessionToConversationDialog

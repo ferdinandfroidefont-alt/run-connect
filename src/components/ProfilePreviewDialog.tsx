@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus, UserMinus, Crown, Calendar, Loader2, Flag, MoreVertical, ArrowLeft, ChevronRight } from "lucide-react";
 import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
 import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
+import { OrganizerRatingBadge } from "@/components/OrganizerRatingBadge";
+import { StreakBadge } from "@/components/StreakBadge";
 import { UserActivityChart } from "@/components/UserActivityChart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
@@ -467,6 +469,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     {profile.is_premium && (
                       <Crown className="h-5 w-5 text-amber-500" />
                     )}
+                    <OrganizerRatingBadge userId={profile.user_id} />
+                    <StreakBadge userId={profile.user_id} variant="compact" />
                   </div>
 
                   {/* Badges */}

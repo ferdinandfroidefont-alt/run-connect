@@ -50,7 +50,8 @@ import {
   Mic,
   Square,
   X,
-  Smile
+  Smile,
+  BarChart3
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -59,6 +60,8 @@ import { useConversationTheme } from "@/hooks/useConversationTheme";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { MessageReactions, useMessageReactionPicker } from "@/components/MessageReactions";
 import { ReplyPreview, ReplyBubble } from "@/components/MessageReply";
+import { CreatePollDialog } from "@/components/CreatePollDialog";
+import { PollCard } from "@/components/PollCard";
 
 interface Profile {
   user_id: string;
@@ -169,6 +172,7 @@ const Messages = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
   
   // Conversation settings states
   const [isMuted, setIsMuted] = useState(false);
@@ -1820,6 +1824,13 @@ const Messages = () => {
                                 <p className="text-sm italic text-muted-foreground">Message supprimé</p>
                               ) : (
                                 <>
+                                  {/* Poll Card */}
+                                  {message.message_type === 'poll' && message.content && (
+                                    <div className="mb-2">
+                                      <PollCard pollId={message.content} />
+                                    </div>
+                                  )}
+
                                   {/* Session sharing - iOS Card Style */}
                                   {message.message_type === 'session' && message.session && (
                                     <div 
@@ -2123,6 +2134,15 @@ const Messages = () => {
                         <Smile className="h-4 w-4 mr-3 text-[#FF9500]" />
                         Emoji
                       </DropdownMenuItem>
+                      {selectedConversation?.is_group && (
+                        <DropdownMenuItem 
+                          onClick={() => setShowCreatePoll(true)}
+                          className="py-3"
+                        >
+                          <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
+                          Sondage
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                   
@@ -2457,6 +2477,7 @@ const Messages = () => {
                                 {conversation.last_message.message_type === 'file' && 'Fichier'}
                                 {conversation.last_message.message_type === 'voice' && 'Message vocal'}
                                 {conversation.last_message.message_type === 'session' && 'Session partagée'}
+                                {conversation.last_message.message_type === 'poll' && '📊 Sondage'}
                                 {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
                                   (conversation.last_message.content?.length > 40 
                                     ? conversation.last_message.content.substring(0, 40) + '…' 

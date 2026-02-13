@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, Gauge, Mountain, Flame } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, Gauge, Mountain, Flame, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   SessionFormData, 
@@ -277,6 +278,25 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                 }
               }}
             />
+          </div>
+
+          {/* Live Tracking Toggle */}
+          <div className="bg-card rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
+                  <Radio className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Live Tracking</Label>
+                  <p className="text-[11px] text-muted-foreground">Les participants verront votre position en direct</p>
+                </div>
+              </div>
+              <Switch
+                checked={formData.live_tracking_enabled}
+                onCheckedChange={(checked) => onFormDataChange({ live_tracking_enabled: checked })}
+              />
+            </div>
           </div>
         </div>
 

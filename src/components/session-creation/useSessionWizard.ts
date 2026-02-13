@@ -60,6 +60,7 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
         hidden_from_users: initialSession.hidden_from_users || [],
         recurrence_type: initialSession.recurrence_type || 'none',
         recurrence_count: initialSession.recurrence_count || 4,
+        live_tracking_enabled: initialSession.live_tracking_enabled || false,
       });
 
       setSelectedLocation({
