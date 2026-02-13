@@ -1,81 +1,68 @@
 
 
-# Fix : Redirection bloquee apres creation de compte
+# Fix : Notifications push cassées après refonte
 
-## Probleme identifie
+## Problèmes identifiés
 
-Apres avoir rempli le formulaire de creation de profil (`ProfileSetupDialog`), le profil est bien cree en base mais l'utilisateur reste bloque sur la page de creation. Le redirect vers `/` echoue silencieusement.
+### 1. `testNotification` bloque sur "Mode Web"
+La fonction `testNotification` (ligne 247) fait `if (!isNative) return` et affiche "Mode Web". Mais le test devrait fonctionner depuis n'importe ou : il suffit de vérifier si un token FCM existe en base de données pour cet utilisateur, puis d'appeler l'edge function.
 
-### Causes racines
+### 2. `testNotification` affiche "Token manquant"
+Meme sur natif, la ligne 252 vérifie `(window as any).fcmToken || token` -- ces deux valeurs sont souvent `null` parce que le state `token` n'est pas systématiquement rempli. Le fix : aller chercher le token directement en DB au lieu de se fier au state local.
 
-1. **Chaos de redirections concurrentes** : `ProfileSetupDialog.handleSubmit()` (lignes 474-485) lance 6 tentatives de redirect (`href`, `replace`, `assign`) avec des `setTimeout` espaces de 100ms a 2s. Simultanement, le callback `onComplete` dans `Auth.tsx` (ligne 857) lance un 7eme redirect. Ces appels concurrents peuvent s'annuler ou creer des conditions de course.
+### 3. Token recovery trop passive
+Le hook ne récupère le `window.fcmToken` qu'une seule fois après 3s (useEffect #2). Si le token natif arrive après 3s (ce qui est courant sur Android lent), il est perdu. Le listener `fcmTokenReady` (useEffect #3) existe mais ne se redéclenche pas si le token était déjà injecté avant le montage du hook.
 
-2. **`signOut` avant `verifyOtp`** (ligne 316 de Auth.tsx) : Appeler `signOut({ scope: 'local' })` juste avant la verification OTP detruit la session locale. Si `verifyOtp` echoue silencieusement a re-persister la session (surtout avec le WebViewStorage custom), le redirect vers `/` echoue car `Layout.tsx` ne trouve pas de session et renvoie vers `/auth`.
+## Corrections
 
-3. **Race condition dialog/state** : `onOpenChange(false)` est appele en meme temps que `onComplete()` et les redirects. Le dialog peut se fermer avant que le redirect ne s'execute, ou React peut re-render et perdre le contexte.
+### Fichier 1 : `src/hooks/usePushNotifications.tsx`
 
-## Solution
+**A. Refaire `testNotification` pour qu'il fonctionne partout :**
+- Supprimer le blocage `if (!isNative) return`
+- Chercher le token directement en DB (`profiles.push_token`)
+- Si token trouvé en DB : appeler l'edge function normalement
+- Si pas de token en DB : afficher "Aucun token enregistré" avec instruction d'installer l'app
 
-### Etape 1 : Supprimer le `signOut` avant `verifyOtp` dans Auth.tsx
-Le nettoyage de session local avant verification OTP n'est pas necessaire et peut casser la persistence. La verification OTP cree elle-meme une nouvelle session propre.
+**B. Renforcer la récupération du token au démarrage :**
+- Dans useEffect #1 (init), toujours synchroniser le token depuis la DB dans le state local
+- Dans useEffect #2 (recovery), ajouter un second check à 6s en plus du check à 3s
+- Dans useEffect #3 (fcmTokenReady), vérifier aussi `window.fcmToken` au montage du listener (pas seulement sur l'événement)
 
-**Fichier** : `src/pages/Auth.tsx` (lignes 314-316)
-- Supprimer les 2 lignes `console.log` + `await supabase.auth.signOut({ scope: 'local' })` dans `handleOtpSubmit`
+**C. Ajouter la récupération du `window.fcmToken` au montage :**
+- Au montage de useEffect #3, si `window.fcmToken` existe déjà (injecté avant React), le sauvegarder immédiatement
 
-### Etape 2 : Simplifier la redirection dans ProfileSetupDialog
-Remplacer les 6 tentatives de redirect (lignes 474-485) par un redirect unique et fiable. Si le premier echoue, utiliser un fallback a 500ms.
-
-**Fichier** : `src/components/ProfileSetupDialog.tsx` (lignes 468-493)
-```text
-// AVANT : 6 redirects concurrents
-redirectNow();
-setTimeout(redirectNow, 100);
-setTimeout(redirectNow, 300);
-...
-
-// APRES : un seul redirect propre
-onOpenChange(false);
-if (onComplete) onComplete();
-// Le redirect est gere par onComplete dans Auth.tsx
-```
-
-### Etape 3 : Renforcer le callback onComplete dans Auth.tsx
-Simplifier le callback pour faire un redirect unique et direct, sans setTimeout imbrique.
-
-**Fichier** : `src/pages/Auth.tsx` (lignes 852-860)
-```text
-// AVANT
-onComplete={() => {
-  setShowProfileSetup(false);
-  setTimeout(() => { window.location.href = '/'; }, 100);
-}}
-
-// APRES
-onComplete={() => {
-  setShowProfileSetup(false);
-  window.location.href = '/';
-}}
-```
-
-### Etape 4 : Ajouter un filet de securite dans le useEffect initial de Auth.tsx
-Le useEffect existant (lignes 36-56) detecte deja `profileCreatedSuccessfully` en localStorage mais ne verifie pas la session. Ajouter une verification de session pour etre sur que le redirect peut fonctionner.
-
-**Fichier** : `src/pages/Auth.tsx` (lignes 40-49)
-- Ajouter un check `supabase.auth.getSession()` avant le redirect force
-- Si pas de session mais profil cree, laisser l'utilisateur se reconnecter au lieu de boucler
+### Fichier 2 : Edge function `send-push-notification` -- aucun changement
+L'edge function est correcte. Le problème est entièrement coté client.
 
 ---
 
-## Fichiers modifies
+## Détails techniques
+
+### `testNotification` corrigé (pseudo-code)
+
+```text
+testNotification:
+  1. Vérifier que user est connecté
+  2. Récupérer le push_token depuis profiles (DB)
+  3. Si pas de token en DB -> "Aucun token. Installez l'app native."
+  4. Si token trouvé -> appeler edge function send-push-notification
+  5. Afficher le résultat (succès/échec)
+```
+
+### Token recovery renforcé
+
+```text
+useEffect #3 (fcmTokenReady):
+  Au montage:
+    - Vérifier si window.fcmToken existe déjà
+    - Si oui et pas encore sauvegardé -> savePushToken()
+  Sur événement fcmTokenReady:
+    - Sauvegarder le token (comme avant)
+```
+
+### Fichiers modifiés
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/Auth.tsx` | Supprimer signOut avant verifyOtp, simplifier onComplete callback, renforcer filet de securite |
-| `src/components/ProfileSetupDialog.tsx` | Supprimer les 6 redirects concurrents, deleguer le redirect a onComplete |
-
-## Ce qui ne change PAS
-- La logique de creation de profil (insert/update + verification)
-- Le upload d'avatar
-- La persistence IndexedDB/sessionStorage pour Android
-- La detection du flag `profileCreatedSuccessfully` en localStorage
+| `src/hooks/usePushNotifications.tsx` | Fix testNotification + renforcement recovery token |
 
