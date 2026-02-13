@@ -773,7 +773,7 @@ const Profile = () => {
 
         {/* Classement, Badges & Activités - iOS Style Group */}
         {!isViewingOtherUser ? (
-          <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} />
+          <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)} />
         ) : (
           <ProfileRankBadgeCompact 
             userId={viewingUserId || ''} 
@@ -784,19 +784,9 @@ const Profile = () => {
 
         {/* iOS List Groups */}
         
-        {/* Informations Section - Own Profile */}
-        {!isViewingOtherUser && <div className="bg-card rounded-[10px] overflow-hidden">
-            <div onClick={() => setIsEditing(!isEditing)} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
-                <User className="h-[18px] w-[18px] text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[17px] text-foreground">Informations personnelles</p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-            </div>
-            
-            {isEditing && <div className="px-4 py-4 space-y-4 border-t border-border">
+        {/* Informations Section - Own Profile (editing form) */}
+        {!isViewingOtherUser && isEditing && <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="px-4 py-4 space-y-4">
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Pseudo</label>
                   <Input value={formData.username || ''} onChange={e => setFormData({
@@ -846,7 +836,7 @@ const Profile = () => {
                     Annuler
                   </Button>
                 </div>
-              </div>}
+              </div>
           </div>}
 
 
