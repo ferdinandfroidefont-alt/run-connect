@@ -246,17 +246,25 @@ export const usePushNotifications = () => {
 
     try {
       // 1. Récupérer le token directement depuis la DB (fiable)
-      const { data: profile } = await supabase
+      console.log('[PUSH TEST] Fetching token for user:', user.id);
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('push_token')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      console.log('[PUSH TEST] Profile result:', { profile, error: profileError });
+
+      if (profileError) {
+        toast({ title: "Erreur DB", description: profileError.message, variant: "destructive" });
+        return;
+      }
+
       const dbToken = profile?.push_token;
       if (!dbToken || dbToken.length < 50) {
         toast({ 
           title: "Aucun token enregistré", 
-          description: "Installez l'app mobile et autorisez les notifications", 
+          description: `user_id: ${user.id?.substring(0, 8)}... — token: ${dbToken ? dbToken.substring(0, 10) + '...' : 'null'}`, 
           variant: "destructive" 
         });
         return;
