@@ -3,12 +3,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { PageTransition } from "@/components/PageTransition";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -54,32 +56,34 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<Layout><Index /></Layout>} />
-                <Route path="/feed" element={<Layout><Feed /></Layout>} />
-                <Route path="/my-sessions" element={<Layout><MySessions /></Layout>} />
-                <Route path="/messages" element={<Layout><Messages /></Layout>} />
-                <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
-                <Route path="/profile" element={<Layout><Profile /></Layout>} />
-                <Route path="/profile/:userId" element={<Layout><Profile /></Layout>} />
-                <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/route-create" element={<RouteCreation />} />
-                <Route path="/route-creation" element={<RouteCreation />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/confirm-presence" element={<ConfirmPresence />} />
-                <Route path="/confirm-presence/:sessionId" element={<ConfirmPresence />} />
-                <Route path="/security" element={<Layout><SecurityDashboard /></Layout>} />
-                <Route path="/android-test" element={<Layout><AndroidTestPage /></Layout>} />
-                <Route path="/donation-success" element={<DonationSuccess />} />
-                <Route path="/donation-canceled" element={<DonationCanceled />} />
-                {/* Route profil public (AVANT *) */}
-                <Route path="/p/:username" element={<PublicProfile />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <AnimatePresence mode="wait">
+                <Routes>
+                  <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
+                  <Route path="/" element={<Layout><PageTransition><Index /></PageTransition></Layout>} />
+                  <Route path="/feed" element={<Layout><PageTransition><Feed /></PageTransition></Layout>} />
+                  <Route path="/my-sessions" element={<Layout><PageTransition><MySessions /></PageTransition></Layout>} />
+                  <Route path="/messages" element={<Layout><PageTransition><Messages /></PageTransition></Layout>} />
+                  <Route path="/leaderboard" element={<Layout><PageTransition><Leaderboard /></PageTransition></Layout>} />
+                  <Route path="/profile" element={<Layout><PageTransition><Profile /></PageTransition></Layout>} />
+                  <Route path="/profile/:userId" element={<Layout><PageTransition><Profile /></PageTransition></Layout>} />
+                  <Route path="/subscription" element={<Layout><PageTransition><Subscription /></PageTransition></Layout>} />
+                  <Route path="/search" element={<PageTransition><Search /></PageTransition>} />
+                  <Route path="/route-create" element={<PageTransition><RouteCreation /></PageTransition>} />
+                  <Route path="/route-creation" element={<PageTransition><RouteCreation /></PageTransition>} />
+                  <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
+                  <Route path="/terms" element={<PageTransition><Terms /></PageTransition>} />
+                  <Route path="/about" element={<PageTransition><About /></PageTransition>} />
+                  <Route path="/confirm-presence" element={<PageTransition><ConfirmPresence /></PageTransition>} />
+                  <Route path="/confirm-presence/:sessionId" element={<PageTransition><ConfirmPresence /></PageTransition>} />
+                  <Route path="/security" element={<Layout><PageTransition><SecurityDashboard /></PageTransition></Layout>} />
+                  <Route path="/android-test" element={<Layout><PageTransition><AndroidTestPage /></PageTransition></Layout>} />
+                  <Route path="/donation-success" element={<PageTransition><DonationSuccess /></PageTransition>} />
+                  <Route path="/donation-canceled" element={<PageTransition><DonationCanceled /></PageTransition>} />
+                  {/* Route profil public (AVANT *) */}
+                  <Route path="/p/:username" element={<PageTransition><PublicProfile /></PageTransition>} />
+                  <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+                </Routes>
+              </AnimatePresence>
             </BrowserRouter>
           </TooltipProvider>
         </AppProvider>

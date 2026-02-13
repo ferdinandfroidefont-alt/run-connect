@@ -91,7 +91,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
       {/* Header */}
       <div className="text-center mb-4">
         <motion.div
-          className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center"
+          className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary flex items-center justify-center"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', bounce: 0.5 }}
@@ -110,7 +110,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         transition={{ delay: 0.2 }}
       >
         {/* Session preview card */}
-        <div className="rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 overflow-hidden">
+        <div className="rounded-2xl bg-card border border-border overflow-hidden">
           {/* Image */}
           {imagePreview && (
             <div className="relative h-32">
@@ -168,7 +168,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             )}
 
             {/* Stats row */}
-            <div className="flex gap-4 pt-2 border-t border-white/10">
+            <div className="flex gap-4 pt-2 border-t border-border">
               {formData.max_participants && (
                 <div className="flex items-center gap-1.5 text-xs">
                   <Users className="w-3.5 h-3.5 text-muted-foreground" />
@@ -232,10 +232,10 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         <Button
           onClick={onSubmit}
           disabled={loading}
-          className="flex-1 h-14 text-lg font-semibold bg-gradient-to-r from-primary to-cyan-500 hover:from-primary/90 hover:to-cyan-500/90"
+          className="flex-1 h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
         >
           {loading ? (
-            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
           ) : (
             <>
               <Check className="w-5 h-5 mr-2" />

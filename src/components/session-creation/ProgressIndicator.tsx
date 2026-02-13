@@ -31,9 +31,9 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentSte
   return (
     <div className="w-full px-4 py-1">
       {/* Progress bar */}
-      <div className="relative h-1 bg-white/10 rounded-full overflow-hidden mb-4">
+      <div className="relative h-1 bg-muted rounded-full overflow-hidden mb-4">
         <motion.div
-          className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-cyan-400"
+          className="absolute left-0 top-0 h-full bg-primary rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -54,7 +54,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentSte
                   "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
                   isCompleted && "bg-primary text-primary-foreground",
                   isCurrent && "bg-primary/20 border-2 border-primary text-primary",
-                  !isCompleted && !isCurrent && "bg-white/5 text-muted-foreground"
+                  !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
                 )}
                 initial={{ scale: 0.8 }}
                 animate={{ scale: isCurrent ? 1.1 : 1 }}
