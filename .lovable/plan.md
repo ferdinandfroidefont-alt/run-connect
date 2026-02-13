@@ -1,122 +1,216 @@
 
-# Audit Complet et Plan de Refonte - RunConnect vers Qualite Mondiale
 
-## Audit par page - Problemes identifies
+# Plan de Refonte : Reputation, Live Tracking et Sondages
 
-### 1. NewConversationView (Bug critique + Design)
-**Bug** : Le scroll vertical des amis recents et suggestions ne fonctionne pas car le `ScrollArea` de Radix ne propage pas correctement le scroll dans un conteneur `fixed inset-0`. Les carousels horizontaux utilisent `overflow-x-auto` mais le conteneur parent bloque le scroll vertical.
-
-**Design** : La page manque de structure iOS "Inset Grouped". Les sections flottent sans hierarchie claire.
-
-### 2. Page 404 (NotFound)
-**Critique** : Design completement generique (`bg-gray-100`, texte anglais "Oops! Page not found"). Zero coherence avec le design system iOS de l'app. C'est la page la plus faible de toute l'application.
-
-### 3. PublicProfile
-**Critique** : Utilise un design `bg-gradient-to-br` avec des `Card` classiques qui ne correspondent pas du tout au design system iOS du reste de l'app. On dirait une page d'un autre projet. Manque le style Inset Grouped, les icones 30x30px, et les separateurs iOS.
-
-### 4. Messages (page principale)
-**Moyen** : La page est fonctionnelle et bien construite avec le style iMessage. Le fichier fait 2573 lignes ce qui rend la maintenance difficile mais le design est correct.
-
-### 5. Feed
-**Moyen** : Le bouton "Actualiser" en haut est un pattern anti-iOS. Les vraies apps utilisent le pull-to-refresh natif. Le bouton rond avec texte fait amateur.
-
-### 6. Auth
-**Correct** : Le design iOS est bien respecte avec le logo, les champs et les boutons. Quelques ameliorations possibles sur le polish.
-
-### 7. Leaderboard
-**Correct** : Le podium et le systeme de filtres sont bien faits. La page est fonctionnelle.
-
-### 8. MySessions
-**Correct** : Le style iOS Inset Grouped est bien applique. La vue calendrier est un bon ajout.
-
-### 9. Profile
-**Correct** : Recemment ameliore avec les blocs unifies.
-
-### 10. LoadingScreen
-**Correct** : Le design est propre avec le logo et la progress bar.
-
-### 11. Subscription
-**Correct** : Bien structure en style iOS Settings.
-
-### 12. BottomNavigation
-**Correct** : Le design frosted glass avec le bouton central + est bien fait.
-
-### 13. ConfirmPresence
-**Correct** : Design iOS propre avec les cartes de selection de role.
+Ce plan couvre les 3 piliers demandes avec la structure de base de donnees, la logique metier et les composants UI.
 
 ---
 
-## Fonctionnalites manquantes pour une app mondiale
+## 1. Systeme d'Avis Post-Seance (Notes du Createur)
 
-### Indispensables (Strava/Instagram level)
-1. **Dark Mode** : Les variables CSS existent dans `:root` mais il n'y a aucune variante `dark:` definie. Un theme toggle existe mais il ne change rien visuellement. C'est un must-have pour toute app mobile moderne.
-2. **Pull-to-Refresh natif** : Remplacer le bouton "Actualiser" du feed par un vrai geste pull-to-refresh.
-3. **Empty states riches** : Beaucoup de pages affichent du texte simple quand il n'y a pas de contenu. Des illustrations et des CTAs contextuels sont necessaires.
-4. **Transitions entre pages** : Aucune animation de navigation. Strava/Instagram ont des transitions fluides entre chaque ecran.
+### Base de donnees
+
+Nouvelle table `session_ratings` :
+
+```text
+session_ratings
++------------------+-------------------+
+| Colonne          | Type              |
++------------------+-------------------+
+| id               | uuid (PK)         |
+| session_id       | uuid (FK sessions)|
+| reviewer_id      | uuid (FK auth)    |
+| organizer_id     | uuid (FK auth)    |
+| rating           | integer (1-5)     |
+| comment          | text (max 200)    |
+| created_at       | timestamptz       |
++------------------+-------------------+
+UNIQUE(session_id, reviewer_id) -- un seul avis par participant par seance
+```
+
+Nouvelle colonne sur `profiles` :
+- `organizer_avg_rating` (numeric, default null) -- cache de la moyenne
+
+### RLS
+- INSERT : `auth.uid() = reviewer_id` ET le reviewer est dans `session_participants` avec `confirmed_by_gps = true`
+- SELECT : tout utilisateur authentifie
+- Pas d'UPDATE ni DELETE (avis definitifs)
+
+### Logique metier
+- L'avis n'est disponible qu'apres la fin de la seance (scheduled_at + 2h)
+- On ne peut pas noter sa propre seance
+- Un trigger SQL recalcule `profiles.organizer_avg_rating` a chaque INSERT
+- La note moyenne est affichee sur le profil public et impacte le tri des seances dans la recherche
+
+### Composants UI
+- **`RateSessionDialog.tsx`** : Dialog iOS avec 5 etoiles tactiles + champ commentaire court. Apparait automatiquement quand l'utilisateur ouvre une seance terminee qu'il n'a pas encore notee.
+- **Affichage dans `SessionDetailsDialog`** : Section "Avis des participants" avec les notes et commentaires
+- **Affichage dans `ProfilePreviewDialog`** et `PublicProfile` : Badge etoile avec la moyenne (ex: 4.8/5)
 
 ---
 
-## Plan d'Implementation (par priorite)
+## 2. Streaks (Amelioration du systeme existant)
 
-### Phase 1 : Corrections critiques
-1. **Fix scroll NewConversationView** : Remplacer `ScrollArea` par un `div` natif avec `overflow-y-auto` et `-webkit-overflow-scrolling: touch` pour garantir le scroll sur mobile.
-2. **Refonte NotFound** : Nouveau design iOS avec illustration, texte en francais, bouton "Retour a l'accueil" style iOS, fond `bg-secondary`.
-3. **Refonte PublicProfile** : Reconstruire entierement en style iOS Inset Grouped avec le meme design system que le reste de l'app (icones 30x30, separateurs, cartes blanches sur fond gris).
+### Etat actuel
+Le composant `StreakBadge.tsx` et la table `user_stats` existent deja avec `streak_weeks`. Le systeme est fonctionnel mais la mise a jour est manuelle.
 
-### Phase 2 : Polish niveau mondial
-4. **Dark Mode complet** : Ajouter les variables CSS dark dans `index.css` (fond sombre #000000/#1C1C1E, cartes #2C2C2E, texte blanc). Le systeme de themes existe deja dans `ThemeContext.tsx`, il suffit d'ajouter les styles.
-5. **Pull-to-Refresh Feed** : Remplacer le bouton par un vrai geste avec animation de spinner iOS (rotation + rebond).
-6. **Amelioration des Empty States** : Ajouter des illustrations SVG minimalistes et des boutons d'action contextuel sur les pages Feed vide, Messages vides, Sessions vides.
-
-### Phase 3 : Animations et transitions
-7. **Transitions de navigation** : Ajouter des animations slide/fade entre les pages principales via `framer-motion` et `AnimatePresence`.
-8. **Haptic feedback ameliore** : Renforcer le retour tactile sur les interactions cles (like, send message, join session).
+### Ameliorations prevues
+- **Calcul automatique** : Un trigger sur `session_participants` (quand `confirmed_by_gps` passe a `true`) verifie si l'utilisateur a deja participe cette semaine. Si c'est la premiere participation de la semaine, incrementer `streak_weeks` ou le remettre a 1 si la semaine precedente n'avait pas d'activite.
+- **Cron hebdomadaire** : Un edge function `update-streaks` qui tourne chaque lundi pour remettre a 0 les streaks des utilisateurs sans activite la semaine precedente.
+- **Visibilite** : Le `StreakBadge` compact sera affiche a cote du nom d'utilisateur dans le leaderboard, les participants de seance, et le profil public.
 
 ---
 
-## Details techniques
+## 3. Live Tracking (Tracing GPS en temps reel)
 
-### Fix scroll NewConversationView
-```
-Fichier: src/components/NewConversationView.tsx
-- Ligne 346: Remplacer <ScrollArea className="flex-1"> par <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-- Fermeture correspondante: </ScrollArea> -> </div>
-```
+### Base de donnees
 
-### Dark Mode CSS
-```
-Fichier: src/index.css
-- Ajouter un bloc .dark sous :root avec:
-  --background: 0 0% 0%
-  --foreground: 0 0% 100%
-  --card: 0 0% 11%
-  --secondary: 240 4% 16%
-  --muted: 240 4% 16%
-  --border: 240 4% 22%
-  etc.
-```
+Nouvelle colonne sur `sessions` :
+- `live_tracking_enabled` (boolean, default false) -- option a la creation
+- `live_tracking_active` (boolean, default false) -- statut en cours
+- `live_tracking_started_at` (timestamptz, nullable)
+- `live_tracking_max_duration` (integer, default 120) -- minutes, securite
 
-### NotFound Refonte
-```
-Fichier: src/pages/NotFound.tsx
-- Redesign complet : fond bg-secondary, icone MapPin, texte francais, bouton primary iOS
-```
+Nouvelle table `live_tracking_points` (donnees temporaires) :
 
-### PublicProfile Refonte
-```
-Fichier: src/pages/PublicProfile.tsx
-- Remplacer le gradient par bg-secondary
-- Utiliser le pattern Inset Grouped (bg-card rounded-[10px])
-- Icones 30x30px avec rounded-[7px]
-- Separateurs ml-[54px]
+```text
+live_tracking_points
++------------------+-------------------+
+| Colonne          | Type              |
++------------------+-------------------+
+| id               | uuid (PK)         |
+| session_id       | uuid (FK sessions)|
+| user_id          | uuid (FK auth)    |
+| lat              | numeric           |
+| lng              | numeric           |
+| accuracy         | numeric           |
+| recorded_at      | timestamptz       |
++------------------+-------------------+
+INDEX sur (session_id, recorded_at DESC) pour requetes performantes
 ```
 
-### Pull-to-Refresh Feed
-```
-Fichier: src/pages/Feed.tsx
-- Remplacer le bouton Actualiser par un composant pull-to-refresh
-  utilisant onTouchStart/onTouchMove/onTouchEnd
-- Spinner iOS style (rotation clockwise)
+### RLS
+- INSERT sur `live_tracking_points` : seulement le `organizer_id` de la seance
+- SELECT sur `live_tracking_points` : seulement les utilisateurs dans `session_participants` de cette seance
+- Pas d'UPDATE ni DELETE cote client
+
+### Logique de securite (coupure automatique)
+1. **Bouton "Demarrer la seance"** dans `SessionDetailsDialog` : visible uniquement par le createur, active `live_tracking_active = true` et demarre le watch GPS Capacitor
+2. **Bouton "Terminer la seance"** : coupe le GPS et passe `live_tracking_active = false`
+3. **Coupure automatique serveur** : Un cron edge function `cleanup-live-tracking` toutes les 5 minutes qui :
+   - Met `live_tracking_active = false` si `live_tracking_started_at + live_tracking_max_duration < NOW()`
+   - Supprime les points de tracking plus vieux que 24h (donnees temporaires)
+4. **Coupure cote client** : Un `useEffect` qui verifie toutes les 30s si la duree max est depassee et coupe le watch GPS local
+
+### Composants UI
+- **Option dans le wizard de creation** : Toggle "Activer le Live Tracking" dans `DetailsStep`
+- **`LiveTrackingControls.tsx`** : Boutons Start/Stop pour le createur dans le detail de seance
+- **`LiveTrackingMap.tsx`** : Overlay sur la carte Google Maps avec le trace du createur (polyline) et un marqueur anime pour sa position actuelle. Utilise Supabase Realtime (`postgres_changes`) pour les mises a jour en direct.
+- **Hook `useLiveTracking.tsx`** : Gere le watch GPS Capacitor, l'envoi des points toutes les 5s, et la coupure automatique
+
+### Flux de donnees
+
+```text
+Createur clique "Demarrer"
+    |
+    v
+Capacitor watchPosition (5s interval)
+    |
+    v
+INSERT dans live_tracking_points
+    |
+    v
+Supabase Realtime broadcast
+    |
+    v
+Participants voient le trace en direct
+    |
+    v
+Createur clique "Terminer" OU duree max atteinte
+    |
+    v
+GPS coupe + live_tracking_active = false
+    |
+    v
+Cron supprime les points apres 24h
 ```
 
-Au total : **8 fichiers modifies**, 0 nouvelles dependances. Toutes les modifications suivent les patterns existants du projet.
+---
+
+## 4. Sondages de Groupe dans le Chat
+
+### Base de donnees
+
+Nouvelle table `polls` :
+
+```text
+polls
++------------------+-------------------+
+| Colonne          | Type              |
++------------------+-------------------+
+| id               | uuid (PK)         |
+| conversation_id  | uuid (FK)         |
+| session_id       | uuid (FK, nullable)|
+| creator_id       | uuid (FK auth)    |
+| question         | text              |
+| options          | jsonb             |
+| expires_at       | timestamptz       |
+| created_at       | timestamptz       |
++------------------+-------------------+
+```
+
+Le champ `options` stocke un tableau JSON :
+```text
+[
+  { "id": "opt1", "text": "17h00", "votes": ["user-id-1", "user-id-2"] },
+  { "id": "opt2", "text": "18h00", "votes": ["user-id-3"] }
+]
+```
+
+### RLS
+- INSERT : `auth.uid() = creator_id` ET l'utilisateur est membre de la conversation
+- SELECT : membres de la conversation uniquement
+- UPDATE : membres de la conversation (pour voter)
+- DELETE : seulement le createur
+
+### Composants UI
+- **`CreatePollDialog.tsx`** : Interface iOS pour creer un sondage (question + 2 a 6 options + duree optionnelle). Accessible via un bouton dans la barre d'outils du chat.
+- **`PollCard.tsx`** : Carte inline dans le fil de messages (type `message_type = 'poll'`). Affiche les options avec des barres de progression horizontales, le nombre de votes, et un indicateur si l'utilisateur a deja vote.
+- **Integration dans Messages.tsx** : Ajout du type `poll` dans le rendu des messages. Le sondage est envoye comme un message normal avec `message_type = 'poll'` et `content = poll_id`.
+
+---
+
+## Resume technique
+
+### Migrations SQL (5 operations)
+1. CREATE TABLE `session_ratings` + RLS
+2. ALTER TABLE `profiles` ADD `organizer_avg_rating`
+3. ALTER TABLE `sessions` ADD `live_tracking_enabled`, `live_tracking_active`, `live_tracking_started_at`, `live_tracking_max_duration`
+4. CREATE TABLE `live_tracking_points` + RLS + INDEX
+5. CREATE TABLE `polls` + RLS
+
+### Nouveaux fichiers (8)
+- `src/components/RateSessionDialog.tsx`
+- `src/components/LiveTrackingControls.tsx`
+- `src/components/LiveTrackingMap.tsx`
+- `src/hooks/useLiveTracking.tsx`
+- `src/components/CreatePollDialog.tsx`
+- `src/components/PollCard.tsx`
+- `supabase/functions/cleanup-live-tracking/index.ts`
+- `supabase/functions/update-streaks/index.ts`
+
+### Fichiers modifies (6)
+- `src/components/SessionDetailsDialog.tsx` -- avis + live tracking controls
+- `src/components/session-creation/steps/DetailsStep.tsx` -- toggle live tracking
+- `src/pages/Messages.tsx` -- rendu des sondages + bouton creation
+- `src/pages/PublicProfile.tsx` -- affichage note moyenne
+- `src/components/ProfilePreviewDialog.tsx` -- badge note
+- `src/components/StreakBadge.tsx` -- ameliorations mineures
+
+### Ordre d'implementation
+1. Migrations SQL (toutes les tables d'abord)
+2. Avis post-seance (rating + UI)
+3. Amelioration streaks (trigger + cron)
+4. Sondages de groupe (table + composants)
+5. Live Tracking (le plus complexe, en dernier)
+
