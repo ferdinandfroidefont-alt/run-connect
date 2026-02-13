@@ -244,24 +244,32 @@ export const usePushNotifications = () => {
       return;
     }
 
-    if (!isNative) {
-      toast({ title: "Mode Web", description: "Installez l'app pour les notifications push" });
-      return;
-    }
-
-    const fcmToken = (window as any).fcmToken || token;
-    if (!fcmToken || fcmToken.length < 50) {
-      toast({ title: "Token manquant", description: "Relancez l'app pour générer un token", variant: "destructive" });
-      return;
-    }
-
     try {
+      // 1. Récupérer le token directement depuis la DB (fiable)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('push_token')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const dbToken = profile?.push_token;
+      if (!dbToken || dbToken.length < 50) {
+        toast({ 
+          title: "Aucun token enregistré", 
+          description: "Installez l'app mobile et autorisez les notifications", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // 2. Vérifier la session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         toast({ title: "Session expirée", description: "Reconnectez-vous", variant: "destructive" });
         return;
       }
 
+      // 3. Appeler l'edge function
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: {
@@ -281,14 +289,14 @@ export const usePushNotifications = () => {
       if (data?.fcm_sent) {
         toast({ title: "✅ Notification envoyée !", description: "Vérifiez votre barre de notification" });
       } else if (data?.web_only) {
-        toast({ title: "Mode Web", description: "Installez l'app Android/iOS" });
+        toast({ title: "Token web", description: "Le token enregistré n'est pas un token mobile" });
       } else {
         toast({ title: "Notification créée", description: "Enregistrée mais non envoyée (token invalide ?)" });
       }
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message || "Une erreur est survenue", variant: "destructive" });
     }
-  }, [user, toast, token, isNative]);
+  }, [user, toast]);
 
   // ─── useEffect #1: INIT (once per user) ──────────────────
 
@@ -362,9 +370,10 @@ export const usePushNotifications = () => {
       }
     };
 
-    // Wait 3s for Supabase session + native injection
-    const timer = setTimeout(recover, 3000);
-    return () => clearTimeout(timer);
+    // Wait 3s then retry at 6s for slow Android devices
+    const timer1 = setTimeout(recover, 3000);
+    const timer2 = setTimeout(recover, 6000);
+    return () => { clearTimeout(timer1); clearTimeout(timer2); };
   }, [user, isNative, savePushToken]);
 
   // ─── useEffect #3: fcmTokenReady listener ────────────────
@@ -388,6 +397,16 @@ export const usePushNotifications = () => {
     window.addEventListener('fcmTokenReady', handleFcmTokenReady);
     (window as any).__fcmListenerReady = true;
     document.dispatchEvent(new CustomEvent('ReactListenerReady'));
+
+    // Check if window.fcmToken was already injected before React mounted
+    const existingToken = (window as any).fcmToken;
+    if (existingToken && typeof existingToken === 'string' && existingToken.length > 50 && !(window as any).__fcmTokenReceived) {
+      log('[PUSH] window.fcmToken already present at mount, saving...');
+      (window as any).__fcmTokenReceived = true;
+      setToken(existingToken);
+      setIsRegistered(true);
+      savePushToken(existingToken);
+    }
 
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
