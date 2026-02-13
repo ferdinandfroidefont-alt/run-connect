@@ -305,6 +305,44 @@ export type Database = {
           },
         ]
       }
+      live_tracking_points: {
+        Row: {
+          accuracy: number | null
+          id: string
+          lat: number
+          lng: number
+          recorded_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          id?: string
+          lat: number
+          lng: number
+          recorded_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          id?: string
+          lat?: number
+          lng?: number
+          recorded_at?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_tracking_points_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string
@@ -491,6 +529,54 @@ export type Database = {
         }
         Relationships: []
       }
+      polls: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          creator_id: string
+          expires_at: string | null
+          id: string
+          options: Json
+          question: string
+          session_id: string | null
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          creator_id: string
+          expires_at?: string | null
+          id?: string
+          options?: Json
+          question: string
+          session_id?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          creator_id?: string
+          expires_at?: string | null
+          id?: string
+          options?: Json
+          question?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "polls_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number | null
@@ -521,6 +607,7 @@ export type Database = {
           notif_session_request: boolean | null
           notifications_enabled: boolean | null
           onboarding_completed: boolean | null
+          organizer_avg_rating: number | null
           phone: string | null
           preferred_language: string | null
           push_token: string | null
@@ -575,6 +662,7 @@ export type Database = {
           notif_session_request?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
+          organizer_avg_rating?: number | null
           phone?: string | null
           preferred_language?: string | null
           push_token?: string | null
@@ -629,6 +717,7 @@ export type Database = {
           notif_session_request?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
+          organizer_avg_rating?: number | null
           phone?: string | null
           preferred_language?: string | null
           push_token?: string | null
@@ -940,6 +1029,44 @@ export type Database = {
           },
         ]
       }
+      session_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          organizer_id: string
+          rating: number
+          reviewer_id: string
+          session_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          organizer_id: string
+          rating: number
+          reviewer_id: string
+          session_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          organizer_id?: string
+          rating?: number
+          reviewer_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_ratings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_requests: {
         Row: {
           created_at: string
@@ -992,6 +1119,10 @@ export type Database = {
           interval_pace: string | null
           interval_pace_unit: string | null
           is_private: boolean | null
+          live_tracking_active: boolean | null
+          live_tracking_enabled: boolean | null
+          live_tracking_max_duration: number | null
+          live_tracking_started_at: string | null
           location_lat: number
           location_lng: number
           location_name: string
@@ -1026,6 +1157,10 @@ export type Database = {
           interval_pace?: string | null
           interval_pace_unit?: string | null
           is_private?: boolean | null
+          live_tracking_active?: boolean | null
+          live_tracking_enabled?: boolean | null
+          live_tracking_max_duration?: number | null
+          live_tracking_started_at?: string | null
           location_lat: number
           location_lng: number
           location_name: string
@@ -1060,6 +1195,10 @@ export type Database = {
           interval_pace?: string | null
           interval_pace_unit?: string | null
           is_private?: boolean | null
+          live_tracking_active?: boolean | null
+          live_tracking_enabled?: boolean | null
+          live_tracking_max_duration?: number | null
+          live_tracking_started_at?: string | null
           location_lat?: number
           location_lng?: number
           location_name?: string
