@@ -107,8 +107,8 @@ export const LevelSliderFilter = ({
       <div
         className={cn(
           'relative rounded-[14px] p-2 flex flex-col items-center',
-          'bg-white/80 backdrop-blur-xl shadow-lg',
-          'border border-white/50',
+          'bg-card/80 backdrop-blur-xl shadow-lg',
+          'border border-border',
           isDragging && 'shadow-xl'
         )}
         style={{ width: 40 }}
@@ -123,15 +123,13 @@ export const LevelSliderFilter = ({
         >
           {/* Track background - iOS gray */}
           <div 
-            className="absolute left-1/2 -translate-x-1/2 w-[4px] h-full rounded-full"
-            style={{ backgroundColor: '#E5E5EA' }}
+            className="absolute left-1/2 -translate-x-1/2 w-[4px] h-full rounded-full bg-border"
           />
           
           {/* Active track portion - iOS blue */}
           <motion.div
-            className="absolute left-1/2 -translate-x-1/2 w-[4px] rounded-full"
+            className="absolute left-1/2 -translate-x-1/2 w-[4px] rounded-full bg-primary"
             style={{ 
-              backgroundColor: '#007AFF',
               bottom: 0,
             }}
             animate={{
@@ -155,11 +153,8 @@ export const LevelSliderFilter = ({
                 <div 
                   className={cn(
                     'w-[6px] h-[6px] rounded-full transition-all duration-200',
-                    isActive ? 'opacity-100' : 'opacity-30'
+                    isActive ? 'bg-primary opacity-100' : 'bg-muted-foreground opacity-30'
                   )}
-                  style={{ 
-                    backgroundColor: isActive ? '#007AFF' : '#C7C7CC'
-                  }}
                 />
               </div>
             );
@@ -169,9 +164,9 @@ export const LevelSliderFilter = ({
           <motion.div
             className={cn(
               'absolute left-1/2 -translate-x-1/2 cursor-grab active:cursor-grabbing',
-              'rounded-full bg-white',
+              'rounded-full bg-card',
               'shadow-[0_2px_8px_rgba(0,0,0,0.15),0_1px_3px_rgba(0,0,0,0.1)]',
-              'border border-black/5',
+              'border border-border',
               isDragging && 'scale-110'
             )}
             style={{ 
@@ -187,10 +182,7 @@ export const LevelSliderFilter = ({
         
         {/* Level indicator at bottom */}
         <div className="mt-2 flex flex-col items-center">
-          <span 
-            className="text-[11px] font-semibold"
-            style={{ color: '#007AFF' }}
-          >
+          <span className="text-[11px] font-semibold text-primary">
             {currentLevel}
           </span>
         </div>
@@ -203,8 +195,8 @@ export const LevelSliderFilter = ({
           animate={{ opacity: 1, x: 0, scale: 1 }}
           className={cn(
             'absolute right-full mr-2 top-1/2 -translate-y-1/2',
-            'bg-white/90 backdrop-blur-md rounded-lg px-2 py-1',
-            'shadow-md border border-white/50',
+            'bg-card/90 backdrop-blur-md rounded-lg px-2 py-1',
+            'shadow-md border border-border',
             'whitespace-nowrap'
           )}
         >
