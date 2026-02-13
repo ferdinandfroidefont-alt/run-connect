@@ -77,7 +77,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="h-screen bg-background flex flex-col bg-pattern">
-      <main className={`flex-1 overflow-auto ${hideBottomNav ? "" : "pb-[72px]"} relative z-[1]`}>
+      <main className={`flex-1 overflow-auto ${hideBottomNav ? "" : "pb-[72px]"}`}>
         <div className="animate-fade-in">
           {children}
         </div>
