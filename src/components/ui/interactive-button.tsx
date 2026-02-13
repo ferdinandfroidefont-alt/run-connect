@@ -72,7 +72,7 @@ export const InteractiveButton = React.forwardRef<
       </span>
       
       {/* Ripple effect */}
-      <span className="absolute inset-0 rounded-md bg-white/20 scale-0 group-active:scale-100 transition-transform duration-200 opacity-0 group-active:opacity-100" />
+      <span className="absolute inset-0 rounded-md bg-foreground/10 scale-0 group-active:scale-100 transition-transform duration-200 opacity-0 group-active:opacity-100" />
     </Button>
   );
 });

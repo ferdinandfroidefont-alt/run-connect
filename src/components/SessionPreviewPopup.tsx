@@ -121,8 +121,8 @@ export const SessionPreviewPopup = ({
               {/* Imminent badge */}
               {isImminent && diffMinutes > 0 && (
                 <div className="bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1.5 flex items-center justify-center gap-2">
-                  <span className="animate-pulse w-2 h-2 bg-white rounded-full" />
-                  <span className="text-white text-xs font-semibold">
+                  <span className="animate-pulse w-2 h-2 bg-primary-foreground rounded-full" />
+                  <span className="text-primary-foreground text-xs font-semibold">
                     Commence bientôt • {getTimeDisplay()}
                   </span>
                 </div>

@@ -76,7 +76,7 @@ export const FeedComments = ({
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder="Ajouter un commentaire..."
-          className="flex-1 h-9 text-sm rounded-full bg-white/5 border-white/10"
+          className="flex-1 h-9 text-sm rounded-full bg-secondary border-border"
         />
         <Button
           type="submit"

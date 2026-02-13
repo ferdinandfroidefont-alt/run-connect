@@ -75,7 +75,7 @@ export const FeedActions = ({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={handleLike}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-secondary transition-colors"
           >
             <motion.div
               animate={isAnimating ? { scale: [1, 1.4, 1] } : {}}
@@ -96,7 +96,7 @@ export const FeedActions = ({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onComment}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-secondary transition-colors"
           >
             <MessageCircle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
             <span className="text-sm font-medium text-muted-foreground">
@@ -108,7 +108,7 @@ export const FeedActions = ({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onShare}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-secondary transition-colors"
           >
             <Share2 className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
           </motion.button>
