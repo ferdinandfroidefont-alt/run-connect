@@ -10,7 +10,7 @@ const DonationCanceled = () => {
   const [showDonationDialog, setShowDonationDialog] = useState(false);
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-screen flex items-center justify-center">
+    <div className="container mx-auto px-4 py-8 min-h-screen flex items-center justify-center bg-pattern">
       <Card className="max-w-md w-full text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">

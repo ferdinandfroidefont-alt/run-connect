@@ -137,7 +137,7 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary">
+    <div className="min-h-screen bg-secondary bg-pattern">
       {/* iOS Header */}
       
       {/* iOS Header */}
