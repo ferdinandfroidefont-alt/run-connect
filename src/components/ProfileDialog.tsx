@@ -562,29 +562,25 @@ export const ProfileDialog = ({
                   ) : (
                     <>
                       <div className="h-px bg-border ml-[54px]" />
-                      <div className="ios-list-item">
-                        <div className="flex items-center gap-3">
-                          <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
-                            <User className="h-[18px] w-[18px] text-white" />
-                          </div>
-                          <div>
-                            <p className="text-[13px] text-muted-foreground">Pseudo</p>
-                            <p className="text-[17px] text-foreground">{profile?.username || 'Non renseigné'}</p>
-                          </div>
+                      <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
+                          <User className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] text-muted-foreground">Pseudo</p>
+                          <p className="text-[17px] text-foreground">{profile?.username || 'Non renseigné'}</p>
                         </div>
                       </div>
                       <div className="ios-list-separator" />
                       {profile?.display_name && (
                         <>
-                          <div className="ios-list-item">
-                            <div className="flex items-center gap-3">
-                              <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
-                                <User className="h-[18px] w-[18px] text-white" />
-                              </div>
-                              <div>
-                                <p className="text-[13px] text-muted-foreground">Nom</p>
-                                <p className="text-[17px] text-foreground">{profile.display_name}</p>
-                              </div>
+                          <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
+                            <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                              <User className="h-[18px] w-[18px] text-white" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] text-muted-foreground">Nom</p>
+                              <p className="text-[17px] text-foreground">{profile.display_name}</p>
                             </div>
                           </div>
                           <div className="ios-list-separator" />
@@ -592,15 +588,13 @@ export const ProfileDialog = ({
                       )}
                       {profile?.age && (
                         <>
-                          <div className="ios-list-item">
-                            <div className="flex items-center gap-3">
-                              <div className="h-[30px] w-[30px] rounded-[7px] bg-pink-500 flex items-center justify-center">
-                                <Calendar className="h-[18px] w-[18px] text-white" />
-                              </div>
-                              <div>
-                                <p className="text-[13px] text-muted-foreground">Âge</p>
-                                <p className="text-[17px] text-foreground">{profile.age} ans</p>
-                              </div>
+                          <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
+                            <div className="h-[30px] w-[30px] rounded-[7px] bg-pink-500 flex items-center justify-center">
+                              <Calendar className="h-[18px] w-[18px] text-white" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] text-muted-foreground">Âge</p>
+                              <p className="text-[17px] text-foreground">{profile.age} ans</p>
                             </div>
                           </div>
                           <div className="ios-list-separator" />
@@ -608,16 +602,13 @@ export const ProfileDialog = ({
                       )}
                       {profile?.phone && (
                         <>
-                          <div className="ios-list-separator" />
-                          <div className="ios-list-item">
-                            <div className="flex items-center gap-3">
-                              <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
-                                <Heart className="h-[18px] w-[18px] text-white" />
-                              </div>
-                              <div>
-                                <p className="text-[13px] text-muted-foreground">Téléphone</p>
-                                <p className="text-[17px] text-foreground">{profile.phone}</p>
-                              </div>
+                          <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
+                            <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
+                              <Heart className="h-[18px] w-[18px] text-white" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] text-muted-foreground">Téléphone</p>
+                              <p className="text-[17px] text-foreground">{profile.phone}</p>
                             </div>
                           </div>
                         </>
