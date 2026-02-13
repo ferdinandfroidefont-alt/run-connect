@@ -773,7 +773,7 @@ const Profile = () => {
 
         {/* Classement, Badges & Activités - iOS Style Group */}
         {!isViewingOtherUser ? (
-          <ProfileStatsGroup userId={user?.id || ''} />
+          <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} />
         ) : (
           <ProfileRankBadgeCompact 
             userId={viewingUserId || ''} 

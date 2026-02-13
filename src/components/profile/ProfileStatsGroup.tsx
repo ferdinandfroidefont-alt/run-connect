@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, Medal, BarChart3, ChevronRight } from "lucide-react";
+import { Trophy, Medal, BarChart3, ChevronRight, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { MyRankCard } from "@/components/leaderboard/MyRankCard";
@@ -11,6 +11,7 @@ import { fr } from "date-fns/locale";
 
 interface ProfileStatsGroupProps {
   userId: string;
+  onSettingsClick?: () => void;
 }
 
 interface Badge {
@@ -47,7 +48,7 @@ const getNextRankInfo = (points: number) => {
   return { name: "Bronze", points: 500 };
 };
 
-export const ProfileStatsGroup = ({ userId }: ProfileStatsGroupProps) => {
+export const ProfileStatsGroup = ({ userId, onSettingsClick }: ProfileStatsGroupProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   
@@ -287,6 +288,25 @@ export const ProfileStatsGroup = ({ userId }: ProfileStatsGroupProps) => {
             </div>
           </div>
         </button>
+
+        {/* Paramètres Row */}
+        {onSettingsClick && (
+          <>
+            <div className="h-px bg-border ml-[54px]" />
+            <button
+              onClick={onSettingsClick}
+              className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+            >
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-gray-500 flex items-center justify-center">
+                <Settings className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1 flex items-center justify-between">
+                <span className="text-[17px] text-foreground">Paramètres</span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+              </div>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Rank Dialog */}
