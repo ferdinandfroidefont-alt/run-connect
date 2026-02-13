@@ -16,6 +16,9 @@ export default function Feed() {
   const [mode, setMode] = useState<FeedMode>('friends');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Friends feed hook
   const {
@@ -82,6 +85,28 @@ export default function Feed() {
     setTimeout(() => setIsRefreshing(false), 500);
   }, [mode, refreshFriends, refreshDiscover]);
 
+  // Pull-to-refresh touch handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (isRefreshing) return;
+    const container = scrollContainerRef.current;
+    if (container && container.scrollTop > 0) return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0) {
+      setPullDistance(Math.min(delta * 0.4, 80));
+    }
+  }, [isRefreshing]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (pullDistance > 50) {
+      handleRefresh();
+    }
+    setPullDistance(0);
+  }, [pullDistance, handleRefresh]);
+
   const handleJoinSession = (sessionId: string) => {
     navigate('/', { state: { openSessionId: sessionId } });
   };
@@ -89,7 +114,13 @@ export default function Feed() {
   const loading = mode === 'friends' ? friendsLoading : discoverLoading;
 
   return (
-    <div className="min-h-screen bg-secondary pb-24">
+    <div
+      ref={scrollContainerRef}
+      className="min-h-screen bg-secondary pb-24"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Header with Mode Selector */}
       <FeedHeader 
         onSearch={() => navigate('/search')} 
@@ -112,17 +143,15 @@ export default function Feed() {
       {/* Separator (only for friends mode) */}
       {mode === 'friends' && <div className="h-px bg-border" />}
 
-      {/* Pull to Refresh - iOS Style */}
-      <div className="flex justify-center py-3">
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 text-[13px] text-muted-foreground active:text-foreground bg-card border border-border rounded-full transition-all active:scale-95"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Actualisation...' : 'Actualiser'}
-        </button>
-      </div>
+      {/* Pull to Refresh - iOS Spinner */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div className="flex justify-center overflow-hidden transition-all" style={{ height: isRefreshing ? 40 : pullDistance * 0.5 }}>
+          <RefreshCw
+            className={`h-5 w-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`}
+            style={{ opacity: isRefreshing ? 1 : Math.min(pullDistance / 50, 1), transform: `rotate(${pullDistance * 3}deg)` }}
+          />
+        </div>
+      )}
 
       {/* Content */}
       <div className="max-w-2xl mx-auto">

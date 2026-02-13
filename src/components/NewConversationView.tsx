@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { OnlineStatus } from "@/components/OnlineStatus";
 import { ChevronLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
@@ -343,7 +343,7 @@ export const NewConversationView = ({
           <h1 className="text-[17px] font-semibold text-foreground">Nouveau message</h1>
         </div>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto scroll-momentum">
           <div className="p-4 space-y-6">
             {/* Quick Suggestions - Recent Friends Carousel */}
             {recentFriends.length > 0 && !searchQuery.trim() && (
@@ -552,7 +552,7 @@ export const NewConversationView = ({
               </div>
             </motion.div>
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {selectedPreviewUserId && (

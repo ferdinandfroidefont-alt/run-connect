@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, UserPlus, Download, MapPin, Calendar } from "lucide-react";
+import { Loader2, UserPlus, Download, MapPin, Calendar, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
@@ -43,7 +42,6 @@ const PublicProfile = () => {
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());
     
-    // Détecter le code de parrainage dans l'URL
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('r');
     if (refCode) {
@@ -63,7 +61,6 @@ const PublicProfile = () => {
       if (!username) return;
 
       try {
-        // Si l'utilisateur est déjà connecté et consulte son propre profil, rediriger vers le profil complet
         if (user) {
           const { data: ownProfile } = await supabase
             .from('profiles')
@@ -77,7 +74,6 @@ const PublicProfile = () => {
           }
         }
 
-        // Récupérer le profil public
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('user_id, username, display_name, avatar_url, bio, is_premium')
@@ -86,7 +82,6 @@ const PublicProfile = () => {
           .single();
 
         if (profileError || !profileData) {
-          // Si utilisateur non connecté, stocker le username cible et rediriger vers auth
           if (!user) {
             sessionStorage.setItem('targetProfileUsername', username);
             toast({
@@ -107,7 +102,6 @@ const PublicProfile = () => {
 
         setProfile(profileData);
 
-        // Récupérer les 3 dernières séances publiques
         const { data: sessionsData } = await supabase
           .from('sessions')
           .select('id, title, activity_type, scheduled_at, location_name')
@@ -129,23 +123,17 @@ const PublicProfile = () => {
 
   const handleSubscribe = () => {
     if (!user) {
-      // Stocker le username cible pour redirection post-auth
       if (username) {
         sessionStorage.setItem('targetProfileUsername', username);
       }
       navigate('/auth');
       return;
     }
-    
-    // Pour utilisateur connecté, ouvrir le ProfilePreviewDialog
     setShowProfilePreview(true);
   };
 
   const handleOpenInApp = () => {
-    // Tenter d'ouvrir le deep link
     window.location.href = `app.runconnect://profile/${username}`;
-    
-    // Fallback : rediriger vers Google Play après 2s si échec
     setTimeout(() => {
       window.location.href = 'https://play.google.com/store/apps/details?id=app.runconnect';
     }, 2000);
@@ -153,8 +141,8 @@ const PublicProfile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/70 to-cyan-400">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      <div className="min-h-screen flex items-center justify-center bg-secondary">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -164,119 +152,106 @@ const PublicProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary/70 to-cyan-400 p-4">
+    <div className="min-h-screen bg-secondary">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-2xl mx-auto pt-12 space-y-6"
+        transition={{ duration: 0.4 }}
+        className="max-w-2xl mx-auto pt-12 px-4 pb-8 space-y-4"
       >
-        {/* Header avec photo et infos */}
-        <Card className="bg-white/95 backdrop-blur">
-          <CardContent className="pt-8 pb-6">
-            <div className="flex flex-col items-center space-y-4">
-              {/* Avatar */}
-              <Avatar className="h-32 w-32 border-4 border-primary shadow-lg">
-                <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="text-3xl bg-primary text-white">
-                  {profile.username?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+        {/* Profile Card */}
+        <div className="bg-card rounded-[10px] overflow-hidden">
+          <div className="flex flex-col items-center px-4 py-8 space-y-4">
+            {/* Avatar */}
+            <Avatar className="h-28 w-28 border-4 border-primary/20">
+              <AvatarImage src={profile.avatar_url || undefined} />
+              <AvatarFallback className="text-3xl bg-primary/10 text-primary font-bold">
+                {profile.username?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
 
-              {/* Username et nom */}
-              <div className="text-center space-y-1">
-                <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
-                  {profile.username}
-                  {profile.is_premium && (
-                    <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-orange-500">
-                      Premium
-                    </Badge>
-                  )}
-                </h1>
-                {profile.display_name && (
-                  <p className="text-muted-foreground">{profile.display_name}</p>
+            {/* Username */}
+            <div className="text-center space-y-1">
+              <h1 className="text-ios-title2 text-foreground flex items-center justify-center gap-2">
+                {profile.username}
+                {profile.is_premium && (
+                  <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[11px] px-2 py-0.5">
+                    Premium
+                  </Badge>
                 )}
-              </div>
-
-              {/* Bio */}
-              {profile.bio && (
-                <p className="text-center text-sm text-muted-foreground max-w-md">
-                  {profile.bio}
-                </p>
+              </h1>
+              {profile.display_name && (
+                <p className="text-ios-subheadline text-muted-foreground">{profile.display_name}</p>
               )}
-
-              {/* Boutons d'action */}
-              <div className="flex gap-3 w-full max-w-sm pt-4">
-                <Button
-                  size="lg"
-                  className="flex-1"
-                  onClick={handleSubscribe}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  S'abonner
-                </Button>
-                {!isNative && (
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={handleOpenInApp}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Ouvrir dans l'app
-                  </Button>
-                )}
-              </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Dernières séances */}
+            {/* Bio */}
+            {profile.bio && (
+              <p className="text-center text-ios-subheadline text-muted-foreground max-w-[280px]">
+                {profile.bio}
+              </p>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 w-full max-w-sm pt-2">
+              <Button
+                onClick={handleSubscribe}
+                className="flex-1 h-12 rounded-[10px] text-[17px] font-semibold"
+              >
+                <UserPlus className="h-5 w-5 mr-2" />
+                S'abonner
+              </Button>
+              {!isNative && (
+                <Button
+                  variant="secondary"
+                  onClick={handleOpenInApp}
+                  className="h-12 rounded-[10px] text-[17px] font-semibold"
+                >
+                  <Download className="h-5 w-5 mr-2" />
+                  App
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sessions List - iOS Inset Grouped */}
         {sessions.length > 0 && (
-          <Card className="bg-white/95 backdrop-blur">
-            <CardContent className="pt-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Dernières séances
-              </h2>
-              <div className="space-y-3">
-                {sessions.map((session) => (
-                  <Card key={session.id} className="bg-background/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-medium">{session.title}</h3>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {session.location_name}
-                            </span>
-                            <span>
-                              {new Date(session.scheduled_at).toLocaleDateString('fr-FR')}
-                            </span>
-                          </div>
-                        </div>
-                        <Badge variant="outline">{session.activity_type}</Badge>
+          <div>
+            <p className="ios-section-header">Dernières séances</p>
+            <div className="bg-card rounded-[10px] overflow-hidden">
+              {sessions.map((session, index) => (
+                <div key={session.id}>
+                  <div className="flex items-center px-4 py-[11px]">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
+                      <Calendar className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-medium text-foreground truncate">{session.title}</p>
+                      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{session.location_name}</span>
+                        <span>·</span>
+                        <span className="flex-shrink-0">{new Date(session.scheduled_at).toLocaleDateString('fr-FR')}</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                    </div>
+                    <Badge variant="outline" className="ml-2 text-[11px] flex-shrink-0">{session.activity_type}</Badge>
+                  </div>
+                  {index < sessions.length - 1 && <div className="ios-list-separator" />}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Footer */}
-        <div className="text-center pb-8">
-          <p className="text-white/80 text-sm">
+        <div className="text-center pt-4">
+          <p className="text-ios-footnote text-muted-foreground">
             Rejoignez {profile.username} sur RunConnect
-          </p>
-          <p className="text-white/60 text-xs mt-1">
-            L'application pour course et vélo
           </p>
         </div>
       </motion.div>
 
-      {/* ProfilePreviewDialog pour utilisateurs connectés */}
       {showProfilePreview && profile && (
         <ProfilePreviewDialog
           userId={profile.user_id}
