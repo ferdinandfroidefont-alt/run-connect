@@ -607,86 +607,83 @@ export const ProfileDialog = ({
                         </>
                       )}
                       {profile?.phone && (
-                        <div className="ios-list-item">
-                          <div className="flex items-center gap-3">
-                            <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
-                              <Heart className="h-[18px] w-[18px] text-white" />
-                            </div>
-                            <div>
-                              <p className="text-[13px] text-muted-foreground">Téléphone</p>
-                              <p className="text-[17px] text-foreground">{profile.phone}</p>
+                        <>
+                          <div className="ios-list-separator" />
+                          <div className="ios-list-item">
+                            <div className="flex items-center gap-3">
+                              <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
+                                <Heart className="h-[18px] w-[18px] text-white" />
+                              </div>
+                              <div>
+                                <p className="text-[13px] text-muted-foreground">Téléphone</p>
+                                <p className="text-[17px] text-foreground">{profile.phone}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </>
                       )}
+                      <div className="ios-list-separator" />
+                      <div
+                        onClick={() => {
+                          onOpenChange(false);
+                          navigate('/my-sessions');
+                        }}
+                        className="flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors cursor-pointer"
+                      >
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
+                          <Route className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                      </div>
+                      <div className="ios-list-separator" />
+                      <div
+                        onClick={() => {
+                          onOpenChange(false);
+                          navigate('/route-creation');
+                        }}
+                        className="flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors cursor-pointer"
+                      >
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                          <MapPin className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[17px] text-foreground">Créer un parcours</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                      </div>
+                      <div className="ios-list-separator" />
+                      <button
+                        onClick={() => setShowSettingsDialog(true)}
+                        className="w-full flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors"
+                      >
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-gray-500 flex items-center justify-center">
+                          <User className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <div className="flex-1 flex items-center justify-between">
+                          <p className="text-[17px] text-foreground">Paramètres</p>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                        </div>
+                      </button>
+                      <div className="ios-list-separator" />
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="w-full flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors"
+                      >
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-orange-500 flex items-center justify-center">
+                          <Shield className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <div className="flex-1 flex items-center justify-between">
+                          <p className="text-[17px] text-foreground">Modifier mon profil</p>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                        </div>
+                      </button>
                     </>
                   )}
                 </ProfileStatsGroup>
               )}
-
-              {/* Mes Parcours, Paramètres & Modifier - iOS Style Group */}
-              <div className="bg-card rounded-[10px] overflow-hidden">
-                <div
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate('/my-sessions');
-                  }}
-                  className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
-                >
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
-                    <Route className="h-[18px] w-[18px] text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                </div>
-                <div className="h-px bg-border ml-[54px]" />
-                
-                <div
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate('/route-creation');
-                  }}
-                  className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer"
-                >
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
-                    <MapPin className="h-[18px] w-[18px] text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[17px] text-foreground">Créer un parcours</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                </div>
-                <div className="h-px bg-border ml-[54px]" />
-
-                <button 
-                  onClick={() => setShowSettingsDialog(true)}
-                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
-                >
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-gray-500 flex items-center justify-center">
-                    <User className="h-[18px] w-[18px] text-white" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-between">
-                    <p className="text-[17px] text-foreground">Paramètres</p>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                  </div>
-                </button>
-                <div className="h-px bg-border ml-[54px]" />
-
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
-                >
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-orange-500 flex items-center justify-center">
-                    <Shield className="h-[18px] w-[18px] text-white" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-between">
-                    <p className="text-[17px] text-foreground">Modifier mon profil</p>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                  </div>
-                </button>
-              </div>
             </div>
           </ScrollArea>
         </DialogContent>
