@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, Medal, BarChart3, ChevronRight, Settings } from "lucide-react";
+import { Trophy, Medal, BarChart3, ChevronRight, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { MyRankCard } from "@/components/leaderboard/MyRankCard";
@@ -12,6 +12,7 @@ import { fr } from "date-fns/locale";
 interface ProfileStatsGroupProps {
   userId: string;
   onSettingsClick?: () => void;
+  onInfoClick?: () => void;
 }
 
 interface Badge {
@@ -48,7 +49,7 @@ const getNextRankInfo = (points: number) => {
   return { name: "Bronze", points: 500 };
 };
 
-export const ProfileStatsGroup = ({ userId, onSettingsClick }: ProfileStatsGroupProps) => {
+export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick }: ProfileStatsGroupProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   
@@ -302,6 +303,25 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick }: ProfileStatsGroup
               </div>
               <div className="flex-1 flex items-center justify-between">
                 <span className="text-[17px] text-foreground">Paramètres</span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+              </div>
+            </button>
+          </>
+        )}
+
+        {/* Informations personnelles Row */}
+        {onInfoClick && (
+          <>
+            <div className="h-px bg-border ml-[54px]" />
+            <button
+              onClick={onInfoClick}
+              className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+            >
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
+                <User className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1 flex items-center justify-between">
+                <span className="text-[17px] text-foreground">Informations personnelles</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
               </div>
             </button>
