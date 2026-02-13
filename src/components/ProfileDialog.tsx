@@ -495,130 +495,133 @@ export const ProfileDialog = ({
                 </div>
               </div>
 
-              {/* Classement, Badges & Activités - iOS Style Group */}
-              {user?.id && <ProfileStatsGroup userId={user.id} />}
-
-              {/* Informations personnelles - Section editing */}
-              {isEditing ? (
-                <div className="bg-card rounded-[10px] p-4 space-y-4">
-                  <h3 className="text-[15px] font-semibold text-foreground">Modifier mes informations</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-[13px] font-medium text-muted-foreground">Pseudo</label>
-                      <Input 
-                        value={formData.username || ''} 
-                        onChange={e => setFormData({ ...formData, username: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[13px] font-medium text-muted-foreground">Nom d'affichage</label>
-                      <Input 
-                        value={formData.display_name || ''} 
-                        onChange={e => setFormData({ ...formData, display_name: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[13px] font-medium text-muted-foreground">Âge</label>
-                      <Input 
-                        type="number" 
-                        value={formData.age || ''} 
-                        onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[13px] font-medium text-muted-foreground">Téléphone</label>
-                      <Input 
-                        value={formData.phone || ''} 
-                        onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                        placeholder="06 12 34 56 78"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
-                      <Input 
-                        value={formData.bio || ''} 
-                        onChange={e => setFormData({ ...formData, bio: e.target.value })} 
-                        placeholder="Décrivez vos records, vos objectifs..."
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button onClick={updateProfile} disabled={loading} className="flex-1">
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Sauvegarder
-                      </Button>
-                      <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1">
-                        Annuler
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-card rounded-[10px] overflow-hidden">
-                  <div className="ios-list-item">
-                    <div className="flex items-center gap-3">
-                      <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
-                        <User className="h-[18px] w-[18px] text-white" />
-                      </div>
-                      <div>
-                        <p className="text-[13px] text-muted-foreground">Pseudo</p>
-                        <p className="text-[17px] text-foreground">{profile?.username || 'Non renseigné'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="ios-list-separator" />
-                  {profile?.display_name && (
+              {/* Classement, Badges, Activités & Infos - iOS Style Group */}
+              {user?.id && (
+                <ProfileStatsGroup userId={user.id}>
+                  {isEditing ? (
                     <>
+                      <div className="h-px bg-border ml-[54px]" />
+                      <div className="p-4 space-y-4">
+                        <h3 className="text-[15px] font-semibold text-foreground">Modifier mes informations</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-[13px] font-medium text-muted-foreground">Pseudo</label>
+                            <Input 
+                              value={formData.username || ''} 
+                              onChange={e => setFormData({ ...formData, username: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[13px] font-medium text-muted-foreground">Nom d'affichage</label>
+                            <Input 
+                              value={formData.display_name || ''} 
+                              onChange={e => setFormData({ ...formData, display_name: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[13px] font-medium text-muted-foreground">Âge</label>
+                            <Input 
+                              type="number" 
+                              value={formData.age || ''} 
+                              onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[13px] font-medium text-muted-foreground">Téléphone</label>
+                            <Input 
+                              value={formData.phone || ''} 
+                              onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+                              placeholder="06 12 34 56 78"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
+                            <Input 
+                              value={formData.bio || ''} 
+                              onChange={e => setFormData({ ...formData, bio: e.target.value })} 
+                              placeholder="Décrivez vos records, vos objectifs..."
+                              className="mt-1"
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <Button onClick={updateProfile} disabled={loading} className="flex-1">
+                              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Sauvegarder
+                            </Button>
+                            <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1">
+                              Annuler
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-px bg-border ml-[54px]" />
                       <div className="ios-list-item">
                         <div className="flex items-center gap-3">
-                          <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                          <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
                             <User className="h-[18px] w-[18px] text-white" />
                           </div>
                           <div>
-                            <p className="text-[13px] text-muted-foreground">Nom</p>
-                            <p className="text-[17px] text-foreground">{profile.display_name}</p>
+                            <p className="text-[13px] text-muted-foreground">Pseudo</p>
+                            <p className="text-[17px] text-foreground">{profile?.username || 'Non renseigné'}</p>
                           </div>
                         </div>
                       </div>
                       <div className="ios-list-separator" />
-                    </>
-                  )}
-                  {profile?.age && (
-                    <>
-                      <div className="ios-list-item">
-                        <div className="flex items-center gap-3">
-                          <div className="h-[30px] w-[30px] rounded-[7px] bg-pink-500 flex items-center justify-center">
-                            <Calendar className="h-[18px] w-[18px] text-white" />
+                      {profile?.display_name && (
+                        <>
+                          <div className="ios-list-item">
+                            <div className="flex items-center gap-3">
+                              <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                                <User className="h-[18px] w-[18px] text-white" />
+                              </div>
+                              <div>
+                                <p className="text-[13px] text-muted-foreground">Nom</p>
+                                <p className="text-[17px] text-foreground">{profile.display_name}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[13px] text-muted-foreground">Âge</p>
-                            <p className="text-[17px] text-foreground">{profile.age} ans</p>
+                          <div className="ios-list-separator" />
+                        </>
+                      )}
+                      {profile?.age && (
+                        <>
+                          <div className="ios-list-item">
+                            <div className="flex items-center gap-3">
+                              <div className="h-[30px] w-[30px] rounded-[7px] bg-pink-500 flex items-center justify-center">
+                                <Calendar className="h-[18px] w-[18px] text-white" />
+                              </div>
+                              <div>
+                                <p className="text-[13px] text-muted-foreground">Âge</p>
+                                <p className="text-[17px] text-foreground">{profile.age} ans</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="ios-list-separator" />
+                        </>
+                      )}
+                      {profile?.phone && (
+                        <div className="ios-list-item">
+                          <div className="flex items-center gap-3">
+                            <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
+                              <Heart className="h-[18px] w-[18px] text-white" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] text-muted-foreground">Téléphone</p>
+                              <p className="text-[17px] text-foreground">{profile.phone}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="ios-list-separator" />
+                      )}
                     </>
                   )}
-                  {profile?.phone && (
-                    <>
-                      <div className="ios-list-item">
-                        <div className="flex items-center gap-3">
-                          <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
-                            <Heart className="h-[18px] w-[18px] text-white" />
-                          </div>
-                          <div>
-                            <p className="text-[13px] text-muted-foreground">Téléphone</p>
-                            <p className="text-[17px] text-foreground">{profile.phone}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                </ProfileStatsGroup>
               )}
 
               {/* Mes Parcours Section - MOVED ABOVE */}

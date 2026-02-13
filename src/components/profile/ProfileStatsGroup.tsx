@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, Medal, BarChart3, ChevronRight, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ interface ProfileStatsGroupProps {
   userId: string;
   onSettingsClick?: () => void;
   onInfoClick?: () => void;
+  children?: ReactNode;
 }
 
 interface Badge {
@@ -49,7 +50,7 @@ const getNextRankInfo = (points: number) => {
   return { name: "Bronze", points: 500 };
 };
 
-export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick }: ProfileStatsGroupProps) => {
+export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, children }: ProfileStatsGroupProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   
@@ -327,6 +328,9 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick }: Prof
             </button>
           </>
         )}
+
+        {/* Extra children rows */}
+        {children}
       </div>
 
       {/* Rank Dialog */}
