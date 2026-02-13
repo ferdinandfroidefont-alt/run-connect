@@ -9,7 +9,7 @@ export default function About() {
   const lastUpdate = "15 janvier 2025";
 
   return (
-    <div className="min-h-screen bg-secondary flex flex-col">
+    <div className="min-h-screen bg-secondary flex flex-col bg-pattern">
       {/* Header fixe style iOS */}
       <div className="sticky top-0 z-50 bg-card border-b border-border/50 safe-area-top">
         <div className="flex items-center justify-between px-4 h-14">

@@ -7,7 +7,7 @@ export default function Privacy() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-pattern">
       {/* Header fixe */}
       <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50">
         <div className="flex items-center gap-3 p-4">

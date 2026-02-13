@@ -126,7 +126,7 @@ En cas de conflit entre ces conditions et les lois locales, les lois locales pr√
   ];
 
   return (
-    <div className="min-h-screen bg-secondary flex flex-col">
+    <div className="min-h-screen bg-secondary flex flex-col bg-pattern">
       {/* Header fixe style iOS */}
       <div className="sticky top-0 z-50 bg-card border-b border-border/50 safe-area-top">
         <div className="flex items-center justify-between px-4 h-14">

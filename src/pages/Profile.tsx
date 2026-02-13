@@ -598,11 +598,11 @@ const Profile = () => {
     }
   };
   if (loading) {
-    return <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center">
+    return <div className="min-h-screen bg-secondary flex items-center justify-center bg-pattern">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  return <div className="min-h-screen bg-[#F2F2F7]">
+  return <div className="min-h-screen bg-secondary bg-pattern">
       {/* iOS Header */}
       <div className="sticky top-0 z-40 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">

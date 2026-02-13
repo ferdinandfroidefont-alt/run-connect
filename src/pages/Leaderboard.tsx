@@ -507,7 +507,7 @@ const Leaderboard = () => {
 
   if (loading && currentPage === 1) {
     return (
-      <div className="min-h-screen bg-secondary pb-24">
+      <div className="min-h-screen bg-secondary pb-24 bg-pattern">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
           <div className="flex items-center justify-between px-4 py-3">
@@ -534,7 +534,7 @@ const Leaderboard = () => {
   const nextRank = getNextRankInfo(userPoints);
 
   return (
-    <div className="min-h-screen bg-secondary pb-8">
+    <div className="min-h-screen bg-secondary pb-8 bg-pattern">
       {/* iOS Header */}
       <div className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3 pt-safe">
