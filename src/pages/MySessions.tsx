@@ -22,6 +22,7 @@ import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { OrganizerStatsCard } from '@/components/OrganizerStatsCard';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
+import { StreakBadge } from '@/components/StreakBadge';
 
 interface UserSession {
   id: string;
@@ -541,9 +542,9 @@ export default function MySessions() {
           {currentView === 'sessions' ? (
             <>
               {/* Display Mode Toggle */}
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3 mb-4">
                 {/* Filter Pills */}
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
                   {[
                     { key: 'all', label: 'Toutes' },
                     { key: 'upcoming', label: 'À venir' },
@@ -562,6 +563,8 @@ export default function MySessions() {
                     </button>
                   ))}
                 </div>
+                {/* Streak Badge */}
+                {user && <StreakBadge userId={user.id} variant="compact" />}
                 {/* List/Calendar toggle */}
                 <div className="flex bg-card rounded-lg p-0.5 ml-2 shrink-0">
                   <button
