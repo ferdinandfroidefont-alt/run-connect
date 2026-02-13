@@ -331,10 +331,14 @@ serve(async (req) => {
         await supabaseClient.from('profiles').update({ push_token: null, push_token_updated_at: null }).eq('user_id', user_id);
 
         if (notificationId) {
-          await supabaseClient.from('notification_logs').insert({
-            notification_id: notificationId, user_id, push_token: profile.push_token,
-            fcm_success: false, fcm_error: 'UNREGISTERED', fcm_response: { error: 'UNREGISTERED', type }
-          }).catch(() => {});
+          try {
+            await supabaseClient.from('notification_logs').insert({
+              notification_id: notificationId, user_id, push_token: profile.push_token,
+              fcm_success: false, fcm_error: 'UNREGISTERED', fcm_response: { error: 'UNREGISTERED', type }
+            });
+          } catch (logErr) {
+            console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+          }
         }
 
         return new Response(
@@ -347,11 +351,15 @@ serve(async (req) => {
 
       // Log attempt
       if (notificationId) {
-        await supabaseClient.from('notification_logs').insert({
-          notification_id: notificationId, user_id, push_token: profile.push_token,
-          fcm_success: fcmSuccess, fcm_error: fcmSuccess ? null : 'FCM send failed',
-          fcm_response: { type, title: finalTitle }
-        }).catch(() => {});
+        try {
+          await supabaseClient.from('notification_logs').insert({
+            notification_id: notificationId, user_id, push_token: profile.push_token,
+            fcm_success: fcmSuccess, fcm_error: fcmSuccess ? null : 'FCM send failed',
+            fcm_response: { type, title: finalTitle }
+          });
+        } catch (logErr) {
+          console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+        }
       }
 
       return new Response(
@@ -365,10 +373,14 @@ serve(async (req) => {
       console.error('❌ [FCM] Exception:', fcmError);
 
       if (notificationId) {
-        await supabaseClient.from('notification_logs').insert({
-          notification_id: notificationId, user_id, push_token: profile.push_token,
-          fcm_success: false, fcm_error: String(fcmError), fcm_response: { error: String(fcmError) }
-        }).catch(() => {});
+        try {
+          await supabaseClient.from('notification_logs').insert({
+            notification_id: notificationId, user_id, push_token: profile.push_token,
+            fcm_success: false, fcm_error: String(fcmError), fcm_response: { error: String(fcmError) }
+          });
+        } catch (logErr) {
+          console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+        }
       }
 
       return new Response(
