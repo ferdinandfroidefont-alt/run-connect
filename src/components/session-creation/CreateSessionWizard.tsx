@@ -396,7 +396,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden flex flex-col border-0 sm:border bg-secondary">
+      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden flex flex-col border-0 sm:border bg-secondary bg-pattern">
         {/* iOS Header */}
         <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
           <div className="flex items-center justify-between px-4 py-3">
