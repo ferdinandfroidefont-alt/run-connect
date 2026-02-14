@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
@@ -383,16 +384,15 @@ export const ProfileDialog = ({
             </div>
           </div>
           
-          <ScrollArea className="flex-1 bg-pattern">
-            <div className="p-4 space-y-6">
-              {/* Profile Header - iOS Style */}
-              <div className="flex flex-col items-center pt-6 pb-4">
-                {/* Avatar with shadow */}
-                <div className="relative mb-4">
+           <ScrollArea className="flex-1 bg-pattern">
+            <div className="p-4 space-y-6 pb-8">
+              {/* Profile Header - Centered */}
+              <div className="flex flex-col items-center pt-4 pb-2">
+                <div className="relative mb-3">
                   <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
                     <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
                     <AvatarFallback className="text-2xl bg-secondary">
-                      {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+                      {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   {isEditing && (
@@ -402,17 +402,11 @@ export const ProfileDialog = ({
                         try {
                           const file = await selectFromGallery();
                           if (file) {
-                            handleAvatarChange({
-                              target: { files: [file] }
-                            } as any);
+                            handleAvatarChange({ target: { files: [file] } } as any);
                           }
                         } catch (error) {
                           console.error('Error selecting from gallery:', error);
-                          toast({
-                            title: "Erreur",
-                            description: "Impossible d'accéder à la galerie",
-                            variant: "destructive"
-                          });
+                          toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
                         }
                       }} 
                       disabled={cameraLoading} 
@@ -423,44 +417,40 @@ export const ProfileDialog = ({
                   )}
                 </div>
                 
-                {/* Display Name (Primary) */}
                 <h2 className="text-[22px] font-bold text-foreground leading-tight">
                   {profile?.display_name || profile?.username || "Utilisateur"}
                 </h2>
-                
-                {/* Username (Secondary) */}
                 <p className="text-[14px] text-muted-foreground mt-0.5">
                   @{profile?.username}
                 </p>
                 
-                {/* Status Badges - Inline */}
+                {/* Status Badges */}
                 <div className="flex items-center gap-1.5 mt-2">
                   {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                    <div className="flex items-center gap-1 bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded-full">
+                    <div className="flex items-center gap-1 bg-primary/12 text-primary px-2 py-0.5 rounded-full">
                       <Crown className="h-3 w-3" />
                       <span className="text-[11px] font-semibold">Premium</span>
                     </div>
                   )}
                   {profile?.is_admin && (
-                    <div className="flex items-center gap-1 bg-red-500/15 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full">
+                    <div className="flex items-center gap-1 bg-destructive/12 text-destructive px-2 py-0.5 rounded-full">
                       <Shield className="h-3 w-3" />
                       <span className="text-[11px] font-semibold">Admin</span>
                     </div>
                   )}
                   {profile?.strava_connected && profile?.strava_verified_at && (
-                    <div className="flex items-center gap-1 bg-orange-500/15 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full">
+                    <div className="flex items-center gap-1 bg-orange-500/12 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full">
                       <Zap className="h-3 w-3" />
                       <span className="text-[11px] font-semibold">Strava</span>
                     </div>
                   )}
                   {profile?.instagram_connected && profile?.instagram_verified_at && (
-                    <div className="flex items-center gap-1 bg-pink-500/15 text-pink-600 dark:text-pink-400 px-2 py-0.5 rounded-full">
+                    <div className="flex items-center gap-1 bg-pink-500/12 text-pink-600 dark:text-pink-400 px-2 py-0.5 rounded-full">
                       <Instagram className="h-3 w-3" />
                     </div>
                   )}
                 </div>
                 
-                {/* Bio */}
                 {profile?.bio && (
                   <p className="text-center text-muted-foreground text-[14px] max-w-[280px] mt-3 line-clamp-2">
                     {profile.bio}
@@ -468,8 +458,8 @@ export const ProfileDialog = ({
                 )}
               </div>
 
-              {/* Stats Card - iOS Style */}
-              <div className="bg-card rounded-[12px] mx-0 overflow-hidden">
+              {/* Social Stats - iOS Segmented */}
+              <IOSListGroup>
                 <div className="flex items-center divide-x divide-border">
                   <button
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
@@ -493,187 +483,151 @@ export const ProfileDialog = ({
                     <p className="text-[12px] text-muted-foreground">Fiabilité</p>
                   </button>
                 </div>
-              </div>
+              </IOSListGroup>
 
-              {/* Classement, Badges, Activités & Infos - iOS Style Group */}
+              {/* Gamification Section */}
               {user?.id && (
-                <ProfileStatsGroup userId={user.id}>
-                  {isEditing ? (
-                    <>
-                      <div className="h-px bg-border ml-[54px]" />
-                      <div className="p-4 space-y-4">
-                        <h3 className="text-[15px] font-semibold text-foreground">Modifier mes informations</h3>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-[13px] font-medium text-muted-foreground">Pseudo</label>
-                            <Input 
-                              value={formData.username || ''} 
-                              onChange={e => setFormData({ ...formData, username: e.target.value })}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[13px] font-medium text-muted-foreground">Nom d'affichage</label>
-                            <Input 
-                              value={formData.display_name || ''} 
-                              onChange={e => setFormData({ ...formData, display_name: e.target.value })}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[13px] font-medium text-muted-foreground">Âge</label>
-                            <Input 
-                              type="number" 
-                              value={formData.age || ''} 
-                              onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[13px] font-medium text-muted-foreground">Téléphone</label>
-                            <Input 
-                              value={formData.phone || ''} 
-                              onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                              placeholder="06 12 34 56 78"
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
-                            <Input 
-                              value={formData.bio || ''} 
-                              onChange={e => setFormData({ ...formData, bio: e.target.value })} 
-                              placeholder="Décrivez vos records, vos objectifs..."
-                              className="mt-1"
-                            />
-                          </div>
-                          <div className="flex gap-2 pt-2">
-                            <Button onClick={updateProfile} disabled={loading} className="flex-1">
-                              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              Sauvegarder
-                            </Button>
-                            <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1">
-                              Annuler
-                            </Button>
-                          </div>
-                        </div>
+                <ProfileStatsGroup userId={user.id} />
+              )}
+
+              {/* Personal Info or Edit Form */}
+              {isEditing ? (
+                <IOSListGroup header="MODIFIER MES INFORMATIONS">
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Pseudo</label>
+                        <Input 
+                          value={formData.username || ''} 
+                          onChange={e => setFormData({ ...formData, username: e.target.value })}
+                          className="mt-1"
+                        />
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-px bg-border ml-[54px]" />
-                      <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
-                        <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
-                          <User className="h-[18px] w-[18px] text-white" />
-                        </div>
-                        <div>
-                          <p className="text-[13px] text-muted-foreground">Pseudo</p>
-                          <p className="text-[17px] text-foreground">{profile?.username || 'Non renseigné'}</p>
-                        </div>
+                      <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Nom d'affichage</label>
+                        <Input 
+                          value={formData.display_name || ''} 
+                          onChange={e => setFormData({ ...formData, display_name: e.target.value })}
+                          className="mt-1"
+                        />
                       </div>
-                      <div className="ios-list-separator" />
-                      {profile?.display_name && (
-                        <>
-                          <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
-                            <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
-                              <User className="h-[18px] w-[18px] text-white" />
-                            </div>
-                            <div>
-                              <p className="text-[13px] text-muted-foreground">Nom</p>
-                              <p className="text-[17px] text-foreground">{profile.display_name}</p>
-                            </div>
-                          </div>
-                          <div className="ios-list-separator" />
-                        </>
-                      )}
-                      {profile?.age && (
-                        <>
-                          <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
-                            <div className="h-[30px] w-[30px] rounded-[7px] bg-pink-500 flex items-center justify-center">
-                              <Calendar className="h-[18px] w-[18px] text-white" />
-                            </div>
-                            <div>
-                              <p className="text-[13px] text-muted-foreground">Âge</p>
-                              <p className="text-[17px] text-foreground">{profile.age} ans</p>
-                            </div>
-                          </div>
-                          <div className="ios-list-separator" />
-                        </>
-                      )}
-                      {profile?.phone && (
-                        <>
-                          <div className="flex items-center gap-3 px-4 py-[11px] bg-card">
-                            <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
-                              <Heart className="h-[18px] w-[18px] text-white" />
-                            </div>
-                            <div>
-                              <p className="text-[13px] text-muted-foreground">Téléphone</p>
-                              <p className="text-[17px] text-foreground">{profile.phone}</p>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      <div className="ios-list-separator" />
-                      <div
-                        onClick={() => {
-                          onOpenChange(false);
-                          navigate('/my-sessions');
-                        }}
-                        className="flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors cursor-pointer"
-                      >
-                        <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
-                          <Route className="h-[18px] w-[18px] text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                      <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Âge</label>
+                        <Input 
+                          type="number" 
+                          value={formData.age || ''} 
+                          onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
+                          className="mt-1"
+                        />
                       </div>
-                      <div className="ios-list-separator" />
-                      <div
-                        onClick={() => {
-                          onOpenChange(false);
-                          navigate('/route-creation');
-                        }}
-                        className="flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors cursor-pointer"
-                      >
-                        <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
-                          <MapPin className="h-[18px] w-[18px] text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-[17px] text-foreground">Créer un parcours</p>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                      <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Téléphone</label>
+                        <Input 
+                          value={formData.phone || ''} 
+                          onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+                          placeholder="06 12 34 56 78"
+                          className="mt-1"
+                        />
                       </div>
-                      <div className="ios-list-separator" />
-                      <button
-                        onClick={() => setShowSettingsDialog(true)}
-                        className="w-full flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors"
-                      >
-                        <div className="h-[30px] w-[30px] rounded-[7px] bg-gray-500 flex items-center justify-center">
-                          <User className="h-[18px] w-[18px] text-white" />
-                        </div>
-                        <div className="flex-1 flex items-center justify-between">
-                          <p className="text-[17px] text-foreground">Paramètres</p>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                        </div>
-                      </button>
-                      <div className="ios-list-separator" />
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="w-full flex items-center gap-3 px-4 py-[11px] bg-card active:bg-secondary transition-colors"
-                      >
-                        <div className="h-[30px] w-[30px] rounded-[7px] bg-orange-500 flex items-center justify-center">
-                          <Shield className="h-[18px] w-[18px] text-white" />
-                        </div>
-                        <div className="flex-1 flex items-center justify-between">
-                          <p className="text-[17px] text-foreground">Modifier mon profil</p>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                        </div>
-                      </button>
-                    </>
-                  )}
-                </ProfileStatsGroup>
+                      <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
+                        <Input 
+                          value={formData.bio || ''} 
+                          onChange={e => setFormData({ ...formData, bio: e.target.value })} 
+                          placeholder="Décrivez vos records, vos objectifs..."
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button onClick={updateProfile} disabled={loading} className="flex-1">
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Sauvegarder
+                        </Button>
+                        <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1">
+                          Annuler
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </IOSListGroup>
+              ) : (
+                <>
+                  {/* Personal Info */}
+                  <IOSListGroup header="INFORMATIONS">
+                    <IOSListItem
+                      icon={User}
+                      iconBgColor="bg-blue-500"
+                      iconColor="text-white"
+                      title="Pseudo"
+                      value={profile?.username || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    {profile?.display_name && (
+                      <IOSListItem
+                        icon={User}
+                        iconBgColor="bg-purple-500"
+                        iconColor="text-white"
+                        title="Nom"
+                        value={profile.display_name}
+                        showChevron={false}
+                      />
+                    )}
+                    {profile?.age && (
+                      <IOSListItem
+                        icon={Calendar}
+                        iconBgColor="bg-pink-500"
+                        iconColor="text-white"
+                        title="Âge"
+                        value={`${profile.age} ans`}
+                        showChevron={false}
+                      />
+                    )}
+                    {profile?.phone && (
+                      <IOSListItem
+                        icon={Heart}
+                        iconBgColor="bg-green-500"
+                        iconColor="text-white"
+                        title="Téléphone"
+                        value={profile.phone}
+                        showChevron={false}
+                        showSeparator={false}
+                      />
+                    )}
+                  </IOSListGroup>
+
+                  {/* Actions */}
+                  <IOSListGroup header="RACCOURCIS">
+                    <IOSListItem
+                      icon={Route}
+                      iconBgColor="bg-teal-500"
+                      iconColor="text-white"
+                      title="Mes séances et itinéraires"
+                      onClick={() => { onOpenChange(false); navigate('/my-sessions'); }}
+                    />
+                    <IOSListItem
+                      icon={MapPin}
+                      iconBgColor="bg-purple-500"
+                      iconColor="text-white"
+                      title="Créer un parcours"
+                      onClick={() => { onOpenChange(false); navigate('/route-creation'); }}
+                    />
+                    <IOSListItem
+                      icon={User}
+                      iconBgColor="bg-gray-500"
+                      iconColor="text-white"
+                      title="Paramètres"
+                      onClick={() => setShowSettingsDialog(true)}
+                    />
+                    <IOSListItem
+                      icon={Shield}
+                      iconBgColor="bg-orange-500"
+                      iconColor="text-white"
+                      title="Modifier mon profil"
+                      onClick={() => setIsEditing(true)}
+                      showSeparator={false}
+                    />
+                  </IOSListGroup>
+                </>
               )}
             </div>
           </ScrollArea>
