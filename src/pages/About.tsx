@@ -1,4 +1,5 @@
 import { ArrowLeft, Info, Mail, Globe, Code, Heart, Shield, ExternalLink } from "lucide-react";
+import appIcon from '@/assets/app-icon.png';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
@@ -30,9 +31,7 @@ export default function About() {
         <div className="p-4 pb-24 space-y-6">
           {/* Logo et nom */}
           <div className="bg-card rounded-2xl p-6 text-center space-y-4 shadow-sm">
-            <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto shadow-lg">
-              <span className="text-4xl">🏃</span>
-            </div>
+            <img src={appIcon} alt="RunConnect" className="h-24 w-24 rounded-3xl shadow-lg mx-auto" />
             <div>
               <h2 className="text-2xl font-bold text-foreground">RunConnect</h2>
               <p className="text-muted-foreground text-sm mt-1">
