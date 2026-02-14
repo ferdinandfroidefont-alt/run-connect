@@ -32,21 +32,13 @@ export const generateRoundProfileMarkerSVG = (
   return `
     <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <defs>
-        <!-- Shadow for depth -->
-        <filter id="profileShadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
-        </filter>
-        
-        <!-- Circular clip for profile photo -->
         <clipPath id="profileClip-${size}">
           <circle cx="${radius}" cy="${radius}" r="${radius - borderWidth}"/>
         </clipPath>
       </defs>
       
-      <!-- White border circle with shadow -->
-      <circle cx="${radius}" cy="${radius}" r="${radius - 1}" 
-              fill="white" 
-              filter="url(#profileShadow)"/>
+      <!-- White border circle -->
+      <circle cx="${radius}" cy="${radius}" r="${radius - 1}" fill="white"/>
       
       <!-- Profile photo -->
       <image xlink:href="${profileImageUrl}" 
