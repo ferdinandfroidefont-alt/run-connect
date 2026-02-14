@@ -632,7 +632,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     <Input
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Nom complet *"
+                      placeholder="Pseudo *"
                       className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
                       required
                     />
@@ -708,7 +708,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               {/* Bio */}
               <div className="space-y-2">
                 <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
-                  Présentation
+                  Présentation / Bio
                 </h3>
                 <div className="bg-card rounded-[10px] overflow-hidden">
                   <div className="flex items-start gap-3 px-4 py-3">
