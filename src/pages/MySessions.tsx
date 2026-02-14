@@ -83,6 +83,8 @@ export default function MySessions() {
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRouteDeleteConfirm, setShowRouteDeleteConfirm] = useState(false);
+  const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
   const SESSIONS_PER_PAGE = 3;
 
@@ -228,17 +230,23 @@ export default function MySessions() {
     }
   };
 
-  const deleteRoute = async (routeId: string) => {
+  const confirmDeleteRoute = (routeId: string) => {
+    setRouteToDelete(routeId);
+    setShowRouteDeleteConfirm(true);
+  };
+
+  const deleteRoute = async () => {
+    if (!routeToDelete) return;
     try {
       const { error } = await supabase
         .from('routes')
         .delete()
-        .eq('id', routeId)
+        .eq('id', routeToDelete)
         .eq('created_by', user?.id);
 
       if (error) throw error;
 
-      setRoutes(prev => prev.filter(route => route.id !== routeId));
+      setRoutes(prev => prev.filter(route => route.id !== routeToDelete));
       toast({
         title: "Succès",
         description: "Itinéraire supprimé avec succès",
@@ -249,6 +257,9 @@ export default function MySessions() {
         description: "Impossible de supprimer l'itinéraire",
         variant: "destructive",
       });
+    } finally {
+      setShowRouteDeleteConfirm(false);
+      setRouteToDelete(null);
     }
   };
 
@@ -317,12 +328,13 @@ export default function MySessions() {
 
       if (error) throw error;
 
-      setSelectedSession(null);
       setSessions(sessions.filter(s => s.id !== selectedSession.id));
       toast({
         title: "Succès",
         description: "Séance supprimée avec succès",
       });
+      // Navigate back AFTER toast
+      setTimeout(() => setSelectedSession(null), 100);
     } catch (error) {
       console.error('Error deleting session:', error);
       toast({
@@ -726,7 +738,7 @@ export default function MySessions() {
                       key={route.id}
                       route={route}
                       onEdit={() => editRoute(route)}
-                      onDelete={() => deleteRoute(route.id)}
+                      onDelete={() => confirmDeleteRoute(route.id)}
                     />
                   ))}
                 </div>
@@ -748,7 +760,7 @@ export default function MySessions() {
         onClose={closeProfilePreview}
       />
 
-      {/* Delete Confirmation Dialog - iOS Style */}
+      {/* Delete Session Confirmation Dialog - iOS Style */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
           <AlertDialogHeader className="p-6 pb-4">
@@ -767,6 +779,33 @@ export default function MySessions() {
           <div className="border-t border-border">
             <AlertDialogAction
               onClick={handleDeleteSession}
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Route Confirmation Dialog - iOS Style */}
+      <AlertDialog open={showRouteDeleteConfirm} onOpenChange={setShowRouteDeleteConfirm}>
+        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-6 pb-4">
+            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+              Supprimer l'itinéraire
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+              Êtes-vous sûr de vouloir supprimer cet itinéraire ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogAction
+              onClick={deleteRoute}
               className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
             >
               Supprimer
