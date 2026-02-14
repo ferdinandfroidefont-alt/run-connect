@@ -2289,7 +2289,7 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="py-3 space-y-3">
+        <div className="pt-0 pb-3 space-y-3">
           {/* Quick Search Buttons */}
           <div className="bg-card p-3">
             <div className="grid grid-cols-5 gap-2">
