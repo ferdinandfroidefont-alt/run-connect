@@ -80,8 +80,8 @@ export const BottomNavigation = () => {
         })}
 
         <div className="flex items-center justify-center">
-          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-14 w-14 rounded-full bg-primary flex items-center justify-center active:scale-90 transition-transform shadow-lg" data-tutorial="create-session">
-            <Plus className="h-7 w-7 text-primary-foreground" strokeWidth={2.5} />
+          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-[52px] w-[52px] rounded-[16px] bg-primary flex items-center justify-center active:scale-90 transition-all duration-200 shadow-md shadow-primary/15 ring-1 ring-primary/20" data-tutorial="create-session">
+            <Plus className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
           </button>
         </div>
 
