@@ -33,32 +33,32 @@ export const useConversationTheme = () => {
   const getThemeClasses = () => {
     const themes: Record<string, { background: string; ownMessage: string; otherMessage: string }> = {
       default: {
-        background: 'bg-white',
+        background: 'bg-secondary bg-pattern',
         ownMessage: 'bg-[#007AFF] text-white',
-        otherMessage: 'bg-[#E5E5EA] text-black'
+        otherMessage: 'bg-[#E5E5EA] text-black dark:bg-[#38383A] dark:text-white'
       },
       ocean: {
-        background: 'bg-gradient-to-b from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20',
+        background: 'bg-secondary bg-pattern',
         ownMessage: 'bg-blue-600 text-white',
         otherMessage: 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100'
       },
       sunset: {
-        background: 'bg-gradient-to-br from-orange-50 via-pink-50 to-red-50 dark:from-orange-950/20 dark:via-pink-950/20 dark:to-red-950/20',
+        background: 'bg-secondary bg-pattern',
         ownMessage: 'bg-gradient-to-r from-orange-500 to-red-500 text-white',
         otherMessage: 'bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-100'
       },
       forest: {
-        background: 'bg-gradient-to-b from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
+        background: 'bg-secondary bg-pattern',
         ownMessage: 'bg-green-600 text-white',
         otherMessage: 'bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-100'
       },
       night: {
-        background: 'bg-gradient-to-b from-slate-900 to-slate-800',
+        background: 'bg-secondary bg-pattern',
         ownMessage: 'bg-purple-600 text-white',
         otherMessage: 'bg-slate-700 text-slate-100'
       },
       runner: {
-        background: 'bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 dark:from-yellow-950/20 dark:via-orange-950/20 dark:to-red-950/20',
+        background: 'bg-secondary bg-pattern',
         ownMessage: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white',
         otherMessage: 'bg-yellow-100 text-orange-900 dark:bg-yellow-900/40 dark:text-orange-100'
       }
