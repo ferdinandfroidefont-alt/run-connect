@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import appIcon from '@/assets/app-icon.png';
 
 const Auth = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [authStep, setAuthStep] = useState<'email' | 'otp' | 'password' | 'reset'>('email');
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -44,13 +46,13 @@ const Auth = () => {
       // Si profil créé il y a moins de 30 secondes, vérifier la session puis rediriger
       if (timeSinceCreation < 30000) {
         supabase.auth.getSession().then(({ data: { session } }) => {
-          localStorage.removeItem('profileCreatedSuccessfully');
-          localStorage.removeItem('profileCreatedAt');
           if (session) {
             console.log('🔥 [Auth] Profil créé + session active, redirection vers /');
-            window.location.href = '/';
+            navigate('/', { replace: true });
           } else {
-            console.log('⚠️ [Auth] Profil créé mais pas de session, l\'utilisateur doit se reconnecter');
+            console.log('⚠️ [Auth] Profil créé mais pas de session');
+            localStorage.removeItem('profileCreatedSuccessfully');
+            localStorage.removeItem('profileCreatedAt');
           }
         });
         return;
@@ -138,7 +140,7 @@ const Auth = () => {
         } catch (error) {
           console.error('Error checking profile:', error);
         }
-        window.location.href = '/';
+        navigate('/', { replace: true });
       }
     });
   }, [toast]);
@@ -214,7 +216,7 @@ const Auth = () => {
               setNewUserId(user.id);
               setShowProfileSetup(true);
             } else {
-              window.location.href = '/';
+              navigate('/', { replace: true });
             }
           }
           return;
@@ -350,7 +352,7 @@ const Auth = () => {
             setNewUserId(data.user.id);
             setShowProfileSetup(true);
           } else {
-            window.location.href = '/';
+            navigate('/', { replace: true });
           }
         }, 1000);
       }
@@ -391,7 +393,7 @@ const Auth = () => {
       captchaRef.current?.resetCaptcha();
       
       if (error) throw error;
-      window.location.href = '/';
+      navigate('/', { replace: true });
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
@@ -854,25 +856,9 @@ const Auth = () => {
         userId={newUserId}
         email={email}
         onComplete={() => {
-          console.log('✅ Profil créé - redirection robuste vers /');
+          console.log('✅ Profil créé - navigation SPA vers /');
           setShowProfileSetup(false);
-          
-          // Set flags BEFORE redirect
-          localStorage.setItem('profileCreatedSuccessfully', 'true');
-          localStorage.setItem('profileCreatedAt', Date.now().toString());
-          
-          // Small delay to let React state settle, then redirect
-          setTimeout(() => {
-            window.location.replace('/');
-          }, 300);
-          
-          // Fallback: if still on auth after 2s, force redirect
-          setTimeout(() => {
-            if (window.location.pathname.includes('auth')) {
-              console.log('⚠️ Fallback redirect triggered');
-              window.location.href = '/';
-            }
-          }, 2000);
+          navigate('/', { replace: true });
         }}
       />
     </div>

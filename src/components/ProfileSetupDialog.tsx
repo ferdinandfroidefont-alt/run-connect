@@ -477,7 +477,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       if (onComplete) {
         onComplete();
       } else {
-        window.location.replace('/');
+        navigate('/', { replace: true });
       }
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
