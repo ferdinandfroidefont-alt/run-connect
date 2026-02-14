@@ -60,6 +60,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const avatarPreviewRef = useRef<string>("");
   const avatarFileRef = useRef<File | null>(null);
   const originalImageSrcRef = useRef<string>("");
+  const isRedirecting = useRef(false);
 
   // 🔄 PARTIE 1: Restaurer l'état du formulaire et l'image au montage
   useEffect(() => {
@@ -464,15 +465,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         description: "Bienvenue dans RunConnect !"
       });
 
-      // ✅ FIX: Déléguer la redirection au callback onComplete (géré par Auth.tsx)
-      // Un seul point de redirection = pas de race condition
+      // ✅ FIX: Guard against double-fire with isRedirecting
+      if (isRedirecting.current) {
+        console.log('⚠️ [ProfileSetup] Already redirecting, skipping duplicate onComplete');
+        return;
+      }
+      isRedirecting.current = true;
+      
       console.log('✅ [ProfileSetup] Profil créé, délégation redirect à onComplete');
       onOpenChange(false);
       if (onComplete) {
         onComplete();
       } else {
-        // Fallback si pas de onComplete (ne devrait pas arriver)
-        window.location.href = '/';
+        window.location.replace('/');
       }
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });

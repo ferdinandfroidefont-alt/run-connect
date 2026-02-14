@@ -854,9 +854,25 @@ const Auth = () => {
         userId={newUserId}
         email={email}
         onComplete={() => {
-          console.log('✅ Profil créé - redirection directe vers /');
+          console.log('✅ Profil créé - redirection robuste vers /');
           setShowProfileSetup(false);
-          window.location.href = '/';
+          
+          // Set flags BEFORE redirect
+          localStorage.setItem('profileCreatedSuccessfully', 'true');
+          localStorage.setItem('profileCreatedAt', Date.now().toString());
+          
+          // Small delay to let React state settle, then redirect
+          setTimeout(() => {
+            window.location.replace('/');
+          }, 300);
+          
+          // Fallback: if still on auth after 2s, force redirect
+          setTimeout(() => {
+            if (window.location.pathname.includes('auth')) {
+              console.log('⚠️ Fallback redirect triggered');
+              window.location.href = '/';
+            }
+          }, 2000);
         }}
       />
     </div>
