@@ -1,47 +1,73 @@
 
-# Harmonisation Edge-to-Edge sur toutes les pages
 
-Appliquer le meme style "bord a bord" (sans padding horizontal, sans coins arrondis sur les cartes de liste) a toutes les pages restantes, en conservant les espacements verticaux.
+# Fix: Profile Creation Loop - Account Created but App Inaccessible
 
-## Pages a modifier
+## Problem Analysis
 
-### 1. Leaderboard (`src/pages/Leaderboard.tsx`)
-- Changer `<div className="p-4 space-y-4">` en `<div className="py-4 space-y-4">`
-- Supprimer `rounded-[10px]` des conteneurs Podium et Classement (lignes 593, 598)
-- Garder `px-4` sur le FilterBar, MyRankCard, StreakBadge, ProgressionChart, SeasonStatsCard, WeeklyChallengesCard, BadgesToUnlockCard (ces composants gerent leur propre padding interne)
-- Squelette de chargement : `p-4` devient `py-4`
+After creating a profile via `ProfileSetupDialog` in `Auth.tsx`, the user sees "Profil cree !" toast but the app fails to redirect to the main page. The profile setup dialog either stays visible or re-appears, trapping the user in a loop.
 
-### 2. Subscription (`src/pages/Subscription.tsx`)
-- Changer `<div className="px-4 py-6 space-y-6">` en `<div className="py-6 space-y-6">`
-- Supprimer `rounded-[10px]` des 4 groupes de liste (Mon Abonnement, Plans Disponibles, Avantages Premium, Soutenir RunConnect)
-- Garder `px-4` sur les headers de section (`<h3>`) et le warning d'expiration
+**Root cause identified**: Two interacting issues:
 
-### 3. Profile (`src/pages/Profile.tsx`)
-- Changer `<div className="max-w-md mx-auto p-4 space-y-4">` en `<div className="max-w-md mx-auto py-4 space-y-4">`
-- Supprimer `rounded-[10px]` des groupes iOS : formulaire d'edition (ligne 788), section stats autre utilisateur (ligne 845), clubs en commun (ligne 868), historique connexions (ligne 889), section routes (ligne 913)
-- Garder `px-4` sur les headers de section et le contenu du profil header (centrage)
+1. **Redirect race condition in Auth.tsx**: The `onComplete` callback calls `setShowProfileSetup(false)` (a React state update) immediately followed by `window.location.href = '/'` (a full page reload). React may re-render the component between these two operations, potentially re-triggering dialog state before the navigation completes.
 
-### 4. PublicProfile (`src/pages/PublicProfile.tsx`)
-- Changer `className="max-w-2xl mx-auto pt-12 px-4 pb-8 space-y-4"` en `className="max-w-2xl mx-auto pt-12 pb-8 space-y-4"`
-- Supprimer `rounded-[10px]` de la carte profil (ligne 163) et de la liste des seances (ligne 222)
+2. **Double ProfileSetupDialog**: After successful redirect to `/`, the `Index.tsx` page also renders a `ProfileSetupDialog` via `useOnboarding`. Even though there's a 30-second localStorage guard, the `useOnboarding` hook queries the database asynchronously. If the query resolves before the localStorage check prevents it (or if the user ID doesn't match between contexts), the dialog re-appears.
 
-### 5. Feed (`src/pages/Feed.tsx`)
-- Section Discover : changer `<div className="p-4 space-y-3">` en `<div className="py-4 space-y-3">` (ligne 239)
-- Section Friends skeletons : changer `px-3` en `py-2` sans padding horizontal (ligne 166)
-- Section Discover loading : supprimer `p-4` du wrapper et `rounded-[10px]` du loader (lignes 225-226)
+3. **Fragile redirect mechanism**: `window.location.href = '/'` in a WebView/Capacitor context can be unreliable. The redirect may silently fail or be delayed, leaving the user on the Auth page.
 
-### 6. Search (`src/pages/Search.tsx`)
-- Pas de changement necessaire (le contenu est deja gere par les sous-composants)
+## Solution
 
-### 7. MySessions - Routes section (`src/pages/MySessions.tsx`)
-- Supprimer `px-4` et `rounded-[10px]` des routes (lignes 702-704, 711, 723)
-- Etat vide routes : supprimer `mx-4` et `rounded-[10px]`
+### Step 1: Make Auth.tsx onComplete redirect bulletproof
 
-## Composants enfants a ajuster si necessaire
-- Les composants comme `MyRankCard`, `SeasonStatsCard`, `WeeklyChallengesCard`, `BadgesToUnlockCard`, `ProgressionChart`, `StreakBadge`, `OrganizerStatsCard` devront etre verifies pour s'assurer qu'ils n'ajoutent pas de padding horizontal ou coins arrondis en doublon. Si ces composants ont un `rounded-[10px]` interne, il faudra le retirer aussi.
+Replace the current `onComplete` with a robust mechanism:
+- Add a small delay before redirect to ensure React state settles
+- Use `window.location.replace('/')` instead of `href` to prevent back-button loops
+- Add a fallback timer that retries the redirect if the page is still on `/auth`
 
-## Principe directeur
-- Les **cartes de liste / groupes** deviennent pleine largeur (`rounded-none`)
-- Les **controles interactifs** (filtres segmentes, boutons de filtre, barres de recherche) gardent leur `px-4`
-- Les **headers de section** gardent leur `px-4`
-- Tous les **espacements verticaux** sont preserves
+```tsx
+// Auth.tsx - ProfileSetupDialog onComplete
+onComplete={() => {
+  console.log('Profile created - redirecting to /');
+  setShowProfileSetup(false);
+  
+  // Set flags BEFORE redirect
+  localStorage.setItem('profileCreatedSuccessfully', 'true');
+  localStorage.setItem('profileCreatedAt', Date.now().toString());
+  
+  // Small delay to let React state settle, then redirect
+  setTimeout(() => {
+    window.location.replace('/');
+  }, 300);
+  
+  // Fallback: if still on auth after 2s, force redirect
+  setTimeout(() => {
+    if (window.location.pathname.includes('auth')) {
+      console.log('Fallback redirect triggered');
+      window.location.href = '/';
+    }
+  }, 2000);
+}}
+```
+
+### Step 2: Strengthen useOnboarding localStorage guard
+
+Currently the guard only works for 30 seconds and checks a timestamp. Make it more robust:
+- Extend the guard window to 60 seconds
+- Also check the `profileCreatedSuccessfully` flag from Auth.tsx
+- Clean up BOTH flags once profile is confirmed complete from DB
+
+### Step 3: Prevent ProfileSetupDialog from re-appearing in Index.tsx after fresh creation
+
+In `Index.tsx`, add a check: if `profileCreatedSuccessfully` localStorage flag exists, skip showing the ProfileSetupDialog entirely and let `useOnboarding` settle.
+
+### Step 4: Fix ProfileSetupDialog.handleSubmit to not call onComplete if already redirecting
+
+Add a guard (`isRedirecting` ref) to prevent double-calling `onComplete` if the submit button is clicked twice or if React re-renders during the transition.
+
+## Technical Details
+
+**Files to modify:**
+- `src/pages/Auth.tsx` (lines 856-860): Robust onComplete with delayed redirect and fallback
+- `src/hooks/useOnboarding.tsx` (lines 20-30): Extend guard window, check both localStorage flags  
+- `src/components/ProfileSetupDialog.tsx` (lines 467-476): Add isRedirecting guard to prevent double-fire
+- `src/pages/Index.tsx` (lines 69-78): Skip ProfileSetupDialog rendering when profileCreatedSuccessfully flag exists
+
