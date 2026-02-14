@@ -540,11 +540,11 @@ export default function MySessions() {
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="py-4">
           {currentView === 'sessions' ? (
             <>
               {/* Display Mode Toggle */}
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-4 px-4">
                 {/* Filter Pills */}
                 <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
                   {[
@@ -595,9 +595,9 @@ export default function MySessions() {
                   onSessionClick={handleSessionClick}
                 />
               ) : loading ? (
-                <div className="space-y-3">
+                <div className="space-y-px">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-card rounded-[10px] p-4 animate-pulse">
+                    <div key={i} className="bg-card p-4 animate-pulse">
                       <div className="flex gap-3">
                         <div className="h-12 w-12 bg-secondary rounded-xl" />
                         <div className="flex-1 space-y-2">
@@ -609,7 +609,7 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : filteredSessions.length === 0 ? (
-                <div className="bg-card rounded-[10px] p-8 text-center">
+                <div className="bg-card rounded-[10px] p-8 text-center mx-4">
                   <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-[17px] font-medium text-foreground mb-1">Aucune séance</p>
                   <p className="text-[15px] text-muted-foreground">
@@ -617,7 +617,7 @@ export default function MySessions() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="divide-y divide-border">
                   {/* Flèche haut */}
                   {sessionPage > 0 && (
                     <button
@@ -636,7 +636,7 @@ export default function MySessions() {
                         <div
                           key={session.id}
                           onClick={() => handleSessionClick(session)}
-                          className="bg-card rounded-[10px] p-4 cursor-pointer active:bg-secondary transition-colors"
+                          className="bg-card p-4 cursor-pointer active:bg-secondary transition-colors"
                         >
                           <div className="flex items-start gap-3">
                             <ActivityIcon activityType={session.activity_type} size="lg" />
@@ -692,14 +692,14 @@ export default function MySessions() {
 
               {/* Organizer Stats - en bas */}
               <div className="mt-6">
-                <OrganizerStatsCard />
+                <div className="px-4"><OrganizerStatsCard /></div>
               </div>
             </>
           ) : (
             <>
               {/* Routes */}
               {routesLoading ? (
-                <div className="space-y-3">
+                <div className="space-y-3 px-4">
                   {[1, 2].map((i) => (
                     <div key={i} className="bg-card rounded-[10px] p-4 animate-pulse">
                       <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
@@ -708,7 +708,7 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : routes.length === 0 ? (
-                <div className="bg-card rounded-[10px] p-8 text-center">
+                <div className="bg-card rounded-[10px] p-8 text-center mx-4">
                   <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-[17px] font-medium text-foreground mb-1">Aucun itinéraire</p>
                   <p className="text-[15px] text-muted-foreground mb-4">
@@ -720,7 +720,7 @@ export default function MySessions() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 px-4">
                   {routes.map((route) => (
                     <RouteCard
                       key={route.id}
