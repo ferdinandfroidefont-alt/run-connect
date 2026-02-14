@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Save, X, PenTool } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RouteEditDialogProps {
   isOpen: boolean;
@@ -83,17 +84,19 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
 
   if (!route) return null;
 
+  const isMobile = useIsMobile();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className={isMobile ? "h-full w-full max-w-full max-h-full rounded-none border-none p-0 flex flex-col" : "max-w-md"}>
+        <DialogHeader className={isMobile ? "px-4 pt-safe pt-4" : ""}>
           <DialogTitle>Modifier l'itinéraire</DialogTitle>
           <DialogDescription>
             Modifiez les informations de votre itinéraire
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className={isMobile ? "flex-1 overflow-y-auto px-4 space-y-4 pb-8" : "space-y-4"}>
           <div>
             <Label htmlFor="route-name">Nom de l'itinéraire</Label>
             <Input
