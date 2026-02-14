@@ -23,6 +23,7 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,7 +36,6 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
   }, [route]);
 
   const handleEditPath = () => {
-    // Stocker les données de l'itinéraire pour l'édition (inclure les waypoints)
     localStorage.setItem('editRouteData', JSON.stringify({
       id: route.id,
       name: route.name,
@@ -83,8 +83,6 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
   };
 
   if (!route) return null;
-
-  const isMobile = useIsMobile();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
