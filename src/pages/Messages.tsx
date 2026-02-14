@@ -2244,9 +2244,9 @@ const Messages = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-secondary bg-pattern">
-        {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border">
+      <div className="min-h-screen bg-secondary">
+        {/* iOS Header with pattern */}
+        <div className="sticky top-0 z-50 bg-card border-b border-border bg-pattern">
           <div className="px-4 pt-4 pt-safe pb-4 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
@@ -2291,7 +2291,7 @@ const Messages = () => {
 
         <div className="py-3 space-y-3">
           {/* Quick Search Buttons */}
-          <div className="bg-card p-3">
+          <div className="p-3">
             <div className="grid grid-cols-5 gap-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
@@ -2349,17 +2349,17 @@ const Messages = () => {
 
           {/* Search Conversations */}
           <div className="relative px-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher une conversation..."
               value={conversationSearch}
               onChange={(e) => setConversationSearch(e.target.value)}
-              className="pl-9 h-9 bg-secondary border-0 rounded-[10px] text-[15px] placeholder:text-muted-foreground"
+              className="pl-9 h-9 bg-muted border-0 rounded-[10px] text-[15px] placeholder:text-muted-foreground"
             />
           </div>
 
           {/* Conversations List */}
-          <div className="bg-card overflow-hidden">
+          <div className="overflow-hidden">
             {conversations.length === 0 ? (
               <div className="text-center py-12 px-4">
                 <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
@@ -2408,19 +2408,19 @@ const Messages = () => {
                         </div>
                       )}
                       
-                      <div className="relative">
-                        <Avatar className="h-[52px] w-[52px]">
+                        <div className="relative">
+                        <Avatar className="h-[52px] w-[52px] ring-0">
                           {conversation.is_group ? (
                             <>
                               <AvatarImage src={conversation.group_avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary">
+                              <AvatarFallback className="bg-muted">
                                 <Users className="h-6 w-6 text-muted-foreground" />
                               </AvatarFallback>
                             </>
                           ) : (
                             <>
                               <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary text-[17px] font-semibold">
+                              <AvatarFallback className="bg-muted text-[17px] font-semibold">
                                 {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </>
@@ -2446,7 +2446,7 @@ const Messages = () => {
                             {pinnedConversations.has(conversation.id) && (
                               <span className="text-[13px] flex-shrink-0">📌</span>
                             )}
-                            <p className="text-[17px] font-medium truncate">
+                            <p className="text-[17px] font-bold truncate">
                               {conversation.is_group 
                                 ? conversation.group_name 
                                 : (conversation.other_participant?.username || "Utilisateur")
@@ -2505,9 +2505,9 @@ const Messages = () => {
                         </div>
                       </div>
                       
-                      {/* iOS-style inset separator */}
+                      {/* iOS-style thin inset separator */}
                       {index < filteredAndSortedConversations.length - 1 && (
-                        <div className="absolute bottom-0 left-[76px] right-0 h-px bg-border" />
+                        <div className="absolute bottom-0 left-[76px] right-0 h-px bg-border/50" />
                       )}
                     </div>
                   </SwipeableConversationItem>
