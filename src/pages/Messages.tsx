@@ -2290,16 +2290,6 @@ const Messages = () => {
         </div>
 
         <div className="py-3 space-y-3">
-          {/* Search Conversations */}
-          <div className="relative px-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher une conversation..."
-              value={conversationSearch}
-              onChange={(e) => setConversationSearch(e.target.value)}
-              className="pl-9 h-9 bg-secondary border-0 rounded-[10px] text-[15px] placeholder:text-muted-foreground"
-            />
-          </div>
           {/* Quick Search Buttons */}
           <div className="bg-card p-3">
             <div className="grid grid-cols-5 gap-2">
@@ -2355,6 +2345,17 @@ const Messages = () => {
                 <span className="text-[11px] text-muted-foreground">Club</span>
               </button>
             </div>
+          </div>
+
+          {/* Search Conversations */}
+          <div className="relative px-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher une conversation..."
+              value={conversationSearch}
+              onChange={(e) => setConversationSearch(e.target.value)}
+              className="pl-9 h-9 bg-secondary border-0 rounded-[10px] text-[15px] placeholder:text-muted-foreground"
+            />
           </div>
 
           {/* Conversations List */}
