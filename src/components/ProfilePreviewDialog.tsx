@@ -447,222 +447,255 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </div>
         ) : profile ? (
           <ScrollArea className="flex-1 bg-pattern">
-            <div className="p-4 space-y-4">
-              {/* Avatar Section */}
-              <div className="bg-card rounded-[10px] border border-border p-6">
-                <div className="flex flex-col items-center">
-                  <div className="relative mb-4">
-                    <Avatar className="h-24 w-24 ring-2 ring-border">
-                      <AvatarImage src={profile.avatar_url || ""} />
-                      <AvatarFallback className="text-2xl bg-secondary text-foreground">
-                        {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {!isOwnProfile && areFriends && (
-                      <OnlineStatus userId={profile.user_id} />
-                    )}
-                  </div>
-
-                  {/* Username + Crown */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <h2 className="text-xl font-bold text-foreground">@{profile.username || profile.display_name}</h2>
-                    {profile.is_premium && (
-                      <Crown className="h-5 w-5 text-amber-500" />
-                    )}
-                    <OrganizerRatingBadge userId={profile.user_id} />
-                    <StreakBadge userId={profile.user_id} variant="compact" />
-                  </div>
-
-                  {/* Badges */}
-                  <div className="flex gap-2 mb-3 flex-wrap justify-center">
-                    {profile.is_admin && (
-                      <span className="px-3 py-1 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-xs rounded-full font-medium">
-                        Admin
-                      </span>
-                    )}
-                    {profile.strava_connected && profile.strava_verified_at && (
-                      <button
-                        onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                        className="px-3 py-1 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-xs rounded-full font-medium"
-                      >
-                        Strava
-                      </button>
-                    )}
-                    {profile.instagram_connected && profile.instagram_verified_at && (
-                      <button
-                        onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                        className="px-3 py-1 bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 text-xs rounded-full font-medium"
-                      >
-                        Instagram
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Bio */}
-                  {profile.bio && (
-                    <p className="text-center text-muted-foreground text-sm max-w-xs mb-4 line-clamp-2">
-                      {profile.bio}
-                    </p>
-                  )}
-
-                  {/* Follow Button */}
-                  {!isOwnProfile && user && (
-                    <Button
-                      onClick={handleFollowToggle}
-                      disabled={actionLoading}
-                      variant={isFollowing ? "outline" : "default"}
-                      className="w-full max-w-xs h-11 rounded-[10px]"
-                    >
-                      {actionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : isFollowing ? (
-                        <>
-                          <UserMinus className="h-4 w-4 mr-2" />
-                          Se désabonner
-                        </>
-                      ) : followRequestSent ? (
-                        "Demande envoyée"
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          S'abonner
-                        </>
-                      )}
-                    </Button>
+            <div className="py-4 space-y-4">
+              {/* Profile Header - Mirrors Profile.tsx */}
+              <div className="flex flex-col items-center pt-4 pb-2">
+                {/* Avatar */}
+                <div className="relative mb-3">
+                  <Avatar className="h-20 w-20 ring-[3px] ring-white shadow-lg">
+                    <AvatarImage src={profile.avatar_url || ""} />
+                    <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
+                      {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!isOwnProfile && areFriends && (
+                    <OnlineStatus userId={profile.user_id} />
                   )}
                 </div>
-              </div>
 
-              {/* Stats Row */}
-              <div className="bg-card rounded-[10px] border border-border p-4">
-                <div className="flex items-center justify-around">
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-foreground">{followerCount}</div>
-                    <div className="text-xs text-muted-foreground">Abonnés</div>
+                {/* Display Name */}
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <h2 className="text-[22px] font-bold text-foreground">
+                    {profile.display_name || profile.username}
+                  </h2>
+                  {profile.is_premium && (
+                    <Crown className="h-4 w-4 text-yellow-500" />
+                  )}
+                </div>
+
+                {/* Username */}
+                <p className="text-[14px] text-muted-foreground mb-2">
+                  @{profile.username}
+                </p>
+
+                {/* Status Badges */}
+                <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                  {profile.is_admin ? (
+                    <span className="px-2 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 text-[11px] rounded-full font-medium">
+                      Admin
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-muted text-muted-foreground text-[11px] rounded-full font-medium">
+                      Membre
+                    </span>
+                  )}
+                  {profile.is_premium && (
+                    <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 text-[11px] rounded-full font-medium">
+                      Premium
+                    </span>
+                  )}
+                  {profile.strava_connected && profile.strava_verified_at && (
+                    <button
+                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
+                      className="px-2 py-0.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] rounded-full font-medium"
+                    >
+                      Strava ✓
+                    </button>
+                  )}
+                  {profile.instagram_connected && profile.instagram_verified_at && (
+                    <button
+                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
+                      className="px-2 py-0.5 bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 text-[11px] rounded-full font-medium"
+                    >
+                      Instagram ✓
+                    </button>
+                  )}
+                  <OrganizerRatingBadge userId={profile.user_id} />
+                  <StreakBadge userId={profile.user_id} variant="compact" />
+                </div>
+
+                {/* Stats Row - Always visible */}
+                <div className="flex items-center justify-center gap-8 py-3 w-full">
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnés</p>
                   </div>
-                  <div className="w-px h-10 bg-border" />
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-foreground">{followingCount}</div>
-                    <div className="text-xs text-muted-foreground">Abonnements</div>
+                  <div className="w-px h-8 bg-border/60" />
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnements</p>
                   </div>
-                  <div className="w-px h-10 bg-border" />
+                  <div className="w-px h-8 bg-border/60" />
                   <button
                     onClick={() => setShowReliabilityDetails(true)}
-                    className="text-center"
+                    className="text-center min-w-[60px] active:opacity-70 transition-opacity"
                   >
-                    <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{Math.round(reliabilityRate)}%</div>
-                    <div className="text-xs text-muted-foreground">Fiable</div>
+                    <p className="text-[20px] font-bold text-emerald-600 dark:text-emerald-400">{Math.round(reliabilityRate)}%</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Fiabilité</p>
                   </button>
                 </div>
+
+                {/* Bio */}
+                {profile.bio && (
+                  <p className="text-[14px] text-muted-foreground text-center max-w-[280px] mt-3 leading-relaxed">
+                    {profile.bio}
+                  </p>
+                )}
               </div>
 
-              {/* Classement */}
-              <ProfileRankCard userId={userId} />
+              {/* === NOT FOLLOWING: Show follow CTA === */}
+              {!isOwnProfile && !isFollowing && (
+                <div className="px-4 space-y-3">
+                  <Button
+                    onClick={handleFollowToggle}
+                    disabled={actionLoading}
+                    className="w-full h-12 rounded-[10px] text-[17px] font-semibold"
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : followRequestSent ? (
+                      "Demande envoyée ✓"
+                    ) : (
+                      <>
+                        <UserPlus className="h-5 w-5 mr-2" />
+                        Suivre cette personne
+                      </>
+                    )}
+                  </Button>
 
-              {/* Badges gagnés */}
-              <EarnedBadgesSection userId={userId} />
+                  {/* Member since - compact */}
+                  <div className="text-center pt-2">
+                    <p className="text-[13px] text-muted-foreground">
+                      Membre depuis {format(new Date(profile.created_at), "MMMM yyyy", { locale: fr })}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              {/* Activité récente */}
-              <UserActivityChart userId={userId} username={profile.username} />
+              {/* === FOLLOWING: Show full profile like "Mon Profil" === */}
+              {(isFollowing || isOwnProfile) && (
+                <>
+                  {/* Streak Badge */}
+                  <StreakBadge userId={profile.user_id} variant="full" />
 
-              {/* Age - Only show for own profile */}
-              {profile.age && isOwnProfile && (
-                <div className="bg-card rounded-[10px] border border-border overflow-hidden">
-                  <div className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-[6px] bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
-                        <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  {/* Classement & Badges */}
+                  <ProfileRankCard userId={userId} />
+                  <EarnedBadgesSection userId={userId} />
+
+                  {/* Activité récente */}
+                  <UserActivityChart userId={userId} username={profile.username} />
+
+                  {/* Sports Records */}
+                  {profile.walking_records && Object.keys(profile.walking_records).length > 0 && Object.values(profile.walking_records).some(v => v) && (
+                    <div className="bg-card overflow-hidden p-4">
+                      <p className="font-medium text-foreground mb-3">🚶‍♂️ Records Marche</p>
+                      <div className="space-y-2">
+                        {Object.entries(profile.walking_records).map(([distance, time]) => 
+                          time && (
+                            <div key={distance} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{distance}</span>
+                              <span className="font-mono text-foreground">{String(time)}</span>
+                            </div>
+                          )
+                        )}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">Âge</p>
-                        <p className="text-xs text-muted-foreground">{profile.age} ans</p>
+                    </div>
+                  )}
+
+                  {profile.running_records && Object.keys(profile.running_records).length > 0 && Object.values(profile.running_records).some(v => v) && (
+                    <div className="bg-card overflow-hidden p-4">
+                      <p className="font-medium text-foreground mb-3">🏃‍♂️ Records Course à pied</p>
+                      <div className="space-y-2">
+                        {Object.entries(profile.running_records).map(([distance, time]) => 
+                          time && (
+                            <div key={distance} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{distance}</span>
+                              <span className="font-mono text-foreground">{String(time)}</span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {profile.cycling_records && Object.keys(profile.cycling_records).length > 0 && Object.values(profile.cycling_records).some(v => v) && (
+                    <div className="bg-card overflow-hidden p-4">
+                      <p className="font-medium text-foreground mb-3">🚴‍♂️ Records Cyclisme</p>
+                      <div className="space-y-2">
+                        {Object.entries(profile.cycling_records).map(([distance, time]) => 
+                          time && (
+                            <div key={distance} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{distance}</span>
+                              <span className="font-mono text-foreground">{String(time)}</span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {profile.swimming_records && Object.keys(profile.swimming_records).length > 0 && Object.values(profile.swimming_records).some(v => v) && (
+                    <div className="bg-card overflow-hidden p-4">
+                      <p className="font-medium text-foreground mb-3">🏊‍♂️ Records Natation</p>
+                      <div className="space-y-2">
+                        {Object.entries(profile.swimming_records).map(([distance, time]) => 
+                          time && (
+                            <div key={distance} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{distance}</span>
+                              <span className="font-mono text-foreground">{String(time)}</span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Member since */}
+                  <div className="bg-card overflow-hidden">
+                    <div className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-[6px] bg-primary/10 flex items-center justify-center">
+                          <Calendar className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Membre depuis</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(profile.created_at), "MMMM yyyy", { locale: fr })}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Sports Records */}
-              {profile.walking_records && Object.keys(profile.walking_records).length > 0 && Object.values(profile.walking_records).some(v => v) && (
-                <div className="bg-card rounded-[10px] border border-border p-4">
-                  <p className="font-medium text-foreground mb-3">🚶‍♂️ Records Marche</p>
-                  <div className="space-y-2">
-                    {Object.entries(profile.walking_records).map(([distance, time]) => 
-                      time && (
-                        <div key={distance} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{distance}</span>
-                          <span className="font-mono text-foreground">{String(time)}</span>
+                  {/* Actions: Unfollow + Report */}
+                  {!isOwnProfile && (
+                    <div className="bg-card overflow-hidden">
+                      <button
+                        onClick={handleFollowToggle}
+                        disabled={actionLoading}
+                        className="w-full flex items-center px-4 py-[11px] active:bg-muted/50 transition-colors"
+                      >
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-destructive/10 flex items-center justify-center mr-3">
+                          <UserMinus className="h-4 w-4 text-destructive" />
                         </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {profile.running_records && Object.keys(profile.running_records).length > 0 && Object.values(profile.running_records).some(v => v) && (
-                <div className="bg-card rounded-[10px] border border-border p-4">
-                  <p className="font-medium text-foreground mb-3">🏃‍♂️ Records Course à pied</p>
-                  <div className="space-y-2">
-                    {Object.entries(profile.running_records).map(([distance, time]) => 
-                      time && (
-                        <div key={distance} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{distance}</span>
-                          <span className="font-mono text-foreground">{String(time)}</span>
+                        <span className="text-[15px] text-destructive font-medium">
+                          {actionLoading ? 'Chargement...' : 'Ne plus suivre'}
+                        </span>
+                      </button>
+                      <div className="h-px bg-border ml-[54px]" />
+                      <button
+                        onClick={() => setShowReportDialog(true)}
+                        className="w-full flex items-center px-4 py-[11px] active:bg-muted/50 transition-colors"
+                      >
+                        <div className="h-[30px] w-[30px] rounded-[7px] bg-destructive/10 flex items-center justify-center mr-3">
+                          <Flag className="h-4 w-4 text-destructive" />
                         </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {profile.cycling_records && Object.keys(profile.cycling_records).length > 0 && Object.values(profile.cycling_records).some(v => v) && (
-                <div className="bg-card rounded-[10px] border border-border p-4">
-                  <p className="font-medium text-foreground mb-3">🚴‍♂️ Records Cyclisme</p>
-                  <div className="space-y-2">
-                    {Object.entries(profile.cycling_records).map(([distance, time]) => 
-                      time && (
-                        <div key={distance} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{distance}</span>
-                          <span className="font-mono text-foreground">{String(time)}</span>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {profile.swimming_records && Object.keys(profile.swimming_records).length > 0 && Object.values(profile.swimming_records).some(v => v) && (
-                <div className="bg-card rounded-[10px] border border-border p-4">
-                  <p className="font-medium text-foreground mb-3">🏊‍♂️ Records Natation</p>
-                  <div className="space-y-2">
-                    {Object.entries(profile.swimming_records).map(([distance, time]) => 
-                      time && (
-                        <div key={distance} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{distance}</span>
-                          <span className="font-mono text-foreground">{String(time)}</span>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Member since */}
-              <div className="bg-card rounded-[10px] border border-border overflow-hidden">
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-[6px] bg-primary/10 flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-primary" />
+                        <span className="text-[15px] text-destructive font-medium">Signaler</span>
+                      </button>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Membre depuis</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(profile.created_at), "MMMM yyyy", { locale: fr })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  )}
+                </>
+              )}
             </div>
           </ScrollArea>
         ) : (
