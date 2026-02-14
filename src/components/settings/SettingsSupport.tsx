@@ -92,7 +92,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 bg-pattern">
         <div className="px-4 py-6 space-y-6">
           {/* Legal */}
           <div className="space-y-2">

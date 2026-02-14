@@ -558,7 +558,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 bg-pattern">
             <form onSubmit={handleSubmit} className="px-4 py-6 space-y-6">
               {/* Avatar Section */}
               <div className="flex flex-col items-center">
