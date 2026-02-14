@@ -111,13 +111,13 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
       </div>
 
       <ScrollArea className="flex-1 bg-pattern">
-        <div className="px-4 py-6 space-y-6">
+        <div className="py-6 space-y-6">
           {/* External Connections */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Connexions externes
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden p-4 space-y-4">
+            <div className="bg-card overflow-hidden p-4 space-y-4">
               <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
               <InstagramConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
             </div>
@@ -128,7 +128,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Social & Partage
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               {/* Friend Suggestions */}
               <div className="flex items-center gap-3 px-4 py-3">
                 <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">

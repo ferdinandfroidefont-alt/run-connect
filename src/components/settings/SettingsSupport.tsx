@@ -93,13 +93,13 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
       </div>
 
       <ScrollArea className="flex-1 bg-pattern">
-        <div className="px-4 py-6 space-y-6">
+        <div className="py-6 space-y-6">
           {/* Legal */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Mentions légales
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               <button 
                 onClick={() => { onClose(); navigate('/about'); }}
                 className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
@@ -150,7 +150,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Assistance
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               <button 
                 onClick={handleRestartTutorial}
                 className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
@@ -188,7 +188,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Compte
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               <button 
                 onClick={handleSignOut}
                 className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
@@ -225,7 +225,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Zone de danger
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <button className="w-full flex items-center gap-3 px-4 py-3 active:bg-destructive/5 transition-colors">
