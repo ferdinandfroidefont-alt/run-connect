@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendNotification } from "@/hooks/useSendNotification";
@@ -39,6 +40,7 @@ export const NotificationCenter = ({
   const {
     sendPushNotification
   } = useSendNotification();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -46,6 +48,7 @@ export const NotificationCenter = ({
   const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
   const [acceptedFollows, setAcceptedFollows] = useState<Set<string>>(new Set());
   const [followedBack, setFollowedBack] = useState<Set<string>>(new Set());
+  const [alreadyFollowing, setAlreadyFollowing] = useState<Set<string>>(new Set());
   const [pendingAcceptNotification, setPendingAcceptNotification] = useState<Notification | null>(null);
   const [pendingRejectNotification, setPendingRejectNotification] = useState<Notification | null>(null);
   const [pendingAcceptClubNotification, setPendingAcceptClubNotification] = useState<Notification | null>(null);
@@ -80,7 +83,11 @@ export const NotificationCenter = ({
       }, payload => {
         console.log('New notification received:', payload);
         const newNotification = payload.new as Notification;
-        setNotifications(prev => [newNotification, ...prev]);
+        // Deduplicate: don't add if already in list
+        setNotifications(prev => {
+          if (prev.some(n => n.id === newNotification.id)) return prev;
+          return [newNotification, ...prev];
+        });
 
         // Show toast for new notification
         toast({
@@ -93,7 +100,6 @@ export const NotificationCenter = ({
         table: 'notifications',
         filter: `user_id=eq.${user.id}`
       }, payload => {
-        console.log('Notification updated:', payload);
         const updatedNotification = payload.new as Notification;
         setNotifications(prev => prev.map(n => n.id === updatedNotification.id ? updatedNotification : n));
       }).on('postgres_changes', {
@@ -102,7 +108,6 @@ export const NotificationCenter = ({
         table: 'notifications',
         filter: `user_id=eq.${user.id}`
       }, payload => {
-        console.log('Notification deleted:', payload);
         const deletedNotification = payload.old as Notification;
         setNotifications(prev => prev.filter(n => n.id !== deletedNotification.id));
       }).subscribe();
@@ -111,6 +116,27 @@ export const NotificationCenter = ({
       };
     }
   }, [user, toast]);
+
+  // Check which follow_request users we already follow back (persists across reloads)
+  useEffect(() => {
+    const checkAlreadyFollowing = async () => {
+      if (!user || notifications.length === 0) return;
+      const followRequestNotifs = notifications.filter(n => n.type === 'follow_request' && n.data?.follower_id);
+      if (followRequestNotifs.length === 0) return;
+      
+      const followerIds = [...new Set(followRequestNotifs.map(n => n.data.follower_id))];
+      const { data: existingFollows } = await supabase
+        .from('user_follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+        .in('following_id', followerIds);
+      
+      if (existingFollows && existingFollows.length > 0) {
+        setAlreadyFollowing(new Set(existingFollows.map(f => f.following_id)));
+      }
+    };
+    checkAlreadyFollowing();
+  }, [user, notifications]);
   const handleAcceptClubInvitation = async (notification: Notification) => {
     if (!user || notification.type !== 'club_invitation') return;
     setLoading(true);
@@ -354,34 +380,28 @@ export const NotificationCenter = ({
       // Marquer la notification comme lue
       await markAsRead(notification.id);
 
-      // Ajouter à la liste des demandes acceptées pour garder les boutons visibles
+      // Ajouter à la liste des demandes acceptées
       setAcceptedFollows(prev => new Set([...prev, notification.id]));
 
-      // Get current user profile data for the notification
+      // Send push notification only (no DB notification to avoid duplicates)
       const {
-        data: currentUserProfile,
-        error: profileError
+        data: currentUserProfile
       } = await supabase.from('profiles').select('display_name, avatar_url, user_id').eq('user_id', user?.id).single();
-      console.log('Current user profile for notification:', currentUserProfile);
-      console.log('Profile error:', profileError);
+      
       const acceptorName = currentUserProfile?.display_name || 'Un utilisateur';
-      console.log('Acceptor name:', acceptorName);
 
-      // Create notification for follower
-      const {
-        error: notificationError
-      } = await supabase.from('notifications').insert([{
-        user_id: follower_id,
-        title: 'Demande acceptée !',
-        message: `${acceptorName} a accepté votre demande de suivi`,
-        type: 'follow_accepted',
-        data: {
+      await sendPushNotification(
+        follower_id,
+        'Demande acceptée ! 🎉',
+        `${acceptorName} a accepté votre demande de suivi`,
+        'follow_accepted',
+        {
           acceptor_id: user?.id,
           acceptor_name: acceptorName,
           acceptor_avatar: currentUserProfile?.avatar_url
         }
-      }]);
-      if (notificationError) console.error('Error creating notification:', notificationError);
+      );
+
       toast({
         title: "Demande acceptée",
         description: "Vous avez un nouvel abonné"
@@ -437,17 +457,23 @@ export const NotificationCenter = ({
 
       // Marquer comme suivi en retour
       setFollowedBack(prev => new Set([...prev, notification.id]));
+      setAlreadyFollowing(prev => new Set([...prev, follower_id]));
 
-      // Create notification for the person we're following back
-      const {
-        error: notificationError
-      } = await supabase.from('notifications').insert([{
-        user_id: follower_id,
-        title: 'Nouveau suivi !',
-        message: 'Quelqu\'un vous suit en retour',
-        type: 'follow_back'
-      }]);
-      if (notificationError) console.error('Error creating notification:', notificationError);
+      // Send push notification only (avoid duplicate DB notifications)
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('display_name, username')
+        .eq('user_id', user.id)
+        .single();
+
+      await sendPushNotification(
+        follower_id,
+        'Nouveau suivi !',
+        `${myProfile?.display_name || myProfile?.username || 'Un utilisateur'} vous suit en retour`,
+        'follow_back',
+        { followed_by: user.id }
+      );
+
       toast({
         title: "Suivi ajouté",
         description: `Vous suivez maintenant ${follower_name}`
@@ -573,7 +599,31 @@ export const NotificationCenter = ({
               markAsRead(notification.id);
             }
           }}>
-                <CardContent className="p-4">
+                <CardContent className="p-4" onClick={(e) => {
+              // Navigate to relevant page based on notification type
+              const handleNotificationNav = () => {
+                const data = notification.data;
+                if (notification.type === 'follow_accepted' && data?.acceptor_id) {
+                  setIsOpen(false);
+                  navigate(`/profile/${data.acceptor_id}`);
+                } else if (notification.type === 'follow_request' && data?.follower_id) {
+                  // Don't navigate for follow requests - they have action buttons
+                  return;
+                } else if (notification.type === 'session_accepted' && data?.session_id) {
+                  setIsOpen(false);
+                  navigate('/my-sessions');
+                } else if (notification.type === 'session_request' && data?.session_id) {
+                  // Don't navigate for session requests - they have action buttons
+                  return;
+                } else if (notification.type === 'club_invitation') {
+                  return;
+                } else if (notification.type === 'follow_back' && data?.followed_by) {
+                  setIsOpen(false);
+                  navigate(`/profile/${data.followed_by}`);
+                }
+              };
+              handleNotificationNav();
+            }}>
                    <div className="flex items-start gap-3">
                     {/* Avatar for session_request, follow_request, follow_accepted, and club_invitation with user data */}
                       {(notification.type === 'session_request' || notification.type === 'follow_request' || notification.type === 'follow_accepted' || notification.type === 'club_invitation') && notification.data && (notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar || notification.data.acceptor_avatar) ? <div className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => handleOpenProfilePreview(notification.data.follower_id || notification.data.request_user_id || notification.data.inviter_id || notification.data.acceptor_id)}>
@@ -656,14 +706,14 @@ export const NotificationCenter = ({
                                    Refuser
                                  </Button>
                                </div>}
-                             {/* Montrer "ajouter en retour" si accepté ou si déjà lu, mais pas si déjà suivi en retour */}
-                             {(acceptedFollows.has(notification.id) || notification.read) && !followedBack.has(notification.id) && <Button size="sm" variant="secondary" onClick={() => handleFollowBack(notification)} disabled={loading} className="w-full">
-                                 <UserPlus className="h-4 w-4 mr-2" />
-                                 Ajouter en retour
-                               </Button>}
-                             {/* Montrer confirmation si déjà suivi en retour */}
-                             {followedBack.has(notification.id) && <div className="w-full text-center text-sm text-muted-foreground py-2">
-                                 ✓ Vous suivez maintenant cette personne en retour
+                              {/* Montrer "ajouter en retour" seulement si pas déjà suivi (ni localement ni en DB) */}
+                              {(acceptedFollows.has(notification.id) || notification.read) && !followedBack.has(notification.id) && !alreadyFollowing.has(notification.data?.follower_id) && <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); handleFollowBack(notification); }} disabled={loading} className="w-full">
+                                  <UserPlus className="h-4 w-4 mr-2" />
+                                  Ajouter en retour
+                                </Button>}
+                              {/* Montrer confirmation si déjà suivi en retour */}
+                              {(followedBack.has(notification.id) || alreadyFollowing.has(notification.data?.follower_id)) && <div className="w-full text-center text-sm text-muted-foreground py-2">
+                                  ✓ Vous suivez déjà cette personne
                                </div>}
                            </div>
                          </>}
