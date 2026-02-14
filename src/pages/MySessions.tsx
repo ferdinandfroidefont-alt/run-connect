@@ -617,7 +617,7 @@ export default function MySessions() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-1.5">
                   {/* Flèche haut */}
                   {sessionPage > 0 && (
                     <button
@@ -636,7 +636,7 @@ export default function MySessions() {
                         <div
                           key={session.id}
                           onClick={() => handleSessionClick(session)}
-                          className="bg-card rounded-[10px] p-4 cursor-pointer active:bg-secondary transition-colors"
+                          className="bg-card rounded-[10px] px-4 py-2.5 cursor-pointer active:bg-secondary transition-colors"
                         >
                           <div className="flex items-start gap-3">
                             <ActivityIcon activityType={session.activity_type} size="lg" />
