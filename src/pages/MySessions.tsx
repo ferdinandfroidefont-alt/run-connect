@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus, CalendarDays, List } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -83,6 +83,8 @@ export default function MySessions() {
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [sessionPage, setSessionPage] = useState(0);
+  const SESSIONS_PER_PAGE = 3;
 
   const loadUserSessions = async () => {
     if (!user) return;
@@ -552,7 +554,7 @@ export default function MySessions() {
                   ].map((f) => (
                     <button
                       key={f.key}
-                      onClick={() => setFilter(f.key as any)}
+                      onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
                       className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
                         filter === f.key
                           ? 'bg-primary text-primary-foreground'
@@ -616,46 +618,75 @@ export default function MySessions() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredSessions.map((session) => {
-                    const isUpcoming = session.scheduled_at >= now;
-                    return (
-                      <div
-                        key={session.id}
-                        onClick={() => handleSessionClick(session)}
-                        className="bg-card rounded-[10px] p-4 cursor-pointer active:bg-secondary transition-colors"
-                      >
-                        <div className="flex items-start gap-3">
-                          <ActivityIcon activityType={session.activity_type} size="lg" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge 
-                                variant={isUpcoming ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {isUpcoming ? "À venir" : "Terminée"}
-                              </Badge>
+                  {/* Flèche haut */}
+                  {sessionPage > 0 && (
+                    <button
+                      onClick={() => setSessionPage(p => p - 1)}
+                      className="w-full flex items-center justify-center py-2 text-primary active:opacity-70 transition-opacity"
+                    >
+                      <ChevronUp className="h-6 w-6" />
+                    </button>
+                  )}
+
+                  {filteredSessions
+                    .slice(sessionPage * SESSIONS_PER_PAGE, (sessionPage + 1) * SESSIONS_PER_PAGE)
+                    .map((session) => {
+                      const isUpcoming = session.scheduled_at >= now;
+                      return (
+                        <div
+                          key={session.id}
+                          onClick={() => handleSessionClick(session)}
+                          className="bg-card rounded-[10px] p-4 cursor-pointer active:bg-secondary transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <ActivityIcon activityType={session.activity_type} size="lg" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge 
+                                  variant={isUpcoming ? "default" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {isUpcoming ? "À venir" : "Terminée"}
+                                </Badge>
+                              </div>
+                              <h3 className="text-[17px] font-semibold truncate">{session.title}</h3>
+                              <div className="flex items-center gap-4 mt-1 text-[13px] text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3.5 w-3.5" />
+                                  {session.current_participants || 0}
+                                </span>
+                              </div>
                             </div>
-                            <h3 className="text-[17px] font-semibold truncate">{session.title}</h3>
-                            <div className="flex items-center gap-4 mt-1 text-[13px] text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3.5 w-3.5" />
-                                {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Users className="h-3.5 w-3.5" />
-                                {session.current_participants || 0}
-                              </span>
-                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground/50 mt-2" />
                           </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 mt-2" />
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+
+                  {/* Flèche bas */}
+                  {(sessionPage + 1) * SESSIONS_PER_PAGE < filteredSessions.length && (
+                    <button
+                      onClick={() => setSessionPage(p => p + 1)}
+                      className="w-full flex items-center justify-center py-2 text-primary active:opacity-70 transition-opacity"
+                    >
+                      <ChevronDown className="h-6 w-6" />
+                    </button>
+                  )}
+
+                  {/* Page indicator */}
+                  {filteredSessions.length > SESSIONS_PER_PAGE && (
+                    <p className="text-center text-[13px] text-muted-foreground">
+                      {sessionPage * SESSIONS_PER_PAGE + 1}-{Math.min((sessionPage + 1) * SESSIONS_PER_PAGE, filteredSessions.length)} sur {filteredSessions.length}
+                    </p>
+                  )}
                 </div>
               )}
 
