@@ -248,6 +248,26 @@
     filter: invert(1);
     opacity: 0.06;
   }
+
+  /* Background Pattern for Dialogs (no position:relative to avoid breaking dialog centering) */
+  .bg-pattern-dialog::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/patterns/sports-pattern.png');
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .dark .bg-pattern-dialog::before {
+    opacity: 0.1;
+  }
+  :not(.dark) .bg-pattern-dialog::before {
+    filter: invert(1);
+    opacity: 0.06;
+  }
 }
 
 /* Shimmer animation for skeleton loaders */
