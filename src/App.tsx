@@ -31,7 +31,6 @@ import Terms from "./pages/Terms";
 import About from "./pages/About";
 import ConfirmPresence from "./pages/ConfirmPresence";
 import { SecurityDashboard } from "./components/SecurityDashboard";
-import { AndroidTestPage } from "./components/AndroidTestPage";
 
 const queryClient = new QueryClient();
 
@@ -76,7 +75,7 @@ const App = () => {
                   <Route path="/confirm-presence" element={<PageTransition><ConfirmPresence /></PageTransition>} />
                   <Route path="/confirm-presence/:sessionId" element={<PageTransition><ConfirmPresence /></PageTransition>} />
                   <Route path="/security" element={<Layout><PageTransition><SecurityDashboard /></PageTransition></Layout>} />
-                  <Route path="/android-test" element={<Layout><PageTransition><AndroidTestPage /></PageTransition></Layout>} />
+                  
                   <Route path="/donation-success" element={<PageTransition><DonationSuccess /></PageTransition>} />
                   <Route path="/donation-canceled" element={<PageTransition><DonationCanceled /></PageTransition>} />
                   {/* Route profil public (AVANT *) */}

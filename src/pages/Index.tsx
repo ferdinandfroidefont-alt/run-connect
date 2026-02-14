@@ -1,7 +1,7 @@
 import { InteractiveMap } from "@/components/InteractiveMap";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
-import { NativePermissionTester } from "@/components/NativePermissionTester";
+
 import { InteractiveTutorial } from "@/components/InteractiveTutorial";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTutorial } from "@/hooks/useTutorial";
@@ -30,7 +30,7 @@ const Index = () => {
     skipTutorial,
   } = useTutorial();
   const [searchParams] = useSearchParams();
-  const [showPermissionTester, setShowPermissionTester] = useState(false);
+  
   const [nativeStatus, setNativeStatus] = useState<boolean | null>(null);
 
   // Activer les notifications de dépassement au classement
@@ -44,12 +44,6 @@ const Index = () => {
     };
     
     checkNativeStatus();
-    
-    // Démo: montrer le testeur de permissions en dev
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('test') || urlParams.has('debug')) {
-      setShowPermissionTester(true);
-    }
   }, []);
 
   // Extract map parameters from URL
@@ -97,12 +91,7 @@ const Index = () => {
         />
       )}
       
-      {/* Testeur de permissions (debug) */}
-      {showPermissionTester && (
-        <NativePermissionTester 
-          onClose={() => setShowPermissionTester(false)} 
-        />
-      )}
+      
 
       {/* Tutoriel interactif pour nouveaux utilisateurs */}
       {shouldShowTutorial && !needsOnboarding && !needsProfileSetup && (
