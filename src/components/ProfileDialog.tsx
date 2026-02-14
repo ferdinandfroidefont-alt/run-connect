@@ -385,7 +385,7 @@ export const ProfileDialog = ({
           </div>
           
            <ScrollArea className="flex-1 bg-pattern">
-            <div className="p-4 space-y-6 pb-8">
+            <div className="py-4 space-y-6 pb-8">
               {/* Profile Header - Centered */}
               <div className="flex flex-col items-center pt-4 pb-2">
                 <div className="relative mb-3">
@@ -459,7 +459,7 @@ export const ProfileDialog = ({
               </div>
 
               {/* Social Stats - iOS Segmented */}
-              <IOSListGroup>
+              <IOSListGroup flush>
                 <div className="flex items-center divide-x divide-border">
                   <button
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
@@ -492,7 +492,7 @@ export const ProfileDialog = ({
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (
-                <IOSListGroup header="MODIFIER MES INFORMATIONS">
+                <IOSListGroup header="MODIFIER MES INFORMATIONS" flush>
                   <div className="p-4 space-y-4">
                     <div className="space-y-3">
                       <div>
@@ -553,7 +553,7 @@ export const ProfileDialog = ({
               ) : (
                 <>
                   {/* Personal Info */}
-                  <IOSListGroup header="INFORMATIONS">
+                  <IOSListGroup header="INFORMATIONS" flush>
                     <IOSListItem
                       icon={User}
                       iconBgColor="bg-blue-500"
@@ -596,7 +596,7 @@ export const ProfileDialog = ({
                   </IOSListGroup>
 
                   {/* Actions */}
-                  <IOSListGroup header="RACCOURCIS">
+                  <IOSListGroup header="RACCOURCIS" flush>
                     <IOSListItem
                       icon={Route}
                       iconBgColor="bg-teal-500"

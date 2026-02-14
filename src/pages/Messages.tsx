@@ -2289,9 +2289,9 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="p-4 space-y-3">
+        <div className="py-3 space-y-3">
           {/* Search Conversations */}
-          <div className="relative">
+          <div className="relative px-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher une conversation..."
@@ -2301,7 +2301,7 @@ const Messages = () => {
             />
           </div>
           {/* Quick Search Buttons */}
-          <div className="bg-card rounded-[10px] p-3">
+          <div className="bg-card p-3">
             <div className="grid grid-cols-5 gap-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
@@ -2358,7 +2358,7 @@ const Messages = () => {
           </div>
 
           {/* Conversations List */}
-          <div className="bg-card rounded-[10px] overflow-hidden">
+          <div className="bg-card overflow-hidden">
             {conversations.length === 0 ? (
               <div className="text-center py-12 px-4">
                 <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />

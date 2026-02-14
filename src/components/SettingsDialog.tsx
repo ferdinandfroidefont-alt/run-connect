@@ -436,9 +436,9 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               </div>
 
               <ScrollArea className="flex-1 bg-pattern">
-                <div className="p-4 space-y-6">
+                <div className="py-6 space-y-6">
                   {/* iOS grouped list style */}
-                  <div className="bg-background rounded-[10px] overflow-hidden">
+                  <div className="bg-background overflow-hidden">
                     {filteredCategories.map((category, index) => (
                       <div key={category.id}>
                         <button
@@ -470,7 +470,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Profile Share Section */}
                   {profile && (
-                    <div className="bg-background rounded-[10px] overflow-hidden p-4 space-y-4">
+                    <div className="bg-background overflow-hidden p-4 space-y-4">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
