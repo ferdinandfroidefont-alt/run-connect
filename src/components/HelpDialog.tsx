@@ -353,7 +353,7 @@ export const HelpDialog = ({ isOpen, onClose }: HelpDialogProps) => {
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 bg-pattern">
             <div className="px-4 py-6 space-y-6">
               <FeatureSection title="Page Carte" emoji="🗺️" features={mapFeatures} />
               <FeatureSection title="Page Profil" emoji="👤" features={profileFeatures} />
