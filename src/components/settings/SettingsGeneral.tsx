@@ -83,13 +83,13 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
       </div>
 
       <ScrollArea className="flex-1 bg-pattern">
-        <div className="px-4 py-6 space-y-6">
+        <div className="py-6 space-y-6">
           {/* Language & Theme */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Apparence
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               {/* Language Selector */}
               <div className="flex items-center gap-3 px-4 py-3">
                 <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
@@ -137,7 +137,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Compte
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               {/* Password Reset */}
               <button 
                 onClick={handlePasswordReset}
@@ -165,7 +165,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Carte
             </h3>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               {/* Long Press to Create Session */}
               <div className="flex items-center gap-3 px-4 py-3">
                 <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
