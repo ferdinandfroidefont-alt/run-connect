@@ -16,10 +16,11 @@ import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 interface DiscoverCardProps {
   session: DiscoverSession;
   onJoin: (session: DiscoverSession) => void;
+  onCardClick?: (session: DiscoverSession) => void;
   index?: number;
 }
 
-export const DiscoverCard = ({ session, onJoin, index = 0 }: DiscoverCardProps) => {
+export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: DiscoverCardProps) => {
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
 
@@ -51,8 +52,9 @@ export const DiscoverCard = ({ session, onJoin, index = 0 }: DiscoverCardProps) 
   return (
     <>
       <div 
-        className={cn("rounded-[14px] overflow-hidden border-0 animate-fade-in", getActivityPastel(session.activity_type))}
+        className={cn("rounded-[14px] overflow-hidden border-0 animate-fade-in cursor-pointer", getActivityPastel(session.activity_type))}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
+        onClick={() => onCardClick?.(session)}
       >
         <div className="p-4 space-y-3">
           {/* Header */}
@@ -60,7 +62,7 @@ export const DiscoverCard = ({ session, onJoin, index = 0 }: DiscoverCardProps) 
             <div className="flex items-center gap-3">
               <Avatar 
                 className="h-10 w-10 cursor-pointer"
-                onClick={() => setSelectedProfile(session.organizer_id)}
+                onClick={(e) => { e.stopPropagation(); setSelectedProfile(session.organizer_id); }}
               >
                 <AvatarImage src={session.organizer.avatar_url || ""} />
                 <AvatarFallback className="bg-secondary text-[15px]">
@@ -71,7 +73,7 @@ export const DiscoverCard = ({ session, onJoin, index = 0 }: DiscoverCardProps) 
                 <h3 className="font-semibold text-[17px]">{session.title}</h3>
                 <p 
                   className="text-[13px] text-muted-foreground cursor-pointer"
-                  onClick={() => setSelectedProfile(session.organizer_id)}
+                  onClick={(e) => { e.stopPropagation(); setSelectedProfile(session.organizer_id); }}
                 >
                   par {session.organizer.username || session.organizer.display_name}
                 </p>
@@ -138,7 +140,7 @@ export const DiscoverCard = ({ session, onJoin, index = 0 }: DiscoverCardProps) 
           {/* Action Buttons */}
           <div className="pt-3 border-t border-foreground/5 flex gap-2">
             <Button
-              onClick={() => onJoin(session)}
+              onClick={(e) => { e.stopPropagation(); onJoin(session); }}
               size="sm"
               className="flex-1 h-10 rounded-full ios-gradient-btn text-white shadow-lg shadow-primary/25 border-0"
             >
@@ -146,7 +148,7 @@ export const DiscoverCard = ({ session, onJoin, index = 0 }: DiscoverCardProps) 
               {session.friends_only ? "Demander" : "Rejoindre"}
             </Button>
             <Button
-              onClick={() => setShowShareDialog(true)}
+              onClick={(e) => { e.stopPropagation(); setShowShareDialog(true); }}
               size="sm"
               variant="ghost"
               className="h-10 w-10 p-0 rounded-full bg-foreground/5 active:bg-foreground/10"

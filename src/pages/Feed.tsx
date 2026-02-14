@@ -8,14 +8,17 @@ import { DiscoverFilters } from '@/components/feed/DiscoverFilters';
 import { DiscoverCard } from '@/components/feed/DiscoverCard';
 import { DiscoverEmptyState } from '@/components/feed/DiscoverEmptyState';
 import { ProfileDialog } from '@/components/ProfileDialog';
+import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import type { DiscoverSession } from '@/hooks/useDiscoverFeed';
 
 export default function Feed() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<FeedMode>('friends');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [selectedDiscoverSession, setSelectedDiscoverSession] = useState<any>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const touchStartY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -239,6 +242,15 @@ export default function Feed() {
                     key={session.id}
                     session={session}
                     onJoin={joinSession}
+                    onCardClick={(s) => setSelectedDiscoverSession({
+                      ...s,
+                      session_type: s.activity_type,
+                      profiles: {
+                        username: s.organizer.username,
+                        display_name: s.organizer.display_name,
+                        avatar_url: s.organizer.avatar_url || undefined
+                      }
+                    })}
                     index={index}
                   />
                 ))}
@@ -252,6 +264,13 @@ export default function Feed() {
       <ProfileDialog 
         open={showProfileDialog} 
         onOpenChange={setShowProfileDialog} 
+      />
+
+      {/* Session Details Dialog */}
+      <SessionDetailsDialog
+        session={selectedDiscoverSession}
+        onClose={() => setSelectedDiscoverSession(null)}
+        onSessionUpdated={() => refreshDiscover()}
       />
     </div>
   );
