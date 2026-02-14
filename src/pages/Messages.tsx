@@ -2384,7 +2384,7 @@ const Messages = () => {
                     onSwipeRight={() => togglePinConversation(conversation.id)}
                   >
                     <div
-                      className={`flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors relative ${
+                      className={`flex items-center gap-3 px-4 py-3 bg-secondary active:bg-muted transition-colors relative ${
                         selectedConversations.has(conversation.id) ? 'bg-primary/5' : ''
                       }`}
                       onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
