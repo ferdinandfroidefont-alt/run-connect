@@ -9,12 +9,14 @@ import { OnlineStatus } from "./OnlineStatus";
 import { SettingsDialog } from "./SettingsDialog";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, UserPlus, UserMinus, Crown, Calendar, Loader2, Flag, MoreVertical, ArrowLeft, ChevronRight } from "lucide-react";
+import { User, UserPlus, UserMinus, Crown, Calendar, Loader2, Flag, MoreVertical, ArrowLeft, ChevronRight, Users } from "lucide-react";
 import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
 import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
 import { OrganizerRatingBadge } from "@/components/OrganizerRatingBadge";
 import { StreakBadge } from "@/components/StreakBadge";
 import { UserActivityChart } from "@/components/UserActivityChart";
+import { PersonalRecords } from "@/components/PersonalRecords";
+import { ActivityTimeline } from "@/components/profile/ActivityTimeline";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -71,6 +73,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
   const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
+  const [commonClubs, setCommonClubs] = useState<any[]>([]);
 
   const isOwnProfile = userId === user?.id;
 
@@ -83,9 +86,24 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkFollowStatus();
         checkFriendStatus();
         checkBlockedStatus();
+        fetchCommonClubs();
       }
     }
   }, [userId, user, isOwnProfile]);
+
+  const fetchCommonClubs = async () => {
+    if (!user || !userId || isOwnProfile) return;
+    try {
+      const { data, error } = await supabase.rpc('get_common_clubs', {
+        user_1_id: user.id,
+        user_2_id: userId
+      });
+      if (error) throw error;
+      setCommonClubs(data || []);
+    } catch (error) {
+      console.error('Error fetching common clubs:', error);
+    }
+  };
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -582,73 +600,40 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   <ProfileRankCard userId={userId} />
                   <EarnedBadgesSection userId={userId} />
 
+                  {/* Records personnels */}
+                  <PersonalRecords records={{
+                    running_records: profile.running_records,
+                    cycling_records: profile.cycling_records,
+                    swimming_records: profile.swimming_records,
+                    triathlon_records: profile.triathlon_records,
+                    walking_records: profile.walking_records,
+                  }} />
+
+                  {/* Clubs en commun */}
+                  {!isOwnProfile && commonClubs.length > 0 && (
+                    <div>
+                      <p className="ios-section-header">Clubs en commun</p>
+                      <div className="bg-card overflow-hidden">
+                        {commonClubs.map((club: any, index: number) => (
+                          <div key={club.id}>
+                            <div className="flex items-center px-4 py-[11px]">
+                              <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
+                                <Users className="h-4 w-4 text-primary" />
+                              </div>
+                              <span className="text-[15px] font-medium text-foreground">{club.group_name}</span>
+                            </div>
+                            {index < commonClubs.length - 1 && <div className="h-px bg-border ml-[54px]" />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Activité récente */}
+                  <ActivityTimeline userId={userId!} />
+
+                  {/* Statistiques d'activité */}
                   <UserActivityChart userId={userId} username={profile.username} />
-
-                  {/* Sports Records */}
-                  {profile.walking_records && Object.keys(profile.walking_records).length > 0 && Object.values(profile.walking_records).some(v => v) && (
-                    <div className="bg-card overflow-hidden p-4">
-                      <p className="font-medium text-foreground mb-3">🚶‍♂️ Records Marche</p>
-                      <div className="space-y-2">
-                        {Object.entries(profile.walking_records).map(([distance, time]) => 
-                          time && (
-                            <div key={distance} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{distance}</span>
-                              <span className="font-mono text-foreground">{String(time)}</span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {profile.running_records && Object.keys(profile.running_records).length > 0 && Object.values(profile.running_records).some(v => v) && (
-                    <div className="bg-card overflow-hidden p-4">
-                      <p className="font-medium text-foreground mb-3">🏃‍♂️ Records Course à pied</p>
-                      <div className="space-y-2">
-                        {Object.entries(profile.running_records).map(([distance, time]) => 
-                          time && (
-                            <div key={distance} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{distance}</span>
-                              <span className="font-mono text-foreground">{String(time)}</span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {profile.cycling_records && Object.keys(profile.cycling_records).length > 0 && Object.values(profile.cycling_records).some(v => v) && (
-                    <div className="bg-card overflow-hidden p-4">
-                      <p className="font-medium text-foreground mb-3">🚴‍♂️ Records Cyclisme</p>
-                      <div className="space-y-2">
-                        {Object.entries(profile.cycling_records).map(([distance, time]) => 
-                          time && (
-                            <div key={distance} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{distance}</span>
-                              <span className="font-mono text-foreground">{String(time)}</span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {profile.swimming_records && Object.keys(profile.swimming_records).length > 0 && Object.values(profile.swimming_records).some(v => v) && (
-                    <div className="bg-card overflow-hidden p-4">
-                      <p className="font-medium text-foreground mb-3">🏊‍♂️ Records Natation</p>
-                      <div className="space-y-2">
-                        {Object.entries(profile.swimming_records).map(([distance, time]) => 
-                          time && (
-                            <div key={distance} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{distance}</span>
-                              <span className="font-mono text-foreground">{String(time)}</span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Member since */}
                   <div className="bg-card overflow-hidden">
