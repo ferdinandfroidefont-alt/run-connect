@@ -840,24 +840,20 @@ const Profile = () => {
           </div>}
 
 
-        {/* Stats Section - For other users (iOS Inset Grouped) */}
+        {/* Records personnels - Other users */}
         {isViewingOtherUser && profile && viewingUserId && (
-          <div className="bg-card overflow-hidden">
-            {/* Records Row */}
-            <div className="relative">
-              <PersonalRecords records={{
-                running_records: profile.running_records,
-                cycling_records: profile.cycling_records,
-                swimming_records: profile.swimming_records,
-                triathlon_records: profile.triathlon_records,
-                walking_records: profile.walking_records
-              }} />
-              <div className="absolute bottom-0 left-[54px] right-0 h-px bg-border" />
-            </div>
-            
-            {/* Activity Row */}
-            <UserActivityChart userId={viewingUserId} username={profile?.username} />
-          </div>
+          <PersonalRecords records={{
+            running_records: profile.running_records,
+            cycling_records: profile.cycling_records,
+            swimming_records: profile.swimming_records,
+            triathlon_records: profile.triathlon_records,
+            walking_records: profile.walking_records
+          }} />
+        )}
+
+        {/* Statistiques d'activité - Other users */}
+        {isViewingOtherUser && viewingUserId && (
+          <UserActivityChart userId={viewingUserId} username={profile?.username} />
         )}
 
         {/* Common Clubs - Other Users */}
