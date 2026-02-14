@@ -249,11 +249,8 @@
     opacity: 0.06;
   }
 
-  /* Background Pattern for Dialogs (no position:relative to avoid breaking dialog centering) */
-  .bg-pattern-dialog {
-    isolation: isolate;
-  }
-  .bg-pattern-dialog::before {
+  /* Background Pattern for Dialogs - uses ::after with z-index 0, children get z-[1] */
+  .bg-pattern-dialog::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -262,12 +259,17 @@
     background-size: 256px 256px;
     opacity: 0.08;
     pointer-events: none;
-    z-index: -1;
+    z-index: 0;
+    border-radius: inherit;
   }
-  .dark .bg-pattern-dialog::before {
+  .bg-pattern-dialog > * {
+    position: relative;
+    z-index: 1;
+  }
+  .dark .bg-pattern-dialog::after {
     opacity: 0.1;
   }
-  :not(.dark) .bg-pattern-dialog::before {
+  :not(.dark) .bg-pattern-dialog::after {
     filter: invert(1);
     opacity: 0.06;
   }
