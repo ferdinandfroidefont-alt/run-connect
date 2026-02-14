@@ -250,6 +250,9 @@
   }
 
   /* Background Pattern for Dialogs (no position:relative to avoid breaking dialog centering) */
+  .bg-pattern-dialog {
+    isolation: isolate;
+  }
   .bg-pattern-dialog::before {
     content: '';
     position: absolute;
@@ -259,7 +262,7 @@
     background-size: 256px 256px;
     opacity: 0.08;
     pointer-events: none;
-    z-index: 0;
+    z-index: -1;
   }
   .dark .bg-pattern-dialog::before {
     opacity: 0.1;
