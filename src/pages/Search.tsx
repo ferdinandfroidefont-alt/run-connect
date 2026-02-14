@@ -97,7 +97,7 @@ export default function Search() {
         <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Zone scrollable des résultats */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto flex flex-col">
           {activeTab === 'profiles' && (
             <ProfilesTab searchQuery={searchQuery} />
           )}
