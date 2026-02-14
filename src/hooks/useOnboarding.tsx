@@ -14,13 +14,22 @@ export const useOnboarding = () => {
       return;
     }
 
-    // ✅ FIX: Check localStorage safety flag first to prevent loop
+    // ✅ FIX: Check localStorage safety flags to prevent loop
+    const profileCreatedFlag = localStorage.getItem('profileCreatedSuccessfully');
     const completedTimestamp = localStorage.getItem(`profileSetupCompleted_${user.id}`);
+    
+    if (profileCreatedFlag === 'true') {
+      console.log('✅ [Onboarding] profileCreatedSuccessfully flag found - skipping');
+      setNeedsOnboarding(false);
+      setNeedsProfileSetup(false);
+      setLoading(false);
+      return;
+    }
+    
     if (completedTimestamp) {
       const elapsed = Date.now() - parseInt(completedTimestamp, 10);
-      // If profile was completed within the last 30 seconds, skip showing dialog
-      if (elapsed < 30000) {
-        console.log('✅ [Onboarding] localStorage flag found, profile setup completed recently - skipping');
+      if (elapsed < 60000) {
+        console.log('✅ [Onboarding] profileSetupCompleted flag found (within 60s) - skipping');
         setNeedsOnboarding(false);
         setNeedsProfileSetup(false);
         setLoading(false);
@@ -71,8 +80,10 @@ export const useOnboarding = () => {
           setNeedsProfileSetup(true);
         } else {
           console.log('Profile is complete');
-          // Clean up localStorage flag since profile is confirmed complete
+          // Clean up ALL localStorage flags since profile is confirmed complete
           localStorage.removeItem(`profileSetupCompleted_${user.id}`);
+          localStorage.removeItem('profileCreatedSuccessfully');
+          localStorage.removeItem('profileCreatedAt');
           setNeedsOnboarding(false);
           setNeedsProfileSetup(false);
         }

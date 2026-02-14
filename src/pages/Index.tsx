@@ -78,7 +78,7 @@ const Index = () => {
       />
       
       {/* Setup de profil pour les utilisateurs existants avec profil incomplet */}
-      {needsProfileSetup && user && (
+      {needsProfileSetup && user && !localStorage.getItem('profileCreatedSuccessfully') && (
         <ProfileSetupDialog
           open={needsProfileSetup}
           onOpenChange={() => {}} // Empêche la fermeture manuelle
