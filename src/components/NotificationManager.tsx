@@ -3,9 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { MIUINotificationGuide } from '@/components/MIUINotificationGuide';
-import { RedmiNote9Guide } from '@/components/RedmiNote9Guide';
-import { TestLocalNotificationButton } from '@/components/TestLocalNotificationButton';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -388,7 +385,7 @@ export const NotificationManager = () => {
                 <TestTube className="h-4 w-4" />
                 {tokenSaving ? "Sauvegarde..." : "Tester"}
               </Button>
-              <TestLocalNotificationButton />
+              
               <Button 
                 variant="outline" 
                 onClick={diagnoseNotifications} 
@@ -450,18 +447,7 @@ export const NotificationManager = () => {
           </div>
         )}
 
-        {/* Guide MIUI spécialisé */}
-        {deviceInfo.isRedmiNote9 && (
-          <div className="mt-4">
-            <RedmiNote9Guide />
-          </div>
-        )}
         
-        {deviceInfo.isMIUI && !deviceInfo.isRedmiNote9 && (
-          <div className="mt-4">
-            <MIUINotificationGuide />
-          </div>
-        )}
 
         {/* Instructions générales si permissions refusées */}
         {permissionStatus.denied && !isMIUIDevice && isNative && (

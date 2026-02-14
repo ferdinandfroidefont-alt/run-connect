@@ -1,319 +1,210 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { useSendNotification } from '@/hooks/useSendNotification';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { CheckCircle2, MapPin, Loader2, Trophy } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { PointsBreakdown } from '@/components/PointsBreakdown';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, XCircle, Loader2, MapPin, Calendar, Users } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+interface Session {
+  id: string;
+  title: string;
+  scheduled_at: string;
+  location_name: string;
+  location_lat: number;
+  location_lng: number;
+  organizer_id: string;
+  activity_type: string;
+}
 
 interface Participant {
   id: string;
   user_id: string;
-  confirmed_by_gps: boolean;
-  confirmed_by_creator: boolean;
-  profiles: {
-    username: string;
-    display_name: string;
-    avatar_url?: string;
-  };
+  confirmed_by_creator: boolean | null;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 interface CreatorValidationViewProps {
-  session: {
-    id: string;
-    title: string;
-  };
+  session: Session;
   onComplete: () => void;
 }
 
 export const CreatorValidationView = ({ session, onComplete }: CreatorValidationViewProps) => {
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [validating, setValidating] = useState(false);
-  const [totalPoints, setTotalPoints] = useState(0);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { sendPushNotification } = useSendNotification();
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState<string | null>(null);
 
   useEffect(() => {
-    loadParticipants();
+    fetchParticipants();
   }, [session.id]);
 
-  useEffect(() => {
-    // Calculate points
-    const unvalidatedCount = Array.from(selectedParticipants).filter(id => {
-      const participant = participants.find(p => p.id === id);
-      return participant && !participant.confirmed_by_creator;
-    }).length;
-    
-    const points = 10 + unvalidatedCount; // 10 base + 1 per participant
-    setTotalPoints(points);
-  }, [selectedParticipants, participants]);
-
-  const loadParticipants = async () => {
-    setLoading(true);
+  const fetchParticipants = async () => {
     try {
       const { data: participantsData, error } = await supabase
         .from('session_participants')
-        .select('id, user_id, confirmed_by_gps, confirmed_by_creator, joined_at')
+        .select('id, user_id, confirmed_by_creator')
         .eq('session_id', session.id)
-        .order('joined_at', { ascending: true });
+        .neq('user_id', user?.id);
 
       if (error) throw error;
 
-      if (!participantsData || participantsData.length === 0) {
-        setParticipants([]);
-        return;
-      }
+      if (participantsData && participantsData.length > 0) {
+        const userIds = participantsData.map(p => p.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', userIds);
 
-      const userIds = participantsData.map(p => p.user_id);
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url')
-        .in('user_id', userIds);
-
-      const participantsWithProfiles = participantsData.map(p => {
-        const profile = profilesData?.find(pr => pr.user_id === p.user_id);
-        return {
+        const enriched = participantsData.map(p => ({
           ...p,
-          profiles: {
-            username: profile?.username || '',
-            display_name: profile?.display_name || '',
-            avatar_url: profile?.avatar_url
-          }
-        };
-      });
+          username: profiles?.find(pr => pr.user_id === p.user_id)?.username || '',
+          display_name: profiles?.find(pr => pr.user_id === p.user_id)?.display_name || null,
+          avatar_url: profiles?.find(pr => pr.user_id === p.user_id)?.avatar_url || null,
+        }));
 
-      setParticipants(participantsWithProfiles);
-      
-      // Auto-select GPS-confirmed participants
-      const gpsConfirmed = participantsWithProfiles
-        .filter(p => p.confirmed_by_gps && !p.confirmed_by_creator)
-        .map(p => p.id);
-      setSelectedParticipants(new Set(gpsConfirmed));
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+        setParticipants(enriched);
+      }
+    } catch (error) {
+      console.error('Error fetching participants:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleParticipant = (participantId: string) => {
-    const newSelected = new Set(selectedParticipants);
-    if (newSelected.has(participantId)) {
-      newSelected.delete(participantId);
-    } else {
-      newSelected.add(participantId);
-    }
-    setSelectedParticipants(newSelected);
-  };
-
-  const handleValidateAll = async () => {
-    if (selectedParticipants.size === 0) {
-      toast({
-        title: "Aucun participant sélectionné",
-        description: "Cochez au moins un participant pour valider",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setValidating(true);
+  const handleValidate = async (participantId: string, confirmed: boolean) => {
+    setValidating(participantId);
     try {
-      for (const participantId of Array.from(selectedParticipants)) {
-        const participant = participants.find(p => p.id === participantId);
-        if (!participant || participant.confirmed_by_creator) continue;
+      const { error } = await supabase
+        .from('session_participants')
+        .update({ confirmed_by_creator: confirmed })
+        .eq('id', participantId);
 
-        await supabase
-          .from('session_participants')
-          .update({ confirmed_by_creator: true })
-          .eq('id', participantId);
+      if (error) throw error;
 
-        await supabase.rpc('calculate_and_award_points', { participant_id: participantId });
-        await supabase.rpc('check_and_award_badges', { user_id_param: participant.user_id });
+      setParticipants(prev =>
+        prev.map(p => p.id === participantId ? { ...p, confirmed_by_creator: confirmed } : p)
+      );
 
-        // Créer notification dans la base
-        await supabase
-          .from('notifications')
-          .insert([{
-            user_id: participant.user_id,
-            title: 'Présence confirmée',
-            message: `Votre présence à "${session.title}" a été confirmée par l'organisateur`,
-            type: 'presence_confirmed',
-            data: {
-              session_id: session.id,
-              session_title: session.title
-            }
-          }]);
-
-        // Envoyer notification push
-        await sendPushNotification(
-          participant.user_id,
-          'Présence confirmée',
-          `Votre présence à "${session.title}" a été confirmée par l'organisateur`,
-          'presence_confirmed',
-          {
-            session_id: session.id,
-            session_title: session.title
-          }
-        );
-      }
-
-      await supabase.functions.invoke('award-organizer-points', {
-        body: { sessionId: session.id }
+      toast({
+        title: confirmed ? "Présence confirmée" : "Absence marquée",
+        description: confirmed ? "Le participant a été validé" : "Le participant a été marqué absent",
       });
-
-      setShowSuccess(true);
-      setTimeout(() => {
-        onComplete();
-      }, 2000);
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error) {
+      console.error('Error validating participant:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de valider la présence",
+        variant: "destructive",
+      });
     } finally {
-      setValidating(false);
+      setValidating(null);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="bg-card border border-border rounded-[10px] p-12 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      {/* Header */}
-      <div className="glass-card p-6">
-        <h2 className="text-heading-xl mb-2">Validez les participants présents</h2>
-        <p className="text-body-md text-muted-foreground">
-          Cochez les membres que vous avez vus sur place à "{session.title}"
-        </p>
+    <div className="space-y-4">
+      {/* Session Info */}
+      <div className="bg-card border border-border rounded-[10px] p-4">
+        <h2 className="text-[17px] font-semibold text-foreground mb-2">{session.title}</h2>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>{format(new Date(session.scheduled_at), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}</span>
+          </div>
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            <span>{session.location_name}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Participants list */}
-      <div className="space-y-3">
-        {participants.map((participant, index) => (
-          <motion.div
-            key={participant.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="glass-card p-4"
-          >
-            <div className="flex items-center gap-4">
-              <Checkbox
-                checked={selectedParticipants.has(participant.id) || participant.confirmed_by_creator}
-                onCheckedChange={() => handleToggleParticipant(participant.id)}
-                disabled={participant.confirmed_by_creator}
-              />
-
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={participant.profiles.avatar_url} />
-                <AvatarFallback>
-                  {(participant.profiles.username || participant.profiles.display_name)?.charAt(0)?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-
-              <div className="flex-1">
-                <p className="font-medium">
-                  {participant.profiles.display_name || participant.profiles.username}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  {participant.confirmed_by_gps && (
-                    <Badge variant="secondary" className="text-xs">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      GPS validé
-                    </Badge>
-                  )}
-                  {participant.confirmed_by_creator && (
-                    <Badge variant="default" className="text-xs">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Validé
-                    </Badge>
+      {/* Participants List */}
+      <div className="bg-card border border-border rounded-[10px] overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          <h3 className="text-[15px] font-medium text-foreground">
+            Participants ({participants.length})
+          </h3>
+        </div>
+        
+        {participants.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-[15px] text-muted-foreground">Aucun participant inscrit</p>
+          </div>
+        ) : (
+          <div>
+            {participants.map((participant, index) => (
+              <div key={participant.id}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={participant.avatar_url || ''} />
+                    <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                      {(participant.display_name || participant.username)?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-medium text-foreground truncate">
+                      {participant.display_name || participant.username}
+                    </p>
+                    <p className="text-[13px] text-muted-foreground">@{participant.username}</p>
+                  </div>
+                  
+                  {participant.confirmed_by_creator === true ? (
+                    <Badge className="bg-emerald-100 text-emerald-700 border-0">Présent</Badge>
+                  ) : participant.confirmed_by_creator === false ? (
+                    <Badge className="bg-red-100 text-red-700 border-0">Absent</Badge>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleValidate(participant.id, true)}
+                        disabled={validating === participant.id}
+                        className="h-8 gap-1"
+                      >
+                        {validating === participant.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleValidate(participant.id, false)}
+                        disabled={validating === participant.id}
+                        className="h-8 gap-1"
+                      >
+                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                      </Button>
+                    </div>
                   )}
                 </div>
+                {index < participants.length - 1 && <div className="h-px bg-border ml-[68px]" />}
               </div>
-
-              <AnimatePresence>
-                {selectedParticipants.has(participant.id) && !participant.confirmed_by_creator && (
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    exit={{ scale: 0, rotate: 180 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <CheckCircle2 className="h-6 w-6 text-green-500" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        ))}
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Points breakdown */}
-      {selectedParticipants.size > 0 && (
-        <PointsBreakdown
-          organizerPoints={totalPoints}
-          participantCount={selectedParticipants.size}
-        />
-      )}
-
-      {/* Validate button */}
-      <Button
-        onClick={handleValidateAll}
-        disabled={validating || selectedParticipants.size === 0}
-        className="w-full h-14 text-lg"
-        size="lg"
-      >
-        {validating ? (
-          <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Validation en cours...
-          </>
-        ) : showSuccess ? (
-          <>
-            <Trophy className="mr-2 h-5 w-5" />
-            Présences confirmées !
-          </>
-        ) : (
-          `Valider ${selectedParticipants.size} participant${selectedParticipants.size > 1 ? 's' : ''}`
-        )}
+      <Button onClick={onComplete} className="w-full h-11 rounded-[10px]">
+        Terminer
       </Button>
-
-      {/* Success animation */}
-      <AnimatePresence>
-        {showSuccess && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50"
-          >
-            <motion.div
-              animate={{
-                scale: [1, 1.2, 1],
-                rotate: [0, 360, 0]
-              }}
-              transition={{ duration: 0.6 }}
-              className="text-8xl"
-            >
-              ✅
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };

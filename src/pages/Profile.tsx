@@ -23,7 +23,7 @@ import { useAppContext } from "@/contexts/AppContext";
 import { StravaConnect } from "@/components/StravaConnect";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
-import { SimpleAABDiagnostic } from "@/components/SimpleAABDiagnostic";
+
 import { UserActivityChart } from "@/components/UserActivityChart";
 import { ReliabilityBadge } from "@/components/ReliabilityBadge";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
@@ -932,8 +932,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Simple AAB Diagnostic - Only for creators */}
-        {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && <SimpleAABDiagnostic />}
+        
 
         {/* Strava Connect Section */}
         <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
