@@ -293,7 +293,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 bg-pattern">
             <div className="p-4 space-y-4">
               {/* Club Avatar */}
               <div className="bg-card rounded-[10px] p-6 border border-border">

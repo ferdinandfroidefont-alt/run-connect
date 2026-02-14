@@ -383,7 +383,7 @@ export const ProfileDialog = ({
             </div>
           </div>
           
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 bg-pattern">
             <div className="p-4 space-y-6">
               {/* Profile Header - iOS Style */}
               <div className="flex flex-col items-center pt-6 pb-4">
