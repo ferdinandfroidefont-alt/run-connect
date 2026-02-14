@@ -619,7 +619,7 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto p-4 space-y-4">
+      <div className="max-w-md mx-auto py-4 space-y-4">
         {/* Profile Header - iOS Style Premium */}
         <div className="flex flex-col items-center pt-4 pb-2">
           {/* Avatar with subtle shadow */}
@@ -785,7 +785,7 @@ const Profile = () => {
         {/* iOS List Groups */}
         
         {/* Informations Section - Own Profile (editing form) */}
-        {!isViewingOtherUser && isEditing && <div className="bg-card rounded-[10px] overflow-hidden">
+        {!isViewingOtherUser && isEditing && <div className="bg-card overflow-hidden">
             <div className="px-4 py-4 space-y-4">
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Pseudo</label>
@@ -842,7 +842,7 @@ const Profile = () => {
 
         {/* Stats Section - For other users (iOS Inset Grouped) */}
         {isViewingOtherUser && profile && viewingUserId && (
-          <div className="bg-card rounded-[10px] overflow-hidden">
+          <div className="bg-card overflow-hidden">
             {/* Records Row */}
             <div className="relative">
               <PersonalRecords records={{
@@ -865,7 +865,7 @@ const Profile = () => {
             <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
               Clubs en commun ({commonClubs.length})
             </p>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               {commonClubs.map((club, index) => <div key={club.club_id} className="relative">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
@@ -886,7 +886,7 @@ const Profile = () => {
             <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
               Historique des connexions
             </p>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               {connectionHistory.map((log, index) => <div key={index} className="relative">
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-[15px] text-muted-foreground">{log.action}</span>
