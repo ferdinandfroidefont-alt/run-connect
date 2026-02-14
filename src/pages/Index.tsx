@@ -36,6 +36,20 @@ const Index = () => {
   // Activer les notifications de dépassement au classement
   useLeaderboardNotifications();
 
+  // Cleanup localStorage flags after successful landing
+  useEffect(() => {
+    const profileCreated = localStorage.getItem('profileCreatedSuccessfully');
+    if (profileCreated === 'true') {
+      const timer = setTimeout(() => {
+        localStorage.removeItem('profileCreatedSuccessfully');
+        localStorage.removeItem('profileCreatedAt');
+        console.log('🧹 [Index] Cleaned up profile creation flags');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+
   useEffect(() => {
     const checkNativeStatus = async () => {
       const isNative = await nativeManager.ensureNativeStatus();
