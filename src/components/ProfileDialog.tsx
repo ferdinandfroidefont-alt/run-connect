@@ -367,7 +367,7 @@ export const ProfileDialog = ({
   }
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary bg-pattern border-0 sm:border">
+        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary bg-pattern-dialog border-0 sm:border">
           {/* iOS Header */}
           <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
             <div className="flex items-center justify-between px-4 py-3">
