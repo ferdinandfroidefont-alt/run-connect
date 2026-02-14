@@ -1,41 +1,48 @@
 
 
-# Background Pattern for RunConnect
+# Fix: Loading Screen Only Visible on Top Half (Mobile)
 
-## Approach
+## Problem
+The loading screen only covers the top half of the screen on mobile devices. This is caused by a conflict between:
+- The mobile CSS rule that sets `html, body` to `position: fixed; height: 100%`
+- The `#root` container with `height: 100%; overflow: auto`
+- The `bg-pattern` class using `isolation: isolate` which creates a new stacking context that interferes with the `fixed` positioning
 
-Use the Nano banana pro image generation model (`google/gemini-3-pro-image-preview`) via a Supabase Edge Function to generate a high-quality seamless tile pattern matching the specifications.
+## Solution
 
-## Implementation
+### 1. LoadingScreen.tsx - Use viewport height units
+Replace `fixed inset-0` with explicit `100dvh` (dynamic viewport height) sizing, which works reliably on all mobile browsers regardless of the parent container constraints.
 
-### 1. Create Edge Function `generate-pattern`
+```tsx
+<div 
+  className="fixed top-0 left-0 z-50 bg-secondary flex flex-col items-center justify-center px-6"
+  style={{ width: '100vw', height: '100dvh' }}
+>
+```
 
-A one-time-use edge function that calls the image generation API with the detailed prompt, saves the result to Supabase Storage, and returns the public URL.
+Remove `bg-pattern` from the root container and add the pattern as an inline style or a separate inner div to avoid `isolation: isolate` breaking the fixed positioning.
 
-### 2. Save Pattern Asset
+### 2. Add pattern separately inside the container
+Instead of using the `.bg-pattern` class (which adds `isolation: isolate`), add a dedicated pattern overlay div inside the loading screen:
 
-Save the generated image as `public/patterns/sports-pattern.png` for use across the app.
+```tsx
+{/* Pattern overlay */}
+<div 
+  className="absolute inset-0 pointer-events-none"
+  style={{
+    backgroundImage: "url('/patterns/sports-pattern.png')",
+    backgroundRepeat: 'repeat',
+    backgroundSize: '256px 256px',
+    opacity: 0.06
+  }}
+/>
+```
 
-### 3. Integrate into the App
+This avoids the `isolation: isolate` stacking context issue entirely while keeping the pattern visible.
 
-Add the pattern as a subtle background texture on key screens:
-
-- **`src/index.css`**: Add a `.bg-pattern` utility class that applies the pattern at 5-6% opacity
-- **`src/components/Layout.tsx`**: Apply the pattern behind the main content area
-- **Dark mode compatible**: The pattern is monochrome dark grey, so it works natively on dark backgrounds. For light mode, use CSS `filter: invert(1)` with the same low opacity.
-
-### Technical Details
-
-- **Generation prompt**: The exact prompt from the request, optimized for the model
-- **Format**: PNG, 512x512 square tile
-- **Usage**: CSS `background-image` with `background-repeat: repeat` at `opacity: 0.05`
-- **Performance**: Single small image file, cached by browser, minimal impact
-
-### Files Created
-- `supabase/functions/generate-pattern/index.ts` (temporary, for generation)
-- `public/patterns/sports-pattern.png` (the asset)
-
-### Files Modified
-- `src/index.css` -- add `.bg-pattern` utility
-- `src/components/Layout.tsx` -- apply pattern to app background
+## Technical Details
+- `100dvh` adapts to the actual visible viewport on mobile (accounts for URL bar, etc.)
+- Removing `isolation: isolate` from the loading screen prevents the fixed positioning from being constrained
+- The pattern is rendered as a child div instead of a `::before` pseudo-element, giving full control over layering
+- `z-50` ensures it stays above all other content
 
