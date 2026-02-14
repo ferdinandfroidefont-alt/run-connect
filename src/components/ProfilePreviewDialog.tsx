@@ -446,7 +446,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : profile ? (
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 bg-pattern">
             <div className="p-4 space-y-4">
               {/* Avatar Section */}
               <div className="bg-card rounded-[10px] border border-border p-6">

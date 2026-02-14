@@ -435,7 +435,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 </div>
               </div>
 
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 bg-pattern">
                 <div className="p-4 space-y-6">
                   {/* iOS grouped list style */}
                   <div className="bg-background rounded-[10px] overflow-hidden">
@@ -579,7 +579,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           ) : (
             <motion.div
               key={currentPage}
-              className="flex-1 h-full bg-background"
+              className="flex-1 h-full bg-background bg-pattern"
             >
               {renderPage()}
             </motion.div>
