@@ -147,7 +147,7 @@ const Subscription = () => {
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="px-4 py-6 space-y-6">
+          <div className="py-6 space-y-6">
             {/* Expiring Soon Warning */}
             {isExpiringSoon && (
               <div className="bg-[#FF9500]/10 border border-[#FF9500]/30 rounded-[10px] p-4">
@@ -173,7 +173,7 @@ const Subscription = () => {
               <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
                 Mon Abonnement
               </h3>
-              <div className="bg-card rounded-[10px] overflow-hidden">
+              <div className="bg-card overflow-hidden">
                 {status === 'loading' ? (
                   <div className="p-4 space-y-3">
                     <Skeleton className="h-6 w-32" />
@@ -277,7 +277,7 @@ const Subscription = () => {
               <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
                 Plans Disponibles
               </h3>
-              <div className="bg-card rounded-[10px] overflow-hidden">
+              <div className="bg-card overflow-hidden">
                 {/* Monthly Plan */}
                 <button 
                   onClick={() => handleSubscribe('monthly')}
@@ -344,7 +344,7 @@ const Subscription = () => {
               <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
                 Avantages Premium
               </h3>
-              <div className="bg-card rounded-[10px] overflow-hidden">
+              <div className="bg-card overflow-hidden">
                 {features.map((feature, index) => (
                   <div key={feature}>
                     <div className="flex items-center gap-3 px-4 py-3">
@@ -364,7 +364,7 @@ const Subscription = () => {
               <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
                 Soutenir RunConnect
               </h3>
-              <div className="bg-card rounded-[10px] overflow-hidden">
+              <div className="bg-card overflow-hidden">
                 <DonationDialog
                   trigger={
                     <button className="w-full flex items-center gap-3 px-4 py-4 active:bg-secondary/50 transition-colors">

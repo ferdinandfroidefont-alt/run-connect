@@ -163,7 +163,7 @@ export default function Feed() {
           <>
             {loading && feedItems.length === 0 ? (
               // Skeleton loaders
-              <div className="space-y-3 px-3 pt-2">
+              <div className="space-y-3 pt-2">
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="rounded-[14px] bg-card border border-border p-4 space-y-3 animate-fade-in" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
                     <div className="flex items-center gap-3">
@@ -222,8 +222,8 @@ export default function Feed() {
           // Discover Feed
           <>
             {loading ? (
-              <div className="p-4">
-                <div className="bg-card border border-border rounded-[10px] p-8 flex flex-col items-center justify-center gap-3">
+              <div className="py-4">
+                <div className="bg-card border border-border p-8 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-[15px] text-muted-foreground">Recherche...</p>
                 </div>
@@ -236,7 +236,7 @@ export default function Feed() {
                 />
               </div>
             ) : (
-              <div className="p-4 space-y-3">
+              <div className="py-4 space-y-3">
                 {discoverSessions.map((session, index) => (
                   <DiscoverCard
                     key={session.id}

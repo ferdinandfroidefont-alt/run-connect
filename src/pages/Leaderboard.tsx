@@ -522,7 +522,7 @@ const Leaderboard = () => {
             <div className="w-16" />
           </div>
         </div>
-        <div className="p-4">
+        <div className="py-4">
           <LeaderboardSkeleton />
         </div>
       </div>
@@ -550,7 +550,7 @@ const Leaderboard = () => {
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="py-4 space-y-4">
         {/* Filtres */}
         <FilterBar 
           activeFilter={activeFilter}
@@ -590,12 +590,12 @@ const Leaderboard = () => {
         )}
 
         {/* Top 3 Podium */}
-        <div className="bg-card rounded-[10px] overflow-hidden">
+        <div className="bg-card overflow-hidden">
           <PodiumDisplay top3={top3} />
         </div>
 
         {/* Liste du classement */}
-        <div className="bg-card rounded-[10px] overflow-hidden">
+        <div className="bg-card overflow-hidden">
           {(() => {
             const userInTop10 = userRank !== null && userRank <= 10;
             

@@ -699,16 +699,16 @@ export default function MySessions() {
             <>
               {/* Routes */}
               {routesLoading ? (
-                <div className="space-y-3 px-4">
+                <div className="space-y-px">
                   {[1, 2].map((i) => (
-                    <div key={i} className="bg-card rounded-[10px] p-4 animate-pulse">
+                    <div key={i} className="bg-card p-4 animate-pulse">
                       <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
                       <div className="h-3 bg-secondary rounded w-1/2" />
                     </div>
                   ))}
                 </div>
               ) : routes.length === 0 ? (
-                <div className="bg-card rounded-[10px] p-8 text-center mx-4">
+                <div className="bg-card p-8 text-center">
                   <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-[17px] font-medium text-foreground mb-1">Aucun itinéraire</p>
                   <p className="text-[15px] text-muted-foreground mb-4">
@@ -720,7 +720,7 @@ export default function MySessions() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3 px-4">
+                <div className="space-y-3">
                   {routes.map((route) => (
                     <RouteCard
                       key={route.id}

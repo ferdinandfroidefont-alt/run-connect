@@ -157,10 +157,10 @@ const PublicProfile = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="max-w-2xl mx-auto pt-12 px-4 pb-8 space-y-4"
+        className="max-w-2xl mx-auto pt-12 pb-8 space-y-4"
       >
         {/* Profile Card */}
-        <div className="bg-card rounded-[10px] overflow-hidden">
+        <div className="bg-card overflow-hidden">
           <div className="flex flex-col items-center px-4 py-8 space-y-4">
             {/* Avatar */}
             <Avatar className="h-28 w-28 border-4 border-primary/20">
@@ -219,7 +219,7 @@ const PublicProfile = () => {
         {sessions.length > 0 && (
           <div>
             <p className="ios-section-header">Dernières séances</p>
-            <div className="bg-card rounded-[10px] overflow-hidden">
+            <div className="bg-card overflow-hidden">
               {sessions.map((session, index) => (
                 <div key={session.id}>
                   <div className="flex items-center px-4 py-[11px]">
