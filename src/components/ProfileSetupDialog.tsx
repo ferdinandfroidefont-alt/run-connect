@@ -446,6 +446,27 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
       console.log('✅ [ProfileSetup] Profil vérifié avec tous les champs:', verifiedProfile.id);
 
+      // 🔔 Save pending FCM token if available
+      try {
+        const pendingToken = (window as any).fcmToken;
+        if (pendingToken && typeof pendingToken === 'string' && pendingToken.length > 50) {
+          console.log('[ProfileSetup] Saving pending FCM token...');
+          let platform = 'android';
+          if (typeof (window as any).fcmTokenPlatform === 'string') {
+            platform = (window as any).fcmTokenPlatform;
+          }
+          await supabase.from('profiles').update({
+            push_token: pendingToken,
+            push_token_platform: platform,
+            push_token_updated_at: new Date().toISOString(),
+            notifications_enabled: true
+          }).eq('user_id', userId);
+          console.log('✅ [ProfileSetup] FCM token saved with profile');
+        }
+      } catch (fcmErr) {
+        console.warn('[ProfileSetup] FCM token save failed (non-blocking):', fcmErr);
+      }
+
       // 🔄 Nettoyer IndexedDB et sessionStorage après succès
       try {
         await deleteImageFromIndexedDB(PENDING_AVATAR_KEY);

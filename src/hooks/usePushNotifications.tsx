@@ -61,12 +61,12 @@ export const usePushNotifications = () => {
     }
   }, [isNative]);
 
-  /** Save token to DB — one attempt, no infinite retry */
-  const savePushToken = useCallback(async (pushToken: string) => {
+  /** Save token to DB — with retry if profile doesn't exist yet */
+  const savePushToken = useCallback(async (pushToken: string): Promise<boolean> => {
     if (!user) {
       log('[PUSH] No user, storing token in memory');
       setToken(pushToken);
-      return;
+      return false;
     }
 
     // Verify Supabase session is ready
@@ -74,7 +74,7 @@ export const usePushNotifications = () => {
     if (!sess?.session?.user) {
       log('[PUSH] Session not ready, deferring save');
       setToken(pushToken);
-      return;
+      return false;
     }
 
     try {
@@ -83,13 +83,20 @@ export const usePushNotifications = () => {
         .from('profiles')
         .select('push_token')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (existing?.push_token === pushToken) {
+      // Profile doesn't exist yet — keep token in memory, signal retry needed
+      if (!existing) {
+        log('[PUSH] Profile not found yet, keeping token in memory for retry');
+        setToken(pushToken);
+        return false;
+      }
+
+      if (existing.push_token === pushToken) {
         log('[PUSH] Token already saved');
         setToken(pushToken);
         setIsRegistered(true);
-        return;
+        return true;
       }
 
       // Detect platform
@@ -101,7 +108,7 @@ export const usePushNotifications = () => {
         platform = (window as any).fcmTokenPlatform;
       }
 
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('profiles')
         .update({
           push_token: pushToken,
@@ -113,8 +120,8 @@ export const usePushNotifications = () => {
 
       if (error) {
         logError('[PUSH] Save token error:', error.code, error.message);
-        setToken(pushToken); // Keep in memory for later
-        return;
+        setToken(pushToken);
+        return false;
       }
 
       log('[PUSH] Token saved successfully');
@@ -125,9 +132,11 @@ export const usePushNotifications = () => {
       if ((window as any).AndroidBridge?.saveUserIdForFCM) {
         try { (window as any).AndroidBridge.saveUserIdForFCM(user.id); } catch {}
       }
+      return true;
     } catch (e) {
       logError('[PUSH] Exception saving token:', e);
       setToken(pushToken);
+      return false;
     }
   }, [user]);
 
@@ -349,13 +358,17 @@ export const usePushNotifications = () => {
     init();
   }, [user, isNative, setupPushListeners, checkPermissionStatus]);
 
-  // ─── useEffect #2: TOKEN RECOVERY (window.fcmToken) ──────
+  // ─── useEffect #2: TOKEN RETRY (persistent, for new users) ──
 
   useEffect(() => {
     if (!user || !isNative) return;
+    if (isRegistered) return; // Already saved, no need to retry
 
-    const recover = async () => {
-      // Check if token already in DB
+    let attempts = 0;
+    const maxAttempts = 12; // 12 x 10s = 2 minutes
+
+    const tryRecover = async () => {
+      // Check DB first
       try {
         const { data: profile } = await supabase
           .from('profiles')
@@ -364,25 +377,39 @@ export const usePushNotifications = () => {
           .maybeSingle();
 
         if (profile?.push_token) {
+          log('[PUSH] Token already in DB, syncing state');
           setToken(profile.push_token);
           setIsRegistered(true);
-          return;
+          return true;
         }
       } catch {}
 
-      // Try window.fcmToken (injected by native)
-      const windowToken = (window as any).fcmToken;
-      if (windowToken && typeof windowToken === 'string' && windowToken.length > 50) {
-        log('[PUSH] Recovering token from window.fcmToken');
-        await savePushToken(windowToken);
+      // Try saving from window.fcmToken or local state
+      const pendingToken = token || (window as any).fcmToken;
+      if (pendingToken && typeof pendingToken === 'string' && pendingToken.length > 50) {
+        log('[PUSH] Retry saving token, attempt', attempts + 1);
+        const saved = await savePushToken(pendingToken);
+        if (saved) return true;
       }
+      return false;
     };
 
-    // Wait 3s then retry at 6s for slow Android devices
-    const timer1 = setTimeout(recover, 3000);
-    const timer2 = setTimeout(recover, 6000);
-    return () => { clearTimeout(timer1); clearTimeout(timer2); };
-  }, [user, isNative, savePushToken]);
+    // Immediate attempt
+    tryRecover();
+
+    // Then retry every 10s for up to 2 minutes
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        return;
+      }
+      const done = await tryRecover();
+      if (done) clearInterval(interval);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [user, isNative, isRegistered, savePushToken, token]);
 
   // ─── useEffect #3: fcmTokenReady listener ────────────────
 
