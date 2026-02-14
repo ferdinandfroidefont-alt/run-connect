@@ -1581,12 +1581,15 @@ const Messages = () => {
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-secondary border-b border-border z-50">
             <div className="flex items-center px-2 py-2">
               {/* Back button - Left */}
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setSelectedConversation(null)}
-                className="flex items-center text-primary shrink-0 p-2 -ml-2"
+                className="gap-1 text-primary p-0 h-auto font-normal shrink-0"
               >
-                <ArrowLeft className="h-6 w-6" strokeWidth={2.5} />
-              </button>
+                <ArrowLeft className="h-5 w-5" />
+                Retour
+              </Button>
               
               {/* Center - Avatar and Name (stacked) */}
               <div className="flex-1 flex flex-col items-center justify-center -ml-4">
