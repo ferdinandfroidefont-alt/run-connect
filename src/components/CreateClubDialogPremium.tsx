@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Users, Search, Camera, Lock, Globe, MapPin, Check, Sparkles, Loader2 } from "lucide-react";
 import { ImageCropEditor } from "./ImageCropEditor";
@@ -293,91 +293,81 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
             </div>
           </div>
 
-          <ScrollArea className="flex-1 bg-pattern">
-            <div className="p-4 space-y-4">
-              {/* Club Avatar */}
-              <div className="bg-card rounded-[10px] p-6 border border-border">
-                <div className="flex flex-col items-center gap-3">
-                  <div 
-                    className="relative group cursor-pointer"
-                    onClick={() => document.getElementById('club-avatar-upload')?.click()}
-                  >
-                    <Avatar className="h-24 w-24 border-2 border-border">
-                      <AvatarImage src={groupAvatarUrl || ""} />
-                      <AvatarFallback className="bg-secondary">
-                        <Users className="h-10 w-10 text-muted-foreground" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                      <Camera className="h-4 w-4 text-primary-foreground" />
-                    </div>
+          <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch bg-pattern">
+            <div className="space-y-6 pb-8">
+
+              {/* Club Avatar - Centered */}
+              <div className="flex flex-col items-center gap-3 pt-6 pb-2">
+                <div 
+                  className="relative group cursor-pointer"
+                  onClick={() => document.getElementById('club-avatar-upload')?.click()}
+                >
+                  <Avatar className="h-24 w-24 border-2 border-border">
+                    <AvatarImage src={groupAvatarUrl || ""} />
+                    <AvatarFallback className="bg-secondary">
+                      <Users className="h-10 w-10 text-muted-foreground" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                    <Camera className="h-4 w-4 text-primary-foreground" />
                   </div>
-                  <p className="text-[13px] text-muted-foreground">Ajouter une photo</p>
-                  <input
-                    id="club-avatar-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarSelect}
-                  />
                 </div>
+                <p className="text-[13px] text-muted-foreground">Ajouter une photo</p>
+                <input
+                  id="club-avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarSelect}
+                />
               </div>
 
-              {/* Club Info */}
-              <div className="bg-card rounded-[10px] border border-border divide-y divide-border">
-                {/* Club Name */}
-                <div className="p-4">
-                  <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                    Nom du club *
-                  </Label>
-                  <Input
-                    placeholder="Ex: Running Club Paris"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    maxLength={50}
-                    className="mt-2 h-11 bg-secondary border-0 rounded-[8px]"
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="p-4">
-                  <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                    Description
-                  </Label>
-                  <Textarea
-                    placeholder="Décrivez votre club en quelques mots..."
-                    value={groupDescription}
-                    onChange={(e) => setGroupDescription(e.target.value)}
-                    maxLength={200}
-                    rows={3}
-                    className="mt-2 bg-secondary border-0 rounded-[8px] resize-none"
-                  />
-                </div>
-
-                {/* Location */}
-                <div className="p-4">
-                  <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                    Localisation
-                  </Label>
-                  <div className="relative mt-2">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Paris, Lyon, Marseille..."
-                      value={groupLocation}
-                      onChange={(e) => {
-                        setGroupLocation(e.target.value);
-                        setTimeout(() => searchLocation(e.target.value), 300);
-                      }}
-                      className="pl-10 h-11 bg-secondary border-0 rounded-[8px]"
-                    />
-                    {locationLoading && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      </div>
-                    )}
+              {/* Informations du club - Inset Grouped */}
+              <div>
+                <p className="ios-section-header">Informations</p>
+                <div className="bg-card border-y border-border divide-y divide-border">
+                  <div className="ios-list-item">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Nom du club *"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                        maxLength={50}
+                        className="h-11 bg-transparent border-0 p-0 text-[17px] focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
                   </div>
-                  {showLocationSuggestions && (
-                    <div className="mt-2 bg-secondary rounded-[8px] overflow-hidden">
+                  <div className="px-4 py-3">
+                    <Textarea
+                      placeholder="Description (optionnelle)"
+                      value={groupDescription}
+                      onChange={(e) => setGroupDescription(e.target.value)}
+                      maxLength={200}
+                      rows={3}
+                      className="bg-transparent border-0 p-0 text-[17px] resize-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                  <div className="ios-list-item">
+                    <div className="flex items-center gap-3 flex-1">
+                      <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 relative">
+                        <Input
+                          placeholder="Localisation"
+                          value={groupLocation}
+                          onChange={(e) => {
+                            setGroupLocation(e.target.value);
+                            setTimeout(() => searchLocation(e.target.value), 300);
+                          }}
+                          className="h-11 bg-transparent border-0 p-0 text-[17px] focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </div>
+                      {locationLoading && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                      )}
+                    </div>
+                  </div>
+                  {showLocationSuggestions && locationSuggestions.length > 0 && (
+                    <>
                       {locationSuggestions.map((loc, i) => (
                         <button
                           key={i}
@@ -385,111 +375,69 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
                             setGroupLocation(loc);
                             setShowLocationSuggestions(false);
                           }}
-                          className="w-full px-3 py-2.5 text-left text-[15px] hover:bg-card border-b border-border last:border-0"
+                          className="w-full ios-list-item text-left text-[15px] text-primary"
                         >
                           {loc}
                         </button>
                       ))}
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
 
-              {/* Privacy Toggle */}
-              <div className="bg-card rounded-[10px] border border-border p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "h-8 w-8 rounded-[6px] flex items-center justify-center",
-                      isPrivate ? "bg-amber-500" : "bg-green-500"
-                    )}>
-                      {isPrivate ? (
-                        <Lock className="h-4 w-4 text-white" />
-                      ) : (
-                        <Globe className="h-4 w-4 text-white" />
-                      )}
+              {/* Confidentialité - Inset Grouped */}
+              <div>
+                <p className="ios-section-header">Confidentialité</p>
+                <div className="bg-card border-y border-border">
+                  <div className="ios-list-item">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={cn(
+                        "h-[30px] w-[30px] rounded-[7px] flex items-center justify-center",
+                        isPrivate ? "bg-amber-500" : "bg-green-500"
+                      )}>
+                        {isPrivate ? (
+                          <Lock className="h-4 w-4 text-white" />
+                        ) : (
+                          <Globe className="h-4 w-4 text-white" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[17px]">{isPrivate ? "Club privé" : "Club public"}</p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {isPrivate ? "Sur invitation uniquement" : "Tout le monde peut rejoindre"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[15px] font-medium">{isPrivate ? "Club privé" : "Club public"}</p>
-                      <p className="text-[13px] text-muted-foreground">
-                        {isPrivate ? "Sur invitation uniquement" : "Tout le monde peut rejoindre"}
-                      </p>
-                    </div>
+                    <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
                   </div>
-                  <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
                 </div>
               </div>
 
-              {/* Suggested Members */}
-              {suggestedMembers.length > 0 && (
-                <div className="bg-card rounded-[10px] border border-border p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-6 w-6 rounded-[4px] bg-primary flex items-center justify-center">
-                      <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+              {/* Ajouter des membres - Barre de recherche uniquement */}
+              <div>
+                <p className="ios-section-header">Ajouter des membres</p>
+                <div className="bg-card border-y border-border">
+                  <div className="ios-list-item">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <Input
+                        placeholder="Rechercher un utilisateur..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-11 bg-transparent border-0 p-0 text-[17px] focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
                     </div>
-                    <span className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                      Inviter des amis
-                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedMembers.map((member) => {
-                      const isSelected = selectedMembers.some(m => m.user_id === member.user_id);
-                      return (
-                        <button
-                          key={member.user_id}
-                          onClick={() => toggleMember(member)}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-full border transition-colors",
-                            isSelected 
-                              ? "bg-primary text-primary-foreground border-primary" 
-                              : "bg-secondary border-border hover:bg-secondary/80"
-                          )}
-                        >
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={member.avatar_url || ""} />
-                            <AvatarFallback className="text-[10px]">
-                              {(member.username || "U").charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-[13px] font-medium">{member.username || member.display_name}</span>
-                          {isSelected && <Check className="h-3.5 w-3.5" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Search More Members */}
-              <div className="bg-card rounded-[10px] border border-border p-4">
-                <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                  Rechercher des membres
-                </Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher un utilisateur..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-11 bg-secondary border-0 rounded-[8px]"
-                  />
-                </div>
-                
-                {searchResults.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    {searchResults.map((profile) => {
-                      const isSelected = selectedMembers.some(m => m.user_id === profile.user_id);
-                      return (
-                        <button
-                          key={profile.user_id}
-                          onClick={() => toggleMember(profile)}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-3 rounded-[8px] transition-colors",
-                            isSelected 
-                              ? "bg-primary/10" 
-                              : "bg-secondary hover:bg-secondary/80"
-                          )}
-                        >
+                  
+                  {searchResults.length > 0 && searchResults.map((profile) => {
+                    const isSelected = selectedMembers.some(m => m.user_id === profile.user_id);
+                    return (
+                      <button
+                        key={profile.user_id}
+                        onClick={() => toggleMember(profile)}
+                        className="w-full ios-list-item border-t border-border"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={profile.avatar_url || ""} />
                             <AvatarFallback>{(profile.username || "U").charAt(0).toUpperCase()}</AvatarFallback>
@@ -499,24 +447,26 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
                             <p className="text-[13px] text-muted-foreground">@{profile.username}</p>
                           </div>
                           {isSelected && <Check className="h-5 w-5 text-primary" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Selected Members Count */}
               {selectedMembers.length > 0 && (
-                <div className="bg-primary/10 border border-primary/20 rounded-[10px] p-4 text-center">
-                  <p className="text-[15px] font-medium text-primary">
-                    {selectedMembers.length} membre{selectedMembers.length > 1 ? 's' : ''} sélectionné{selectedMembers.length > 1 ? 's' : ''}
-                  </p>
+                <div className="px-4">
+                  <div className="bg-primary/10 border border-primary/20 rounded-[10px] p-4 text-center">
+                    <p className="text-[15px] font-medium text-primary">
+                      {selectedMembers.length} membre{selectedMembers.length > 1 ? 's' : ''} sélectionné{selectedMembers.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
                 </div>
               )}
 
               {/* Create Button */}
-              <div className="pt-2 pb-8">
+              <div className="px-4 pb-4">
                 <Button
                   onClick={handleCreateGroup}
                   disabled={!groupName.trim() || loading}
@@ -536,7 +486,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
                 </Button>
               </div>
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
