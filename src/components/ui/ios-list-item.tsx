@@ -80,9 +80,10 @@ interface IOSListGroupProps {
   header?: string;
   footer?: string;
   className?: string;
+  flush?: boolean;
 }
 
-export const IOSListGroup = ({ children, header, footer, className }: IOSListGroupProps) => {
+export const IOSListGroup = ({ children, header, footer, className, flush }: IOSListGroupProps) => {
   return (
     <div className={cn("mb-6", className)}>
       {header && (
@@ -90,7 +91,7 @@ export const IOSListGroup = ({ children, header, footer, className }: IOSListGro
           {header}
         </p>
       )}
-      <div className="bg-card rounded-[10px] overflow-hidden">
+      <div className={cn("bg-card overflow-hidden", flush ? "rounded-none" : "rounded-[10px]")}>
         {children}
       </div>
       {footer && (
