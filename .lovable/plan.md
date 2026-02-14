@@ -1,48 +1,47 @@
 
+# Harmonisation Edge-to-Edge sur toutes les pages
 
-# Fix: Loading Screen Only Visible on Top Half (Mobile)
+Appliquer le meme style "bord a bord" (sans padding horizontal, sans coins arrondis sur les cartes de liste) a toutes les pages restantes, en conservant les espacements verticaux.
 
-## Problem
-The loading screen only covers the top half of the screen on mobile devices. This is caused by a conflict between:
-- The mobile CSS rule that sets `html, body` to `position: fixed; height: 100%`
-- The `#root` container with `height: 100%; overflow: auto`
-- The `bg-pattern` class using `isolation: isolate` which creates a new stacking context that interferes with the `fixed` positioning
+## Pages a modifier
 
-## Solution
+### 1. Leaderboard (`src/pages/Leaderboard.tsx`)
+- Changer `<div className="p-4 space-y-4">` en `<div className="py-4 space-y-4">`
+- Supprimer `rounded-[10px]` des conteneurs Podium et Classement (lignes 593, 598)
+- Garder `px-4` sur le FilterBar, MyRankCard, StreakBadge, ProgressionChart, SeasonStatsCard, WeeklyChallengesCard, BadgesToUnlockCard (ces composants gerent leur propre padding interne)
+- Squelette de chargement : `p-4` devient `py-4`
 
-### 1. LoadingScreen.tsx - Use viewport height units
-Replace `fixed inset-0` with explicit `100dvh` (dynamic viewport height) sizing, which works reliably on all mobile browsers regardless of the parent container constraints.
+### 2. Subscription (`src/pages/Subscription.tsx`)
+- Changer `<div className="px-4 py-6 space-y-6">` en `<div className="py-6 space-y-6">`
+- Supprimer `rounded-[10px]` des 4 groupes de liste (Mon Abonnement, Plans Disponibles, Avantages Premium, Soutenir RunConnect)
+- Garder `px-4` sur les headers de section (`<h3>`) et le warning d'expiration
 
-```tsx
-<div 
-  className="fixed top-0 left-0 z-50 bg-secondary flex flex-col items-center justify-center px-6"
-  style={{ width: '100vw', height: '100dvh' }}
->
-```
+### 3. Profile (`src/pages/Profile.tsx`)
+- Changer `<div className="max-w-md mx-auto p-4 space-y-4">` en `<div className="max-w-md mx-auto py-4 space-y-4">`
+- Supprimer `rounded-[10px]` des groupes iOS : formulaire d'edition (ligne 788), section stats autre utilisateur (ligne 845), clubs en commun (ligne 868), historique connexions (ligne 889), section routes (ligne 913)
+- Garder `px-4` sur les headers de section et le contenu du profil header (centrage)
 
-Remove `bg-pattern` from the root container and add the pattern as an inline style or a separate inner div to avoid `isolation: isolate` breaking the fixed positioning.
+### 4. PublicProfile (`src/pages/PublicProfile.tsx`)
+- Changer `className="max-w-2xl mx-auto pt-12 px-4 pb-8 space-y-4"` en `className="max-w-2xl mx-auto pt-12 pb-8 space-y-4"`
+- Supprimer `rounded-[10px]` de la carte profil (ligne 163) et de la liste des seances (ligne 222)
 
-### 2. Add pattern separately inside the container
-Instead of using the `.bg-pattern` class (which adds `isolation: isolate`), add a dedicated pattern overlay div inside the loading screen:
+### 5. Feed (`src/pages/Feed.tsx`)
+- Section Discover : changer `<div className="p-4 space-y-3">` en `<div className="py-4 space-y-3">` (ligne 239)
+- Section Friends skeletons : changer `px-3` en `py-2` sans padding horizontal (ligne 166)
+- Section Discover loading : supprimer `p-4` du wrapper et `rounded-[10px]` du loader (lignes 225-226)
 
-```tsx
-{/* Pattern overlay */}
-<div 
-  className="absolute inset-0 pointer-events-none"
-  style={{
-    backgroundImage: "url('/patterns/sports-pattern.png')",
-    backgroundRepeat: 'repeat',
-    backgroundSize: '256px 256px',
-    opacity: 0.06
-  }}
-/>
-```
+### 6. Search (`src/pages/Search.tsx`)
+- Pas de changement necessaire (le contenu est deja gere par les sous-composants)
 
-This avoids the `isolation: isolate` stacking context issue entirely while keeping the pattern visible.
+### 7. MySessions - Routes section (`src/pages/MySessions.tsx`)
+- Supprimer `px-4` et `rounded-[10px]` des routes (lignes 702-704, 711, 723)
+- Etat vide routes : supprimer `mx-4` et `rounded-[10px]`
 
-## Technical Details
-- `100dvh` adapts to the actual visible viewport on mobile (accounts for URL bar, etc.)
-- Removing `isolation: isolate` from the loading screen prevents the fixed positioning from being constrained
-- The pattern is rendered as a child div instead of a `::before` pseudo-element, giving full control over layering
-- `z-50` ensures it stays above all other content
+## Composants enfants a ajuster si necessaire
+- Les composants comme `MyRankCard`, `SeasonStatsCard`, `WeeklyChallengesCard`, `BadgesToUnlockCard`, `ProgressionChart`, `StreakBadge`, `OrganizerStatsCard` devront etre verifies pour s'assurer qu'ils n'ajoutent pas de padding horizontal ou coins arrondis en doublon. Si ces composants ont un `rounded-[10px]` interne, il faudra le retirer aussi.
 
+## Principe directeur
+- Les **cartes de liste / groupes** deviennent pleine largeur (`rounded-none`)
+- Les **controles interactifs** (filtres segmentes, boutons de filtre, barres de recherche) gardent leur `px-4`
+- Les **headers de section** gardent leur `px-4`
+- Tous les **espacements verticaux** sont preserves
