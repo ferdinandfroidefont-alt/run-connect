@@ -621,12 +621,25 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : filteredSessions.length === 0 ? (
-                <div className="bg-card rounded-[10px] p-8 text-center mx-4">
-                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-[17px] font-medium text-foreground mb-1">Aucune séance</p>
-                  <p className="text-[15px] text-muted-foreground">
-                    Créez votre première séance sportive
-                  </p>
+                <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+                  <div className="mb-6 p-6 bg-secondary rounded-full">
+                    <Calendar className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2 mb-8">
+                    <h3 className="text-[20px] font-semibold text-foreground">
+                      Aucune séance
+                    </h3>
+                    <p className="text-[15px] text-muted-foreground max-w-xs leading-relaxed">
+                      Créez votre première séance sportive et invitez vos amis à vous rejoindre.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => navigate('/')}
+                    className="w-full max-w-xs"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Créer une séance
+                  </Button>
                 </div>
               ) : (
                 <div className="divide-y divide-border">
