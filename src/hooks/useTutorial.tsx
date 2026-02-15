@@ -40,8 +40,8 @@ export const useTutorial = () => {
         return;
       }
 
-      // Show tutorial only if onboarding is complete but tutorial is not
-      if (profile?.onboarding_completed && !profile?.tutorial_completed) {
+      // Show tutorial for any user who hasn't completed it yet
+      if (!profile?.tutorial_completed) {
         // Small delay to ensure UI is ready
         setTimeout(() => {
           setShouldShowTutorial(true);
