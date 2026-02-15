@@ -102,16 +102,18 @@ export default function Search() {
             <div className="flex-1 flex flex-col"><ProfilesTab searchQuery={searchQuery} /></div>
           )}
           {activeTab === 'clubs' && (
-            <ClubsTab searchQuery={searchQuery} />
+            <div className="flex-1 flex flex-col"><ClubsTab searchQuery={searchQuery} /></div>
           )}
           {activeTab === 'strava' && (
-            <StravaTab 
-              searchQuery={searchQuery} 
-              onOpenSettings={handleOpenSettings}
-            />
+            <div className="flex-1 flex flex-col">
+              <StravaTab 
+                searchQuery={searchQuery} 
+                onOpenSettings={handleOpenSettings}
+              />
+            </div>
           )}
           {activeTab === 'contacts' && (
-            <ContactsTab searchQuery={searchQuery} />
+            <div className="flex-1 flex flex-col"><ContactsTab searchQuery={searchQuery} /></div>
           )}
         </div>
       </div>
