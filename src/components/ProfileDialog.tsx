@@ -69,6 +69,7 @@ export const ProfileDialog = ({
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [reliabilityRate, setReliabilityRate] = useState(100);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
@@ -132,6 +133,14 @@ export const ProfileDialog = ({
       });
       setFollowerCount(followerData || 0);
       setFollowingCount(followingData || 0);
+
+      // Fetch pending follow requests
+      const { count } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', user.id)
+        .eq('status', 'pending');
+      setPendingRequestsCount(count || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
     }
@@ -463,9 +472,16 @@ export const ProfileDialog = ({
                 <div className="flex items-center divide-x divide-border">
                   <button
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
+                    className="flex-1 py-3 active:bg-secondary/50 transition-colors relative"
                   >
-                    <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
+                    <div className="flex items-center justify-center gap-1">
+                      <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
+                      {pendingRequestsCount > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold px-1">
+                          {pendingRequestsCount}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[12px] text-muted-foreground">Abonnés</p>
                   </button>
                   <button
