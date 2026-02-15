@@ -1372,12 +1372,12 @@ export const InteractiveMap = ({
               </div>}
             
             {/* Streak, Bell and Settings - Right aligned */}
-            <div className="flex items-center gap-8">
+            <div className="flex items-center justify-center gap-8">
               {user && <StreakBadge userId={user.id} variant="compact" />}
-              <div data-tutorial="notifications">
+              <div data-tutorial="notifications" className="flex items-center justify-center">
                 <NotificationCenter onSessionUpdated={loadSessions} />
               </div>
-              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10" onClick={() => setShowSettingsDialog(true)}>
+              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10 flex items-center justify-center" onClick={() => setShowSettingsDialog(true)}>
                 ⚙️
               </div>
             </div>
