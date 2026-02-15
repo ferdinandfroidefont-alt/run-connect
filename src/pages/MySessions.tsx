@@ -577,8 +577,6 @@ export default function MySessions() {
                     </button>
                   ))}
                 </div>
-                {/* Streak Badge */}
-                {user && <StreakBadge userId={user.id} variant="compact" />}
                 {/* List/Calendar toggle */}
                 <div className="flex bg-card rounded-lg p-0.5 ml-2 shrink-0">
                   <button

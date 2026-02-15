@@ -8,6 +8,7 @@ import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
 import { NotificationCenter } from './NotificationCenter';
+import { StreakBadge } from './StreakBadge';
 import { SettingsDialog } from './SettingsDialog';
 import { ProfileDialog } from './ProfileDialog';
 import { UserSessionsDialog } from './UserSessionsDialog';
@@ -1370,8 +1371,9 @@ export const InteractiveMap = ({
                 </div>
               </div>}
             
-            {/* Bell and Settings - Right aligned, closer together */}
+            {/* Streak, Bell and Settings - Right aligned */}
             <div className="flex items-center gap-1">
+              {user && <StreakBadge userId={user.id} variant="compact" />}
               <div data-tutorial="notifications">
                 <NotificationCenter onSessionUpdated={loadSessions} />
               </div>
