@@ -99,7 +99,7 @@ export default function Search() {
         {/* Zone scrollable des résultats */}
         <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
           {activeTab === 'profiles' && (
-            <div className="flex-1 flex flex-col"><ProfilesTab searchQuery={searchQuery} /></div>
+            <div className="flex-1 flex flex-col min-h-0"><ProfilesTab searchQuery={searchQuery} /></div>
           )}
           {activeTab === 'clubs' && (
             <div className="flex-1 flex flex-col"><ClubsTab searchQuery={searchQuery} /></div>
