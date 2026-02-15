@@ -1372,7 +1372,7 @@ export const InteractiveMap = ({
               </div>}
             
             {/* Streak, Bell and Settings - Right aligned */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-8">
               {user && <StreakBadge userId={user.id} variant="compact" />}
               <div data-tutorial="notifications">
                 <NotificationCenter onSessionUpdated={loadSessions} />
