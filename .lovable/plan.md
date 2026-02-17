@@ -1,69 +1,81 @@
 
+# Parcours 3D -- Visualisation 3D des deniveles avec survol anime
 
-# Fix : Token push null pour les nouveaux utilisateurs
+## Objectif
+Remplacer/completer le profil d'elevation SVG actuel par une visualisation 3D immersive du parcours, avec un terrain en relief et une animation de survol (camera qui suit le trace automatiquement).
 
-## Diagnostic
+## Ce qui sera cree
 
-En analysant la base de donnees, **8 utilisateurs sur 10** ont `push_token: null`. Le probleme vient d'un **probleme de timing** entre la creation du profil et la sauvegarde du token FCM.
+### 1. Nouveau composant `ElevationProfile3D.tsx`
+Un composant React Three Fiber qui affiche le parcours en 3D :
+- **Terrain 3D** : Le trace est rendu comme un ruban/tube 3D suivant les coordonnees GPS, avec la hauteur correspondant a l'elevation reelle
+- **Sol** : Un plan de base semi-transparent sous le trace pour donner de la profondeur
+- **Survol anime** : La camera suit automatiquement le parcours du debut a la fin en boucle (animation Flyover)
+- **Couleurs dynamiques** : Le trace change de couleur selon l'altitude (vert = bas, rouge = haut) avec un degradevertical
+- **Controles utilisateur** : Bouton play/pause pour l'animation, possibilite de tourner manuellement avec OrbitControls quand l'animation est en pause
+- **Stats overlay** : Distance, D+, D- affiches en superposition sur la scene 3D
 
-### Sequence actuelle (bugguee)
+### 2. Integration dans les pages existantes
 
-```text
-1. App demarre -> Token FCM genere par Firebase
-2. Token injecte dans window.fcmToken
-3. React detecte le token -> appelle savePushToken()
-4. savePushToken() fait un UPDATE sur la table profiles
-5. MAIS le profil n'existe pas encore (l'utilisateur n'a pas termine le ProfileSetup)
-6. UPDATE match 0 lignes -> "reussit" silencieusement sans rien sauvegarder
-7. L'utilisateur termine son profil -> INSERT du profil SANS le token
-8. Le token est perdu a jamais
-```
+**RouteCreation.tsx** : Ajout d'un bouton "Vue 3D" a cote du profil d'elevation existant. Au clic, le profil SVG est remplace par la vue 3D dans le meme espace.
 
-## Solution
+**InteractiveMap.tsx** : Meme logique -- un toggle "2D / 3D" sur le panneau d'elevation pendant la creation de parcours.
 
-### 1. savePushToken : ajouter un retry apres echec d'UPDATE (usePushNotifications.tsx)
+**RouteCard.tsx** : Option d'ouvrir la vue 3D en plein ecran (dialog) depuis la carte de l'itineraire.
 
-Quand l'UPDATE ne modifie aucune ligne (profil pas encore cree), stocker le token en memoire et programmer un retry toutes les 10 secondes pendant 2 minutes. Des que le profil existe, le token sera sauve.
-
-Aussi, verifier le nombre de lignes affectees par l'UPDATE : si 0, ca veut dire que le profil n'existe pas encore.
-
-### 2. ProfileSetupDialog : sauvegarder le token FCM a la creation du profil
-
-Dans `ProfileSetupDialog.tsx`, apres l'INSERT du nouveau profil, verifier si un token FCM est disponible dans `window.fcmToken` et le sauvegarder immediatement dans le profil. Cela garantit que meme si le retry n'a pas encore tourne, le token est capture au moment de la creation du profil.
-
-### 3. Ajouter un useEffect qui re-tente quand user change
-
-Actuellement, le useEffect #2 (recovery) lance des timers a 3s et 6s. Mais si l'utilisateur met plus de 6 secondes a se connecter (tres probable sur une nouvelle installation), les timers sont passes. Ajouter un retry plus long (toutes les 10s pendant 2 min) specifiquement pour le cas ou le profil n'existe pas encore.
+### 3. Composant `ElevationProfile3DDialog.tsx`
+Un dialog plein ecran pour afficher la vue 3D de maniere immersive, accessible depuis n'importe quelle carte d'itineraire.
 
 ## Details techniques
 
-### Fichier 1 : `src/hooks/usePushNotifications.tsx`
+### Technologies utilisees
+- `@react-three/fiber` (v8.18 -- deja installe)
+- `@react-three/drei` (v9.122 -- deja installe)
+- `three` (v0.160 -- deja installe)
+- `framer-motion` pour les transitions d'UI
 
-**Modifier `savePushToken`** :
-- Apres l'UPDATE, verifier combien de lignes ont ete affectees (via `.select()` apres update ou un re-query)
-- Si 0 lignes : le profil n'existe pas encore, garder le token en memoire et retourner `false`
-- Ajouter un mecanisme de retry : un `setInterval` de 10s qui re-tente `savePushToken` tant que le token n'est pas sauve (max 2 min)
+### Architecture du rendu 3D
 
-**Ajouter un useEffect supplementaire** :
-- Quand `user` passe de null a une valeur, verifier si un token est en attente dans le state local ou dans `window.fcmToken`
-- Si oui, lancer immediatement `savePushToken` puis des retries a 5s, 15s, 30s, 60s
-
-### Fichier 2 : `src/components/ProfileSetupDialog.tsx`
-
-**Apres l'INSERT du profil** (ligne 415), ajouter :
-```
-const pendingToken = (window as any).fcmToken;
-if (pendingToken && pendingToken.length > 50) {
-  await supabase.from('profiles')
-    .update({ push_token: pendingToken, push_token_platform: 'android', push_token_updated_at: new Date().toISOString(), notifications_enabled: true })
-    .eq('user_id', userId);
-}
+```text
+Canvas
+  +-- PerspectiveCamera (animee sur le trace)
+  +-- OrbitControls (actifs quand animation en pause)
+  +-- Lights (ambient + directional)
+  +-- TerrainMesh (plan de base avec grille)
+  +-- RouteTube (tube 3D suivant les coordonnees)
+  +-- ElevationMarkers (points min/max)
+  +-- RunnerDot (sphere animee qui suit le parcours)
 ```
 
-### Resume des changements
+### Conversion des coordonnees
+- Les coordonnees GPS (lat/lng) sont projetees en espace local (metres relatifs au centre du parcours)
+- L'elevation est exageree par un facteur configurable (x2 par defaut) pour un rendu plus dramatique
+- Les coordonnees sont lissees (Catmull-Rom) pour un trace fluide
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/hooks/usePushNotifications.tsx` | savePushToken avec retry si profil inexistant + useEffect de re-tentative progressive |
-| `src/components/ProfileSetupDialog.tsx` | Sauvegarde du token FCM en attente lors de la creation du profil |
+### Animation de survol
+- La camera suit une courbe Catmull-Rom parallele au trace, decalee en hauteur et lateralement
+- Duree configurable (10s par defaut pour un tour complet)
+- Easing smooth avec acceleration/deceleration aux extremites
+- La sphere "runner" avance sur le trace en synchronisation avec la camera
 
+### Props du composant
+
+```text
+ElevationProfile3D
+  - coordinates: {lat, lng}[]     -- Points GPS du parcours
+  - elevations: number[]          -- Altitudes correspondantes
+  - activityType?: string         -- Pour la couleur du trace
+  - autoPlay?: boolean            -- Demarrer l'animation auto
+  - elevationExaggeration?: number -- Facteur d'exageration (defaut: 2)
+  - className?: string
+```
+
+## Fichiers concernes
+
+| Fichier | Action |
+|---------|--------|
+| `src/components/ElevationProfile3D.tsx` | Creer -- Composant 3D principal |
+| `src/components/ElevationProfile3DDialog.tsx` | Creer -- Dialog plein ecran |
+| `src/components/ElevationProfile.tsx` | Modifier -- Ajouter toggle 2D/3D |
+| `src/pages/RouteCreation.tsx` | Modifier -- Integrer le toggle 3D |
+| `src/components/RouteCard.tsx` | Modifier -- Bouton "Vue 3D" |
