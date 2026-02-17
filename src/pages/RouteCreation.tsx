@@ -785,7 +785,10 @@ export const RouteCreation = () => {
               
               {showElevationProfile && (
                 <div className="p-4 pt-0">
-                  <ElevationProfile elevations={routeElevations} />
+                  <ElevationProfile 
+                    elevations={routeElevations}
+                    coordinates={getAllCoordinates().map(c => ({ lat: c.lat(), lng: c.lng() }))}
+                  />
                 </div>
               )}
             </div>
