@@ -1,81 +1,56 @@
 
-# Parcours 3D -- Visualisation 3D des deniveles avec survol anime
+# Outil Createur -- Gestion des abonnements Premium
 
 ## Objectif
-Remplacer/completer le profil d'elevation SVG actuel par une visualisation 3D immersive du parcours, avec un terrain en relief et une animation de survol (camera qui suit le trace automatiquement).
+Creer un panneau d'administration reserve au createur (toi) permettant de rechercher n'importe quel utilisateur par nom/pseudo et de lui attribuer ou retirer un abonnement premium gratuit avec une duree personnalisee.
 
 ## Ce qui sera cree
 
-### 1. Nouveau composant `ElevationProfile3D.tsx`
-Un composant React Three Fiber qui affiche le parcours en 3D :
-- **Terrain 3D** : Le trace est rendu comme un ruban/tube 3D suivant les coordonnees GPS, avec la hauteur correspondant a l'elevation reelle
-- **Sol** : Un plan de base semi-transparent sous le trace pour donner de la profondeur
-- **Survol anime** : La camera suit automatiquement le parcours du debut a la fin en boucle (animation Flyover)
-- **Couleurs dynamiques** : Le trace change de couleur selon l'altitude (vert = bas, rouge = haut) avec un degradevertical
-- **Controles utilisateur** : Bouton play/pause pour l'animation, possibilite de tourner manuellement avec OrbitControls quand l'animation est en pause
-- **Stats overlay** : Distance, D+, D- affiches en superposition sur la scene 3D
+### 1. Nouveau composant `AdminPremiumManager.tsx`
+Un panneau complet style iOS avec :
+- **Barre de recherche** en haut pour trouver n'importe quel utilisateur par username ou display_name
+- **Resultats de recherche** avec avatar, nom, pseudo et badge premium actuel
+- **Au clic sur un utilisateur** : un panneau de gestion s'ouvre avec :
+  - Statut premium actuel (actif/inactif, date d'expiration)
+  - **Selecteur de duree** : 1 semaine, 1 mois, 3 mois, 6 mois, 1 an, ou duree personnalisee
+  - **Bouton "Offrir Premium"** pour activer l'abonnement gratuit
+  - **Bouton "Retirer Premium"** pour desactiver immediatement
+  - Historique des actions effectuees
 
-### 2. Integration dans les pages existantes
+### 2. Integration dans le profil
+- Accessible uniquement quand `user.email === 'ferdinand.froidefont@gmail.com'` (meme logique que l'historique de connexion existant)
+- Ajoute comme un nouvel element dans la page Profile (visible uniquement pour le createur sur son propre profil)
+- Bouton "Gestion Premium" avec une icone couronne qui ouvre le panneau en plein ecran (Dialog)
 
-**RouteCreation.tsx** : Ajout d'un bouton "Vue 3D" a cote du profil d'elevation existant. Au clic, le profil SVG est remplace par la vue 3D dans le meme espace.
+## Fonctionnement technique
 
-**InteractiveMap.tsx** : Meme logique -- un toggle "2D / 3D" sur le panneau d'elevation pendant la creation de parcours.
+### Recherche d'utilisateurs
+- Recherche dans la table `profiles` sur les champs `username` et `display_name` avec `ilike`
+- Debounce de 300ms sur la saisie
+- Affichage de l'avatar, nom, pseudo et statut premium
 
-**RouteCard.tsx** : Option d'ouvrir la vue 3D en plein ecran (dialog) depuis la carte de l'itineraire.
+### Attribution/Retrait Premium
+- **Attribuer** : Met a jour la table `subscribers` pour l'utilisateur cible :
+  - `subscribed = true`
+  - `subscription_status = 'active'`
+  - `subscription_tier = 'creator_gift'` (pour differencier des abonnements payants)
+  - `subscription_end` = date actuelle + duree choisie
+  - Met aussi `is_premium = true` dans `profiles`
+- **Retirer** : 
+  - `subscribed = false`, `subscription_status = 'inactive'`
+  - Met `is_premium = false` dans `profiles`
 
-### 3. Composant `ElevationProfile3DDialog.tsx`
-Un dialog plein ecran pour afficher la vue 3D de maniere immersive, accessible depuis n'importe quelle carte d'itineraire.
-
-## Details techniques
-
-### Technologies utilisees
-- `@react-three/fiber` (v8.18 -- deja installe)
-- `@react-three/drei` (v9.122 -- deja installe)
-- `three` (v0.160 -- deja installe)
-- `framer-motion` pour les transitions d'UI
-
-### Architecture du rendu 3D
-
-```text
-Canvas
-  +-- PerspectiveCamera (animee sur le trace)
-  +-- OrbitControls (actifs quand animation en pause)
-  +-- Lights (ambient + directional)
-  +-- TerrainMesh (plan de base avec grille)
-  +-- RouteTube (tube 3D suivant les coordonnees)
-  +-- ElevationMarkers (points min/max)
-  +-- RunnerDot (sphere animee qui suit le parcours)
-```
-
-### Conversion des coordonnees
-- Les coordonnees GPS (lat/lng) sont projetees en espace local (metres relatifs au centre du parcours)
-- L'elevation est exageree par un facteur configurable (x2 par defaut) pour un rendu plus dramatique
-- Les coordonnees sont lissees (Catmull-Rom) pour un trace fluide
-
-### Animation de survol
-- La camera suit une courbe Catmull-Rom parallele au trace, decalee en hauteur et lateralement
-- Duree configurable (10s par defaut pour un tour complet)
-- Easing smooth avec acceleration/deceleration aux extremites
-- La sphere "runner" avance sur le trace en synchronisation avec la camera
-
-### Props du composant
-
-```text
-ElevationProfile3D
-  - coordinates: {lat, lng}[]     -- Points GPS du parcours
-  - elevations: number[]          -- Altitudes correspondantes
-  - activityType?: string         -- Pour la couleur du trace
-  - autoPlay?: boolean            -- Demarrer l'animation auto
-  - elevationExaggeration?: number -- Facteur d'exageration (defaut: 2)
-  - className?: string
-```
+### Edge function `admin-manage-premium`
+Comme les tables `subscribers` et `profiles` ont des RLS qui empechent un utilisateur de modifier les donnees d'un autre, une edge function avec le service_role key est necessaire pour :
+- Verifier que l'appelant est bien le createur (email check)
+- Effectuer l'upsert dans `subscribers`
+- Mettre a jour `is_premium` dans `profiles`
 
 ## Fichiers concernes
 
 | Fichier | Action |
 |---------|--------|
-| `src/components/ElevationProfile3D.tsx` | Creer -- Composant 3D principal |
-| `src/components/ElevationProfile3DDialog.tsx` | Creer -- Dialog plein ecran |
-| `src/components/ElevationProfile.tsx` | Modifier -- Ajouter toggle 2D/3D |
-| `src/pages/RouteCreation.tsx` | Modifier -- Integrer le toggle 3D |
-| `src/components/RouteCard.tsx` | Modifier -- Bouton "Vue 3D" |
+| `src/components/AdminPremiumManager.tsx` | Creer -- Panneau de gestion premium |
+| `src/pages/Profile.tsx` | Modifier -- Ajouter le bouton d'acces au panneau (createur uniquement) |
+| `supabase/functions/admin-manage-premium/index.ts` | Creer -- Edge function pour modifier les abonnements |
+| `supabase/config.toml` | Modifier -- Ajouter la config de la nouvelle edge function |
