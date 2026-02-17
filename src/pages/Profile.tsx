@@ -33,6 +33,7 @@ import { ProfileRankBadgeCompact } from "@/components/profile/ProfileRankBadgeCo
 import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { StreakBadge } from "@/components/StreakBadge";
 import { ActivityTimeline } from "@/components/profile/ActivityTimeline";
+import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 interface Profile {
   username: string;
@@ -112,6 +113,7 @@ const Profile = () => {
   const [settingsFocus, setSettingsFocus] = useState<string>("");
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
+  const [showAdminPremium, setShowAdminPremium] = useState(false);
   const [reliabilityRate, setReliabilityRate] = useState(0);
   const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
@@ -931,7 +933,25 @@ const Profile = () => {
               </div>}
           </div>
         </div>
-
+        
+        {/* Admin Premium Manager - Creator only */}
+        {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <button
+              onClick={() => setShowAdminPremium(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+            >
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-yellow-500 flex items-center justify-center">
+                <Crown className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-[17px] text-foreground">Gestion Premium</p>
+                <p className="text-[13px] text-muted-foreground">Offrir ou retirer des abonnements</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            </button>
+          </div>
+        )}
         
 
         {/* Strava Connect Section */}
@@ -951,6 +971,9 @@ const Profile = () => {
 
         {/* Image Crop Editor */}
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
+
+        {/* Admin Premium Manager Dialog */}
+        <AdminPremiumManager open={showAdminPremium} onOpenChange={setShowAdminPremium} />
       </div>
     </div>;
 };
