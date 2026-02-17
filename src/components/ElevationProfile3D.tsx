@@ -110,7 +110,7 @@ const GridHelper = ({ size }: { size: number }) => {
 };
 
 // Runner dot
-const RunnerDot = ({ points, progress }: { points: THREE.Vector3[]; progress: number }) => {
+const RunnerDot = ({ points, progress, onPositionUpdate }: { points: THREE.Vector3[]; progress: number; onPositionUpdate?: (y: number) => void }) => {
   const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame(() => {
@@ -120,6 +120,7 @@ const RunnerDot = ({ points, progress }: { points: THREE.Vector3[]; progress: nu
     const pos = new THREE.Vector3().lerpVectors(points[idx], points[idx + 1], frac);
     meshRef.current.position.copy(pos);
     meshRef.current.position.y += 3;
+    onPositionUpdate?.(pos.y);
   });
 
   return (
@@ -178,7 +179,7 @@ const CameraController = ({
   orbitRef: React.RefObject<any>;
 }) => {
   const { camera } = useThree();
-  const speed = 0.008; // ~12s for full loop
+  const speed = 0.002; // ~50s for full loop (much slower)
 
   useFrame((_, delta) => {
     if (!isPlaying || points.length < 2) return;
@@ -212,7 +213,7 @@ const CameraController = ({
 };
 
 // Scene setup
-const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, setProgress }: {
+const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, setProgress, onPositionUpdate }: {
   points: THREE.Vector3[];
   minElev: number;
   maxElev: number;
@@ -220,6 +221,7 @@ const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, se
   isPlaying: boolean;
   progress: number;
   setProgress: (p: number) => void;
+  onPositionUpdate?: (y: number) => void;
 }) => {
   const orbitRef = useRef<any>(null);
 
@@ -254,7 +256,7 @@ const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, se
       <Ground size={sceneSize} />
       <GridHelper size={sceneSize} />
       <RoutePath points={points} minElev={minElev} maxElev={maxElev} exaggeration={exaggeration} />
-      <RunnerDot points={points} progress={progress} />
+      <RunnerDot points={points} progress={progress} onPositionUpdate={onPositionUpdate} />
       <ElevationMarkers points={points} minElev={minElev} maxElev={maxElev} exaggeration={exaggeration} />
 
       <CameraController
@@ -286,6 +288,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [progress, setProgress] = useState(0);
+  const [currentElevY, setCurrentElevY] = useState(0);
 
   const { points, minElev, maxElev } = useMemo(
     () => gpsToLocal(coordinates, elevations, elevationExaggeration),
@@ -293,6 +296,21 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   );
 
   const smoothed = useMemo(() => smoothPoints(points, 3), [points]);
+
+  // Compute total route distance in meters for live tracking
+  const totalRouteDistance = useMemo(() => {
+    if (routeStats?.totalDistance) return routeStats.totalDistance;
+    let d = 0;
+    for (let i = 1; i < coordinates.length; i++) {
+      const dlat = (coordinates[i].lat - coordinates[i - 1].lat) * 111320;
+      const dlng = (coordinates[i].lng - coordinates[i - 1].lng) * 111320 * Math.cos((coordinates[i].lat * Math.PI) / 180);
+      d += Math.sqrt(dlat * dlat + dlng * dlng);
+    }
+    return d;
+  }, [coordinates, routeStats]);
+
+  const currentKm = (progress * totalRouteDistance / 1000).toFixed(2);
+  const currentAltitude = Math.round(minElev + currentElevY / elevationExaggeration);
 
   const handleReset = useCallback(() => {
     setProgress(0);
@@ -322,6 +340,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
           isPlaying={isPlaying}
           progress={progress}
           setProgress={setProgress}
+          onPositionUpdate={setCurrentElevY}
         />
       </Canvas>
 
@@ -345,14 +364,21 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         </Button>
       </div>
 
-      {/* Stats overlay */}
-      {routeStats && (
-        <div className="absolute top-3 right-3 bg-background/70 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2 text-xs space-y-1">
-          <div className="text-foreground font-medium">{(routeStats.totalDistance / 1000).toFixed(1)} km</div>
-          <div className="text-green-400">↑ {routeStats.elevationGain}m</div>
-          <div className="text-red-400">↓ {routeStats.elevationLoss}m</div>
-        </div>
-      )}
+      {/* Live stats overlay */}
+      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2 text-xs space-y-1.5">
+        <div className="text-primary font-bold text-sm">{currentKm} km</div>
+        <div className="text-foreground">⛰️ {currentAltitude} m</div>
+        {routeStats && (
+          <>
+            <div className="border-t border-border/30 pt-1 mt-1 text-muted-foreground">
+              Total : {(routeStats.totalDistance / 1000).toFixed(1)} km
+            </div>
+            <div className="text-green-400">↑ {routeStats.elevationGain}m</div>
+            <div className="text-red-400">↓ {routeStats.elevationLoss}m</div>
+          </>
+        )}
+        <div className="text-muted-foreground">{Math.round(progress * 100)}%</div>
+      </div>
 
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30">
