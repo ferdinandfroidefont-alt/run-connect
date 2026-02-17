@@ -60,5 +60,8 @@ verify_jwt = false
 [functions.strava-disconnect]
 verify_jwt = true
 
+[functions.admin-manage-premium]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false
