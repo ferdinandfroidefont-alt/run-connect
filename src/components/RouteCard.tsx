@@ -1,11 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download } from "lucide-react";
+import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download, Box } from "lucide-react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
+import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 
 interface RouteCardProps {
   route: {
@@ -25,6 +26,7 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const polyline = useRef<google.maps.Polyline | null>(null);
+  const [show3DDialog, setShow3DDialog] = useState(false);
 
   const formatDistance = (meters: number | null) => {
     if (!meters) return "N/A";
@@ -264,7 +266,47 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
               {route.description}
             </p>
           )}
+
+          {/* Bouton Vue 3D */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShow3DDialog(true)}
+            className="w-full mt-2 gap-2 text-xs"
+          >
+            <Box className="h-3.5 w-3.5" />
+            Vue 3D du parcours
+          </Button>
         </div>
+
+        {/* 3D Dialog */}
+        <ElevationProfile3DDialog
+          open={show3DDialog}
+          onOpenChange={setShow3DDialog}
+          coordinates={
+            Array.isArray(route.coordinates)
+              ? route.coordinates.map((c: any) => ({
+                  lat: Number(c.lat ?? c[0]),
+                  lng: Number(c.lng ?? c[1]),
+                }))
+              : []
+          }
+          elevations={
+            Array.isArray(route.coordinates)
+              ? route.coordinates.map((c: any) => Number(c.elevation ?? c[2] ?? 0))
+              : []
+          }
+          routeName={route.name}
+          routeStats={
+            route.total_distance || route.total_elevation_gain
+              ? {
+                  totalDistance: route.total_distance || 0,
+                  elevationGain: route.total_elevation_gain || 0,
+                  elevationLoss: 0,
+                }
+              : null
+          }
+        />
       </CardContent>
     </Card>
   );

@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Mountain, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, TrendingDown, Mountain, MapPin, Box } from 'lucide-react';
+
+const ElevationProfile3D = lazy(() => import('./ElevationProfile3D').then(m => ({ default: m.ElevationProfile3D })));
 
 interface ElevationProfileProps {
   elevations: number[];
+  coordinates?: { lat: number; lng: number }[];
   routeStats?: {
     totalDistance: number;
     elevationGain: number;
@@ -15,8 +19,11 @@ interface ElevationProfileProps {
 
 export const ElevationProfile: React.FC<ElevationProfileProps> = ({ 
   elevations, 
+  coordinates,
   routeStats 
 }) => {
+  const [show3D, setShow3D] = useState(false);
+  const has3DData = coordinates && coordinates.length >= 2 && elevations.length >= 2;
   if (elevations.length === 0) {
     return (
       <Card className="w-full max-w-md">
@@ -106,16 +113,46 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Mountain className="h-4 w-4" />
-          Profil d'élévation
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Mountain className="h-4 w-4" />
+            Profil d'élévation
+          </CardTitle>
+          {has3DData && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShow3D(!show3D)}
+              className="h-7 px-2 text-xs gap-1"
+            >
+              <Box className="h-3.5 w-3.5" />
+              {show3D ? '2D' : '3D'}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Graphique */}
-        <div className="bg-muted/20 p-2 rounded">
-          {createElevationSVG()}
-        </div>
+        {show3D && has3DData ? (
+          <Suspense fallback={<div className="h-64 flex items-center justify-center text-sm text-muted-foreground">Chargement 3D...</div>}>
+            <ElevationProfile3D
+              coordinates={coordinates!}
+              elevations={elevations}
+              autoPlay
+              elevationExaggeration={2}
+              routeStats={routeStats ? {
+                totalDistance: routeStats.totalDistance,
+                elevationGain: routeStats.elevationGain,
+                elevationLoss: routeStats.elevationLoss,
+              } : null}
+              className="h-64"
+            />
+          </Suspense>
+        ) : (
+          <div className="bg-muted/20 p-2 rounded">
+            {createElevationSVG()}
+          </div>
+        )}
         
         {/* Statistiques */}
         {routeStats && (
