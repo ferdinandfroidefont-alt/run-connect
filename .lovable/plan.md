@@ -1,26 +1,62 @@
 
 
-## Fix: Barre de prolongement dans la zone du notch (safe area) sur 3 pages
+## Fix: Google Sign-In sur iOS reste dans l'app (comme Android)
 
 ### Probleme
-Sur iPhone, les pages "Mon Profil", "Creer une seance" et "Details de la seance" n'ont pas de fond qui s'etend dans la zone du notch (au-dessus du bouton "Retour"). On voit le fond du WebView au lieu du fond du header.
-
-### Constat apres analyse
-- **Profile.tsx**: a deja `pt-safe` sur le header -- OK
-- **CreateSessionWizard.tsx**: le header n'a PAS `pt-safe` -- le fond ne couvre pas le notch
-- **SessionDetailsDialog.tsx**: le header n'a PAS `pt-safe` -- le fond ne couvre pas le notch
-
-Le composant `DialogContent` est en plein ecran sur mobile (`w-full h-full`), donc le header du dialog doit lui-meme gerer la safe area avec `pt-safe`.
+Sur Android, Google Sign-In ouvre une popup native dans l'app. Sur iOS, `signInWithOAuth` ouvre Safari externe, ce qui fait quitter l'app.
 
 ### Solution
-Ajouter `pt-safe` au `div` du header iOS dans les deux fichiers concernes.
+Utiliser `@capgo/inappbrowser` sur iOS pour ouvrir le flux OAuth Google dans un navigateur integre (SFSafariViewController), sans quitter l'app. Le flux sera:
+
+1. Generer l'URL OAuth Google via `signInWithOAuth` avec `skipBrowserRedirect: true`
+2. Ouvrir cette URL dans l'InAppBrowser (reste dans l'app)
+3. Ecouter la redirection de callback pour capturer les tokens
+4. Fermer l'InAppBrowser et creer la session Supabase
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/session-creation/CreateSessionWizard.tsx` | Ajouter `pt-safe` au div du header (ligne 401) |
-| `src/components/SessionDetailsDialog.tsx` | Ajouter `pt-safe` au div du header (ligne 431) |
+| `src/pages/Auth.tsx` | Ajouter la logique iOS: detecter la plateforme, utiliser InAppBrowser pour le flux OAuth au lieu de la redirection externe |
+| `src/lib/googleSignIn.ts` | Ajouter `isNativeIOSGoogleSignInAvailable()` pour detecter iOS natif |
 
-Aucune modification de taille ni de position des elements existants -- on ajoute uniquement le padding top pour couvrir la zone du notch.
+### Details techniques
+
+**`src/lib/googleSignIn.ts`**
+- Ajouter une fonction `isNativeIOS()` qui retourne `true` si on est sur iOS natif (via `Capacitor.getPlatform() === 'ios'`)
+
+**`src/pages/Auth.tsx`** - dans `handleGoogleAuth`:
+- Apres le check `isNativeAvailable` (Android), ajouter un check iOS
+- Si iOS natif:
+  1. Appeler `signInWithOAuth({ provider: 'google', options: { skipBrowserRedirect: true } })` pour obtenir l'URL OAuth
+  2. Ouvrir cette URL avec `InAppBrowser.openInWebView()` de `@capgo/inappbrowser`
+  3. Ecouter l'evenement `urlChangeEvent` pour detecter quand l'URL contient le callback Supabase (contient `access_token` ou `code`)
+  4. Extraire les tokens de l'URL de callback
+  5. Fermer l'InAppBrowser avec `InAppBrowser.close()`
+  6. Appeler `supabase.auth.setSession()` ou echanger le code pour etablir la session
+- Sinon (web), garder le comportement actuel avec redirection
+
+### Flux sur iOS apres le fix
+
+```text
+Utilisateur tape "Se connecter avec Google"
+        |
+        v
+InAppBrowser s'ouvre (dans l'app)
+        |
+        v
+Page de connexion Google s'affiche
+        |
+        v
+Utilisateur selectionne son compte
+        |
+        v
+Redirection vers callback Supabase detectee
+        |
+        v
+InAppBrowser se ferme automatiquement
+        |
+        v
+Session creee, utilisateur connecte
+```
 
