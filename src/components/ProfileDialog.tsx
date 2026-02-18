@@ -394,7 +394,7 @@ export const ProfileDialog = ({
           </div>
           
            <ScrollArea className="flex-1 bg-pattern">
-            <div className="py-4 space-y-6 pb-8">
+            <div className="py-4 space-y-6 pb-0">
               {/* Profile Header - Centered */}
               <div className="flex flex-col items-center pt-4 pb-2">
                 <div className="relative mb-3">
