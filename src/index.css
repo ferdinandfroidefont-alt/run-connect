@@ -390,7 +390,7 @@
 
   /* Reduce nav bar height */
   .h-\[72px\] { height: 64px !important; }
-  .h-\[52px\] { height: 44px !important; }
+  .h-\[52px\]:not(.avatar-fixed) { height: 44px !important; }
 
   /* Reduce icon sizes slightly */
   .h-7.w-7 { height: 1.375rem !important; width: 1.375rem !important; }
@@ -426,7 +426,7 @@
     top: calc(4.5rem + env(safe-area-inset-top, 0px)) !important;
   }
   .ios-map-filters {
-    top: calc(8rem + env(safe-area-inset-top, 0px)) !important;
+    top: calc(7rem + env(safe-area-inset-top, 0px)) !important;
   }
   .ios-map-bottom-buttons {
     bottom: 0.5rem !important;

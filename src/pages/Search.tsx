@@ -64,7 +64,7 @@ export default function Search() {
           paddingBottom: 'env(safe-area-inset-bottom)'
         }}
       >
-        {/* Header iOS style */}
+        {/* Header iOS style with safe area */}
         <header className="bg-card border-b border-border px-4 pt-4 pb-3 pt-safe">
           <div className="relative flex items-center justify-center min-h-[44px]">
             {/* Bouton retour */}
