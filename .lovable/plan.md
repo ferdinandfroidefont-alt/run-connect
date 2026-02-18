@@ -1,51 +1,28 @@
 
-# Fix iOS Crash on Launch -- RunConnect
 
-## Root Causes Identified
+# Fix iOS Crash: Remove AdMob Native SDK
 
-### 1. Automatic permission checking at startup (CRITICAL)
-In `main.tsx` (lines 130-137), `Geolocation.checkPermissions()` and `Camera.checkPermissions()` are called just 1 second after app launch via `setTimeout`. On iOS, calling these before the WebView/Capacitor bridge is fully initialized causes an immediate crash.
+## Root Cause (Confirmed by Crash Log)
 
-### 2. `requestPermissions: true` in Capacitor config (CRITICAL)
-`capacitor.config.ts` has `Geolocation: { requestPermissions: true }` and `Camera: { requestPermissions: true }` in the plugins section. On iOS, this can trigger the native permission dialog automatically when the plugin loads, before the app UI is ready -- which Apple rejects and may crash.
+The crash happens on **Thread 7** at `GADApplicationVerifyPublisherInitializedCorrectly`. This is the Google Mobile Ads SDK verifying the publisher App ID at native startup -- before any JavaScript or WebView loads. Since the AdMob IDs in the code are placeholders (`ca-app-pub-XXXXXXXXXXXXXXX~XXXXXXXXXX`), the SDK calls `abort()` and kills the app instantly.
 
-### 3. Missing Info.plist usage descriptions (HIGH)
-The CI workflow is missing two required keys:
-- `NSMicrophoneUsageDescription` (needed if any audio API is accessed)
-- `NSUserTrackingUsageDescription` (needed if AdMob/tracking is ever enabled)
+**Why JS guards don't work**: The `@capacitor-community/admob` npm package auto-registers its native iOS plugin during `npx cap sync ios`. The Google SDK runs its verification check at native app launch, completely independent of any JavaScript code.
 
-If iOS encounters a permission request without the corresponding usage description, it crashes instantly.
+## Fix
 
-### 4. `require()` call in useAdMob (MEDIUM)
-`useAdMob.tsx` line 45 uses `require('@capacitor/core')` which is a CommonJS call inside a Vite ESM build. This can throw a runtime error on iOS where the module system is stricter.
+**Remove `@capacitor-community/admob` from `package.json`**. This prevents the AdMob CocoaPod from being included in the iOS build during `npx cap sync ios`. The `useAdMob.tsx` hook already uses dynamic imports with try/catch, so it will gracefully do nothing when the package is absent.
 
-## Fixes
+When you have real AdMob IDs in the future, you can re-add the package and configure `GADApplicationIdentifier` in Info.plist.
 
-### File 1: `src/main.tsx`
-- Remove the early `Geolocation.checkPermissions()` and `Camera.checkPermissions()` calls from `initializeCapacitorPlugins`
-- Only preload the plugin modules (dynamic import) without calling any permission APIs
-- Permissions should only be checked/requested when the user triggers a feature (camera button, map, etc.)
-
-### File 2: `capacitor.config.ts`
-- Remove `requestPermissions: true` from both Geolocation and Camera plugin configs
-- These flags tell Capacitor to auto-request permissions on plugin load, which crashes iOS if the WebView isn't ready or if Info.plist keys are missing
-
-### File 3: `src/hooks/useAdMob.tsx`
-- Replace `require('@capacitor/core')` with a proper check using the already-available `window.Capacitor` or a dynamic import
-- This avoids a potential runtime error in Vite's ESM bundle on iOS
-
-### File 4: `.github/workflows/ios-appstore.yml`
-- Add `NSMicrophoneUsageDescription` to Info.plist configuration step
-- Add `NSUserTrackingUsageDescription` to Info.plist configuration step
-- These prevent crashes if any code path triggers these permission dialogs
-
-## Summary
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `src/main.tsx` | Remove early permission checks, keep only plugin preload |
-| `capacitor.config.ts` | Remove `requestPermissions: true` from Geolocation and Camera |
-| `src/hooks/useAdMob.tsx` | Replace `require()` with proper ESM-compatible check |
-| `.github/workflows/ios-appstore.yml` | Add missing NSMicrophoneUsageDescription and NSUserTrackingUsageDescription |
+| `package.json` | Remove `@capacitor-community/admob` from dependencies |
+| `src/hooks/useAdMob.tsx` | Add extra safety: return no-op immediately if placeholder IDs detected (belt and suspenders) |
+| `src/components/AdMobInitializer.tsx` | Add early return if AdMob package is unavailable |
 
-After these changes, you will need to rebuild and re-upload to TestFlight using your GitHub Actions workflow.
+## After These Changes
+
+You must trigger your GitHub Actions iOS workflow to rebuild. The new build will NOT include the Google Mobile Ads SDK in the binary, eliminating the crash entirely.
+
