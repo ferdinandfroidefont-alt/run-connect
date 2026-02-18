@@ -23,7 +23,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -155,7 +155,8 @@ export const InteractiveMap = ({
   const {
     setRefreshSessions,
     setOpenCreateSession,
-    setOpenCreateRoute
+    setOpenCreateRoute,
+    setHideBottomNav
   } = useAppContext();
   const navigate = useNavigate();
 
@@ -209,7 +210,15 @@ export const InteractiveMap = ({
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  
+  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+
+  const toggleImmersiveMode = () => {
+    setIsImmersiveMode(prev => {
+      const next = !prev;
+      setHideBottomNav(next);
+      return next;
+    });
+  };
 
   // Share profile hook
   const {
@@ -1350,8 +1359,25 @@ export const InteractiveMap = ({
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" data-tutorial="map-container" />
       
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10">
+      {/* Immersive Mode: Minimal top bar with back button */}
+      {isImmersiveMode && (
+        <div className="absolute top-0 left-0 right-0 z-10 pt-safe">
+          <div className="flex items-center justify-between px-4 py-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleImmersiveMode}
+              className="h-10 px-3 rounded-[10px] bg-card/90 backdrop-blur-sm border border-border shadow-sm gap-1"
+            >
+              <Minimize2 className="h-4 w-4" />
+              Retour
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Header - Hidden in immersive mode */}
+      {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden pt-safe">
           <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
             {/* Runconnect Title - Left aligned iOS style */}
@@ -1478,7 +1504,7 @@ export const InteractiveMap = ({
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Route Creation Mode Banner */}
       {isRouteCreationMode && <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
@@ -1510,7 +1536,7 @@ export const InteractiveMap = ({
         </div>}
 
       {/* Leaderboard, Confirm Presence & Level Filter Buttons - iOS Style */}
-      {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
+      {user && !isImmersiveMode && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
           {/* Level Slider Filter - iOS Style */}
           <LevelSliderFilter
             selectedLevel={filters.level}
@@ -1528,13 +1554,18 @@ export const InteractiveMap = ({
           </Button>
         </div>}
 
-      {/* Filters - repositionné plus haut */}
-      <div className="absolute top-36 right-4 z-10">
+      {/* Filters - Hidden in immersive mode */}
+      {!isImmersiveMode && <div className="absolute ios-filter-position right-4 z-10" style={{ top: 'calc(12rem + env(safe-area-inset-top, 0px))' }}>
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
-      </div>
+      </div>}
       
       {/* All Map Controls - iOS Style */}
       <div className="absolute left-4 bottom-4 flex flex-col gap-2 z-10">
+        {/* Immersive Mode Toggle */}
+        <Button onClick={toggleImmersiveMode} size="sm" variant="outline" className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center" title={isImmersiveMode ? "Quitter le mode immersif" : "Mode immersif"}>
+          {isImmersiveMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
+
         {/* Route Creation Button */}
         {user && <Button onClick={() => {
         console.log('🖱️ Pencil button clicked - navigating to route creation');
