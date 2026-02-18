@@ -1,29 +1,26 @@
 
 
-## Fix: Espace entre la carte et la barre de navigation
+## Fix: Barre de prolongement dans la zone du notch (safe area) sur 3 pages
 
-### Cause racine identifiee
-Le probleme vient de `env(safe-area-inset-bottom)` dans le padding du contenu principal. Sur iPhone avec home indicator, cela ajoute ~34px supplementaires au padding. Le calcul actuel:
-- Padding du main = `60px + 34px (safe area) = 94px`
-- Hauteur de la nav = `64px` (fixee en bas)
-- **Gap visible = 30px**
+### Probleme
+Sur iPhone, les pages "Mon Profil", "Creer une seance" et "Details de la seance" n'ont pas de fond qui s'etend dans la zone du notch (au-dessus du bouton "Retour"). On voit le fond du WebView au lieu du fond du header.
 
-La barre de navigation est en `fixed bottom-0` avec une hauteur de 64px sur iOS, mais elle ne s'etend pas dans la zone safe-area du bas. Le padding du contenu, lui, inclut cette zone safe-area, creant un espace vide entre la carte et la nav.
+### Constat apres analyse
+- **Profile.tsx**: a deja `pt-safe` sur le header -- OK
+- **CreateSessionWizard.tsx**: le header n'a PAS `pt-safe` -- le fond ne couvre pas le notch
+- **SessionDetailsDialog.tsx**: le header n'a PAS `pt-safe` -- le fond ne couvre pas le notch
+
+Le composant `DialogContent` est en plein ecran sur mobile (`w-full h-full`), donc le header du dialog doit lui-meme gerer la safe area avec `pt-safe`.
 
 ### Solution
-Deux modifications:
-
-1. **`src/components/BottomNavigation.tsx`**: Ajouter `pb-safe` a la nav pour qu'elle s'etende visuellement dans la zone du home indicator (sous les boutons).
-
-2. **`src/components/Layout.tsx`**: Garder le padding avec safe-area mais ajuster la valeur de base pour correspondre exactement a la hauteur reelle de la nav (64px iOS + safe area couverte par la nav).
-
-Concretement, la nav doit couvrir `64px + safe-area-inset-bottom`, et le padding du main doit etre identique: `calc(64px + env(safe-area-inset-bottom, 0px))`.
+Ajouter `pt-safe` au `div` du header iOS dans les deux fichiers concernes.
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/BottomNavigation.tsx` | Ajouter `pb-safe` a la nav pour couvrir le home indicator |
-| `src/components/Layout.tsx` | Ajuster le padding par defaut a `calc(64px + safe-area)` |
-| `src/index.css` | Mettre `.ios-nav-padding` a `calc(64px + safe-area)` pour correspondre exactement |
+| `src/components/session-creation/CreateSessionWizard.tsx` | Ajouter `pt-safe` au div du header (ligne 401) |
+| `src/components/SessionDetailsDialog.tsx` | Ajouter `pt-safe` au div du header (ligne 431) |
+
+Aucune modification de taille ni de position des elements existants -- on ajoute uniquement le padding top pour couvrir la zone du notch.
 
