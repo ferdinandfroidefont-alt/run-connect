@@ -1,7 +1,17 @@
 /**
  * 🔥 Google Sign-In Native Helper
  * Utilise AndroidBridge pour l'authentification Google native sur Android
+ * + InAppBrowser pour iOS
  */
+
+import { Capacitor } from '@capacitor/core';
+
+/**
+ * Détecte si on est sur iOS natif (Capacitor)
+ */
+export const isNativeIOS = (): boolean => {
+  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+};
 
 export interface GoogleSignInResult {
   idToken: string;

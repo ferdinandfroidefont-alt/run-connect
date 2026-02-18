@@ -9,7 +9,8 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
-import { googleSignIn, isNativeGoogleSignInAvailable } from '@/lib/googleSignIn';
+import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
+import { InAppBrowser } from '@capgo/inappbrowser';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import appIcon from '@/assets/app-icon.png';
@@ -227,6 +228,119 @@ const Auth = () => {
           toast({
             title: "Erreur Google Sign-In",
             description: nativeError.message || "Erreur lors de l'authentification",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      // 🍎 iOS: utiliser InAppBrowser pour rester dans l'app
+      if (isNativeIOS()) {
+        console.log('🍎 [GOOGLE AUTH] iOS detected, using InAppBrowser...');
+        try {
+          const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/`,
+              skipBrowserRedirect: true,
+              queryParams: { access_type: 'offline', prompt: 'consent' }
+            }
+          });
+
+          if (oauthError || !oauthData?.url) {
+            throw oauthError || new Error('No OAuth URL returned');
+          }
+
+          console.log('🍎 [GOOGLE AUTH] Opening InAppBrowser with URL:', oauthData.url);
+
+          // Écouter les changements d'URL pour détecter le callback
+          const urlListener = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
+            console.log('🍎 [GOOGLE AUTH] URL changed:', event.url);
+            
+            const url = event.url;
+            // Détecter le callback Supabase (contient access_token ou code dans le fragment/query)
+            if (url.includes('access_token=') || url.includes('code=') || url.includes('#access_token')) {
+              console.log('🍎 [GOOGLE AUTH] Callback detected, extracting tokens...');
+              
+              try {
+                // Fermer le browser immédiatement
+                await InAppBrowser.close();
+                urlListener.remove();
+
+                // Extraire les paramètres du fragment (#) ou query (?)
+                const urlObj = new URL(url);
+                const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+                const queryParams = new URLSearchParams(urlObj.search);
+
+                const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+
+                if (accessToken && refreshToken) {
+                  console.log('🍎 [GOOGLE AUTH] Setting session with tokens...');
+                  const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken
+                  });
+
+                  if (sessionError) throw sessionError;
+
+                  // Vérifier le profil
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (user) {
+                    const { data: existingProfile } = await supabase
+                      .from('profiles')
+                      .select('id, username')
+                      .eq('user_id', user.id)
+                      .maybeSingle();
+
+                    if (!existingProfile) {
+                      setNewUserId(user.id);
+                      setShowProfileSetup(true);
+                    } else {
+                      navigate('/', { replace: true });
+                    }
+                  }
+                } else {
+                  // Si on a un code PKCE, laisser Supabase le gérer via detectSessionInUrl
+                  console.log('🍎 [GOOGLE AUTH] No direct tokens, trying PKCE exchange...');
+                  // Naviguer vers l'URL de callback pour que Supabase échange le code
+                  window.location.href = url;
+                }
+              } catch (callbackError) {
+                console.error('🍎 [GOOGLE AUTH] Callback error:', callbackError);
+                toast({
+                  title: "Erreur Google Sign-In",
+                  description: "Erreur lors de la récupération de la session",
+                  variant: "destructive"
+                });
+              } finally {
+                setIsLoading(false);
+              }
+            }
+          });
+
+          // Écouter la fermeture manuelle du browser
+          const closeListener = await InAppBrowser.addListener('closeEvent', () => {
+            console.log('🍎 [GOOGLE AUTH] InAppBrowser closed by user');
+            closeListener.remove();
+            urlListener.remove();
+            setIsLoading(false);
+          });
+
+          // Ouvrir le navigateur intégré
+          await InAppBrowser.openWebView({
+            url: oauthData.url,
+            title: 'Connexion Google',
+            isPresentAfterPageLoad: true,
+            preventDeeplink: false,
+          });
+          
+          return;
+        } catch (iosError: any) {
+          console.error('🍎 [GOOGLE AUTH] iOS error:', iosError);
+          toast({
+            title: "Erreur Google Sign-In",
+            description: iosError.message || "Erreur lors de l'authentification",
             variant: "destructive"
           });
           return;
