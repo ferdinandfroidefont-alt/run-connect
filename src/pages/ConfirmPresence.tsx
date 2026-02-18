@@ -137,7 +137,7 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary bg-pattern pt-safe">
+    <div className="fixed inset-0 bg-secondary bg-pattern flex flex-col pt-safe">
       {/* iOS Header with safe area background */}
       <div className="bg-card border-b border-border shrink-0 pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
@@ -156,7 +156,7 @@ export default function ConfirmPresence() {
       </div>
 
       {/* Content */}
-      <div className="p-4 pb-24">
+      <div className="flex-1 overflow-y-auto p-4 pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
         {loading ? (
           <div className="bg-card border border-border rounded-[10px] p-12 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
