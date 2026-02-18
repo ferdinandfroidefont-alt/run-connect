@@ -412,7 +412,7 @@
 
   /* Adjust main content bottom padding for smaller nav + safe area */
   .ios-nav-padding {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: 64px !important;
   }
 
   /* iOS: remonter les boutons du header carte */
