@@ -32,7 +32,7 @@ const config: CapacitorConfig = {
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'app.runconnect',
-    backgroundColor: '#FFFFFF'
+    backgroundColor: '#0F1729'
   }
 };
 
