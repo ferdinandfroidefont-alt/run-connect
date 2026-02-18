@@ -95,7 +95,7 @@ export const SessionFilters = ({ filters, onFiltersChange, className }: SessionF
   const activeFilterLabel = getActiveFilterLabel();
 
   return (
-    <Card className={`${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control ${className || ''}`}>
+    <Card className={`${isOpen ? 'w-[calc(100vw-2rem)] max-w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control ${className || ''}`}>
       {/* Header cliquable - toujours visible */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
@@ -144,7 +144,7 @@ export const SessionFilters = ({ filters, onFiltersChange, className }: SessionF
 
       {/* Contenu qui apparaît au clic */}
       {isOpen && (
-        <CardContent className="p-4 pt-0 max-h-[28rem] overflow-y-auto">
+        <CardContent className="p-4 pt-0 max-h-[60dvh] overflow-y-auto">
           <Separator className="mb-4" />
 
           <div className="space-y-4">
