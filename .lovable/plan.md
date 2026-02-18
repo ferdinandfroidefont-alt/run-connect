@@ -1,55 +1,52 @@
 
 
-## Corrections multiples iOS - 7 problemes a resoudre
+## Corrections iOS multiples - 8 problemes
 
-### 1. Augmenter la barre de navigation + combler le trou carte/nav
-**Probleme**: La barre de navigation a ete reduite a 58px via CSS iOS, creant un trou entre la carte et la nav.
-**Solution**: Augmenter la hauteur iOS de la nav de 58px a 64px dans `src/index.css` (`.ios-nav-padding` et `.h-[72px]` override), ce qui comblera le gap tout en restant compact.
+### 1. Trou entre la carte et la barre de navigation
+**Cause**: Le padding bottom du Layout (`ios-nav-padding`) utilise 64px mais la vraie hauteur de la nav sur iOS est reduite a 64px via `.h-[72px]`. Le probleme est que le `pb-[calc(72px+...)]` par defaut est trop grand.
+**Solution**: Dans `src/index.css`, ajuster `.ios-nav-padding` pour utiliser exactement la bonne valeur et s'assurer que la carte s'etend jusqu'a la nav. Reduire a `calc(64px + env(safe-area-inset-bottom, 0px))` (deja fait) mais aussi verifier que le Layout ne cause pas de gap supplementaire. Le vrai probleme est que le `pb-[calc(72px+...)]` par defaut dans Layout.tsx s'applique avant le CSS iOS. Changer le Layout pour que la classe `ios-nav-padding` s'applique correctement.
 
-### 2. Remonter la barre de recherche et les boutons en dessous
-**Probleme**: Sur iOS, la barre de recherche et les filtres ne sont pas au meme endroit que sur Android.
-**Solution**: Ajuster les valeurs `top` dans les classes `.ios-map-search` (de `5.5rem` a `4.5rem`) et `.ios-map-filters` (de `9rem` a `8rem`) dans `src/index.css`.
+### 2. "Runconnect" desaligne avec cloche et parametres
+**Cause**: Le header utilise `py-8` (beaucoup de padding vertical) et le titre est `text-xl`. Sur iOS avec le compact mode, les elements ne sont pas sur la meme ligne visuelle.
+**Solution**: Dans `src/components/InteractiveMap.tsx` ligne 1382, reduire `py-8` a `py-3` et changer le titre de `text-xl` a `text-lg` pour un alignement correct. Ajouter `items-center` explicitement au conteneur flex.
 
-### 3. Supprimer la "status bar area" (barre coloree du notch)
-**Probleme**: Des `div` fixes colorees remplissent la zone du notch sur Profile, Leaderboard et Settings.
-**Solution**: Supprimer les 3 lignes `<div className="fixed top-0 ... bg-card" style={{ height: 'env(safe-area-inset-top)' }} />` dans:
-- `src/pages/Profile.tsx` (ligne 609)
-- `src/pages/Leaderboard.tsx` (ligne 539)
-- `src/components/SettingsDialog.tsx` (ligne 411)
+### 3. Filtre et Maximize a la meme hauteur que les creneaux horaires
+**Cause**: Le bloc filtre/maximize est positionne a `top: calc(9.5rem + safe-area)` tandis que les creneaux sont dans le flux du search bar.
+**Solution**: Dans `src/index.css`, ajuster `.ios-map-filters` de `8rem` a `7rem` pour remonter le bloc filtre/maximize sur iPhone.
 
-### 4. Centrer le QR code dans les parametres
-**Probleme**: Le QR code est penche vers la droite dans le dialog.
-**Solution**: Dans `src/components/QRShareDialog.tsx`, le `DialogContent` a `max-w-full` en mobile. Le `motion.div` wrapper n'a pas de centrage explicite. Ajouter `mx-auto max-w-sm` au wrapper interne et s'assurer que `flex justify-center` est bien applique au conteneur QR (deja present ligne 279, mais le parent `relative` peut decaler). Corriger en ajoutant `w-full` au wrapper du QR pour forcer le centrage.
+### 4. Latence sur les boutons de navigation (performance)
+**Cause**: Le `BottomNavigation` fait des requetes Supabase en boucle (fetchUnreadCount itere sur chaque conversation individuellement). Cela cree de la latence a chaque interaction.
+**Solution**: Optimiser `fetchUnreadCount` dans `src/components/BottomNavigation.tsx` pour utiliser une seule requete SQL au lieu d'iterer sur chaque conversation. Utiliser un `.in()` filter ou un RPC.
 
-### 5. Ecran qui bouge au focus des inputs
-**Probleme**: Meme avec `maximum-scale=1.0`, l'ecran se deplace legerement au focus.
-**Solution**: Ajouter `touch-action: manipulation` sur les inputs iOS et `position: fixed` au body pendant le focus n'est pas viable. La solution est d'ajouter un listener JS dans `index.html` qui force `window.scrollTo(0,0)` au focus des inputs, car le WebView deplace le viewport. Ajouter dans `src/index.css` sous le bloc iOS:
-```css
-input:focus, textarea:focus, select:focus {
-  transform: translateZ(0);
-}
-```
-Et dans `index.html`, ajouter un script qui reset le scroll au focus.
+### 5. Status bar area qui reapparait apres ConfirmPresence et Search
+**Cause**: Les routes `/confirm-presence` et `/search` ne sont PAS dans `<Layout>` (voir App.tsx lignes 69, 75). Quand ces pages utilisent `document.body.style.overflow = 'hidden'` ou naviguent en arriere, elles ne restaurent pas proprement l'etat du viewport. Le probleme principal: ces pages n'ont pas de fond qui couvre la safe area, et au retour le WebView peut montrer un fond different.
+**Solution**: Ajouter `pt-safe` et un fond `bg-background` couvrant la zone safe-area dans `src/pages/ConfirmPresence.tsx` et `src/pages/Search.tsx` pour le header. Egalement ajouter un cleanup dans le useEffect de Search.tsx pour restaurer l'overflow.
 
-### 6. Photos de profil deformees sur la page Messages
-**Probleme**: Les avatars `h-[52px] w-[52px]` dans la liste des conversations sont deformes.
-**Solution**: L'`AvatarImage` utilise `object-cover` mais le CSS iOS reduit `.h-10.w-10` (ligne 397). Le `h-[52px] w-[52px]` n'est pas affecte par cette regle, mais l'avatar circle peut etre ecrase par les reductions iOS de padding. Ajouter `aspect-square shrink-0` explicitement au `Avatar` dans `Messages.tsx` ligne 2423 pour forcer le ratio 1:1.
+### 6. Photos de profil deformees dans Messages
+**Cause**: Le CSS iOS compact reduit `.h-10.w-10` a `2rem` mais l'avatar utilise `h-[52px] w-[52px]` qui n'est pas affecte. Le vrai probleme est que le conteneur flex parent compresse l'avatar. La classe `aspect-square shrink-0` a ete ajoutee mais le `w-[52px]` peut etre ecrase par des styles parents.
+**Solution**: Ajouter `min-w-[52px] min-h-[52px]` a l'Avatar dans Messages.tsx pour forcer les dimensions minimales et empecher la compression.
 
-### 7. Scroll difficile sur OrganizerStatsCard
-**Probleme**: Le composant `OrganizerStatsCard` dans `MySessions.tsx` est encapsule dans un `div` avec `px-4`, le scroll du parent est bloque.
-**Solution**: Le probleme vient du fait que la page `MySessions` utilise probablement un scroll container qui ne laisse pas assez d'espace en bas. Ajouter `pb-8` au conteneur parent de l'`OrganizerStatsCard` dans `MySessions.tsx` pour garantir que le contenu soit scrollable jusqu'en bas.
+### 7. Flammes (StreakBadge) deplacees sous la photo de profil
+**Changement Android + iPhone**: Deplacer le `StreakBadge` du header (a cote de la cloche) vers sous l'avatar central sur la page principale.
+**Solution**: Dans `src/components/InteractiveMap.tsx`:
+- Retirer `{user && <StreakBadge userId={user.id} variant="compact" />}` du bloc right-aligned (ligne 1402)
+- Ajouter un petit `StreakBadge` sous l'avatar central (apres la ligne 1397), avec une taille reduite.
+
+### 8. Barre de prolongement au-dessus du bouton retour (Profil etc.)
+**Cause**: Les pages Profil, Leaderboard, Settings avaient des divs fixed pour le notch qui ont ete supprimes. Il manque maintenant une continuite visuelle.
+**Solution**: Le `pt-safe` deja present sur les headers assure la continuite. Verifier que le fond du header (`bg-card`) s'etend bien dans la safe area grace a `pt-safe`. Si ce n'est pas le cas, ajouter un `div` de fond avec `bg-card` qui couvre la zone safe-area en haut.
 
 ---
 
 ### Fichiers modifies
+
 | Fichier | Modification |
 |---------|-------------|
-| `src/index.css` | Ajuster `.ios-nav-padding` (64px), `.ios-map-search` (4.5rem), `.ios-map-filters` (8rem), ajouter anti-scroll-jump CSS |
-| `src/pages/Profile.tsx` | Supprimer le div fixed safe-area notch |
-| `src/pages/Leaderboard.tsx` | Supprimer le div fixed safe-area notch |
-| `src/components/SettingsDialog.tsx` | Supprimer le div fixed safe-area notch |
-| `src/components/QRShareDialog.tsx` | Centrer le QR code (ajouter `w-full` au wrapper) |
-| `src/pages/Messages.tsx` | Ajouter `aspect-square shrink-0` aux avatars de conversation |
-| `src/pages/MySessions.tsx` | Ajouter `pb-8` au conteneur de l'OrganizerStatsCard |
-| `index.html` | Ajouter script anti-scroll-jump au focus |
+| `src/index.css` | Ajuster `.ios-map-filters` (7rem) |
+| `src/components/InteractiveMap.tsx` | Reduire py du header, titre plus petit, deplacer StreakBadge sous avatar |
+| `src/components/BottomNavigation.tsx` | Optimiser fetchUnreadCount en une seule requete |
+| `src/pages/ConfirmPresence.tsx` | Ajouter fond safe-area pour eviter la status bar au retour |
+| `src/pages/Search.tsx` | Ajouter fond safe-area pour eviter la status bar au retour |
+| `src/pages/Messages.tsx` | Ajouter min-w/min-h aux avatars pour eviter la deformation |
+| `src/pages/Profile.tsx` | Verifier la continuite bg-card dans la safe area |
 
