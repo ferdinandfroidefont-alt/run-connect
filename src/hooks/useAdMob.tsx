@@ -40,13 +40,9 @@ export const useAdMob = (userIsPremium: boolean = false) => {
         return false;
       }
 
-      // Vérifier si on est en mode natif via Capacitor
-      try {
-        const { Capacitor } = require('@capacitor/core');
-        if (!Capacitor.isNativePlatform()) {
-          return false;
-        }
-      } catch {
+      // Vérifier si on est en mode natif via window.Capacitor (ESM-compatible)
+      const cap = (window as any).Capacitor;
+      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) {
         return false;
       }
 

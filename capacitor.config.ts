@@ -9,12 +9,8 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert']
     },
-    Geolocation: {
-      requestPermissions: true
-    },
-    Camera: {
-      requestPermissions: true
-    },
+    Geolocation: {},
+    Camera: {},
     // Browser config removed to allow in-app OAuth flows
   },
   android: {

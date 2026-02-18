@@ -127,15 +127,9 @@ const initializeCapacitorPlugins = async () => {
     const { Camera } = await import('@capacitor/camera');
     console.log('✅ Plugins critiques préchargés');
     
-    setTimeout(async () => {
-      try {
-        const geoPerms = await Geolocation.checkPermissions();
-        const camPerms = await Camera.checkPermissions();
-        console.log('✅ APIs natives vérifiées - Geo:', geoPerms.location, 'Camera:', camPerms.camera);
-      } catch (error) {
-        console.log('⚠️ Erreur vérification APIs:', error);
-      }
-    }, 1000);
+    // ✅ Ne PAS appeler checkPermissions() au démarrage sur iOS
+    // Les permissions seront vérifiées uniquement quand l'utilisateur déclenche une fonctionnalité
+    console.log('✅ Plugins préchargés - permissions seront demandées à l\'usage');
     
   } catch (pluginError) {
     console.error('❌ Erreur chargement plugins:', pluginError);

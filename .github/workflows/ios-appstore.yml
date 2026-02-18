@@ -88,6 +88,14 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST"
           
+          # Microphone
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'RunConnect peut avoir besoin du microphone pour enregistrer des messages audio.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription 'RunConnect peut avoir besoin du microphone pour enregistrer des messages audio.'" "$INFO_PLIST"
+          
+          # User Tracking (requis si AdMob/tracking activé)
+          /usr/libexec/PlistBuddy -c "Add :NSUserTrackingUsageDescription string 'RunConnect utilise le suivi pour améliorer votre expérience et afficher des publicités pertinentes.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSUserTrackingUsageDescription 'RunConnect utilise le suivi pour améliorer votre expérience et afficher des publicités pertinentes.'" "$INFO_PLIST"
+          
           # Encryption exemption declaration (uses only standard Apple encryption: HTTPS, TLS, Firebase Auth)
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$INFO_PLIST"
