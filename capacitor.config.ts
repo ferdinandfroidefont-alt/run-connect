@@ -31,8 +31,8 @@ const config: CapacitorConfig = {
     scrollEnabled: true,
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: false,
-    // Deep linking pour OAuth (même scheme qu'Android)
-    scheme: 'app.runconnect'
+    scheme: 'app.runconnect',
+    backgroundColor: '#FFFFFF'
   }
 };
 
