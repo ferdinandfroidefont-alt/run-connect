@@ -68,7 +68,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center bg-pattern">
+      <div className="h-full bg-background flex items-center justify-center bg-pattern">
         <div className="text-center">
           <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>

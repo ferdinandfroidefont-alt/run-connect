@@ -588,7 +588,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-secondary flex flex-col bg-pattern">
+    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern pt-safe">
       {/* iOS Header */}
       <div className="bg-card border-b border-border">
         <div className="flex items-center justify-center px-4 h-[56px]">

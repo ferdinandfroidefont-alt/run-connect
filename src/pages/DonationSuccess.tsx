@@ -15,7 +15,7 @@ const DonationSuccess = () => {
   }, [sessionId]);
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-screen flex items-center justify-center bg-pattern">
+    <div className="fixed inset-0 flex items-center justify-center bg-pattern px-4">
       <Card className="max-w-md w-full text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">

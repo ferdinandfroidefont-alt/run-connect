@@ -7,7 +7,7 @@ export default function Privacy() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background bg-pattern">
+    <div className="fixed inset-0 bg-background flex flex-col bg-pattern pt-safe">
       {/* Header fixe */}
       <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50">
         <div className="flex items-center gap-3 p-4">
@@ -27,7 +27,7 @@ export default function Privacy() {
       </div>
 
       {/* Contenu scrollable */}
-      <ScrollArea className="h-[calc(100vh-73px)]">
+      <ScrollArea className="flex-1">
         <div className="max-w-3xl mx-auto p-6 space-y-8">
           {/* Date de mise à jour */}
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
