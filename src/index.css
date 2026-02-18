@@ -407,7 +407,7 @@
   .text-\[15px\] { font-size: 14px !important; }
   .text-\[13px\] { font-size: 12px !important; }
 
-  /* Adjust main content bottom padding for smaller nav */
+  /* Adjust main content bottom padding for smaller nav + safe area */
   .pb-\[72px\] { padding-bottom: 64px !important; }
 }
 
