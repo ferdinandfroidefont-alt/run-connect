@@ -66,7 +66,7 @@ export const BottomNavigation = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl">
       <div className="h-px bg-border/50" />
-      <div className="grid grid-cols-5 items-center h-[72px]">
+      <div className="grid grid-cols-5 items-center h-[58px]">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const tutorialId = path === '/my-sessions' ? 'nav-sessions' : undefined;
@@ -80,7 +80,7 @@ export const BottomNavigation = () => {
         })}
 
         <div className="flex items-center justify-center">
-          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-[52px] w-[52px] rounded-[16px] bg-primary flex items-center justify-center active:scale-90 transition-all duration-200 shadow-md shadow-primary/15 ring-1 ring-primary/20" data-tutorial="create-session">
+          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-[44px] w-[44px] rounded-[14px] bg-primary flex items-center justify-center active:scale-90 transition-all duration-200 shadow-md shadow-primary/15 ring-1 ring-primary/20" data-tutorial="create-session">
             <Plus className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
           </button>
         </div>
