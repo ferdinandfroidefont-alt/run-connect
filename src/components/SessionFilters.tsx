@@ -20,6 +20,7 @@ interface Filter {
 interface SessionFiltersProps {
   filters: Filter;
   onFiltersChange: (filters: Filter) => void;
+  className?: string;
 }
 
 const activityTypes = [
@@ -43,7 +44,7 @@ const TIME_SLOTS = [
   { id: 'evening' as const, icon: Moon, label: 'Soir', startHour: 18, endHour: 23, color: 'text-indigo-500' },
 ];
 
-export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps) => {
+export const SessionFilters = ({ filters, onFiltersChange, className }: SessionFiltersProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleActivityType = (activityId: string) => {
@@ -94,7 +95,7 @@ export const SessionFilters = ({ filters, onFiltersChange }: SessionFiltersProps
   const activeFilterLabel = getActiveFilterLabel();
 
   return (
-    <Card className={`absolute top-1 right-0 z-20 ${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control`}>
+    <Card className={`${isOpen ? 'w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control ${className || ''}`}>
       {/* Header cliquable - toujours visible */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
