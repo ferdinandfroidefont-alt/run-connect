@@ -411,7 +411,9 @@
   .text-\[13px\] { font-size: 11px !important; }
 
   /* Adjust main content bottom padding for smaller nav + safe area */
-  .pb-\[72px\] { padding-bottom: 58px !important; }
+  .ios-nav-padding {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 
   /* iOS: remonter les boutons du header carte */
   .ios-map-header {
