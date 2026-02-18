@@ -600,13 +600,13 @@ const Profile = () => {
     }
   };
   if (loading) {
-    return <div className="min-h-screen bg-secondary flex items-center justify-center bg-pattern">
+    return <div className="min-h-screen bg-secondary flex items-center justify-center bg-pattern pt-safe">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
   return <div className="min-h-screen bg-secondary bg-pattern">
       {/* iOS Header */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border">
+      <div className="sticky top-0 z-40 bg-card border-b border-border pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
           {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-primary">
               <ChevronLeft className="h-5 w-5" />
