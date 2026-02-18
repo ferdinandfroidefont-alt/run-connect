@@ -278,8 +278,8 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               transition={{ delay: 0.2 }}
               className="flex justify-center"
             >
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
+              <div className="relative w-full flex justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50 mx-auto max-w-[280px]" />
                 <div className="relative bg-gradient-to-br from-card to-card/80 p-4 rounded-2xl border border-primary/20 shadow-lg">
                   {isLoading ? (
                     <div className="w-[240px] h-[240px] flex items-center justify-center">

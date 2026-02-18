@@ -2420,7 +2420,7 @@ const Messages = () => {
                       )}
                       
                       <div className="relative">
-                        <Avatar className="h-[52px] w-[52px]">
+                        <Avatar className="h-[52px] w-[52px] aspect-square shrink-0">
                           {conversation.is_group ? (
                             <>
                               <AvatarImage src={conversation.group_avatar_url || ""} />

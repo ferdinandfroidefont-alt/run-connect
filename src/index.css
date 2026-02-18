@@ -389,7 +389,7 @@
   .p-3 { padding: 0.5rem !important; }
 
   /* Reduce nav bar height */
-  .h-\[72px\] { height: 58px !important; }
+  .h-\[72px\] { height: 64px !important; }
   .h-\[52px\] { height: 44px !important; }
 
   /* Reduce icon sizes slightly */
@@ -412,7 +412,7 @@
 
   /* Adjust main content bottom padding for smaller nav + safe area */
   .ios-nav-padding {
-    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* iOS: remonter les boutons du header carte */
@@ -423,13 +423,18 @@
 
   /* iOS: remonter la barre de recherche et les boutons bas de la carte */
   .ios-map-search {
-    top: calc(5.5rem + env(safe-area-inset-top, 0px)) !important;
+    top: calc(4.5rem + env(safe-area-inset-top, 0px)) !important;
   }
   .ios-map-filters {
-    top: calc(9rem + env(safe-area-inset-top, 0px)) !important;
+    top: calc(8rem + env(safe-area-inset-top, 0px)) !important;
   }
   .ios-map-bottom-buttons {
     bottom: 0.5rem !important;
+  }
+
+  /* Anti scroll-jump on input focus */
+  input:focus, textarea:focus, select:focus {
+    transform: translateZ(0);
   }
 }
 
