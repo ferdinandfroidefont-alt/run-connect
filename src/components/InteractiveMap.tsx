@@ -1379,27 +1379,27 @@ export const InteractiveMap = ({
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden pt-safe">
-          <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
+          <div className="relative flex items-center justify-between px-4 py-3 ios-map-header">
             {/* Runconnect Title - Left aligned iOS style */}
-            <h1 className="text-xl font-semibold text-primary">
+            <h1 className="text-lg font-semibold text-primary">
               Runconnect
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
             {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2" data-tutorial="profile-avatar">
-                <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200">
+                <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200 flex flex-col items-center">
                   <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                     <AvatarFallback className="text-lg">
                       {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
+                  {user && <div className="mt-0.5"><StreakBadge userId={user.id} variant="compact" /></div>}
                 </div>
               </div>}
             
-            {/* Streak, Bell and Settings - Right aligned */}
+            {/* Bell and Settings - Right aligned */}
             <div className="flex items-center justify-center gap-3">
-              {user && <StreakBadge userId={user.id} variant="compact" />}
               <div data-tutorial="notifications" className="flex items-center justify-center">
                 <NotificationCenter onSessionUpdated={loadSessions} />
               </div>

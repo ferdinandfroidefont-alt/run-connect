@@ -31,17 +31,20 @@ export const BottomNavigation = () => {
           .select('id')
           .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
 
-        let totalUnread = 0;
-        for (const conv of conversations || []) {
-          const { count } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .neq('sender_id', user.id)
-            .is('read_at', null);
-          totalUnread += count || 0;
+        const convIds = (conversations || []).map(c => c.id);
+        if (convIds.length === 0) {
+          setTotalUnreadCount(0);
+          return;
         }
-        setTotalUnreadCount(totalUnread);
+
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .in('conversation_id', convIds)
+          .neq('sender_id', user.id)
+          .is('read_at', null);
+
+        setTotalUnreadCount(count || 0);
       } catch (error) {
         console.error('Error fetching unread count:', error);
       }
