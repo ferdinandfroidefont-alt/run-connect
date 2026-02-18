@@ -59,7 +59,7 @@ export default function Search() {
   return (
     <>
       <div 
-        className={`fixed inset-0 z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed inset-0 z-[60] bg-secondary flex flex-col pt-safe ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{ 
           paddingBottom: 'env(safe-area-inset-bottom)'
         }}
