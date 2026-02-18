@@ -27,38 +27,37 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-// 🔇 Wrapper pour désactiver les toasts non-error sur Android
+// 🔇 Wrapper pour désactiver les toasts non-error sur natif (iOS + Android)
 const toast = {
   ...sonnerToast,
   success: (...args: Parameters<typeof sonnerToast.success>) => {
     if (isReallyNative()) {
-      console.log('🔇 Toast success désactivé sur Android');
+      console.log('🔇 Toast success désactivé sur natif');
       return;
     }
     return sonnerToast.success(...args);
   },
   info: (...args: Parameters<typeof sonnerToast.info>) => {
     if (isReallyNative()) {
-      console.log('🔇 Toast info désactivé sur Android');
+      console.log('🔇 Toast info désactivé sur natif');
       return;
     }
     return sonnerToast.info(...args);
   },
   warning: (...args: Parameters<typeof sonnerToast.warning>) => {
     if (isReallyNative()) {
-      console.log('🔇 Toast warning désactivé sur Android');
+      console.log('🔇 Toast warning désactivé sur natif');
       return;
     }
     return sonnerToast.warning(...args);
   },
   loading: (...args: Parameters<typeof sonnerToast.loading>) => {
     if (isReallyNative()) {
-      console.log('🔇 Toast loading désactivé sur Android');
+      console.log('🔇 Toast loading désactivé sur natif');
       return;
     }
     return sonnerToast.loading(...args);
   },
-  // Garder les toasts error actifs (critiques)
   error: sonnerToast.error,
 };
 

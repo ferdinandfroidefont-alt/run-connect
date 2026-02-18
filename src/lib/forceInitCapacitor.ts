@@ -1,30 +1,33 @@
-// Force l'initialisation du plugin Capacitor pour les builds AAB
+// Force l'initialisation du plugin Capacitor pour les builds AAB (Android uniquement)
 export const forceInitCapacitorPlugins = () => {
-  console.log('🔥 FORCE INIT CAPACITOR PLUGINS');
+  // ✅ Guard iOS : ne pas exécuter sur iOS
+  const platform = (window as any).Capacitor?.getPlatform?.();
+  if (platform === 'ios') {
+    console.log('⏭️ forceInitCapacitor: ignoré sur iOS');
+    return;
+  }
   
-  // Attendre que Capacitor soit prêt
+  // ✅ Guard : ne pas exécuter si pas sur Android
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  if (!isAndroid && platform !== 'android') {
+    return;
+  }
+
+  console.log('🔥 FORCE INIT CAPACITOR PLUGINS (Android)');
+  
   const initializePlugin = () => {
-    console.log('🔥 Initialisation des plugins...');
-    console.log('🔥 - Capacitor disponible:', !!(window as any).Capacitor);
-    console.log('🔥 - Platform:', (window as any).Capacitor?.getPlatform?.());
-    console.log('🔥 - PermissionsPlugin avant init:', !!window.PermissionsPlugin);
+    console.log('🔥 Initialisation des plugins Android...');
     
-    // Force l'enregistrement du plugin si on est sur Android
     if ((window as any).Capacitor) {
       try {
-        // Tenter de déclencher l'init des plugins
         const capacitor = (window as any).Capacitor;
         if (capacitor.Plugins) {
           console.log('🔥 Plugins disponibles:', Object.keys(capacitor.Plugins));
         }
         
-        // Vérifier si PermissionsPlugin est maintenant disponible
         setTimeout(() => {
-          console.log('🔥 - PermissionsPlugin après init:', !!window.PermissionsPlugin);
           if (window.PermissionsPlugin) {
-            console.log('🔥 ✅ PermissionsPlugin initialisé avec succès');
-          } else {
-            console.log('🔥 ❌ PermissionsPlugin toujours manquant');
+            console.log('🔥 ✅ PermissionsPlugin initialisé');
           }
         }, 1000);
         
@@ -37,14 +40,13 @@ export const forceInitCapacitorPlugins = () => {
   if ((window as any).Capacitor) {
     initializePlugin();
   } else {
-    // Attendre que Capacitor soit chargé
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(initializePlugin, 500);
     });
   }
 };
 
-// Auto-init au chargement du module
+// Auto-init au chargement du module (Android uniquement)
 if (typeof window !== 'undefined') {
   forceInitCapacitorPlugins();
 }

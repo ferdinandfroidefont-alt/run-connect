@@ -480,6 +480,8 @@ export const usePushNotifications = () => {
           logError('[PUSH] Resume check error:', e);
         }
       });
+    }).catch((err) => {
+      console.warn('⚠️ @capacitor/app import failed (non-fatal):', err);
     });
 
     return () => {
