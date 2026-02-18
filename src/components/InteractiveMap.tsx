@@ -1554,14 +1554,10 @@ export const InteractiveMap = ({
           </Button>
         </div>}
 
-      {/* Filters - Hidden in immersive mode */}
-      {!isImmersiveMode && <div className="absolute top-36 right-4 z-10">
+      {/* Filters + Immersive toggle - grouped right side */}
+      {!isImmersiveMode && <div className="absolute top-36 right-4 z-10 flex items-center gap-1">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
-      </div>}
-
-      {/* Immersive mode toggle - below filters */}
-      {!isImmersiveMode && <div className="absolute top-[10.5rem] right-4 z-10">
-        <div className="w-auto bg-card/95 backdrop-blur-sm shadow-sm rounded-xl cursor-pointer hover:bg-accent/50 transition-colors" onClick={toggleImmersiveMode}>
+        <div className="bg-card/95 backdrop-blur-sm shadow-sm rounded-xl cursor-pointer hover:bg-accent/50 transition-colors" onClick={toggleImmersiveMode}>
           <div className="flex items-center gap-2 p-2">
             <Maximize2 className="h-4 w-4" />
           </div>
