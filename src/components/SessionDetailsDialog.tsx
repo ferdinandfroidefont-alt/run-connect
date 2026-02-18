@@ -428,7 +428,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     <Dialog open={!!session} onOpenChange={onClose}>
       <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0">
         {/* iOS Header */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border">
+        <div className="sticky top-0 z-10 bg-background border-b border-border pt-safe">
           <div className="flex items-center justify-between h-[56px] px-4">
             <button 
               onClick={onClose}
