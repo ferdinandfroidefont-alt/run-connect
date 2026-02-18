@@ -555,30 +555,30 @@ export default function MySessions() {
         <div className="py-4">
           {currentView === 'sessions' ? (
             <>
-              {/* Display Mode Toggle */}
-              <div className="flex items-center gap-3 mb-4 px-4">
-                {/* Filter Pills */}
-                <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
-                  {[
-                    { key: 'all', label: 'Toutes' },
-                    { key: 'upcoming', label: 'À venir' },
-                    { key: 'completed', label: 'Terminées' }
-                  ].map((f) => (
-                    <button
-                      key={f.key}
-                      onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
-                      className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
-                        filter === f.key
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-card text-muted-foreground'
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-                {/* List/Calendar toggle */}
-                <div className="flex bg-card rounded-lg p-0.5 ml-2 shrink-0">
+              {/* Filter Pills */}
+              <div className="flex gap-2 overflow-x-auto pb-1 px-4 mb-2">
+                {[
+                  { key: 'all', label: 'Toutes' },
+                  { key: 'upcoming', label: 'À venir' },
+                  { key: 'completed', label: 'Terminées' }
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
+                    className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
+                      filter === f.key
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card text-muted-foreground'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* List/Calendar toggle */}
+              <div className="flex px-4 mb-4">
+                <div className="flex bg-card rounded-lg p-0.5 shrink-0">
                   <button
                     onClick={() => setSessionsDisplayMode('list')}
                     className={`p-1.5 rounded-md transition-colors ${
