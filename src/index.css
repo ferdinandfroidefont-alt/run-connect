@@ -353,6 +353,46 @@
   input, textarea, select {
     font-size: 16px !important;
   }
+
+  /* iOS Compact Sizing - Slightly reduce vertical heights on iPhone */
+  button {
+    --ios-scale: 0.92;
+  }
+
+  /* Reduce button heights */
+  .h-\[50px\] { height: 46px !important; }
+  .h-\[56px\] { height: 50px !important; }
+  .h-\[44px\] { height: 40px !important; }
+  .h-\[36px\] { height: 34px !important; }
+
+  /* Reduce card/list item vertical padding */
+  .py-3 { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; }
+  .py-4 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+  .p-4 { padding: 0.75rem !important; }
+
+  /* Reduce nav bar height */
+  .h-\[72px\] { height: 64px !important; }
+  .h-\[52px\] { height: 46px !important; }
+
+  /* Reduce icon sizes slightly */
+  .h-7.w-7 { height: 1.5rem !important; width: 1.5rem !important; }
+  .h-10.w-10 { height: 2.25rem !important; width: 2.25rem !important; }
+
+  /* Reduce gap/spacing */
+  .gap-3 { gap: 0.625rem !important; }
+  .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(0.625rem * calc(1 - var(--tw-space-y-reverse))) !important;
+    margin-bottom: calc(0.625rem * var(--tw-space-y-reverse)) !important;
+  }
+
+  /* Reduce text sizes slightly */
+  .text-\[17px\] { font-size: 15px !important; }
+  .text-\[15px\] { font-size: 14px !important; }
+  .text-\[13px\] { font-size: 12px !important; }
+
+  /* Adjust main content bottom padding for smaller nav */
+  .pb-\[72px\] { padding-bottom: 64px !important; }
 }
 
 @media screen and (max-width: 768px) {
