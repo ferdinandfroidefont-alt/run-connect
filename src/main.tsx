@@ -141,8 +141,9 @@ const initializeCapacitorPlugins = async () => {
     console.error('❌ Erreur chargement plugins:', pluginError);
   }
   
+  const detectedPlatform = (window as any).detectedPlatform || 'android';
   window.dispatchEvent(new CustomEvent('capacitorReady', { 
-    detail: { platform: 'android', native: true }
+    detail: { platform: detectedPlatform, native: true }
   }));
 };
 

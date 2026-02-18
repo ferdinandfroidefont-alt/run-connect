@@ -1,15 +1,15 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { AdMob, InterstitialAdPluginEvents, AdLoadInfo } from '@capacitor-community/admob';
 
 // Configuration AdMob
 const ADMOB_CONFIG = {
-  // REMPLACE CES IDs PAR TES VRAIS IDs ADMOB
-  APP_ID: 'ca-app-pub-XXXXXXXXXXXXXXX~XXXXXXXXXX', // Ton App ID AdMob
-  INTERSTITIAL_AD_UNIT_ID: 'ca-app-pub-XXXXXXXXXXXXXXX/XXXXXXXXXX', // Ton Interstitial Unit ID
-  
-  // Mode production (mettre IS_TESTING à false)
-  IS_TESTING: false, // ⚠️ IMPORTANT: false pour la production
+  APP_ID: 'ca-app-pub-XXXXXXXXXXXXXXX~XXXXXXXXXX',
+  INTERSTITIAL_AD_UNIT_ID: 'ca-app-pub-XXXXXXXXXXXXXXX/XXXXXXXXXX',
+  IS_TESTING: false,
+};
+
+// ✅ Détection des IDs placeholder
+const isPlaceholderId = (id: string): boolean => {
+  return id.includes('XXXXXXX') || id.includes('xxxxx') || id.length < 20;
 };
 
 interface AdMobState {
@@ -31,45 +31,72 @@ export const useAdMob = (userIsPremium: boolean = false) => {
     lastSessionAdTime: 0,
   });
 
+  // ✅ Vérifier si AdMob peut être initialisé (IDs valides + plateforme native)
+  const canInitAdMob = useCallback((): boolean => {
+    try {
+      // Vérifier les IDs placeholder
+      if (isPlaceholderId(ADMOB_CONFIG.APP_ID) || isPlaceholderId(ADMOB_CONFIG.INTERSTITIAL_AD_UNIT_ID)) {
+        console.log('⚠️ AdMob: IDs placeholder détectés, initialisation ignorée');
+        return false;
+      }
+
+      // Vérifier si on est en mode natif via Capacitor
+      try {
+        const { Capacitor } = require('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) {
+          return false;
+        }
+      } catch {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('⚠️ AdMob: Erreur vérification:', error);
+      return false;
+    }
+  }, []);
+
   // Initialisation AdMob
   const initializeAdMob = useCallback(async () => {
-    if (!Capacitor.isNativePlatform() || stateRef.current.isInitialized) {
+    if (stateRef.current.isInitialized || !canInitAdMob()) {
       return;
     }
 
     try {
+      const { AdMob } = await import('@capacitor-community/admob');
+      
       await AdMob.initialize({
         testingDevices: ADMOB_CONFIG.IS_TESTING ? ['YOUR_TEST_DEVICE_ID'] : [],
         initializeForTesting: ADMOB_CONFIG.IS_TESTING,
       });
 
       stateRef.current.isInitialized = true;
-      console.log('AdMob initialized successfully');
+      console.log('✅ AdMob initialized successfully');
       
-      // Précharger la première interstitielle
       await loadInterstitialAd();
     } catch (error) {
-      console.error('Failed to initialize AdMob:', error);
+      console.warn('⚠️ AdMob init failed (non-fatal):', error);
     }
-  }, []);
+  }, [canInitAdMob]);
 
   // Chargement d'une interstitielle
   const loadInterstitialAd = useCallback(async (): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform() || !stateRef.current.isInitialized) {
-      return false;
-    }
+    if (!stateRef.current.isInitialized) return false;
 
     try {
+      const { AdMob } = await import('@capacitor-community/admob');
+      
       await AdMob.prepareInterstitial({
         adId: ADMOB_CONFIG.INTERSTITIAL_AD_UNIT_ID,
         isTesting: ADMOB_CONFIG.IS_TESTING,
       });
 
       stateRef.current.isAdLoaded = true;
-      console.log('Interstitial ad loaded successfully');
+      console.log('✅ Interstitial ad loaded');
       return true;
     } catch (error) {
-      console.error('Failed to load interstitial ad:', error);
+      console.warn('⚠️ AdMob load failed:', error);
       stateRef.current.isAdLoaded = false;
       return false;
     }
@@ -77,90 +104,59 @@ export const useAdMob = (userIsPremium: boolean = false) => {
 
   // Vérification des conditions d'affichage
   const canShowAd = useCallback((): boolean => {
-    if (userIsPremium) {
-      console.log('AdMob: User is premium, skipping ad');
-      return false;
-    }
-
-    if (!stateRef.current.isAdLoaded) {
-      console.log('AdMob: Ad not loaded, skipping');
-      return false;
-    }
+    if (userIsPremium || !stateRef.current.isAdLoaded) return false;
 
     const now = Date.now();
     const timeSinceLastAd = now - stateRef.current.lastAdTime;
     const eightMinutesInMs = 8 * 60 * 1000;
 
-    // Vérifier le cap de fréquence: minimum 2 actions ET 8 minutes
-    if (stateRef.current.actionCount < 2) {
-      console.log('AdMob: Not enough actions (need 2, have', stateRef.current.actionCount, ')');
-      return false;
-    }
-
-    if (timeSinceLastAd < eightMinutesInMs) {
-      console.log('AdMob: Too soon since last ad (need 8min, been', Math.round(timeSinceLastAd / 60000), 'min)');
-      return false;
-    }
+    if (stateRef.current.actionCount < 2) return false;
+    if (timeSinceLastAd < eightMinutesInMs) return false;
 
     return true;
   }, [userIsPremium]);
 
   // Affichage d'une interstitielle
   const showInterstitialAd = useCallback(async (): Promise<boolean> => {
-    if (!canShowAd()) {
-      return false;
-    }
+    if (!canShowAd()) return false;
 
     try {
+      const { AdMob } = await import('@capacitor-community/admob');
       await AdMob.showInterstitial();
       
-      // Réinitialiser les compteurs après affichage
       stateRef.current.lastAdTime = Date.now();
       stateRef.current.actionCount = 0;
       stateRef.current.isAdLoaded = false;
       
-      console.log('Interstitial ad shown successfully');
-      
-      // Précharger la prochaine interstitielle
       setTimeout(() => loadInterstitialAd(), 1000);
-      
       return true;
     } catch (error) {
-      console.error('Failed to show interstitial ad:', error);
+      console.warn('⚠️ AdMob show failed:', error);
       return false;
     }
   }, [canShowAd, loadInterstitialAd]);
 
-  // Affichage après création de séance
   const showAdAfterSessionCreation = useCallback(async () => {
-    console.log('AdMob: Session created, checking ad conditions');
     stateRef.current.actionCount++;
     await showInterstitialAd();
   }, [showInterstitialAd]);
 
-  // Affichage après avoir rejoint une séance
   const showAdAfterJoiningSession = useCallback(async () => {
-    console.log('AdMob: Joined session, checking ad conditions');
     stateRef.current.actionCount++;
     await showInterstitialAd();
   }, [showInterstitialAd]);
 
-  // Timer de session (8 minutes)
+  // Timer de session
   const checkSessionTimer = useCallback(() => {
-    if (userIsPremium) return;
+    if (userIsPremium || !stateRef.current.isInitialized) return;
 
     const now = Date.now();
     const sessionDuration = now - stateRef.current.sessionStartTime;
     const timeSinceLastSessionAd = now - stateRef.current.lastSessionAdTime;
     const eightMinutesInMs = 8 * 60 * 1000;
 
-    // Si 8 minutes se sont écoulées depuis le début de la session
-    // ET 8 minutes depuis la dernière pub de session
     if (sessionDuration >= eightMinutesInMs && timeSinceLastSessionAd >= eightMinutesInMs) {
-      console.log('AdMob: 8 minutes session timer reached');
       stateRef.current.lastSessionAdTime = now;
-      
-      // Ne pas compter comme une action pour le timer de session
       if (stateRef.current.isAdLoaded) {
         showInterstitialAd();
       }
@@ -169,25 +165,26 @@ export const useAdMob = (userIsPremium: boolean = false) => {
 
   // Initialisation et listeners
   useEffect(() => {
+    if (!canInitAdMob()) return;
+
     initializeAdMob();
 
-    // Timer de vérification toutes les minutes
     const sessionTimer = setInterval(checkSessionTimer, 60000);
 
-    // Listeners pour les événements AdMob
     const addListeners = async () => {
-      if (Capacitor.isNativePlatform()) {
-        await AdMob.addListener(InterstitialAdPluginEvents.Loaded, (info: AdLoadInfo) => {
-          console.log('Interstitial ad loaded:', info);
+      try {
+        const { AdMob, InterstitialAdPluginEvents } = await import('@capacitor-community/admob');
+        
+        await AdMob.addListener(InterstitialAdPluginEvents.Loaded, () => {
           stateRef.current.isAdLoaded = true;
         });
 
-        await AdMob.addListener(InterstitialAdPluginEvents.FailedToLoad, (info) => {
-          console.error('Interstitial ad failed to load:', info);
+        await AdMob.addListener(InterstitialAdPluginEvents.FailedToLoad, () => {
           stateRef.current.isAdLoaded = false;
-          // Réessayer de charger après 30 secondes
           setTimeout(() => loadInterstitialAd(), 30000);
         });
+      } catch (error) {
+        console.warn('⚠️ AdMob listeners setup failed:', error);
       }
     };
 
@@ -195,9 +192,8 @@ export const useAdMob = (userIsPremium: boolean = false) => {
 
     return () => {
       clearInterval(sessionTimer);
-      // Les listeners seront automatiquement nettoyés
     };
-  }, [initializeAdMob, checkSessionTimer, loadInterstitialAd]);
+  }, [canInitAdMob, initializeAdMob, checkSessionTimer, loadInterstitialAd]);
 
   return {
     showAdAfterSessionCreation,
