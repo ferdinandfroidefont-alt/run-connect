@@ -714,7 +714,7 @@ export default function MySessions() {
               )}
 
               {/* Organizer Stats - en bas */}
-              <div className="mt-3">
+              <div className="mt-3 pb-8">
                 <div className="px-4"><OrganizerStatsCard /></div>
               </div>
             </>

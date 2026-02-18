@@ -605,8 +605,7 @@ const Profile = () => {
       </div>;
   }
   return <div className="min-h-screen bg-secondary bg-pattern">
-      {/* Safe area fill for iOS notch */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-card" style={{ height: 'env(safe-area-inset-top, 0px)' }} />
+      {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
       <div className="sticky top-0 z-40 bg-card border-b border-border pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
