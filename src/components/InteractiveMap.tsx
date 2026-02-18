@@ -1381,7 +1381,7 @@ export const InteractiveMap = ({
         <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden pt-safe">
           <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
             {/* Runconnect Title - Left aligned iOS style */}
-            <h1 className="text-lg font-semibold text-primary leading-none flex items-center">
+            <h1 className="text-lg font-semibold text-primary leading-none flex items-center mt-1">
               Runconnect
             </h1>
             
@@ -1555,7 +1555,7 @@ export const InteractiveMap = ({
         </div>}
 
       {/* Filters + Immersive toggle - stacked & attached */}
-      {!isImmersiveMode && <div className="absolute right-4 z-10 flex flex-col items-stretch ios-map-filters" style={{ top: 'calc(9.5rem + env(safe-area-inset-top, 0px))' }}>
+      {!isImmersiveMode && <div className="absolute right-4 z-10 flex flex-col items-stretch ios-map-filters" style={{ top: 'calc(10.5rem + env(safe-area-inset-top, 0px))' }}>
         <SessionFilters filters={filters} onFiltersChange={setFilters} className="rounded-b-none" />
         <div className="bg-card/95 backdrop-blur-sm shadow-sm rounded-b-xl border border-t-0 border-border cursor-pointer hover:bg-accent/50 transition-colors flex items-center justify-center p-1.5" onClick={toggleImmersiveMode}>
           <Maximize2 className="h-3.5 w-3.5" />
