@@ -415,6 +415,17 @@
     align-items: flex-start !important;
     padding-top: 0.5rem !important;
   }
+
+  /* iOS: remonter la barre de recherche et les boutons bas de la carte */
+  .ios-map-search {
+    top: calc(5.5rem + env(safe-area-inset-top, 0px)) !important;
+  }
+  .ios-map-filters {
+    top: calc(9rem + env(safe-area-inset-top, 0px)) !important;
+  }
+  .ios-map-bottom-buttons {
+    bottom: 0.5rem !important;
+  }
 }
 
 /* Mobile viewport handling replaced by global base styles */
