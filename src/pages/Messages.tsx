@@ -2054,8 +2054,8 @@ const Messages = () => {
 
            {/* iMessage Style Input */}
           <div 
-            className="sticky bottom-0 w-full px-2 py-2 bg-secondary border-t border-border z-40 keyboard-input-container"
-            style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+            className="sticky bottom-0 w-full px-2 py-1 bg-secondary border-t border-border z-40 keyboard-input-container"
+            style={{ paddingBottom: 'calc(0.25rem + env(safe-area-inset-bottom, 0px))' }}
           >
             {/* Reply Preview */}
             {replyTo && (
