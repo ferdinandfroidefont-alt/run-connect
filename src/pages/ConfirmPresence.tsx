@@ -141,7 +141,7 @@ export default function ConfirmPresence() {
       {/* iOS Header */}
       
       {/* iOS Header */}
-      <div className="bg-card border-b border-border shrink-0">
+      <div className="bg-card border-b border-border shrink-0 pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={handleBack}

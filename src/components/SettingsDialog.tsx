@@ -408,7 +408,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               className="flex flex-col h-full"
             >
               {/* iOS Header */}
-              <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
+              <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0 pt-safe">
                 <div className="flex items-center justify-between px-4 py-3">
                   <button
                     onClick={() => onOpenChange(false)}
