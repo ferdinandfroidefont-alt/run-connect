@@ -168,6 +168,12 @@
 }
 
 @layer utilities {
+  /* Safe viewport height: uses 100dvh with 100vh fallback */
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+
   /* iOS Typography System */
   .text-ios-largetitle {
     @apply font-bold text-[34px] tracking-tight leading-tight;
@@ -342,14 +348,16 @@
 
 @media screen and (max-width: 768px) {
   html, body {
-    height: 100%;
+    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     position: fixed;
     width: 100%;
   }
 
   #root {
-    height: 100%;
+    height: 100vh;
+    height: 100dvh;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
   }

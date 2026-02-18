@@ -64,7 +64,7 @@ export const BottomNavigation = () => {
   if (hideBottomNav) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl pb-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl pb-safe">
       <div className="h-px bg-border/50" />
       <div className="grid grid-cols-5 items-center h-[72px]">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
