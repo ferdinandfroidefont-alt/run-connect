@@ -536,8 +536,8 @@ const Leaderboard = () => {
   return (
     <div className="min-h-screen bg-secondary pb-8 bg-pattern">
       {/* iOS Header */}
-      <div className="sticky top-0 z-50 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3 pt-safe">
+      <div className="sticky top-0 z-50 bg-card border-b border-border pt-safe">
+        <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => navigate('/')}
             className="flex items-center gap-1 text-primary"
