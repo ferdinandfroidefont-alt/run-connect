@@ -1362,14 +1362,14 @@ export const InteractiveMap = ({
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (
         <div className="absolute top-0 left-0 right-0 z-10 pt-safe">
-          <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center px-4 py-2">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={toggleImmersiveMode}
-              className="h-10 px-3 rounded-[10px] bg-card/90 backdrop-blur-sm border border-border shadow-sm gap-1"
+              className="px-0 font-normal"
             >
-              <Minimize2 className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5 mr-1" />
               Retour
             </Button>
           </div>
@@ -1554,18 +1554,16 @@ export const InteractiveMap = ({
           </Button>
         </div>}
 
-      {/* Filters - Hidden in immersive mode */}
-      {!isImmersiveMode && <div className="absolute ios-filter-position right-4 z-10" style={{ top: 'calc(12rem + env(safe-area-inset-top, 0px))' }}>
+      {/* Filters + Immersive toggle - Hidden in immersive mode */}
+      {!isImmersiveMode && <div className="absolute top-36 right-4 z-10 flex flex-col items-end gap-2">
         <SessionFilters filters={filters} onFiltersChange={setFilters} />
+        <Button onClick={toggleImmersiveMode} size="sm" variant="outline" className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center" title="Mode immersif">
+          <Maximize2 className="h-4 w-4" />
+        </Button>
       </div>}
       
       {/* All Map Controls - iOS Style */}
       <div className="absolute left-4 bottom-4 flex flex-col gap-2 z-10">
-        {/* Immersive Mode Toggle */}
-        <Button onClick={toggleImmersiveMode} size="sm" variant="outline" className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center" title={isImmersiveMode ? "Quitter le mode immersif" : "Mode immersif"}>
-          {isImmersiveMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
-
         {/* Route Creation Button */}
         {user && <Button onClick={() => {
         console.log('🖱️ Pencil button clicked - navigating to route creation');
