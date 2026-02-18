@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield, GraduationCap } from "lucide-react";
+import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +23,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
   const { t } = useLanguage();
   const { restartTutorial } = useTutorial();
   const [loading, setLoading] = useState(false);
+  const [showAdminPremium, setShowAdminPremium] = useState(false);
   const navigate = useNavigate();
 
   const handleRestartTutorial = async () => {
@@ -206,7 +208,10 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
               {user?.email === 'ferdinand.froidefont@gmail.com' && (
                 <>
                   <div className="h-px bg-border ml-[54px]" />
-                  <button className="w-full flex items-center gap-3 px-4 py-3 bg-primary/5 active:bg-primary/10 transition-colors">
+                  <button 
+                    onClick={() => setShowAdminPremium(true)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-primary/5 active:bg-primary/10 transition-colors"
+                  >
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
                       <Settings className="h-[18px] w-[18px] text-white" />
                     </div>
@@ -215,6 +220,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                     </div>
                     <ChevronRight className="h-5 w-5 text-primary/50" />
                   </button>
+                  <AdminPremiumManager open={showAdminPremium} onOpenChange={setShowAdminPremium} />
                 </>
               )}
             </div>
