@@ -1387,14 +1387,14 @@ export const InteractiveMap = ({
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
             {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2" data-tutorial="profile-avatar">
-                <div onClick={() => setShowProfileDialog(true)} className="cursor-pointer hover-scale hover-glow transition-all duration-200 flex flex-col items-center">
+                <div onClick={() => setShowProfileDialog(true)} className="relative cursor-pointer hover-scale hover-glow transition-all duration-200 flex flex-col items-center">
                   <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                     <AvatarFallback className="text-lg">
                       {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {user && <div className="mt-0.5"><StreakBadge userId={user.id} variant="compact" /></div>}
+                  {user && <div className="absolute -bottom-1 -right-1 scale-75"><StreakBadge userId={user.id} variant="compact" /></div>}
                 </div>
               </div>}
             

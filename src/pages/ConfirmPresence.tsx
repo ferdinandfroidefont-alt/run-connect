@@ -137,7 +137,7 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary bg-pattern">
+    <div className="min-h-screen bg-secondary bg-pattern pt-safe">
       {/* iOS Header with safe area background */}
       <div className="bg-card border-b border-border shrink-0 pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
