@@ -1353,7 +1353,7 @@ export const InteractiveMap = ({
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
         <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden pt-safe">
-          <div className="relative flex items-center justify-between px-4 py-3">
+          <div className="relative flex items-center justify-between px-4 py-8">
             {/* Runconnect Title - Left aligned iOS style */}
             <h1 className="text-xl font-semibold text-primary">
               Runconnect
@@ -1385,7 +1385,7 @@ export const InteractiveMap = ({
         </div>
         
         {/* Search Bar and Date Filter - Floating over map */}
-        <div className="px-4 pb-4 pt-2">
+        <div className="absolute top-24 left-0 right-0 z-10 px-4 pb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
