@@ -76,8 +76,8 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen-safe bg-background flex flex-col bg-pattern pt-safe">
-      <main className={`flex-1 overflow-auto ${hideBottomNav ? "" : "pb-[calc(72px+env(safe-area-inset-bottom,0px))]"}`}>
+    <div className="h-screen-safe bg-background flex flex-col bg-pattern overflow-hidden">
+      <main className={`flex-1 overflow-auto scroll-momentum ${hideBottomNav ? "" : "pb-[calc(72px+env(safe-area-inset-bottom,0px))]"}`}>
         <div className="animate-fade-in">
           {children}
         </div>

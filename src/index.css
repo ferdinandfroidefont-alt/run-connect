@@ -264,6 +264,14 @@
     @apply text-[13px] font-normal text-muted-foreground uppercase tracking-wide px-4 py-2;
   }
 
+  /* Glass Card */
+  .glass-card {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
   /* Background Pattern */
   .bg-pattern {
     position: relative;
@@ -351,15 +359,12 @@
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
-    position: fixed;
-    width: 100%;
   }
 
   #root {
     height: 100vh;
     height: 100dvh;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 }
 
