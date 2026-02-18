@@ -1346,7 +1346,7 @@ export const InteractiveMap = ({
     });
     setIsCreateDialogOpen(true);
   };
-  return <div className="relative w-full bg-background overflow-hidden" style={{ height: 'calc(100dvh - 72px - env(safe-area-inset-bottom, 0px))' }}>
+  return <div className="relative w-full h-full bg-background overflow-hidden">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" data-tutorial="map-container" />
       
@@ -1510,7 +1510,7 @@ export const InteractiveMap = ({
         </div>}
 
       {/* Leaderboard, Confirm Presence & Level Filter Buttons - iOS Style */}
-      {user && <div className="absolute right-4 z-10 flex flex-col gap-2" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+      {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
           {/* Level Slider Filter - iOS Style */}
           <LevelSliderFilter
             selectedLevel={filters.level}
@@ -1534,7 +1534,7 @@ export const InteractiveMap = ({
       </div>
       
       {/* All Map Controls - iOS Style */}
-      <div className="absolute left-4 flex flex-col gap-2 z-10" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="absolute left-4 bottom-4 flex flex-col gap-2 z-10">
         {/* Route Creation Button */}
         {user && <Button onClick={() => {
         console.log('🖱️ Pencil button clicked - navigating to route creation');
