@@ -336,16 +336,33 @@ export const usePushNotifications = () => {
       await checkPermissionStatus();
 
       if (isNative) {
+        // IMPORTANT: setup listeners FIRST, then register
         await setupPushListeners();
+
+        // Small delay to ensure listeners are fully attached before register()
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         try {
           const status = await PushNotifications.checkPermissions();
+          log('[PUSH] Permission status:', status.receive);
+          
           if (status.receive === 'granted') {
             const { data: profile } = await supabase.from('profiles').select('push_token').eq('user_id', user.id).single();
             if (profile?.push_token) {
+              log('[PUSH] Token already in DB, syncing');
               setToken(profile.push_token);
               setIsRegistered(true);
             } else {
+              log('[PUSH] No token in DB, calling register()...');
+              await PushNotifications.register();
+              log('[PUSH] register() called successfully');
+            }
+          } else if (status.receive === 'prompt' || status.receive === 'prompt-with-rationale') {
+            // iOS: request permissions then register
+            log('[PUSH] Requesting permissions on iOS...');
+            const permResult = await PushNotifications.requestPermissions();
+            if (permResult.receive === 'granted') {
+              log('[PUSH] iOS permissions granted, registering...');
               await PushNotifications.register();
             }
           }
