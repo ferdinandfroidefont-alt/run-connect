@@ -470,7 +470,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Profile Share Section */}
                   {profile && (
-                    <div className="bg-background overflow-hidden p-4 space-y-4">
+                    <div className="bg-background overflow-hidden px-6 py-4 space-y-4">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
@@ -502,7 +502,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
                           <div className="relative bg-gradient-to-br from-card to-card/80 p-3 rounded-2xl border border-primary/20 shadow-lg">
                             {qrLoading ? (
-                              <div className="w-[180px] h-[180px] flex items-center justify-center">
+                              <div className="w-[140px] h-[140px] flex items-center justify-center">
                                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
                               </div>
                             ) : qrImageUrl ? (
@@ -510,10 +510,10 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                                 src={qrImageUrl} 
                                 alt="QR Code du profil"
                                 className="rounded-lg"
-                                style={{ width: 180, height: 180 }}
+                                style={{ width: 140, height: 140 }}
                               />
                             ) : (
-                              <div className="w-[180px] h-[180px] flex items-center justify-center text-muted-foreground text-xs">
+                              <div className="w-[140px] h-[140px] flex items-center justify-center text-muted-foreground text-xs">
                                 Erreur de génération
                               </div>
                             )}
