@@ -1346,13 +1346,13 @@ export const InteractiveMap = ({
     });
     setIsCreateDialogOpen(true);
   };
-  return <div className="relative w-full h-[calc(100vh-72px)] bg-background overflow-hidden">
+  return <div className="relative w-full bg-background overflow-hidden" style={{ height: 'calc(100dvh - 72px - env(safe-area-inset-bottom, 0px))' }}>
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" data-tutorial="map-container" />
       
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10">
-        <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden">
+        <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden pt-safe">
           <div className="relative flex items-center justify-between px-4 py-8">
             {/* Runconnect Title - Left aligned iOS style */}
             <h1 className="text-xl font-semibold text-primary">
@@ -1510,7 +1510,7 @@ export const InteractiveMap = ({
         </div>}
 
       {/* Leaderboard, Confirm Presence & Level Filter Buttons - iOS Style */}
-      {user && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2">
+      {user && <div className="absolute right-4 z-10 flex flex-col gap-2" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
           {/* Level Slider Filter - iOS Style */}
           <LevelSliderFilter
             selectedLevel={filters.level}
@@ -1534,7 +1534,7 @@ export const InteractiveMap = ({
       </div>
       
       {/* All Map Controls - iOS Style */}
-      <div className="absolute left-4 bottom-4 flex flex-col gap-2 z-10">
+      <div className="absolute left-4 flex flex-col gap-2 z-10" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
         {/* Route Creation Button */}
         {user && <Button onClick={() => {
         console.log('🖱️ Pencil button clicked - navigating to route creation');
