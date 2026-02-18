@@ -523,7 +523,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                       {/* Referral code */}
                       {profile.referral_code && (
-                        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-cyan-400/10 p-3 rounded-xl border border-primary/20">
+                        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-cyan-400/10 p-3 rounded-xl border border-primary/20 mx-2">
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-muted-foreground">Code parrainage</span>
                             <span className="font-mono font-bold text-primary text-sm tracking-wider">{profile.referral_code}</span>
@@ -537,7 +537,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                       </p>
                       
                       {/* Action buttons */}
-                      <div className="space-y-2">
+                      <div className="space-y-2 mx-2">
                         <Button
                           variant="default"
                           size="default"
