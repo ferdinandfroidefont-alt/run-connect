@@ -555,29 +555,8 @@ export default function MySessions() {
         <div className="py-4">
           {currentView === 'sessions' ? (
             <>
-              {/* Filter Pills */}
-              <div className="flex gap-2 overflow-x-auto pb-1 px-4 mb-2">
-                {[
-                  { key: 'all', label: 'Toutes' },
-                  { key: 'upcoming', label: 'À venir' },
-                  { key: 'completed', label: 'Terminées' }
-                ].map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
-                    className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
-                      filter === f.key
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card text-muted-foreground'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-
               {/* List/Calendar toggle */}
-              <div className="flex px-4 mb-4">
+              <div className="flex px-4 mb-2">
                 <div className="flex bg-card rounded-lg p-0.5 shrink-0">
                   <button
                     onClick={() => setSessionsDisplayMode('list')}
@@ -596,6 +575,27 @@ export default function MySessions() {
                     <CalendarDays className="h-4 w-4" />
                   </button>
                 </div>
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex gap-2 overflow-x-auto pb-1 px-4 mb-4">
+                {[
+                  { key: 'all', label: 'Toutes' },
+                  { key: 'upcoming', label: 'À venir' },
+                  { key: 'completed', label: 'Terminées' }
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
+                    className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
+                      filter === f.key
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card text-muted-foreground'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
 
               {/* Sessions Display */}
