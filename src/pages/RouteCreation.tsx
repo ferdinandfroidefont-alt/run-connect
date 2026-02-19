@@ -637,7 +637,7 @@ export const RouteCreation = () => {
   };
 
    return (
-    <div className="fixed inset-0 bg-background z-50 bg-pattern overflow-hidden">
+    <div className="fixed inset-0 bg-background z-50 bg-pattern overflow-x-hidden">
       {/* Barre supérieure minimaliste */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background/95 to-transparent backdrop-blur-sm border-b border-border/30 p-4 pt-safe">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
