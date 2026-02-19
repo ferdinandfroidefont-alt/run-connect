@@ -587,9 +587,9 @@ const Auth = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern overflow-x-hidden" style={{ touchAction: 'pan-y' }}>
+    <div className="h-full w-full bg-secondary flex flex-col bg-pattern overflow-hidden">
       {/* iOS Header */}
-      <div className="bg-card border-b border-border pt-safe">
+      <div className="bg-card border-b border-border pt-safe flex-shrink-0">
         <div className="flex items-center justify-center px-4 h-[56px]">
           <h1 className="text-[17px] font-semibold">
             {authStep === 'reset' ? 'Réinitialiser' : authMode === 'signup' ? 'Inscription' : 'Connexion'}
@@ -597,8 +597,8 @@ const Auth = () => {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-momentum" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
-        <div className="px-4 py-6 space-y-6 pb-12">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="px-4 py-6 space-y-6 pb-16">
           {/* Logo Section */}
           <div className="flex flex-col items-center pt-4 pb-2">
             <img 
