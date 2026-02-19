@@ -328,9 +328,8 @@ const Auth = () => {
           });
 
           // Ouvrir le navigateur intégré
-          await InAppBrowser.openWebView({
+          await InAppBrowser.open({
             url: oauthData.url,
-            title: 'Connexion Google',
             isPresentAfterPageLoad: true,
             preventDeeplink: false,
           });
