@@ -1,57 +1,56 @@
 
 
-## Fix: Google Sign-In "Acces Bloque" sur iOS
+# Supprimer la barre de statut iOS
 
-### Cause racine
+## Probleme
+La barre de statut (heure, batterie, reseau) reste visible en haut de l'ecran sur iPhone. Elle n'a jamais ete masquee car le plugin necessaire n'est pas installe.
 
-Google interdit l'authentification OAuth dans les WebViews embarquees (WKWebView) depuis avril 2017. C'est une politique de securite stricte de Google.
+## Solution
 
-Le code actuel utilise `InAppBrowser.openWebView()` qui ouvre un **WKWebView** -- Google le detecte et affiche "Acces bloque".
+### 1. Installer le plugin Capacitor StatusBar
+Ajouter `@capacitor/status-bar` au projet. C'est le seul moyen officiel de cacher la barre de statut sur iOS dans une app Capacitor.
 
-Safari fonctionne car c'est un navigateur complet. Android fonctionne car il utilise le SDK natif Google (AndroidBridge).
+### 2. Masquer la barre de statut au demarrage de l'app
+Dans `src/main.tsx` (ou `src/lib/capacitor-init.ts`), appeler `StatusBar.hide()` au lancement :
 
-### Solution
-
-Remplacer `InAppBrowser.openWebView()` par `InAppBrowser.open()` dans `src/pages/Auth.tsx`. La methode `open()` utilise `SFSafariViewController` (ou `ASWebAuthenticationSession`) sur iOS, qui est **autorise par Google** pour OAuth car il partage les cookies et le contexte de securite du navigateur systeme.
-
-### Modification
-
-**Fichier : `src/pages/Auth.tsx`** (ligne ~331)
-
-Changer :
 ```typescript
-await InAppBrowser.openWebView({
-  url: oauthData.url,
-  title: 'Connexion Google',
-  isPresentAfterPageLoad: true,
-  preventDeeplink: false,
-});
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
+
+if (Capacitor.isNativePlatform()) {
+  StatusBar.hide();
+}
 ```
 
-En :
+### 3. Mettre a jour la config Capacitor (iOS)
+Dans `capacitor.config.ts`, ajouter la config du plugin StatusBar :
+
 ```typescript
-await InAppBrowser.open({
-  url: oauthData.url,
-  isPresentAfterPageLoad: true,
-  preventDeeplink: false,
-});
+plugins: {
+  StatusBar: {
+    style: 'Dark',
+    backgroundColor: '#0F1729'
+  }
+}
 ```
 
-### Pourquoi ca fonctionne
+### 4. Ajouter la meta tag pour le web (PWA/Safari)
+Dans `index.html`, ajouter :
+```html
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+```
+Cela masque visuellement la barre de statut quand l'app est ajoutee a l'ecran d'accueil depuis Safari.
 
-| Methode | Composant iOS | Google OAuth |
-|---------|--------------|--------------|
-| `openWebView()` | WKWebView (embarque) | BLOQUE |
-| `open()` | SFSafariViewController | AUTORISE |
+## Details techniques
+- Le plugin `@capacitor/status-bar` est la methode officielle Capacitor pour controler la barre de statut iOS/Android
+- `StatusBar.hide()` utilise l'API native `prefersStatusBarHidden` sur iOS
+- Les meta tags couvrent le cas PWA (app installee depuis Safari)
+- L'appel est protege par `Capacitor.isNativePlatform()` pour ne pas planter sur le web
 
-`SFSafariViewController` est un composant systeme Apple qui :
-- Partage les cookies avec Safari (donc les sessions Google existantes)
-- Est reconnu par Google comme un navigateur legitime
-- Reste dans l'application (pas de redirection vers Safari externe)
-
-### Impact
-
-- Une seule ligne modifiee
-- Le reste du flux (urlChangeEvent, extraction des tokens, fermeture automatique) reste identique
-- L'experience utilisateur reste la meme : une popup s'ouvre dans l'app, l'utilisateur se connecte, la popup se ferme
+## Fichiers modifies
+- `package.json` (ajout dependance)
+- `src/main.tsx` ou `src/lib/capacitor-init.ts` (appel StatusBar.hide)
+- `capacitor.config.ts` (config plugin)
+- `index.html` (meta tags PWA)
 
