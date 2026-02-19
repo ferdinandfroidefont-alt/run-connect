@@ -426,7 +426,7 @@
     top: calc(4.5rem + env(safe-area-inset-top, 0px)) !important;
   }
   .ios-map-filters {
-    top: calc(7rem + env(safe-area-inset-top, 0px)) !important;
+    top: calc(7.5rem + env(safe-area-inset-top, 0px)) !important;
   }
   .ios-map-bottom-buttons {
     bottom: 0.5rem !important;
