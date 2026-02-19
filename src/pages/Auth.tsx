@@ -597,7 +597,7 @@ const Auth = () => {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="px-4 py-6 space-y-6">
           {/* Logo Section */}
           <div className="flex flex-col items-center pt-4 pb-2">
@@ -961,7 +961,7 @@ const Auth = () => {
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <ProfileSetupDialog
         open={showProfileSetup}
