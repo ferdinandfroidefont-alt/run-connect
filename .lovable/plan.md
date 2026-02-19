@@ -1,51 +1,57 @@
 
 
-## Fix: Stabilite iOS (barre en haut) + Google Sign-In "Acces Bloque"
+## Fix: Google Sign-In "Acces Bloque" sur iOS
 
-### Probleme 1 : Barre qui apparait en haut sur la page Auth et autres pages
+### Cause racine
 
-La page Auth (`/auth`) et plusieurs autres pages autonomes (About, Terms, Privacy, PublicProfile, NotFound, DonationSuccess, DonationCanceled) utilisent encore `min-h-screen`, ce qui provoque l'effet de rebond elastique iOS et revele la barre du navigateur.
+Google interdit l'authentification OAuth dans les WebViews embarquees (WKWebView) depuis avril 2017. C'est une politique de securite stricte de Google.
 
-### Probleme 2 : Google Sign-In "Acces Bloque" sur iOS
+Le code actuel utilise `InAppBrowser.openWebView()` qui ouvre un **WKWebView** -- Google le detecte et affiche "Acces bloque".
 
-L'erreur "Acces bloque - demande du projet 220304658307 ne respecte pas les regles" est un probleme de **configuration Google Cloud Console**, pas du code. Sur iOS, le flux utilise `InAppBrowser` qui ouvre la page OAuth Google -- mais Google bloque la requete car le projet n'a pas ete verifie ou les URIs de redirection ne sont pas correctement configurees pour iOS.
+Safari fonctionne car c'est un navigateur complet. Android fonctionne car il utilise le SDK natif Google (AndroidBridge).
 
----
+### Solution
 
-### Solution code : Corriger toutes les pages avec `min-h-screen`
+Remplacer `InAppBrowser.openWebView()` par `InAppBrowser.open()` dans `src/pages/Auth.tsx`. La methode `open()` utilise `SFSafariViewController` (ou `ASWebAuthenticationSession`) sur iOS, qui est **autorise par Google** pour OAuth car il partage les cookies et le contexte de securite du navigateur systeme.
 
-| Fichier | Type | Correction |
-|---------|------|------------|
-| `src/pages/Auth.tsx` | Autonome | `min-h-screen` devient `fixed inset-0 flex flex-col pt-safe` + ScrollArea dans `flex-1` |
-| `src/pages/About.tsx` | Autonome | `min-h-screen` devient `fixed inset-0 flex flex-col pt-safe` |
-| `src/pages/Terms.tsx` | Autonome | `min-h-screen` devient `fixed inset-0 flex flex-col pt-safe` |
-| `src/pages/Privacy.tsx` | Autonome | `min-h-screen` devient `fixed inset-0 flex flex-col pt-safe` |
-| `src/pages/PublicProfile.tsx` | Autonome | `min-h-screen` devient `fixed inset-0 flex flex-col pt-safe` avec contenu `flex-1 overflow-y-auto` |
-| `src/pages/NotFound.tsx` | Autonome | `min-h-screen` devient `fixed inset-0` |
-| `src/pages/DonationSuccess.tsx` | Autonome | `min-h-screen` devient `fixed inset-0` |
-| `src/pages/DonationCanceled.tsx` | Autonome | `min-h-screen` devient `fixed inset-0` |
-| `src/pages/Index.tsx` (loading) | Dans Layout | `min-h-screen` devient `h-full` |
+### Modification
 
-### Solution Google Sign-In iOS : Actions manuelles requises
+**Fichier : `src/pages/Auth.tsx`** (ligne ~331)
 
-L'erreur "Acces bloque" vient de la **Google Cloud Console**, pas du code. Voici les etapes :
+Changer :
+```typescript
+await InAppBrowser.openWebView({
+  url: oauthData.url,
+  title: 'Connexion Google',
+  isPresentAfterPageLoad: true,
+  preventDeeplink: false,
+});
+```
 
-1. Aller dans **Google Cloud Console** : https://console.cloud.google.com/apis/credentials?project=run-connect-55803
-2. Aller dans **OAuth consent screen** (ecran de consentement)
-3. Verifier que le statut de publication est **"En production"** (pas "En test")
-   - Si c'est "En test", cliquer **"Publier l'application"**
-   - En mode test, seuls les utilisateurs de test ajoutes manuellement peuvent se connecter
-4. Verifier les **domaines autorises** :
-   - `run-connect.lovable.app`
-   - `dbptgehpknjsoisirviz.supabase.co` (domaine Supabase pour le callback OAuth)
-5. Verifier les **URI de redirection** du client Web OAuth :
-   - `https://dbptgehpknjsoisirviz.supabase.co/auth/v1/callback`
+En :
+```typescript
+await InAppBrowser.open({
+  url: oauthData.url,
+  isPresentAfterPageLoad: true,
+  preventDeeplink: false,
+});
+```
 
-### Detail technique
+### Pourquoi ca fonctionne
 
-**Auth.tsx** : Le conteneur principal passe de `min-h-screen bg-secondary flex flex-col bg-pattern` a `fixed inset-0 bg-secondary flex flex-col bg-pattern pt-safe`. Le header perd son `pt-safe` interne (deja sur le parent). La `ScrollArea` reste inchangee car elle gere deja le scroll interne correctement.
+| Methode | Composant iOS | Google OAuth |
+|---------|--------------|--------------|
+| `openWebView()` | WKWebView (embarque) | BLOQUE |
+| `open()` | SFSafariViewController | AUTORISE |
 
-**Pages autonomes (About, Terms, Privacy)** : Meme pattern -- `fixed inset-0` remplace `min-h-screen`, le contenu scrollable utilise `flex-1 overflow-y-auto`.
+`SFSafariViewController` est un composant systeme Apple qui :
+- Partage les cookies avec Safari (donc les sessions Google existantes)
+- Est reconnu par Google comme un navigateur legitime
+- Reste dans l'application (pas de redirection vers Safari externe)
 
-**PublicProfile** : Les deux vues (loading et contenu) passent de `min-h-screen` a `fixed inset-0` avec scroll interne.
+### Impact
+
+- Une seule ligne modifiee
+- Le reste du flux (urlChangeEvent, extraction des tokens, fermeture automatique) reste identique
+- L'experience utilisateur reste la meme : une popup s'ouvre dans l'app, l'utilisateur se connecte, la popup se ferme
 
