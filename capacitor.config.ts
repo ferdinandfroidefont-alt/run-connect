@@ -11,10 +11,7 @@ const config: CapacitorConfig = {
     },
     Geolocation: {},
     Camera: {},
-    StatusBar: {
-      style: 'Dark',
-      backgroundColor: '#0F1729'
-    }
+    // Browser config removed to allow in-app OAuth flows
   },
   android: {
     allowMixedContent: false,
