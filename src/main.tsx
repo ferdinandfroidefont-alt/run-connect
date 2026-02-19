@@ -122,6 +122,15 @@ const initializeCapacitorPlugins = async () => {
   
   console.log('🚀 Préchargement plugins Capacitor...');
   
+  // ✅ Masquer la barre de statut iOS/Android
+  try {
+    const { StatusBar } = await import('@capacitor/status-bar');
+    await StatusBar.hide();
+    console.log('✅ Barre de statut masquée');
+  } catch (statusBarError) {
+    console.warn('⚠️ StatusBar.hide() non disponible:', statusBarError);
+  }
+  
   try {
     const { Geolocation } = await import('@capacitor/geolocation');
     const { Camera } = await import('@capacitor/camera');
