@@ -53,6 +53,7 @@ export const RouteCreation = () => {
   const waypointMarkers = useRef<google.maps.Marker[]>([]);
   
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(false);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
   const [showElevationProfile, setShowElevationProfile] = useState(true);
   const [totalDistance, setTotalDistance] = useState(0);
@@ -236,6 +237,7 @@ export const RouteCreation = () => {
 
       } catch (error) {
         console.error('Erreur lors du chargement de la carte:', error);
+        setMapError(true);
         toast.error("Erreur lors du chargement de la carte");
       }
     };
@@ -670,6 +672,25 @@ export const RouteCreation = () => {
 
       {/* Carte plein écran */}
       <div ref={mapContainer} className="absolute inset-0" />
+
+      {/* Loading / Error overlay */}
+      {!isMapLoaded && !mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-[5]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">Chargement de la carte...</p>
+          </div>
+        </div>
+      )}
+      {mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-[5]">
+          <div className="flex flex-col items-center gap-4 px-6 text-center">
+            <MapPin className="h-12 w-12 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Impossible de charger la carte. Vérifiez votre connexion.</p>
+            <Button variant="outline" onClick={() => navigate(-1)}>Retour</Button>
+          </div>
+        </div>
+      )}
 
       {/* Toggle Mode */}
       <div className="absolute left-4 top-24 z-10">
