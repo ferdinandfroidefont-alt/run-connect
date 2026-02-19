@@ -587,7 +587,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern overflow-x-hidden">
+    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern overflow-x-hidden" style={{ touchAction: 'pan-y' }}>
       {/* iOS Header */}
       <div className="bg-card border-b border-border pt-safe">
         <div className="flex items-center justify-center px-4 h-[56px]">
@@ -597,8 +597,8 @@ const Auth = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="px-4 py-6 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-momentum" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+        <div className="px-4 py-6 space-y-6 pb-12">
           {/* Logo Section */}
           <div className="flex flex-col items-center pt-4 pb-2">
             <img 
