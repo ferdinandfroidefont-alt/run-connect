@@ -438,16 +438,16 @@
     transform: translateZ(0);
   }
 
-  /* iOS Home Indicator zone - couleur dynamique via --ios-bottom-color */
-  body::after {
+  /* iOS Status Bar zone - fond fixe derrière la status bar */
+  body::before {
     content: '';
     display: block;
     position: fixed;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-bottom, 0px);
-    background-color: var(--ios-bottom-color, #1d283a);
+    height: env(safe-area-inset-top, 0px);
+    background-color: #1d283a;
     z-index: 9999;
     pointer-events: none;
   }

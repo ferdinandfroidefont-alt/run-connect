@@ -62,7 +62,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   return (
     <div 
       className="fixed inset-0 z-50 bg-secondary flex flex-col items-center justify-center px-6"
-      style={{ '--ios-bottom-color': 'hsl(var(--secondary))' } as React.CSSProperties}
     >
       {/* Pattern overlay without isolation:isolate */}
       <div 

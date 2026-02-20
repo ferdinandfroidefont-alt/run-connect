@@ -16,12 +16,18 @@ export const Layout = ({ children }: LayoutProps) => {
   const { hideBottomNav } = useAppContext();
   const location = useLocation();
 
-  // Couleur dynamique iOS Home Indicator selon la page
-  const getIosBottomColor = () => {
+  // Couleur dynamique iOS Home Indicator selon la page — appliquée sur documentElement
+  useEffect(() => {
     const path = location.pathname;
-    if (path === '/messages' || path.startsWith('/messages/')) return 'hsl(var(--secondary))';
-    return '#1d283a'; // carte, sessions, feed, profil, etc.
-  };
+    let color = '#1d283a';
+    if (path === '/messages' || path.startsWith('/messages/')) {
+      color = 'hsl(var(--secondary))';
+    }
+    document.documentElement.style.setProperty('--ios-bottom-color', color);
+    return () => {
+      document.documentElement.style.removeProperty('--ios-bottom-color');
+    };
+  }, [location.pathname]);
   
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);
@@ -51,12 +57,10 @@ export const Layout = ({ children }: LayoutProps) => {
   // Callback pour ConsentDialog - fermeture immédiate garantie
   const handleConsentComplete = async () => {
     if (user?.id) {
-      // Stocker en localStorage IMMÉDIATEMENT pour éviter la boucle
       localStorage.setItem(`consent_${user.id}`, 'true');
       console.log('✅ [Layout] Consentement sauvegardé en localStorage');
     }
     setConsentCompleted(true);
-    // Rafraîchir le profil en arrière-plan (ne bloque pas la fermeture)
     refreshProfile();
   };
 
@@ -69,10 +73,6 @@ export const Layout = ({ children }: LayoutProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Vérifier le consentement UNIQUEMENT si:
-  // 1. Le profil est initialisé (pas de race condition)
-  // 2. Le consentement n'est pas déjà marqué comme complété
-  // 3. Le profil indique que le consentement n'est pas accepté
   const needsConsent = isInitialized && 
     userProfile && 
     !consentCompleted &&
@@ -84,7 +84,7 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen-safe bg-background flex flex-col bg-pattern overflow-x-hidden overflow-y-hidden" style={{ '--ios-bottom-color': getIosBottomColor() } as React.CSSProperties}>
+    <div className="h-screen-safe bg-background flex flex-col bg-pattern overflow-x-hidden overflow-y-hidden">
       <main className={`flex-1 overflow-auto scroll-momentum min-h-0 h-0 ${hideBottomNav ? "" : "pb-[64px] ios-nav-padding"}`}>
         <div className="animate-fade-in h-full relative w-full">
           {children}
