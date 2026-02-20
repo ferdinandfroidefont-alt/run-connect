@@ -46,6 +46,16 @@ export default function Search() {
     };
   }, []);
 
+  // iOS : couleurs gris/card pour status bar et home indicator
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--card))');
+    document.documentElement.style.setProperty('--ios-bottom-color', 'hsl(var(--card))');
+    return () => {
+      document.documentElement.style.removeProperty('--ios-top-color');
+      document.documentElement.style.removeProperty('--ios-bottom-color');
+    };
+  }, []);
+
   // Focus automatique
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
