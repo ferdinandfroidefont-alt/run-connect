@@ -54,7 +54,7 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
         </button>
 
         {/* Title - Center */}
-        <h1 className="text-[34px] font-bold tracking-tight text-center">
+        <h1 className="text-[28px] font-black tracking-tight text-center uppercase">
           Feed
         </h1>
 
