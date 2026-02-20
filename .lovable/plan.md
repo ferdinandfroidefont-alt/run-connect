@@ -1,27 +1,21 @@
 
 
-# Suppression des barres systeme uniquement sur iOS
+# Suppression des derniers vestiges de barres systeme iOS
 
-## Objectif
-Supprimer toutes les barres visibles (status bar en haut, home indicator en bas) uniquement sur iOS. Android reste inchange avec ses barres noires actuelles.
+## Probleme
+3 fichiers utilisent encore la classe `pt-safe` qui reserve un espace en haut pour la barre de statut iOS, ce qui contredit l'objectif d'affichage 100% bord a bord.
 
-## Modifications
+## Fichiers a modifier
 
-### 1. `src/components/BottomNavigation.tsx`
-- Supprimer le `paddingBottom: 'env(safe-area-inset-bottom, 0px)'` du style inline du `<nav>` -- cette propriete reserve de l'espace pour le home indicator iOS
+### 1. `src/components/settings/SettingsGeneral.tsx` (ligne 70)
+- Supprimer `pt-safe` de la classe du header
 
-### 2. `index.html`
-- Supprimer la balise `<meta name="theme-color">` (elle affecte uniquement le rendu iOS/Safari)
-- Conserver les meta tags `apple-mobile-web-app-capable` et `apple-mobile-web-app-status-bar-style: black-translucent` pour la fusion du contenu avec le notch
+### 2. `src/components/CreateClubDialogPremium.tsx` (ligne 282)
+- Supprimer `pt-safe` de la classe du header
 
-### 3. `src/index.css`
-- Dans le bloc `@supports (-webkit-touch-callout: none)` (qui cible uniquement iOS), supprimer toute reference a `safe-area-inset-bottom` et `safe-area-inset-top` pour garantir zero espace reserve
+### 3. `src/components/RouteEditDialog.tsx` (ligne 90)
+- Supprimer `pt-safe` de la classe du header
 
-### 4. Fichiers Android NON modifies
-- `android/app/src/main/res/values/styles.xml` : inchange
-- `android/app/src/main/res/values-v35/styles.xml` : inchange
-- `android-webview/app/src/main/res/values/styles.xml` : inchange
-- `android-webview/app/src/main/res/values-v35/styles.xml` : inchange
-
-Les barres noires Android restent telles quelles. Seul le comportement iOS est modifie pour un affichage 100% bord a bord.
+## Resultat
+Apres ces 3 corrections, il ne restera plus aucune reference aux barres systeme iOS dans toute l'application (ni `pt-safe`, ni `pb-safe`, ni `env(safe-area-inset-*)`, ni `theme-color`, ni `StatusBar`).
 
