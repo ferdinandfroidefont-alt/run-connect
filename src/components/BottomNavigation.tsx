@@ -68,7 +68,7 @@ export const BottomNavigation = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card">
-      <div className="h-px bg-border" />
+      <div style={{ height: '1.5px' }} className="bg-border" />
       <div className="grid grid-cols-5 items-center h-[72px]">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
@@ -76,7 +76,7 @@ export const BottomNavigation = () => {
           return (
             <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-1 active:scale-90 transition-transform touch-manipulation" data-tutorial={tutorialId}>
               <Icon className={`h-6 w-6 ${isActive ? 'text-primary' : 'text-foreground/60'}`} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span className={`text-[9px] mt-1 uppercase tracking-wider font-bold ${isActive ? 'text-primary' : 'text-foreground/60'}`}>{label}</span>
+              <span className={`text-[10px] mt-1 font-medium ${isActive ? 'text-primary' : 'text-foreground/60'}`}>{label}</span>
             </button>
           );
         })}
@@ -97,7 +97,7 @@ export const BottomNavigation = () => {
                 <Icon className={`h-6 w-6 ${isActive ? 'text-primary' : 'text-foreground/60'}`} strokeWidth={isActive ? 2.5 : 1.8} />
                 {showBadge && <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-primary text-primary-foreground text-[11px] font-bold rounded-full px-1">{totalUnreadCount > 99 ? '99+' : totalUnreadCount}</span>}
               </div>
-              <span className={`text-[9px] mt-1 uppercase tracking-wider font-bold ${isActive ? 'text-primary' : 'text-foreground/60'}`}>{label}</span>
+              <span className={`text-[10px] mt-1 font-medium ${isActive ? 'text-primary' : 'text-foreground/60'}`}>{label}</span>
             </button>
           );
         })}

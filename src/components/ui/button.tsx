@@ -16,6 +16,7 @@ const buttonVariants = cva(
         ghost: "text-primary rounded-full active:bg-secondary",
         link: "text-primary underline-offset-4 hover:underline",
         tinted: "bg-primary/10 text-primary font-bold rounded-full active:bg-primary/20",
+        cyan: "bg-[hsl(193_100%_42%)] text-white font-bold rounded-full active:brightness-90",
       },
       size: {
         default: "h-[48px] px-6",

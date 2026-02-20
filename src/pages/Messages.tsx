@@ -2245,7 +2245,7 @@ const Messages = () => {
     <>
       <div className="h-full bg-secondary bg-pattern flex flex-col">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border">
+        <div className="sticky top-0 z-50 bg-background">
           <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
@@ -2272,7 +2272,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
+                <h1 className="text-[28px] font-black tracking-tight text-left absolute left-4">Messages</h1>
                 <div className="absolute right-4 flex items-center gap-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}
@@ -2288,72 +2288,15 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="space-y-3">
-          {/* Quick Search Buttons */}
-          <div className="bg-card p-3">
-            <div className="grid grid-cols-5 gap-2">
-              <button
-                onClick={() => navigate('/search?tab=profiles')}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Profils</span>
-              </button>
-              
-              <button
-                onClick={() => navigate('/search?tab=contacts')}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Contacts</span>
-              </button>
-              
-              <button
-                onClick={() => navigate('/search?tab=clubs')}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Clubs</span>
-              </button>
-              
-              <button
-                onClick={() => navigate('/search?tab=strava')}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center">
-                  <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                  </svg>
-                </div>
-                <span className="text-[11px] text-muted-foreground">Strava</span>
-              </button>
-
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
-                  <Plus className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Club</span>
-              </button>
-            </div>
-          </div>
-
+        <div className="space-y-2">
           {/* Search Conversations */}
-          <div className="relative px-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative px-4 pt-1">
+            <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher une conversation..."
               value={conversationSearch}
               onChange={(e) => setConversationSearch(e.target.value)}
-              className="pl-9 h-9 bg-secondary border-0 rounded-[10px] text-[15px] placeholder:text-muted-foreground"
+              className="pl-9 h-10 bg-muted border-0 rounded-xl text-[15px] placeholder:text-muted-foreground"
             />
           </div>
 

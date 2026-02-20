@@ -296,6 +296,29 @@
     @apply text-[13px] font-normal text-muted-foreground uppercase tracking-wide px-4 py-2;
   }
 
+  /* Zwift Companion - Section Dark */
+  .section-dark {
+    background: hsl(0 0% 18%);
+    color: white;
+    padding: 20px 16px;
+  }
+  .dark .section-dark {
+    background: hsl(0 0% 11%);
+  }
+
+  /* Zwift Companion - Stat Grid */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 16px;
+    padding: 16px;
+  }
+
+  /* Zwift Companion - Avatar ring */
+  .avatar-ring-primary {
+    @apply ring-[3px] ring-primary ring-offset-2 ring-offset-background;
+  }
+
   /* Glass Card */
   .glass-card {
     background: hsl(var(--card) / 0.8);

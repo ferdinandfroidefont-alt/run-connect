@@ -12,7 +12,6 @@ const Card = React.forwardRef<
       "rounded-2xl bg-card text-card-foreground",
       className
     )}
-    style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}
     {...props}
   />
 ))

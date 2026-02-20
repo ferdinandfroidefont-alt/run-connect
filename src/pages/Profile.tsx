@@ -607,17 +607,14 @@ const Profile = () => {
   return <div className="h-full bg-secondary bg-pattern overflow-y-auto">
       {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border">
+      <div className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 py-3">
           {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-primary">
               <ChevronLeft className="h-5 w-5" />
               <span className="text-[17px]">Retour</span>
-            </button> : <div className="w-16" />}
-          <h1 className="text-[17px] font-semibold text-foreground">
-            {isViewingOtherUser ? 'Profil' : 'Mon Profil'}
-          </h1>
-          {!isViewingOtherUser ? <button onClick={() => setShowSettingsDialog(true)} className="w-16 flex justify-end">
-              <Settings className="h-5 w-5 text-primary" />
+            </button> : <h1 className="text-[28px] font-black tracking-tight">Profil</h1>}
+          {!isViewingOtherUser ? <button onClick={() => setShowSettingsDialog(true)}>
+              <Settings className="h-5 w-5 text-muted-foreground" />
             </button> : <div className="w-16" />}
         </div>
       </div>
@@ -627,7 +624,7 @@ const Profile = () => {
         <div className="flex flex-col items-center pt-4 pb-2">
           {/* Avatar with subtle shadow */}
           <div className="relative mb-3">
-            <Avatar className="h-20 w-20 ring-[3px] ring-white shadow-lg">
+            <Avatar className="h-24 w-24 avatar-ring-primary">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
               <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
                 {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
@@ -709,33 +706,31 @@ const Profile = () => {
             )}
           </div>
           
-          {/* Stats Row - Instagram/Strava Style */}
-          <div className="flex items-center justify-center gap-8 py-3 w-full">
+          {/* Stats Row - Zwift Companion Style */}
+          <div className="stat-grid w-full max-w-xs">
             <button 
               onClick={() => {
                 setFollowDialogType('followers');
                 setShowFollowDialog(true);
               }} 
-              className="text-center min-w-[60px] active:opacity-70 transition-opacity"
+              className="text-center active:opacity-70 transition-opacity"
             >
-              <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnés</p>
+              <p className="text-stat">{followerCount}</p>
+              <p className="text-label">Abonnés</p>
             </button>
-            <div className="w-px h-8 bg-border/60" />
             <button 
               onClick={() => {
                 setFollowDialogType('following');
                 setShowFollowDialog(true);
               }} 
-              className="text-center min-w-[60px] active:opacity-70 transition-opacity"
+              className="text-center active:opacity-70 transition-opacity"
             >
-              <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnements</p>
+              <p className="text-stat">{followingCount}</p>
+              <p className="text-label">Abonnements</p>
             </button>
-            <div className="w-px h-8 bg-border/60" />
-            <div className="text-center min-w-[60px]">
-              <p className="text-[20px] font-bold text-foreground">{totalSessionsCreated}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Séances</p>
+            <div className="text-center">
+              <p className="text-stat">{totalSessionsCreated}</p>
+              <p className="text-label">Séances</p>
             </div>
           </div>
           
