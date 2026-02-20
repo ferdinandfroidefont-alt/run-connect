@@ -1,131 +1,108 @@
 
 
-# Refonte Design Complet - Style Zwift Companion Light
+# Refonte Typographie, Formes et Style des Pages - Zwift Companion
 
 ## Analyse des captures Zwift Companion
 
-Les captures montrent un design tres distinct du design actuel :
+Les captures montrent des choix typographiques et de forme tres specifiques :
 
-- **Couleur primaire** : Orange vif (#FF6600) au lieu du bleu ciel actuel
-- **Fond general** : Gris tres clair (#F2F2F7) quasi blanc
-- **Cartes** : Blanc pur avec coins arrondis et ombres tres subtiles
-- **Typographie** : Tres grasse (bold/black), majuscules pour les titres de section et labels
-- **Navigation** : Fond blanc, icones noires inactives, orange actif, bouton central "+" orange rond
-- **Separateurs** : Lignes fines gris clair sur toute la largeur
-- **Stats** : Grands chiffres en gras avec petits labels uppercase en dessous
-- **Dark cards** : Certaines sections (ex: tendances fitness) utilisent un fond gris fonce/ardoise
+- **Police** : Geometrique, type **Inter** ou **Plus Jakarta Sans** - plus moderne que DM Sans
+- **Poids** : Titres en **font-black (900)** ou **extrabold (800)**, pas juste bold (700)
+- **Boutons** : Forme **pill** (rounded-full) pour les CTA principaux, pas rounded-xl
+- **Inputs** : Coins tres arrondis (rounded-2xl), fond gris clair, pas de bordure
+- **Cards** : Coins 16px, ombres tres douces, espacement genereux (padding 20-24px)
+- **Labels** : Tout en **UPPERCASE** avec letter-spacing large pour les sous-titres
+- **Chiffres** : Police **tabular-nums**, taille 28-36px pour les stats
 
 ## Changements prevus
 
-### 1. Tokens de couleur CSS (src/index.css)
+### 1. Police - Remplacer DM Sans par Inter (index.html + index.css + tailwind.config.ts)
 
-Remplacer le systeme "Sky Blue" par un systeme "Zwift Orange" :
+Inter est plus proche de la typo Zwift : geometrique, propre, excellente lisibilite. On ajoute les poids 400-900.
+
+### 2. Boutons - Forme pill et poids plus lourds (button.tsx)
+
+- Variante `default` : `rounded-full` au lieu de `rounded-xl`, `font-bold` au lieu de `font-semibold`
+- Variante `outline` : `rounded-full`, bordure plus epaisse
+- Variante `tinted` : deja `rounded-full`, garder
+- Tailles ajustees : default `h-[48px]`, sm `h-[36px]`, lg `h-[54px]`
+
+### 3. Inputs (index.css ou composant Input)
+
+- `rounded-2xl` (16px) au lieu de `rounded-[10px]`
+- Fond `bg-muted/50` tres leger
+- Pas de bordure visible (`border-0`)
+- Hauteur 52px
+
+### 4. Cards (card.tsx)
+
+- `rounded-2xl` (16px) au lieu de `rounded-xl`
+- Shadow encore plus subtile
+- Padding interne augmente (p-5 au lieu de p-4)
+
+### 5. Typographie globale (index.css)
+
+- `.text-ios-largetitle` : passer a `font-black` (900)
+- `.text-ios-title1/2/3` : passer a `font-extrabold` (800)
+- Ajouter une classe `.text-stat` pour les grands chiffres (font-black, tabular-nums, 28px)
+- Ajouter `.text-label` pour les labels uppercase (11px, uppercase, tracking-[0.1em], font-semibold, muted)
+
+### 6. Page Auth (Auth.tsx)
+
+- Logo dans un header orange gradient en haut (pas juste une image centree)
+- Boutons "Continuer avec Google" en pill shape
+- Inputs avec `rounded-2xl`
+- Section header avec fond orange et texte blanc "RUNCONNECT"
+
+### 7. Page Profil (Profile.tsx)
+
+- Stats avec classe `.text-stat` (grands chiffres gras)
+- Labels en `.text-label` (uppercase, tracking)
+- Boutons d'action (Follow/Edit) en pill shape
+
+### 8. Page Feed (FeedCard.tsx)
+
+- Cards avec `rounded-2xl` et padding p-5
+- Badge d'activite en pill
+
+### 9. Navigation (BottomNavigation.tsx)
+
+- Labels en font-bold au lieu de font-semibold
+- Taille icones legerement augmentee (h-6.5)
+
+## Details techniques
+
+### Fichiers modifies
+
+1. **index.html** - Remplacer Google Font DM Sans par Inter (poids 400-900)
+2. **src/index.css** - Mettre a jour font-family, classes typographiques, ajouter `.text-stat` et `.text-label`
+3. **tailwind.config.ts** - Remplacer DM Sans par Inter dans fontFamily.sans
+4. **src/components/ui/button.tsx** - Forme pill (`rounded-full`), poids plus lourds
+5. **src/components/ui/card.tsx** - `rounded-2xl`, shadow plus douce
+6. **src/pages/Auth.tsx** - Header orange, inputs arrondis, boutons pill
+7. **src/pages/Profile.tsx** - Stats avec `.text-stat`, labels uppercase
+8. **src/components/feed/FeedCard.tsx** - Cards avec `rounded-2xl`
+9. **src/components/BottomNavigation.tsx** - Labels bold
+
+### Nouvelles classes CSS
 
 ```text
-Mode clair (:root) :
-  --background:          0 0% 96%           (#F5F5F5 - gris tres clair)
-  --foreground:          0 0% 13%           (#222222 - quasi noir)
-  --card:                0 0% 100%          (#FFFFFF)
-  --card-foreground:     0 0% 13%
-  --primary:             24 100% 50%        (#FF6600 - orange Zwift)
-  --primary-foreground:  0 0% 100%          (#FFFFFF)
-  --secondary:           0 0% 93%           (#EDEDED)
-  --secondary-foreground:0 0% 13%
-  --muted:               0 0% 90%           (#E5E5E5)
-  --muted-foreground:    0 0% 45%           (#737373)
-  --border:              0 0% 90%           (#E5E5E5)
-  --ring:                24 100% 50%
-
-Mode sombre (.dark) :
-  --background:          0 0% 7%            (#121212)
-  --card:                0 0% 12%           (#1E1E1E)
-  --primary:             24 100% 55%        (orange plus lumineux)
-  --secondary:           0 0% 16%
-  --muted:               0 0% 22%
-  --border:              0 0% 20%
+.text-stat     -> font-black text-[28px] tabular-nums leading-none
+.text-label    -> text-[11px] uppercase tracking-[0.1em] font-semibold text-muted-foreground
 ```
 
-### 2. Navigation (BottomNavigation.tsx)
+### Police Inter
 
-- Fond blanc opaque au lieu de blur transparent
-- Icones noires (inactives) au lieu de gris
-- Label actif en orange + texte uppercase plus petit
-- Bouton central "+" : cercle orange plein (pas carre arrondi)
-- Suppression du petit dot sous l'icone active
-- Bordure superieure nette au lieu de subtle
-
-### 3. Typographie globale
-
-- Titres de sections : bold, taille plus grande, pas d'uppercase systematique mais style plus impose
-- Labels de stats : uppercase, tracking-wide, petite taille
-- Chiffres de stats : tres grands, font-black
-- Police : garder DM Sans mais augmenter les poids (700/800)
-
-### 4. Page Auth (Auth.tsx)
-
-- Header orange avec logo blanc au lieu du fond secondaire
-- Formulaires sur fond blanc avec coins arrondis
-- Bouton principal orange plein
-- Style Zwift : plus epure, moins de sous-sections empilees
-
-### 5. Page Profil (Profile.tsx)
-
-- Header avec photo grande a gauche, stats a droite (style Zwift capture 2)
-- Section "SUIVIS / FOLLOWERS" en ligne horizontale avec separateur
-- Stats en grille : grands chiffres gras + labels uppercase
-- Barre de progression style Zwift pour le niveau
-- Bouton "ACTIVITES" orange en bas du profil
-
-### 6. Page Feed (Feed.tsx)
-
-- Cards d'activite avec image a gauche, texte a droite
-- Bouton like bleu cyan (style Zwift thumb-up)
-- Stats en ligne : km, temps, denivele en gras
-- Separateurs pleine largeur entre les cards
-
-### 7. Composant Button (button.tsx)
-
-- Variante default : orange plein, coins plus arrondis (12px)
-- Active state : assombrissement au lieu d'opacity
-- Taille default legerement plus compacte
-
-### 8. Composant Card (card.tsx)
-
-- Ombre encore plus subtile
-- Border-radius 12px
-- Pas de bordure visible par defaut
-
-### 9. Composant IOSListItem (ios-list-item.tsx)
-
-- Icones de couleur (bleu cyan, orange) au lieu du bg-primary generique
-- Texte plus gras pour les titres de menu
-- Separateurs sur toute la largeur (pas inset)
-
-### 10. LoadingScreen
-
-- Adapter les couleurs du loading screen a l'orange
-
-## Fichiers modifies
-
-1. `src/index.css` - Tokens CSS complets light + dark
-2. `src/components/BottomNavigation.tsx` - Redesign navigation
-3. `src/components/ui/button.tsx` - Variantes de bouton
-4. `src/components/ui/card.tsx` - Style des cartes
-5. `src/components/ui/ios-list-item.tsx` - Style des listes
-6. `src/pages/Auth.tsx` - Page de connexion
-7. `src/pages/Profile.tsx` - Page profil (header + stats)
-8. `src/pages/Feed.tsx` - Feed d'activites
-9. `src/components/feed/FeedHeader.tsx` - Header du feed
-10. `tailwind.config.ts` - Keyframes glow adaptes
-11. `android/app/src/main/res/values/colors.xml` - Couleurs Android
-12. `android-webview/app/src/main/res/values/colors.xml` - Couleurs Android WebView
-13. `android/app/src/main/res/drawable/splash_gradient.xml` - Splash screen
+```text
+Import: https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap
+Font-family: 'Inter', ui-sans-serif, system-ui, sans-serif
+```
 
 ## Ordre d'implementation
 
-1. Tokens CSS (fondation - tout le reste en depend)
-2. Composants UI de base (Button, Card, ListItem)
-3. Navigation
-4. Pages (Auth, Feed, Profile)
-5. Ressources Android
+1. Police (index.html + tailwind.config + index.css)
+2. Classes typographiques (index.css)
+3. Composants UI (button, card)
+4. Pages (Auth, Profile, Feed)
+5. Navigation
 
