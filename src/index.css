@@ -447,7 +447,7 @@
     left: 0;
     right: 0;
     height: env(safe-area-inset-top, 0px);
-    background-color: hsl(var(--background));
+    background-color: #1d283a;
     z-index: 9999;
     pointer-events: none;
   }
