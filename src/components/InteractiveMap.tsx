@@ -1378,7 +1378,7 @@ export const InteractiveMap = ({
 
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10">
-        <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden">
+        <div className="bg-card border-b border-border bg-pattern overflow-hidden">
           <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
             {/* Runconnect Title - Left aligned iOS style */}
             <h1 className="text-lg font-semibold text-primary leading-none flex items-center mt-2">
