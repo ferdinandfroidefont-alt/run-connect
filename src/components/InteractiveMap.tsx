@@ -1378,17 +1378,17 @@ export const InteractiveMap = ({
 
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10">
-        <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden">
-          <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
+        <div className="bg-secondary border-b border-border overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <div className="relative flex items-center justify-between px-4 py-3 ios-map-header">
             {/* Runconnect Title - Left aligned iOS style */}
-            <h1 className="text-lg font-semibold text-primary leading-none flex items-center mt-2">
+            <h1 className="text-lg font-semibold text-secondary-foreground leading-none flex items-center">
               Runconnect
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
             {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2" data-tutorial="profile-avatar">
                 <div onClick={() => setShowProfileDialog(true)} className="relative cursor-pointer hover-scale hover-glow transition-all duration-200 flex flex-col items-center">
-                  <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+                  <Avatar className="w-12 h-12 ring-2 ring-white/30 hover:ring-white/50 transition-all duration-200">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                     <AvatarFallback className="text-lg">
                       {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
@@ -1403,7 +1403,7 @@ export const InteractiveMap = ({
               <div data-tutorial="notifications" className="flex items-center justify-center">
                 <NotificationCenter onSessionUpdated={loadSessions} />
               </div>
-              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10 flex items-center justify-center" onClick={() => setShowSettingsDialog(true)}>
+              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/20 flex items-center justify-center text-secondary-foreground" onClick={() => setShowSettingsDialog(true)}>
                 ⚙️
               </div>
             </div>
