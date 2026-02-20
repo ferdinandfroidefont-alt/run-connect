@@ -119,8 +119,8 @@ export const FeedCard = ({
 
   return (
     <div 
-      className="mb-px overflow-hidden bg-card border-b border-border animate-fade-in"
-      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
+      className="mb-2 mx-3 overflow-hidden bg-card rounded-2xl animate-fade-in"
+      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both', boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
