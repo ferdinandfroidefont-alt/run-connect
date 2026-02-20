@@ -67,9 +67,9 @@ export const IOSListItem = ({
         </div>
       </div>
       
-      {/* Full-width separator */}
+      {/* iOS-style inset separator */}
       {showSeparator && (
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-border" />
+        <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
       )}
     </div>
   );

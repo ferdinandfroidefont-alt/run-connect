@@ -78,7 +78,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       <p className="text-muted-foreground text-[15px] mb-1">Bienvenue sur</p>
       
       {/* App title */}
-      <h1 className="text-primary text-[32px] font-black tracking-tight mb-10 uppercase">
+      <h1 className="text-primary text-[32px] font-bold tracking-tight mb-10">
         RUNCONNECT
       </h1>
 
@@ -88,7 +88,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           src={appIcon} 
           alt="RunConnect" 
           className="w-[120px] h-[120px] rounded-[28px]"
-          style={{ boxShadow: '0 8px 24px hsl(24 100% 50% / 0.25)' }}
+          style={{ boxShadow: '0 8px 24px hsl(211 100% 50% / 0.25)' }}
         />
       </div>
 

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Zwift Orange Design System -->
-    <color name="colorPrimary">#FF6600</color>
-    <color name="colorPrimaryDark">#E55A00</color>
-    <color name="colorAccent">#FF6600</color>
+    <!-- Couleur EXACTE de l'app React : HSL(217, 91%, 65%) = #5B7CFF -->
+    <color name="colorPrimary">#5B7CFF</color>
+    <color name="colorPrimaryDark">#4B6CD9</color>
+    <color name="colorAccent">#EC4899</color>
     <color name="white">#FFFFFF</color>
-    <color name="progressBarOrange">#FF8533</color>
-    <!-- Theme Colors -->
-    <color name="iosBlue">#FF6600</color>
+    <color name="progressBarBlue">#6EC6FF</color>
+    <!-- iOS Colors -->
+    <color name="iosBlue">#007AFF</color>
     <color name="iosGray">#E5E5EA</color>
     <color name="iosSystemGray">#F2F2F7</color>
     <!-- System Bars - NOIR permanent -->
