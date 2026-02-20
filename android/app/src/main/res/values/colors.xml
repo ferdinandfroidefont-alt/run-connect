@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Couleur EXACTE de l'app React : HSL(217, 91%, 65%) = #5B7CFF -->
-    <color name="colorPrimary">#5B7CFF</color>
-    <color name="colorPrimaryDark">#4B6CD9</color>
+    <!-- Sky Blue Design System -->
+    <color name="colorPrimary">#4DA6E8</color>
+    <color name="colorPrimaryDark">#3A8FCC</color>
     <color name="colorAccent">#EC4899</color>
     <color name="white">#FFFFFF</color>
     <color name="progressBarBlue">#6EC6FF</color>
     <!-- iOS Colors -->
-    <color name="iosBlue">#007AFF</color>
+    <color name="iosBlue">#4DA6E8</color>
     <color name="iosGray">#E5E5EA</color>
     <color name="iosSystemGray">#F2F2F7</color>
     <!-- System Bars - NOIR permanent -->
