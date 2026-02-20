@@ -587,9 +587,9 @@ const Auth = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern">
+    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern" style={{ overflow: 'hidden' }}>
       {/* iOS Header */}
-      <div className="bg-card border-b border-border" style={{ flexShrink: 0 }}>
+      <div className="bg-card border-b border-border" style={{ flexShrink: 0, zIndex: 10 }}>
         <div className="flex items-center justify-center px-4 h-[56px]">
           <h1 className="text-[17px] font-semibold">
             {authStep === 'reset' ? 'Réinitialiser' : authMode === 'signup' ? 'Inscription' : 'Connexion'}
@@ -597,7 +597,7 @@ const Auth = () => {
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'scroll', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+      <div id="auth-scroll-container" className="scroll-momentum" style={{ flex: '1 1 0%', minHeight: 0 }}>
         <div className="px-4 py-6 space-y-6 pb-16">
           {/* Logo Section */}
           <div className="flex flex-col items-center pt-4 pb-2">
