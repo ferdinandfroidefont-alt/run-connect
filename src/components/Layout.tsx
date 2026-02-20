@@ -19,8 +19,8 @@ export const Layout = ({ children }: LayoutProps) => {
   // Couleurs dynamiques iOS Status Bar + Home Indicator selon la page
   useEffect(() => {
     const path = location.pathname;
-    let topColor = '#1d283a';
-    let bottomColor = '#1d283a';
+    let topColor = 'hsl(var(--background))';
+    let bottomColor = 'hsl(var(--background))';
 
     if (path === '/') {
       topColor = 'hsl(var(--card))';
