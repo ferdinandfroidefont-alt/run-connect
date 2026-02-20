@@ -16,15 +16,23 @@ export const Layout = ({ children }: LayoutProps) => {
   const { hideBottomNav } = useAppContext();
   const location = useLocation();
 
-  // Couleur dynamique iOS Home Indicator selon la page — appliquée sur documentElement
+  // Couleurs dynamiques iOS Status Bar + Home Indicator selon la page
   useEffect(() => {
     const path = location.pathname;
-    let color = '#1d283a';
-    if (path === '/messages' || path.startsWith('/messages/')) {
-      color = 'hsl(var(--secondary))';
+    let topColor = '#1d283a';
+    let bottomColor = '#1d283a';
+
+    if (path === '/') {
+      topColor = 'hsl(var(--card))';
+    } else if (path === '/messages' || path.startsWith('/messages/')) {
+      topColor = '#1d283a';
+      bottomColor = 'hsl(var(--secondary))';
     }
-    document.documentElement.style.setProperty('--ios-bottom-color', color);
+
+    document.documentElement.style.setProperty('--ios-top-color', topColor);
+    document.documentElement.style.setProperty('--ios-bottom-color', bottomColor);
     return () => {
+      document.documentElement.style.removeProperty('--ios-top-color');
       document.documentElement.style.removeProperty('--ios-bottom-color');
     };
   }, [location.pathname]);
