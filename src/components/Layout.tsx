@@ -22,9 +22,11 @@ export const Layout = ({ children }: LayoutProps) => {
     let topColor = 'hsl(var(--background))';
     let bottomColor = 'hsl(var(--background))';
 
-    const cardPages = ['/', '/my-sessions', '/messages', '/feed', '/leaderboard', '/profile'];
-    if (cardPages.some(p => path === p || path.startsWith(p + '/'))) {
+    if (path === '/') {
       topColor = 'hsl(var(--card))';
+    } else if (path === '/messages' || path.startsWith('/messages/')) {
+      topColor = '#1d283a';
+      bottomColor = 'hsl(var(--secondary))';
     }
 
     document.documentElement.style.setProperty('--ios-top-color', topColor);
