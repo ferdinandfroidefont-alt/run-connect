@@ -61,7 +61,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-secondary flex flex-col items-center justify-center px-6 pt-safe"
+      className="fixed inset-0 z-50 bg-secondary flex flex-col items-center justify-center px-6 pt-safe pb-safe"
       style={{ width: '100vw', height: '100dvh' }}
     >
       {/* Pattern overlay without isolation:isolate */}
