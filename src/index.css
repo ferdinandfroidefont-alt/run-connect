@@ -437,6 +437,20 @@
   input:focus, textarea:focus, select:focus {
     transform: translateZ(0);
   }
+
+  /* iOS Home Indicator zone - couleur dynamique via --ios-bottom-color */
+  body::after {
+    content: '';
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background-color: var(--ios-bottom-color, #1d283a);
+    z-index: 9999;
+    pointer-events: none;
+  }
 }
 
 /* Mobile viewport handling replaced by global base styles */

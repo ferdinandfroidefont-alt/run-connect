@@ -26,6 +26,7 @@
     "@capacitor/ios": "^8.0.0-alpha.1",
     "@capacitor/push-notifications": "^7.0.2",
     "@capacitor/share": "^7.0.2",
+    "@capacitor/status-bar": "^8.0.1",
     "@capgo/inappbrowser": "^7.22.1",
     "@googlemaps/js-api-loader": "^1.16.10",
     "@hcaptcha/react-hcaptcha": "^1.17.1",

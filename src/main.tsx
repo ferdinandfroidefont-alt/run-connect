@@ -127,8 +127,6 @@ const initializeCapacitorPlugins = async () => {
     const { Camera } = await import('@capacitor/camera');
     console.log('✅ Plugins critiques préchargés');
     
-    // ✅ Ne PAS appeler checkPermissions() au démarrage sur iOS
-    // Les permissions seront vérifiées uniquement quand l'utilisateur déclenche une fonctionnalité
     console.log('✅ Plugins préchargés - permissions seront demandées à l\'usage');
     
   } catch (pluginError) {
@@ -136,6 +134,20 @@ const initializeCapacitorPlugins = async () => {
   }
   
   const detectedPlatform = (window as any).detectedPlatform || 'android';
+  
+  // ✅ iOS Status Bar : visible dès le premier rendu avec fond #1d283a
+  if (detectedPlatform === 'ios') {
+    try {
+      const { StatusBar, Style } = await import('@capacitor/status-bar');
+      await StatusBar.setStyle({ style: Style.Light });
+      await StatusBar.setBackgroundColor({ color: '#1d283a' });
+      await StatusBar.show();
+      console.log('✅ iOS StatusBar configurée : visible, style Light, fond #1d283a');
+    } catch (sbError) {
+      console.error('❌ Erreur StatusBar iOS:', sbError);
+    }
+  }
+  
   window.dispatchEvent(new CustomEvent('capacitorReady', { 
     detail: { platform: detectedPlatform, native: true }
   }));

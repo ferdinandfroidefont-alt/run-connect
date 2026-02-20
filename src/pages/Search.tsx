@@ -60,6 +60,7 @@ export default function Search() {
     <>
       <div 
         className={`fixed inset-0 z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        style={{ '--ios-bottom-color': 'hsl(var(--secondary))' } as React.CSSProperties}
       >
         {/* Header iOS style with safe area */}
         <header className="bg-card border-b border-border px-4 pt-4 pb-3">

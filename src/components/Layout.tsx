@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from './BottomNavigation';
 import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
@@ -14,6 +14,14 @@ export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const { hideBottomNav } = useAppContext();
+  const location = useLocation();
+
+  // Couleur dynamique iOS Home Indicator selon la page
+  const getIosBottomColor = () => {
+    const path = location.pathname;
+    if (path === '/messages' || path.startsWith('/messages/')) return 'hsl(var(--secondary))';
+    return '#1d283a'; // carte, sessions, feed, profil, etc.
+  };
   
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);
@@ -76,7 +84,7 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen-safe bg-background flex flex-col bg-pattern overflow-x-hidden overflow-y-hidden">
+    <div className="h-screen-safe bg-background flex flex-col bg-pattern overflow-x-hidden overflow-y-hidden" style={{ '--ios-bottom-color': getIosBottomColor() } as React.CSSProperties}>
       <main className={`flex-1 overflow-auto scroll-momentum min-h-0 h-0 ${hideBottomNav ? "" : "pb-[64px] ios-nav-padding"}`}>
         <div className="animate-fade-in h-full relative w-full">
           {children}
