@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
@@ -25,8 +26,14 @@ export default function ConfirmPresence() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { setHideBottomNav } = useAppContext();
   
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setHideBottomNav(true);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
   const [roleChoice, setRoleChoice] = useState<'creator' | 'participant' | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<'creator' | 'participant' | null>(null);

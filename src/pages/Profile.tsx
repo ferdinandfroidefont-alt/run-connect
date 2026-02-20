@@ -74,6 +74,12 @@ const Profile = () => {
     subscriptionInfo,
     refreshSubscription
   } = useAuth();
+  const { setHideBottomNav } = useAppContext();
+
+  useEffect(() => {
+    setHideBottomNav(true);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
   const {
     userProfile: globalProfile,
     refreshProfile: refreshGlobalProfile
