@@ -166,14 +166,12 @@
   html, body {
     height: 100%;
     width: 100%;
-    margin: 0;
     overflow-x: hidden;
     overflow-y: hidden;
     position: fixed;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: auto;
     max-width: 100vw;
-    background: hsl(var(--background));
   }
 
   #root {
@@ -183,31 +181,6 @@
     position: relative;
     max-width: 100vw;
     overflow-x: hidden;
-    background: hsl(var(--background));
-  }
-
-  /* Safe-area TOP overlay — eliminates any flash/bar behind status bar */
-  .safe-top-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top, 0px);
-    background: hsl(var(--background));
-    z-index: 99999;
-    pointer-events: none;
-  }
-
-  /* Safe-area BOTTOM overlay — page continues under home indicator */
-  .safe-bottom-bg {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: env(safe-area-inset-bottom, 0px);
-    background: var(--page-bg, hsl(var(--background)));
-    z-index: 99999;
-    pointer-events: none;
   }
 }
 
