@@ -87,7 +87,7 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={isMobile ? "h-full w-full max-w-full max-h-full rounded-none border-none p-0 flex flex-col" : "max-w-md"}>
-        <DialogHeader className={isMobile ? "px-4 pt-safe pt-4" : ""}>
+        <DialogHeader className={isMobile ? "px-4 pt-4" : ""}>
           <DialogTitle>Modifier l'itinéraire</DialogTitle>
           <DialogDescription>
             Modifiez les informations de votre itinéraire

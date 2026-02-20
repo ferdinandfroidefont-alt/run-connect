@@ -279,7 +279,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 gap-0 flex flex-col bg-secondary sm:max-w-lg sm:max-h-[90vh] sm:rounded-[10px] sm:border">
           {/* iOS Header */}
-          <div className="bg-card border-b border-border shrink-0 sm:rounded-t-[10px] pt-safe">
+          <div className="bg-card border-b border-border shrink-0 sm:rounded-t-[10px]">
             <div className="flex items-center justify-between px-4 py-3 min-h-[56px]">
               <button
                 onClick={handleClose}
