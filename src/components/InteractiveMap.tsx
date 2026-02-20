@@ -1361,7 +1361,7 @@ export const InteractiveMap = ({
       
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (
-        <div className="absolute top-0 left-0 right-0 z-10 pt-safe">
+        <div className="absolute top-0 left-0 right-0 z-10">
           <div className="flex items-center px-4 py-2">
             <Button
               variant="ghost"
@@ -1378,7 +1378,7 @@ export const InteractiveMap = ({
 
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10">
-        <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden pt-safe">
+        <div className="bg-card/95 backdrop-blur-sm border-b border-border bg-pattern overflow-hidden">
           <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
             {/* Runconnect Title - Left aligned iOS style */}
             <h1 className="text-lg font-semibold text-primary leading-none flex items-center mt-2">
@@ -1411,7 +1411,7 @@ export const InteractiveMap = ({
         </div>
         
         {/* Search Bar and Date Filter - Floating over map */}
-        <div className="absolute left-0 right-0 z-10 px-4 pb-4 ios-map-search" style={{ top: 'calc(6rem + env(safe-area-inset-top, 0px))' }}>
+        <div className="absolute left-0 right-0 z-10 px-4 pb-4 ios-map-search" style={{ top: '6rem' }}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
@@ -1555,7 +1555,7 @@ export const InteractiveMap = ({
         </div>}
 
       {/* Filters + Immersive toggle - stacked & attached */}
-      {!isImmersiveMode && <div className="absolute right-4 z-10 flex flex-col items-stretch ios-map-filters" style={{ top: 'calc(10.5rem + env(safe-area-inset-top, 0px))' }}>
+      {!isImmersiveMode && <div className="absolute right-4 z-10 flex flex-col items-stretch ios-map-filters" style={{ top: '10.5rem' }}>
         <SessionFilters filters={filters} onFiltersChange={setFilters} className="rounded-b-none" />
         <div className="bg-card/95 backdrop-blur-sm shadow-sm rounded-b-xl border border-t-0 border-border cursor-pointer hover:bg-accent/50 transition-colors flex items-center justify-center p-1.5" onClick={toggleImmersiveMode}>
           <Maximize2 className="h-3.5 w-3.5" />

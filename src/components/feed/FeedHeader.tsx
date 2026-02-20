@@ -39,7 +39,7 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
 
   return (
     <header className="sticky top-0 z-20 bg-card border-b border-border">
-      <div className="px-4 pt-safe pt-4 pb-3 relative flex items-center justify-center min-h-[60px]">
+      <div className="px-4 pt-4 pb-3 relative flex items-center justify-center min-h-[60px]">
         {/* Avatar - Left */}
         <button 
           onClick={onProfileClick}

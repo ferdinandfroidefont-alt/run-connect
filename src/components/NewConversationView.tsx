@@ -332,7 +332,7 @@ export const NewConversationView = ({
     <div className="fixed inset-0 z-50 bg-secondary">
       <div className="h-full flex flex-col">
         {/* iOS Header */}
-        <div className="flex-shrink-0 bg-card border-b border-border min-h-[60px] flex items-center justify-center relative px-4 pt-safe">
+        <div className="flex-shrink-0 bg-card border-b border-border min-h-[60px] flex items-center justify-center relative px-4">
           <button
             onClick={onBack}
             className="absolute left-4 flex items-center gap-1 text-primary active:opacity-70"
