@@ -438,7 +438,7 @@
     transform: translateZ(0);
   }
 
-  /* iOS Status Bar zone - fond fixe derrière la status bar */
+  /* iOS Status Bar zone - fond dynamique derrière la status bar */
   body::before {
     content: '';
     display: block;
@@ -447,7 +447,21 @@
     left: 0;
     right: 0;
     height: env(safe-area-inset-top, 0px);
-    background-color: #1d283a;
+    background-color: var(--ios-top-color, #1d283a);
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  /* iOS Home Indicator zone - fond dynamique */
+  body::after {
+    content: '';
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background-color: var(--ios-bottom-color, #1d283a);
     z-index: 9999;
     pointer-events: none;
   }

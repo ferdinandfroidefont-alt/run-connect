@@ -16,15 +16,31 @@ export const Layout = ({ children }: LayoutProps) => {
   const { hideBottomNav } = useAppContext();
   const location = useLocation();
 
-  // Couleur dynamique iOS Home Indicator selon la page — appliquée sur documentElement
+  // Couleurs dynamiques iOS Status Bar + Home Indicator selon la page
   useEffect(() => {
     const path = location.pathname;
-    let color = '#1d283a';
-    if (path === '/messages' || path.startsWith('/messages/')) {
-      color = 'hsl(var(--secondary))';
+    let topColor = '#1d283a';
+    let bottomColor = '#1d283a';
+
+    if (path === '/') {
+      // Accueil : status bar = même couleur que le header (card), home indicator = bleu foncé
+      topColor = 'hsl(var(--card))';
+      bottomColor = '#1d283a';
+    } else if (path.startsWith('/messages/')) {
+      // Conversation ouverte : gris partout
+      topColor = 'hsl(var(--secondary))';
+      bottomColor = 'hsl(var(--secondary))';
+    } else if (path === '/search') {
+      // Recherche : gris/card partout
+      topColor = 'hsl(var(--card))';
+      bottomColor = 'hsl(var(--card))';
     }
-    document.documentElement.style.setProperty('--ios-bottom-color', color);
+    // Reste (messages liste, my-sessions, feed, etc.) = #1d283a par défaut
+
+    document.documentElement.style.setProperty('--ios-top-color', topColor);
+    document.documentElement.style.setProperty('--ios-bottom-color', bottomColor);
     return () => {
+      document.documentElement.style.removeProperty('--ios-top-color');
       document.documentElement.style.removeProperty('--ios-bottom-color');
     };
   }, [location.pathname]);
