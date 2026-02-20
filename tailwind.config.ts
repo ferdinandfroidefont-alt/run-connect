@@ -305,10 +305,10 @@ export default {
     			},
 			'glow-pulse': {
 				'0%, 100%': {
-					boxShadow: '0 0 20px 5px hsl(207 78% 60% / 0.3)'
+					boxShadow: '0 0 20px 5px hsl(24 100% 50% / 0.3)'
 				},
 				'50%': {
-					boxShadow: '0 0 30px 10px hsl(207 78% 60% / 0.5)'
+					boxShadow: '0 0 30px 10px hsl(24 100% 50% / 0.5)'
 				}
 			},
     			'bounce-subtle': {
