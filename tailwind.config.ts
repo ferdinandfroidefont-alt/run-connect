@@ -303,14 +303,14 @@ export default {
     					opacity: '1'
     				}
     			},
-    			'glow-pulse': {
-    				'0%, 100%': {
-    					boxShadow: '0 0 20px 5px hsl(217 91% 65% / 0.3)'
-    				},
-    				'50%': {
-    					boxShadow: '0 0 30px 10px hsl(217 91% 65% / 0.5)'
-    				}
-    			},
+			'glow-pulse': {
+				'0%, 100%': {
+					boxShadow: '0 0 20px 5px hsl(207 78% 60% / 0.3)'
+				},
+				'50%': {
+					boxShadow: '0 0 30px 10px hsl(207 78% 60% / 0.5)'
+				}
+			},
     			'bounce-subtle': {
     				'0%, 100%': {
     					transform: 'translateY(0)'

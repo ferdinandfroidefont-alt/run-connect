@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Gradient bleu identique au gradient-primary du design system -->
+    <!-- Gradient bleu ciel Sky Blue design system -->
     <gradient
         android:type="linear"
         android:angle="135"
-        android:startColor="#5B7CFF"
+        android:startColor="#4DA6E8"
         android:endColor="#6EC6FF" />
 </shape>
