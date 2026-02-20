@@ -597,7 +597,7 @@ const Auth = () => {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex-1 min-h-0" style={{ overflowY: 'scroll', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <div className="px-4 py-6 space-y-6 pb-16">
           {/* Logo Section */}
           <div className="flex flex-col items-center pt-4 pb-2">

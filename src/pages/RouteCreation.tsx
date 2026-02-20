@@ -671,7 +671,7 @@ export const RouteCreation = () => {
       </div>
 
       {/* Carte plein écran */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div ref={mapContainer} className="absolute inset-0 bg-secondary" />
 
       {/* Loading / Error overlay */}
       {!isMapLoaded && !mapError && (

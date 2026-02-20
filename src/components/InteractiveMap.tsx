@@ -1357,7 +1357,7 @@ export const InteractiveMap = ({
   };
   return <div className="relative w-full h-full bg-background overflow-hidden">
       {/* Map Container */}
-      <div ref={mapContainer} className="absolute inset-0" data-tutorial="map-container" />
+      <div ref={mapContainer} className="absolute inset-0 bg-secondary" data-tutorial="map-container" />
       
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (
