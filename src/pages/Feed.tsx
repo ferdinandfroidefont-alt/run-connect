@@ -127,7 +127,6 @@ export default function Feed() {
       {/* Header with Mode Selector */}
       <FeedHeader 
         onSearch={() => navigate('/search')} 
-        onProfileClick={() => setShowProfileDialog(true)}
         mode={mode}
         onModeChange={setMode}
       />
