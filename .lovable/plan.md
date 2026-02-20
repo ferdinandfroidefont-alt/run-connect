@@ -1,48 +1,54 @@
 
-# Suppression totale des barres iPhone (haut et bas)
+# Fix: Scroll sur la page Connexion
 
-## Objectif
-Supprimer toute trace visible des barres safe area iOS : plus aucun padding en haut (notch) ni en bas (home indicator). Le contenu doit occuper 100% de l'ecran, bord a bord, sans espace reserve visible.
+## Probleme identifie
 
-## Ce qui sera fait
+Le CSS global verrouille le scroll a tous les niveaux :
+- `html, body` : `position: fixed` + `overflow: hidden`
+- `#root` : `overflow: hidden`
+- Le conteneur Auth : `overflow: hidden` (inline style)
 
-### 1. Supprimer les classes `pt-safe` et `pb-safe` de TOUTES les pages et composants
+Le conteneur scrollable utilise `flex: 1` mais cela ne lui donne pas une hauteur fixe calculee -- donc le navigateur ne detecte jamais de debordement et le scroll ne se declenche pas.
 
-Fichiers concernes (32 fichiers au total) :
+## Solution
 
-**Composants principaux :**
-- `src/components/BottomNavigation.tsx` : retirer `pb-safe` de la nav
-- `src/components/SearchHeader.tsx` : retirer `pt-safe` du header
-- `src/components/SettingsDialog.tsx` : retirer `pt-safe`
-- `src/components/session-creation/CreateSessionWizard.tsx` : retirer `pt-safe`
-- `src/components/RouteEditDialog.tsx` : retirer `pt-safe`
-- `src/components/feed/FeedHeader.tsx` : retirer `pt-safe`
-- `src/components/LoadingScreen.tsx` : retirer `pb-safe`
-- Tout autre composant utilisant `pt-safe` ou `pb-safe`
+Donner au conteneur scrollable une **hauteur explicite** au lieu de se reposer sur flexbox. L'approche `flex: 1` ne fonctionne pas dans une chaine de parents tous verrouilles en `overflow: hidden`.
 
-**Pages :**
-- `src/pages/Auth.tsx` : retirer `pt-safe`
-- `src/pages/Profile.tsx` : retirer `pt-safe`
-- `src/pages/Leaderboard.tsx` : retirer `pt-safe`
-- `src/pages/MySessions.tsx` : retirer `pt-safe`
-- `src/pages/Search.tsx` : retirer `pt-safe` et `paddingBottom: env(safe-area-inset-bottom)`
-- `src/pages/RouteCreation.tsx` : retirer `pt-safe`
-- `src/pages/Terms.tsx` : retirer `pb-safe`
-- `src/pages/Privacy.tsx` : retirer `pb-safe`
-- `src/pages/About.tsx` : retirer `pb-safe`
-- `src/pages/NotFound.tsx` : retirer `pb-safe`
-- `src/pages/PublicProfile.tsx` : retirer `pb-safe`
-- `src/pages/ConfirmPresence.tsx` : retirer `pb-safe`
-- `src/pages/DonationSuccess.tsx` : retirer `pb-safe`
-- `src/pages/DonationCanceled.tsx` : retirer `pb-safe`
-- `src/pages/Messages.tsx` : retirer tout `env(safe-area-inset-bottom)` et `pt-safe`
-- `src/pages/Feed.tsx` : retirer si present
+## Modifications techniques
 
-### 2. Nettoyer le CSS global
-Dans `src/index.css` :
-- Supprimer les classes `.pb-safe` et `.pt-safe` (elles ne serviront plus)
+### Fichier : `src/pages/Auth.tsx`
 
-### 3. Resultat attendu
-- Zero espace reserve en haut pour le notch : le contenu (headers, cartes) monte jusqu'au bord superieur de l'ecran
-- Zero espace reserve en bas pour le home indicator : la nav bar et le contenu descendent jusqu'au bord inferieur
-- L'app occupe 100% de la surface de l'ecran, sans aucune "barre" visible
+1. **Conteneur racine** : retirer le `style={{ overflow: 'hidden' }}` ajoute lors du dernier edit (il est deja fixe par la classe `fixed inset-0`).
+
+2. **Conteneur scrollable** : remplacer le style flex actuel par une hauteur explicite calculee :
+
+```tsx
+// AVANT (ne fonctionne pas)
+<div id="auth-scroll-container" className="scroll-momentum" style={{ flex: '1 1 0%', minHeight: 0 }}>
+
+// APRES (hauteur explicite = viewport - header)
+<div 
+  id="auth-scroll-container" 
+  style={{ 
+    height: 'calc(100dvh - 56px)',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    WebkitOverflowScrolling: 'touch',
+    touchAction: 'pan-y'
+  }}
+>
+```
+
+3. **Conteneur racine** : changer le layout de `flex flex-col` vers un simple empilement sans flex, pour eviter que le moteur flex ne recalcule la hauteur du scroll container :
+
+```tsx
+// AVANT
+<div className="fixed inset-0 bg-secondary flex flex-col bg-pattern" style={{ overflow: 'hidden' }}>
+
+// APRES  
+<div className="fixed inset-0 bg-secondary bg-pattern">
+```
+
+Le header gardera sa hauteur fixe de 56px grace a `flexShrink: 0` et sa position naturelle en haut du flux.
+
+Cela garantit que le conteneur de scroll a une taille concrete en pixels, independamment des contraintes `overflow: hidden` des parents.
