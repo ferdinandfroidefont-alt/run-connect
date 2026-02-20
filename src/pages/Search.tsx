@@ -46,6 +46,16 @@ export default function Search() {
     };
   }, []);
 
+  // Couleurs iOS Status Bar + Home Indicator
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ios-top-color', '#1d283a');
+    document.documentElement.style.setProperty('--ios-bottom-color', 'hsl(var(--card))');
+    return () => {
+      document.documentElement.style.removeProperty('--ios-top-color');
+      document.documentElement.style.removeProperty('--ios-bottom-color');
+    };
+  }, []);
+
   // Focus automatique
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
