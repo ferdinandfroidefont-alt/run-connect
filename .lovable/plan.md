@@ -1,49 +1,37 @@
 
+# Corriger la bande visible sous la Status Bar sur la page Accueil
 
-# Continuity visuelle Status Bar et Home Indicator - Page Accueil
+## Cause du probleme
 
-## Probleme identifie
+Le header de la carte utilise `bg-card/95` (couleur card a 95% d'opacite avec backdrop-blur), tandis que la zone Status Bar utilise `hsl(var(--card))` (100% opaque, sans motif sportif). Cette difference d'opacite + l'absence du motif cree une legere difference de teinte visible.
 
-Les couleurs hardcodees `#1d283a` ne correspondent pas exactement a la variable CSS `--background` (`hsl(222 47% 11%)` en dark mode). Cela cree une legere difference de teinte visible entre :
-- La zone de la Status Bar (haut) et le header de la carte
-- La zone du Home Indicator (bas) et la bottom navigation bar
+## Solution
 
-## Corrections dans `src/components/Layout.tsx`
+Rendre le fond du header completement opaque pour qu'il corresponde exactement a la couleur de la Status Bar.
 
-Modifier le `useEffect` (lignes 20-38) pour utiliser les variables CSS dynamiques au lieu de `#1d283a` en dur :
+### Fichier : `src/components/InteractiveMap.tsx` (ligne 1381)
 
-**Status Bar (haut) pour la page Accueil :** deja correct (`hsl(var(--card))`), pas de changement.
-
-**Home Indicator (bas) pour la page Accueil :** remplacer `#1d283a` par `hsl(var(--background))` pour correspondre exactement au `bg-background` de la `BottomNavigation`.
-
-**Valeur par defaut pour toutes les pages :** remplacer `#1d283a` par `hsl(var(--background))` partout ou c'etait en dur, sauf les cas speciaux (messages = `hsl(var(--secondary))`, recherche = `hsl(var(--card))`).
-
-### Changement concret (lignes 21-23)
-
-Avant :
+Remplacer :
 ```
-let topColor = '#1d283a';
-let bottomColor = '#1d283a';
+bg-card/95 backdrop-blur-sm
+```
+Par :
+```
+bg-card
 ```
 
-Apres :
-```
-let topColor = 'hsl(var(--background))';
-let bottomColor = 'hsl(var(--background))';
-```
+Le `backdrop-blur-sm` et l'opacite a 95% n'apportent rien visuellement en haut de page (il n'y a pas de contenu derriere le header a cet endroit). En passant a `bg-card` opaque, la couleur sera strictement identique a `hsl(var(--card))` defini dans `--ios-top-color`.
 
-Le reste de la logique conditionnelle (messages, accueil) ne change pas.
+## Ce qui ne change pas
+
+- Aucune modification de position ou de padding
+- Aucune modification de la safe area
+- Aucune modification du layout
+- Les icones, le titre, l'avatar restent identiques
+- Le motif sportif (`bg-pattern`) reste present sur le header
 
 ## Fichier modifie
 
 | Fichier | Changement |
 |---------|-----------|
-| `src/components/Layout.tsx` | Remplacer `#1d283a` par `hsl(var(--background))` dans les valeurs par defaut du useEffect (2 lignes) |
-
-## Ce qui ne change pas
-
-- Aucune modification de position, padding, ou safe area
-- Aucun changement sur les composants de la carte ou les boutons
-- Aucun changement sur la BottomNavigation
-- Le design general reste identique
-
+| `src/components/InteractiveMap.tsx` | Ligne 1381 : `bg-card/95 backdrop-blur-sm` remplace par `bg-card` |
