@@ -152,7 +152,7 @@ const PublicProfile = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-secondary bg-pattern overflow-y-auto overflow-x-hidden pb-safe">
+    <div className="fixed inset-0 bg-secondary bg-pattern overflow-y-auto overflow-x-hidden">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

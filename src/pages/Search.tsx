@@ -59,13 +59,10 @@ export default function Search() {
   return (
     <>
       <div 
-        className={`fixed inset-0 z-[60] bg-secondary flex flex-col pt-safe ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
-        style={{ 
-          paddingBottom: 'env(safe-area-inset-bottom)'
-        }}
+        className={`fixed inset-0 z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
       >
         {/* Header iOS style with safe area */}
-        <header className="bg-card border-b border-border px-4 pt-4 pb-3 pt-safe">
+        <header className="bg-card border-b border-border px-4 pt-4 pb-3">
           <div className="relative flex items-center justify-center min-h-[44px]">
             {/* Bouton retour */}
             <button

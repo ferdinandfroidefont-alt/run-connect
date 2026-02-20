@@ -95,7 +95,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
       className="flex flex-col h-full bg-secondary"
     >
       {/* iOS Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border pt-safe">
+      <div className="sticky top-0 z-10 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 h-[56px]">
           <Button
             variant="ghost"

@@ -423,10 +423,10 @@
 
   /* iOS: remonter la barre de recherche et les boutons bas de la carte */
   .ios-map-search {
-    top: calc(4.5rem + env(safe-area-inset-top, 0px)) !important;
+    top: 4.5rem !important;
   }
   .ios-map-filters {
-    top: calc(7.5rem + env(safe-area-inset-top, 0px)) !important;
+    top: 7.5rem !important;
   }
   .ios-map-bottom-buttons {
     bottom: 0.5rem !important;
@@ -447,14 +447,6 @@
 }
 
 
-/* Safe area padding */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
-}
 
 /* Imminent session pulse animation - orange/red glow */
 @keyframes imminentPulse {

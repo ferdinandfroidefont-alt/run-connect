@@ -409,7 +409,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
             >
               {/* Status bar area removed for cleaner iOS look */}
               {/* iOS Header */}
-              <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0 pt-safe">
+              <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
                 <div className="flex items-center justify-between px-4 py-3">
                   <button
                     onClick={() => onOpenChange(false)}
