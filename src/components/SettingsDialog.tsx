@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Settings, Bell, Link2, Shield, HelpCircle, ChevronRight, Loader2, ArrowLeft, Search, Copy, Share2, Instagram } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -69,6 +70,12 @@ const settingsCategories = [
 export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setHideBottomNav } = useAppContext();
+
+  useEffect(() => {
+    setHideBottomNav(open);
+    return () => setHideBottomNav(false);
+  }, [open, setHideBottomNav]);
   const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [loading, setLoading] = useState(false);
