@@ -1,51 +1,27 @@
-# Masquer la barre de navigation sur certaines pages
 
-## Situation actuelle
 
-- **Classement (Leaderboard)** : la barre n'est pas masquée __à masquer
-- **Profil (Profile)** : la barre est visible -- a masquer
-- **Confirmer presence (ConfirmPresence)** : la barre est visible -- a masquer
-- **Parametres (SettingsDialog)** : c'est un dialog plein ecran, la barre reste visible en dessous -- a masquer
+# Suppression des barres systeme uniquement sur iOS
+
+## Objectif
+Supprimer toutes les barres visibles (status bar en haut, home indicator en bas) uniquement sur iOS. Android reste inchange avec ses barres noires actuelles.
 
 ## Modifications
 
-### 1. `src/pages/Profile.tsx`
+### 1. `src/components/BottomNavigation.tsx`
+- Supprimer le `paddingBottom: 'env(safe-area-inset-bottom, 0px)'` du style inline du `<nav>` -- cette propriete reserve de l'espace pour le home indicator iOS
 
-Ajouter le meme pattern que Leaderboard :
+### 2. `index.html`
+- Supprimer la balise `<meta name="theme-color">` (elle affecte uniquement le rendu iOS/Safari)
+- Conserver les meta tags `apple-mobile-web-app-capable` et `apple-mobile-web-app-status-bar-style: black-translucent` pour la fusion du contenu avec le notch
 
-```tsx
-const { setHideBottomNav } = useAppContext();
+### 3. `src/index.css`
+- Dans le bloc `@supports (-webkit-touch-callout: none)` (qui cible uniquement iOS), supprimer toute reference a `safe-area-inset-bottom` et `safe-area-inset-top` pour garantir zero espace reserve
 
-useEffect(() => {
-  setHideBottomNav(true);
-  return () => setHideBottomNav(false);
-}, [setHideBottomNav]);
-```
+### 4. Fichiers Android NON modifies
+- `android/app/src/main/res/values/styles.xml` : inchange
+- `android/app/src/main/res/values-v35/styles.xml` : inchange
+- `android-webview/app/src/main/res/values/styles.xml` : inchange
+- `android-webview/app/src/main/res/values-v35/styles.xml` : inchange
 
-### 2. `src/pages/ConfirmPresence.tsx`
+Les barres noires Android restent telles quelles. Seul le comportement iOS est modifie pour un affichage 100% bord a bord.
 
-Meme ajout :
-
-```tsx
-const { setHideBottomNav } = useAppContext();
-
-useEffect(() => {
-  setHideBottomNav(true);
-  return () => setHideBottomNav(false);
-}, [setHideBottomNav]);
-```
-
-### 3. `src/components/SettingsDialog.tsx`
-
-Masquer la barre quand le dialog est ouvert :
-
-```tsx
-const { setHideBottomNav } = useAppContext();
-
-useEffect(() => {
-  setHideBottomNav(open);
-  return () => setHideBottomNav(false);
-}, [open, setHideBottomNav]);
-```
-
-Chaque composant restaure la barre au demontage (cleanup du useEffect), donc la navigation reapparait normalement quand on quitte ces pages.
