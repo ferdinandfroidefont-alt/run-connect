@@ -139,10 +139,10 @@ const initializeCapacitorPlugins = async () => {
   if (detectedPlatform === 'ios') {
     try {
       const { StatusBar, Style } = await import('@capacitor/status-bar');
-      await StatusBar.setStyle({ style: Style.Light });
-      await StatusBar.setOverlaysWebView({ overlay: false });
+      await StatusBar.setOverlaysWebView({ overlay: true });
+      await StatusBar.setStyle({ style: Style.Dark });
       await StatusBar.show();
-      console.log('✅ iOS StatusBar configurée : visible, style Light, overlay false');
+      console.log('✅ iOS StatusBar configurée : visible, style Dark, overlay true');
     } catch (sbError) {
       console.error('❌ Erreur StatusBar iOS:', sbError);
     }
