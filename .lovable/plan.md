@@ -1,52 +1,69 @@
+# Appliquer le code couleur iOS : Status Bar + Home Indicator
+
+## Regles de couleur demandees
+
+### Status Bar (haut)
 
 
-# Correction couleurs iOS - Etape par etape
+| Page                                                                                       | Couleur                                             |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| Accueil (carte `/`)bleu avec motif sportif (meme couleur que la barre du haut avec cloche) | &nbsp;                                              |
+| Chargement (LoadingScreen)page conversation > gris                                        | Gris avec motif sportif = `hsl(var(--card))`&nbsp; |
+| Tout le reste                                                                              | `#1d283a`                                           |
 
-## Probleme
 
-La variable `--ios-bottom-color` est definie en JS mais **aucun element CSS ne l'utilise** : le `body::after` a ete supprime precedemment. Il faut le remettre.
+### Home Indicator (bas)
 
-De plus, la page Recherche a `--ios-top-color` en `#1d283a` alors qu'elle devrait etre grise avec motif sportif (comme la page de chargement).
 
-## Corrections (couleurs seulement, pas de changement de position)
+| Page                        | Couleur                                      |
+| --------------------------- | -------------------------------------------- |
+| Chargement + Recherche      | Gris avec motif sportif = `hsl(var(--card))` |
+| Conversations (`/messages`) | Gris = `hsl(var(--secondary))`               |
+| Tout le reste               | `#1d283a`                                    |
 
-### 1. `src/index.css` -- Ajouter `body::after` pour le Home Indicator
 
-Dans le bloc `@supports (-webkit-touch-callout: none)`, juste apres le `body::before` existant, ajouter :
+## Modifications
+
+### 1. `src/index.css` -- Rendre les pseudo-elements dynamiques
+
+Actuellement `body::before` (status bar) est en dur `#1d283a`. Il faut le rendre dynamique via une variable CSS `--ios-top-color` :
 
 ```css
-body::after {
-  content: '';
-  display: block;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-bottom, 0px);
-  background-color: var(--ios-bottom-color, #1d283a);
-  z-index: 9999;
-  pointer-events: none;
+body::before {
+  /* ... memes proprietes ... */
+  background-color: var(--ios-top-color, #1d283a);
 }
 ```
 
-C'est lui qui affichera la couleur du Home Indicator. Sans cet element, la variable `--ios-bottom-color` n'a aucun effet.
+### 2. `src/components/Layout.tsx` -- Ajouter la logique pour les deux variables
 
-### 2. `src/pages/Search.tsx` -- Corriger la couleur du haut
+Dans le `useEffect` existant, gerer les deux variables `--ios-top-color` et `--ios-bottom-color` :
 
-Actuellement : `--ios-top-color` = `#1d283a` (bleu fonce).
-Correction : `--ios-top-color` = `hsl(var(--card))` (gris avec motif sportif, pareil que la page de chargement).
+- Route `/` (accueil) : top = `hsl(var(--card))`, bottom = `#1d283a`
+- Route `/messages` : top = `#1d283a`, bottom = `hsl(var(--secondary))`
+- Route `/search` : top = `#1d283a`, bottom = `hsl(var(--card))`
+- Tout le reste : top = `#1d283a`, bottom = `#1d283a`
 
-Le bas reste `hsl(var(--card))` -- c'est deja correct.
+### 3. `src/pages/Search.tsx` -- Ajouter un useEffect pour les couleurs
 
-### 3. Pas de changement sur les autres fichiers
+Search est hors Layout. Ajouter un `useEffect` qui definit :
 
-- `Layout.tsx` : les regles sont correctes (accueil = card en haut, messages = secondary en bas, reste = #1d283a).
-- `LoadingScreen.tsx` : deja correct (haut et bas = `hsl(var(--card))`).
+- `--ios-top-color` = `#1d283a`
+- `--ios-bottom-color` = `hsl(var(--card))` (gris motif sportif)
 
-## Resume
+### 4. `src/components/LoadingScreen.tsx` -- Ajouter un useEffect pour les couleurs
 
-| Fichier | Changement |
-|---------|-----------|
-| `src/index.css` | Ajouter `body::after` avec `var(--ios-bottom-color)` |
-| `src/pages/Search.tsx` | Changer `--ios-top-color` de `#1d283a` a `hsl(var(--card))` |
+LoadingScreen est hors Layout. Ajouter un `useEffect` qui definit :
 
+- `--ios-top-color` = `hsl(var(--card))` (gris motif sportif)
+- `--ios-bottom-color` = `hsl(var(--card))` (gris motif sportif)
+
+## Fichiers modifies
+
+
+| Fichier                            | Changement                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `src/index.css`                    | `body::before` utilise `var(--ios-top-color, #1d283a)` au lieu de `#1d283a` en dur |
+| `src/components/Layout.tsx`        | useEffect gere `--ios-top-color` + `--ios-bottom-color` selon la route             |
+| `src/pages/Search.tsx`             | useEffect pour definir les deux variables CSS                                      |
+| `src/components/LoadingScreen.tsx` | useEffect pour definir les deux variables CSS                                      |

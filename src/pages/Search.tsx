@@ -48,7 +48,7 @@ export default function Search() {
 
   // Couleurs iOS Status Bar + Home Indicator
   useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--card))');
+    document.documentElement.style.setProperty('--ios-top-color', '#1d283a');
     document.documentElement.style.setProperty('--ios-bottom-color', 'hsl(var(--card))');
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
