@@ -597,7 +597,7 @@ const Auth = () => {
         </div>
       </div>
 
-      <div style={{ height: 'calc(100% - 56px)', overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ position: 'absolute', top: 56, left: 0, right: 0, bottom: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <div className="px-4 py-6 space-y-6 pb-16">
           {/* Logo Section */}
           <div className="flex flex-col items-center pt-4 pb-2">
