@@ -1,65 +1,37 @@
 
+# Corriger la bande visible sous la Status Bar sur la page Accueil
 
-# Continuity visuelle Status Bar et Home Indicator - Page de chargement
+## Cause du probleme
 
-## Probleme identifie
-
-La page de chargement (LoadingScreen) utilise un fond `bg-secondary` avec le motif sportif en overlay a 6% d'opacite. La Status Bar (`body::before`) recoit bien `hsl(var(--secondary))` comme couleur, et depuis la derniere correction elle affiche aussi le motif sportif. Cependant :
-
-1. **Le motif est rendu differemment** : `body::before` utilise `background-blend-mode: overlay` tandis que le LoadingScreen utilise `opacity: 0.06`. Le rendu visuel peut differer.
-2. **Il n'existe pas de `body::after`** pour le Home Indicator (bas de l'ecran). La variable `--ios-bottom-color` est definie mais aucune regle CSS ne la consomme. Il faut la creer.
+Le header de la carte utilise `bg-card/95` (couleur card a 95% d'opacite avec backdrop-blur), tandis que la zone Status Bar utilise `hsl(var(--card))` (100% opaque, sans motif sportif). Cette difference d'opacite + l'absence du motif cree une legere difference de teinte visible.
 
 ## Solution
 
-### 1. Ajouter `body::after` pour le Home Indicator
+Rendre le fond du header completement opaque pour qu'il corresponde exactement a la couleur de la Status Bar.
 
-Creer un pseudo-element `body::after` dans `src/index.css` (dans le bloc `@supports (-webkit-touch-callout: none)`) qui colore la zone du Home Indicator exactement comme `body::before` colore la Status Bar, avec le meme motif sportif.
+### Fichier : `src/components/InteractiveMap.tsx` (ligne 1381)
 
-### 2. S'assurer que la texture est coherente
-
-Le `body::before` et `body::after` utiliseront tous les deux `background-blend-mode: overlay` sur la couleur de fond + motif. Cela correspond bien au rendu du LoadingScreen puisque la couleur `--secondary` avec overlay produit un rendu quasi identique a l'opacite 6%.
-
-## Changements concrets
-
-### Fichier : `src/index.css`
-
-Apres le bloc `body::before` existant (apres la ligne 462), ajouter :
-
-```css
-  body::after {
-    content: '';
-    display: block;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-bottom, 0px);
-    background-color: var(--ios-bottom-color, hsl(var(--background)));
-    background-image: url('/patterns/sports-pattern.png');
-    background-size: 200px 200px;
-    background-repeat: repeat;
-    z-index: 9999;
-    pointer-events: none;
-  }
-  .dark body::after {
-    background-blend-mode: overlay;
-  }
-  :not(.dark) body::after {
-    background-blend-mode: overlay;
-  }
+Remplacer :
 ```
+bg-card/95 backdrop-blur-sm
+```
+Par :
+```
+bg-card
+```
+
+Le `backdrop-blur-sm` et l'opacite a 95% n'apportent rien visuellement en haut de page (il n'y a pas de contenu derriere le header a cet endroit). En passant a `bg-card` opaque, la couleur sera strictement identique a `hsl(var(--card))` defini dans `--ios-top-color`.
 
 ## Ce qui ne change pas
 
-- Aucune modification de position, padding ou safe area
-- Aucune modification du LoadingScreen lui-meme
-- Aucune modification du layout ou des composants
-- La Status Bar (haut) garde son fonctionnement actuel
-- Les couleurs dynamiques (`--ios-top-color`, `--ios-bottom-color`) continuent d'etre pilotees par chaque page/composant
+- Aucune modification de position ou de padding
+- Aucune modification de la safe area
+- Aucune modification du layout
+- Les icones, le titre, l'avatar restent identiques
+- Le motif sportif (`bg-pattern`) reste present sur le header
 
 ## Fichier modifie
 
 | Fichier | Changement |
 |---------|-----------|
-| `src/index.css` | Ajout de `body::after` pour le Home Indicator avec motif sportif et couleur dynamique |
-
+| `src/components/InteractiveMap.tsx` | Ligne 1381 : `bg-card/95 backdrop-blur-sm` remplace par `bg-card` |

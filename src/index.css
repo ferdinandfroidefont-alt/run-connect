@@ -448,39 +448,8 @@
     right: 0;
     height: env(safe-area-inset-top, 0px);
     background-color: var(--ios-top-color, #1d283a);
-    background-image: url('/patterns/sports-pattern.png');
-    background-size: 200px 200px;
-    background-repeat: repeat;
     z-index: 9999;
     pointer-events: none;
-  }
-  .dark body::before {
-    background-blend-mode: overlay;
-  }
-  :not(.dark) body::before {
-    background-blend-mode: overlay;
-  }
-
-  body::after {
-    content: '';
-    display: block;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-bottom, 0px);
-    background-color: var(--ios-bottom-color, hsl(var(--background)));
-    background-image: url('/patterns/sports-pattern.png');
-    background-size: 200px 200px;
-    background-repeat: repeat;
-    z-index: 9999;
-    pointer-events: none;
-  }
-  .dark body::after {
-    background-blend-mode: overlay;
-  }
-  :not(.dark) body::after {
-    background-blend-mode: overlay;
   }
 }
 
