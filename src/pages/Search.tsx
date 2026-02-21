@@ -46,11 +46,13 @@ export default function Search() {
     };
   }, []);
 
-  // Couleurs iOS Status Bar + Home Indicator
+  // Couleurs iOS Status Bar + WKWebView background
   useEffect(() => {
     document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--card))');
+    document.documentElement.style.setProperty('--wkwebview-bg', 'hsl(var(--secondary))');
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
+      document.documentElement.style.removeProperty('--wkwebview-bg');
     };
   }, []);
 

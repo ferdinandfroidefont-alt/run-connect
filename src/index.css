@@ -452,6 +452,11 @@
     pointer-events: none;
   }
 
+  /* WKWebView native background - dynamique par page */
+  html, body {
+    background-color: var(--wkwebview-bg, #1d283a) !important;
+  }
+
 }
 
 /* Mobile viewport handling replaced by global base styles */

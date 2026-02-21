@@ -206,9 +206,14 @@ const Messages = () => {
   useEffect(() => {
     if (selectedConversation) {
       setHideBottomNav(true);
+      document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
     } else {
       setHideBottomNav(false);
+      document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
     }
+    return () => {
+      document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
+    };
   }, [selectedConversation, setHideBottomNav]);
 
   // Avatar viewer
