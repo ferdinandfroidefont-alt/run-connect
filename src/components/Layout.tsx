@@ -28,8 +28,10 @@ export const Layout = ({ children }: LayoutProps) => {
     }
 
     document.documentElement.style.setProperty('--ios-top-color', topColor);
+    document.documentElement.style.setProperty('--ios-bottom-color', 'hsl(var(--background))');
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
+      document.documentElement.style.removeProperty('--ios-bottom-color');
     };
   }, [location.pathname]);
   
