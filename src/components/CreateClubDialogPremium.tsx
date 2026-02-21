@@ -52,14 +52,6 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
   // Hide bottom navigation when dialog is open
   useEffect(() => {
     setHideBottomNav(isOpen);
-    if (isOpen) {
-      const prev = document.documentElement.style.getPropertyValue('--ios-bottom-color');
-      document.documentElement.style.setProperty('--ios-bottom-color', 'transparent');
-      return () => {
-        setHideBottomNav(false);
-        document.documentElement.style.setProperty('--ios-bottom-color', prev);
-      };
-    }
     return () => setHideBottomNav(false);
   }, [isOpen, setHideBottomNav]);
 
