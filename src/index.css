@@ -163,15 +163,7 @@
   }
 
   /* Strict Viewport Locking for iOS Stability */
-  html {
-    background-color: hsl(var(--background));
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    max-width: 100vw;
-  }
-
-  body {
+  html, body {
     background-color: hsl(var(--background));
     height: 100%;
     width: 100%;
@@ -439,10 +431,6 @@
   }
   .ios-map-bottom-buttons {
     bottom: 0.5rem !important;
-  }
-
-  html {
-    background-color: hsl(var(--background)) !important;
   }
 
   /* Anti scroll-jump on input focus */
