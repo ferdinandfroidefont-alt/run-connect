@@ -29,6 +29,10 @@ export const Layout = ({ children }: LayoutProps) => {
       bottomColor = 'hsl(var(--secondary))';
     }
 
+    if (path === '/leaderboard') {
+      bottomColor = 'transparent';
+    }
+
     document.documentElement.style.setProperty('--ios-top-color', topColor);
     document.documentElement.style.setProperty('--ios-bottom-color', bottomColor);
     return () => {

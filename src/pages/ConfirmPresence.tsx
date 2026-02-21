@@ -32,7 +32,12 @@ export default function ConfirmPresence() {
 
   useEffect(() => {
     setHideBottomNav(true);
-    return () => setHideBottomNav(false);
+    const prev = document.documentElement.style.getPropertyValue('--ios-bottom-color');
+    document.documentElement.style.setProperty('--ios-bottom-color', 'transparent');
+    return () => {
+      setHideBottomNav(false);
+      document.documentElement.style.setProperty('--ios-bottom-color', prev);
+    };
   }, [setHideBottomNav]);
   const [roleChoice, setRoleChoice] = useState<'creator' | 'participant' | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
