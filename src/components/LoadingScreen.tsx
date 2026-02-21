@@ -20,11 +20,13 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [currentPhrase, setCurrentPhrase] = useState(loadingPhrases[0]);
   const [phraseOpacity, setPhraseOpacity] = useState(1);
 
-  // Couleurs iOS Status Bar + Home Indicator
+  // Couleurs iOS Status Bar + WKWebView background
   useEffect(() => {
     document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--secondary))');
+    document.documentElement.style.setProperty('--wkwebview-bg', 'hsl(var(--secondary))');
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
+      document.documentElement.style.removeProperty('--wkwebview-bg');
     };
   }, []);
 

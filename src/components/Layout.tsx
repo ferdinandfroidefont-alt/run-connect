@@ -28,8 +28,13 @@ export const Layout = ({ children }: LayoutProps) => {
     }
 
     document.documentElement.style.setProperty('--ios-top-color', topColor);
+
+    // WKWebView native background - défaut #1d283a pour toutes les pages
+    document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
+
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
+      document.documentElement.style.removeProperty('--wkwebview-bg');
     };
   }, [location.pathname]);
   
