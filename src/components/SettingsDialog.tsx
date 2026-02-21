@@ -74,6 +74,14 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
 
   useEffect(() => {
     setHideBottomNav(open);
+    if (open) {
+      const prev = document.documentElement.style.getPropertyValue('--ios-bottom-color');
+      document.documentElement.style.setProperty('--ios-bottom-color', 'transparent');
+      return () => {
+        setHideBottomNav(false);
+        document.documentElement.style.setProperty('--ios-bottom-color', prev);
+      };
+    }
     return () => setHideBottomNav(false);
   }, [open, setHideBottomNav]);
   const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');

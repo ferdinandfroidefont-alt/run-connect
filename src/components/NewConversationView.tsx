@@ -76,7 +76,12 @@ export const NewConversationView = ({
   // Hide bottom navigation when this view is open
   useEffect(() => {
     setHideBottomNav(true);
-    return () => setHideBottomNav(false);
+    const prev = document.documentElement.style.getPropertyValue('--ios-bottom-color');
+    document.documentElement.style.setProperty('--ios-bottom-color', 'transparent');
+    return () => {
+      setHideBottomNav(false);
+      document.documentElement.style.setProperty('--ios-bottom-color', prev);
+    };
   }, [setHideBottomNav]);
 
   // Load recent friends (based on recent conversations)
