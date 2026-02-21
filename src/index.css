@@ -441,6 +441,10 @@
     bottom: 0.5rem !important;
   }
 
+  html {
+    background-color: hsl(var(--background)) !important;
+  }
+
   /* Anti scroll-jump on input focus */
   input:focus, textarea:focus, select:focus {
     transform: translateZ(0);
