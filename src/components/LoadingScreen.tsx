@@ -23,10 +23,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   // Couleurs iOS Status Bar + Home Indicator
   useEffect(() => {
     document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--secondary))');
-    document.documentElement.style.setProperty('--ios-bottom-color', 'hsl(var(--secondary))');
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
-      document.documentElement.style.removeProperty('--ios-bottom-color');
     };
   }, []);
 
