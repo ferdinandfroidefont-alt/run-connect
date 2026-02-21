@@ -20,11 +20,12 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [currentPhrase, setCurrentPhrase] = useState(loadingPhrases[0]);
   const [phraseOpacity, setPhraseOpacity] = useState(1);
 
-  // Couleurs iOS Status Bar + Home Indicator
+  // Safe area iOS : loading = secondary + pattern (haut et bas)
   useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--secondary))');
+    document.body.classList.remove('page-home', 'page-default', 'page-search', 'page-conversation');
+    document.body.classList.add('page-loading');
     return () => {
-      document.documentElement.style.removeProperty('--ios-top-color');
+      document.body.classList.remove('page-loading');
     };
   }, []);
 

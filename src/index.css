@@ -438,7 +438,7 @@
     transform: translateZ(0);
   }
 
-  /* iOS Status Bar zone - fond fixe derrière la status bar */
+  /* iOS Safe Area Overlays - couleur unie par défaut, pattern optionnel */
   body::before {
     content: '';
     display: block;
@@ -447,11 +447,65 @@
     left: 0;
     right: 0;
     height: env(safe-area-inset-top, 0px);
-    background-color: var(--ios-top-color, hsl(var(--background)));
+    background-color: var(--safe-top-bg, #1d283a);
+    background-image: var(--safe-top-pattern, none);
+    background-repeat: repeat;
+    background-size: 256px 256px;
     z-index: 9999;
     pointer-events: none;
   }
 
+  body::after {
+    content: '';
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background-color: var(--safe-bottom-bg, #1d283a);
+    background-image: var(--safe-bottom-pattern, none);
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    z-index: 9999;
+    pointer-events: none;
+  }
+}
+
+/* Page-specific safe area colors */
+body.page-loading {
+  --safe-top-bg: hsl(var(--secondary));
+  --safe-top-pattern: url('/patterns/sports-pattern.png');
+  --safe-bottom-bg: hsl(var(--secondary));
+  --safe-bottom-pattern: url('/patterns/sports-pattern.png');
+}
+
+body.page-home {
+  --safe-top-bg: hsl(var(--card));
+  --safe-top-pattern: url('/patterns/sports-pattern.png');
+  --safe-bottom-bg: #1d283a;
+  --safe-bottom-pattern: none;
+}
+
+body.page-default {
+  --safe-top-bg: #1d283a;
+  --safe-top-pattern: none;
+  --safe-bottom-bg: #1d283a;
+  --safe-bottom-pattern: none;
+}
+
+body.page-search {
+  --safe-top-bg: #1d283a;
+  --safe-top-pattern: none;
+  --safe-bottom-bg: hsl(var(--secondary));
+  --safe-bottom-pattern: url('/patterns/sports-pattern.png');
+}
+
+body.page-conversation {
+  --safe-top-bg: hsl(var(--secondary));
+  --safe-top-pattern: url('/patterns/sports-pattern.png');
+  --safe-bottom-bg: hsl(var(--secondary));
+  --safe-bottom-pattern: url('/patterns/sports-pattern.png');
 }
 
 /* Mobile viewport handling replaced by global base styles */
