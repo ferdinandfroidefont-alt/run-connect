@@ -163,7 +163,15 @@
   }
 
   /* Strict Viewport Locking for iOS Stability */
-  html, body {
+  html {
+    background-color: hsl(var(--background));
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    max-width: 100vw;
+  }
+
+  body {
     background-color: hsl(var(--background));
     height: 100%;
     width: 100%;
