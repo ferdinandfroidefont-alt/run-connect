@@ -76,11 +76,8 @@ export const NewConversationView = ({
   // Hide bottom navigation when this view is open
   useEffect(() => {
     setHideBottomNav(true);
-    const prev = document.documentElement.style.getPropertyValue('--ios-bottom-color');
-    document.documentElement.style.setProperty('--ios-bottom-color', 'transparent');
     return () => {
       setHideBottomNav(false);
-      document.documentElement.style.setProperty('--ios-bottom-color', prev);
     };
   }, [setHideBottomNav]);
 

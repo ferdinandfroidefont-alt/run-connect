@@ -20,24 +20,16 @@ export const Layout = ({ children }: LayoutProps) => {
   useEffect(() => {
     const path = location.pathname;
     let topColor = 'hsl(var(--background))';
-    let bottomColor = 'hsl(var(--background))';
 
     if (path === '/') {
       topColor = 'hsl(var(--card))';
     } else if (path === '/messages' || path.startsWith('/messages/')) {
       topColor = 'hsl(var(--secondary))';
-      bottomColor = 'hsl(var(--secondary))';
-    }
-
-    if (path === '/leaderboard') {
-      bottomColor = 'transparent';
     }
 
     document.documentElement.style.setProperty('--ios-top-color', topColor);
-    document.documentElement.style.setProperty('--ios-bottom-color', bottomColor);
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
-      document.documentElement.style.removeProperty('--ios-bottom-color');
     };
   }, [location.pathname]);
   
