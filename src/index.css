@@ -463,7 +463,7 @@
     left: 0;
     right: 0;
     height: env(safe-area-inset-bottom, 0px);
-    background-color: var(--safe-bottom-bg, #1d283a);
+    background-color: var(--safe-bottom-bg, hsl(var(--background)));
     background-image: var(--safe-bottom-pattern, none);
     background-repeat: repeat;
     background-size: 256px 256px;
@@ -483,15 +483,11 @@ body.page-loading {
 body.page-home {
   --safe-top-bg: #1d283a;
   --safe-top-pattern: url('/patterns/sports-pattern.png');
-  --safe-bottom-bg: #1d283a;
-  --safe-bottom-pattern: none;
 }
 
 body.page-default {
   --safe-top-bg: #1d283a;
   --safe-top-pattern: none;
-  --safe-bottom-bg: #1d283a;
-  --safe-bottom-pattern: none;
 }
 
 body.page-search {
