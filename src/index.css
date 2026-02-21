@@ -451,7 +451,7 @@
     background-image: var(--safe-top-pattern, none);
     background-repeat: repeat;
     background-size: 256px 256px;
-    z-index: 9999;
+    z-index: 40;
     pointer-events: none;
   }
 
@@ -467,21 +467,21 @@
     background-image: var(--safe-bottom-pattern, none);
     background-repeat: repeat;
     background-size: 256px 256px;
-    z-index: 9999;
+    z-index: 40;
     pointer-events: none;
   }
 }
 
 /* Page-specific safe area colors */
 body.page-loading {
-  --safe-top-bg: hsl(var(--secondary));
+  --safe-top-bg: #465467;
   --safe-top-pattern: url('/patterns/sports-pattern.png');
-  --safe-bottom-bg: hsl(var(--secondary));
+  --safe-bottom-bg: #465467;
   --safe-bottom-pattern: url('/patterns/sports-pattern.png');
 }
 
 body.page-home {
-  --safe-top-bg: hsl(var(--card));
+  --safe-top-bg: #1d283a;
   --safe-top-pattern: url('/patterns/sports-pattern.png');
   --safe-bottom-bg: #1d283a;
   --safe-bottom-pattern: none;
@@ -497,14 +497,14 @@ body.page-default {
 body.page-search {
   --safe-top-bg: #1d283a;
   --safe-top-pattern: none;
-  --safe-bottom-bg: hsl(var(--secondary));
+  --safe-bottom-bg: #465467;
   --safe-bottom-pattern: url('/patterns/sports-pattern.png');
 }
 
 body.page-conversation {
-  --safe-top-bg: hsl(var(--secondary));
+  --safe-top-bg: #465467;
   --safe-top-pattern: url('/patterns/sports-pattern.png');
-  --safe-bottom-bg: hsl(var(--secondary));
+  --safe-bottom-bg: #465467;
   --safe-bottom-pattern: url('/patterns/sports-pattern.png');
 }
 
