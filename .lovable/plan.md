@@ -1,76 +1,45 @@
 
 
-# Correction complete des couleurs Status Bar et Home Indicator sur toutes les pages
+# Supprimer la barre Home Indicator sur certaines pages
 
-## Diagnostic
+## Principe
+On met `--ios-bottom-color` a `transparent` sur les pages demandees. Aucune barre n'est creee, aucune position ne change -- on rend juste le fond du Home Indicator invisible.
 
-Le systeme actuel a **3 problemes** :
+## Pages concernees et modifications
 
-1. **Pas de `body::after` pour le Home Indicator** : seul `body::before` (Status Bar haut) existe dans `index.css`. La variable `--ios-bottom-color` est definie en JS mais jamais utilisee en CSS. Le bas n'est donc jamais colore dynamiquement.
+### 1. Page Classement (`/leaderboard`)
+**Fichier : `src/components/Layout.tsx`**
+- Ajouter une condition dans le `useEffect` existant : si `path === '/leaderboard'`, mettre `bottomColor = 'transparent'`.
 
-2. **Couleurs hardcodees `#1d283a`** restantes dans :
-   - `src/pages/Search.tsx` (ligne 51) : `--ios-top-color` en dur
-   - `src/index.css` (ligne 450) : fallback `var(--ios-top-color, #1d283a)`
+### 2. Page Confirmer une seance (`/confirm-presence`)
+**Fichier : `src/pages/ConfirmPresence.tsx`**
+- Cette page n'est pas dans le Layout. Ajouter un `useEffect` qui set `--ios-bottom-color` a `transparent` (et cleanup au demontage).
 
-3. **Opacite sur le header de la carte** : `bg-card/95 backdrop-blur-sm` sur `InteractiveMap.tsx` (ligne 1381) cree une teinte legerement differente de `hsl(var(--card))` utilise pour la Status Bar.
+### 3. Page Parametres et sous-pages
+**Fichier : `src/components/SettingsDialog.tsx`**
+- Ajouter un `useEffect` qui, quand le dialog est `open`, set `--ios-bottom-color` a `transparent`, et restaure la valeur precedente quand il se ferme.
 
-## Plan de corrections
+### 4. Page Creer un club
+**Fichier : `src/components/CreateClubDialogPremium.tsx`**
+- Meme principe : `useEffect` quand le dialog est ouvert, `--ios-bottom-color` a `transparent`, restauration a la fermeture.
 
-### 1. `src/index.css` -- Ajouter `body::after` et corriger le fallback
+### 5. Page Nouveau message
+**Fichier : `src/components/NewConversationView.tsx`**
+- Ajouter un `useEffect` au montage qui set `--ios-bottom-color` a `transparent`, et restaure au demontage.
 
-**Ligne 450** : Changer le fallback de `#1d283a` en `hsl(var(--background))`
+## Detail technique
 
-**Apres ligne 453** : Ajouter `body::after` pour le Home Indicator :
-```css
-body::after {
-  content: '';
-  display: block;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-bottom, 0px);
-  background-color: var(--ios-bottom-color, hsl(var(--background)));
-  z-index: 9999;
-  pointer-events: none;
-}
+Chaque `useEffect` suit ce schema :
+
+```text
+useEffect(() => {
+  const prev = document.documentElement.style.getPropertyValue('--ios-bottom-color');
+  document.documentElement.style.setProperty('--ios-bottom-color', 'transparent');
+  return () => {
+    document.documentElement.style.setProperty('--ios-bottom-color', prev);
+  };
+}, []);  // ou [open] pour les dialogs
 ```
 
-### 2. `src/pages/Search.tsx` -- Supprimer la couleur en dur
-
-**Ligne 51** : Remplacer `'#1d283a'` par `'hsl(var(--card))'` (la page Search a un fond `bg-card`)
-
-### 3. `src/components/Layout.tsx` -- Supprimer la derniere couleur en dur
-
-**Ligne 28** : Remplacer `'#1d283a'` par `'hsl(var(--background))'` pour la page Messages (ou la couleur appropriee selon le header de Messages)
-
-### 4. `src/components/InteractiveMap.tsx` -- Rendre le header opaque
-
-**Ligne 1381** : Remplacer `bg-card/95 backdrop-blur-sm` par `bg-card` pour que le header soit 100% opaque et corresponde exactement a la Status Bar
-
-## Mapping final des couleurs par page
-
-| Page | Status Bar (haut) | Home Indicator (bas) |
-|------|-------------------|---------------------|
-| Accueil `/` | `hsl(var(--card))` | `hsl(var(--background))` |
-| Messages | `hsl(var(--background))` | `hsl(var(--secondary))` |
-| Search | `hsl(var(--card))` | `hsl(var(--card))` |
-| Loading Screen | `hsl(var(--secondary))` | `hsl(var(--secondary))` |
-| Toutes les autres | `hsl(var(--background))` | `hsl(var(--background))` |
-
-## Ce qui ne change pas
-
-- Aucune modification de position ou de taille des barres
-- Aucun mode immersif
-- Aucune modification de la safe area ou des paddings
-- Aucune modification du layout ou des composants
-
-## Fichiers modifies
-
-| Fichier | Changement |
-|---------|-----------|
-| `src/index.css` | Corriger fallback `body::before` + ajouter `body::after` pour Home Indicator |
-| `src/pages/Search.tsx` | Remplacer `#1d283a` par `hsl(var(--card))` |
-| `src/components/Layout.tsx` | Remplacer `#1d283a` par `hsl(var(--background))` |
-| `src/components/InteractiveMap.tsx` | Remplacer `bg-card/95 backdrop-blur-sm` par `bg-card` |
+Cela garantit que la valeur est restauree quand on quitte la page ou ferme le dialog.
 
