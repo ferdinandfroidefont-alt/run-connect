@@ -1,80 +1,72 @@
-# Colorer dynamiquement la zone Home Indicator iOS par page
-
-## Principe
-
-Le systeme existant colore deja la zone status bar (haut) via `body::before` + la variable CSS `--ios-top-color`. On replique exactement ce pattern pour le bas avec `body::after` + `--ios-bottom-color`.
-
-## Couleurs demandees
 
 
-| Page                                                              | Couleur bas (Home Indicator) |
-| ----------------------------------------------------------------- | ---------------------------- |
-| Toutes les pages (defaut)                                         | `#1d283a`                    |
-| Conversation ouverte (`/messages` avec conversation selectionnee) | `#465467`                    |
-| Chargement (LoadingScreen)                                        | gris clair + pattern sportif |
-| Recherche (`/search`)                                             | gris clair + pattern sportif |
+# Fix: le fond WKWebView ne change pas de couleur
 
+## Probleme identifie
+
+Le fond natif de la WKWebView iOS ne resout **pas** les variables CSS imbriquees comme `hsl(var(--secondary))`. La couche native lit la couleur computee de `html`/`body`, mais les references de type `hsl(var(...))` ne sont pas toujours resolues correctement par le moteur natif.
+
+De plus, la regle a la **ligne 167** (`background-color: hsl(var(--background))`) dans `@layer base` entre potentiellement en conflit meme si le `!important` de la ligne 457 devrait gagner.
+
+## Solution
+
+Remplacer toutes les references `hsl(var(--secondary))` par des **couleurs hexadecimales en dur** dans les appels a `--wkwebview-bg`. Le natif iOS comprend uniquement les couleurs resolues.
 
 ## Modifications
 
-### 1. `src/index.css` -- Ajouter `body::after`
+### 1. `src/components/LoadingScreen.tsx`
 
-Dans le bloc `@supports (-webkit-touch-callout: none)`, juste apres le `body::before` existant (ligne 453), ajouter un `body::after` identique mais pour le bas :
-
-```css
-body::after {
-  content: '';
-  display: block;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-bottom, 0px);
-  background-color: var(--ios-bottom-color, #1d283a);
-  background-image: var(--ios-bottom-pattern, none);
-  background-size: 200px 200px;
-  background-repeat: repeat;
-  z-index: 9999;
-  pointer-events: none;
-}
+Remplacer :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', 'hsl(var(--secondary))');
+```
+Par la couleur hex equivalente du mode sombre (puisque le defaut de l'app est sombre) :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#3b4a5c');
 ```
 
-La valeur par defaut est `#1d283a`, donc sans intervention JS, toutes les pages auront cette couleur.
+Note : `--secondary` en mode sombre = `215 19% 34%` = environ `#465467`. En mode clair = `215 19% 34%` aussi. La valeur exacte sera calculee et codee en dur.
 
-### 2. `src/components/Layout.tsx` -- Piloter la couleur pour la conversation
+### 2. `src/pages/Search.tsx`
 
-Dans le `useEffect` existant (lignes 20-34), ajouter la logique pour `--ios-bottom-color`. La plupart des pages gardent le defaut (`#1d283a`), donc on ne set la variable que pour les cas speciaux. Cependant, comme la page Messages est dans Layout mais que la conversation est un etat interne du composant Messages, il faut un mecanisme pour que Messages puisse communiquer l'etat "conversation ouverte".
+Meme correction :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', 'hsl(var(--secondary))');
+```
+Remplacer par la meme couleur hex en dur.
 
-On utilisera un nouveau setter dans `AppContext` (ex: `setConversationOpen`) ou plus simplement, on fera la logique directement dans `Messages.tsx`.
+### 3. `src/index.css` -- Renforcer la regle
 
-### 3. `src/pages/Messages.tsx` -- Couleur conversation
+Deplacer la regle `html, body { background-color: var(--wkwebview-bg, #1d283a) !important; }` **en dehors** du bloc `@supports (-webkit-touch-callout: none)` pour qu'elle s'applique aussi dans le preview web, et la mettre **apres** la regle de la ligne 167 pour garantir la cascade.
 
-Dans le `useEffect` qui gere deja `setHideBottomNav` quand `selectedConversation` change (lignes 206-212), ajouter :
+Ou bien : ajouter `!important` aussi a la ligne 167, mais avec la variable `--wkwebview-bg`.
 
-- Quand conversation ouverte : `--ios-bottom-color` = `#465467`
-- Quand liste conversations : supprimer la variable (retour au defaut `#1d283a`)
+Concretement, remplacer la ligne 167 :
+```css
+background-color: hsl(var(--background));
+```
+Par :
+```css
+background-color: var(--wkwebview-bg, #1d283a) !important;
+```
 
-### 4. `src/components/LoadingScreen.tsx` -- Gris clair + pattern
+Et supprimer le doublon dans le bloc `@supports` (lignes 455-458).
 
-Dans le `useEffect` existant (lignes 23-29), ajouter :
+### 4. Valeurs hex exactes a utiliser
 
-- `--ios-bottom-color` = la couleur gris clair du loading
-- `--ios-bottom-pattern` = `url(/patterns/sports-pattern.png)`
-- Nettoyage au unmount
+| Variable CSS | Valeur HSL | Hex calcule |
+|---|---|---|
+| `--secondary` dark (215 19% 34%) | `hsl(215, 19%, 34%)` | `#465467` |
+| `--secondary` light (215 19% 34%) | `hsl(215, 19%, 34%)` | `#465467` |
+| Defaut | - | `#1d283a` |
+| Conversation | - | `#465467` |
 
-### 5. `src/pages/Search.tsx` -- Gris clair + pattern
+## Fichiers modifies
 
-Dans le `useEffect` existant (lignes 49-55), ajouter :
+- `src/index.css` : unifier la regle background sur `html, body`
+- `src/components/LoadingScreen.tsx` : hex en dur au lieu de `hsl(var(...))`
+- `src/pages/Search.tsx` : hex en dur au lieu de `hsl(var(...))`
 
-- `--ios-bottom-color` = la couleur gris clair
-- `--ios-bottom-pattern` = `url(/patterns/sports-pattern.png)`
-- Nettoyage au unmount
+## Resultat attendu
 
-## Resultat
-
-- Par defaut `#1d283a` sur toutes les pages (couleur sombre de l'app)
-- `#465467` quand une conversation est ouverte
-- Gris clair avec motif sportif sur le chargement et la recherche
-- Meme mecanisme eprouve que pour la status bar, aucune modification native requise
-
-je ne veux pas que ça soit pour l barre home indicator mais pour le fond de la WKWEbView natif c'est compris ?
+Le fond natif WKWebView changera effectivement de couleur car seules des valeurs hex resolues seront utilisees, sans dependance aux variables CSS imbriquees.
