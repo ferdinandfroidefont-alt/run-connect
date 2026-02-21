@@ -46,11 +46,11 @@ export default function Search() {
     };
   }, []);
 
-  // Couleurs iOS Status Bar + Home Indicator
+  // Safe area iOS : search = haut #1d283a, bas secondary + pattern
   useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--card))');
+    document.body.classList.add('page-search');
     return () => {
-      document.documentElement.style.removeProperty('--ios-top-color');
+      document.body.classList.remove('page-search');
     };
   }, []);
 
