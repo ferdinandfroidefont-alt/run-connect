@@ -28,8 +28,6 @@ export const Layout = ({ children }: LayoutProps) => {
 
     if (path === '/') {
       document.body.classList.add('page-home');
-    } else if (path.startsWith('/messages/')) {
-      document.body.classList.add('page-conversation');
     } else {
       document.body.classList.add('page-default');
     }
