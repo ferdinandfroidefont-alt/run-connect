@@ -466,10 +466,6 @@
     right: 0;
     height: env(safe-area-inset-bottom, 0px);
     background-color: var(--ios-bottom-color, hsl(var(--background)));
-    background-image: url('/patterns/sports-pattern.png');
-    background-repeat: repeat;
-    background-size: 200px 200px;
-    background-blend-mode: overlay;
     z-index: 9999;
     pointer-events: none;
   }
