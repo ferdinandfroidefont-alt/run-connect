@@ -1,45 +1,20 @@
 
 
-# Supprimer la barre Home Indicator sur certaines pages
+# Corriger la barre Home Indicator (bas) pour une continuité parfaite
 
-## Principe
-On met `--ios-bottom-color` a `transparent` sur les pages demandees. Aucune barre n'est creee, aucune position ne change -- on rend juste le fond du Home Indicator invisible.
+## Probleme identifie
 
-## Pages concernees et modifications
+Le `body::after` (zone Home Indicator iOS) applique `background-blend-mode: overlay` avec le motif sportif. Ce blend mode melange la couleur de fond avec le motif, produisant une couleur resultante **differente** de celle du contenu juste au-dessus (barre de navigation ou page). C'est ce qui cree l'effet de "deuxieme barre" visible sur les captures.
 
-### 1. Page Classement (`/leaderboard`)
-**Fichier : `src/components/Layout.tsx`**
-- Ajouter une condition dans le `useEffect` existant : si `path === '/leaderboard'`, mettre `bottomColor = 'transparent'`.
+Le `body::before` (Status Bar en haut) a le meme probleme potentiel, mais il est moins visible car les headers ont eux-memes le motif.
 
-### 2. Page Confirmer une seance (`/confirm-presence`)
-**Fichier : `src/pages/ConfirmPresence.tsx`**
-- Cette page n'est pas dans le Layout. Ajouter un `useEffect` qui set `--ios-bottom-color` a `transparent` (et cleanup au demontage).
+## Solution
 
-### 3. Page Parametres et sous-pages
-**Fichier : `src/components/SettingsDialog.tsx`**
-- Ajouter un `useEffect` qui, quand le dialog est `open`, set `--ios-bottom-color` a `transparent`, et restaure la valeur precedente quand il se ferme.
+### Fichier : `src/index.css`
 
-### 4. Page Creer un club
-**Fichier : `src/components/CreateClubDialogPremium.tsx`**
-- Meme principe : `useEffect` quand le dialog est ouvert, `--ios-bottom-color` a `transparent`, restauration a la fermeture.
+**Modification du `body::after` (lignes 460-475)** : Supprimer `background-image`, `background-repeat`, `background-size` et `background-blend-mode` du pseudo-element `body::after`. On garde uniquement la couleur de fond unie (`background-color`) pour que le Home Indicator soit une simple extension de couleur, invisible et parfaitement dans la continuite.
 
-### 5. Page Nouveau message
-**Fichier : `src/components/NewConversationView.tsx`**
-- Ajouter un `useEffect` au montage qui set `--ios-bottom-color` a `transparent`, et restaure au demontage.
+Le `body::before` (Status Bar haut) reste inchange car le motif y fonctionne bien visuellement.
 
-## Detail technique
-
-Chaque `useEffect` suit ce schema :
-
-```text
-useEffect(() => {
-  const prev = document.documentElement.style.getPropertyValue('--ios-bottom-color');
-  document.documentElement.style.setProperty('--ios-bottom-color', 'transparent');
-  return () => {
-    document.documentElement.style.setProperty('--ios-bottom-color', prev);
-  };
-}, []);  // ou [open] pour les dialogs
-```
-
-Cela garantit que la valeur est restauree quand on quitte la page ou ferme le dialog.
+Aucune autre modification. Aucune barre creee, aucune position changee -- on retire juste le motif qui causait le decalage de couleur.
 
