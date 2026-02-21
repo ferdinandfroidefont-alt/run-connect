@@ -211,19 +211,6 @@ const Messages = () => {
     }
   }, [selectedConversation, setHideBottomNav]);
 
-  // Safe area iOS: basculer page-conversation / page-default
-  useEffect(() => {
-    document.body.classList.remove('page-conversation', 'page-default');
-    if (selectedConversation) {
-      document.body.classList.add('page-conversation');
-    } else {
-      document.body.classList.add('page-default');
-    }
-    return () => {
-      document.body.classList.remove('page-conversation', 'page-default');
-    };
-  }, [selectedConversation]);
-
   // Avatar viewer
   const handleAvatarClick = (avatarUrl: string | null, username: string) => {
     console.log('Avatar cliqué ! UserID:', username);

@@ -16,26 +16,20 @@ export const Layout = ({ children }: LayoutProps) => {
   const { hideBottomNav } = useAppContext();
   const location = useLocation();
 
-  // Classes de page pour les safe areas iOS (haut + bas)
+  // Couleurs dynamiques iOS Status Bar + Home Indicator selon la page
   useEffect(() => {
-    // Ne pas écraser page-loading si le loading screen est actif
-    if (document.body.classList.contains('page-loading')) return;
-
     const path = location.pathname;
-    document.body.classList.remove(
-      'page-home', 'page-default', 'page-search', 'page-conversation'
-    );
+    let topColor = 'hsl(var(--background))';
 
     if (path === '/') {
-      document.body.classList.add('page-home');
-    } else {
-      document.body.classList.add('page-default');
+      topColor = 'hsl(var(--card))';
+    } else if (path === '/messages' || path.startsWith('/messages/')) {
+      topColor = 'hsl(var(--secondary))';
     }
 
+    document.documentElement.style.setProperty('--ios-top-color', topColor);
     return () => {
-      document.body.classList.remove(
-        'page-home', 'page-default', 'page-conversation'
-      );
+      document.documentElement.style.removeProperty('--ios-top-color');
     };
   }, [location.pathname]);
   

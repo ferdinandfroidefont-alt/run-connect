@@ -73,7 +73,6 @@
     --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
     --font-serif: 'Crimson Pro', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
     --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    --tabbar-bg: #edf1f5;
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
@@ -135,7 +134,6 @@
     --chart-4: 217 10% 64%;
     --chart-5: 215 16% 46%;
     --sidebar: 217 32% 17%;
-    --tabbar-bg: #172033;
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
@@ -440,7 +438,7 @@
     transform: translateZ(0);
   }
 
-  /* iOS Safe Area Overlays - couleur unie par défaut, pattern optionnel */
+  /* iOS Status Bar zone - fond fixe derrière la status bar */
   body::before {
     content: '';
     display: block;
@@ -449,61 +447,11 @@
     left: 0;
     right: 0;
     height: env(safe-area-inset-top, 0px);
-    background-color: var(--safe-top-bg, #1d283a);
-    background-image: var(--safe-top-pattern, none);
-    background-repeat: repeat;
-    background-size: 256px 256px;
-    z-index: 40;
+    background-color: var(--ios-top-color, hsl(var(--background)));
+    z-index: 9999;
     pointer-events: none;
   }
 
-  body::after {
-    content: '';
-    display: block;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-bottom, 0px);
-    background-color: var(--safe-bottom-bg, var(--tabbar-bg));
-    background-image: var(--safe-bottom-pattern, none);
-    background-repeat: repeat;
-    background-size: 256px 256px;
-    z-index: 40;
-    pointer-events: none;
-  }
-}
-
-/* Page-specific safe area colors */
-body.page-loading {
-  --safe-top-bg: #465467;
-  --safe-top-pattern: url('/patterns/sports-pattern.png');
-  --safe-bottom-bg: #465467;
-  --safe-bottom-pattern: url('/patterns/sports-pattern.png');
-}
-
-body.page-home {
-  --safe-top-bg: #1d283a;
-  --safe-top-pattern: url('/patterns/sports-pattern.png');
-}
-
-body.page-default {
-  --safe-top-bg: #1d283a;
-  --safe-top-pattern: none;
-}
-
-body.page-search {
-  --safe-top-bg: #1d283a;
-  --safe-top-pattern: none;
-  --safe-bottom-bg: #465467;
-  --safe-bottom-pattern: url('/patterns/sports-pattern.png');
-}
-
-body.page-conversation {
-  --safe-top-bg: #465467;
-  --safe-top-pattern: url('/patterns/sports-pattern.png');
-  --safe-bottom-bg: #465467;
-  --safe-bottom-pattern: url('/patterns/sports-pattern.png');
 }
 
 /* Mobile viewport handling replaced by global base styles */
