@@ -25,7 +25,7 @@ export const Layout = ({ children }: LayoutProps) => {
     if (path === '/') {
       topColor = 'hsl(var(--card))';
     } else if (path === '/messages' || path.startsWith('/messages/')) {
-      topColor = '#1d283a';
+      topColor = 'hsl(var(--background))';
       bottomColor = 'hsl(var(--secondary))';
     }
 
