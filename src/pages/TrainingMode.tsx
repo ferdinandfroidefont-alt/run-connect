@@ -229,13 +229,13 @@ export default function TrainingMode() {
       <div ref={mapRef} className="absolute inset-0 bg-secondary" />
 
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 safe-area-top">
+      <div className="absolute top-0 left-0 right-0 z-[9999] safe-area-top">
         <div className="backdrop-blur-xl bg-background/80 border-b border-border/50">
           <div className="flex items-center gap-3 px-4 py-3 pt-[env(safe-area-inset-top,12px)]">
             {/* Back button */}
             <button
-              onClick={() => { stopTracking(); navigate(-1); }}
-              className="w-9 h-9 rounded-full bg-background border border-border/50 flex items-center justify-center shadow-sm active:opacity-70 transition-opacity"
+              onClick={() => { try { stopTracking(); } catch {} navigate(-1); }}
+              className="w-9 h-9 rounded-full bg-background border border-border/50 flex items-center justify-center shadow-sm active:opacity-70 transition-opacity relative z-[10000]"
             >
               <ChevronLeft className="h-5 w-5 text-foreground" />
             </button>
@@ -273,7 +273,7 @@ export default function TrainingMode() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-32 left-4 right-4 z-20"
+            className="absolute top-32 left-4 right-4 z-[9999]"
           >
             <div className="bg-[#FF9500] text-white rounded-xl px-4 py-3 text-center shadow-lg">
               <p className="text-[15px] font-medium">Vous vous éloignez du parcours</p>
@@ -283,11 +283,11 @@ export default function TrainingMode() {
       </AnimatePresence>
 
       {/* Bottom - Stop button */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 pb-[env(safe-area-inset-bottom,20px)]">
+      <div className="absolute bottom-0 left-0 right-0 z-[9999] pb-[env(safe-area-inset-bottom,20px)]">
         <div className="px-4 pb-4">
           <button
             onClick={handleStop}
-            className="w-full py-4 bg-destructive text-destructive-foreground rounded-2xl text-[17px] font-semibold active:opacity-80 transition-opacity shadow-lg"
+            className="w-full py-4 bg-destructive text-destructive-foreground rounded-2xl text-[17px] font-semibold active:opacity-80 transition-opacity shadow-lg relative z-[10000]"
           >
             Terminer
           </button>
