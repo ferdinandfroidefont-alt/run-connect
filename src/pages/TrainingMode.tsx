@@ -223,16 +223,12 @@ export default function TrainingMode() {
           0% { transform: scale(1); opacity: 0.6; }
           100% { transform: scale(2.5); opacity: 0; }
         }
-        .gm-style > div:first-child > div:last-child {
-          pointer-events: none !important;
-        }
-        .gm-style > div:first-child > div:first-child {
-          pointer-events: auto !important;
-        }
       `}</style>
 
-      {/* Map */}
-      <div ref={mapRef} className="absolute inset-0 bg-secondary" />
+      {/* Map - isolated stacking context so Google Maps z-indexes stay below our UI */}
+      <div className="absolute inset-0" style={{ zIndex: 0, isolation: 'isolate' }}>
+        <div ref={mapRef} className="w-full h-full bg-secondary" />
+      </div>
 
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-[9999] safe-area-top pointer-events-auto">
