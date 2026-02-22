@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
     Camera: {},
     StatusBar: {
       style: 'LIGHT',
-      backgroundColor: '#1d283a'
+      backgroundColor: '#F5F5F5'
     },
   },
   android: {
@@ -35,7 +35,7 @@ const config: CapacitorConfig = {
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'app.runconnect',
-    backgroundColor: '#1d283a'
+    backgroundColor: '#F5F5F5'
   }
 };
 
