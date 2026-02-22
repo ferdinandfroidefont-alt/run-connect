@@ -2062,7 +2062,7 @@ const Messages = () => {
 
            {/* iMessage Style Input */}
           <div 
-            className="sticky bottom-0 w-full px-2 py-1 bg-secondary border-t border-border z-40 keyboard-input-container"
+            className="sticky bottom-0 w-full px-2 py-1 bg-background border-t border-border/50 z-40 keyboard-input-container"
           >
             {/* Reply Preview */}
             {replyTo && (
