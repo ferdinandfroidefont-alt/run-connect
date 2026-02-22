@@ -118,7 +118,7 @@ export const FeedActions = ({
         <Button
           onClick={onJoin}
           size="sm"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 shadow-lg shadow-primary/20 font-medium"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 font-medium"
         >
           <UserPlus className="h-4 w-4 mr-1.5" />
           Rejoindre

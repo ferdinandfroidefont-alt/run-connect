@@ -187,7 +187,7 @@ export default function Feed() {
             ) : feedItems.length === 0 ? (
               <FeedEmptyState />
             ) : (
-              <div className="pt-1">
+              <div className="divide-y divide-border/30">
                 {feedItems.map((session, index) => (
                   <FeedCard
                     key={session.id}
@@ -236,7 +236,7 @@ export default function Feed() {
                 />
               </div>
             ) : (
-              <div className="py-4 space-y-2">
+              <div className="py-4 divide-y divide-border/30">
                 {discoverSessions.map((session, index) => (
                   <DiscoverCard
                     key={session.id}

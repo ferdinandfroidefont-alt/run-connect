@@ -589,7 +589,7 @@ const Auth = () => {
   return (
     <div className="fixed inset-0 bg-background flex flex-col" style={{ overflow: 'hidden' }}>
       {/* iOS Header */}
-      <div className="bg-card border-b border-border" style={{ flexShrink: 0, zIndex: 10 }}>
+      <div className="bg-card/80 backdrop-blur-xl border-b border-border/30" style={{ flexShrink: 0, zIndex: 10 }}>
         <div className="flex items-center justify-center px-4 h-[56px]">
           <h1 className="text-[17px] font-semibold">
             {authStep === 'reset' ? 'Réinitialiser' : authMode === 'signup' ? 'Inscription' : 'Connexion'}
@@ -605,7 +605,6 @@ const Auth = () => {
               src={appIcon} 
               alt="RunConnect" 
               className="w-20 h-20 rounded-[18px] mb-4"
-              style={{ boxShadow: '0 4px 12px hsl(211 100% 50% / 0.2)' }}
             />
             <h2 className="text-2xl font-bold text-primary">RunConnect</h2>
             <p className="text-[13px] text-muted-foreground mt-1">

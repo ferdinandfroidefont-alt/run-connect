@@ -633,9 +633,9 @@ const Profile = () => {
         <div className="flex flex-col items-center pt-4 pb-2">
           {/* Avatar with subtle shadow */}
           <div className="relative mb-3">
-            <Avatar className="h-20 w-20 ring-[3px] ring-white shadow-lg">
+            <Avatar className="h-20 w-20 ring-2 ring-border">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
+              <AvatarFallback className="text-xl bg-secondary text-foreground">
                 {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
