@@ -2253,7 +2253,7 @@ const Messages = () => {
     <>
       <div className="h-full bg-secondary bg-pattern flex flex-col">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-[#1d283a] sport-pattern-top">
+        <div className="sticky top-0 z-50 bg-[#1d283a] sport-pattern-top header-pattern-gradient">
           <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
