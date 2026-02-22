@@ -290,17 +290,6 @@ export default function TrainingMode() {
         )}
       </AnimatePresence>
 
-      {/* Bottom - Stop button */}
-      <div className="absolute bottom-0 left-0 right-0 z-[9999] pb-[env(safe-area-inset-bottom,20px)] pointer-events-auto">
-        <div className="px-4 pb-4">
-          <button
-            onClick={handleStop}
-            className="w-full py-4 bg-destructive text-destructive-foreground rounded-2xl text-[17px] font-semibold active:opacity-80 transition-opacity shadow-lg relative z-[10000]"
-          >
-            Terminer
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
