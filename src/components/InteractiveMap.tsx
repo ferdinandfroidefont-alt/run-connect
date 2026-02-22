@@ -23,7 +23,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -1361,17 +1361,22 @@ export const InteractiveMap = ({
       
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (
-        <div className="absolute top-0 left-0 right-0 z-10 bg-card pt-[env(safe-area-inset-top)]">
-          <div className="flex items-center px-4 py-2 border-b border-border/30">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleImmersiveMode}
-              className="px-0 font-normal"
-            >
-              <ArrowLeft className="h-5 w-5 mr-1" />
-              Retour
-            </Button>
+        <div className="absolute top-0 left-0 right-0 z-10 pointer-events-auto">
+          <div className="backdrop-blur-xl bg-background/80 border-b border-border/50">
+            <div className="flex items-center gap-3 px-4 py-3 pt-[env(safe-area-inset-top,12px)]">
+              <button
+                onClick={toggleImmersiveMode}
+                className="w-9 h-9 rounded-full bg-background border border-border/50 flex items-center justify-center shadow-sm active:opacity-70 transition-opacity"
+              >
+                <ChevronLeft className="h-5 w-5 text-foreground" />
+              </button>
+
+              <p className="flex-1 text-[17px] font-semibold text-foreground text-center truncate">
+                Suivi d'itinéraire
+              </p>
+
+              <div className="w-9" />
+            </div>
           </div>
         </div>
       )}
