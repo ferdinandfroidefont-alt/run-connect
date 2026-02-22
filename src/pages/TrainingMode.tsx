@@ -172,8 +172,8 @@ export default function TrainingMode() {
     }
   }, [mapReady, loading]);
 
-  const handleStop = useCallback(() => {
-    stopTracking();
+  const handleStop = useCallback(async () => {
+    try { await stopTracking(); } catch {}
     navigate(-1);
   }, [stopTracking, navigate]);
 
@@ -223,18 +223,24 @@ export default function TrainingMode() {
           0% { transform: scale(1); opacity: 0.6; }
           100% { transform: scale(2.5); opacity: 0; }
         }
+        .gm-style > div:first-child > div:last-child {
+          pointer-events: none !important;
+        }
+        .gm-style > div:first-child > div:first-child {
+          pointer-events: auto !important;
+        }
       `}</style>
 
       {/* Map */}
       <div ref={mapRef} className="absolute inset-0 bg-secondary" />
 
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 z-[9999] safe-area-top">
+      <div className="absolute top-0 left-0 right-0 z-[9999] safe-area-top pointer-events-auto">
         <div className="backdrop-blur-xl bg-background/80 border-b border-border/50">
           <div className="flex items-center gap-3 px-4 py-3 pt-[env(safe-area-inset-top,12px)]">
             {/* Back button */}
             <button
-              onClick={() => { try { stopTracking(); } catch {} navigate(-1); }}
+              onClick={async () => { try { await stopTracking(); } catch {} navigate(-1); }}
               className="w-9 h-9 rounded-full bg-background border border-border/50 flex items-center justify-center shadow-sm active:opacity-70 transition-opacity relative z-[10000]"
             >
               <ChevronLeft className="h-5 w-5 text-foreground" />
@@ -283,7 +289,7 @@ export default function TrainingMode() {
       </AnimatePresence>
 
       {/* Bottom - Stop button */}
-      <div className="absolute bottom-0 left-0 right-0 z-[9999] pb-[env(safe-area-inset-bottom,20px)]">
+      <div className="absolute bottom-0 left-0 right-0 z-[9999] pb-[env(safe-area-inset-bottom,20px)] pointer-events-auto">
         <div className="px-4 pb-4">
           <button
             onClick={handleStop}
