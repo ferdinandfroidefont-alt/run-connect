@@ -378,7 +378,7 @@ export const usePushNotifications = () => {
   // ─── useEffect #2: TOKEN RETRY (persistent, for new users) ──
 
   useEffect(() => {
-    if (!user || !isNative) return;
+    if (!user) return;
     if (isRegistered) return; // Already saved, no need to retry
 
     let attempts = 0;
@@ -402,7 +402,7 @@ export const usePushNotifications = () => {
       } catch {}
 
       // Try saving from window.fcmToken or local state
-      const pendingToken = token || (window as any).fcmToken;
+      const pendingToken = token || (window as any).fcmToken || (window as any).__fcmTokenBuffer;
       if (pendingToken && typeof pendingToken === 'string' && pendingToken.length > 50) {
         log('[PUSH] Retry saving token, attempt', attempts + 1);
         const saved = await savePushToken(pendingToken);
@@ -426,20 +426,19 @@ export const usePushNotifications = () => {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [user, isNative, isRegistered, savePushToken, token]);
+  }, [user, isRegistered, savePushToken, token]);
 
   // ─── useEffect #3: fcmTokenReady listener ────────────────
 
   useEffect(() => {
-    if (!isNative) return;
-
     const handleFcmTokenReady = (event: Event) => {
       const customEvent = event as CustomEvent<{ token: string; platform: string; attempt?: number }>;
       const t = customEvent.detail?.token;
 
       if (t && !(window as any).__fcmTokenReceived) {
-        log('[PUSH] fcmTokenReady received');
+        log('[PUSH] fcmTokenReady received — forcing native mode');
         (window as any).__fcmTokenReceived = true;
+        setIsNative(true); // Receiving a token proves we're native
         setToken(t);
         setIsRegistered(true);
         savePushToken(t);
@@ -450,11 +449,12 @@ export const usePushNotifications = () => {
     (window as any).__fcmListenerReady = true;
     document.dispatchEvent(new CustomEvent('ReactListenerReady'));
 
-    // Check if window.fcmToken was already injected before React mounted
-    const existingToken = (window as any).fcmToken;
+    // Check if window.fcmToken or __fcmTokenBuffer was already injected before React mounted
+    const existingToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
     if (existingToken && typeof existingToken === 'string' && existingToken.length > 50 && !(window as any).__fcmTokenReceived) {
-      log('[PUSH] window.fcmToken already present at mount, saving...');
+      log('[PUSH] window.fcmToken/buffer already present at mount, saving...');
       (window as any).__fcmTokenReceived = true;
+      setIsNative(true);
       setToken(existingToken);
       setIsRegistered(true);
       savePushToken(existingToken);
@@ -463,7 +463,7 @@ export const usePushNotifications = () => {
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
     };
-  }, [isNative, savePushToken]);
+  }, [savePushToken]);
 
   // ─── useEffect #4: App resume ────────────────────────────
 
@@ -513,7 +513,7 @@ export const usePushNotifications = () => {
       const native = isReallyNative();
       if (native !== isNative) setIsNative(native);
     }, 500);
-    const timeout = setTimeout(() => clearInterval(interval), 5000);
+    const timeout = setTimeout(() => clearInterval(interval), 15000);
 
     return () => {
       clearInterval(interval);
