@@ -417,7 +417,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               {/* Status bar area removed for cleaner iOS look */}
               {/* iOS Header */}
               <div className="sticky top-0 z-40 shrink-0">
-                <div className="bg-[#1d283a] header-pattern-gradient sport-pattern-top">
+                <div className="bg-[#1d283a] header-pattern-gradient">
                   <div className="flex items-center justify-between px-4 py-3">
                     <button
                       onClick={() => onOpenChange(false)}
@@ -432,7 +432,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 </div>
                 
                 {/* iOS-style search bar */}
-                <div className="px-4 pb-3 pt-3 bg-card border-b border-border relative z-10">
+                <div className="px-4 pb-3 pt-3 bg-[#1d283a] border-b border-border relative z-10 sport-pattern-top">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
