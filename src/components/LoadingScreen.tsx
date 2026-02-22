@@ -78,14 +78,12 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           src={appIcon} 
           alt="RunConnect" 
           className="w-[120px] h-[120px] rounded-[28px]"
-          style={{ boxShadow: '0 8px 24px hsl(211 100% 50% / 0.25)' }}
         />
       </div>
 
       {/* Loading card */}
       <div 
         className="w-full max-w-[280px] bg-card rounded-[14px] p-5"
-        style={{ boxShadow: '0 2px 8px hsl(0 0% 0% / 0.06)' }}
       >
         <p className="text-foreground text-[15px] font-medium text-center mb-3">
           Chargement en cours

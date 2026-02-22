@@ -550,7 +550,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           variant="default"
                           size="default"
                           onClick={copyUrl}
-                          className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
+                          className="w-full bg-primary hover:bg-primary/90"
                         >
                           <Copy className="h-4 w-4 mr-2" />
                           Copier le lien
