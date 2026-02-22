@@ -156,7 +156,6 @@ export const InteractiveMap = ({
     setRefreshSessions,
     setOpenCreateSession,
     setOpenCreateRoute,
-    setHideBottomNav
   } = useAppContext();
   const navigate = useNavigate();
 
