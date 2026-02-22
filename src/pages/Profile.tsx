@@ -606,11 +606,11 @@ const Profile = () => {
     }
   };
   if (loading) {
-    return <div className="h-full bg-secondary flex items-center justify-center bg-pattern">
+    return <div className="h-full bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  return <div className="h-full bg-secondary bg-pattern overflow-y-auto">
+  return <div className="h-full bg-background overflow-y-auto">
       {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
       <div className="sticky top-0 z-40 bg-card border-b border-border">

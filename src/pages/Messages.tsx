@@ -206,16 +206,11 @@ const Messages = () => {
   useEffect(() => {
     if (selectedConversation) {
       setHideBottomNav(true);
-      document.documentElement.style.backgroundColor = '#465467';
-      document.body.style.backgroundColor = '#465467';
     } else {
       setHideBottomNav(false);
-      document.documentElement.style.backgroundColor = '#1d283a';
-      document.body.style.backgroundColor = '#1d283a';
     }
     return () => {
-      document.documentElement.style.backgroundColor = '#1d283a';
-      document.body.style.backgroundColor = '#1d283a';
+      setHideBottomNav(false);
     };
   }, [selectedConversation, setHideBottomNav]);
 
@@ -1583,7 +1578,7 @@ const Messages = () => {
     
     return (
       <>
-        <div className="h-full bg-background bg-pattern">
+        <div className="h-full bg-background">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* iMessage Style Header */}
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-secondary border-b border-border z-50">
@@ -2251,7 +2246,7 @@ const Messages = () => {
 
   return (
     <>
-      <div className="h-full bg-secondary bg-pattern flex flex-col">
+      <div className="h-full bg-background flex flex-col">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
           <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">

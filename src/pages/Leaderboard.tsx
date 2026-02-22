@@ -507,7 +507,7 @@ const Leaderboard = () => {
 
   if (loading && currentPage === 1) {
     return (
-      <div className="h-full bg-secondary pb-24 bg-pattern overflow-y-auto">
+      <div className="h-full bg-background pb-24 overflow-y-auto">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
           <div className="flex items-center justify-between px-4 py-3">
@@ -534,7 +534,7 @@ const Leaderboard = () => {
   const nextRank = getNextRankInfo(userPoints);
 
   return (
-    <div className="h-full bg-secondary pb-8 bg-pattern overflow-y-auto">
+    <div className="h-full bg-background pb-8 overflow-y-auto">
       {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
       <div className="sticky top-0 z-50 bg-card border-b border-border">

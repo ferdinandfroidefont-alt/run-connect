@@ -145,7 +145,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full bg-secondary"
+      className="flex flex-col h-full bg-background"
     >
       {/* iOS Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border">
@@ -163,7 +163,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
         </div>
       </div>
 
-      <ScrollArea className="flex-1 bg-pattern">
+      <ScrollArea className="flex-1">
         <div className="py-6 space-y-6">
           {/* Main Toggle */}
           <div className="space-y-2">

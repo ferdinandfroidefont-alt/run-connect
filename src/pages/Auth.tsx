@@ -587,7 +587,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern" style={{ overflow: 'hidden' }}>
+    <div className="fixed inset-0 bg-background flex flex-col" style={{ overflow: 'hidden' }}>
       {/* iOS Header */}
       <div className="bg-card border-b border-border" style={{ flexShrink: 0, zIndex: 10 }}>
         <div className="flex items-center justify-center px-4 h-[56px]">

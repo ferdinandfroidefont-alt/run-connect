@@ -20,17 +20,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [currentPhrase, setCurrentPhrase] = useState(loadingPhrases[0]);
   const [phraseOpacity, setPhraseOpacity] = useState(1);
 
-  // Couleurs iOS Status Bar + WKWebView background
-  useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', '#465467');
-    document.documentElement.style.backgroundColor = '#465467';
-    document.body.style.backgroundColor = '#465467';
-    return () => {
-      document.documentElement.style.removeProperty('--ios-top-color');
-      document.documentElement.style.removeProperty('background-color');
-      document.body.style.removeProperty('background-color');
-    };
-  }, []);
 
   useEffect(() => {
     // Smooth eased progress
@@ -73,18 +62,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-secondary flex flex-col items-center justify-center px-6"
+      className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center px-6"
     >
-      {/* Pattern overlay without isolation:isolate */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: "url('/patterns/sports-pattern.png')",
-          backgroundRepeat: 'repeat',
-          backgroundSize: '256px 256px',
-          opacity: 0.06
-        }}
-      />
       {/* Welcome text */}
       <p className="text-muted-foreground text-[15px] mb-1">Bienvenue sur</p>
       
