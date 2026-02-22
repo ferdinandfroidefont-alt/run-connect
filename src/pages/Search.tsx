@@ -48,9 +48,9 @@ export default function Search() {
 
   // Couleurs iOS Status Bar + WKWebView background
   useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', '#465467');
-    document.documentElement.style.backgroundColor = '#465467';
-    document.body.style.backgroundColor = '#465467';
+    document.documentElement.style.setProperty('--ios-top-color', '#F5F5F5');
+    document.documentElement.style.backgroundColor = '#F5F5F5';
+    document.body.style.backgroundColor = '#F5F5F5';
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
       document.documentElement.style.removeProperty('background-color');
@@ -58,9 +58,13 @@ export default function Search() {
     };
   }, []);
 
-  // Focus automatique
+  // Focus automatique - délai plus long pour laisser le layout se stabiliser sur iOS
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
+    const timer = setTimeout(() => {
+      // Empêcher le scroll lors du focus
+      inputRef.current?.focus({ preventScroll: true });
+    }, 400);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleOpenSettings = (focus?: string) => {
