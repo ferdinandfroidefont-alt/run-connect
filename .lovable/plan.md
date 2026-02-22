@@ -1,59 +1,103 @@
 
 
-## Diagnostic : Pourquoi les tokens push ne sont pas sauvegardes
+## Faire fonctionner les notifications push sur iOS (App Store)
 
-### Probleme identifie
+### Probleme actuel
 
-Sur 60 utilisateurs, seulement 4 ont un token push en base. Le probleme est une **race condition** dans le hook `usePushNotifications.tsx` :
+Le code React (`usePushNotifications.tsx`) gere correctement iOS : il demande les permissions, appelle `PushNotifications.register()`, et sauvegarde le token APNs via Capacitor. **Mais** le pipeline CI/CD iOS (`.github/workflows/ios-appstore.yml`) ne configure pas Firebase ni les entitlements push, donc :
 
-1. **Detection native echoue au demarrage** : Dans le WebView Android, `isReallyNative()` retourne `false` au premier rendu car `AndroidBridge` et `fcmToken` ne sont pas encore injectes
-2. **Le listener `fcmTokenReady` n'est jamais installe** : L'useEffect #3 (ligne 433) fait `if (!isNative) return;` -- donc le listener n'est jamais mis en place
-3. **Le polling natif dure seulement 5 secondes** : Meme si `isNative` passe a `true` apres le polling, le token FCM a deja ete dispatche et rate
-4. **Le token n'est jamais sauve en base** : Resultat = `push_token: null` pour la majorite des utilisateurs
+1. Le token APNs n'est jamais genere car Firebase n'est pas initialise
+2. L'app n'a pas l'entitlement "Push Notifications" requis par Apple
+3. Le fichier `GoogleService-Info.plist` n'est pas inclus dans le build
 
-### Correction planifiee
+### Corrections a appliquer
 
-**Fichier : `src/hooks/usePushNotifications.tsx`**
+#### 1. Ajouter `GoogleService-Info.plist` au pipeline iOS
 
-#### 1. Ecouter `fcmTokenReady` SANS condition `isNative` (useEffect #3)
+Le fichier Firebase pour iOS doit etre injecte dans le build via un secret GitHub encode en base64 (`IOS_GOOGLE_SERVICE_INFO_BASE64`).
 
-Le listener global doit etre actif des le montage, pas seulement en mode natif. Quand un token arrive, on le sauvegarde directement.
+Ajouter une etape dans `.github/workflows/ios-appstore.yml` apres "Add iOS platform" :
 
-Modifier l'useEffect #3 (lignes 433-466) :
-- Retirer le guard `if (!isNative) return;`
-- Quand un token est recu, mettre aussi a jour `isNative` a `true` (car recevoir un token prouve qu'on est natif)
+```yaml
+- name: Add GoogleService-Info.plist
+  env:
+    GOOGLE_SERVICE_INFO: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_BASE64 }}
+  run: |
+    echo "$GOOGLE_SERVICE_INFO" | base64 --decode > ios/App/App/GoogleService-Info.plist
+    echo "GoogleService-Info.plist added"
+```
 
-#### 2. Verifier `window.__fcmTokenBuffer` en plus de `window.fcmToken`
+#### 2. Ajouter l'entitlement Push Notifications
 
-Le `index.html` stocke le token dans `window.__fcmTokenBuffer` (via le listener global fallback). Le hook doit aussi verifier cette variable.
+Creer un fichier `App.entitlements` avec la capability push, injecte dans le build :
 
-Modifier les lignes 454-461 pour aussi chercher le token dans `window.__fcmTokenBuffer`.
+```yaml
+- name: Configure Push Notification entitlements
+  run: |
+    cat > ios/App/App/App.entitlements << 'EOF'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+      <key>aps-environment</key>
+      <string>production</string>
+    </dict>
+    </plist>
+    EOF
 
-#### 3. Allonger le polling natif de 5s a 15s (lignes 511-516)
+    # Ajouter le fichier entitlements dans les build settings Xcode
+```
 
-Changer le timeout de 5000 a 15000ms pour donner plus de temps a la detection native.
+Puis mettre a jour le script Ruby de signing pour ajouter `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` dans les build settings.
 
-#### 4. Ajouter une sauvegarde directe dans le retry loop (useEffect #2)
+#### 3. Ajouter le plugin Firebase dans le Podfile iOS
 
-Modifier le retry loop (lignes 380-429) pour ne pas etre bloque par `isNative` -- le check du token en DB et la tentative de sauvegarde doivent fonctionner meme si `isNative` n'est pas encore detecte.
+Capacitor utilise CocoaPods. Il faut ajouter le pod Firebase Messaging pour que le bridge natif fonctionne :
 
-Retirer le guard `if (!user || !isNative) return;` (ligne 381) et le remplacer par `if (!user) return;`.
+```yaml
+- name: Add Firebase Messaging pod
+  run: |
+    cd ios/App
+    # Ajouter le pod Firebase/Messaging au Podfile
+    if ! grep -q "Firebase/Messaging" Podfile; then
+      sed -i '' '/target .App. do/a\
+        pod '\''Firebase\/Messaging'\''
+      ' Podfile
+    fi
+```
+
+#### 4. Initialiser Firebase dans AppDelegate.swift
+
+Ajouter le code d'initialisation Firebase dans le AppDelegate iOS genere par Capacitor :
+
+```yaml
+- name: Configure AppDelegate for Firebase
+  run: |
+    DELEGATE="ios/App/App/AppDelegate.swift"
+    # Ajouter import FirebaseCore et FirebaseCore.configure() dans application(_:didFinishLaunchingWithOptions:)
+    sed -i '' 's/import UIKit/import UIKit\nimport FirebaseCore/' "$DELEGATE"
+    sed -i '' '/super.application.*didFinishLaunchingWithOptions/a\
+        FirebaseApp.configure()
+    ' "$DELEGATE"
+```
+
+### Ce que l'utilisateur doit faire (hors Lovable)
+
+1. **Dans Firebase Console** : creer une app iOS avec le bundle ID `com.ferdi.runconnect`, telecharger le `GoogleService-Info.plist`
+2. **Dans Apple Developer Portal** : generer une cle APNs (.p8), puis l'uploader dans Firebase Console > Cloud Messaging > iOS
+3. **Dans GitHub Secrets** : ajouter `IOS_GOOGLE_SERVICE_INFO_BASE64` (le fichier .plist encode en base64 : `base64 -i GoogleService-Info.plist`)
 
 ### Resume des modifications
 
-| Ligne | Modification |
-|-------|-------------|
-| 381 | Retirer `!isNative` du guard du retry loop |
-| 405 | Ajouter `window.__fcmTokenBuffer` comme source de token |
-| 433-435 | Retirer `if (!isNative) return;` du listener fcmTokenReady |
-| 440-446 | Quand token recu, forcer `setIsNative(true)` |
-| 454-461 | Ajouter verification de `window.__fcmTokenBuffer` |
-| 516 | Changer timeout polling de 5000 a 15000 |
+| Fichier | Modification |
+|---------|-------------|
+| `.github/workflows/ios-appstore.yml` | Ajouter 4 etapes : GoogleService-Info.plist, entitlements push, pod Firebase/Messaging, init Firebase dans AppDelegate |
+| Script Ruby de signing | Ajouter `CODE_SIGN_ENTITLEMENTS` dans les build settings |
 
-### Impact attendu
+### Ce qui fonctionne deja
 
-- Les tokens seront captures meme si la detection native est lente
-- Le fallback `__fcmTokenBuffer` rattrape les tokens dispatches avant React
-- Le retry loop fonctionne independamment de la detection native
-- Compatible Android WebView, Capacitor Android, et iOS
+- Le code React (`usePushNotifications.tsx`) gere correctement iOS : permission prompt, register, save token
+- Le `capacitor.config.ts` a les `presentationOptions` pour iOS
+- L'edge function `send-push-notification` utilise FCM v1 API qui supporte les tokens APNs via Firebase
+- Le secret `FIREBASE_SERVICE_ACCOUNT_JSON` est deja configure
 
