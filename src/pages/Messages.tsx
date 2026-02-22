@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useTransition } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-
+import { useAppContext } from "@/contexts/AppContext";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -132,7 +132,7 @@ const Messages = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { getThemeClasses } = useConversationTheme();
-  
+  const { setHideBottomNav } = useAppContext();
   const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationSearch, setConversationSearch] = useState("");
@@ -202,12 +202,14 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  // Background color based on conversation state
+  // Show/hide bottom navigation based on conversation state
   useEffect(() => {
     if (selectedConversation) {
+      setHideBottomNav(true);
       document.documentElement.style.backgroundColor = '#465467';
       document.body.style.backgroundColor = '#465467';
     } else {
+      setHideBottomNav(false);
       document.documentElement.style.backgroundColor = '#1d283a';
       document.body.style.backgroundColor = '#1d283a';
     }
@@ -215,7 +217,7 @@ const Messages = () => {
       document.documentElement.style.backgroundColor = '#1d283a';
       document.body.style.backgroundColor = '#1d283a';
     };
-  }, [selectedConversation]);
+  }, [selectedConversation, setHideBottomNav]);
 
   // Avatar viewer
   const handleAvatarClick = (avatarUrl: string | null, username: string) => {
@@ -1582,7 +1584,7 @@ const Messages = () => {
     return (
       <>
         <div className="h-full bg-background bg-pattern">
-        <div className="max-w-md mx-auto w-full h-full flex flex-col keyboard-aware-container">
+        <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* iMessage Style Header */}
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-secondary border-b border-border z-50">
             <div className="flex items-center px-2 py-2">

@@ -155,7 +155,8 @@ export const InteractiveMap = ({
   const {
     setRefreshSessions,
     setOpenCreateSession,
-    setOpenCreateRoute
+    setOpenCreateRoute,
+    setHideBottomNav
   } = useAppContext();
   const navigate = useNavigate();
 
@@ -212,7 +213,11 @@ export const InteractiveMap = ({
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
 
   const toggleImmersiveMode = () => {
-    setIsImmersiveMode(prev => !prev);
+    setIsImmersiveMode(prev => {
+      const next = !prev;
+      setHideBottomNav(next);
+      return next;
+    });
   };
 
   // Share profile hook

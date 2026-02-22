@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-
+import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Settings, Bell, Link2, Shield, HelpCircle, ChevronRight, Loader2, ArrowLeft, Search, Copy, Share2, Instagram } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -70,6 +70,12 @@ const settingsCategories = [
 export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setHideBottomNav } = useAppContext();
+
+  useEffect(() => {
+    setHideBottomNav(open);
+    return () => setHideBottomNav(false);
+  }, [open, setHideBottomNav]);
   const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [loading, setLoading] = useState(false);
@@ -397,7 +403,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 pb-[72px] flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
+      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div

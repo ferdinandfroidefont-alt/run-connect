@@ -13,7 +13,7 @@ import { ChevronLeft, Users, Search, Camera, Lock, Globe, MapPin, Check, Sparkle
 import { ImageCropEditor } from "./ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-
+import { useAppContext } from "@/contexts/AppContext";
 
 interface Profile {
   user_id: string;
@@ -31,6 +31,7 @@ interface CreateClubDialogPremiumProps {
 export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: CreateClubDialogPremiumProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setHideBottomNav } = useAppContext();
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
   const [groupLocation, setGroupLocation] = useState("");
@@ -47,6 +48,12 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+
+  // Hide bottom navigation when dialog is open
+  useEffect(() => {
+    setHideBottomNav(isOpen);
+    return () => setHideBottomNav(false);
+  }, [isOpen, setHideBottomNav]);
 
   // Load suggested members (closest friends based on recent conversations)
   useEffect(() => {
