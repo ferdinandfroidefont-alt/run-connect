@@ -2298,7 +2298,7 @@ const Messages = () => {
 
         <div className="space-y-3">
           {/* Quick Search Buttons */}
-          <div className="bg-card p-3">
+          <div className="bg-card p-3 relative z-10 isolate">
             <div className="grid grid-cols-5 gap-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
