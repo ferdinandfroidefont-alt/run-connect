@@ -22,17 +22,17 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  const [theme, setThemeState] = useState<Theme>('dark'); // Mode sombre par défaut
+  const [theme, setThemeState] = useState<Theme>('light'); // Mode clair par défaut
 
   useEffect(() => {
-    // Charger le thème sauvegardé ou utiliser 'dark' par défaut
+    // Charger le thème sauvegardé ou utiliser 'light' par défaut
     const savedTheme = localStorage.getItem('theme') as Theme;
     if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
       setThemeState(savedTheme);
     } else {
-      // Pas de thème sauvegardé, utiliser le mode sombre par défaut
-      setThemeState('dark');
-      localStorage.setItem('theme', 'dark');
+      // Pas de thème sauvegardé, utiliser le mode clair par défaut
+      setThemeState('light');
+      localStorage.setItem('theme', 'light');
     }
   }, []);
 
