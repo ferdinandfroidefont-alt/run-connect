@@ -1,39 +1,27 @@
 
 
-## Corrections du Mode Entrainement
+## Correction des boutons non-cliquables sur la page Mode Entrainement
 
-### Problemes identifies
+### Probleme
 
-1. **Carte affiche "For development purposes only"** : le code utilise `import.meta.env.VITE_GOOGLE_MAPS_API_KEY` (variable vide) au lieu du proxy `google-maps-proxy` utilise par toute l'app pour recuperer la cle API Google Maps.
-2. **Puce bleue absente** : la carte ne charge pas correctement donc le marker GPS ne s'affiche pas. De plus, `AdvancedMarkerElement` necessite un `mapId` dans les options de la carte.
-3. **Pas de bouton retour** dans la barre blanche du haut.
-4. **Couleur de l'itineraire** : l'utilisateur veut une couleur differente du bleu principal.
+Google Maps cree des divs internes avec des `z-index` tres eleves (jusqu'a 1000000+) qui interceptent tous les clics, meme si nos boutons ont `z-[9999]`. Le `z-index` seul ne suffit pas car les overlays Google Maps sont dans le meme contexte d'empilement.
 
-### Corrections dans `src/pages/TrainingMode.tsx`
+### Solution
 
-#### 1. Charger la cle API via le proxy (comme le reste de l'app)
+Modifier `src/pages/TrainingMode.tsx` avec 2 changements :
 
-Remplacer l'utilisation de `import.meta.env.VITE_GOOGLE_MAPS_API_KEY` par un appel a `supabase.functions.invoke('google-maps-proxy', { body: { type: 'get-key' } })` pour recuperer la cle dynamiquement avant d'initialiser la carte. C'est exactement ce que font `InteractiveMap.tsx` et `RouteCreation.tsx`.
+1. **Ajouter `pointer-events: none` sur le conteneur de la carte** pour empecher Google Maps d'intercepter les clics sur les zones ou se trouvent nos boutons. Puis remettre `pointer-events: auto` sur le div interne de la carte pour que le pan/zoom fonctionne toujours.
 
-#### 2. Ajouter le `mapId` pour activer AdvancedMarkerElement
+2. **Ajouter `pointer-events: auto` explicitement** sur la barre du haut, le bouton "Terminer", et le toast off-route.
 
-Ajouter `mapId: MAP_ID` dans les options de `new google.maps.Map(...)` pour que le marker bleu iOS fonctionne.
+3. **Transformer `stopTracking` en appel asynchrone avec `await`** dans les handlers de clic, car `stopTracking()` est une fonction `async` qui peut rejeter une promesse non geree, causant un crash silencieux qui empeche `navigate(-1)` de s'executer.
 
-#### 3. Ajouter un bouton retour (fleche) dans la barre du haut
+### Details techniques
 
-Ajouter une fleche de retour a gauche dans la barre blanche, style iOS, qui appelle `navigate(-1)`.
+Dans `src/pages/TrainingMode.tsx` :
 
-#### 4. Changer la couleur de l'itineraire
-
-Passer du bleu `#5B7CFF` a un orange/corail `#FF6B35` pour que le trace se distingue bien de la puce bleue de position.
-
-#### 5. Fallback pour la puce bleue sans AdvancedMarkerElement
-
-Si `AdvancedMarkerElement` n'est pas disponible (certaines versions), utiliser un `google.maps.Marker` classique avec une icone SVG cercle bleu en fallback.
-
-### Fichier modifie
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/TrainingMode.tsx` | Charger la cle API via proxy, ajouter mapId, bouton retour, nouvelle couleur itineraire |
+- Le conteneur racine `fixed inset-0` recoit un style qui isole les couches
+- La barre du haut et le bouton du bas recoivent `pointer-events-auto` en plus du z-index eleve
+- Le handler du bouton retour et de "Terminer" utilisent des fonctions `async` avec `await stopTracking()` dans un `try/catch`, puis `navigate(-1)`
+- Ajout d'une balise `<style>` globale pour forcer les overlays Google Maps a ne pas bloquer : `.gm-style > div:first-child > div:last-child { pointer-events: none !important; }` (cible les overlays de controle Google Maps)
 
