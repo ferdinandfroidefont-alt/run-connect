@@ -204,18 +204,22 @@ const Messages = () => {
 
   // Show/hide bottom navigation based on conversation state
   useEffect(() => {
+    // Couleur secondary mode clair : hsl(210 40% 98%) ≈ #F5F7FA
+    const secondaryColor = '#F5F7FA';
+    const defaultColor = '#F5F5F5';
+    
     if (selectedConversation) {
       setHideBottomNav(true);
-      document.documentElement.style.backgroundColor = '#465467';
-      document.body.style.backgroundColor = '#465467';
+      document.documentElement.style.backgroundColor = secondaryColor;
+      document.body.style.backgroundColor = secondaryColor;
     } else {
       setHideBottomNav(false);
-      document.documentElement.style.backgroundColor = '#1d283a';
-      document.body.style.backgroundColor = '#1d283a';
+      document.documentElement.style.backgroundColor = defaultColor;
+      document.body.style.backgroundColor = defaultColor;
     }
     return () => {
-      document.documentElement.style.backgroundColor = '#1d283a';
-      document.body.style.backgroundColor = '#1d283a';
+      document.documentElement.style.backgroundColor = defaultColor;
+      document.body.style.backgroundColor = defaultColor;
     };
   }, [selectedConversation, setHideBottomNav]);
 
