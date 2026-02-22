@@ -1,33 +1,29 @@
 
 
-## Remplacement de l'icone de l'application
+## Correction du bug de la barre de navigation
 
-L'image uploadee sera utilisee comme nouvelle icone partout dans l'application.
+### Probleme identifie
 
-### Changements prevus
+Plusieurs composants appellent encore `setHideBottomNav(true)` ce qui masque la barre de navigation et peut la laisser cachee si le nettoyage ne se fait pas correctement :
 
-**1. Copier l'image dans le projet**
-- Copier l'image vers `src/assets/app-icon.png` (remplace l'ancienne, utilisee dans Auth, About, LoadingScreen)
-- Copier l'image vers `public/favicon.png` (remplace le favicon web)
+1. **`SettingsDialog.tsx`** (ligne 76) : appelle `setHideBottomNav(open)` a l'ouverture
+2. **`CreateClubDialogPremium.tsx`** (ligne 54) : appelle `setHideBottomNav(isOpen)` a l'ouverture
 
-**2. Fichiers impactes automatiquement (aucune modification de code necessaire)**
-Les fichiers suivants importent deja `@/assets/app-icon.png`, donc ils utiliseront automatiquement la nouvelle icone :
-- `src/pages/Auth.tsx` - page de connexion
-- `src/pages/About.tsx` - page a propos
-- `src/components/LoadingScreen.tsx` - ecran de chargement
+Selon les regles etablies, la barre de navigation doit etre visible partout sauf sur les ecrans de chargement et de connexion.
 
-Le `index.html` reference deja `/favicon.png`, donc le favicon sera aussi mis a jour automatiquement.
+### Corrections prevues
 
-**3. Instructions pour iOS (manuel, hors Lovable)**
-Pour que l'icone apparaisse sur iOS (App Store / SpringBoard), il faudra :
-- Ouvrir le projet Xcode (`ios/App/App.xcworkspace`)
-- Aller dans `Assets.xcassets > AppIcon`
-- Remplacer toutes les tailles d'icone avec la nouvelle image (1024x1024 pour l'App Store, puis les tailles reduites : 180x180, 120x120, 87x87, 80x80, 60x60, 58x58, 40x40, 29x29, 20x20)
-- Des outils comme [appicon.co](https://appicon.co) permettent de generer toutes les tailles automatiquement a partir d'une seule image
+**1. `src/components/SettingsDialog.tsx`**
+- Supprimer le `useEffect` qui appelle `setHideBottomNav(open)` (lignes 75-78)
+- Supprimer l'import de `setHideBottomNav` depuis `useAppContext`
+
+**2. `src/components/CreateClubDialogPremium.tsx`**
+- Supprimer le `useEffect` qui appelle `setHideBottomNav(isOpen)` (lignes 53-56)
+- Supprimer l'import de `setHideBottomNav` depuis `useAppContext`
+
+**3. `src/components/InteractiveMap.tsx`**
+- Supprimer l'import inutilise de `setHideBottomNav` depuis `useAppContext` (ligne 159)
 
 ### Details techniques
 
-- L'image source est `user-uploads://4A14AEA8-0C35-49D9-B1BF-A09ADD1BA78B.png`
-- Elle sera copiee en tant que `src/assets/app-icon.png` et `public/favicon.png`
-- Pour Android, les icones launcher (`mipmap-*`) dans `android/app/src/main/res/` devront aussi etre remplacees manuellement dans Android Studio (hors perimetre Lovable)
-
+Le composant `BottomNavigation` utilise `if (hideBottomNav) return null` pour se masquer. Si un composant met `hideBottomNav` a `true` et que le nettoyage (`return () => setHideBottomNav(false)`) ne s'execute pas correctement (ex: demontage non ordonne), la barre reste cachee indefiniment. La solution est de supprimer tous ces appels conformement a la regle : la barre doit toujours etre visible.
