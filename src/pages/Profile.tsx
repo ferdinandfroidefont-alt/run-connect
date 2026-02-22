@@ -613,7 +613,7 @@ const Profile = () => {
   return <div className="h-full bg-background overflow-y-auto">
       {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border">
+      <div className="sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/30">
         <div className="flex items-center justify-between px-4 py-3">
           {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-primary">
               <ChevronLeft className="h-5 w-5" />
