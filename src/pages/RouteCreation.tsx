@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
-import { X, Check, ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -634,33 +634,36 @@ export const RouteCreation = () => {
   };
 
    return (
-    <div className="fixed inset-0 bg-background z-50 overflow-x-hidden">
-      {/* Barre supérieure minimaliste */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background/95 to-transparent backdrop-blur-sm border-b border-border/30 p-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <span className="text-2xl">✏️</span>
-            {isEditMode ? "Modifier le tracé" : "Mode création d'itinéraire"}
+    <div className="fixed inset-0 bg-background overflow-x-hidden pb-[64px]">
+      {/* Barre de navigation iOS compacte */}
+      <div className="absolute top-0 left-0 right-0 z-10 bg-background/95 backdrop-blur-md border-b border-border/30 safe-area-top">
+        <div className="flex items-center justify-between h-11 px-2">
+          <button
+            onClick={handleCancel}
+            className="flex items-center gap-1 text-primary active:opacity-60 px-2 py-1"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-[17px]">Retour</span>
+          </button>
+          <h1 className="text-[17px] font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
+            {isEditMode ? "Modifier" : "Itinéraire"}
           </h1>
-          
-          <div className="flex flex-col items-end gap-1">
-            <Button
-              size="sm"
+          <div className="flex items-center gap-1">
+            <button
               onClick={handleFinish}
-              className="bg-primary/90 hover:bg-primary backdrop-blur-sm w-28"
+              className="text-2xl active:scale-90 transition-transform px-2 py-1"
+              title="Valider"
             >
-              <Check className="w-4 h-4 mr-2" />
-              Terminer
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              className="bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border/50 w-28"
+              ✅
+            </button>
+            <button
+              onClick={handleClear}
+              disabled={waypoints.current.length === 0}
+              className="text-2xl active:scale-90 transition-transform px-2 py-1 disabled:opacity-30"
+              title="Supprimer"
             >
-              <X className="w-4 h-4 mr-2" />
-              Annuler
-            </Button>
+              🗑️
+            </button>
           </div>
         </div>
       </div>
