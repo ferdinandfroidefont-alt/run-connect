@@ -416,23 +416,21 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
             >
               {/* Status bar area removed for cleaner iOS look */}
               {/* iOS Header */}
-              <div className="sticky top-0 z-40 shrink-0">
-                <div className="bg-[#1d283a] header-pattern-gradient">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <button
-                      onClick={() => onOpenChange(false)}
-                      className="flex items-center gap-1 text-white/80"
-                    >
-                      <ArrowLeft className="h-5 w-5" />
-                      <span className="text-[17px]">Retour</span>
-                    </button>
-                    <h1 className="text-[17px] font-semibold text-white">Paramètres</h1>
-                    <div className="w-16" />
-                  </div>
+              <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <button
+                    onClick={() => onOpenChange(false)}
+                    className="flex items-center gap-1 text-primary"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                    <span className="text-[17px]">Retour</span>
+                  </button>
+                  <h1 className="text-[17px] font-semibold text-foreground">Paramètres</h1>
+                  <div className="w-16" />
                 </div>
                 
                 {/* iOS-style search bar */}
-                <div className="px-4 pb-3 pt-3 bg-[#1d283a] border-b border-border relative z-10 sport-pattern-top">
+                <div className="px-4 pb-3">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
