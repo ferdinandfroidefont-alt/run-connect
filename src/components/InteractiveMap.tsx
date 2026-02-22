@@ -216,7 +216,7 @@ export const InteractiveMap = ({
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(prev => {
       const next = !prev;
-      setHideBottomNav(next);
+      // Ne plus cacher la barre de navigation en mode immersif
       return next;
     });
   };
@@ -1362,8 +1362,8 @@ export const InteractiveMap = ({
       
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (
-        <div className="absolute top-0 left-0 right-0 z-10">
-          <div className="flex items-center px-4 py-2">
+        <div className="absolute top-0 left-0 right-0 z-10 bg-card pt-[env(safe-area-inset-top)]">
+          <div className="flex items-center px-4 py-2 border-b border-border/30">
             <Button
               variant="ghost"
               size="sm"
