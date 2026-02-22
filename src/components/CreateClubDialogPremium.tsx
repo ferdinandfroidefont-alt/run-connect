@@ -293,7 +293,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch">
+          <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch bg-pattern">
             <div className="space-y-6 pb-8">
 
               {/* Club Avatar - Centered */}

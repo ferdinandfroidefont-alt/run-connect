@@ -13,7 +13,7 @@ export const ScrollToMyRankButton = ({ onClick, visible }: ScrollToMyRankButtonP
     <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
       <Button
         onClick={onClick}
-        className="animate-pulse"
+        className="shadow-lg shadow-primary/30 animate-pulse"
         size="sm"
       >
         <Target className="h-4 w-4 mr-2" />

@@ -119,7 +119,7 @@ export default function Feed() {
   return (
     <div
       ref={scrollContainerRef}
-      className="h-full bg-background pb-24 overflow-y-auto"
+      className="h-full bg-secondary pb-24 bg-pattern overflow-y-auto"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -165,7 +165,7 @@ export default function Feed() {
               // Skeleton loaders
               <div className="space-y-3 pt-2">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="rounded-[12px] bg-card p-4 space-y-3 animate-fade-in" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
+                  <div key={i} className="rounded-[14px] bg-card border border-border p-4 space-y-3 animate-fade-in" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
                       <div className="space-y-1.5 flex-1">
@@ -187,7 +187,7 @@ export default function Feed() {
             ) : feedItems.length === 0 ? (
               <FeedEmptyState />
             ) : (
-              <div className="divide-y divide-border/30">
+              <div className="pt-1">
                 {feedItems.map((session, index) => (
                   <FeedCard
                     key={session.id}
@@ -223,7 +223,7 @@ export default function Feed() {
           <>
             {loading ? (
               <div className="py-4">
-                <div className="bg-card p-8 flex flex-col items-center justify-center gap-3 rounded-[12px]">
+                <div className="bg-card border border-border p-8 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-[15px] text-muted-foreground">Recherche...</p>
                 </div>
@@ -236,7 +236,7 @@ export default function Feed() {
                 />
               </div>
             ) : (
-              <div className="py-4 divide-y divide-border/30">
+              <div className="py-4 space-y-3">
                 {discoverSessions.map((session, index) => (
                   <DiscoverCard
                     key={session.id}

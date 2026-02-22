@@ -7,7 +7,7 @@ export default function Privacy() {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col overflow-x-hidden">
+    <div className="fixed inset-0 bg-background flex flex-col bg-pattern overflow-x-hidden">
       {/* Header fixe */}
       <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50">
         <div className="flex items-center gap-3 p-4">

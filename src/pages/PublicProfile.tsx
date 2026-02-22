@@ -141,7 +141,7 @@ const PublicProfile = () => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
+      <div className="fixed inset-0 flex items-center justify-center bg-secondary bg-pattern">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -152,7 +152,7 @@ const PublicProfile = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-background overflow-y-auto overflow-x-hidden">
+    <div className="fixed inset-0 bg-secondary bg-pattern overflow-y-auto overflow-x-hidden">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

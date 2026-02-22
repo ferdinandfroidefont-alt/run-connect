@@ -206,11 +206,16 @@ const Messages = () => {
   useEffect(() => {
     if (selectedConversation) {
       setHideBottomNav(true);
+      document.documentElement.style.backgroundColor = '#465467';
+      document.body.style.backgroundColor = '#465467';
     } else {
       setHideBottomNav(false);
+      document.documentElement.style.backgroundColor = '#1d283a';
+      document.body.style.backgroundColor = '#1d283a';
     }
     return () => {
-      setHideBottomNav(false);
+      document.documentElement.style.backgroundColor = '#1d283a';
+      document.body.style.backgroundColor = '#1d283a';
     };
   }, [selectedConversation, setHideBottomNav]);
 
@@ -1578,7 +1583,7 @@ const Messages = () => {
     
     return (
       <>
-        <div className="h-full bg-background">
+        <div className="h-full bg-background bg-pattern">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* iMessage Style Header */}
           <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-secondary border-b border-border z-50">
@@ -2246,17 +2251,17 @@ const Messages = () => {
 
   return (
     <>
-      <div className="h-full bg-background flex flex-col">
+      <div className="h-full bg-secondary bg-pattern flex flex-col">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/30">
-          <div className="px-4 pt-4 pb-3 flex items-center justify-between min-h-[60px]">
+        <div className="sticky top-0 z-50 bg-card border-b border-border">
+          <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={exitSelectionMode}
-                  className="text-primary p-0 h-auto font-normal"
+                  className="text-primary p-0 h-auto font-normal absolute left-4"
                 >
                   Annuler
                 </Button>
@@ -2268,22 +2273,24 @@ const Messages = () => {
                   size="sm"
                   variant="ghost"
                   disabled={selectedConversations.size === 0}
-                  className="text-destructive p-0 h-auto font-normal"
+                  className="text-destructive p-0 h-auto font-normal absolute right-4"
                 >
                   Supprimer
                 </Button>
               </>
             ) : (
               <>
-                <h1 className="text-[34px] font-bold tracking-tight">Messages</h1>
-                <Button
-                  onClick={() => setShowNewConversation(true)}
-                  size="icon"
-                  variant="ghost"
-                  className="h-9 w-9"
-                >
-                  <Plus className="h-6 w-6 text-primary" />
-                </Button>
+                <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
+                <div className="absolute right-4 flex items-center gap-2">
+                  <Button
+                    onClick={() => setShowNewConversation(true)}
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9"
+                  >
+                    <Plus className="h-6 w-6 text-primary" />
+                  </Button>
+                </div>
               </>
             )}
           </div>

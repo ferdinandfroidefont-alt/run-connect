@@ -119,7 +119,7 @@ export const FeedCard = ({
 
   return (
     <div 
-      className="overflow-hidden bg-card animate-fade-in"
+      className="mb-px overflow-hidden bg-card border-b border-border animate-fade-in"
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
     >
       {/* Header */}
@@ -202,7 +202,7 @@ export const FeedCard = ({
         </div>
 
         {/* Mini Map */}
-        <div className="w-full h-32 rounded-[12px] overflow-hidden">
+        <div className="w-full h-32 rounded-[10px] overflow-hidden border border-border">
           <MiniMapPreview 
             lat={session.location_lat}
             lng={session.location_lng}

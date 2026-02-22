@@ -444,7 +444,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           </div>
         </div>
 
-        <ScrollArea className="flex-1 h-[calc(100vh-56px)] sm:h-auto sm:max-h-[calc(90vh-56px)]">
+        <ScrollArea className="flex-1 h-[calc(100vh-56px)] sm:h-auto sm:max-h-[calc(90vh-56px)] bg-pattern">
           <div className="pb-8">
             {/* Session Header Card */}
             <div className="bg-background mt-6 mx-4 rounded-xl overflow-hidden">

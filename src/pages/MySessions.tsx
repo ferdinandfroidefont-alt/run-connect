@@ -361,9 +361,9 @@ export default function MySessions() {
     
     return (
       <>
-        <div className="min-h-full bg-background">
+        <div className="min-h-full bg-secondary bg-pattern">
           {/* iOS Header */}
-          <div className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/30">
+          <div className="sticky top-0 z-50 bg-card">
             <div className="flex items-center justify-between px-4 py-3">
               <Button
                 variant="ghost"
@@ -516,25 +516,19 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="min-h-full bg-background pb-8">
-        {/* iOS Header - Large Title */}
-        <div className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/30">
-          <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-            <h1 className="text-[34px] font-bold tracking-tight">Mes Séances</h1>
-            <button
-              onClick={() => navigate('/')}
-              className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
-            >
-              <Plus className="h-6 w-6 text-primary" />
-            </button>
+      <div className="min-h-full bg-secondary pb-8 bg-pattern">
+        {/* iOS Header */}
+        <div className="sticky top-0 z-50 bg-card border-b border-border">
+          <div className="px-4 pt-4 pb-4 relative flex items-center justify-center">
+            <h1 className="text-[34px] font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           
           {/* iOS Segmented Control */}
           <div className="px-4 pb-3">
-            <div className="flex bg-secondary rounded-[9px] p-[2px]">
+            <div className="flex bg-secondary rounded-[10px] p-1">
               <button
                 onClick={() => setCurrentView('sessions')}
-                className={`flex-1 py-2 text-[13px] font-semibold rounded-[7px] transition-all ${
+                className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
                   currentView === 'sessions'
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground'
@@ -544,7 +538,7 @@ export default function MySessions() {
               </button>
               <button
                 onClick={() => setCurrentView('routes')}
-                className={`flex-1 py-2 text-[13px] font-semibold rounded-[7px] transition-all ${
+                className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
                   currentView === 'routes'
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground'
@@ -554,6 +548,7 @@ export default function MySessions() {
               </button>
             </div>
           </div>
+          <div className="h-px bg-border" />
         </div>
 
         {/* Content */}

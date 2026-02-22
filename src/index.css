@@ -1,143 +1,146 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* iOS Native Design System - Apple HIG Colors */
+/* iOS Native Design System - Ultra Clean
+   Pure Apple-style design with opaque colors
+*/
 
 @layer base {
   :root {
-    /* Apple iOS System Colors - Light Mode */
-    --background: 0 0% 95%;              /* systemGroupedBackground #F2F2F7 */
-    --foreground: 0 0% 0%;               /* label #000000 */
+    /* iOS System Colors - Pure Light Mode */
+    --background: 209 40% 96%;           /* #FFFFFF - Pure white */
+    --foreground: 222 47% 11%;             /* #000000 - Pure black */
 
-    --card: 0 0% 100%;                   /* secondarySystemGroupedBackground #FFFFFF */
-    --card-foreground: 0 0% 0%;
+    --card: 210 40% 98%;                 /* White cards */
+    --card-foreground: 222 47% 11%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover: 214 31% 91%;
+    --popover-foreground: 222 47% 11%;
 
     /* iOS System Blue */
-    --primary: 211 100% 50%;             /* systemBlue #007AFF */
-    --primary-foreground: 0 0% 100%;
+    --primary: 216 19% 26%;           /* #007AFF */
+    --primary-foreground: 210 19% 98%;
 
-    /* iOS tertiarySystemFill */
-    --secondary: 240 5% 93%;             /* #E5E5EA */
-    --secondary-foreground: 0 0% 0%;
+    /* iOS System Gray 6 */
+    --secondary: 215 19% 34%;           /* #F2F2F7 */
+    --secondary-foreground: 210 40% 98%;
 
-    /* iOS Muted */
-    --muted: 240 5% 93%;
-    --muted-foreground: 240 2% 56%;      /* secondaryLabel #8E8E93 */
+    /* iOS Muted Grays */
+    --muted: 215 20% 65%;               /* #F2F2F7 */
+    --muted-foreground: 222 47% 11%;    /* #8E8E93 */
 
     /* Accent */
-    --accent: 240 5% 96%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 210 40% 98%;
+    --accent-foreground: 215 16% 46%;
 
     /* iOS System Red */
-    --destructive: 0 100% 59%;           /* systemRed #FF3B30 */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 72% 50%;         /* #FF3B30 */
+    --destructive-foreground: 0 85% 97%;
 
     /* iOS System Green */
-    --success: 142 76% 36%;              /* #34C759 */
+    --success: 142 76% 36%;            /* #34C759 */
 
-    /* iOS Borders */
-    --border: 240 6% 90%;               /* separator #C6C6C8 */
-    --input: 240 6% 90%;
-    --ring: 211 100% 50%;
+    /* iOS Borders - Very light */
+    --border: 212 26% 83%;              /* #E5E5EA */
+    --input: 212 26% 83%;               /* #F2F2F7 */
+    --ring: 216 19% 26%;
 
-    /* iOS Shadows */
+    /* iOS Shadows - Ultra subtle */
     --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.04);
-    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
 
-    /* iOS Radius - 12px standard */
-    --radius: 0.75rem;
+    /* iOS Radius */
+    --radius: 0rem;                /* 10px */
 
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 0%;
-    --sidebar-primary: 211 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 96%;
-    --sidebar-accent-foreground: 0 0% 0%;
-    --sidebar-border: 240 6% 90%;
-    --sidebar-ring: 211 100% 50%;
-    --chart-1: 211 100% 50%;
-    --chart-2: 142 76% 36%;
-    --chart-3: 0 100% 59%;
-    --chart-4: 28 100% 50%;
-    --chart-5: 270 70% 50%;
-    --sidebar: 0 0% 100%;
-    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Helvetica Neue', Arial, sans-serif;
-    --font-serif: Georgia, Cambria, 'Times New Roman', Times, serif;
-    --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    --shadow-2xs: 0 1px 2px hsl(0 0% 0% / 0.03);
-    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.05);
-    --shadow: 0 1px 3px hsl(0 0% 0% / 0.08);
-    --shadow-md: 0 2px 6px hsl(0 0% 0% / 0.08);
-    --shadow-lg: 0 4px 12px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 8px 24px hsl(0 0% 0% / 0.12);
-    --shadow-2xl: 0 16px 48px hsl(0 0% 0% / 0.15);
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 216 19% 26%;
+    --sidebar-primary-foreground: 210 19% 98%;
+    --sidebar-accent: 215 19% 34%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 212 26% 83%;
+    --sidebar-ring: 216 19% 26%;
+    --chart-1: 217 10% 64%;
+    --chart-2: 215 20% 65%;
+    --chart-3: 215 16% 46%;
+    --chart-4: 219 8% 46%;
+    --chart-5: 215 19% 34%;
+    --sidebar: 210 40% 98%;
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --font-serif: 'Crimson Pro', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
     --tracking-normal: 0em;
     --spacing: 0.25rem;
   }
 
   .dark {
-    /* Apple iOS System Colors - Dark Mode */
-    --background: 0 0% 0%;               /* systemBackground #000000 */
-    --foreground: 0 0% 100%;             /* label #FFFFFF */
+    --background: 222 47% 11%;              /* #000000 */
+    --foreground: 210 40% 98%;            /* #FFFFFF */
 
-    --card: 240 6% 11%;                  /* secondarySystemBackground #1C1C1E */
-    --card-foreground: 0 0% 100%;
+    --card: 217 32% 17%;                   /* #1C1C1E */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 240 6% 11%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 215 24% 26%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 211 100% 50%;             /* systemBlue #0A84FF */
-    --primary-foreground: 0 0% 100%;
+    --primary: 212 26% 83%;            /* #007AFF */
+    --primary-foreground: 228 84% 4%;
 
-    --secondary: 240 4% 18%;             /* tertiarySystemFill #2C2C2E */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 215 19% 34%;            /* #2C2C2E */
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 240 4% 18%;
-    --muted-foreground: 240 2% 60%;      /* secondaryLabel #98989D */
+    --muted: 215 16% 46%;               /* #2C2C2E */
+    --muted-foreground: 210 40% 98%;    /* #99999C */
 
-    --accent: 240 4% 18%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 228 84% 4%;
+    --accent-foreground: 215 20% 65%;
 
-    --destructive: 0 100% 59%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 85% 97%;
 
     --success: 142 76% 36%;
 
-    --border: 240 4% 24%;               /* separator #38383A */
-    --input: 240 4% 24%;
-    --ring: 211 100% 50%;
+    --border: 215 19% 34%;              /* #38383A */
+    --input: 215 19% 34%;
+    --ring: 212 26% 83%;
 
-    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.4);
-    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
     --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 211 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4% 18%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 4% 24%;
-    --sidebar-ring: 211 100% 50%;
-    --chart-1: 211 100% 50%;
-    --chart-2: 142 76% 36%;
-    --chart-3: 0 100% 59%;
-    --chart-4: 28 100% 50%;
-    --chart-5: 270 70% 50%;
-    --sidebar: 240 6% 11%;
-    --shadow-2xs: 0 1px 2px hsl(0 0% 0% / 0.2);
-    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
-    --shadow: 0 1px 3px hsl(0 0% 0% / 0.4);
-    --shadow-md: 0 2px 6px hsl(0 0% 0% / 0.4);
-    --shadow-lg: 0 4px 12px hsl(0 0% 0% / 0.5);
-    --shadow-xl: 0 8px 24px hsl(0 0% 0% / 0.5);
-    --shadow-2xl: 0 16px 48px hsl(0 0% 0% / 0.6);
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 212 26% 83%;
+    --sidebar-primary-foreground: 228 84% 4%;
+    --sidebar-accent: 215 20% 65%;
+    --sidebar-accent-foreground: 228 84% 4%;
+    --sidebar-border: 215 19% 34%;
+    --sidebar-ring: 212 26% 83%;
+    --chart-1: 215 12% 83%;
+    --chart-2: 212 26% 83%;
+    --chart-3: 215 20% 65%;
+    --chart-4: 217 10% 64%;
+    --chart-5: 215 16% 46%;
+    --sidebar: 217 32% 17%;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   }
 }
 
@@ -161,7 +164,7 @@
 
   /* Strict Viewport Locking for iOS Stability */
   html, body {
-    background-color: #000000 !important;
+    background-color: #1d283a !important;
     height: 100%;
     width: 100%;
     overflow-x: hidden;
@@ -244,13 +247,13 @@
   }
 
   .ios-grouped-bg {
-    @apply bg-background;
+    @apply bg-secondary;
   }
 
   /* iOS Card */
   .ios-card {
-    @apply bg-card rounded-[12px];
-    box-shadow: 0 0 0 0.5px hsl(0 0% 0% / 0.04);
+    @apply bg-card rounded-[10px];
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.04);
   }
 
   /* iOS Pastel Card Backgrounds */
@@ -271,8 +274,8 @@
   .ios-tinted-orange { background: hsl(28 100% 50% / 0.12); color: hsl(28 100% 50%); }
   .ios-tinted-purple { background: hsl(270 70% 50% / 0.12); color: hsl(270 70% 50%); }
 
-  /* iOS Button - solid, no gradient */
-  .ios-gradient-btn { background: hsl(211 100% 50%); }
+  /* iOS Gradient Button */
+  .ios-gradient-btn { background: linear-gradient(180deg, hsl(211 100% 55%) 0%, hsl(211 100% 45%) 100%); }
 
   /* iOS Section Header */
   .ios-section-header {
@@ -287,6 +290,29 @@
     border: 1px solid hsl(var(--border) / 0.5);
   }
 
+  /* Background Pattern */
+  .bg-pattern {
+    position: relative;
+    isolation: isolate;
+  }
+  .bg-pattern::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/patterns/sports-pattern.png');
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .dark .bg-pattern::before {
+    opacity: 0.1;
+  }
+  :not(.dark) .bg-pattern::before {
+    filter: invert(1);
+    opacity: 0.06;
+  }
 
 }
 
@@ -324,16 +350,7 @@
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@keyframes iosPush {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-.animate-ios-push {
-  animation: iosPush 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .animate-slide-down {
@@ -373,7 +390,7 @@
   .p-3 { padding: 0.5rem !important; }
 
   /* Reduce nav bar height */
-  .h-\[49px\] { height: 44px !important; }
+  .h-\[72px\] { height: 64px !important; }
   .h-\[52px\]:not(.avatar-fixed) { height: 44px !important; }
 
   /* Reduce icon sizes slightly */

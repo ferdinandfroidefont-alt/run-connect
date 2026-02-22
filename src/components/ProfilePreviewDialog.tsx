@@ -464,7 +464,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : profile ? (
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 bg-pattern">
             <div className="py-4 space-y-4">
               {/* Profile Header - Mirrors Profile.tsx */}
               <div className="flex flex-col items-center pt-4 pb-2">

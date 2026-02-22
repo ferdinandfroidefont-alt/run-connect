@@ -33,10 +33,26 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
     }
   };
 
+  const getActivityPastel = (activityType: string) => {
+    switch (activityType) {
+      case 'running': return 'ios-pastel-orange';
+      case 'trail': return 'ios-pastel-green';
+      case 'cycling': return 'ios-pastel-blue';
+      case 'mtb': return 'ios-pastel-indigo';
+      case 'walking': return 'ios-pastel-yellow';
+      case 'football': return 'ios-pastel-green';
+      case 'basketball': return 'ios-pastel-orange';
+      case 'swimming': return 'ios-pastel-cyan';
+      case 'tennis': return 'ios-pastel-purple';
+      case 'petanque': return 'ios-pastel-pink';
+      default: return 'ios-pastel-blue';
+    }
+  };
+
   return (
     <>
       <div 
-        className="overflow-hidden rounded-[12px] border-0 bg-card animate-fade-in cursor-pointer"
+        className={cn("overflow-hidden border-0 animate-fade-in cursor-pointer", getActivityPastel(session.activity_type))}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
         onClick={() => onCardClick?.(session)}
       >
@@ -126,7 +142,7 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
             <Button
               onClick={(e) => { e.stopPropagation(); onJoin(session); }}
               size="sm"
-              className="flex-1 h-10 rounded-full bg-primary text-primary-foreground border-0"
+              className="flex-1 h-10 rounded-full ios-gradient-btn text-white shadow-lg shadow-primary/25 border-0"
             >
               <UserPlus className="h-4 w-4 mr-2" />
               {session.friends_only ? "Demander" : "Rejoindre"}

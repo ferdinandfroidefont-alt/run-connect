@@ -38,12 +38,12 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-20 bg-card/80 backdrop-blur-xl border-b border-border/30">
-      <div className="px-4 pt-4 pb-3 flex items-center justify-between min-h-[60px]">
+    <header className="sticky top-0 z-20 bg-card border-b border-border">
+      <div className="px-4 pt-4 pb-3 relative flex items-center justify-center min-h-[60px]">
         {/* Avatar - Left */}
         <button 
           onClick={onProfileClick}
-          className="active:opacity-70 transition-opacity"
+          className="active:opacity-70 transition-opacity absolute left-4"
         >
           <Avatar className="h-9 w-9">
             <AvatarImage src={profile.avatar_url || ''} />
@@ -53,13 +53,13 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
           </Avatar>
         </button>
 
-        {/* Title - Left aligned Large Title */}
-        <h1 className="text-[34px] font-bold tracking-tight flex-1 ml-3">
+        {/* Title - Center */}
+        <h1 className="text-[34px] font-bold tracking-tight text-center">
           Feed
         </h1>
 
         {/* Actions - Right */}
-        <div className="flex items-center gap-1">
+        <div className="absolute right-4 flex items-center gap-1">
           <button
             onClick={onSearch}
             className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"

@@ -10,7 +10,7 @@ export default function About() {
   const lastUpdate = "15 janvier 2025";
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col overflow-x-hidden">
+    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern overflow-x-hidden">
       {/* Header fixe style iOS */}
       <div className="sticky top-0 z-50 bg-card border-b border-border/50">
         <div className="flex items-center justify-between px-4 h-14">

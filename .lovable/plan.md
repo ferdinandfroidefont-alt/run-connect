@@ -1,84 +1,115 @@
 
-# Refonte page principale -- Reproduire le design de la capture
 
-## Constat
+# Fix definitif : fond WKWebView natif par style inline direct
 
-La capture de reference montre un design precis qui differe de l'etat actuel sur plusieurs points majeurs :
+## Diagnostic du probleme
 
-1. **Tab bar a 5 onglets avec bouton "+" central** : la tab bar actuelle n'a que 4 onglets, le "+" a ete supprime lors d'une precedente iteration. Il faut le restaurer.
-2. **Header de la carte** : l'avatar doit etre a GAUCHE avec "Runconnect" a cote, les icones cloche et reglages a droite -- actuellement l'avatar est centre.
-3. **Icones du header** : utiliser des icones Lucide propres (Bell, Settings) au lieu de l'emoji "engrenage" actuel.
-4. **Style de la tab bar** : fond blanc legerement translucide avec un gros bouton "+" bleu au centre, style iOS frosted glass.
-5. **Design general clair** : la capture montre un mode clair -- le design doit fonctionner correctement en mode clair comme en dark.
-
-## Modifications detaillees
-
-### 1. Restaurer le bouton "+" dans la Tab Bar
-
-**Fichier : `src/components/BottomNavigation.tsx`**
-
-- Repasser de `grid-cols-4` a `grid-cols-5`
-- Ajouter le bouton "+" central entre "Mes seances" et "Messages"
-- Le bouton "+" appelle `openCreateSession` depuis `AppContext`
-- Style du "+" : cercle blanc/card avec icone Plus bleue, legerement plus grand que les autres onglets (comme sur la capture : un cercle avec un "+" bleu)
-- Le "+" n'a pas de label texte en dessous
-- Fond du bouton : `bg-card` avec `border border-border/50`, `rounded-full`, taille `w-14 h-14`, positionne en `relative -top-3` pour depasser legerement
-
-### 2. Refaire le header de la carte
-
-**Fichier : `src/components/InteractiveMap.tsx`** (lignes 1380-1411)
-
-Le header actuel a l'avatar centre et un emoji engrenage. Le nouveau layout :
-
+Le code actuel fait :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
 ```
-[Avatar 40px] [Runconnect titre] ........... [Bell] [Settings]
+Puis le CSS fait :
+```css
+html, body { background-color: var(--wkwebview-bg, #1d283a) !important; }
 ```
 
-- Avatar a gauche, `w-10 h-10`, cliquable (ouvre ProfileDialog) -- avec le StreakBadge
-- "Runconnect" en `text-lg font-bold` a cote de l'avatar
-- A droite : icone `Bell` (NotificationCenter) + icone `Settings` (Lucide `Settings` icon au lieu de l'emoji)
-- Supprimer le positionnement absolu centre de l'avatar
-- Le header utilise `bg-card/95 backdrop-blur-xl` pour l'effet frosted glass
-- Safe area : garder `pt-[env(safe-area-inset-top)]` ou le padding iOS existant
+Le probleme : la WKWebView native lit la couleur **computee** de `html`/`body`. Mais :
+1. La resolution de `var(--wkwebview-bg)` passe par une indirection (variable CSS) qui n'est pas toujours resolue a temps par le moteur natif
+2. La regle est dans `@layer base` qui a une priorite de cascade basse
+3. `@apply bg-background` sur `body` (ligne 149) genere un `background-color` concurrent
 
-### 3. Icone Settings propre
+## Solution : style inline direct
 
-**Fichier : `src/components/InteractiveMap.tsx`** (ligne 1406-1408)
+Au lieu de passer par une variable CSS, on ecrit **directement** la couleur en inline style :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+```
 
-- Remplacer l'emoji `engrenage` par l'icone Lucide `Settings` (deja importee? sinon l'ajouter)
-- Style : `h-6 w-6 text-muted-foreground` dans un bouton ghost circulaire
+Un inline style est **toujours** prioritaire sur toute regle CSS (meme `!important` dans `@layer`). La WKWebView voit immediatement la couleur computee.
 
-### 4. Style du bouton "+" dans la tab bar (details)
+## Modifications
 
-Le design de la capture montre :
-- Un cercle blanc/clair avec ombre tres legere
-- Un "+" bleu (`text-primary`) de taille `h-7 w-7`
-- Le cercle depasse legerement au-dessus de la tab bar
-- Pas de label en dessous
+### 1. `src/index.css` (ligne 167) -- Garder le fallback
 
-### 5. Tab bar labels
+Conserver la regle existante comme fallback initial (avant que le JS ne s'execute) :
+```css
+html, body {
+  background-color: #1d283a !important;
+  /* ... reste inchange */
+}
+```
+Remplacer `var(--wkwebview-bg, #1d283a)` par juste `#1d283a` en dur. La variable CSS n'est plus necessaire puisque le JS pilotera directement.
 
-Sur la capture les labels sont :
-- "Accueil" (Home)
-- "Mes seances" (Calendar)
-- (pas de label pour +)
-- "Messages" (MessageCircle)
-- "Feed" (Newspaper)
+### 2. `src/components/Layout.tsx` -- Inline style direct
 
-Ce sont les memes qu'actuellement sauf qu'il faut remettre le 5e onglet.
+Remplacer :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
+```
+Par :
+```js
+document.documentElement.style.backgroundColor = '#1d283a';
+document.body.style.backgroundColor = '#1d283a';
+```
+Et au cleanup, retirer ces inline styles.
 
-## Fichiers modifies
+### 3. `src/components/LoadingScreen.tsx` -- Inline style direct
 
-| Fichier | Changement |
-|---------|-----------|
-| `src/components/BottomNavigation.tsx` | 5 onglets, bouton "+" central restaure |
-| `src/components/InteractiveMap.tsx` | Header : avatar a gauche, icone Settings Lucide |
+Remplacer :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
+```
+Par :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+```
+Cleanup au unmount :
+```js
+document.documentElement.style.removeProperty('background-color');
+document.body.style.removeProperty('background-color');
+```
 
-## Ce qui ne change PAS
+### 4. `src/pages/Search.tsx` -- Inline style direct
 
-- Toute la logique metier
-- La recherche, les filtres, le calendrier
-- Les dialogs (create session, settings, profile, notifications)
-- Les autres pages (Feed, Messages, Leaderboard, etc.)
-- Le mode immersif de la carte
-- Les controles de carte (zoom, style, locate)
+Meme remplacement :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+```
+Cleanup au unmount.
+
+### 5. `src/pages/Messages.tsx` (lignes 209-215) -- Inline style direct
+
+Remplacer :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
+// et
+document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
+```
+Par :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+// et
+document.documentElement.style.backgroundColor = '#1d283a';
+document.body.style.backgroundColor = '#1d283a';
+```
+
+## Recapitulatif des couleurs
+
+| Page | Couleur inline |
+|------|---------------|
+| Defaut (toutes pages) | `#1d283a` |
+| Chargement | `#465467` |
+| Recherche | `#465467` |
+| Conversation ouverte | `#465467` |
+
+## Pourquoi ca marchera cette fois
+
+1. **Inline style** = priorite maximale dans la cascade CSS, aucune regle ne peut l'overrider
+2. **Valeur hex directe** = pas d'indirection par variable CSS, la couleur computee est immediate
+3. **Double application** (html + body) = la WKWebView lit la couleur du premier element qui la definit
+4. **Fallback CSS en dur** (#1d283a sans variable) = avant meme que le JS s'execute, la bonne couleur par defaut est la
+

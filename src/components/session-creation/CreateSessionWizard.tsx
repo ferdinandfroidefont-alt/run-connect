@@ -396,7 +396,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden flex flex-col border-0 sm:border bg-background">
+      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden flex flex-col border-0 sm:border bg-secondary">
         {/* iOS Header */}
         <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
           <div className="flex items-center justify-between px-4 py-3">
@@ -418,7 +418,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
 
         {/* Step content */}
-        <div className="flex-1 overflow-hidden px-4 pb-4">
+        <div className="flex-1 overflow-hidden px-4 pb-4 bg-pattern">
           <AnimatePresence mode="wait">
             {renderStep()}
           </AnimatePresence>

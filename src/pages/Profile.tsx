@@ -606,14 +606,14 @@ const Profile = () => {
     }
   };
   if (loading) {
-    return <div className="h-full bg-background flex items-center justify-center">
+    return <div className="h-full bg-secondary flex items-center justify-center bg-pattern">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  return <div className="h-full bg-background overflow-y-auto">
+  return <div className="h-full bg-secondary bg-pattern overflow-y-auto">
       {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
-      <div className="sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/30">
+      <div className="sticky top-0 z-40 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-primary">
               <ChevronLeft className="h-5 w-5" />
@@ -633,9 +633,9 @@ const Profile = () => {
         <div className="flex flex-col items-center pt-4 pb-2">
           {/* Avatar with subtle shadow */}
           <div className="relative mb-3">
-            <Avatar className="h-20 w-20 ring-2 ring-border">
+            <Avatar className="h-20 w-20 ring-[3px] ring-white shadow-lg">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="text-xl bg-secondary text-foreground">
+              <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
                 {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
