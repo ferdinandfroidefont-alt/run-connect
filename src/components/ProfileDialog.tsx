@@ -612,7 +612,7 @@ export const ProfileDialog = ({
                   </IOSListGroup>
 
                   {/* Actions */}
-                  <IOSListGroup header="RACCOURCIS" flush>
+                  <IOSListGroup header="RACCOURCIS" flush className="mb-0">
                     <IOSListItem
                       icon={Route}
                       iconBgColor="bg-teal-500"
@@ -642,7 +642,7 @@ export const ProfileDialog = ({
                       onClick={() => setIsEditing(true)}
                       showSeparator={false}
                     />
-                  </IOSListGroup>
+                   </IOSListGroup>
                 </>
               )}
             </div>
