@@ -1,213 +1,113 @@
 
 
-# Refonte iOS Native - Apple Human Interface Guidelines
+# Refonte complete -- Vrai design iOS natif
 
-## Vue d'ensemble
+## Problemes actuels
 
-Transformation complete de l'application pour qu'elle ressemble a une vraie app iOS native (type Messages, Plans, Sante d'Apple). Aucune fonctionnalite ne sera supprimee -- seul le design visuel change.
+L'app a les bonnes couleurs Apple (noir pur, #1C1C1E cards, systemBlue) et les bons composants de base (tab bar, segmented controls, frosted headers). Mais elle ressemble encore a un site web a cause de :
 
-## Philosophie
+1. **Ombres lourdes** : `shadow-lg shadow-primary/20`, `shadow-primary/25` sur les boutons et cards -- typiquement web
+2. **Effets glow/gradient** : l'icone de l'app sur l'ecran de chargement et d'auth a un `boxShadow` bleu lumineux
+3. **FeedCard** : structure "carte empilee" style Instagram web, pas une vraie liste iOS
+4. **DiscoverCard** : fonds pastel colores par activite -- pattern web, pas Apple
+5. **FeedActions** : bouton "Rejoindre" avec `shadow-lg shadow-primary/20` -- pas iOS
+6. **Profile** : avatar avec `bg-gradient-to-br` et `ring-white shadow-lg` -- trop decore
+7. **Auth page** : header avec bordure epaisse, sections avec titres uppercase espaces
+8. **Espacement** : les cards sont separees par du vide (`space-y-2`, `space-y-3`) au lieu d'etre collees en groupes iOS
 
-L'app actuelle a une base iOS correcte (IOSListItem, segmented controls, tab bar) mais souffre de plusieurs problemes "web" :
-- Couleurs trop sombres et desaturees (palette bleu marine)
-- Titres de 34px centres partout (excessif)
-- Manque de hierarchie visuelle claire
-- Tab bar avec bouton "+" central style Android/FAB
-- Cards avec bordures visibles (`border border-border`)
-- Radius inconsistant (parfois 0, parfois 10px, parfois 16px)
-- Ombres quasi-absentes en dark mode
+## Philosophie de la correction
 
----
+Sur iOS natif, les listes sont **collees** en groupes avec des **separateurs fins** (hairline) entre les items. Il n'y a **jamais** d'ombre visible, **jamais** de gradient, **jamais** de fond colore par categorie. Tout est sobre : fond noir, cards #1C1C1E, texte blanc, accent systemBlue.
 
-## 1. Palette de couleurs -- iOS System Colors
+## Modifications detaillees
 
-Refonte complete des CSS variables pour utiliser les vraies couleurs systeme Apple.
+### 1. Supprimer toutes les ombres web
 
-### Light mode
-| Token | Nouvelle valeur | Equivalent Apple |
-|-------|----------------|-----------------|
-| `--background` | `0 0% 95%` | systemGroupedBackground (#F2F2F7) |
-| `--card` | `0 0% 100%` | secondarySystemGroupedBackground (#FFFFFF) |
-| `--primary` | `211 100% 50%` | systemBlue (#007AFF) |
-| `--secondary` | `240 5% 93%` | tertiarySystemFill (#E5E5EA) |
-| `--muted-foreground` | `240 2% 56%` | secondaryLabel (#8E8E93) |
-| `--border` | `240 6% 90%` | separator (#C6C6C8) |
-| `--foreground` | `0 0% 0%` | label (#000000) |
-| `--destructive` | `0 100% 59%` | systemRed (#FF3B30) |
+**`src/components/feed/FeedActions.tsx`** (ligne 122) :
+- Remplacer `shadow-lg shadow-primary/20` par rien -- le bouton iOS n'a pas d'ombre
+- Resultat : `className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 font-medium"`
 
-### Dark mode
-| Token | Nouvelle valeur | Equivalent Apple |
-|-------|----------------|-----------------|
-| `--background` | `0 0% 0%` | systemBackground (#000000) |
-| `--card` | `240 6% 11%` | secondarySystemBackground (#1C1C1E) |
-| `--primary` | `211 100% 50%` | systemBlue (#0A84FF) |
-| `--secondary` | `240 4% 18%` | tertiarySystemFill (#2C2C2E) |
-| `--muted-foreground` | `240 2% 60%` | secondaryLabel (#98989D) |
-| `--border` | `240 4% 24%` | separator (#38383A) |
-| `--foreground` | `0 0% 100%` | label (#FFFFFF) |
+**`src/components/feed/DiscoverCard.tsx`** (ligne 146) :
+- Supprimer `shadow-lg shadow-primary/25` du bouton "Rejoindre"
+- Resultat : `className="flex-1 h-10 rounded-full ios-gradient-btn text-white border-0"`
 
-### Fichier : `src/index.css`
-- Remplacer les valeurs `:root` et `.dark` par les couleurs Apple ci-dessus
-- Mettre `--radius: 0.75rem` (12px, standard iOS)
-- `html, body` background en `#000000` (dark) pour WKWebView
+### 2. DiscoverCard -- Supprimer les fonds pastel
 
----
+**`src/components/feed/DiscoverCard.tsx`** :
+- Remplacer le fond pastel par activite (`getActivityPastel`) par un simple `bg-card`
+- Supprimer les fonctions `getActivityPastel` et les classes `ios-pastel-*`
+- Le card devient un simple conteneur `bg-card rounded-[12px]` uniforme
+- Ajouter un separateur fin `border-b border-border/30` entre les cards au lieu d'un `space-y-2`
 
-## 2. Tab Bar -- Standard iOS
+### 3. FeedCard -- Style liste iOS
 
-Le bouton "+" central en carre colore est un pattern Android (FAB). Sur iOS, la tab bar a 4-5 onglets egaux sans bouton special.
+**`src/components/feed/FeedCard.tsx`** :
+- Supprimer `mb-px` (le separateur sera gere par le parent)
+- Garder le `bg-card` sans ombre ni bordure (correct actuellement)
+- Le parent `Feed.tsx` ajoutera `divide-y divide-border/30` pour les separateurs entre cards
 
-### Fichier : `src/components/BottomNavigation.tsx`
-- Passer de `grid-cols-5` a `grid-cols-4` (4 onglets egaux)
-- Supprimer le bouton "+" central
-- Ajouter le fond frosted glass : `bg-card/80 backdrop-blur-xl`
-- Icones : `strokeWidth={1.5}` pour inactif, `fill` + `strokeWidth={2}` pour actif (style SF Symbols filled)
-- Labels : garder `text-[10px]`, supprimer le dot indicateur (pas Apple)
-- Hauteur : `h-[49px]` + `pb-[env(safe-area-inset-bottom)]` (standard iOS)
-- L'action "creer une session" sera deplacee vers un bouton "+" dans le header de la page d'accueil (pattern Apple Maps/Calendar)
+**`src/pages/Feed.tsx`** :
+- Ligne 190 : remplacer `<div className="pt-1">` par `<div className="divide-y divide-border/30">`
+- Ligne 239 : remplacer `<div className="py-4 space-y-2">` par `<div className="divide-y divide-border/30">` pour les DiscoverCards aussi
 
----
+### 4. LoadingScreen -- Epure Apple
 
-## 3. Headers / Navigation Bars
+**`src/components/LoadingScreen.tsx`** :
+- Ligne 81 : supprimer le `boxShadow` glow bleu sur l'icone
+- Rendre l'icone sobre : juste `rounded-[28px]` sans ombre
+- Ligne 88 : supprimer le `boxShadow` sur le loading card
+- Rendre le loading card sobre : juste `bg-card rounded-[14px] p-5` sans ombre
 
-Chaque page doit avoir un header iOS standard :
-- Titre aligne a gauche en `text-[34px] font-bold` uniquement sur l'ecran de premier niveau (Large Title)
-- Titre centre en `text-[17px] font-semibold` sur les ecrans secondaires
-- Pas de header enorme personnalise
+### 5. Auth page -- Nettoyage
 
-### Fichiers impactes :
-- `src/pages/MySessions.tsx` : titre "Mes Seances" aligne a gauche en large title, bouton "+" a droite pour creer
-- `src/components/feed/FeedHeader.tsx` : titre "Feed" aligne a gauche en large title
-- `src/pages/Leaderboard.tsx` : bouton retour + titre centre "Classement"
-- `src/pages/Profile.tsx` : bouton retour + titre centre "Profil"
-- `src/pages/Messages.tsx` : titre "Messages" aligne a gauche, bouton "Nouveau" a droite
+**`src/pages/Auth.tsx`** :
+- Ligne 592 : supprimer `border-b border-border` du header -- les headers iOS frosted n'ont pas de bordure epaisse, utiliser `border-b border-border/30` (subtil)
+- Supprimer le `boxShadow` glow bleu sur l'icone de l'app (meme que LoadingScreen)
+- Les sections "CONNEXION PAR CODE" et "OU AVEC MOT DE PASSE" : garder le style iOS grouped list actuel
 
----
+### 6. Profile -- Simplifier l'avatar
 
-## 4. Cards et Listes
+**`src/pages/Profile.tsx`** (ligne 636-641) :
+- Remplacer `ring-[3px] ring-white shadow-lg` par `ring-2 ring-border`
+- Remplacer `bg-gradient-to-br from-primary/20 to-primary/40` du AvatarFallback par `bg-secondary text-foreground`
 
-### Suppression du style "web cards"
-- Supprimer `border border-border` sur les FeedCards et DiscoverCards
-- Utiliser `rounded-[12px]` partout (pas 10px, pas 14px, pas 16px -- 12px est le standard iOS)
-- Ombre ultra-legere : `shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)]` (hairline) au lieu de `box-shadow` visible
-- Espacement entre cards : `gap-2` (8px), pas `gap-3`
+### 7. Leaderboard podium -- Simplifier
 
-### Fichiers : `src/components/ui/card.tsx`
-- `rounded-[12px]` au lieu de `rounded-[10px]`
-- Supprimer le inline `boxShadow`, utiliser une classe CSS
+**`src/pages/Leaderboard.tsx`** :
+- Les blocs podium (lignes 453-500) avec `bg-gray-400`, `bg-yellow-500`, `bg-amber-600` sont corrects pour un podium visuel -- les garder mais s'assurer qu'ils n'ont pas d'ombre
 
-### Fichiers : `src/components/feed/FeedCard.tsx`, `src/components/feed/DiscoverCard.tsx`
-- Supprimer `border border-border`
-- Ajouter `rounded-[12px]`
+### 8. Nettoyage global des ombres
 
----
+Rechercher et remplacer dans tous les fichiers :
+- `shadow-lg shadow-primary/20` -> `` (supprimer)
+- `shadow-lg shadow-primary/25` -> `` (supprimer)
+- `shadow-lg` sur les boutons -> `` (supprimer, les boutons iOS n'ont pas d'ombre)
 
-## 5. Boutons
+Les ombres `shadow-sm` et le hairline `shadow-[0_0_0_0.5px...]` sur les cards restent (c'est correct pour iOS).
 
-### Fichier : `src/components/ui/button.tsx`
-- Variante `default` : `rounded-[12px]` au lieu de `rounded-[10px]`, supprimer `shadow-sm shadow-primary/20`
-- Variante `ghost` : supprimer `rounded-[10px]`, mettre `rounded-[8px]`
-- Hauteur defaut : `h-[50px]` est correct (Apple CTA = 50px)
-- Supprimer le fond sur ghost (juste texte bleu cliquable)
+### 9. Conversations list (Messages.tsx) -- Verification
 
----
+La liste des conversations doit utiliser des separateurs fins, pas des espaces. Verifier que `SwipeableConversationItem` utilise bien un `border-b border-border/30` ou un `divide-y` parent.
 
-## 6. Typographie
+## Fichiers modifies
 
-La police systeme est deja SF Pro via `-apple-system` -- c'est correct. Ajustements :
+| Fichier | Changement |
+|---------|-----------|
+| `src/components/feed/FeedActions.tsx` | Supprimer ombres du bouton Rejoindre |
+| `src/components/feed/DiscoverCard.tsx` | Supprimer fonds pastel, ombres bouton |
+| `src/components/feed/FeedCard.tsx` | Supprimer `mb-px` |
+| `src/pages/Feed.tsx` | `divide-y divide-border/30` entre cards |
+| `src/components/LoadingScreen.tsx` | Supprimer glow shadows |
+| `src/pages/Auth.tsx` | Header border subtile, supprimer glow icon |
+| `src/pages/Profile.tsx` | Simplifier avatar ring/shadow |
 
-- Supprimer les imports Google Fonts (`DM Sans`, `Crimson Pro`) car ils ne sont pas utilises (body utilise deja `-apple-system`)
-- S'assurer que `--font-sans` pointe vers `-apple-system` en priorite
-
-### Hierarchie stricte (deja dans les utility classes mais pas toujours respectee) :
-- Large Title : 34px bold (une seule par page, alignee a gauche)
-- Title 2 : 22px bold
-- Headline : 17px semibold
-- Body : 17px regular
-- Subheadline : 15px regular
-- Caption : 13px, couleur secondaryLabel
-
----
-
-## 7. Segmented Controls
-
-Deja bien implementes dans `MySessions.tsx` et `FeedHeader.tsx`. Petit ajustement :
-- S'assurer que le padding interne est `p-[2px]` (deja fait dans FeedHeader)
-- Radius : `rounded-[9px]` externe, `rounded-[7px]` interne (correct)
-
----
-
-## 8. Animations et transitions
-
-### Fichier : `src/index.css`
-- `slideUp` : passer a `0.3s cubic-bezier(0.2, 0.8, 0.2, 1)` (iOS spring)
-- Ajouter une animation `ios-push` pour les transitions de navigation (translateX)
-
-### Pas de changement sur Framer Motion (deja en place dans `PageTransition`)
-
----
-
-## 9. Bottom Navigation -- Deplacement du "+"
-
-Puisque le bouton "+" central est supprime de la tab bar :
-
-### Fichier : `src/pages/Index.tsx` (page d'accueil / carte)
-- Ajouter un bouton "+" dans le coin haut-droit ou via un FAB discret integre a la carte (comme Apple Maps "+" pour un nouveau repere)
-
-### Fichier : `src/contexts/AppContext.tsx`
-- Garder `openCreateSession` mais ne plus l'appeler depuis la tab bar
-- L'appeler depuis un bouton "+" dans le header de la page d'accueil
-
----
-
-## 10. Nettoyage CSS
-
-### Fichier : `src/index.css`
-- Supprimer les imports Google Fonts inutilises (DM Sans, Crimson Pro)
-- Supprimer `.ios-grouped-bg` (utilise `bg-secondary` directement)
-- Supprimer `.ios-gradient-btn` (pas Apple, gradient interdit)
-- Supprimer les pastels inutilises si non references
-- Garder `.glass-card` (backdrop-blur est un vrai pattern iOS)
-- La regle iOS compact mode (`@supports (-webkit-touch-callout: none)`) reste intacte
-
----
-
-## 11. Mode sombre / Mode clair
-
-- Les deux modes sont supportes et les couleurs s'adaptent automatiquement via les variables CSS
-- Le WKWebView background sera `#000000` en dark (pur noir Apple) au lieu de `#1d283a`
-- En light mode : `#F2F2F7` (gris Apple)
-
----
-
-## Recapitulatif des fichiers modifies
-
-| Fichier | Nature du changement |
-|---------|---------------------|
-| `src/index.css` | Palette couleurs Apple, nettoyage, radius 12px |
-| `src/components/BottomNavigation.tsx` | 4 onglets egaux, frosted glass, suppression bouton "+" |
-| `src/components/ui/card.tsx` | rounded-[12px], ombre hairline |
-| `src/components/ui/button.tsx` | rounded-[12px], suppression ombres |
-| `src/components/feed/FeedHeader.tsx` | Large title aligne a gauche |
-| `src/components/feed/FeedCard.tsx` | Suppression bordures |
-| `src/pages/MySessions.tsx` | Header iOS, bouton "+" dans header |
-| `src/pages/Messages.tsx` | Header iOS large title |
-| `src/pages/Feed.tsx` | Ajustements mineurs spacing |
-| `src/pages/Index.tsx` | Bouton "+" dans le header carte |
-| `src/pages/Leaderboard.tsx` | Header iOS centré |
-| `src/pages/Profile.tsx` | Header iOS centré |
-| `src/components/Layout.tsx` | Ajustement padding bottom pour nouvelle tab bar |
-| `src/components/LoadingScreen.tsx` | Fond noir pur, style Apple boot |
-
-## Ce qui ne change PAS (fonctionnalites preservees)
+## Ce qui ne change PAS
 
 - Toute la logique metier (Supabase, auth, messages, sessions, feed, leaderboard)
-- Les composants IOSListItem / IOSListGroup
-- Le systeme de conversation et messagerie
-- Le systeme de notifications et badges
+- Les headers frosted glass (deja corrects)
+- La tab bar (deja correcte)
+- Les segmented controls (deja corrects)
+- Les IOSListItem / IOSListGroup (deja corrects)
 - Les animations Framer Motion
-- Le mode compact iOS (`@supports`)
-- La gestion du Safe Area
 - Le pull-to-refresh
-- Toutes les pages et routes existantes
-
+- Toutes les fonctionnalites existantes
