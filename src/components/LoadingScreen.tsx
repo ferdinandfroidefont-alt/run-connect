@@ -75,16 +75,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     <div 
       className="fixed inset-0 z-50 bg-secondary flex flex-col items-center justify-center px-6"
     >
-      {/* Pattern overlay without isolation:isolate */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: "url('/patterns/sports-pattern.png')",
-          backgroundRepeat: 'repeat',
-          backgroundSize: '256px 256px',
-          opacity: 0.06
-        }}
-      />
       {/* Welcome text */}
       <p className="text-muted-foreground text-[15px] mb-1">Bienvenue sur</p>
       

@@ -119,7 +119,7 @@ export default function Feed() {
   return (
     <div
       ref={scrollContainerRef}
-      className="h-full bg-secondary pb-24 bg-pattern overflow-y-auto"
+      className="h-full bg-secondary pb-24 overflow-y-auto"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}

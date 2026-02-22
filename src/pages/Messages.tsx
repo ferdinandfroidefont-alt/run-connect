@@ -2251,7 +2251,7 @@ const Messages = () => {
 
   return (
     <>
-      <div className="h-full bg-secondary bg-pattern flex flex-col">
+      <div className="h-full bg-secondary flex flex-col">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
           <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
