@@ -2184,7 +2184,7 @@ const Messages = () => {
                   />
                   
                   {/* iMessage input field */}
-                  <div className="flex-1 flex items-center bg-card border border-border rounded-full px-4 py-2">
+                  <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-4 py-2">
                     <input
                       type="text"
                       placeholder="iMessage"
