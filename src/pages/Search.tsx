@@ -38,25 +38,6 @@ export default function Search() {
     }
   };
 
-  // Désactiver le scroll du body
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
-
-  // Couleurs iOS Status Bar + WKWebView background
-  useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', '#465467');
-    document.documentElement.style.backgroundColor = '#465467';
-    document.body.style.backgroundColor = '#465467';
-    return () => {
-      document.documentElement.style.removeProperty('--ios-top-color');
-      document.documentElement.style.removeProperty('background-color');
-      document.body.style.removeProperty('background-color');
-    };
-  }, []);
 
   // Focus automatique
   useEffect(() => {
@@ -71,7 +52,7 @@ export default function Search() {
   return (
     <>
       <div 
-        className={`fixed inset-0 bottom-[64px] z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`flex flex-col h-full bg-secondary ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
       >
         {/* Header iOS style with safe area */}
         <header className="bg-card border-b border-border px-4 pt-4 pb-3">
@@ -106,7 +87,7 @@ export default function Search() {
         <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Zone scrollable des résultats */}
-        <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-secondary bg-pattern" style={{ minHeight: '100%' }}>
+        <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-secondary bg-pattern">
           {activeTab === 'profiles' && (
             <div className="flex-1 flex flex-col min-h-0"><ProfilesTab searchQuery={searchQuery} /></div>
           )}
