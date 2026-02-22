@@ -34,7 +34,7 @@ export const useConversationTheme = () => {
     const themes: Record<string, { background: string; ownMessage: string; otherMessage: string }> = {
       default: {
         background: 'bg-secondary',
-        ownMessage: 'bg-[#10B981] text-white',
+        ownMessage: 'bg-primary text-primary-foreground',
         otherMessage: 'bg-[#E5E5EA] text-black dark:bg-[#38383A] dark:text-white'
       },
       ocean: {
