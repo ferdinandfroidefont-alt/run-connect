@@ -397,7 +397,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
+      <DialogContent className="w-[100%] max-w-[100vw] h-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
@@ -472,7 +472,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Profile Share Section */}
                   {profile && (
-                    <div className="bg-background overflow-hidden px-6 py-4 space-y-4">
+                    <div className="bg-background overflow-hidden px-4 sm:px-6 py-4 space-y-4">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
@@ -499,8 +499,8 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                       </div>
                       
                       {/* QR Code */}
-                      <div className="flex justify-center">
-                        <div className="relative">
+                      <div className="flex justify-center overflow-hidden">
+                        <div className="relative max-w-[200px]">
                           <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
                           <div className="relative bg-gradient-to-br from-card to-card/80 p-3 rounded-2xl border border-primary/20 shadow-lg">
                             {qrLoading ? (
