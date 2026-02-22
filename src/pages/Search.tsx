@@ -71,7 +71,7 @@ export default function Search() {
   return (
     <>
       <div 
-        className={`fixed inset-0 z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed inset-0 bottom-[64px] z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
       >
         {/* Header iOS style with safe area */}
         <header className="bg-card border-b border-border px-4 pt-4 pb-3">

@@ -66,14 +66,14 @@ const App = () => {
                   <Route path="/profile" element={<Layout><PageTransition><Profile /></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><Profile /></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><Subscription /></PageTransition></Layout>} />
-                  <Route path="/search" element={<PageTransition><Search /></PageTransition>} />
-                  <Route path="/route-create" element={<PageTransition><RouteCreation /></PageTransition>} />
-                  <Route path="/route-creation" element={<PageTransition><RouteCreation /></PageTransition>} />
+                  <Route path="/search" element={<Layout><PageTransition><Search /></PageTransition></Layout>} />
+                  <Route path="/route-create" element={<Layout><PageTransition><RouteCreation /></PageTransition></Layout>} />
+                  <Route path="/route-creation" element={<Layout><PageTransition><RouteCreation /></PageTransition></Layout>} />
                   <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
                   <Route path="/terms" element={<PageTransition><Terms /></PageTransition>} />
                   <Route path="/about" element={<PageTransition><About /></PageTransition>} />
-                  <Route path="/confirm-presence" element={<PageTransition><ConfirmPresence /></PageTransition>} />
-                  <Route path="/confirm-presence/:sessionId" element={<PageTransition><ConfirmPresence /></PageTransition>} />
+                  <Route path="/confirm-presence" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
+                  <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
                   <Route path="/security" element={<Layout><PageTransition><SecurityDashboard /></PageTransition></Layout>} />
                   
                   <Route path="/donation-success" element={<PageTransition><DonationSuccess /></PageTransition>} />
