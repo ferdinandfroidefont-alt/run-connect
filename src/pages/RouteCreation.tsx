@@ -634,7 +634,7 @@ export const RouteCreation = () => {
   };
 
    return (
-    <div className="fixed inset-0 bg-background overflow-x-hidden pb-[64px]">
+    <div className="h-full relative bg-background overflow-x-hidden">
       {/* Barre de navigation iOS compacte */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-background/95 backdrop-blur-md border-b border-border/30 safe-area-top">
         <div className="flex items-center justify-between h-11 px-2">
@@ -691,7 +691,7 @@ export const RouteCreation = () => {
       )}
 
       {/* Toggle Mode */}
-      <div className="absolute left-4 top-24 z-10">
+      <div className="absolute left-4 top-14 z-10">
         <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-xl p-1 shadow-lg flex gap-1">
           <Button
             size="sm"
@@ -718,7 +718,7 @@ export const RouteCreation = () => {
       </div>
 
       {/* Outils latéraux */}
-      <div className="absolute right-4 top-24 flex flex-col gap-2 z-10">
+      <div className="absolute right-4 top-14 flex flex-col gap-2 z-10">
         <Button
           size="icon"
           variant="outline"
@@ -765,7 +765,7 @@ export const RouteCreation = () => {
 
       {/* Stats flottantes */}
       {totalDistance > 0 && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl px-4 py-2 shadow-lg">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl px-4 py-2 shadow-lg">
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">📏</span>
