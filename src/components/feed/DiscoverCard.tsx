@@ -52,7 +52,7 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
   return (
     <>
       <div 
-        className={cn("overflow-hidden border-0 animate-fade-in cursor-pointer", getActivityPastel(session.activity_type))}
+        className={cn("overflow-hidden rounded-[12px] border-0 animate-fade-in cursor-pointer", getActivityPastel(session.activity_type))}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
         onClick={() => onCardClick?.(session)}
       >

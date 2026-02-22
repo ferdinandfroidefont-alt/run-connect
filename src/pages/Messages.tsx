@@ -2248,15 +2248,15 @@ const Messages = () => {
     <>
       <div className="h-full bg-background flex flex-col">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
+        <div className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/30">
+          <div className="px-4 pt-4 pb-3 flex items-center justify-between min-h-[60px]">
             {isSelectionMode ? (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={exitSelectionMode}
-                  className="text-primary p-0 h-auto font-normal absolute left-4"
+                  className="text-primary p-0 h-auto font-normal"
                 >
                   Annuler
                 </Button>
@@ -2268,24 +2268,22 @@ const Messages = () => {
                   size="sm"
                   variant="ghost"
                   disabled={selectedConversations.size === 0}
-                  className="text-destructive p-0 h-auto font-normal absolute right-4"
+                  className="text-destructive p-0 h-auto font-normal"
                 >
                   Supprimer
                 </Button>
               </>
             ) : (
               <>
-                <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
-                <div className="absolute right-4 flex items-center gap-2">
-                  <Button
-                    onClick={() => setShowNewConversation(true)}
-                    size="icon"
-                    variant="ghost"
-                    className="h-9 w-9"
-                  >
-                    <Plus className="h-6 w-6 text-primary" />
-                  </Button>
-                </div>
+                <h1 className="text-[34px] font-bold tracking-tight">Messages</h1>
+                <Button
+                  onClick={() => setShowNewConversation(true)}
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9"
+                >
+                  <Plus className="h-6 w-6 text-primary" />
+                </Button>
               </>
             )}
           </div>
