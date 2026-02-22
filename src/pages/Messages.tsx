@@ -2253,7 +2253,7 @@ const Messages = () => {
     <>
       <div className="h-full bg-secondary bg-pattern flex flex-col">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border">
+        <div className="sticky top-0 z-50 bg-[#1d283a] sport-pattern-top">
           <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
@@ -2265,7 +2265,7 @@ const Messages = () => {
                 >
                   Annuler
                 </Button>
-                <h1 className="text-[17px] font-semibold text-center">
+                <h1 className="text-[17px] font-semibold text-center text-white">
                   {selectedConversations.size} sélectionné(s)
                 </h1>
                 <Button
@@ -2280,7 +2280,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
+                <h1 className="text-[34px] font-bold tracking-tight text-center text-white">Messages</h1>
                 <div className="absolute right-4 flex items-center gap-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}
@@ -2288,7 +2288,7 @@ const Messages = () => {
                     variant="ghost"
                     className="h-9 w-9"
                   >
-                    <Plus className="h-6 w-6 text-primary" />
+                    <Plus className="h-6 w-6 text-white" />
                   </Button>
                 </div>
               </>

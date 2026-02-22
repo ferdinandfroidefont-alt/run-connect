@@ -537,16 +537,16 @@ const Leaderboard = () => {
     <div className="h-full bg-secondary pb-8 bg-pattern overflow-y-auto">
       {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
-      <div className="sticky top-0 z-50 bg-card border-b border-border">
+      <div className="sticky top-0 z-50 bg-[#1d283a] sport-pattern-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-1 text-primary"
+            className="flex items-center gap-1 text-white/80"
           >
             <ArrowLeft className="h-5 w-5" />
             <span className="text-[17px]">Retour</span>
           </button>
-          <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
+          <h1 className="text-[17px] font-semibold text-white">Classement</h1>
           <div className="w-16" />
         </div>
       </div>
