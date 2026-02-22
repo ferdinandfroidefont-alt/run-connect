@@ -101,7 +101,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 bg-pattern">
+      <ScrollArea className="flex-1">
         <div className="py-6 space-y-6">
           {/* Consents */}
           <div className="space-y-2">

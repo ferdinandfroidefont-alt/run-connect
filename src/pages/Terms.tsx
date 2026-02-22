@@ -126,7 +126,7 @@ En cas de conflit entre ces conditions et les lois locales, les lois locales pr√
   ];
 
   return (
-    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern overflow-x-hidden">
+    <div className="fixed inset-0 bg-secondary flex flex-col overflow-x-hidden">
       {/* Header fixe style iOS */}
       <div className="sticky top-0 z-50 bg-card border-b border-border/50">
         <div className="flex items-center justify-between px-4 h-14">

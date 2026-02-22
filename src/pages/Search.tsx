@@ -106,7 +106,7 @@ export default function Search() {
         <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Zone scrollable des résultats */}
-        <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-secondary bg-pattern" style={{ minHeight: '100%' }}>
+        <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-secondary" style={{ minHeight: '100%' }}>
           {activeTab === 'profiles' && (
             <div className="flex-1 flex flex-col min-h-0"><ProfilesTab searchQuery={searchQuery} /></div>
           )}

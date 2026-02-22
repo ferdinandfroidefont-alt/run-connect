@@ -119,7 +119,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
             </div>
           </div>
 
-          <ScrollArea className="flex-1 bg-pattern">
+          <ScrollArea className="flex-1">
             <div className="px-4 py-6 space-y-6">
               {/* Step 0: Language */}
               {step === 0 && (
