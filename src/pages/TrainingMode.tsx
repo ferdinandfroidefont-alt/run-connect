@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTrainingMode } from '@/hooks/useTrainingMode';
 import { Loader } from '@googlemaps/js-api-loader';
-import { ChevronLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -230,47 +231,18 @@ export default function TrainingMode() {
         <div ref={mapRef} className="w-full h-full bg-secondary" />
       </div>
 
-      {/* Top Bar - iOS style */}
-      <div className="absolute top-0 left-0 right-0 z-[9999] safe-area-top pointer-events-auto">
-        <div className="backdrop-blur-xl bg-background/80 border-b border-border/50">
-          <div className="flex items-center gap-3 px-4 py-3 pt-[env(safe-area-inset-top,12px)]">
-            <button
-              onClick={async () => { try { await stopTracking(); } catch {} navigate(-1); }}
-              className="w-9 h-9 rounded-full bg-background border border-border/50 flex items-center justify-center shadow-sm active:opacity-70 transition-opacity relative z-[10000]"
-            >
-              <ChevronLeft className="h-5 w-5 text-foreground" />
-            </button>
-
-            <p className="flex-1 text-[17px] font-semibold text-foreground text-center truncate">
-              {sessionTitle || 'Entraînement'}
-            </p>
-
-            {/* Spacer to balance back button */}
-            <div className="w-9" />
-          </div>
-        </div>
-      </div>
-
-      {/* Compass - floating below header, right side */}
-      <div className="absolute top-20 right-4 z-[9999] pointer-events-auto">
-        <div
-          className="w-14 h-14 rounded-full bg-background/90 backdrop-blur-md border border-border/40 flex items-center justify-content shadow-lg"
-          style={{ transition: 'transform 0.3s ease-out' }}
-        >
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            className="mx-auto"
-            style={{ transform: `rotate(${-heading}deg)`, transition: 'transform 0.3s ease-out' }}
+      {/* Top Bar */}
+      <div className="absolute top-0 left-0 right-0 z-[9999] bg-card pt-[env(safe-area-inset-top)] pointer-events-auto">
+        <div className="flex items-center px-4 py-2 border-b border-border/30">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => { try { await stopTracking(); } catch {} navigate(-1); }}
+            className="px-0 font-normal"
           >
-            {/* North needle (red) */}
-            <polygon points="16,4 12,18 16,16 20,18" fill="hsl(var(--destructive))" />
-            {/* South needle (muted) */}
-            <polygon points="16,28 12,18 16,16 20,18" fill="hsl(var(--muted-foreground))" opacity="0.4" />
-            {/* Center dot */}
-            <circle cx="16" cy="16" r="2" fill="hsl(var(--foreground))" />
-          </svg>
+            <ArrowLeft className="h-5 w-5 mr-1" />
+            Retour
+          </Button>
         </div>
       </div>
 
