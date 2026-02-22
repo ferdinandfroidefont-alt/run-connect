@@ -613,17 +613,17 @@ const Profile = () => {
   return <div className="h-full bg-secondary bg-pattern overflow-y-auto">
       {/* Status bar area removed for cleaner iOS look */}
       {/* iOS Header */}
-      <div className="sticky top-0 z-40 bg-[#1d283a] sport-pattern-top header-pattern-gradient">
+      <div className="sticky top-0 z-40 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
-          {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-white/80">
+          {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-primary">
               <ChevronLeft className="h-5 w-5" />
               <span className="text-[17px]">Retour</span>
             </button> : <div className="w-16" />}
-          <h1 className="text-[17px] font-semibold text-white">
+          <h1 className="text-[17px] font-semibold text-foreground">
             {isViewingOtherUser ? 'Profil' : 'Mon Profil'}
           </h1>
           {!isViewingOtherUser ? <button onClick={() => setShowSettingsDialog(true)} className="w-16 flex justify-end">
-              <Settings className="h-5 w-5 text-white" />
+              <Settings className="h-5 w-5 text-primary" />
             </button> : <div className="w-16" />}
         </div>
       </div>

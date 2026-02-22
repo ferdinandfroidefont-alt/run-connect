@@ -38,7 +38,7 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-20 bg-[#1d283a] sport-pattern-top header-pattern-gradient">
+    <header className="sticky top-0 z-20 bg-card border-b border-border">
       <div className="px-4 pt-4 pb-3 relative flex items-center justify-center min-h-[60px]">
         {/* Avatar - Left */}
         <button 
@@ -47,14 +47,14 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
         >
           <Avatar className="h-9 w-9">
             <AvatarImage src={profile.avatar_url || ''} />
-            <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
+            <AvatarFallback className="bg-secondary text-foreground text-sm font-medium">
               {profile.username?.[0]?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
         </button>
 
         {/* Title - Center */}
-        <h1 className="text-[34px] font-bold tracking-tight text-center text-white">
+        <h1 className="text-[34px] font-bold tracking-tight text-center">
           Feed
         </h1>
 
@@ -62,9 +62,9 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
         <div className="absolute right-4 flex items-center gap-1">
           <button
             onClick={onSearch}
-            className="h-9 w-9 flex items-center justify-center rounded-full active:bg-white/10 transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
           >
-            <Search className="h-[22px] w-[22px] text-white" />
+            <Search className="h-[22px] w-[22px] text-primary" />
           </button>
         </div>
       </div>
