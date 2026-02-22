@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTrainingMode } from '@/hooks/useTrainingMode';
 import { Loader } from '@googlemaps/js-api-loader';
-import { Navigation, X, Compass } from 'lucide-react';
+import { Navigation, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
 
-const ROUTE_COLOR = '#5B7CFF';
+const ROUTE_COLOR = '#FF6B35';
 const MAP_ID = 'training-map';
 
 export default function TrainingMode() {
@@ -29,19 +30,36 @@ export default function TrainingMode() {
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | google.maps.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [showOffRouteToast, setShowOffRouteToast] = useState(false);
   const offRouteToastTimer = useRef<NodeJS.Timeout | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
+  // Fetch API key via proxy
+  useEffect(() => {
+    const fetchKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
+          body: { type: 'get-key' },
+        });
+        if (error) throw error;
+        if (data?.apiKey) setApiKey(data.apiKey);
+      } catch (err) {
+        console.error('Failed to fetch Google Maps API key:', err);
+      }
+    };
+    fetchKey();
+  }, []);
 
   // Init Google Maps
   useEffect(() => {
-    if (routeCoordinates.length === 0 || mapReady) return;
+    if (routeCoordinates.length === 0 || mapReady || !apiKey) return;
 
     const initMap = async () => {
       try {
         const loader = new Loader({
-          apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+          apiKey,
           version: 'weekly',
           libraries: ['marker'],
         });
@@ -49,33 +67,28 @@ export default function TrainingMode() {
         const google = await loader.load();
         if (!mapRef.current) return;
 
-        // Calculate bounds
         const bounds = new google.maps.LatLngBounds();
         routeCoordinates.forEach(c => bounds.extend(c));
 
         const map = new google.maps.Map(mapRef.current, {
           center: bounds.getCenter(),
           zoom: 15,
+          mapId: MAP_ID,
           disableDefaultUI: true,
           zoomControl: false,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
           gestureHandling: 'greedy',
-          styles: [
-            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-            { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-          ],
         });
 
         map.fitBounds(bounds, 60);
 
-        // Draw route polyline
         const polyline = new google.maps.Polyline({
           path: routeCoordinates,
           strokeColor: ROUTE_COLOR,
           strokeOpacity: 0.9,
-          strokeWeight: 4,
+          strokeWeight: 5,
           geodesic: true,
         });
         polyline.setMap(map);
@@ -89,7 +102,7 @@ export default function TrainingMode() {
     };
 
     initMap();
-  }, [routeCoordinates, mapReady]);
+  }, [routeCoordinates, mapReady, apiKey]);
 
   // Update user marker position
   useEffect(() => {
@@ -98,26 +111,46 @@ export default function TrainingMode() {
     const map = googleMapRef.current;
 
     if (!markerRef.current) {
-      // Create iOS-style blue dot
-      const dotEl = document.createElement('div');
-      dotEl.innerHTML = `
-        <div style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
-          <div style="position:absolute;width:28px;height:28px;border-radius:50%;background:rgba(91,124,255,0.2);animation:pulse-ring 2s ease-out infinite;"></div>
-          <div style="width:14px;height:14px;border-radius:50%;background:#5B7CFF;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);position:relative;z-index:1;"></div>
-        </div>
-      `;
+      try {
+        // Try AdvancedMarkerElement first
+        const dotEl = document.createElement('div');
+        dotEl.innerHTML = `
+          <div style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;width:28px;height:28px;border-radius:50%;background:rgba(91,124,255,0.2);animation:pulse-ring 2s ease-out infinite;"></div>
+            <div style="width:14px;height:14px;border-radius:50%;background:#5B7CFF;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);position:relative;z-index:1;"></div>
+          </div>
+        `;
 
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: userPosition,
-        content: dotEl,
-      });
-      markerRef.current = marker;
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          map,
+          position: userPosition,
+          content: dotEl,
+        });
+        markerRef.current = marker;
+      } catch {
+        // Fallback to classic Marker
+        const marker = new google.maps.Marker({
+          map,
+          position: userPosition,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#5B7CFF',
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 2.5,
+          },
+        });
+        markerRef.current = marker;
+      }
     } else {
-      markerRef.current.position = userPosition;
+      if (markerRef.current instanceof google.maps.Marker) {
+        markerRef.current.setPosition(userPosition);
+      } else {
+        (markerRef.current as google.maps.marker.AdvancedMarkerElement).position = userPosition;
+      }
     }
 
-    // Gently pan map to follow
     map.panTo(userPosition);
   }, [userPosition, mapReady]);
 
@@ -185,7 +218,6 @@ export default function TrainingMode() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      {/* Pulse animation CSS */}
       <style>{`
         @keyframes pulse-ring {
           0% { transform: scale(1); opacity: 0.6; }
@@ -196,12 +228,20 @@ export default function TrainingMode() {
       {/* Map */}
       <div ref={mapRef} className="absolute inset-0 bg-secondary" />
 
-      {/* Top Bar - Distance remaining */}
+      {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-10 safe-area-top">
         <div className="backdrop-blur-xl bg-background/80 border-b border-border/50">
-          <div className="flex items-center justify-between px-4 py-3 pt-[env(safe-area-inset-top,12px)]">
-            <div className="flex-1">
-              <p className="text-[13px] text-muted-foreground">{sessionTitle}</p>
+          <div className="flex items-center gap-3 px-4 py-3 pt-[env(safe-area-inset-top,12px)]">
+            {/* Back button */}
+            <button
+              onClick={() => { stopTracking(); navigate(-1); }}
+              className="w-9 h-9 rounded-full bg-background border border-border/50 flex items-center justify-center shadow-sm active:opacity-70 transition-opacity"
+            >
+              <ChevronLeft className="h-5 w-5 text-foreground" />
+            </button>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] text-muted-foreground truncate">{sessionTitle}</p>
               <p className="text-[22px] font-semibold text-foreground tabular-nums">
                 {formatDistance(remainingDistance)} restants
               </p>
@@ -216,7 +256,6 @@ export default function TrainingMode() {
             </div>
           </div>
 
-          {/* Elapsed time */}
           {isActive && (
             <div className="flex items-center gap-4 px-4 pb-2">
               <span className="text-[13px] text-muted-foreground tabular-nums">
