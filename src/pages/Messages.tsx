@@ -1587,10 +1587,10 @@ const Messages = () => {
     
     return (
       <>
-        <div className="h-full bg-background">
+        <div className="h-full bg-secondary">
         <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
           {/* iMessage Style Header */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-background border-b border-border/50 z-50">
+          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-secondary border-b border-border/50 z-50">
             <div className="flex items-center px-2 py-2">
               {/* Back button - Left */}
               <Button
@@ -2066,7 +2066,7 @@ const Messages = () => {
 
            {/* iMessage Style Input */}
           <div 
-            className="sticky bottom-0 w-full px-2 py-1 bg-background border-t border-border/50 z-40 keyboard-input-container"
+            className="sticky bottom-0 w-full px-2 py-1 bg-secondary border-t border-border/50 z-40 keyboard-input-container"
           >
             {/* Reply Preview */}
             {replyTo && (
