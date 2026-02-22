@@ -30,8 +30,8 @@ export const Layout = ({ children }: LayoutProps) => {
     document.documentElement.style.setProperty('--ios-top-color', topColor);
 
     // WKWebView native background - inline direct pour fiabilité native
-    document.documentElement.style.backgroundColor = '#1d283a';
-    document.body.style.backgroundColor = '#1d283a';
+    document.documentElement.style.backgroundColor = '#F5F5F5';
+    document.body.style.backgroundColor = '#F5F5F5';
 
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
