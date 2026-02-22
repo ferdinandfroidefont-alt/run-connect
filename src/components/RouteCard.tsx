@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download, Box } from "lucide-react";
+import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download, Box, Navigation } from "lucide-react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
@@ -23,6 +24,7 @@ interface RouteCardProps {
 }
 
 export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
+  const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const polyline = useRef<google.maps.Polyline | null>(null);
@@ -267,12 +269,22 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
             </p>
           )}
 
+          {/* Bouton Mode Entraînement */}
+          <Button
+            onClick={() => navigate(`/training/route/${route.id}`)}
+            className="w-full mt-2 gap-2 text-xs bg-primary hover:bg-primary/90"
+            size="sm"
+          >
+            <Navigation className="h-3.5 w-3.5" />
+            Mode Entraînement
+          </Button>
+
           {/* Bouton Vue 3D */}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShow3DDialog(true)}
-            className="w-full mt-2 gap-2 text-xs"
+            className="w-full mt-1 gap-2 text-xs"
           >
             <Box className="h-3.5 w-3.5" />
             Vue 3D du parcours

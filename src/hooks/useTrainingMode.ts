@@ -84,7 +84,7 @@ function calculateRemainingDistance(segmentIndex: number, projected: Coord, rout
   return remaining;
 }
 
-export function useTrainingMode(sessionId: string | undefined) {
+export function useTrainingMode(sessionId: string | undefined, routeId?: string | undefined) {
   const [state, setState] = useState<TrainingState>({
     routeCoordinates: [],
     userPosition: null,
@@ -109,10 +109,48 @@ export function useTrainingMode(sessionId: string | undefined) {
 
   // Load session & route data
   useEffect(() => {
-    if (!sessionId) return;
-
     const loadData = async () => {
       try {
+        // Mode 1: Load from route directly
+        if (routeId) {
+          const { data: route, error: routeError } = await supabase
+            .from('routes')
+            .select('name, coordinates')
+            .eq('id', routeId)
+            .single();
+
+          if (routeError || !route) {
+            setState(s => ({ ...s, loading: false, error: 'Itinéraire introuvable' }));
+            return;
+          }
+
+          const coords: Coord[] = (route.coordinates as any[]).map((c: any) => ({
+            lat: typeof c.lat === 'number' ? c.lat : parseFloat(c.lat),
+            lng: typeof c.lng === 'number' ? c.lng : parseFloat(c.lng),
+          }));
+
+          let totalDist = 0;
+          for (let i = 0; i < coords.length - 1; i++) {
+            totalDist += haversine(coords[i], coords[i + 1]);
+          }
+
+          setState(s => ({
+            ...s,
+            routeCoordinates: coords,
+            remainingDistance: totalDist,
+            loading: false,
+            sessionTitle: route.name,
+            routeName: route.name,
+          }));
+          return;
+        }
+
+        // Mode 2: Load from session
+        if (!sessionId) {
+          setState(s => ({ ...s, loading: false, error: 'Aucun itinéraire spécifié' }));
+          return;
+        }
+
         const { data: session, error: sessionError } = await supabase
           .from('sessions')
           .select('title, route_id')
@@ -140,7 +178,6 @@ export function useTrainingMode(sessionId: string | undefined) {
           lng: typeof c.lng === 'number' ? c.lng : parseFloat(c.lng),
         }));
 
-        // Calculate total distance
         let totalDist = 0;
         for (let i = 0; i < coords.length - 1; i++) {
           totalDist += haversine(coords[i], coords[i + 1]);
@@ -160,7 +197,7 @@ export function useTrainingMode(sessionId: string | undefined) {
     };
 
     loadData();
-  }, [sessionId]);
+  }, [sessionId, routeId]);
 
   const handlePosition = useCallback((lat: number, lng: number, accuracy: number, gpsHeading?: number | null) => {
     // Filter bad GPS
