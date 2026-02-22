@@ -38,7 +38,7 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-20 bg-[#1d283a] sport-pattern-top">
+    <header className="sticky top-0 z-20 bg-[#1d283a] sport-pattern-top header-pattern-gradient">
       <div className="px-4 pt-4 pb-3 relative flex items-center justify-center min-h-[60px]">
         {/* Avatar - Left */}
         <button 
