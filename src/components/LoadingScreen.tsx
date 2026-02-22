@@ -22,9 +22,9 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
   // Couleurs iOS Status Bar + WKWebView background
   useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', '#465467');
-    document.documentElement.style.backgroundColor = '#465467';
-    document.body.style.backgroundColor = '#465467';
+    document.documentElement.style.setProperty('--ios-top-color', '#F5F5F5');
+    document.documentElement.style.backgroundColor = '#F5F5F5';
+    document.body.style.backgroundColor = '#F5F5F5';
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
       document.documentElement.style.removeProperty('background-color');
@@ -89,7 +89,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           src={appIcon} 
           alt="RunConnect" 
           className="w-[120px] h-[120px] rounded-[28px]"
-          style={{ boxShadow: '0 8px 24px hsl(211 100% 50% / 0.25)' }}
+          style={{ boxShadow: '0 8px 24px hsl(160 84% 39% / 0.25)' }}
         />
       </div>
 
