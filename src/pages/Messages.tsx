@@ -214,6 +214,7 @@ const Messages = () => {
       document.body.style.backgroundColor = '#1d283a';
     }
     return () => {
+      setHideBottomNav(false);
       document.documentElement.style.backgroundColor = '#1d283a';
       document.body.style.backgroundColor = '#1d283a';
     };
