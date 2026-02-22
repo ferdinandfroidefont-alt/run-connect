@@ -141,7 +141,7 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
               "absolute z-50 mt-1",
               "bg-card rounded-full shadow-lg border border-border",
               "flex items-center gap-1 p-1",
-              isOwnMessage ? "right-0" : "left-0"
+              isOwnMessage ? "right-0 left-0 mx-auto w-fit" : "left-0 right-0 mx-auto w-fit"
             )}
           >
             {QUICK_REACTIONS.map((emoji) => (
