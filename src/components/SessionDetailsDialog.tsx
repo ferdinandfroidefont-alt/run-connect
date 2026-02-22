@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink, Files, CalendarPlus } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink, Files, CalendarPlus, Navigation } from "lucide-react";
 import { downloadICSFile, openGoogleCalendarLink } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -727,6 +727,22 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     </div>
                   </div>
                 </div>
+
+                {/* Training Mode Button */}
+                {(isOrganizer || isParticipant) && isScheduled && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => navigate(`/training/${session.id}`)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-primary/10 rounded-xl active:bg-primary/20 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                        <Navigation className="h-4 w-4 text-primary-foreground" />
+                      </div>
+                      <span className="text-[15px] font-medium text-primary">Mode Entraînement</span>
+                      <ChevronRight className="h-5 w-5 text-primary/50 ml-auto" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
