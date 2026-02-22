@@ -82,7 +82,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 bg-pattern">
+      <ScrollArea className="flex-1">
         <div className="py-6 space-y-6">
           {/* Language & Theme */}
           <div className="space-y-2">

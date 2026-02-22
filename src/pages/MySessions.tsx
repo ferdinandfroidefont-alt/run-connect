@@ -361,7 +361,7 @@ export default function MySessions() {
     
     return (
       <>
-        <div className="min-h-full bg-secondary bg-pattern">
+        <div className="min-h-full bg-background">
           {/* iOS Header */}
           <div className="sticky top-0 z-50 bg-card">
             <div className="flex items-center justify-between px-4 py-3">
@@ -516,7 +516,7 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="min-h-full bg-secondary pb-8 bg-pattern">
+      <div className="min-h-full bg-background pb-8">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
           <div className="px-4 pt-4 pb-4 relative flex items-center justify-center">

@@ -146,7 +146,7 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="fixed inset-0 bg-secondary bg-pattern flex flex-col overflow-x-hidden">
+    <div className="fixed inset-0 bg-background flex flex-col overflow-x-hidden">
       {/* iOS Header */}
       <div className="bg-card border-b border-border shrink-0">
         <div className="flex items-center justify-between px-4 py-3">

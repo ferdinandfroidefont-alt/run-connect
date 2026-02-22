@@ -33,32 +33,32 @@ export const useConversationTheme = () => {
   const getThemeClasses = () => {
     const themes: Record<string, { background: string; ownMessage: string; otherMessage: string }> = {
       default: {
-        background: 'bg-secondary bg-pattern',
+        background: 'bg-background',
         ownMessage: 'bg-[#007AFF] text-white',
         otherMessage: 'bg-[#E5E5EA] text-black dark:bg-[#38383A] dark:text-white'
       },
       ocean: {
-        background: 'bg-secondary bg-pattern',
+        background: 'bg-background',
         ownMessage: 'bg-blue-600 text-white',
         otherMessage: 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100'
       },
       sunset: {
-        background: 'bg-secondary bg-pattern',
+        background: 'bg-background',
         ownMessage: 'bg-gradient-to-r from-orange-500 to-red-500 text-white',
         otherMessage: 'bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-100'
       },
       forest: {
-        background: 'bg-secondary bg-pattern',
+        background: 'bg-background',
         ownMessage: 'bg-green-600 text-white',
         otherMessage: 'bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-100'
       },
       night: {
-        background: 'bg-secondary bg-pattern',
+        background: 'bg-background',
         ownMessage: 'bg-purple-600 text-white',
         otherMessage: 'bg-slate-700 text-slate-100'
       },
       runner: {
-        background: 'bg-secondary bg-pattern',
+        background: 'bg-background',
         ownMessage: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white',
         otherMessage: 'bg-yellow-100 text-orange-900 dark:bg-yellow-900/40 dark:text-orange-100'
       }

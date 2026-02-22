@@ -16,29 +16,13 @@ export const Layout = ({ children }: LayoutProps) => {
   const { hideBottomNav } = useAppContext();
   const location = useLocation();
 
-  // Couleurs dynamiques iOS Status Bar + Home Indicator selon la page
+  // iOS Status Bar color - unified
   useEffect(() => {
-    const path = location.pathname;
-    let topColor = 'hsl(var(--background))';
-
-    if (path === '/') {
-      topColor = 'hsl(var(--card))';
-    } else if (path === '/messages' || path.startsWith('/messages/')) {
-      topColor = 'hsl(var(--secondary))';
-    }
-
-    document.documentElement.style.setProperty('--ios-top-color', topColor);
-
-    // WKWebView native background - inline direct pour fiabilité native
-    document.documentElement.style.backgroundColor = '#1d283a';
-    document.body.style.backgroundColor = '#1d283a';
-
+    document.documentElement.style.setProperty('--ios-top-color', 'hsl(var(--background))');
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
-      document.documentElement.style.removeProperty('background-color');
-      document.body.style.removeProperty('background-color');
     };
-  }, [location.pathname]);
+  }, []);
   
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);
@@ -95,7 +79,7 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen-safe bg-background flex flex-col bg-pattern overflow-x-hidden overflow-y-hidden">
+    <div className="h-screen-safe bg-background flex flex-col overflow-x-hidden overflow-y-hidden">
       <main className={`flex-1 overflow-auto scroll-momentum min-h-0 h-0 ${hideBottomNav ? "" : "pb-[64px] ios-nav-padding"}`}>
         <div className="animate-fade-in h-full relative w-full">
           {children}

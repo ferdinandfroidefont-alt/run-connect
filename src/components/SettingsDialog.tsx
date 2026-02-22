@@ -403,7 +403,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
+      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-background overflow-hidden overflow-x-hidden border-0 sm:border">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
@@ -443,7 +443,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 bg-pattern">
+              <ScrollArea className="flex-1">
                 <div className="py-6 space-y-6">
                   {/* iOS grouped list style */}
                   <div className="bg-background overflow-hidden">
@@ -587,7 +587,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           ) : (
             <motion.div
               key={currentPage}
-              className="flex-1 h-full bg-background bg-pattern"
+              className="flex-1 h-full bg-background"
             >
               {renderPage()}
             </motion.div>
