@@ -9,7 +9,7 @@ import { OnlineStatus } from "@/components/OnlineStatus";
 import { ChevronLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
-import { useAppContext } from "@/contexts/AppContext";
+
 interface Profile {
   user_id: string;
   username: string;
@@ -59,7 +59,7 @@ export const NewConversationView = ({
   onAvatarClick
 }: NewConversationViewProps) => {
   const { user } = useAuth();
-  const { setHideBottomNav } = useAppContext();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [recentFriends, setRecentFriends] = useState<Profile[]>([]);
   const [allFriends, setAllFriends] = useState<Profile[]>([]);
@@ -73,13 +73,6 @@ export const NewConversationView = ({
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [friendsSet, setFriendsSet] = useState<Set<string>>(new Set());
 
-  // Hide bottom navigation when this view is open
-  useEffect(() => {
-    setHideBottomNav(true);
-    return () => {
-      setHideBottomNav(false);
-    };
-  }, [setHideBottomNav]);
 
   // Load recent friends (based on recent conversations)
   useEffect(() => {

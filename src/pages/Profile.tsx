@@ -19,7 +19,7 @@ import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
-import { useAppContext } from "@/contexts/AppContext";
+
 import { StravaConnect } from "@/components/StravaConnect";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
@@ -74,12 +74,8 @@ const Profile = () => {
     subscriptionInfo,
     refreshSubscription
   } = useAuth();
-  const { setHideBottomNav } = useAppContext();
+  
 
-  useEffect(() => {
-    setHideBottomNav(true);
-    return () => setHideBottomNav(false);
-  }, [setHideBottomNav]);
   const {
     userProfile: globalProfile,
     refreshProfile: refreshGlobalProfile

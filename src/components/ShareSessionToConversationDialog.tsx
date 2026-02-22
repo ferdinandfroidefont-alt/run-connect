@@ -10,7 +10,7 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useAppContext } from "@/contexts/AppContext";
+
 
 interface Session {
   id: string;
@@ -60,18 +60,11 @@ export const ShareSessionToConversationDialog = ({
 }: ShareSessionToConversationDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { setHideBottomNav } = useAppContext();
+  
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [sharingTo, setSharingTo] = useState<string | null>(null);
 
-  // Hide bottom nav when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setHideBottomNav(true);
-    }
-    return () => setHideBottomNav(false);
-  }, [isOpen, setHideBottomNav]);
 
   useEffect(() => {
     if (isOpen && user) {
