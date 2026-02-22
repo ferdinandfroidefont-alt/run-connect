@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTrainingMode } from '@/hooks/useTrainingMode';
 import { Loader } from '@googlemaps/js-api-loader';
 import { ArrowLeft } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -104,6 +106,68 @@ export default function TrainingMode() {
 
     initMap();
   }, [routeCoordinates, mapReady, apiKey]);
+
+  // Fetch initial position immediately when map is ready
+  useEffect(() => {
+    if (!mapReady || !googleMapRef.current) return;
+
+    const createBlueDot = (map: google.maps.Map, pos: { lat: number; lng: number }) => {
+      if (markerRef.current) {
+        if (markerRef.current instanceof google.maps.Marker) {
+          markerRef.current.setPosition(pos);
+        } else {
+          (markerRef.current as google.maps.marker.AdvancedMarkerElement).position = pos;
+        }
+        map.panTo(pos);
+        return;
+      }
+      try {
+        const dotEl = document.createElement('div');
+        dotEl.innerHTML = `
+          <div style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;width:28px;height:28px;border-radius:50%;background:rgba(91,124,255,0.2);animation:pulse-ring 2s ease-out infinite;"></div>
+            <div style="width:14px;height:14px;border-radius:50%;background:#5B7CFF;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);position:relative;z-index:1;"></div>
+          </div>
+        `;
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          map, position: pos, content: dotEl,
+        });
+        markerRef.current = marker;
+      } catch {
+        const marker = new google.maps.Marker({
+          map, position: pos,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE, scale: 8,
+            fillColor: '#5B7CFF', fillOpacity: 1,
+            strokeColor: 'white', strokeWeight: 2.5,
+          },
+        });
+        markerRef.current = marker;
+      }
+      map.panTo(pos);
+    };
+
+    const getInitialPosition = async () => {
+      const map = googleMapRef.current;
+      if (!map) return;
+
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+          createBlueDot(map, { lat: pos.coords.latitude, lng: pos.coords.longitude });
+          return;
+        }
+      } catch {}
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => createBlueDot(googleMapRef.current!, { lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    };
+
+    getInitialPosition();
+  }, [mapReady]);
 
   // Update user marker position
   useEffect(() => {
