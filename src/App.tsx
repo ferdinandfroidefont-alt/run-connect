@@ -72,8 +72,8 @@ const App = () => {
                   <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
                   <Route path="/terms" element={<PageTransition><Terms /></PageTransition>} />
                   <Route path="/about" element={<PageTransition><About /></PageTransition>} />
-                  <Route path="/confirm-presence" element={<PageTransition><ConfirmPresence /></PageTransition>} />
-                  <Route path="/confirm-presence/:sessionId" element={<PageTransition><ConfirmPresence /></PageTransition>} />
+                  <Route path="/confirm-presence" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
+                  <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
                   <Route path="/security" element={<Layout><PageTransition><SecurityDashboard /></PageTransition></Layout>} />
                   
                   <Route path="/donation-success" element={<PageTransition><DonationSuccess /></PageTransition>} />
