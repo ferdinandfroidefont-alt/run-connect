@@ -6,7 +6,7 @@ import { X, Check, ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useAppContext } from '@/contexts/AppContext';
+
 import { ElevationProfile } from '@/components/ElevationProfile';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
@@ -38,7 +38,7 @@ export const RouteCreation = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { setHideBottomNav } = useAppContext();
+  
   const { getCurrentPosition } = useGeolocation();
   
   const isEditMode = searchParams.get('edit') === 'true';
@@ -92,11 +92,6 @@ export const RouteCreation = () => {
     };
   }, [isEditMode]);
 
-  // Cacher le menu du bas au montage
-  useEffect(() => {
-    setHideBottomNav(true);
-    return () => setHideBottomNav(false);
-  }, [setHideBottomNav]);
 
   // Charger l'itinéraire existant sur la carte
   const loadExistingRoute = async () => {

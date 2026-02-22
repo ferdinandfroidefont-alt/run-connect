@@ -19,7 +19,7 @@ import { WeeklyChallengesCard } from "@/components/leaderboard/WeeklyChallengesC
 import { BadgesToUnlockCard } from "@/components/leaderboard/BadgesToUnlockCard";
 import { ProgressionChart } from "@/components/leaderboard/ProgressionChart";
 import { StreakBadge } from "@/components/StreakBadge";
-import { useAppContext } from "@/contexts/AppContext";
+
 
 interface LeaderboardUser {
   user_id: string;
@@ -44,7 +44,7 @@ interface Club {
 const Leaderboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { setHideBottomNav } = useAppContext();
+  
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -60,11 +60,6 @@ const Leaderboard = () => {
   
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
-  // Masquer la barre de navigation sur cette page
-  useEffect(() => {
-    setHideBottomNav(true);
-    return () => setHideBottomNav(false);
-  }, [setHideBottomNav]);
 
   const USERS_PER_PAGE = 10;
 

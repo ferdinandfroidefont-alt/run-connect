@@ -21,7 +21,7 @@ import { CreateSessionWizard } from "./session-creation/CreateSessionWizard";
 import { useAdMob } from '@/hooks/useAdMob';
 import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '@/contexts/AppContext';
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
 import { RateSessionDialog } from './RateSessionDialog';
@@ -134,7 +134,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const { toast } = useToast();
   const { validatePresence, validating: validatingGPS } = useGPSValidation();
   const { sendPushNotification } = useSendNotification();
-  const { setHideBottomNav } = useAppContext();
+  
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
@@ -151,13 +151,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [hasRated, setHasRated] = useState(false);
 
-  // Hide bottom nav when dialog opens
-  useEffect(() => {
-    if (session) {
-      setHideBottomNav(true);
-    }
-    return () => setHideBottomNav(false);
-  }, [session, setHideBottomNav]);
 
   useEffect(() => {
     const checkUserStatus = async () => {
