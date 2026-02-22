@@ -211,6 +211,7 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(prev => {
@@ -1556,10 +1557,10 @@ export const InteractiveMap = ({
 
       {/* Filters + Immersive toggle - stacked & attached */}
       {!isImmersiveMode && <div className="absolute right-4 z-10 flex flex-col items-stretch ios-map-filters" style={{ top: '10.5rem' }}>
-        <SessionFilters filters={filters} onFiltersChange={setFilters} className="rounded-b-none" />
-        <div className="bg-card/95 backdrop-blur-sm shadow-sm rounded-b-xl border border-t-0 border-border cursor-pointer hover:bg-accent/50 transition-colors flex items-center justify-center p-1.5" onClick={toggleImmersiveMode}>
+        <SessionFilters filters={filters} onFiltersChange={setFilters} className="rounded-b-none" onOpenChange={setIsFiltersOpen} />
+        {!isFiltersOpen && <div className="bg-card/95 backdrop-blur-sm shadow-sm rounded-b-xl border border-t-0 border-border cursor-pointer hover:bg-accent/50 transition-colors flex items-center justify-center p-1.5" onClick={toggleImmersiveMode}>
           <Maximize2 className="h-3.5 w-3.5" />
-        </div>
+        </div>}
       </div>}
       
       {/* All Map Controls - iOS Style */}

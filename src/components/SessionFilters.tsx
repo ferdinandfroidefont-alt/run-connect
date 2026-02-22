@@ -21,6 +21,7 @@ interface SessionFiltersProps {
   filters: Filter;
   onFiltersChange: (filters: Filter) => void;
   className?: string;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 const activityTypes = [
@@ -44,8 +45,14 @@ const TIME_SLOTS = [
   { id: 'evening' as const, icon: Moon, label: 'Soir', startHour: 18, endHour: 23, color: 'text-indigo-500' },
 ];
 
-export const SessionFilters = ({ filters, onFiltersChange, className }: SessionFiltersProps) => {
+export const SessionFilters = ({ filters, onFiltersChange, className, onOpenChange }: SessionFiltersProps) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleToggleOpen = () => {
+    const newOpen = !isOpen;
+    setIsOpen(newOpen);
+    onOpenChange?.(newOpen);
+  };
 
   const toggleActivityType = (activityId: string) => {
     const newActivityTypes = filters.activity_types.includes(activityId)
@@ -98,7 +105,7 @@ export const SessionFilters = ({ filters, onFiltersChange, className }: SessionF
     <Card className={`${isOpen ? 'w-[calc(100vw-2rem)] max-w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control relative z-50 ${className || ''}`}>
       {/* Header cliquable - toujours visible */}
       <div 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
       >
         {isOpen ? (
