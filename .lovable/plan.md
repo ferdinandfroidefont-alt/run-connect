@@ -1,36 +1,33 @@
 
-# Barres systeme iOS en blanc pour le mode clair
 
-Le fond natif iOS (Status Bar, Home Indicator, overscroll WKWebView) utilise actuellement un bleu fonce `#1d283a` (reste de l'ancien theme sombre). Puisque le mode clair est maintenant le mode par defaut, tout doit etre blanc/clair.
+## Remplacement de l'icone de l'application
 
-## Fichiers a modifier
+L'image uploadee sera utilisee comme nouvelle icone partout dans l'application.
 
-### 1. `capacitor.config.ts`
-- Ligne 16 : `backgroundColor: '#1d283a'` (StatusBar plugin) -> `'#F5F5F5'`
-- Ligne 38 : `backgroundColor: '#1d283a'` (iOS config) -> `'#F5F5F5'`
+### Changements prevus
 
-### 2. `src/components/Layout.tsx`
-- Lignes 33-34 : Les couleurs WKWebView hardcodees `#1d283a` -> `#F5F5F5`
+**1. Copier l'image dans le projet**
+- Copier l'image vers `src/assets/app-icon.png` (remplace l'ancienne, utilisee dans Auth, About, LoadingScreen)
+- Copier l'image vers `public/favicon.png` (remplace le favicon web)
 
-### 3. `src/index.css`
-- La regle `html, body` qui force `background-color: #F5F5F5` est deja correcte (mise a jour precedente)
+**2. Fichiers impactes automatiquement (aucune modification de code necessaire)**
+Les fichiers suivants importent deja `@/assets/app-icon.png`, donc ils utiliseront automatiquement la nouvelle icone :
+- `src/pages/Auth.tsx` - page de connexion
+- `src/pages/About.tsx` - page a propos
+- `src/components/LoadingScreen.tsx` - ecran de chargement
 
-### 4. `android/app/src/main/res/values/styles.xml`
-- Les barres systeme Android sont en noir (`#000000`). On les passe en blanc pour correspondre au mode clair :
-  - `android:statusBarColor` -> `#F5F5F5`
-  - `android:navigationBarColor` -> `#F5F5F5`
-  - `android:windowLightStatusBar` -> `true` (icones sombres sur fond clair)
-  - `android:windowLightNavigationBar` -> `true`
+Le `index.html` reference deja `/favicon.png`, donc le favicon sera aussi mis a jour automatiquement.
 
-### 5. `android/app/src/main/res/values/colors.xml`
-- Ajouter une couleur `systemBarLight` (`#F5F5F5`)
-- Remplacer les references `systemBarBlack` par `systemBarLight` dans les styles
+**3. Instructions pour iOS (manuel, hors Lovable)**
+Pour que l'icone apparaisse sur iOS (App Store / SpringBoard), il faudra :
+- Ouvrir le projet Xcode (`ios/App/App.xcworkspace`)
+- Aller dans `Assets.xcassets > AppIcon`
+- Remplacer toutes les tailles d'icone avec la nouvelle image (1024x1024 pour l'App Store, puis les tailles reduites : 180x180, 120x120, 87x87, 80x80, 60x60, 58x58, 40x40, 29x29, 20x20)
+- Des outils comme [appicon.co](https://appicon.co) permettent de generer toutes les tailles automatiquement a partir d'une seule image
 
-### 6. `android/app/src/main/res/values-v35/styles.xml`
-- Meme adaptation pour Android 15+
+### Details techniques
 
-## Resultat attendu
-- Status Bar : fond clair avec icones sombres (heure, batterie en noir)
-- Home Indicator / Navigation Bar : fond clair
-- Overscroll WKWebView : fond clair uniforme
-- Coherence totale avec le theme clair de l'app
+- L'image source est `user-uploads://4A14AEA8-0C35-49D9-B1BF-A09ADD1BA78B.png`
+- Elle sera copiee en tant que `src/assets/app-icon.png` et `public/favicon.png`
+- Pour Android, les icones launcher (`mipmap-*`) dans `android/app/src/main/res/` devront aussi etre remplacees manuellement dans Android Studio (hors perimetre Lovable)
+
