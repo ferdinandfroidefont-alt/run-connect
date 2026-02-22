@@ -1,72 +1,115 @@
 
 
-# Fix: le fond WKWebView ne change pas de couleur
+# Fix definitif : fond WKWebView natif par style inline direct
 
-## Probleme identifie
+## Diagnostic du probleme
 
-Le fond natif de la WKWebView iOS ne resout **pas** les variables CSS imbriquees comme `hsl(var(--secondary))`. La couche native lit la couleur computee de `html`/`body`, mais les references de type `hsl(var(...))` ne sont pas toujours resolues correctement par le moteur natif.
+Le code actuel fait :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
+```
+Puis le CSS fait :
+```css
+html, body { background-color: var(--wkwebview-bg, #1d283a) !important; }
+```
 
-De plus, la regle a la **ligne 167** (`background-color: hsl(var(--background))`) dans `@layer base` entre potentiellement en conflit meme si le `!important` de la ligne 457 devrait gagner.
+Le probleme : la WKWebView native lit la couleur **computee** de `html`/`body`. Mais :
+1. La resolution de `var(--wkwebview-bg)` passe par une indirection (variable CSS) qui n'est pas toujours resolue a temps par le moteur natif
+2. La regle est dans `@layer base` qui a une priorite de cascade basse
+3. `@apply bg-background` sur `body` (ligne 149) genere un `background-color` concurrent
 
-## Solution
+## Solution : style inline direct
 
-Remplacer toutes les references `hsl(var(--secondary))` par des **couleurs hexadecimales en dur** dans les appels a `--wkwebview-bg`. Le natif iOS comprend uniquement les couleurs resolues.
+Au lieu de passer par une variable CSS, on ecrit **directement** la couleur en inline style :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+```
+
+Un inline style est **toujours** prioritaire sur toute regle CSS (meme `!important` dans `@layer`). La WKWebView voit immediatement la couleur computee.
 
 ## Modifications
 
-### 1. `src/components/LoadingScreen.tsx`
+### 1. `src/index.css` (ligne 167) -- Garder le fallback
+
+Conserver la regle existante comme fallback initial (avant que le JS ne s'execute) :
+```css
+html, body {
+  background-color: #1d283a !important;
+  /* ... reste inchange */
+}
+```
+Remplacer `var(--wkwebview-bg, #1d283a)` par juste `#1d283a` en dur. La variable CSS n'est plus necessaire puisque le JS pilotera directement.
+
+### 2. `src/components/Layout.tsx` -- Inline style direct
 
 Remplacer :
 ```js
-document.documentElement.style.setProperty('--wkwebview-bg', 'hsl(var(--secondary))');
-```
-Par la couleur hex equivalente du mode sombre (puisque le defaut de l'app est sombre) :
-```js
-document.documentElement.style.setProperty('--wkwebview-bg', '#3b4a5c');
-```
-
-Note : `--secondary` en mode sombre = `215 19% 34%` = environ `#465467`. En mode clair = `215 19% 34%` aussi. La valeur exacte sera calculee et codee en dur.
-
-### 2. `src/pages/Search.tsx`
-
-Meme correction :
-```js
-document.documentElement.style.setProperty('--wkwebview-bg', 'hsl(var(--secondary))');
-```
-Remplacer par la meme couleur hex en dur.
-
-### 3. `src/index.css` -- Renforcer la regle
-
-Deplacer la regle `html, body { background-color: var(--wkwebview-bg, #1d283a) !important; }` **en dehors** du bloc `@supports (-webkit-touch-callout: none)` pour qu'elle s'applique aussi dans le preview web, et la mettre **apres** la regle de la ligne 167 pour garantir la cascade.
-
-Ou bien : ajouter `!important` aussi a la ligne 167, mais avec la variable `--wkwebview-bg`.
-
-Concretement, remplacer la ligne 167 :
-```css
-background-color: hsl(var(--background));
+document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
 ```
 Par :
-```css
-background-color: var(--wkwebview-bg, #1d283a) !important;
+```js
+document.documentElement.style.backgroundColor = '#1d283a';
+document.body.style.backgroundColor = '#1d283a';
+```
+Et au cleanup, retirer ces inline styles.
+
+### 3. `src/components/LoadingScreen.tsx` -- Inline style direct
+
+Remplacer :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
+```
+Par :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+```
+Cleanup au unmount :
+```js
+document.documentElement.style.removeProperty('background-color');
+document.body.style.removeProperty('background-color');
 ```
 
-Et supprimer le doublon dans le bloc `@supports` (lignes 455-458).
+### 4. `src/pages/Search.tsx` -- Inline style direct
 
-### 4. Valeurs hex exactes a utiliser
+Meme remplacement :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+```
+Cleanup au unmount.
 
-| Variable CSS | Valeur HSL | Hex calcule |
-|---|---|---|
-| `--secondary` dark (215 19% 34%) | `hsl(215, 19%, 34%)` | `#465467` |
-| `--secondary` light (215 19% 34%) | `hsl(215, 19%, 34%)` | `#465467` |
-| Defaut | - | `#1d283a` |
-| Conversation | - | `#465467` |
+### 5. `src/pages/Messages.tsx` (lignes 209-215) -- Inline style direct
 
-## Fichiers modifies
+Remplacer :
+```js
+document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
+// et
+document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
+```
+Par :
+```js
+document.documentElement.style.backgroundColor = '#465467';
+document.body.style.backgroundColor = '#465467';
+// et
+document.documentElement.style.backgroundColor = '#1d283a';
+document.body.style.backgroundColor = '#1d283a';
+```
 
-- `src/index.css` : unifier la regle background sur `html, body`
-- `src/components/LoadingScreen.tsx` : hex en dur au lieu de `hsl(var(...))`
-- `src/pages/Search.tsx` : hex en dur au lieu de `hsl(var(...))`
+## Recapitulatif des couleurs
 
-## Resultat attendu
+| Page | Couleur inline |
+|------|---------------|
+| Defaut (toutes pages) | `#1d283a` |
+| Chargement | `#465467` |
+| Recherche | `#465467` |
+| Conversation ouverte | `#465467` |
 
-Le fond natif WKWebView changera effectivement de couleur car seules des valeurs hex resolues seront utilisees, sans dependance aux variables CSS imbriquees.
+## Pourquoi ca marchera cette fois
+
+1. **Inline style** = priorite maximale dans la cascade CSS, aucune regle ne peut l'overrider
+2. **Valeur hex directe** = pas d'indirection par variable CSS, la couleur computee est immediate
+3. **Double application** (html + body) = la WKWebView lit la couleur du premier element qui la definit
+4. **Fallback CSS en dur** (#1d283a sans variable) = avant meme que le JS s'execute, la bonne couleur par defaut est la
+
