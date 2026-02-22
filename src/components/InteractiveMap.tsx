@@ -23,7 +23,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft, Settings, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -1378,34 +1378,37 @@ export const InteractiveMap = ({
 
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10">
-        <div className="bg-card border-b border-border overflow-hidden">
-          <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
-            {/* Runconnect Title - Left aligned iOS style */}
-            <h1 className="text-lg font-semibold text-primary leading-none flex items-center mt-2">
-              Runconnect
-            </h1>
-            
-            {/* User Profile Avatar - Centered - Clickable to access profile */}
-            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2" data-tutorial="profile-avatar">
-                <div onClick={() => setShowProfileDialog(true)} className="relative cursor-pointer hover-scale hover-glow transition-all duration-200 flex flex-col items-center">
-                  <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+        <div className="bg-card/95 backdrop-blur-xl border-b border-border/30 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 ios-map-header">
+            {/* Avatar + Runconnect - Left aligned */}
+            <div className="flex items-center gap-3">
+              {userProfile && (
+                <div onClick={() => setShowProfileDialog(true)} className="relative cursor-pointer" data-tutorial="profile-avatar">
+                  <Avatar className="w-10 h-10">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
-                    <AvatarFallback className="text-lg">
+                    <AvatarFallback className="text-sm bg-secondary text-foreground">
                       {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {user && <div className="absolute -bottom-1 -right-1 scale-75"><StreakBadge userId={user.id} variant="compact" /></div>}
                 </div>
-              </div>}
+              )}
+              <h1 className="text-lg font-bold text-foreground leading-none">
+                Runconnect
+              </h1>
+            </div>
             
             {/* Bell and Settings - Right aligned */}
-            <div className="flex items-center justify-center gap-3">
-              <div data-tutorial="notifications" className="flex items-center justify-center">
+            <div className="flex items-center gap-2">
+              <div data-tutorial="notifications">
                 <NotificationCenter onSessionUpdated={loadSessions} />
               </div>
-              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10 flex items-center justify-center" onClick={() => setShowSettingsDialog(true)}>
-                ⚙️
-              </div>
+              <button
+                onClick={() => setShowSettingsDialog(true)}
+                className="p-2 rounded-full hover:bg-secondary/80 transition-colors"
+              >
+                <Settings className="h-6 w-6 text-muted-foreground" />
+              </button>
             </div>
           </div>
         </div>

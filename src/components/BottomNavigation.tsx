@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, MessageCircle, Newspaper } from 'lucide-react';
+import { Home, Calendar, MessageCircle, Newspaper, Plus } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -12,11 +12,14 @@ export const BottomNavigation = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const { hideBottomNav } = useAppContext();
+  const { hideBottomNav, openCreateSession } = useAppContext();
 
-  const navItems = [
+  const navItemsBefore = [
     { path: '/', icon: Home, label: t('navigation.home') },
     { path: '/my-sessions', icon: Calendar, label: t('navigation.mySessions') },
+  ];
+
+  const navItemsAfter = [
     { path: '/messages', icon: MessageCircle, label: t('navigation.messages') },
     { path: '/feed', icon: Newspaper, label: 'Feed' }
   ];
@@ -66,39 +69,53 @@ export const BottomNavigation = () => {
 
   if (hideBottomNav) return null;
 
+  const renderNavItem = (path: string, Icon: any, label: string) => {
+    const isActive = location.pathname === path;
+    const showBadge = path === '/messages' && totalUnreadCount > 0;
+    const tutorialId = path === '/my-sessions' ? 'nav-sessions' : path === '/messages' ? 'nav-messages' : path === '/feed' ? 'nav-feed' : undefined;
+    return (
+      <button
+        key={path}
+        onClick={() => navigate(path)}
+        className="flex flex-col items-center justify-center h-full active:scale-90 transition-transform touch-manipulation"
+        data-tutorial={tutorialId}
+      >
+        <div className="relative">
+          <Icon
+            className={`h-6 w-6 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+            strokeWidth={isActive ? 2 : 1.5}
+            fill={isActive ? 'currentColor' : 'none'}
+          />
+          {showBadge && (
+            <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-destructive text-destructive-foreground text-[11px] font-semibold rounded-full px-1">
+              {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+            </span>
+          )}
+        </div>
+        <span className={`text-[10px] mt-0.5 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+          {label}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="h-px bg-border/30" />
-      <div className="grid grid-cols-4 items-center h-[49px]">
-        {navItems.map(({ path, icon: Icon, label }) => {
-          const isActive = location.pathname === path;
-          const showBadge = path === '/messages' && totalUnreadCount > 0;
-          const tutorialId = path === '/my-sessions' ? 'nav-sessions' : path === '/messages' ? 'nav-messages' : path === '/feed' ? 'nav-feed' : undefined;
-          return (
-            <button
-              key={path}
-              onClick={() => navigate(path)}
-              className="flex flex-col items-center justify-center h-full active:scale-90 transition-transform touch-manipulation"
-              data-tutorial={tutorialId}
-            >
-              <div className="relative">
-                <Icon
-                  className={`h-6 w-6 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
-                  strokeWidth={isActive ? 2 : 1.5}
-                  fill={isActive ? 'currentColor' : 'none'}
-                />
-                {showBadge && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-destructive text-destructive-foreground text-[11px] font-semibold rounded-full px-1">
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[10px] mt-0.5 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                {label}
-              </span>
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-5 items-center h-[49px]">
+        {navItemsBefore.map(({ path, icon, label }) => renderNavItem(path, icon, label))}
+        
+        {/* Central "+" button */}
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => openCreateSession()}
+            className="relative -top-3 w-14 h-14 rounded-full bg-card border border-border/50 shadow-sm flex items-center justify-center active:scale-90 transition-transform touch-manipulation"
+          >
+            <Plus className="h-7 w-7 text-primary" strokeWidth={2} />
+          </button>
+        </div>
+        
+        {navItemsAfter.map(({ path, icon, label }) => renderNavItem(path, icon, label))}
       </div>
     </nav>
   );
