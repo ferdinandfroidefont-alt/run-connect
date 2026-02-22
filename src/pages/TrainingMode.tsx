@@ -9,7 +9,7 @@ const ROUTE_COLOR = '#5B7CFF';
 const MAP_ID = 'training-map';
 
 export default function TrainingMode() {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { sessionId, routeId } = useParams<{ sessionId?: string; routeId?: string }>();
   const navigate = useNavigate();
   const {
     routeCoordinates,
@@ -24,7 +24,7 @@ export default function TrainingMode() {
     sessionTitle,
     startTracking,
     stopTracking,
-  } = useTrainingMode(sessionId);
+  } = useTrainingMode(sessionId, routeId);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);

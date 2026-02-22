@@ -76,6 +76,7 @@ const App = () => {
                   <Route path="/confirm-presence" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
                   <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
                   <Route path="/security" element={<Layout><PageTransition><SecurityDashboard /></PageTransition></Layout>} />
+                  <Route path="/training/route/:routeId" element={<PageTransition><TrainingMode /></PageTransition>} />
                   <Route path="/training/:sessionId" element={<PageTransition><TrainingMode /></PageTransition>} />
                   
                   <Route path="/donation-success" element={<PageTransition><DonationSuccess /></PageTransition>} />
