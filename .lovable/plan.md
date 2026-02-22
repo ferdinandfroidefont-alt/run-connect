@@ -1,103 +1,96 @@
 
 
-## Faire fonctionner les notifications push sur iOS (App Store)
+## Mode Entrainement - Suivi d'itineraire en temps reel
 
-### Probleme actuel
+### Vue d'ensemble
 
-Le code React (`usePushNotifications.tsx`) gere correctement iOS : il demande les permissions, appelle `PushNotifications.register()`, et sauvegarde le token APNs via Capacitor. **Mais** le pipeline CI/CD iOS (`.github/workflows/ios-appstore.yml`) ne configure pas Firebase ni les entitlements push, donc :
+Creer un ecran plein ecran dedie au suivi d'itineraire pendant une seance de course, accessible depuis la fiche seance (`SessionDetailsDialog`) quand un itineraire est attache. L'ecran affiche la carte avec le trace, la position GPS en temps reel, une boussole, la distance restante, et detecte les sorties de parcours.
 
-1. Le token APNs n'est jamais genere car Firebase n'est pas initialise
-2. L'app n'a pas l'entitlement "Push Notifications" requis par Apple
-3. Le fichier `GoogleService-Info.plist` n'est pas inclus dans le build
+### Fichiers a creer
 
-### Corrections a appliquer
+#### 1. `src/pages/TrainingMode.tsx` - Page plein ecran
 
-#### 1. Ajouter `GoogleService-Info.plist` au pipeline iOS
+Page autonome sans Layout (plein ecran comme `/auth`), recevant `sessionId` en param URL. Au montage :
+- Charge la session et son itineraire depuis Supabase (`sessions` + `routes`)
+- Initialise Google Maps plein ecran (fond clair, UI minimale)
+- Dessine le trace (polyline bleu primaire `#5B7CFF`, epaisseur 4px)
+- Demarre le suivi GPS
 
-Le fichier Firebase pour iOS doit etre injecte dans le build via un secret GitHub encode en base64 (`IOS_GOOGLE_SERVICE_INFO_BASE64`).
+Elements UI :
+- **Barre du haut** : distance restante ("2.3 km restants"), fond semi-transparent flouté
+- **Boussole** : coin haut droit, icone 24px, rotation selon `DeviceOrientationEvent` (ou heading GPS en fallback)
+- **Point bleu iOS** : cercle bleu 14px avec halo semi-transparent pulse, mis a jour toutes les 3-5 secondes
+- **Bouton "Terminer"** : bas de l'ecran, style iOS destructive
 
-Ajouter une etape dans `.github/workflows/ios-appstore.yml` apres "Add iOS platform" :
+Logique GPS :
+- Utiliser `Geolocation.watchPosition` sur natif, `navigator.geolocation.watchPosition` sur web
+- `enableHighAccuracy: true`, intervalle ~3s (via `minimumUpdateInterval` sur Capacitor)
+- Filtrer les points avec accuracy > 50m (GPS instable)
+- Smoothing : moyenner avec le point precedent si saut > 20m
 
-```yaml
-- name: Add GoogleService-Info.plist
-  env:
-    GOOGLE_SERVICE_INFO: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_BASE64 }}
-  run: |
-    echo "$GOOGLE_SERVICE_INFO" | base64 --decode > ios/App/App/GoogleService-Info.plist
-    echo "GoogleService-Info.plist added"
+Distance restante :
+- Projeter la position courante sur le segment le plus proche du trace
+- Calculer la distance entre ce point projete et la fin du trace (somme des segments restants)
+
+Detection sortie de trace :
+- Si distance au segment le plus proche > 30m pendant > 5s : vibration (`navigator.vibrate(200)`) + toast discret
+- Cooldown de 30s entre alertes pour eviter le spam
+
+#### 2. `src/hooks/useTrainingMode.ts` - Hook principal
+
+Gere tout l'etat et la logique :
+- `routeCoordinates: {lat, lng}[]` - le trace charge
+- `userPosition: {lat, lng} | null` - position GPS courante
+- `heading: number` - orientation pour la boussole
+- `remainingDistance: number` - distance restante en km
+- `isOffRoute: boolean` - detecte si hors trace
+- `isActive: boolean` - mode actif ou non
+- `startTracking()` / `stopTracking()` - demarrage/arret
+- `elapsedTime: number` - temps ecoule
+
+Fonctions internes :
+- `projectOnRoute(point, routeCoords)` : trouve le point le plus proche sur le trace
+- `calculateRemainingDistance(projectedIndex, routeCoords)` : somme des segments restants
+- `checkOffRoute(point, routeCoords, threshold)` : verifie si hors trace
+
+### Fichiers a modifier
+
+#### 3. `src/App.tsx` - Ajouter la route
+
+```
+<Route path="/training/:sessionId" element={<PageTransition><TrainingMode /></PageTransition>} />
 ```
 
-#### 2. Ajouter l'entitlement Push Notifications
+Sans Layout (plein ecran).
 
-Creer un fichier `App.entitlements` avec la capability push, injecte dans le build :
+#### 4. `src/components/SessionDetailsDialog.tsx` - Bouton "Demarrer le suivi"
 
-```yaml
-- name: Configure Push Notification entitlements
-  run: |
-    cat > ios/App/App/App.entitlements << 'EOF'
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-    <dict>
-      <key>aps-environment</key>
-      <string>production</string>
-    </dict>
-    </plist>
-    EOF
+Ajouter un bouton dans la section actions (entre le bouton GPS et le partage), visible uniquement si :
+- La session a un itineraire (`session.routes`)
+- L'utilisateur est participant ou organisateur
+- La session est programmee (pas terminee)
 
-    # Ajouter le fichier entitlements dans les build settings Xcode
-```
+Le bouton utilise `useNavigate` vers `/training/${session.id}`.
 
-Puis mettre a jour le script Ruby de signing pour ajouter `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` dans les build settings.
+Style : bouton iOS avec icone `Navigation` (lucide), fond bleu primaire, texte "Mode Entrainement".
 
-#### 3. Ajouter le plugin Firebase dans le Podfile iOS
+### Details techniques
 
-Capacitor utilise CocoaPods. Il faut ajouter le pod Firebase Messaging pour que le bridge natif fonctionne :
+| Aspect | Choix |
+|--------|-------|
+| Frequence GPS | ~3s (watchPosition, pas de polling) |
+| Seuil hors trace | 30m pendant 5s |
+| Filtrage GPS | Ignorer accuracy > 50m, smooth sauts > 20m |
+| Boussole | `DeviceOrientationEvent` (iOS demande permission), fallback heading GPS |
+| Vibration | `navigator.vibrate(200)` (Android), pas de vibration sur iOS web |
+| Carte | Google Maps, style minimal, pas de labels routes |
+| Couleur trace | `#5B7CFF` (bleu primaire app) |
+| Ecran allume | `navigator.wakeLock.request('screen')` si disponible |
 
-```yaml
-- name: Add Firebase Messaging pod
-  run: |
-    cd ios/App
-    # Ajouter le pod Firebase/Messaging au Podfile
-    if ! grep -q "Firebase/Messaging" Podfile; then
-      sed -i '' '/target .App. do/a\
-        pod '\''Firebase\/Messaging'\''
-      ' Podfile
-    fi
-```
+### Optimisation batterie
 
-#### 4. Initialiser Firebase dans AppDelegate.swift
-
-Ajouter le code d'initialisation Firebase dans le AppDelegate iOS genere par Capacitor :
-
-```yaml
-- name: Configure AppDelegate for Firebase
-  run: |
-    DELEGATE="ios/App/App/AppDelegate.swift"
-    # Ajouter import FirebaseCore et FirebaseCore.configure() dans application(_:didFinishLaunchingWithOptions:)
-    sed -i '' 's/import UIKit/import UIKit\nimport FirebaseCore/' "$DELEGATE"
-    sed -i '' '/super.application.*didFinishLaunchingWithOptions/a\
-        FirebaseApp.configure()
-    ' "$DELEGATE"
-```
-
-### Ce que l'utilisateur doit faire (hors Lovable)
-
-1. **Dans Firebase Console** : creer une app iOS avec le bundle ID `com.ferdi.runconnect`, telecharger le `GoogleService-Info.plist`
-2. **Dans Apple Developer Portal** : generer une cle APNs (.p8), puis l'uploader dans Firebase Console > Cloud Messaging > iOS
-3. **Dans GitHub Secrets** : ajouter `IOS_GOOGLE_SERVICE_INFO_BASE64` (le fichier .plist encode en base64 : `base64 -i GoogleService-Info.plist`)
-
-### Resume des modifications
-
-| Fichier | Modification |
-|---------|-------------|
-| `.github/workflows/ios-appstore.yml` | Ajouter 4 etapes : GoogleService-Info.plist, entitlements push, pod Firebase/Messaging, init Firebase dans AppDelegate |
-| Script Ruby de signing | Ajouter `CODE_SIGN_ENTITLEMENTS` dans les build settings |
-
-### Ce qui fonctionne deja
-
-- Le code React (`usePushNotifications.tsx`) gere correctement iOS : permission prompt, register, save token
-- Le `capacitor.config.ts` a les `presentationOptions` pour iOS
-- L'edge function `send-push-notification` utilise FCM v1 API qui supporte les tokens APNs via Firebase
-- Le secret `FIREBASE_SERVICE_ACCOUNT_JSON` est deja configure
+- GPS watchPosition au lieu de polling (le systeme gere la frequence)
+- Pas de re-render carte a chaque position (mise a jour du marker seulement)
+- Pas de calculs lourds a chaque frame (projection recalculee seulement quand position change)
+- WakeLock pour eviter mise en veille ecran sans forcer un refresh constant
 
