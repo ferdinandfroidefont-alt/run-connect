@@ -1,79 +1,56 @@
 
-## Afficher la position actuelle sur la page Suivi d'itinéraire
 
-### Problème
-La page Suivi d'itinéraire a déjà le code du point bleu (marqueur GPS), mais il ne s'affiche qu'une fois que le tracking GPS démarre et renvoie une position. Contrairement à la carte principale qui récupère la position dès le chargement, cette page attend le `watchPosition` qui peut mettre du temps.
+## Corriger le debordement horizontal de l'ecran "Partager mon profil" sur iPhone
 
-### Solution
-Ajouter une récupération immédiate de la position dès que la carte est prête, avant même que le tracking ne démarre. Cela affichera le point bleu instantanément comme sur la carte principale.
+### Probleme
+Sur iPhone, le contenu du dialog "Partager mon profil" (QR code + boutons) est partiellement coupe a droite. Cela vient de la combinaison `w-full h-full max-w-full max-h-full` sur le `DialogContent` qui, associee au positionnement `left-[50%] translate-x-[-50%]` du composant dialog de base, peut creer un debordement. De plus, les elements internes (glow blur, QR container) n'ont pas de contrainte `overflow-hidden` et peuvent deborder.
 
-### Changements prévus
+### Modifications
 
-**Fichier : `src/pages/TrainingMode.tsx`**
+**Fichier 1 : `src/components/QRShareDialog.tsx`**
 
-1. Ajouter un `useEffect` qui récupère la position actuelle via `navigator.geolocation.getCurrentPosition()` dès que la carte est initialisée (`mapReady === true`), et place le marqueur bleu immédiatement -- sans attendre le cycle de tracking.
+- Ligne 231 : Remplacer les classes du `DialogContent` pour forcer `overflow-x-hidden`, utiliser `w-[100%]` au lieu de `w-full h-full max-w-full max-h-full`, et ajouter du padding safe-area :
+  ```
+  className="w-[100%] max-w-[100vw] h-full max-h-full sm:max-w-sm sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden overflow-x-hidden border-0 sm:border bg-gradient-to-br from-background via-background to-primary/5 flex flex-col"
+  ```
+- Ligne 247 : Ajouter `overflow-hidden` au conteneur interne `px-6 pb-6` pour que les effets blur ne debordent pas :
+  ```
+  className="px-4 sm:px-6 pb-6 space-y-5 overflow-hidden"
+  ```
+- Ligne 281-282 : Simplifier le conteneur QR pour eviter le `absolute inset-0` du glow qui peut causer un debordement, et centrer avec flex :
+  ```
+  <div className="flex justify-center overflow-hidden">
+    <div className="relative max-w-[280px]">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
+      ...
+  ```
+- Ligne 310 : Ajouter `overflow-hidden` au bloc code parrainage.
+- Lignes 325-363 : Ajouter des marges laterales aux boutons d'action pour eviter qu'ils touchent les bords.
 
-2. Ce `useEffect` sera indépendant du tracking : il sert uniquement à afficher le point bleu au plus vite. Le tracking (watch) prendra ensuite le relais pour les mises à jour continues.
+**Fichier 2 : `src/components/SettingsDialog.tsx`**
 
-### Détail technique
+- Ligne 400 : Le `DialogContent` a deja `overflow-x-hidden`, mais verifier que `max-w-[100vw]` est present.
+- Ligne 475 : Ajouter `overflow-hidden` au conteneur de la section "Partager mon profil" :
+  ```
+  className="bg-background overflow-hidden px-4 sm:px-6 py-4 space-y-4"
+  ```
+- Ligne 503-504 : Meme correction que QRShareDialog pour le conteneur QR avec `overflow-hidden` et flex center.
 
-Nouveau `useEffect` à ajouter après l'init de la carte (après ligne 106) :
+**Fichier 3 : `src/index.css`**
 
-```tsx
-// Fetch initial position immediately when map is ready
-useEffect(() => {
-  if (!mapReady || !googleMapRef.current) return;
+- Ajouter une regle globale `overflow-x: hidden` sur `html` et `body` pour prevenir tout scroll horizontal residuel sur iPhone :
+  ```css
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  ```
 
-  const getInitialPosition = async () => {
-    try {
-      // Try Capacitor first
-      if (Capacitor.isNativePlatform()) {
-        const pos = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        if (pos) {
-          const coord = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          // Create marker immediately
-          // (the existing userPosition effect will handle it
-          //  once we set a temporary position)
-        }
-      }
-    } catch {}
+### Resume des corrections
 
-    // Web fallback
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const initialPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        // Place marker on map directly
-        const map = googleMapRef.current;
-        if (map && !markerRef.current) {
-          try {
-            const dotEl = document.createElement('div');
-            dotEl.innerHTML = `...`; // Same blue dot HTML
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-              map, position: initialPos, content: dotEl
-            });
-            markerRef.current = marker;
-          } catch {
-            // Fallback classic marker
-          }
-          map.panTo(initialPos);
-        }
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
+| Fichier | Correction |
+|---------|-----------|
+| `QRShareDialog.tsx` | `overflow-hidden` sur le dialog et conteneurs internes, padding `px-4`, conteneur QR avec `max-w` et `overflow-hidden` |
+| `SettingsDialog.tsx` | `overflow-hidden` sur la section partage, padding `px-4`, conteneur QR corrige |
+| `index.css` | `overflow-x: hidden` et `max-width: 100vw` global sur html/body |
 
-  getInitialPosition();
-}, [mapReady]);
-```
-
-Il faut aussi importer `Capacitor` et `Geolocation` depuis les packages Capacitor.
-
-### Fichiers modifiés
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/TrainingMode.tsx` | Ajout d'un useEffect pour récupérer la position GPS initiale dès que la carte est prête, et afficher le point bleu immédiatement. Import de Capacitor et Geolocation. |
