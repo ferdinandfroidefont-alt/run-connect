@@ -1,115 +1,89 @@
 
 
-# Fix definitif : fond WKWebView natif par style inline direct
+# Header et Tab Bar unifies avec pattern sportif en degrade
 
-## Diagnostic du probleme
+## Concept
 
-Le code actuel fait :
-```js
-document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
-```
-Puis le CSS fait :
-```css
-html, body { background-color: var(--wkwebview-bg, #1d283a) !important; }
-```
+Les deux barres (header en haut et tab bar en bas) partagent la meme couleur de fond `#1d283a`. Depuis chaque barre, un pattern sportif (icones/dessins de sport) se diffuse en degrade vers le centre de l'ecran, dense pres de la barre et de plus en plus transparent, creant une transition visuelle naturelle avec le contenu.
 
-Le probleme : la WKWebView native lit la couleur **computee** de `html`/`body`. Mais :
-1. La resolution de `var(--wkwebview-bg)` passe par une indirection (variable CSS) qui n'est pas toujours resolue a temps par le moteur natif
-2. La regle est dans `@layer base` qui a une priorite de cascade basse
-3. `@apply bg-background` sur `body` (ligne 149) genere un `background-color` concurrent
+## Changements prevus
 
-## Solution : style inline direct
+### 1. Tab Bar plus compacte (`src/components/BottomNavigation.tsx`)
 
-Au lieu de passer par une variable CSS, on ecrit **directement** la couleur en inline style :
-```js
-document.documentElement.style.backgroundColor = '#465467';
-document.body.style.backgroundColor = '#465467';
-```
+- Reduire la hauteur de `h-[72px]` a `h-[56px]`
+- Changer le fond de `bg-background` a la couleur `#1d283a` en dur (fond sombre unifie)
+- Reduire le bouton central "+" de `h-[52px] w-[52px]` a `h-[44px] w-[44px]`
+- Supprimer la condition `if (hideBottomNav) return null;` pour que la tab bar soit presente sur toutes les pages (sauf quand on est dans une conversation ouverte, ou elle reste cachee)
+- Texte et icones en blanc/clair pour la lisibilite sur fond sombre
 
-Un inline style est **toujours** prioritaire sur toute regle CSS (meme `!important` dans `@layer`). La WKWebView voit immediatement la couleur computee.
+### 2. CSS - Degrade pattern sportif (`src/index.css`)
 
-## Modifications
+Ajouter deux pseudo-elements ou classes utilitaires :
 
-### 1. `src/index.css` (ligne 167) -- Garder le fallback
+- `.sport-pattern-top::after` : un overlay en position absolute sous le header, avec le pattern sportif (`/patterns/sports-pattern.png`), masque par un degrade lineaire (opaque en haut, transparent en bas), hauteur ~120px
+- `.sport-pattern-bottom::before` : meme principe au-dessus de la tab bar (opaque en bas, transparent en haut), hauteur ~120px
 
-Conserver la regle existante comme fallback initial (avant que le JS ne s'execute) :
-```css
-html, body {
-  background-color: #1d283a !important;
-  /* ... reste inchange */
-}
-```
-Remplacer `var(--wkwebview-bg, #1d283a)` par juste `#1d283a` en dur. La variable CSS n'est plus necessaire puisque le JS pilotera directement.
+Ces overlays utilisent `mask-image: linear-gradient(to bottom, rgba(0,0,0,0.15), transparent)` (pour le haut) et l'inverse pour le bas, creant l'effet de diffusion du pattern.
 
-### 2. `src/components/Layout.tsx` -- Inline style direct
+### 3. Header de la carte (`src/components/InteractiveMap.tsx`)
 
-Remplacer :
-```js
-document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
-```
-Par :
-```js
-document.documentElement.style.backgroundColor = '#1d283a';
-document.body.style.backgroundColor = '#1d283a';
-```
-Et au cleanup, retirer ces inline styles.
+- Changer le fond du header de `bg-card` a `bg-[#1d283a]`
+- Supprimer `bg-pattern` du header (le pattern sera gere par le degrade CSS)
+- Texte "Runconnect" en blanc
+- Ajouter la classe `.sport-pattern-top` pour le degrade de pattern sous le header
 
-### 3. `src/components/LoadingScreen.tsx` -- Inline style direct
+### 4. Headers des autres pages
 
-Remplacer :
-```js
-document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
-```
-Par :
-```js
-document.documentElement.style.backgroundColor = '#465467';
-document.body.style.backgroundColor = '#465467';
-```
-Cleanup au unmount :
-```js
-document.documentElement.style.removeProperty('background-color');
-document.body.style.removeProperty('background-color');
-```
+Pour chaque page qui a un header (MySessions, Feed, Messages, Leaderboard, Profile, etc.) :
 
-### 4. `src/pages/Search.tsx` -- Inline style direct
+- **`src/pages/MySessions.tsx`** : changer le header `bg-card` en `bg-[#1d283a]` + texte blanc + classe pattern
+- **`src/components/feed/FeedHeader.tsx`** : meme traitement
+- **`src/pages/Messages.tsx`** : header de la liste de conversations, meme traitement
+- **`src/pages/Leaderboard.tsx`** : meme traitement
+- **`src/pages/Profile.tsx`** : meme traitement
 
-Meme remplacement :
-```js
-document.documentElement.style.backgroundColor = '#465467';
-document.body.style.backgroundColor = '#465467';
-```
-Cleanup au unmount.
+### 5. Layout global (`src/components/Layout.tsx`)
 
-### 5. `src/pages/Messages.tsx` (lignes 209-215) -- Inline style direct
+- Ajouter la classe `.sport-pattern-bottom` au conteneur principal pour que le degrade de pattern apparaisse au-dessus de la tab bar sur toutes les pages
+- Le `bg-pattern` existant sur le div racine sera conserve ou remplace selon le rendu
 
-Remplacer :
-```js
-document.documentElement.style.setProperty('--wkwebview-bg', '#465467');
-// et
-document.documentElement.style.setProperty('--wkwebview-bg', '#1d283a');
-```
-Par :
-```js
-document.documentElement.style.backgroundColor = '#465467';
-document.body.style.backgroundColor = '#465467';
-// et
-document.documentElement.style.backgroundColor = '#1d283a';
-document.body.style.backgroundColor = '#1d283a';
+### 6. Supprimer `hideBottomNav` pour la plupart des cas
+
+Actuellement, la tab bar est cachee sur certaines pages (conversations ouvertes, etc.). On la garde cachee uniquement quand une conversation est ouverte (car la barre d'envoi de message prend sa place), mais elle sera visible partout ailleurs.
+
+## Details techniques CSS du degrade pattern
+
+```text
++-----------------------------------+
+|  HEADER (fond #1d283a)            |
++-----------------------------------+
+|  Pattern sportif opacite 15%      |  <-- degrade de pattern (top)
+|  ....de moins en moins visible....| 
+|  .................................|
+|                                   |
+|       CONTENU DE LA PAGE          |
+|                                   |
+|  .................................|
+|  ....de plus en plus visible......|  <-- degrade de pattern (bottom)
+|  Pattern sportif opacite 15%      |
++-----------------------------------+
+|  TAB BAR (fond #1d283a)           |
++-----------------------------------+
 ```
 
-## Recapitulatif des couleurs
+L'effet est obtenu avec CSS `mask-image` applique sur un overlay qui contient le `background-image` du pattern sportif. Le mask cree le degrade d'opacite.
 
-| Page | Couleur inline |
-|------|---------------|
-| Defaut (toutes pages) | `#1d283a` |
-| Chargement | `#465467` |
-| Recherche | `#465467` |
-| Conversation ouverte | `#465467` |
+## Fichiers modifies
 
-## Pourquoi ca marchera cette fois
-
-1. **Inline style** = priorite maximale dans la cascade CSS, aucune regle ne peut l'overrider
-2. **Valeur hex directe** = pas d'indirection par variable CSS, la couleur computee est immediate
-3. **Double application** (html + body) = la WKWebView lit la couleur du premier element qui la definit
-4. **Fallback CSS en dur** (#1d283a sans variable) = avant meme que le JS s'execute, la bonne couleur par defaut est la
+| Fichier | Modification |
+|---------|-------------|
+| `src/index.css` | Classes `.sport-pattern-top` et `.sport-pattern-bottom` avec mask-image |
+| `src/components/BottomNavigation.tsx` | Hauteur reduite, fond `#1d283a`, texte clair, visible sur toutes les pages |
+| `src/components/Layout.tsx` | Ajout du pattern bottom, ajustement du padding |
+| `src/components/InteractiveMap.tsx` | Header fond `#1d283a`, texte blanc, classe pattern top |
+| `src/components/feed/FeedHeader.tsx` | Fond `#1d283a`, texte blanc, classe pattern top |
+| `src/pages/MySessions.tsx` | Header fond `#1d283a`, texte blanc |
+| `src/pages/Messages.tsx` | Header liste fond `#1d283a`, texte blanc |
+| `src/pages/Leaderboard.tsx` | Header fond `#1d283a`, texte blanc |
+| `src/pages/Profile.tsx` | Header fond `#1d283a`, texte blanc |
 
