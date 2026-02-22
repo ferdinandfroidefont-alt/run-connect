@@ -164,7 +164,7 @@
 
   /* Strict Viewport Locking for iOS Stability */
   html, body {
-    background-color: var(--wkwebview-bg, #1d283a) !important;
+    background-color: #1d283a !important;
     height: 100%;
     width: 100%;
     overflow-x: hidden;
