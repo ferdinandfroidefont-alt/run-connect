@@ -1,74 +1,35 @@
 
 
-## Remplacer la vue 3D abstraite par une vraie carte 3D Google Maps
+## Utiliser la puce bleue native Google Maps sur la page Suivi d'itineraire
 
-### Constat actuel
+### Constat
 
-La vue 3D utilise Three.js avec un fond noir abstrait, une grille et un trace flottant dans le vide. L'utilisateur souhaite :
-1. Une barre de retour identique aux autres pages (fleche + "Retour")
-2. Une vraie carte 3D avec le terrain reel (satellite/relief Google Maps)
+- L'ecran d'accueil (InteractiveMap) affiche la puce bleue native de Google Maps (point bleu Google `#4285F4` avec halo clair et animation fluide).
+- La page Suivi d'itineraire (TrainingMode) cree un marqueur custom avec une couleur differente (`#5B7CFF`), une taille et un style differents.
 
 ### Solution
 
-Remplacer le Canvas Three.js par une carte Google Maps en mode satellite avec inclinaison 3D (`tilt: 45`), sur laquelle le trace de l'itineraire est dessine en polyline bleue. Google Maps supporte nativement la vue 3D avec terrain et batiments.
+Supprimer le marqueur custom et activer la puce bleue native de Google Maps sur la page Suivi d'itineraire. Le suivi de position restera actif pour le recentrage automatique.
 
-### Modifications
+### Modifications - Fichier `src/pages/TrainingMode.tsx`
 
-**Fichier 1 : `src/components/ElevationProfile3D.tsx`**
+1. **Supprimer la creation manuelle du blue dot** : retirer les fonctions `createBlueDot` et tout le code qui cree un `AdvancedMarkerElement` ou `google.maps.Marker` pour la position utilisateur (les deux `useEffect` qui gerent `markerRef`).
 
-Refonte complete du composant :
-- Supprimer Three.js (Canvas, OrbitControls, Line, useFrame, etc.)
-- Utiliser Google Maps avec `mapTypeId: 'satellite'`, `tilt: 45`, `heading: 0`
-- Dessiner le trace en `google.maps.Polyline` bleu (#5B7CFF) avec ombre
-- Garder les boutons Play/Pause (animation du survol en deplacant la camera le long du trace), Recentrer, et le panneau de stats
-- Le mode survol utilise `map.moveCamera()` ou `map.panTo()` avec interpolation douce le long des points du trace
-- La cle API est recuperee via `google-maps-proxy` ou reutilisee si Google Maps est deja charge
+2. **Supprimer `markerRef`** : plus besoin de gerer manuellement un marqueur.
 
-Controles :
-- Rotation/zoom manuels via les gestes natifs de Google Maps
-- Bouton "Recentrer" : remet `tilt: 45`, `heading: 0`, zoom pour voir tout le trace
-- Bouton Play : anime la camera le long du trace avec `tilt: 60`, direction orientee vers l'avant
+3. **Supprimer le style CSS `@keyframes pulse-ring`** : plus necessaire puisque Google Maps gere sa propre animation.
 
-**Fichier 2 : `src/components/ElevationProfile3DDialog.tsx`**
+4. **Conserver le recentrage automatique** : garder le `useEffect` qui suit `userPosition` mais au lieu de deplacer un marqueur, simplement appeler `map.panTo(userPosition)` pour que la camera suive la position.
 
-- Remplacer le `DialogHeader` actuel (gradient flottant) par la barre de retour standard :
-  ```
-  bg-card pt-[env(safe-area-inset-top)]
-  fleche ArrowLeft + "Retour" a gauche
-  titre centre "Vue 3D"
-  ```
-- Fermer le dialog au clic sur Retour via `onOpenChange(false)`
+5. **Conserver `getInitialPosition`** : au chargement, recuperer la position GPS et centrer la carte dessus via `map.panTo()` et `map.setZoom(16)`.
 
-**Fichier 3 : `src/components/ElevationProfile.tsx`**
+### Detail technique
 
-- Aucun changement fonctionnel, le composant inline continue d'utiliser `ElevationProfile3D` avec `autoPlay={false}`
+La puce bleue native de Google Maps s'affiche automatiquement quand le navigateur fournit la geolocalisation. Comme la page demande deja les permissions GPS et suit la position, la puce apparaitra naturellement. Le resultat sera un point bleu identique a celui de l'ecran d'accueil.
 
-### Detail technique du nouveau ElevationProfile3D
-
-```text
-Structure :
-+------------------------------------------+
-| [<- Retour]     Vue 3D                   |  (dans le Dialog)
-+------------------------------------------+
-|                                          |
-|   Google Maps satellite + tilt 45deg     |
-|   Polyline bleue sur le terrain reel     |
-|                                          |
-|   [Play] [Recentrer]      [Stats panel]  |
-|   ====================================   |  (barre de progression)
-+------------------------------------------+
-
-Animation survol :
-- Camera suit les coordonnees GPS reelles
-- tilt: 60 pour vue immersive
-- heading: oriente vers le prochain point
-- Vitesse lente avec interpolation douce
-```
-
-### Resume des fichiers modifies
+### Fichier modifie
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/ElevationProfile3D.tsx` | Remplacer Three.js par Google Maps 3D satellite avec polyline |
-| `src/components/ElevationProfile3DDialog.tsx` | Barre retour standard identique aux autres pages |
+| `src/pages/TrainingMode.tsx` | Supprimer le marqueur custom, garder le recentrage automatique via `panTo` |
 
