@@ -780,11 +780,7 @@ const Profile = () => {
         {!isViewingOtherUser ? (
           <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)} />
         ) : (
-          <ProfileRankBadgeCompact 
-            userId={viewingUserId || ''} 
-            onRankClick={() => navigate('/leaderboard')}
-            onBadgesClick={() => {}}
-          />
+          <ProfileStatsGroup userId={viewingUserId || ''} />
         )}
 
         {/* iOS List Groups */}
