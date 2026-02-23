@@ -472,7 +472,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Profile Share Section */}
                   {profile && (
-                    <div className="bg-background overflow-hidden px-4 sm:px-6 py-4 space-y-4">
+                    <div className="bg-background overflow-hidden px-4 sm:px-6 py-4 space-y-4 max-w-full">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
@@ -534,7 +534,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                       )}
                       
                       {/* URL */}
-                      <p className="text-[10px] text-center text-muted-foreground/70 truncate">
+                      <p className="text-[10px] text-center text-muted-foreground/70 truncate max-w-full overflow-hidden px-2">
                         {getProfileUrl()}
                       </p>
                       
