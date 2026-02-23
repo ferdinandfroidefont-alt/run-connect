@@ -843,18 +843,15 @@ const Profile = () => {
 
         {/* Records personnels - Other users */}
         {isViewingOtherUser && profile && viewingUserId && (
-          <PersonalRecords records={{
-            running_records: profile.running_records,
-            cycling_records: profile.cycling_records,
-            swimming_records: profile.swimming_records,
-            triathlon_records: profile.triathlon_records,
-            walking_records: profile.walking_records
-          }} />
-        )}
-
-        {/* Statistiques d'activité - Other users */}
-        {isViewingOtherUser && viewingUserId && (
-          <UserActivityChart userId={viewingUserId} username={profile?.username} />
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <PersonalRecords records={{
+              running_records: profile.running_records,
+              cycling_records: profile.cycling_records,
+              swimming_records: profile.swimming_records,
+              triathlon_records: profile.triathlon_records,
+              walking_records: profile.walking_records
+            }} />
+          </div>
         )}
 
         {/* Common Clubs - Other Users */}
