@@ -31,6 +31,7 @@ import Terms from "./pages/Terms";
 import About from "./pages/About";
 import ConfirmPresence from "./pages/ConfirmPresence";
 import TrainingMode from "./pages/TrainingMode";
+import SessionTracking from "./pages/SessionTracking";
 import { SecurityDashboard } from "./components/SecurityDashboard";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => {
                   <Route path="/security" element={<Layout><PageTransition><SecurityDashboard /></PageTransition></Layout>} />
                   <Route path="/training/route/:routeId" element={<PageTransition><TrainingMode /></PageTransition>} />
                   <Route path="/training/:sessionId" element={<PageTransition><TrainingMode /></PageTransition>} />
+                  <Route path="/session-tracking/:sessionId" element={<PageTransition><SessionTracking /></PageTransition>} />
                   
                   <Route path="/donation-success" element={<PageTransition><DonationSuccess /></PageTransition>} />
                   <Route path="/donation-canceled" element={<PageTransition><DonationCanceled /></PageTransition>} />
