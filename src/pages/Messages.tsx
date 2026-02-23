@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
@@ -174,6 +175,7 @@ const Messages = () => {
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   
   // Conversation settings states
   const [isMuted, setIsMuted] = useState(false);
@@ -1848,11 +1850,9 @@ const Messages = () => {
                               variant="ghost"
                               size="icon"
                               className="absolute -top-1 -right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity bg-[#FF3B30] hover:bg-[#FF3B30]/90 text-white z-10 rounded-full"
-                              onClick={(e) => {
+                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm("Supprimer ce message ?")) {
-                                  handleDeleteMessage(message.id);
-                                }
+                                setMessageToDelete(message.id);
                               }}
                             >
                               <X className="h-3 w-3" />
@@ -2691,6 +2691,28 @@ const Messages = () => {
           username={selectedAvatarData?.username || "Utilisateur"}
         />
       </div>
+
+      {/* Delete message confirmation dialog */}
+      <AlertDialog open={!!messageToDelete} onOpenChange={(open) => { if (!open) setMessageToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce message ?</AlertDialogTitle>
+            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMessageToDelete(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (messageToDelete) handleDeleteMessage(messageToDelete);
+                setMessageToDelete(null);
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
