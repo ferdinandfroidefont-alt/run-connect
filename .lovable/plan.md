@@ -1,37 +1,44 @@
 
 
-## Corriger la barre blanche apres envoi de photo via le raccourci camera
+## Aligner le design de la page "Profil" sur celui de "Mon Profil"
 
-### Le probleme
+### Objectif
 
-Quand tu utilises le bouton camera a cote de l'heure dans la liste des conversations, la prise de photo ouvre la camera native. Au retour, une barre blanche apparait en haut de l'application et reste presente partout.
+Harmoniser l'ordre et la presentation des sections entre la vue "Mon Profil" (propre profil) et la vue "Profil" (profil d'un autre utilisateur) dans `src/pages/Profile.tsx`.
 
-### Cause identifiee
+### Changements prevus
 
-Deux problemes dans `src/hooks/useCamera.tsx` :
+#### Fichier : `src/pages/Profile.tsx`
 
-1. **`takePicture()` (lignes 88-112)** : L'element `<input type="file">` cree par `document.createElement('input')` n'est jamais retire du DOM. Sur iOS/Android WebView, quand la camera native se ferme et l'app revient au premier plan, cet input "fantome" peut perturber le layout.
+**1. Ajouter PersonalRecords sur "Mon Profil"**
+- Actuellement les records personnels (course, velo, natation, etc.) ne s'affichent que sur le profil des autres utilisateurs
+- Les ajouter aussi sur son propre profil, juste apres ProfileStatsGroup (meme position que sur le profil des autres)
 
-2. **`selectFromGalleryWeb()` (lignes 234-361)** : L'input est ajoute au DOM avec `position: fixed; top: 0` et `opacity: 0.01`. Il n'est retire qu'apres un delai de 200ms, et uniquement si la resolution se fait normalement. En cas de timeout ou d'erreur, il peut rester dans le DOM indefiniment, creant une barre visible en haut.
+**2. Ajouter UserActivityChart sur "Mon Profil"**
+- Le graphique d'activite ne s'affiche que sur le profil des autres
+- L'ajouter aussi sur son propre profil, apres PersonalRecords
 
-De plus, dans `src/components/Layout.tsx`, l'effet qui definit `--ios-top-color` et le `backgroundColor` du body a un cleanup qui supprime ces styles. Si le retour de camera provoque un re-render, le `body::before` (pseudo-element CSS pour la zone de status bar iOS) peut se retrouver avec un fond blanc visible.
+**3. Deplacer CommonClubs apres ActivityTimeline**
+- Les clubs en commun restent visibles uniquement sur le profil d'un autre utilisateur (logique, car on ne peut pas avoir de clubs "en commun" avec soi-meme)
+- Les deplacer apres ActivityTimeline pour que l'ordre des sections communes soit identique
 
-### Corrections prevues
+### Ordre final des sections (identique pour les deux vues)
 
-#### 1. Fichier : `src/hooks/useCamera.tsx`
+```text
+1. Header (avatar, nom, badges, stats, bio, fiabilite)
+2. StreakBadge
+3. PersonalGoals (propre profil uniquement)
+4. ProfileStatsGroup
+5. PersonalRecords (les deux vues)
+6. UserActivityChart (les deux vues)
+7. ActivityTimeline
+8. CommonClubs (autre utilisateur uniquement)
+9. Routes section
+```
 
-- **`takePicture()`** : Ajouter l'input au DOM avant de cliquer (necessaire pour certains WebViews), puis le retirer systematiquement dans un bloc `finally` ou apres resolution.
-- **`selectFromGalleryWeb()`** : Garantir le nettoyage de l'input dans **tous** les chemins de resolution (timeout, erreur, annulation). Ajouter un nettoyage des inputs residuels au debut de `takePicture()` aussi.
-- Ajouter un attribut `data-camera-picker` sur les inputs de `takePicture()` pour pouvoir les identifier et les nettoyer.
+### Section technique
 
-#### 2. Fichier : `src/components/Layout.tsx`
-
-- Supprimer le cleanup qui retire `backgroundColor` et `--ios-top-color` dans le `return` du `useEffect`. Ces styles doivent rester permanents car leur suppression cree un flash blanc quand le composant se remonte apres le retour de camera.
-- Garder uniquement la logique de re-set des styles sur chaque changement de `location.pathname`, sans les retirer au demontage.
-
-### Resultat attendu
-
-- Plus aucun element `<input>` residuel dans le DOM apres la prise de photo
-- Le fond de la status bar iOS reste stable, sans barre blanche
-- Le raccourci camera continue de fonctionner normalement
+- `PersonalRecords` a besoin de `records` (running_records, cycling_records, etc.) qui sont deja charges dans `profile` pour les deux vues
+- `UserActivityChart` a besoin de `userId` et `username`, disponibles dans les deux cas
+- Le formulaire d'edition reste uniquement sur "Mon Profil", place entre ProfileStatsGroup et PersonalRecords
 
