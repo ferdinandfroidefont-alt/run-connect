@@ -1,36 +1,69 @@
 
 
-## Remplacer le `confirm()` natif par un AlertDialog pour la suppression de message
+## Menu contextuel iMessage sur appui long
 
-### Probleme
+Remplacer le bouton "+" des reactions et le bouton repondre par un menu contextuel style iMessage qui apparait sur appui long sur un message.
 
-Quand on supprime un message, le navigateur affiche un `confirm()` natif du browser (la boite de dialogue grise/moche qu'on voit sur la capture). Il faut le remplacer par un vrai composant AlertDialog de l'app.
+### Ce qui change
 
-### Modification - `src/pages/Messages.tsx`
+**Supprimer** : Le bloc "Reply + Reactions" sous les messages (lignes 2020-2046 de Messages.tsx) qui contient le bouton repondre et le composant `MessageReactions` avec son bouton "+".
 
-#### 1. Importer AlertDialog
+**Ajouter** : Un appui long (long press) sur chaque bulle de message ouvre un overlay plein ecran sombre avec :
+1. La barre d'emojis rapides en haut (coeur, pouce, rire, etc.) - style iMessage
+2. Un menu d'actions en dessous :
+   - Repondre (icone fleche)
+   - Copier (icone copie) - copie le texte du message
+   - Supprimer (icone poubelle, rouge) - seulement pour ses propres messages
+3. Un tap en dehors ferme le menu
 
-Ajouter les imports depuis `@/components/ui/alert-dialog` :
-- `AlertDialog`, `AlertDialogAction`, `AlertDialogCancel`, `AlertDialogContent`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogHeader`, `AlertDialogTitle`
+**Conserver** : L'affichage des reactions deja posees sous les bulles (les petites pilules avec compteur).
 
-#### 2. Ajouter un state pour la confirmation
+### Details techniques
 
-Ajouter un state `messageToDelete` (`string | null`) pour stocker l'ID du message a supprimer.
+#### 1. Nouveau composant `MessageLongPressMenu.tsx`
 
-#### 3. Remplacer le `confirm()` par le state
+- Props : `isOpen`, `onClose`, `message`, `isOwnMessage`, `onReaction(emoji)`, `onReply()`, `onDelete()`, `position`
+- Overlay sombre (`bg-black/60`) avec `AnimatePresence` pour l'animation
+- Barre d'emojis rapides : `['coeur', 'pouce', 'rire', 'etonne', 'triste', 'feu']` dans un conteneur arrondi
+- Liste d'actions avec icones, style fond sombre arrondi
+- Le bouton "+" a la fin des emojis ouvre un picker plus complet (optionnel, phase 2)
 
-Dans le bouton de suppression (ligne 1853), au lieu de `if (confirm(...)) { handleDeleteMessage(...) }`, simplement faire `setMessageToDelete(message.id)`.
+#### 2. Modifications dans `Messages.tsx`
 
-#### 4. Ajouter le composant AlertDialog dans le JSX
+- Ajouter un state `longPressMessage` pour stocker le message actuellement selectionne
+- Ajouter un handler `onTouchStart`/`onTouchEnd` sur chaque bulle de message avec un timer de 500ms pour detecter l'appui long
+- Supprimer le bloc lignes 2020-2046 (bouton repondre + MessageReactions avec "+")
+- Garder uniquement l'affichage des reactions groupees (sans le bouton "+") sous les bulles
+- Ajouter le composant `MessageLongPressMenu` en bas du JSX
 
-Ajouter en bas du composant un `AlertDialog` qui :
-- S'ouvre quand `messageToDelete` n'est pas null
-- Titre : "Supprimer ce message ?"
-- Description : "Cette action est irreversible."
-- Bouton "Annuler" : remet `messageToDelete` a null
-- Bouton "Supprimer" (style rouge) : appelle `handleDeleteMessage(messageToDelete)` puis remet a null
+#### 3. Modification de `MessageReactions.tsx`
 
-### Resultat
+- Ajouter un mode `displayOnly` qui affiche seulement les pilules de reactions existantes sans le bouton "+" et sans le picker
+- Ce mode est utilise dans la vue normale des messages
 
-Une boite de dialogue propre, style iOS/app, au lieu du popup natif du navigateur.
+### Rendu visuel
+
+```text
++----------------------------------+
+|        (overlay sombre)          |
+|                                  |
+|  +----------------------------+  |
+|  | coeur rire etonne triste + |  |
+|  +----------------------------+  |
+|                                  |
+|  [ Bulle du message ]            |
+|                                  |
+|  +----------------------------+  |
+|  | <- Repondre                |  |
+|  | [] Copier                  |  |
+|  | X  Supprimer (rouge)      |  |
+|  +----------------------------+  |
++----------------------------------+
+```
+
+### Fichiers concernes
+
+- `src/components/MessageLongPressMenu.tsx` (nouveau)
+- `src/components/MessageReactions.tsx` (ajout mode displayOnly)
+- `src/pages/Messages.tsx` (long press + suppression ancien UI)
 
