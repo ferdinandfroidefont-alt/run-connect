@@ -61,13 +61,15 @@ export default function TrainingMode() {
 
     const initMap = async () => {
       try {
-        const loader = new Loader({
-          apiKey,
-          version: 'weekly',
-          libraries: ['marker'],
-        });
-
-        const google = await loader.load();
+        // Reuse existing Google Maps if already loaded, otherwise load with all libraries
+        if (!(window as any).google?.maps) {
+          const loader = new Loader({
+            apiKey,
+            version: 'weekly',
+            libraries: ['geometry', 'places', 'marker'],
+          });
+          await loader.load();
+        }
         if (!mapRef.current) return;
 
         const bounds = new google.maps.LatLngBounds();
@@ -260,6 +262,16 @@ export default function TrainingMode() {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/', { replace: true }); }}
+          className="absolute top-[env(safe-area-inset-top)] left-4 mt-2 px-0 font-normal"
+          style={{ position: 'absolute', zIndex: 10000 }}
+        >
+          <ArrowLeft className="h-5 w-5 mr-1" />
+          Retour
+        </Button>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-[15px] text-muted-foreground">Chargement de l'itinéraire...</p>
@@ -307,6 +319,7 @@ export default function TrainingMode() {
             size="sm"
             onClick={() => { stopTracking().catch(() => {}); if (window.history.length > 1) { navigate(-1); } else { navigate('/', { replace: true }); } }}
             className="px-0 font-normal"
+            style={{ position: 'relative', zIndex: 10000 }}
           >
             <ArrowLeft className="h-5 w-5 mr-1" />
             Retour
