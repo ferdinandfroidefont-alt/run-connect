@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Locate } from 'lucide-react';
 
 interface ElevationProfile3DProps {
   coordinates: { lat: number; lng: number }[];
@@ -37,7 +37,7 @@ function gpsToLocal(
 
   const points = coords.map((c, i) => {
     const x = (c.lng - centerLng) * metersPerDegLng;
-    const z = -(c.lat - centerLat) * metersPerDegLat; // negate for Three.js coord system
+    const z = -(c.lat - centerLat) * metersPerDegLat;
     const y = (elevations[i] - minElev) * exaggeration;
     return new THREE.Vector3(x, y, z);
   });
@@ -52,40 +52,27 @@ function smoothPoints(points: THREE.Vector3[], segments = 4): THREE.Vector3[] {
   return curve.getPoints(points.length * segments);
 }
 
-// Get color based on normalized elevation (0-1)
-function getElevationColor(t: number): THREE.Color {
-  // Green (low) -> Yellow (mid) -> Red (high)
-  if (t < 0.5) {
-    return new THREE.Color().setHSL(0.33 - t * 0.33, 0.85, 0.5);
-  }
-  return new THREE.Color().setHSL(0.17 - (t - 0.5) * 0.34, 0.85, 0.5);
-}
-
-// Route tube component
-const RoutePath = ({ points, minElev, maxElev, exaggeration }: {
-  points: THREE.Vector3[];
-  minElev: number;
-  maxElev: number;
-  exaggeration: number;
-}) => {
-  const elevRange = maxElev - minElev || 1;
-
-  const colors = useMemo(() => {
-    return points.map(p => {
-      const t = p.y / (elevRange * exaggeration);
-      return getElevationColor(Math.min(1, Math.max(0, t)));
-    });
-  }, [points, elevRange, exaggeration]);
-
+// Route path - uniform blue with halo
+const RoutePath = ({ points }: { points: THREE.Vector3[] }) => {
   const linePoints = useMemo(() => points.map(p => [p.x, p.y, p.z] as [number, number, number]), [points]);
-  const lineColors = useMemo(() => colors.map(c => [c.r, c.g, c.b] as [number, number, number]), [colors]);
 
   return (
-    <Line
-      points={linePoints}
-      vertexColors={lineColors}
-      lineWidth={4}
-    />
+    <>
+      {/* Halo / shadow underneath */}
+      <Line
+        points={linePoints}
+        color="#5B7CFF"
+        lineWidth={12}
+        transparent
+        opacity={0.15}
+      />
+      {/* Main route line */}
+      <Line
+        points={linePoints}
+        color="#5B7CFF"
+        lineWidth={6}
+      />
+    </>
   );
 };
 
@@ -93,12 +80,11 @@ const RoutePath = ({ points, minElev, maxElev, exaggeration }: {
 const Ground = ({ size }: { size: number }) => {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-      <planeGeometry args={[size * 2.5, size * 2.5, 32, 32]} />
+      <planeGeometry args={[size * 2.5, size * 2.5, 16, 16]} />
       <meshStandardMaterial
-        color="#1a1a2e"
+        color="#111118"
         transparent
-        opacity={0.4}
-        wireframe={false}
+        opacity={0.3}
       />
     </mesh>
   );
@@ -106,10 +92,10 @@ const Ground = ({ size }: { size: number }) => {
 
 // Grid helper
 const GridHelper = ({ size }: { size: number }) => {
-  return <gridHelper args={[size * 2.5, 20, '#333355', '#222244']} position={[0, -0.5, 0]} />;
+  return <gridHelper args={[size * 2.5, 12, '#2a2a40', '#1a1a30']} position={[0, -0.5, 0]} />;
 };
 
-// Runner dot
+// Runner dot - smaller and more discreet
 const RunnerDot = ({ points, progress, onPositionUpdate }: { points: THREE.Vector3[]; progress: number; onPositionUpdate?: (y: number) => void }) => {
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -119,25 +105,20 @@ const RunnerDot = ({ points, progress, onPositionUpdate }: { points: THREE.Vecto
     const frac = (progress * (points.length - 1)) - idx;
     const pos = new THREE.Vector3().lerpVectors(points[idx], points[idx + 1], frac);
     meshRef.current.position.copy(pos);
-    meshRef.current.position.y += 3;
+    meshRef.current.position.y += 2;
     onPositionUpdate?.(pos.y);
   });
 
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[3, 16, 16]} />
-      <meshStandardMaterial color="#5B7CFF" emissive="#5B7CFF" emissiveIntensity={0.5} />
+      <sphereGeometry args={[2, 16, 16]} />
+      <meshStandardMaterial color="#5B7CFF" emissive="#5B7CFF" emissiveIntensity={0.3} />
     </mesh>
   );
 };
 
 // Elevation markers (min/max)
-const ElevationMarkers = ({ points, minElev, maxElev, exaggeration }: {
-  points: THREE.Vector3[];
-  minElev: number;
-  maxElev: number;
-  exaggeration: number;
-}) => {
+const ElevationMarkers = ({ points }: { points: THREE.Vector3[] }) => {
   const { minPoint, maxPoint } = useMemo(() => {
     let minY = Infinity, maxY = -Infinity;
     let minP = points[0], maxP = points[0];
@@ -150,41 +131,83 @@ const ElevationMarkers = ({ points, minElev, maxElev, exaggeration }: {
 
   return (
     <>
-      {/* Max elevation marker */}
-      <mesh position={[maxPoint.x, maxPoint.y + 8, maxPoint.z]}>
-        <coneGeometry args={[2, 6, 8]} />
-        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={0.3} />
+      <mesh position={[maxPoint.x, maxPoint.y + 6, maxPoint.z]}>
+        <coneGeometry args={[1.5, 5, 8]} />
+        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={0.2} />
       </mesh>
-      {/* Min elevation marker */}
-      <mesh position={[minPoint.x, minPoint.y + 8, minPoint.z]}>
-        <coneGeometry args={[2, 6, 8]} />
-        <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.3} />
+      <mesh position={[minPoint.x, minPoint.y + 6, minPoint.z]}>
+        <coneGeometry args={[1.5, 5, 8]} />
+        <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.2} />
       </mesh>
     </>
   );
 };
 
-// Camera controller for flyover animation
+// Camera controller with smooth interpolation
 const CameraController = ({ 
   points, 
   isPlaying, 
   progress, 
   setProgress,
-  orbitRef 
+  orbitRef,
+  sceneSize,
+  recenterFlag,
 }: {
   points: THREE.Vector3[];
   isPlaying: boolean;
   progress: number;
   setProgress: (p: number) => void;
   orbitRef: React.RefObject<any>;
+  sceneSize: number;
+  recenterFlag: number;
 }) => {
   const { camera } = useThree();
-  const speed = 0.002; // ~50s for full loop (much slower)
+  const targetCamPos = useRef(new THREE.Vector3());
+  const targetLookAt = useRef(new THREE.Vector3());
+  const isRecentering = useRef(false);
+  const recenterLerp = useRef(0);
+
+  // Compute initial position
+  const initialPos = useMemo(() => {
+    if (points.length < 2) return { cam: new THREE.Vector3(0, 100, 0), target: new THREE.Vector3() };
+    const box = new THREE.Box3().setFromPoints(points);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    return {
+      cam: new THREE.Vector3(center.x + sceneSize * 0.6, center.y + sceneSize * 0.5, center.z + sceneSize * 0.6),
+      target: center.clone(),
+    };
+  }, [points, sceneSize]);
+
+  // Recenter when flag changes
+  useEffect(() => {
+    if (recenterFlag > 0) {
+      isRecentering.current = true;
+      recenterLerp.current = 0;
+    }
+  }, [recenterFlag]);
 
   useFrame((_, delta) => {
+    // Smooth recenter transition
+    if (isRecentering.current) {
+      recenterLerp.current = Math.min(1, recenterLerp.current + delta * 2);
+      const t = recenterLerp.current;
+      const ease = t * t * (3 - 2 * t); // smoothstep
+      camera.position.lerp(initialPos.cam, ease * 0.08);
+      if (orbitRef.current) {
+        orbitRef.current.target.lerp(initialPos.target, ease * 0.08);
+      }
+      camera.lookAt(orbitRef.current?.target || initialPos.target);
+      if (recenterLerp.current >= 1) {
+        isRecentering.current = false;
+      }
+      return;
+    }
+
     if (!isPlaying || points.length < 2) return;
 
-    let newProgress = progress + speed * delta * 60;
+    // Slow speed: 0.0005 base (4x slower than before)
+    let newProgress = progress + 0.0005 * delta * 60;
     if (newProgress >= 1) newProgress = 0;
     setProgress(newProgress);
 
@@ -192,28 +215,33 @@ const CameraController = ({
     const frac = (newProgress * (points.length - 1)) - idx;
     const pos = new THREE.Vector3().lerpVectors(points[idx], points[idx + 1], frac);
 
-    // Camera offset: above and to the side
-    const lookAheadIdx = Math.min(idx + 10, points.length - 1);
+    // Look-ahead 30 points for smoother direction
+    const lookAheadIdx = Math.min(idx + 30, points.length - 1);
     const direction = new THREE.Vector3().subVectors(points[lookAheadIdx], pos).normalize();
     const side = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
 
-    camera.position.set(
+    const height = pos.y + sceneSize * 0.3;
+    targetCamPos.current.set(
       pos.x - direction.x * 80 + side.x * 30,
-      pos.y + 60,
+      height,
       pos.z - direction.z * 80 + side.z * 30
     );
-    camera.lookAt(pos.x, pos.y, pos.z);
+    targetLookAt.current.copy(pos);
 
+    // Smooth interpolation (lerp factor 0.03)
+    camera.position.lerp(targetCamPos.current, 0.03);
+    
     if (orbitRef.current) {
-      orbitRef.current.target.copy(pos);
+      orbitRef.current.target.lerp(targetLookAt.current, 0.03);
     }
+    camera.lookAt(orbitRef.current?.target || targetLookAt.current);
   });
 
   return null;
 };
 
 // Scene setup
-const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, setProgress, onPositionUpdate }: {
+const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, setProgress, onPositionUpdate, recenterFlag }: {
   points: THREE.Vector3[];
   minElev: number;
   maxElev: number;
@@ -222,10 +250,10 @@ const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, se
   progress: number;
   setProgress: (p: number) => void;
   onPositionUpdate?: (y: number) => void;
+  recenterFlag: number;
 }) => {
   const orbitRef = useRef<any>(null);
 
-  // Calculate scene scale
   const sceneSize = useMemo(() => {
     if (points.length === 0) return 100;
     const box = new THREE.Box3().setFromPoints(points);
@@ -234,15 +262,22 @@ const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, se
     return Math.max(size.x, size.z, 100);
   }, [points]);
 
-  // Initial camera setup
+  // Initial camera setup - semi-isometric
   const { camera } = useThree();
   useEffect(() => {
     if (points.length < 2) return;
     const box = new THREE.Box3().setFromPoints(points);
     const center = new THREE.Vector3();
     box.getCenter(center);
-    camera.position.set(center.x + sceneSize * 0.5, center.y + sceneSize * 0.4, center.z + sceneSize * 0.5);
+    camera.position.set(
+      center.x + sceneSize * 0.6,
+      center.y + sceneSize * 0.5,
+      center.z + sceneSize * 0.6
+    );
     camera.lookAt(center);
+    if (orbitRef.current) {
+      orbitRef.current.target.copy(center);
+    }
   }, [points, sceneSize, camera]);
 
   return (
@@ -251,13 +286,13 @@ const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, se
       <directionalLight position={[sceneSize, sceneSize, sceneSize * 0.5]} intensity={0.8} />
       <directionalLight position={[-sceneSize * 0.3, sceneSize * 0.5, -sceneSize * 0.3]} intensity={0.3} />
 
-      <fog attach="fog" args={['#0a0a1a', sceneSize * 2, sceneSize * 5]} />
+      <fog attach="fog" args={['#0d0d18', sceneSize * 2.5, sceneSize * 6]} />
 
       <Ground size={sceneSize} />
       <GridHelper size={sceneSize} />
-      <RoutePath points={points} minElev={minElev} maxElev={maxElev} exaggeration={exaggeration} />
+      <RoutePath points={points} />
       <RunnerDot points={points} progress={progress} onPositionUpdate={onPositionUpdate} />
-      <ElevationMarkers points={points} minElev={minElev} maxElev={maxElev} exaggeration={exaggeration} />
+      <ElevationMarkers points={points} />
 
       <CameraController
         points={points}
@@ -265,14 +300,19 @@ const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, se
         progress={progress}
         setProgress={setProgress}
         orbitRef={orbitRef}
+        sceneSize={sceneSize}
+        recenterFlag={recenterFlag}
       />
 
       <OrbitControls
         ref={orbitRef}
         enabled={!isPlaying}
         enableDamping
-        dampingFactor={0.05}
-        maxPolarAngle={Math.PI / 2.1}
+        dampingFactor={0.08}
+        rotateSpeed={0.5}
+        maxPolarAngle={Math.PI / 2.2}
+        minDistance={sceneSize * 0.2}
+        maxDistance={sceneSize * 3}
       />
     </>
   );
@@ -281,7 +321,7 @@ const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, se
 export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   coordinates,
   elevations,
-  autoPlay = true,
+  autoPlay = false,
   elevationExaggeration = 2,
   className = '',
   routeStats,
@@ -289,6 +329,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [progress, setProgress] = useState(0);
   const [currentElevY, setCurrentElevY] = useState(0);
+  const [recenterFlag, setRecenterFlag] = useState(0);
 
   const { points, minElev, maxElev } = useMemo(
     () => gpsToLocal(coordinates, elevations, elevationExaggeration),
@@ -297,7 +338,6 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
 
   const smoothed = useMemo(() => smoothPoints(points, 3), [points]);
 
-  // Compute total route distance in meters for live tracking
   const totalRouteDistance = useMemo(() => {
     if (routeStats?.totalDistance) return routeStats.totalDistance;
     let d = 0;
@@ -314,7 +354,12 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
 
   const handleReset = useCallback(() => {
     setProgress(0);
-    setIsPlaying(true);
+    setIsPlaying(false);
+  }, []);
+
+  const handleRecenter = useCallback(() => {
+    setRecenterFlag(f => f + 1);
+    setIsPlaying(false);
   }, []);
 
   if (coordinates.length < 2 || elevations.length < 2) {
@@ -328,7 +373,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   return (
     <div className={`relative rounded-lg overflow-hidden ${className}`} style={{ minHeight: 300 }}>
       <Canvas
-        style={{ background: '#0a0a1a' }}
+        style={{ background: '#0d0d18' }}
         camera={{ fov: 60, near: 0.1, far: 50000 }}
         gl={{ antialias: true }}
       >
@@ -341,6 +386,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
           progress={progress}
           setProgress={setProgress}
           onPositionUpdate={setCurrentElevY}
+          recenterFlag={recenterFlag}
         />
       </Canvas>
 
@@ -361,6 +407,14 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
           className="bg-background/80 backdrop-blur-sm border border-border/50 h-8 w-8 p-0"
         >
           <RotateCcw className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={handleRecenter}
+          className="bg-background/80 backdrop-blur-sm border border-border/50 h-8 w-8 p-0"
+        >
+          <Locate className="h-3.5 w-3.5" />
         </Button>
       </div>
 
