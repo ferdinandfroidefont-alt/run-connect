@@ -93,7 +93,7 @@ export const CreatePollDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl max-w-[340px] p-0 gap-0 bg-background">
+      <DialogContent aria-describedby={undefined} className="rounded-2xl max-w-[340px] p-0 gap-0 bg-background">
         <div className="p-5 space-y-4">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />

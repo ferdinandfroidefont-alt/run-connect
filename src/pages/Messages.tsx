@@ -176,7 +176,7 @@ const Messages = () => {
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
-  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2185,7 +2185,7 @@ const Messages = () => {
               {!isRecording && (
                 <>
                   {/* Plus button - opens attachment options */}
-                  <DropdownMenu open={attachMenuOpen} onOpenChange={setAttachMenuOpen} modal={false}>
+                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button 
                          className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
@@ -2228,10 +2228,8 @@ const Messages = () => {
                         Emoji
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onSelect={(e) => {
-                          e.preventDefault();
-                          setAttachMenuOpen(false);
-                          setTimeout(() => setShowCreatePoll(true), 150);
+                        onClick={() => {
+                          setTimeout(() => setShowCreatePoll(true), 300);
                         }}
                         className="py-3"
                       >
