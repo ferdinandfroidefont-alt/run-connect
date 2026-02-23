@@ -2538,21 +2538,6 @@ const Messages = () => {
                               }
                             </p>
                           </div>
-                          <span className="text-[13px] text-muted-foreground flex-shrink-0 ml-2">
-                            {(() => {
-                              const date = new Date(conversation.last_message_date || conversation.updated_at);
-                              const now = new Date();
-                              const diffMs = now.getTime() - date.getTime();
-                              const diffMin = Math.floor(diffMs / 60000);
-                              const diffH = Math.floor(diffMs / 3600000);
-                              const diffD = Math.floor(diffMs / 86400000);
-                              if (diffMin < 1) return "à l'instant";
-                              if (diffMin < 60) return `${diffMin} min`;
-                              if (diffH < 24) return `${diffH}h`;
-                              if (diffD < 7) return format(date, 'EEEE', { locale: fr });
-                              return format(date, 'dd/MM', { locale: fr });
-                            })()}
-                          </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <p className={`text-[15px] truncate ${
@@ -2590,18 +2575,35 @@ const Messages = () => {
                         </div>
                       </div>
                       
-                      {/* Quick camera button (Instagram-style) */}
-                      {!isSelectionMode && (
-                        <button
-                          className="p-2 rounded-full active:bg-secondary transition-colors flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleQuickCameraForConversation(conversation);
-                          }}
-                        >
-                          <Camera className="h-5 w-5 text-muted-foreground" />
-                        </button>
-                      )}
+                      {/* Time + Camera aligned */}
+                      <div className="flex flex-col items-center gap-1 flex-shrink-0 ml-2">
+                        <span className="text-[13px] text-muted-foreground">
+                          {(() => {
+                            const date = new Date(conversation.last_message_date || conversation.updated_at);
+                            const now = new Date();
+                            const diffMs = now.getTime() - date.getTime();
+                            const diffMin = Math.floor(diffMs / 60000);
+                            const diffH = Math.floor(diffMs / 3600000);
+                            const diffD = Math.floor(diffMs / 86400000);
+                            if (diffMin < 1) return "à l'instant";
+                            if (diffMin < 60) return `${diffMin} min`;
+                            if (diffH < 24) return `${diffH}h`;
+                            if (diffD < 7) return format(date, 'EEEE', { locale: fr });
+                            return format(date, 'dd/MM', { locale: fr });
+                          })()}
+                        </span>
+                        {!isSelectionMode && (
+                          <button
+                            className="p-1 rounded-full active:bg-secondary transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickCameraForConversation(conversation);
+                            }}
+                          >
+                            <Camera className="h-5 w-5 text-muted-foreground" />
+                          </button>
+                        )}
+                      </div>
                       
                       {/* iOS-style inset separator */}
                       {index < filteredAndSortedConversations.length - 1 && (
