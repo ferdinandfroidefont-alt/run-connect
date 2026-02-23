@@ -237,9 +237,13 @@ export default function TrainingMode() {
     }
   }, [mapReady, loading]);
 
-  const handleStop = useCallback(async () => {
-    try { await stopTracking(); } catch {}
-    navigate(-1);
+  const handleStop = useCallback(() => {
+    stopTracking().catch(() => {});
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
   }, [stopTracking, navigate]);
 
   const formatTime = (seconds: number) => {
@@ -301,7 +305,7 @@ export default function TrainingMode() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={async () => { try { await stopTracking(); } catch {} navigate(-1); }}
+            onClick={() => { stopTracking().catch(() => {}); if (window.history.length > 1) { navigate(-1); } else { navigate('/', { replace: true }); } }}
             className="px-0 font-normal"
           >
             <ArrowLeft className="h-5 w-5 mr-1" />
