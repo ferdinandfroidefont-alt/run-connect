@@ -1,49 +1,37 @@
 
 
-## Ajouter un filtre "Creees / Rejointes" dans la page Mes Seances
+## Accrocher le sous-filtre "Creees / Rejointes" sous le bouton "Seances"
 
 ### Objectif
 
-Ajouter un sous-filtre permettant de basculer entre les seances creees par l'utilisateur et les seances qu'il a rejointes en tant que participant. Pour les seances rejointes, masquer les boutons Modifier/Supprimer et ajouter un bouton pour contacter l'organisateur.
+Le sous-filtre doit etre visuellement attache juste sous le bouton "Seances", avec une largeur totale egale a celle du bouton "Seances" (soit 50% de la barre). Il ne doit pas deborder sous "Itineraires".
 
-### Modifications - Fichier `src/pages/MySessions.tsx`
+### Modification - `src/pages/MySessions.tsx`
 
-**1. Nouveau state pour le sous-filtre**
-- Ajouter `sessionSource: 'created' | 'joined'` (defaut: `'created'`)
-- Ajouter `joinedSessions: UserSession[]` pour stocker les seances rejointes
-- Ajouter `organizerProfiles: Map<string, Profile>` pour avoir les infos de l'organisateur
+Remplacer les deux blocs separes (segmented control principal + sous-filtre en dessous) par un seul conteneur `flex` horizontal :
 
-**2. Nouvelle fonction `loadJoinedSessions()`**
-- Requete `session_participants` filtree par `user_id = user.id` pour recuperer les `session_id`
-- Puis requete `sessions` avec `.in('id', sessionIds)` en excluant `.neq('organizer_id', user.id)`
-- Pour chaque seance, charger le profil de l'organisateur (`profiles` via `organizer_id`)
+```text
+|  px-4 container pleine largeur                          |
+|  [  col gauche (50%)       ]  [ col droite (50%)        ]
+|  [ Seances (bouton)        ]  [ Itineraires (bouton)    ]
+|  [ Creees | Rejointes      ]  [        vide             ]
+```
 
-**3. UI - Nouveau segmented control sous "Seances/Itineraires"**
-- Ajouter un second segmented control iOS-style avec deux options : "Creees" et "Rejointes"
-- Place juste au-dessus des filtres temporels (Toutes / A venir / Terminees)
+**Structure technique :**
 
-**4. Vue liste - Seances rejointes**
-- Meme rendu que les seances creees mais avec en plus le nom/avatar de l'organisateur affiche sous le titre
-- Badge "Rejoint" au lieu du badge de statut standard
+- Le wrapper principal reste `px-4 pb-3`
+- A l'interieur, un `div flex` avec deux colonnes `w-1/2`
+- Colonne gauche :
+  - Bouton "Seances" en haut (arrondi en haut seulement si sous-filtre visible)
+  - Si `currentView === 'sessions'` : sous-filtre "Creees | Rejointes" colle en dessous, meme fond `bg-secondary`, arrondi en bas
+- Colonne droite :
+  - Bouton "Itineraires" (arrondi complet, meme hauteur que "Seances")
 
-**5. Vue detail - Seances rejointes**
-- Masquer les boutons "Modifier" (Edit) et "Supprimer" (Trash2) dans le header
-- Ajouter une section "ORGANISATEUR" avec avatar, nom, et bouton "Envoyer un message"
-- Le bouton message navigue vers `/messages?startConversation={organizerId}`
-- Garder les sections Informations, Description, Participants identiques
-- Ajouter un bouton "Quitter la seance" (suppression du participant) a la place de "Supprimer"
+Le sous-filtre utilise des boutons plus petits (`text-[11px]`, `py-1.5`) pour tenir dans la moitie de largeur.
 
-**6. Realtime**
-- Ajouter un channel realtime sur `session_participants` filtre par `user_id` pour recharger les seances rejointes quand le statut change
+### Fichier modifie
 
-### Resume des changements
-
-| Element | Detail |
-|---------|--------|
-| State | `sessionSource`, `joinedSessions`, `organizerProfiles` |
-| Fonctions | `loadJoinedSessions()`, `handleLeaveSession()` |
-| UI header | Segmented control "Creees / Rejointes" |
-| Vue liste rejointes | Avatar orga + nom sous le titre |
-| Vue detail rejointes | Pas de Modifier/Supprimer, section Organisateur + bouton Message, bouton Quitter |
-| Fichier modifie | `src/pages/MySessions.tsx` uniquement |
+| Fichier | Zone modifiee |
+|---------|---------------|
+| `src/pages/MySessions.tsx` | Lignes ~720-772 : refonte du header segmented control |
 
