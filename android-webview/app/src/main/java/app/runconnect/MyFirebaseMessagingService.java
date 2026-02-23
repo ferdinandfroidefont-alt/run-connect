@@ -158,69 +158,54 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      * Indépendant de React pour éviter les race conditions
      */
     private void savePushTokenToSupabase(String token) {
-        // Exécuter dans un thread séparé pour éviter NetworkOnMainThreadException
         new Thread(() -> {
             try {
-                Log.d(TAG, "💾 [SUPABASE] Début sauvegarde token...");
+                Log.d(TAG, "💾 [EDGE] Début sauvegarde token via edge function...");
                 
-                // 1. Récupérer le user_id depuis SharedPreferences
                 android.content.SharedPreferences prefs = getSharedPreferences("RunConnectPrefs", MODE_PRIVATE);
                 String userId = prefs.getString("user_id", null);
                 
                 if (userId == null || userId.isEmpty()) {
-                    Log.w(TAG, "⚠️ [SUPABASE] user_id non trouvé dans SharedPreferences, sauvegarde impossible");
+                    Log.w(TAG, "⚠️ [EDGE] user_id non trouvé dans SharedPreferences, sauvegarde impossible");
                     return;
                 }
                 
-                Log.d(TAG, "👤 [SUPABASE] user_id: " + userId);
+                Log.d(TAG, "👤 [EDGE] user_id: " + userId);
                 
-                // 2. Préparer la requête PATCH vers Supabase
-                String supabaseUrl = "https://dbptgehpknjsoisirviz.supabase.co";
-                String apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRicHRnZWhwa25qc29pc2lydml6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NjIxNDUsImV4cCI6MjA3MDIzODE0NX0.D1uw0ui_auBAi-dvodv6j2a9x3lvMnY69cDa9Wupjcs";
-                
-                URL url = new URL(supabaseUrl + "/rest/v1/profiles?user_id=eq." + userId);
+                URL url = new URL("https://dbptgehpknjsoisirviz.supabase.co/functions/v1/save-push-token");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 
-                // 3. Configurer la requête
-                conn.setRequestMethod("PATCH");
+                conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
-                conn.setRequestProperty("apikey", apiKey);
-                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-                conn.setRequestProperty("Prefer", "return=minimal");
                 conn.setDoOutput(true);
                 
-                // 4. Construire le JSON body
                 JSONObject json = new JSONObject();
-                json.put("push_token", token);
-                json.put("push_token_platform", "android");
-                json.put("push_token_updated_at", "now()");
+                json.put("user_id", userId);
+                json.put("token", token);
+                json.put("platform", "android");
                 
                 String jsonBody = json.toString();
-                Log.d(TAG, "📤 [SUPABASE] Envoi: " + jsonBody);
+                Log.d(TAG, "📤 [EDGE] Envoi: " + jsonBody);
                 
-                // 5. Envoyer la requête
                 OutputStream os = conn.getOutputStream();
                 os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
                 os.flush();
                 os.close();
                 
-                // 6. Vérifier la réponse
                 int responseCode = conn.getResponseCode();
-                Log.d(TAG, "📥 [SUPABASE] Response code: " + responseCode);
+                Log.d(TAG, "📥 [EDGE] Response code: " + responseCode);
                 
-                if (responseCode == 200 || responseCode == 204) {
-                    Log.d(TAG, "✅ [SUPABASE] Token FCM sauvegardé avec succès !");
-                    
-                    // Sauvegarder la date de mise à jour dans SharedPreferences
+                if (responseCode == 200) {
+                    Log.d(TAG, "✅ [EDGE] Token FCM sauvegardé avec succès !");
                     prefs.edit().putLong("fcm_token_updated_at", System.currentTimeMillis()).apply();
                 } else {
-                    Log.e(TAG, "❌ [SUPABASE] Erreur HTTP: " + responseCode);
+                    Log.e(TAG, "❌ [EDGE] Erreur HTTP: " + responseCode);
                 }
                 
                 conn.disconnect();
                 
             } catch (Exception e) {
-                Log.e(TAG, "❌ [SUPABASE] Exception lors de la sauvegarde:", e);
+                Log.e(TAG, "❌ [EDGE] Exception lors de la sauvegarde:", e);
             }
         }).start();
     }

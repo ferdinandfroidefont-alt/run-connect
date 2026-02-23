@@ -254,7 +254,7 @@ export const usePushNotifications = () => {
     }
 
     try {
-      // 1. Récupérer le token directement depuis la DB (fiable)
+      // 1. Check DB first
       console.log('[PUSH TEST] Fetching token for user:', user.id);
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -269,14 +269,40 @@ export const usePushNotifications = () => {
         return;
       }
 
-      const dbToken = profile?.push_token;
+      let dbToken = profile?.push_token;
+
+      // 2. If no token in DB, try to recover from memory and save via edge function
       if (!dbToken || dbToken.length < 50) {
-        toast({ 
-          title: "Aucun token enregistré", 
-          description: `user_id: ${user.id?.substring(0, 8)}... — token: ${dbToken ? dbToken.substring(0, 10) + '...' : 'null'}`, 
-          variant: "destructive" 
-        });
-        return;
+        const memoryToken = token || (window as any).fcmToken || (window as any).__fcmTokenBuffer;
+        
+        if (memoryToken && typeof memoryToken === 'string' && memoryToken.length > 50) {
+          console.log('[PUSH TEST] Token found in memory, saving via edge function...');
+          try {
+            const response = await fetch(
+              `https://dbptgehpknjsoisirviz.supabase.co/functions/v1/save-push-token`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id, token: memoryToken, platform: 'android' })
+              }
+            );
+            if (response.ok) {
+              console.log('[PUSH TEST] Token saved via edge function');
+              dbToken = memoryToken;
+            }
+          } catch (e) {
+            console.error('[PUSH TEST] Edge function save failed:', e);
+          }
+        }
+
+        if (!dbToken || dbToken.length < 50) {
+          toast({ 
+            title: "Aucun token enregistré", 
+            description: `user_id: ${user.id?.substring(0, 8)}... — token: ${dbToken ? dbToken.substring(0, 10) + '...' : 'null'}`, 
+            variant: "destructive" 
+          });
+          return;
+        }
       }
 
       // 2. Vérifier la session
