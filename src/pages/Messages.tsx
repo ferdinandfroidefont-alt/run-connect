@@ -53,7 +53,8 @@ import {
   X,
   Smile,
   BarChart3,
-  Camera
+  Camera,
+  GraduationCap
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -65,6 +66,8 @@ import { ReplyPreview, ReplyBubble } from "@/components/MessageReply";
 import { CreatePollDialog } from "@/components/CreatePollDialog";
 import { PollCard } from "@/components/PollCard";
 import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
+import { CoachAccessDialog } from "@/components/coaching/CoachAccessDialog";
+import { CreateCoachingSessionDialog } from "@/components/coaching/CreateCoachingSessionDialog";
 
 interface Profile {
   user_id: string;
@@ -176,7 +179,9 @@ const Messages = () => {
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
-  
+  const [showCoachAccess, setShowCoachAccess] = useState(false);
+  const [showCoachCreate, setShowCoachCreate] = useState(false);
+  const [coachClubId, setCoachClubId] = useState<string | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2504,15 +2509,13 @@ const Messages = () => {
               </button>
               
               <button
-                onClick={() => navigate('/search?tab=strava')}
+                onClick={() => setShowCoachAccess(true)}
                 className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center">
-                  <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                  </svg>
+                  <GraduationCap className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-[11px] text-muted-foreground">Strava</span>
+                <span className="text-[11px] text-muted-foreground">Coach</span>
               </button>
 
               <button
@@ -2807,6 +2810,25 @@ const Messages = () => {
           avatarUrl={selectedAvatarData?.url || null}
           username={selectedAvatarData?.username || "Utilisateur"}
         />
+        {/* Coach Access Dialog */}
+        <CoachAccessDialog
+          isOpen={showCoachAccess}
+          onClose={() => setShowCoachAccess(false)}
+          onSelectClub={(clubId) => {
+            setCoachClubId(clubId);
+            setShowCoachCreate(true);
+          }}
+          onCreateClub={() => setShowCreateGroup(true)}
+        />
+
+        {coachClubId && (
+          <CreateCoachingSessionDialog
+            isOpen={showCoachCreate}
+            onClose={() => { setShowCoachCreate(false); setCoachClubId(null); }}
+            clubId={coachClubId}
+            onCreated={() => {}}
+          />
+        )}
 
       </div>
 

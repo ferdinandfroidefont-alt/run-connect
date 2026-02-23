@@ -185,6 +185,11 @@ export type Database = {
           created_at: string
           feedback: string | null
           id: string
+          location_lat: number | null
+          location_lng: number | null
+          location_name: string | null
+          map_session_id: string | null
+          scheduled_at: string | null
           status: string
           user_id: string
         }
@@ -195,6 +200,11 @@ export type Database = {
           created_at?: string
           feedback?: string | null
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          map_session_id?: string | null
+          scheduled_at?: string | null
           status?: string
           user_id: string
         }
@@ -205,6 +215,11 @@ export type Database = {
           created_at?: string
           feedback?: string | null
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          map_session_id?: string | null
+          scheduled_at?: string | null
           status?: string
           user_id?: string
         }
@@ -223,6 +238,7 @@ export type Database = {
           activity_type: string
           club_id: string
           coach_id: string
+          coach_notes: string | null
           created_at: string
           description: string | null
           distance_km: number | null
@@ -237,6 +253,7 @@ export type Database = {
           activity_type?: string
           club_id: string
           coach_id: string
+          coach_notes?: string | null
           created_at?: string
           description?: string | null
           distance_km?: number | null
@@ -251,6 +268,7 @@ export type Database = {
           activity_type?: string
           club_id?: string
           coach_id?: string
+          coach_notes?: string | null
           created_at?: string
           description?: string | null
           distance_km?: number | null
@@ -1202,6 +1220,7 @@ export type Database = {
           activity_type: string
           calculated_level: number | null
           club_id: string | null
+          coaching_session_id: string | null
           created_at: string
           current_participants: number | null
           description: string | null
@@ -1240,6 +1259,7 @@ export type Database = {
           activity_type: string
           calculated_level?: number | null
           club_id?: string | null
+          coaching_session_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
@@ -1278,6 +1298,7 @@ export type Database = {
           activity_type?: string
           calculated_level?: number | null
           club_id?: string | null
+          coaching_session_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
@@ -1318,6 +1339,13 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_coaching_session_id_fkey"
+            columns: ["coaching_session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
             referencedColumns: ["id"]
           },
           {
