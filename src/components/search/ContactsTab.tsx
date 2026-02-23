@@ -166,10 +166,6 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
       
       setContactSuggestions(sorted);
       
-      toast({
-        title: "Contacts synchronisés",
-        description: `${sorted.length} contact(s) trouvé(s) sur l'application`,
-      });
     } catch (error) {
       console.error('[ContactsTab NIVEAU 31] ❌ Error loading contacts:', error);
       toast({
