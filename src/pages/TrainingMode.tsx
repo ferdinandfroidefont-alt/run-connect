@@ -262,16 +262,19 @@ export default function TrainingMode() {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/', { replace: true }); }}
-          className="absolute top-[env(safe-area-inset-top)] left-4 mt-2 px-0 font-normal"
-          style={{ position: 'absolute', zIndex: 10000 }}
-        >
-          <ArrowLeft className="h-5 w-5 mr-1" />
-          Retour
-        </Button>
+        <div className="absolute top-0 left-0 right-0 z-[9999] bg-card pt-[env(safe-area-inset-top)]">
+          <div className="flex items-center px-4 py-2 border-b border-border/30">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/', { replace: true }); }}
+              className="px-0 font-normal"
+            >
+              <ArrowLeft className="h-5 w-5 mr-1" />
+              Retour
+            </Button>
+          </div>
+        </div>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-[15px] text-muted-foreground">Chargement de l'itinéraire...</p>
@@ -283,15 +286,22 @@ export default function TrainingMode() {
   if (error) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center p-6">
+        <div className="absolute top-0 left-0 right-0 z-[9999] bg-card pt-[env(safe-area-inset-top)]">
+          <div className="flex items-center px-4 py-2 border-b border-border/30">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/', { replace: true }); }}
+              className="px-0 font-normal"
+            >
+              <ArrowLeft className="h-5 w-5 mr-1" />
+              Retour
+            </Button>
+          </div>
+        </div>
         <div className="text-center">
           <p className="text-[17px] text-foreground font-medium mb-2">Erreur</p>
           <p className="text-[15px] text-muted-foreground mb-6">{error}</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl text-[15px] font-medium"
-          >
-            Retour
-          </button>
         </div>
       </div>
     );
