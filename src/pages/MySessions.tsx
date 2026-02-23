@@ -717,59 +717,68 @@ export default function MySessions() {
             <h1 className="text-[34px] font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           
-          {/* iOS Segmented Control - Sessions/Itinéraires */}
-          <div className="px-4 pb-2">
-            <div className="flex bg-secondary rounded-[10px] p-1">
-              <button
-                onClick={() => setCurrentView('sessions')}
-                className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
-                  currentView === 'sessions'
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                Séances
-              </button>
-              <button
-                onClick={() => setCurrentView('routes')}
-                className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
-                  currentView === 'routes'
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                Itinéraires
-              </button>
-            </div>
-          </div>
+          {/* iOS Segmented Control - Two columns layout */}
+          <div className="px-4 pb-3">
+            <div className="flex gap-1">
+              {/* Left column: Séances + sub-filter */}
+              <div className="w-1/2">
+                <div className={`bg-secondary ${currentView === 'sessions' ? 'rounded-t-[10px]' : 'rounded-[10px]'} p-1 pb-0`}>
+                  <button
+                    onClick={() => setCurrentView('sessions')}
+                    className={`w-full py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                      currentView === 'sessions'
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Séances
+                  </button>
+                </div>
+                {currentView === 'sessions' && (
+                  <div className="bg-secondary rounded-b-[10px] px-1 pb-1">
+                    <div className="flex gap-0.5">
+                      <button
+                        onClick={() => { setSessionSource('created'); setSessionPage(0); }}
+                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                          sessionSource === 'created'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        Créées
+                      </button>
+                      <button
+                        onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
+                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                          sessionSource === 'joined'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        Rejointes
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-          {/* Created/Joined sub-filter - attached below, same width */}
-          {currentView === 'sessions' && (
-            <div className="px-4 pb-3">
-              <div className="flex bg-secondary rounded-[10px] p-1">
-                <button
-                  onClick={() => { setSessionSource('created'); setSessionPage(0); }}
-                  className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
-                    sessionSource === 'created'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  Créées
-                </button>
-                <button
-                  onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
-                  className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
-                    sessionSource === 'joined'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  Rejointes
-                </button>
+              {/* Right column: Itinéraires */}
+              <div className="w-1/2">
+                <div className="bg-secondary rounded-[10px] p-1">
+                  <button
+                    onClick={() => setCurrentView('routes')}
+                    className={`w-full py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                      currentView === 'routes'
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Itinéraires
+                  </button>
+                </div>
               </div>
             </div>
-          )}
+          </div>
           <div className="h-px bg-border" />
         </div>
 
