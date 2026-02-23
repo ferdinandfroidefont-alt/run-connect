@@ -85,26 +85,47 @@ export const useCamera = () => {
 
       // STRATÉGIE 2: Fallback Input File Web
       console.log('🔄 Fallback Input File...');
-      return new Promise((resolve, reject) => {
+      
+      // Nettoyer tout input résiduel d'une prise précédente
+      document.querySelectorAll('input[data-camera-picker]').forEach(el => el.remove());
+      
+      return new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
         input.capture = 'environment';
+        input.setAttribute('data-camera-picker', 'true');
+        input.style.position = 'fixed';
+        input.style.top = '-9999px';
+        input.style.left = '-9999px';
+        input.style.opacity = '0';
+        input.style.width = '1px';
+        input.style.height = '1px';
+        input.style.pointerEvents = 'none';
+        
+        document.body.appendChild(input);
+        
+        const cleanup = () => {
+          try { input.remove(); } catch (e) { /* ignore */ }
+        };
         
         const timeoutId = setTimeout(() => {
-          resolve(null); // Ne pas rejeter, juste retourner null
-        }, 30000); // Timeout plus court
+          cleanup();
+          resolve(null);
+        }, 30000);
         
         input.onchange = (event) => {
           clearTimeout(timeoutId);
           const file = (event.target as HTMLInputElement).files?.[0];
           console.log('✅ Fichier sélectionné:', file?.name);
+          cleanup();
           resolve(file || null);
         };
         
         input.oncancel = () => {
           clearTimeout(timeoutId);
           console.log('ℹ️ Sélection annulée');
+          cleanup();
           resolve(null);
         };
         
@@ -246,12 +267,12 @@ export const useCamera = () => {
       
       // Style pour rendre l'input visible sur Android WebView (requis pour certains appareils)
       input.style.position = 'fixed';
-      input.style.top = '0';
-      input.style.left = '0';
-      input.style.opacity = '0.01';
+      input.style.top = '-9999px';
+      input.style.left = '-9999px';
+      input.style.opacity = '0';
       input.style.width = '1px';
       input.style.height = '1px';
-      input.style.zIndex = '999999';
+      input.style.pointerEvents = 'none';
       
       // Ajouter au DOM AVANT de cliquer (requis pour Android WebView)
       document.body.appendChild(input);

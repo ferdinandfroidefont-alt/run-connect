@@ -33,11 +33,8 @@ export const Layout = ({ children }: LayoutProps) => {
     document.documentElement.style.backgroundColor = '#F5F5F5';
     document.body.style.backgroundColor = '#F5F5F5';
 
-    return () => {
-      document.documentElement.style.removeProperty('--ios-top-color');
-      document.documentElement.style.removeProperty('background-color');
-      document.body.style.removeProperty('background-color');
-    };
+    // Pas de cleanup : ces styles doivent rester permanents
+    // pour éviter un flash blanc au retour de la caméra native
   }, [location.pathname]);
   
   // État local pour éviter la boucle infinie RGPD
