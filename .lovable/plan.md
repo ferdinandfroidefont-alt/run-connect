@@ -1,72 +1,65 @@
 
 
-## Ajouter le Live Tracking pour les seances rejointes (participants)
+## Auto-stop basé sur la durée définie + Live tracking pour le créateur
 
 ### Objectif
 
-Permettre aux participants de seances rejointes (a venir) d'activer/desactiver le partage de leur position en temps reel. Leur position sera visible sur la page "Suivre les participants" (`/session-tracking/:id`). Un message de prevention s'affiche avant activation, et la permission de localisation native (Android/iOS) est demandee si necessaire.
+1. L'auto-stop du live tracking doit utiliser `live_tracking_max_duration` (défini par le créateur) au lieu d'un 3h codé en dur
+2. Le créateur de la séance doit aussi pouvoir partager sa position pendant une séance en cours (pas seulement les participants rejoints)
 
-### Modifications
+### Modifications - `src/pages/MySessions.tsx`
 
-#### 1. Fichier `src/pages/MySessions.tsx` - Vue detail des seances rejointes
+#### 1. Interface `UserSession` - ajouter le champ durée
 
-**Nouveaux states :**
-- `liveTrackingEnabled: boolean` - indique si le participant partage sa position
-- `showTrackingWarning: boolean` - controle l'affichage du dialog de prevention
-- `trackingWatchId: string | null` - reference du watch GPS pour nettoyage
+Ajouter `live_tracking_max_duration?: number` a l'interface `UserSession` pour accéder à la durée configurée par le créateur.
 
-**Nouvelle section UI dans la vue detail (apres la section ORGANISATEUR, avant INFORMATIONS) :**
-- Visible uniquement si `isViewingJoinedSession && isUpcoming`
-- Carte iOS-style avec icone MapPin et Switch pour activer/desactiver
-- Texte explicatif : "Partagez votre position en temps reel avec les autres participants"
-- Bouton "Voir sur la carte" qui navigue vers `/session-tracking/:id`
+#### 2. Auto-stop dynamique
 
-**Nouveau AlertDialog de prevention :**
-- S'affiche quand l'utilisateur active le switch pour la premiere fois
-- Titre : "Partager votre position"
-- Message : "En activant cette fonctionnalite, votre position GPS sera partagee en temps reel avec l'organisateur et les autres participants de cette seance. Votre position ne sera plus partagee une fois la seance terminee ou si vous desactivez manuellement."
-- Boutons : "Annuler" / "Activer"
-- Sur "Activer" : demande la permission de localisation native via `Geolocation.requestPermissions()` (declenche le popup systeme Android/iOS), puis demarre le watch GPS
+Remplacer la logique actuelle "3h après `scheduled_at`" par :
+- Calculer la durée max depuis `selectedSession.live_tracking_max_duration` (défaut: 120 min)
+- Auto-stop = `scheduled_at + live_tracking_max_duration minutes`
 
-**Logique de tracking participant :**
-- `startParticipantTracking()` : 
-  - Appelle `Geolocation.requestPermissions()` (popup natif)
-  - Lance `Geolocation.watchPosition()` (natif) ou `setInterval` + `getCurrentPosition()` (web)
-  - Insere les points dans `live_tracking_points` toutes les 5 secondes
-  - Met a jour `liveTrackingEnabled = true`
-- `stopParticipantTracking()` :
-  - Arrete le watch/interval GPS
-  - Met a jour `liveTrackingEnabled = false`
-- Auto-stop : quand `scheduled_at` est depasse de plus de 3 heures, arret automatique
+Avant :
+```
+const threeHoursAfter = scheduledTime + 3 * 60 * 60 * 1000;
+```
 
-**Nettoyage :** le watch GPS est nettoye au unmount du composant et quand on revient a la liste
+Après :
+```
+const maxDuration = (selectedSession as any).live_tracking_max_duration || 120;
+const autoStopTime = scheduledTime + maxDuration * 60 * 1000;
+```
 
-#### 2. Fichier `src/hooks/useLiveTracking.tsx` - Etendre aux participants
+#### 3. Section Live Tracking pour les séances créées (organisateur)
 
-Actuellement le hook ne permet le tracking que pour `isOrganizer`. Modification :
-- Supprimer le guard `if (!isOrganizer) return;` dans `startTracking`
-- Ajouter un parametre optionnel `isParticipant: boolean`
-- Pour les participants : ne pas modifier `sessions.live_tracking_active` (seul l'orga controle ce flag)
-- Le reste (watch GPS + insert dans `live_tracking_points`) fonctionne de la meme maniere
+Ajouter une section "POSITION EN DIRECT" dans la vue détail des séances créées, visible quand la séance est en cours ou à venir. La condition "en cours" sera : `scheduled_at <= now < scheduled_at + max_duration`.
 
-Alternativement, la logique de tracking participant peut etre directement dans `MySessions.tsx` sans modifier le hook existant, pour eviter des regressions. C'est l'approche choisie.
+- Meme UI que pour les séances rejointes : Switch + bouton "Voir sur la carte"
+- Utilise les memes fonctions `startParticipantTracking` / `stopParticipantTracking` / `handleTrackingToggle` (renommage interne pas nécessaire, elles fonctionnent pour tout utilisateur)
 
-### Imports a ajouter dans MySessions.tsx
+#### 4. Condition d'affichage
 
-- `MapPin` (deja importe)
-- `Switch` depuis `@/components/ui/switch`
-- `Geolocation` depuis `@capacitor/geolocation`
-- `Capacitor` depuis `@capacitor/core`
+Pour les séances rejointes : visible si la séance est à venir OU en cours (pas terminée)
+Pour les séances créées : visible si la séance est à venir OU en cours (pas terminée)
 
-### Resume
+"En cours" = `scheduled_at <= now AND now < scheduled_at + live_tracking_max_duration`
+
+On simplifie : afficher la section si `now < scheduled_at + live_tracking_max_duration` (séance pas encore terminée selon la durée définie).
+
+#### 5. RLS - Vérification
+
+La policy "Organizer can insert tracking points" exige `live_tracking_active = true` sur la session. Il faudra soit :
+- Activer `live_tracking_active` quand le créateur active son switch (via update sur `sessions`)
+- Ou utiliser la policy "Participants can insert tracking points" si le créateur est aussi participant
+
+Le créateur n'est PAS dans `session_participants`, donc il faut mettre à jour `sessions.live_tracking_active = true` quand le créateur active le switch. On ajoutera cette logique dans `startParticipantTracking` : si `sessionSource === 'created'`, faire un update de `sessions.live_tracking_active`.
+
+### Résumé des changements
 
 | Element | Detail |
 |---------|--------|
-| States | `liveTrackingEnabled`, `showTrackingWarning`, `trackingWatchId` |
-| UI | Section "Position en direct" avec Switch + dialog prevention |
-| Permission | Popup natif Android/iOS via `Geolocation.requestPermissions()` |
-| GPS | `watchPosition` (natif) ou interval (web), insert `live_tracking_points` |
-| Auto-stop | 3h apres `scheduled_at` |
-| Desactivation | Switch OFF ou quitter la seance |
-| Fichier modifie | `src/pages/MySessions.tsx` uniquement |
-
+| Interface | Ajouter `live_tracking_max_duration` dans `UserSession` |
+| Auto-stop | Basé sur `live_tracking_max_duration` au lieu de 3h fixe |
+| UI créateur | Section "Position en direct" dans vue detail des séances créées |
+| RLS | Update `live_tracking_active` quand le créateur active le switch |
+| Fichier modifié | `src/pages/MySessions.tsx` uniquement |
