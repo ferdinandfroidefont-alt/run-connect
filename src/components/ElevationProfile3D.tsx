@@ -1,9 +1,8 @@
-import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Line } from '@react-three/drei';
-import * as THREE from 'three';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Locate } from 'lucide-react';
+import { Play, Pause, Locate } from 'lucide-react';
+import { Loader } from '@googlemaps/js-api-loader';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ElevationProfile3DProps {
   coordinates: { lat: number; lng: number }[];
@@ -19,325 +18,34 @@ interface ElevationProfile3DProps {
   } | null;
 }
 
-// Convert GPS to local meters relative to center
-function gpsToLocal(
-  coords: { lat: number; lng: number }[],
-  elevations: number[],
-  exaggeration: number
-) {
-  if (coords.length === 0) return { points: [], minElev: 0, maxElev: 0, center: { lat: 0, lng: 0 } };
-
-  const centerLat = coords.reduce((s, c) => s + c.lat, 0) / coords.length;
-  const centerLng = coords.reduce((s, c) => s + c.lng, 0) / coords.length;
-  const minElev = Math.min(...elevations);
-  const maxElev = Math.max(...elevations);
-
-  const metersPerDegLat = 111320;
-  const metersPerDegLng = 111320 * Math.cos((centerLat * Math.PI) / 180);
-
-  const points = coords.map((c, i) => {
-    const x = (c.lng - centerLng) * metersPerDegLng;
-    const z = -(c.lat - centerLat) * metersPerDegLat;
-    const y = (elevations[i] - minElev) * exaggeration;
-    return new THREE.Vector3(x, y, z);
-  });
-
-  return { points, minElev, maxElev, center: { lat: centerLat, lng: centerLng } };
-}
-
-// Smooth points with Catmull-Rom
-function smoothPoints(points: THREE.Vector3[], segments = 4): THREE.Vector3[] {
-  if (points.length < 2) return points;
-  const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
-  return curve.getPoints(points.length * segments);
-}
-
-// Route path - uniform blue with halo
-const RoutePath = ({ points }: { points: THREE.Vector3[] }) => {
-  const linePoints = useMemo(() => points.map(p => [p.x, p.y, p.z] as [number, number, number]), [points]);
-
-  return (
-    <>
-      {/* Halo / shadow underneath */}
-      <Line
-        points={linePoints}
-        color="#5B7CFF"
-        lineWidth={12}
-        transparent
-        opacity={0.15}
-      />
-      {/* Main route line */}
-      <Line
-        points={linePoints}
-        color="#5B7CFF"
-        lineWidth={6}
-      />
-    </>
-  );
-};
-
-// Ground plane
-const Ground = ({ size }: { size: number }) => {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-      <planeGeometry args={[size * 2.5, size * 2.5, 16, 16]} />
-      <meshStandardMaterial
-        color="#111118"
-        transparent
-        opacity={0.3}
-      />
-    </mesh>
-  );
-};
-
-// Grid helper
-const GridHelper = ({ size }: { size: number }) => {
-  return <gridHelper args={[size * 2.5, 12, '#2a2a40', '#1a1a30']} position={[0, -0.5, 0]} />;
-};
-
-// Runner dot - smaller and more discreet
-const RunnerDot = ({ points, progress, onPositionUpdate }: { points: THREE.Vector3[]; progress: number; onPositionUpdate?: (y: number) => void }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  useFrame(() => {
-    if (!meshRef.current || points.length < 2) return;
-    const idx = Math.min(Math.floor(progress * (points.length - 1)), points.length - 2);
-    const frac = (progress * (points.length - 1)) - idx;
-    const pos = new THREE.Vector3().lerpVectors(points[idx], points[idx + 1], frac);
-    meshRef.current.position.copy(pos);
-    meshRef.current.position.y += 2;
-    onPositionUpdate?.(pos.y);
-  });
-
-  return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[2, 16, 16]} />
-      <meshStandardMaterial color="#5B7CFF" emissive="#5B7CFF" emissiveIntensity={0.3} />
-    </mesh>
-  );
-};
-
-// Elevation markers (min/max)
-const ElevationMarkers = ({ points }: { points: THREE.Vector3[] }) => {
-  const { minPoint, maxPoint } = useMemo(() => {
-    let minY = Infinity, maxY = -Infinity;
-    let minP = points[0], maxP = points[0];
-    points.forEach(p => {
-      if (p.y < minY) { minY = p.y; minP = p; }
-      if (p.y > maxY) { maxY = p.y; maxP = p; }
-    });
-    return { minPoint: minP, maxPoint: maxP };
-  }, [points]);
-
-  return (
-    <>
-      <mesh position={[maxPoint.x, maxPoint.y + 6, maxPoint.z]}>
-        <coneGeometry args={[1.5, 5, 8]} />
-        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={0.2} />
-      </mesh>
-      <mesh position={[minPoint.x, minPoint.y + 6, minPoint.z]}>
-        <coneGeometry args={[1.5, 5, 8]} />
-        <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.2} />
-      </mesh>
-    </>
-  );
-};
-
-// Camera controller with smooth interpolation
-const CameraController = ({ 
-  points, 
-  isPlaying, 
-  progress, 
-  setProgress,
-  orbitRef,
-  sceneSize,
-  recenterFlag,
-}: {
-  points: THREE.Vector3[];
-  isPlaying: boolean;
-  progress: number;
-  setProgress: (p: number) => void;
-  orbitRef: React.RefObject<any>;
-  sceneSize: number;
-  recenterFlag: number;
-}) => {
-  const { camera } = useThree();
-  const targetCamPos = useRef(new THREE.Vector3());
-  const targetLookAt = useRef(new THREE.Vector3());
-  const isRecentering = useRef(false);
-  const recenterLerp = useRef(0);
-
-  // Compute initial position
-  const initialPos = useMemo(() => {
-    if (points.length < 2) return { cam: new THREE.Vector3(0, 100, 0), target: new THREE.Vector3() };
-    const box = new THREE.Box3().setFromPoints(points);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    return {
-      cam: new THREE.Vector3(center.x + sceneSize * 0.6, center.y + sceneSize * 0.5, center.z + sceneSize * 0.6),
-      target: center.clone(),
-    };
-  }, [points, sceneSize]);
-
-  // Recenter when flag changes
-  useEffect(() => {
-    if (recenterFlag > 0) {
-      isRecentering.current = true;
-      recenterLerp.current = 0;
-    }
-  }, [recenterFlag]);
-
-  useFrame((_, delta) => {
-    // Smooth recenter transition
-    if (isRecentering.current) {
-      recenterLerp.current = Math.min(1, recenterLerp.current + delta * 2);
-      const t = recenterLerp.current;
-      const ease = t * t * (3 - 2 * t); // smoothstep
-      camera.position.lerp(initialPos.cam, ease * 0.08);
-      if (orbitRef.current) {
-        orbitRef.current.target.lerp(initialPos.target, ease * 0.08);
-      }
-      camera.lookAt(orbitRef.current?.target || initialPos.target);
-      if (recenterLerp.current >= 1) {
-        isRecentering.current = false;
-      }
-      return;
-    }
-
-    if (!isPlaying || points.length < 2) return;
-
-    // Slow speed: 0.0005 base (4x slower than before)
-    let newProgress = progress + 0.0005 * delta * 60;
-    if (newProgress >= 1) newProgress = 0;
-    setProgress(newProgress);
-
-    const idx = Math.min(Math.floor(newProgress * (points.length - 1)), points.length - 2);
-    const frac = (newProgress * (points.length - 1)) - idx;
-    const pos = new THREE.Vector3().lerpVectors(points[idx], points[idx + 1], frac);
-
-    // Look-ahead 30 points for smoother direction
-    const lookAheadIdx = Math.min(idx + 30, points.length - 1);
-    const direction = new THREE.Vector3().subVectors(points[lookAheadIdx], pos).normalize();
-    const side = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
-
-    const height = pos.y + sceneSize * 0.3;
-    targetCamPos.current.set(
-      pos.x - direction.x * 80 + side.x * 30,
-      height,
-      pos.z - direction.z * 80 + side.z * 30
-    );
-    targetLookAt.current.copy(pos);
-
-    // Smooth interpolation (lerp factor 0.03)
-    camera.position.lerp(targetCamPos.current, 0.03);
-    
-    if (orbitRef.current) {
-      orbitRef.current.target.lerp(targetLookAt.current, 0.03);
-    }
-    camera.lookAt(orbitRef.current?.target || targetLookAt.current);
-  });
-
-  return null;
-};
-
-// Scene setup
-const Scene = ({ points, minElev, maxElev, exaggeration, isPlaying, progress, setProgress, onPositionUpdate, recenterFlag }: {
-  points: THREE.Vector3[];
-  minElev: number;
-  maxElev: number;
-  exaggeration: number;
-  isPlaying: boolean;
-  progress: number;
-  setProgress: (p: number) => void;
-  onPositionUpdate?: (y: number) => void;
-  recenterFlag: number;
-}) => {
-  const orbitRef = useRef<any>(null);
-
-  const sceneSize = useMemo(() => {
-    if (points.length === 0) return 100;
-    const box = new THREE.Box3().setFromPoints(points);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    return Math.max(size.x, size.z, 100);
-  }, [points]);
-
-  // Initial camera setup - semi-isometric
-  const { camera } = useThree();
-  useEffect(() => {
-    if (points.length < 2) return;
-    const box = new THREE.Box3().setFromPoints(points);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    camera.position.set(
-      center.x + sceneSize * 0.6,
-      center.y + sceneSize * 0.5,
-      center.z + sceneSize * 0.6
-    );
-    camera.lookAt(center);
-    if (orbitRef.current) {
-      orbitRef.current.target.copy(center);
-    }
-  }, [points, sceneSize, camera]);
-
-  return (
-    <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[sceneSize, sceneSize, sceneSize * 0.5]} intensity={0.8} />
-      <directionalLight position={[-sceneSize * 0.3, sceneSize * 0.5, -sceneSize * 0.3]} intensity={0.3} />
-
-      <fog attach="fog" args={['#0d0d18', sceneSize * 2.5, sceneSize * 6]} />
-
-      <Ground size={sceneSize} />
-      <GridHelper size={sceneSize} />
-      <RoutePath points={points} />
-      <RunnerDot points={points} progress={progress} onPositionUpdate={onPositionUpdate} />
-      <ElevationMarkers points={points} />
-
-      <CameraController
-        points={points}
-        isPlaying={isPlaying}
-        progress={progress}
-        setProgress={setProgress}
-        orbitRef={orbitRef}
-        sceneSize={sceneSize}
-        recenterFlag={recenterFlag}
-      />
-
-      <OrbitControls
-        ref={orbitRef}
-        enabled={!isPlaying}
-        enableDamping
-        dampingFactor={0.08}
-        rotateSpeed={0.5}
-        maxPolarAngle={Math.PI / 2.2}
-        minDistance={sceneSize * 0.2}
-        maxDistance={sceneSize * 3}
-      />
-    </>
-  );
-};
-
 export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   coordinates,
   elevations,
   autoPlay = false,
-  elevationExaggeration = 2,
   className = '',
   routeStats,
 }) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
+  const shadowPolylineRef = useRef<google.maps.Polyline | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const animationRef = useRef<number | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [progress, setProgress] = useState(0);
-  const [currentElevY, setCurrentElevY] = useState(0);
-  const [recenterFlag, setRecenterFlag] = useState(0);
+  const [mapReady, setMapReady] = useState(false);
+  const [currentElevation, setCurrentElevation] = useState(0);
 
-  const { points, minElev, maxElev } = useMemo(
-    () => gpsToLocal(coordinates, elevations, elevationExaggeration),
-    [coordinates, elevations, elevationExaggeration]
-  );
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
 
-  const smoothed = useMemo(() => smoothPoints(points, 3), [points]);
+  // Compute bounds
+  // bounds computed inline where needed
 
+  // Total distance
   const totalRouteDistance = useMemo(() => {
     if (routeStats?.totalDistance) return routeStats.totalDistance;
     let d = 0;
@@ -349,20 +57,210 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     return d;
   }, [coordinates, routeStats]);
 
-  const currentKm = (progress * totalRouteDistance / 1000).toFixed(2);
-  const currentAltitude = Math.round(minElev + currentElevY / elevationExaggeration);
+  // Initialize Google Maps
+  useEffect(() => {
+    if (!mapContainerRef.current || coordinates.length < 2) return;
 
-  const handleReset = useCallback(() => {
-    setProgress(0);
-    setIsPlaying(false);
+    const initMap = async () => {
+      try {
+        if (!window.google?.maps) {
+          const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
+            body: { type: 'get-key' }
+          });
+          const apiKey = apiKeyData?.apiKey || '';
+          const loader = new Loader({
+            apiKey,
+            version: 'weekly',
+            libraries: ['geometry', 'places'],
+          });
+          await loader.load();
+        }
+
+        if (!mapContainerRef.current) return;
+
+        // Center of route
+        const centerLat = coordinates.reduce((s, c) => s + c.lat, 0) / coordinates.length;
+        const centerLng = coordinates.reduce((s, c) => s + c.lng, 0) / coordinates.length;
+
+        const map = new google.maps.Map(mapContainerRef.current, {
+          center: { lat: centerLat, lng: centerLng },
+          zoom: 15,
+          mapTypeId: 'satellite',
+          tilt: 45,
+          heading: 0,
+          disableDefaultUI: true,
+          zoomControl: false,
+          gestureHandling: 'greedy',
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
+
+        mapRef.current = map;
+
+        // Fit bounds
+        const b = new google.maps.LatLngBounds();
+        coordinates.forEach(c => b.extend({ lat: c.lat, lng: c.lng }));
+        map.fitBounds(b, 40);
+
+        // Shadow polyline (halo)
+        const shadowPoly = new google.maps.Polyline({
+          path: coordinates.map(c => ({ lat: c.lat, lng: c.lng })),
+          geodesic: true,
+          strokeColor: '#5B7CFF',
+          strokeOpacity: 0.2,
+          strokeWeight: 10,
+          map,
+        });
+        shadowPolylineRef.current = shadowPoly;
+
+        // Main polyline
+        const poly = new google.maps.Polyline({
+          path: coordinates.map(c => ({ lat: c.lat, lng: c.lng })),
+          geodesic: true,
+          strokeColor: '#5B7CFF',
+          strokeOpacity: 1,
+          strokeWeight: 4,
+          map,
+        });
+        polylineRef.current = poly;
+
+        // Runner marker
+        const marker = new google.maps.Marker({
+          position: coordinates[0],
+          map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 6,
+            fillColor: '#5B7CFF',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+          },
+        });
+        markerRef.current = marker;
+
+        setMapReady(true);
+      } catch (err) {
+        console.error('Failed to init Google Maps 3D:', err);
+      }
+    };
+
+    initMap();
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [coordinates]);
+
+  // Compute heading between two points
+  const computeHeading = useCallback((from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
+    if (window.google?.maps?.geometry) {
+      return google.maps.geometry.spherical.computeHeading(
+        new google.maps.LatLng(from.lat, from.lng),
+        new google.maps.LatLng(to.lat, to.lng)
+      );
+    }
+    // Fallback
+    const dLng = (to.lng - from.lng) * Math.PI / 180;
+    const lat1 = from.lat * Math.PI / 180;
+    const lat2 = to.lat * Math.PI / 180;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }, []);
+
+  // Animation loop
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || coordinates.length < 2) return;
+
+    let lastTime = 0;
+
+    const animate = (timestamp: number) => {
+      if (!isPlayingRef.current) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      if (!lastTime) lastTime = timestamp;
+      const delta = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Very slow speed
+      let newProgress = progressRef.current + delta * 0.008;
+      if (newProgress >= 1) newProgress = 0;
+
+      setProgress(newProgress);
+      progressRef.current = newProgress;
+
+      // Current position
+      const totalIdx = coordinates.length - 1;
+      const exactIdx = newProgress * totalIdx;
+      const idx = Math.min(Math.floor(exactIdx), totalIdx - 1);
+      const frac = exactIdx - idx;
+
+      const currentPos = {
+        lat: coordinates[idx].lat + (coordinates[idx + 1].lat - coordinates[idx].lat) * frac,
+        lng: coordinates[idx].lng + (coordinates[idx + 1].lng - coordinates[idx].lng) * frac,
+      };
+
+      // Update marker
+      if (markerRef.current) {
+        markerRef.current.setPosition(currentPos);
+      }
+
+      // Update elevation
+      if (elevations.length > idx + 1) {
+        const elev = elevations[idx] + (elevations[idx + 1] - elevations[idx]) * frac;
+        setCurrentElevation(Math.round(elev));
+      }
+
+      // Look-ahead for heading
+      const lookAheadIdx = Math.min(idx + 5, totalIdx);
+      const heading = computeHeading(currentPos, coordinates[lookAheadIdx]);
+
+      // Smooth camera move
+      const map = mapRef.current;
+      if (map) {
+        map.moveCamera({
+          center: currentPos,
+          heading,
+          tilt: 60,
+          zoom: 17,
+        });
+      }
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [mapReady, coordinates, elevations, computeHeading]);
+
+  const handlePlayPause = useCallback(() => {
+    setIsPlaying(p => !p);
   }, []);
 
   const handleRecenter = useCallback(() => {
-    setRecenterFlag(f => f + 1);
     setIsPlaying(false);
-  }, []);
+    if (!mapRef.current || coordinates.length < 2) return;
 
-  if (coordinates.length < 2 || elevations.length < 2) {
+    const b = new google.maps.LatLngBounds();
+    coordinates.forEach(c => b.extend({ lat: c.lat, lng: c.lng }));
+
+    mapRef.current.moveCamera({
+      tilt: 45,
+      heading: 0,
+    });
+    mapRef.current.fitBounds(b, 40);
+  }, [coordinates]);
+
+  const currentKm = (progress * totalRouteDistance / 1000).toFixed(2);
+
+  if (coordinates.length < 2) {
     return (
       <div className={`flex items-center justify-center h-64 bg-muted/20 rounded-lg ${className}`}>
         <p className="text-sm text-muted-foreground">Pas assez de points pour la vue 3D</p>
@@ -371,42 +269,18 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   }
 
   return (
-    <div className={`relative rounded-lg overflow-hidden ${className}`} style={{ minHeight: 300 }}>
-      <Canvas
-        style={{ background: '#0d0d18' }}
-        camera={{ fov: 60, near: 0.1, far: 50000 }}
-        gl={{ antialias: true }}
-      >
-        <Scene
-          points={smoothed}
-          minElev={minElev}
-          maxElev={maxElev}
-          exaggeration={elevationExaggeration}
-          isPlaying={isPlaying}
-          progress={progress}
-          setProgress={setProgress}
-          onPositionUpdate={setCurrentElevY}
-          recenterFlag={recenterFlag}
-        />
-      </Canvas>
+    <div className={`relative overflow-hidden ${className}`} style={{ minHeight: 300 }}>
+      <div ref={mapContainerRef} className="w-full h-full absolute inset-0" />
 
       {/* Controls overlay */}
-      <div className="absolute bottom-3 left-3 flex items-center gap-2">
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 z-10">
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => setIsPlaying(!isPlaying)}
+          onClick={handlePlayPause}
           className="bg-background/80 backdrop-blur-sm border border-border/50 h-8 w-8 p-0"
         >
           {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={handleReset}
-          className="bg-background/80 backdrop-blur-sm border border-border/50 h-8 w-8 p-0"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
         </Button>
         <Button
           size="sm"
@@ -419,9 +293,9 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       </div>
 
       {/* Live stats overlay */}
-      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2 text-xs space-y-1.5">
+      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2 text-xs space-y-1.5 z-10">
         <div className="text-primary font-bold text-sm">{currentKm} km</div>
-        <div className="text-foreground">⛰️ {currentAltitude} m</div>
+        <div className="text-foreground">⛰️ {currentElevation} m</div>
         {routeStats && (
           <>
             <div className="border-t border-border/30 pt-1 mt-1 text-muted-foreground">
@@ -435,7 +309,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       </div>
 
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30">
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30 z-10">
         <div
           className="h-full bg-primary transition-all duration-100"
           style={{ width: `${progress * 100}%` }}
