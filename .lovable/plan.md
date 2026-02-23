@@ -1,35 +1,38 @@
 
 
-## Utiliser la puce bleue native Google Maps sur la page Suivi d'itineraire
+## Corriger la puce bleue sur la page Suivi d'itineraire
 
-### Constat
+### Probleme identifie
 
-- L'ecran d'accueil (InteractiveMap) affiche la puce bleue native de Google Maps (point bleu Google `#4285F4` avec halo clair et animation fluide).
-- La page Suivi d'itineraire (TrainingMode) cree un marqueur custom avec une couleur differente (`#5B7CFF`), une taille et un style differents.
+La page d'accueil (InteractiveMap) utilise un marqueur cree via **Canvas 2D** (`canvas.toDataURL`) avec `google.maps.Marker` : un cercle bleu (`#3b82f6`) avec halo radiant et bordure blanche, taille 60x60px.
+
+La page Suivi d'itineraire (TrainingMode) utilise `AdvancedMarkerElement` qui necessite un `mapId` enregistre dans la console Google Cloud. Sans cela, le marqueur ne s'affiche pas du tout. Le fallback `google.maps.Marker` avec `SymbolPath.CIRCLE` est trop petit pour etre visible.
 
 ### Solution
 
-Supprimer le marqueur custom et activer la puce bleue native de Google Maps sur la page Suivi d'itineraire. Le suivi de position restera actif pour le recentrage automatique.
+Reprendre exactement la meme methode que InteractiveMap : creer le marqueur via Canvas 2D avec `google.maps.Marker`.
 
 ### Modifications - Fichier `src/pages/TrainingMode.tsx`
 
-1. **Supprimer la creation manuelle du blue dot** : retirer les fonctions `createBlueDot` et tout le code qui cree un `AdvancedMarkerElement` ou `google.maps.Marker` pour la position utilisateur (les deux `useEffect` qui gerent `markerRef`).
+1. **Remplacer `updateBlueDot`** : copier la methode `createPulsatingMarker()` de InteractiveMap qui dessine un canvas avec :
+   - Gradient radial bleu (`rgba(59, 130, 246, ...)`)
+   - Point central bleu solide (`#3b82f6`, rayon 8px)
+   - Bordure blanche (3px)
+   - Taille 60x60px
 
-2. **Supprimer `markerRef`** : plus besoin de gerer manuellement un marqueur.
+2. **Utiliser `google.maps.Marker`** au lieu de `AdvancedMarkerElement` :
+   - `icon.url` = `canvas.toDataURL('image/png')`
+   - `scaledSize` = 60x60
+   - `anchor` = centre (30, 30)
+   - `zIndex: 1000`
 
-3. **Supprimer le style CSS `@keyframes pulse-ring`** : plus necessaire puisque Google Maps gere sa propre animation.
+3. **Supprimer le try/catch AdvancedMarkerElement** : plus besoin de cette logique, on utilise directement `google.maps.Marker`
 
-4. **Conserver le recentrage automatique** : garder le `useEffect` qui suit `userPosition` mais au lieu de deplacer un marqueur, simplement appeler `map.panTo(userPosition)` pour que la camera suive la position.
+4. **Garder la mise a jour de position** : `markerRef.current.setPosition(pos)` quand la position GPS change
 
-5. **Conserver `getInitialPosition`** : au chargement, recuperer la position GPS et centrer la carte dessus via `map.panTo()` et `map.setZoom(16)`.
+5. **Supprimer le CSS `@keyframes gm-pulse`** : plus utilise (l'animation est dans le canvas)
 
-### Detail technique
+### Resultat attendu
 
-La puce bleue native de Google Maps s'affiche automatiquement quand le navigateur fournit la geolocalisation. Comme la page demande deja les permissions GPS et suit la position, la puce apparaitra naturellement. Le resultat sera un point bleu identique a celui de l'ecran d'accueil.
-
-### Fichier modifie
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/TrainingMode.tsx` | Supprimer le marqueur custom, garder le recentrage automatique via `panTo` |
+La puce bleue sera visuellement identique a celle de l'ecran d'accueil : meme couleur, meme taille, meme halo.
 
