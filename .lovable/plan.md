@@ -1,88 +1,121 @@
 
 
-# Mode Coach — Plan d'implémentation
+# Mode Coach amélioré — Plan d'implémentation
 
-## Résumé
+## Analyse de l'existant
 
-Transformer le système de coaching existant (basique : séances dans un onglet club) en un vrai **Mode Coach** où le coach crée des **séances modèle** (template) que chaque membre programme individuellement à son propre lieu et horaire. La séance apparaît ensuite sur la carte interactive.
+Le système actuel permet :
+- Un coach crée une séance modèle (template) dans un club
+- Les membres du club voient la séance et peuvent la programmer (lieu + date)
+- Le coach voit le taux de complétion
+
+## Ce qui manque (delta demandé)
+
+1. **Envoi personnalisé par athlète** — Le coach sélectionne des athlètes individuellement et peut assigner une date différente à chacun
+2. **Envoi via message privé** — Pas seulement via club, aussi en DM
+3. **Personnalisation athlète** — L'athlète peut modifier date/heure/lieu/allures/notes mais PAS les blocs structurés
+4. **Statuts enrichis** — Envoyée → Programmée → Effectuée → Non effectuée
+5. **Notifications push** automatiques à l'envoi
 
 ---
 
-## Ce qui existe déjà
+## 1. Migration SQL
 
-- Tables `coaching_sessions`, `coaching_participations`, colonne `is_coach` sur `group_members`
-- Composants `CoachingTab`, `CreateCoachingSessionDialog`, `CoachingSessionDetail`, `CoachBadge`
-- Intégration dans `ClubInfoDialog` (onglet "Entraînements")
+### Modifier `coaching_sessions`
+- Ajouter `send_mode text DEFAULT 'club'` — valeurs : `'club'` ou `'individual'`
+- Ajouter `target_athletes uuid[] DEFAULT '{}'` — liste des athlètes ciblés (pour envoi individuel)
 
-## Ce qui change (delta)
+### Modifier `coaching_participations`
+- Ajouter `suggested_date timestamptz` — date suggérée par le coach pour cet athlète
+- Ajouter `custom_pace text` — allure personnalisée par l'athlète
+- Ajouter `custom_notes text` — notes personnelles de l'athlète
+- Modifier `status` pour supporter : `'sent'`, `'scheduled'`, `'completed'`, `'missed'`
 
-### 1. Base de données — Migration SQL
+### Pas de nouvelle table — on enrichit l'existant.
 
-**Modifier `coaching_sessions`** : ajouter `session_blocks jsonb` (déjà dans le schéma), ajouter `coach_notes text` pour les consignes du coach.
+---
 
-**Modifier `coaching_participations`** : ajouter les colonnes pour que chaque membre programme sa propre séance :
-- `scheduled_at timestamptz` — date/heure choisie par le membre
-- `location_name text` — lieu choisi
-- `location_lat numeric` — latitude
-- `location_lng numeric` — longitude
-- `map_session_id uuid` — lien vers la séance créée sur la carte (table `sessions`)
+## 2. Refonte `CreateCoachingSessionDialog`
 
-**Nouvelle colonne sur `sessions`** : `coaching_session_id uuid` → lien retour vers la séance coach d'origine, pour identifier les séances issues d'un plan coach.
+Le dialog actuel crée une séance pour tout le club. Le transformer pour supporter :
 
-RLS : les policies existantes couvrent déjà les cas nécessaires.
+**Étape 1 — Template** (inchangé) :
+- Titre, description, notes du coach, type d'activité
+- Mode simple/structuré avec `SessionBlockBuilder`
 
-### 2. Bouton d'accès Coach dans Messages
+**Étape 2 — Destinataires** (nouveau) :
+- Toggle : "Tout le club" / "Athlètes sélectionnés"
+- Si sélection individuelle :
+  - Liste des membres du club avec checkboxes
+  - Pour chaque athlète sélectionné, option de définir une date suggérée (optionnel)
+- Sélection du club source (réutilise `CoachAccessDialog`)
 
-Dans la grille de 5 boutons rapides (Profils, Contacts, Clubs, Strava, +Club) sur `Messages.tsx` :
-- **Remplacer le bouton Strava** (peu utilisé dans ce contexte) ou **ajouter un 6e bouton** "Coach" avec emoji 🎓
-- Ce bouton ouvre un dialog qui :
-  1. Vérifie si l'utilisateur est coach dans au moins un club
-  2. Si non : propose de créer un club d'abord ou de demander le rôle coach
-  3. Si oui : affiche la liste de ses clubs où il est coach, puis ouvre `CreateCoachingSessionDialog` amélioré
+**Étape 3 — Envoi** :
+- Résumé : template + destinataires + dates
+- Bouton "Publier" → crée `coaching_sessions` + `coaching_participations` (status `'sent'`) pour chaque athlète ciblé
+- Notification push à chaque athlète
 
-### 3. Refonte `CreateCoachingSessionDialog`
+---
 
-Le dialog actuel est basique (titre, description, date, activité, distance, allure). Le transformer en **créateur de séance modèle** :
+## 3. Refonte `ScheduleCoachingDialog`
 
-- **Étape 1** : Titre + Description + Notes du coach
-- **Étape 2** : Type d'activité + Mode (simple / structuré via `SessionModeSwitch`)
-- **Étape 3** : Si structuré → `SessionBlockBuilder` (réutilise les composants existants : échauffement, fractionné, récup, etc.)
-- **Étape 4** : Distance cible + Allure cible (optionnels)
-- **Pas de lieu ni date** — c'est le membre qui choisit
+L'athlète peut maintenant personnaliser plus de choses :
 
-Le coach sélectionne le club cible, puis publie. Notification push envoyée aux membres.
+- **Date/heure** — pré-rempli avec `suggested_date` du coach si définie
+- **Lieu** — inchangé (nom + coordonnées)
+- **Allure personnelle** — nouveau champ `custom_pace`
+- **Notes personnelles** — nouveau champ `custom_notes`
+- **Blocs structurés** — affichés en lecture seule (verrouillés)
 
-### 4. Nouveau composant `ScheduleCoachingDialog`
+Sauvegarde :
+- Met à jour `coaching_participations` (scheduled_at, location, custom_pace, custom_notes)
+- Crée la session sur la carte (`sessions` table)
+- Status passe de `'sent'` à `'scheduled'`
 
-Quand un membre reçoit/voit une séance coach, il clique "Programmer ma séance" :
+---
 
-- Choix du **lieu** (recherche Google Maps ou sélection sur la carte)
-- Choix de la **date/heure**
-- Crée une vraie entrée dans la table `sessions` (avec `coaching_session_id` lié) pour qu'elle apparaisse sur la carte
-- Met à jour `coaching_participations` avec `scheduled_at`, `location_*`, `map_session_id`
+## 4. Refonte `CoachingSessionDetail`
 
-### 5. Refonte `CoachingSessionDetail`
+### Vue coach enrichie :
+- Liste par athlète avec statuts visuels :
+  - 📨 Envoyée (sent)
+  - 📍 Programmée (scheduled) — avec date + lieu
+  - ✅ Effectuée (completed)
+  - ❌ Non effectuée (missed)
+- Taux de complétion global (barre de progression)
+- Feedback individuel par athlète (existant)
+- Date suggérée affichée à côté de chaque athlète
 
-**Vue athlète** :
-- Affiche les blocs structurés visuellement (réutilise `SessionBlockComponent`)
+### Vue athlète enrichie :
+- Blocs structurés en lecture seule
+- Si `suggested_date` : affichage "Le coach suggère : [date]"
 - Bouton "Programmer ma séance" → ouvre `ScheduleCoachingDialog`
-- Si déjà programmée : affiche lieu + date + lien vers la séance sur la carte
-- Bouton "Séance effectuée" + note athlète
+- Après complétion : affichage des notes perso + feedback coach
 
-**Vue coach** :
-- Liste des membres avec statut : ⏳ Pas encore programmé / 📍 Programmé (lieu + date) / ✅ Fait
-- Taux de complétion (barre de progression)
-- Zone de feedback individuel par athlète
+---
 
-### 6. Intégration carte
+## 5. Envoi via message privé
 
-Les séances créées via le mode coach apparaissent sur la carte comme des séances normales, mais avec un badge visuel "Coach" (petit 🎓 sur le marqueur). Le champ `coaching_session_id` sur `sessions` permet de les identifier.
+Quand le coach envoie en mode `'individual'` :
+- Pour chaque athlète, insérer un message dans la conversation DM existante (ou en créer une)
+- Type de message : `'coaching_session'` (nouveau `message_type`)
+- Le message contient un lien vers la séance coaching
+- L'athlète voit une card spéciale dans le chat avec bouton "Programmer"
 
-### 7. Notifications
+### Nouveau composant : `CoachingMessageCard`
+- Affiché dans le chat quand `message_type === 'coaching_session'`
+- Montre : titre, type d'activité, blocs en miniature, date suggérée
+- Bouton "Programmer ma séance" → ouvre `ScheduleCoachingDialog`
 
-- Coach publie une séance → push à tous les membres du club
-- Membre programme sa séance → notification au coach
-- Coach envoie un feedback → push à l'athlète
+---
+
+## 6. Notifications push
+
+Réutilise `useSendNotification` :
+- **Envoi séance** → push à chaque athlète : "🎓 Nouvelle séance de [coach] : [titre]"
+- **Athlète programme** → push au coach : "[athlète] a programmé sa séance [titre]"
+- **Athlète valide** → push au coach : "[athlète] a terminé [titre]"
+- **Feedback coach** → push à l'athlète : "Nouveau feedback de votre coach"
 
 ---
 
@@ -90,24 +123,23 @@ Les séances créées via le mode coach apparaissent sur la carte comme des séa
 
 | Fichier | Modification |
 |---|---|
-| `supabase/migrations/` | Nouvelle migration : colonnes sur `coaching_participations`, `sessions` |
+| `supabase/migrations/` | Nouvelles colonnes sur `coaching_sessions` et `coaching_participations` |
 | `src/integrations/supabase/types.ts` | Auto-régénéré |
-| `src/components/coaching/CreateCoachingSessionDialog.tsx` | Refonte complète avec blocs structurés |
-| `src/components/coaching/CoachingSessionDetail.tsx` | Refonte avec vue coach/athlète enrichie |
-| `src/components/coaching/CoachingTab.tsx` | Ajout taux de complétion, meilleur affichage |
-| `src/components/coaching/ScheduleCoachingDialog.tsx` | **Nouveau** — programmation lieu + date par le membre |
-| `src/pages/Messages.tsx` | Ajout bouton Coach dans la grille rapide |
-| `src/components/InteractiveMap.tsx` | Badge coach sur les marqueurs de séances coaching |
+| `src/components/coaching/CreateCoachingSessionDialog.tsx` | Ajout étape sélection athlètes + dates individuelles |
+| `src/components/coaching/ScheduleCoachingDialog.tsx` | Ajout champs allure perso + notes + date suggérée pré-remplie |
+| `src/components/coaching/CoachingSessionDetail.tsx` | Statuts enrichis (sent/scheduled/completed/missed) + date suggérée |
+| `src/components/coaching/CoachingMessageCard.tsx` | **Nouveau** — card dans le chat pour séances coaching |
+| `src/pages/Messages.tsx` | Rendu du `CoachingMessageCard` dans le chat |
+| `src/components/coaching/CoachingTab.tsx` | Affichage du nombre d'athlètes ciblés |
 
 ---
 
 ## Ordre d'implémentation
 
-1. Migration SQL (colonnes `coaching_participations` + `sessions.coaching_session_id`)
-2. Refonte `CreateCoachingSessionDialog` avec blocs structurés
-3. Nouveau `ScheduleCoachingDialog` (membre programme lieu + date → crée `sessions`)
-4. Refonte `CoachingSessionDetail` (vue coach avec taux complétion, vue athlète avec programmation)
-5. Bouton Coach dans `Messages.tsx`
-6. Badge coach sur la carte
-7. Notifications push
+1. Migration SQL (colonnes `coaching_sessions` + `coaching_participations`)
+2. Refonte `CreateCoachingSessionDialog` (sélection athlètes + dates)
+3. Refonte `ScheduleCoachingDialog` (allure perso + notes + date suggérée)
+4. Refonte `CoachingSessionDetail` (statuts enrichis)
+5. Nouveau `CoachingMessageCard` + intégration Messages
+6. Notifications push
 
