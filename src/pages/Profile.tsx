@@ -841,8 +841,8 @@ const Profile = () => {
           </div>}
 
 
-        {/* Records personnels - Other users */}
-        {isViewingOtherUser && profile && viewingUserId && (
+        {/* Records personnels - Both views */}
+        {profile && (
           <PersonalRecords records={{
             running_records: profile.running_records,
             cycling_records: profile.cycling_records,
@@ -852,10 +852,11 @@ const Profile = () => {
           }} />
         )}
 
-        {/* Statistiques d'activité - Other users */}
-        {isViewingOtherUser && viewingUserId && (
-          <UserActivityChart userId={viewingUserId} username={profile?.username} />
-        )}
+        {/* Statistiques d'activité - Both views */}
+        <UserActivityChart userId={viewingUserId || user?.id || ''} username={profile?.username} />
+
+        {/* Historique d'activité */}
+        <ActivityTimeline userId={viewingUserId || user?.id || ''} />
 
         {/* Common Clubs - Other Users */}
         {isViewingOtherUser && commonClubs.length > 0 && <div>
@@ -900,9 +901,6 @@ const Profile = () => {
                 </div>)}
             </div>
           </div>}
-
-        {/* Historique d'activité */}
-        <ActivityTimeline userId={viewingUserId || user?.id || ''} />
 
         {/* Routes Section - For all profiles */}
         <div>
