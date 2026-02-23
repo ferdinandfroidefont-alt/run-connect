@@ -2393,12 +2393,19 @@ const Messages = () => {
           userId={user.id}
           onPollCreated={async (pollId: string) => {
             try {
-              await supabase.from('messages').insert({
+              const { error: msgError } = await supabase.from('messages').insert({
                 conversation_id: selectedConversation.id,
                 sender_id: user.id,
                 content: pollId,
                 message_type: 'poll',
               });
+
+              if (msgError) {
+                console.error('❌ Error inserting poll message:', msgError);
+                toast({ title: 'Erreur', description: 'Impossible d\'envoyer le sondage', variant: 'destructive' });
+                return;
+              }
+
               await supabase
                 .from('conversations')
                 .update({ updated_at: new Date().toISOString() })
