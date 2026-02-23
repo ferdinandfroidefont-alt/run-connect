@@ -2619,7 +2619,18 @@ const Messages = () => {
                           }`}>
                             {conversation.last_message ? (
                               <>
-                                {conversation.last_message.message_type === 'image' && 'Photo'}
+                                {conversation.last_message.message_type === 'image' && (
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {conversation.last_message.file_url ? (
+                                      <img 
+                                        src={conversation.last_message.file_url} 
+                                        alt="" 
+                                        className="h-4 w-4 rounded-[3px] object-cover inline-block" 
+                                      />
+                                    ) : null}
+                                    Photo
+                                  </span>
+                                )}
                                 {conversation.last_message.message_type === 'file' && 'Fichier'}
                                 {conversation.last_message.message_type === 'voice' && 'Message vocal'}
                                 {conversation.last_message.message_type === 'session' && 'Session partagée'}
