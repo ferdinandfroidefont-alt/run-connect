@@ -2226,15 +2226,13 @@ const Messages = () => {
                         <Smile className="h-4 w-4 mr-3 text-[#FF9500]" />
                         Emoji
                       </DropdownMenuItem>
-                      {selectedConversation?.is_group && (
-                        <DropdownMenuItem 
+                      <DropdownMenuItem 
                           onClick={() => setShowCreatePoll(true)}
                           className="py-3"
                         >
                           <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
                           Sondage
                         </DropdownMenuItem>
-                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                   
@@ -2773,6 +2771,32 @@ const Messages = () => {
           avatarUrl={selectedAvatarData?.url || null}
           username={selectedAvatarData?.username || "Utilisateur"}
         />
+
+        {selectedConversation && user && (
+          <CreatePollDialog
+            open={showCreatePoll}
+            onOpenChange={setShowCreatePoll}
+            conversationId={selectedConversation.id}
+            userId={user.id}
+            onPollCreated={async (pollId: string) => {
+              try {
+                await supabase.from('messages').insert({
+                  conversation_id: selectedConversation.id,
+                  sender_id: user.id,
+                  content: pollId,
+                  message_type: 'poll',
+                });
+                await supabase
+                  .from('conversations')
+                  .update({ updated_at: new Date().toISOString() })
+                  .eq('id', selectedConversation.id);
+                loadMessages(selectedConversation.id);
+              } catch (err) {
+                console.error('Error sending poll message:', err);
+              }
+            }}
+          />
+        )}
       </div>
 
     </>
