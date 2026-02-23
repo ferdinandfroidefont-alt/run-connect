@@ -1,26 +1,47 @@
 
 
-## Corriger definitivement le bouton "Sondage"
+## Diagnostic
 
-### Probleme racine
+Les logs confirment que `🗳️ Sondage clicked` est bien execute (2 fois meme). Le state `showCreatePoll` passe a `true` et le `CreatePollDialog` se monte. **Mais le dialog ne s'affiche pas visuellement.**
 
-Le `DropdownMenuItem` de Radix intercepte les evenements `onClick` de maniere interne. Quand on clique sur "Sondage", le dropdown se ferme mais le `setState` est soit annule, soit le re-render cause par la fermeture du dropdown ecrase le changement de state `showCreatePoll`.
+**Cause racine** : le `<div>` qui a remplace le `DropdownMenuItem` ne ferme pas le dropdown. Contrairement a un `DropdownMenuItem`, un simple `<div>` ne declenche pas la fermeture automatique du `DropdownMenuContent`. Le dropdown reste ouvert par-dessus le dialog, le masquant completement.
 
-Les autres items (Fichier, Photo, Emoji) fonctionnent car ils declenchent des actions immediates (click sur un input ref, appel async, toggle d'un picker inline) qui ne dependent pas d'un Dialog monte conditionnellement.
+## Solution
 
-### Solution
+### Fichier : `src/pages/Messages.tsx`
 
-#### Fichier : `src/pages/Messages.tsx`
+1. **Controler l'ouverture du dropdown avec un state** : ajouter `const [attachMenuOpen, setAttachMenuOpen] = useState(false)` et passer `open={attachMenuOpen}` / `onOpenChange={setAttachMenuOpen}` au `<DropdownMenu>`.
 
-**Approche radicale** : ne pas utiliser le `DropdownMenuItem` de Radix pour le sondage. A la place, utiliser `onSelect` avec un `setTimeout` plus long (150ms) pour laisser le dropdown se fermer completement avant de changer le state. Mais surtout, ajouter un `console.log` pour verifier que le handler est bien appele.
+2. **Remettre un `DropdownMenuItem`** pour le sondage (supprimer le `<div>`) mais avec `onSelect` qui :
+   - Ferme le dropdown via `setAttachMenuOpen(false)`
+   - Ouvre le dialog avec un `setTimeout` de 150ms : `setTimeout(() => setShowCreatePoll(true), 150)`
 
-Plus specifiquement :
+Cela garantit que le dropdown se ferme proprement avant que le dialog s'ouvre.
 
-1. **Sur le `DropdownMenuItem` "Sondage"** (ligne 2229-2235) : remplacer `onClick` par `onSelect` avec un callback qui :
-   - Appelle `e.preventDefault()` pour empecher le comportement par defaut de Radix
-   - Utilise `setTimeout(() => setShowCreatePoll(true), 150)` pour decaler l'ouverture du dialog apres la fermeture complete du dropdown
+### Changements concrets
 
-2. **Alternative si ca ne marche toujours pas** : transformer le bouton "Sondage" en un simple `div` avec un `onClick` direct, en le sortant du systeme `DropdownMenuItem` de Radix, ce qui elimine toute interference.
+**Ajout du state** (vers ligne 178) :
+```tsx
+const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+```
 
-La solution 1 est tentee en premier car elle garde la coherence visuelle du menu.
+**Modification du DropdownMenu** (ligne 2187) :
+```tsx
+<DropdownMenu open={attachMenuOpen} onOpenChange={setAttachMenuOpen}>
+```
+
+**Remplacement du div par DropdownMenuItem** (lignes 2229-2239) :
+```tsx
+<DropdownMenuItem
+  onSelect={(e) => {
+    e.preventDefault();
+    setAttachMenuOpen(false);
+    setTimeout(() => setShowCreatePoll(true), 150);
+  }}
+  className="py-3"
+>
+  <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
+  Sondage
+</DropdownMenuItem>
+```
 
