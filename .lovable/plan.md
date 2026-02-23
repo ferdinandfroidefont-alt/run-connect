@@ -1,53 +1,61 @@
 
 
-## Diagnostic approfondi
+## Diagnostic : cause racine trouvée
 
-Le probleme persiste malgre plusieurs tentatives. L'approche actuelle combine `modal={false}`, `e.preventDefault()`, et `setAttachMenuOpen(false)` - ces trois instructions entrent en conflit :
+Le composant `Messages.tsx` a **3 blocs return distincts** :
 
-1. `e.preventDefault()` empeche Radix de fermer le menu par defaut
-2. `setAttachMenuOpen(false)` force la fermeture via le state
-3. `modal={false}` change le comportement du focus mais peut empecher le `DialogOverlay` de se superposer correctement
+1. **Ligne 1640** : `if (showNewConversation) return (...)` — vue nouvelle conversation
+2. **Ligne 1654** : `if (selectedConversation) return (...)` — vue conversation (lignes 1657–2389)
+3. **Ligne 2392** : `return (...)` — vue liste des conversations (lignes 2392–2809)
 
-Le `setTimeout` de 150ms ne suffit peut-etre pas pour que le DOM soit nettoye apres la fermeture du dropdown avec `modal={false}`.
+Le bouton **Sondage** est dans le return n°2 (conversation sélectionnée, autour de la ligne 2230). Mais le **`CreatePollDialog`** est dans le return n°3 (liste des conversations, ligne 2778).
 
-## Solution : approche simplifiee
+Quand une conversation est ouverte, le composant fait un early return à la ligne 2389 et **n'atteint jamais** le `CreatePollDialog` à la ligne 2778. Le dialog n'est tout simplement jamais monté dans le DOM.
 
-### Fichier : `src/pages/Messages.tsx`
+## Solution
 
-**Supprimer toute la complexite** et utiliser l'approche la plus directe possible :
+**Déplacer le `CreatePollDialog`** du return n°3 vers le return n°2, juste avant la fermeture du fragment `<>...</>` à la ligne 2388.
 
-1. **Retirer `modal={false}`** du `DropdownMenu` - revenir au comportement modal par defaut de Radix
-2. **Retirer `open` et `onOpenChange`** du `DropdownMenu` - laisser Radix gerer son propre state
-3. **Supprimer le state `attachMenuOpen`** - il n'est plus necessaire
-4. **Sur le `DropdownMenuItem` "Sondage"** : utiliser un simple `onClick` avec un `setTimeout` de 300ms (plus long pour laisser le dropdown modal se fermer completement avec son animation)
-
-```tsx
-<DropdownMenu>
-  ...
-  <DropdownMenuItem
-    onClick={() => {
-      setTimeout(() => setShowCreatePoll(true), 300);
-    }}
-    className="py-3"
-  >
-    <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
-    Sondage
-  </DropdownMenuItem>
-  ...
-</DropdownMenu>
-```
-
-Le `DropdownMenuItem` avec `onClick` fermera automatiquement le dropdown (comportement par defaut de Radix). Le `setTimeout` de 300ms garantit que le dialog ne s'ouvre qu'apres la fermeture complete du dropdown et de son overlay, evitant tout conflit de focus ou de z-index.
-
-5. **Ajouter `aria-describedby={undefined}`** au `DialogContent` dans `CreatePollDialog.tsx` pour eviter un warning Radix qui pourrait bloquer le rendu dans certains cas.
-
-### Changements concrets
+### Changement concret
 
 **`src/pages/Messages.tsx`** :
-- Ligne 179 : supprimer `const [attachMenuOpen, setAttachMenuOpen] = useState(false);`
-- Ligne 2188 : remplacer `<DropdownMenu open={attachMenuOpen} onOpenChange={setAttachMenuOpen} modal={false}>` par `<DropdownMenu>`
-- Lignes 2230-2240 : remplacer le `onSelect` par un `onClick` avec `setTimeout` de 300ms
 
-**`src/components/CreatePollDialog.tsx`** :
-- Ligne 96 : ajouter `aria-describedby={undefined}` au `DialogContent` pour eviter les warnings Radix sur le titre/description manquants
+1. **Supprimer** le bloc `CreatePollDialog` des lignes 2778–2802 (dans le return de la liste)
+2. **Insérer** ce même bloc dans le return de la conversation sélectionnée, juste avant `</>`à la ligne 2388 (avant le `MessageLongPressMenu`)
+
+Le code à insérer (identique, juste déplacé) :
+
+```tsx
+{user && (
+  <CreatePollDialog
+    open={showCreatePoll}
+    onOpenChange={setShowCreatePoll}
+    conversationId={selectedConversation.id}
+    userId={user.id}
+    onPollCreated={async (pollId: string) => {
+      try {
+        await supabase.from('messages').insert({
+          conversation_id: selectedConversation.id,
+          sender_id: user.id,
+          content: pollId,
+          message_type: 'poll',
+        });
+        await supabase
+          .from('conversations')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', selectedConversation.id);
+        loadMessages(selectedConversation.id);
+      } catch (err) {
+        console.error('Error sending poll message:', err);
+      }
+    }}
+  />
+)}
+```
+
+La condition `selectedConversation &&` n'est plus nécessaire car on est déjà dans le bloc `if (selectedConversation)`. On garde juste `user &&`.
+
+### Pourquoi ça ne marchait pas
+
+Aucune des solutions précédentes (setTimeout, modal, onSelect, div) ne pouvait fonctionner car le problème n'était pas lié au dropdown ou au timing — le `CreatePollDialog` n'était simplement **jamais rendu** quand une conversation était ouverte.
 
