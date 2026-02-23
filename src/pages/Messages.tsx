@@ -1657,9 +1657,9 @@ const Messages = () => {
     return (
       <>
         <div className="h-full bg-secondary">
-        <div className="max-w-md mx-auto w-full h-screen flex flex-col keyboard-aware-container">
+        <div className="max-w-md mx-auto w-full flex flex-col keyboard-aware-container" style={{ height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* iMessage Style Header */}
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-card border-b border-border/50 z-50">
+          <div className="shrink-0 bg-card border-b border-border/50 z-50">
             <div className="flex items-center px-2 py-2">
               {/* Back button - Left */}
               <Button
@@ -1791,7 +1791,7 @@ const Messages = () => {
           </div>
 
           {/* Messages - iMessage style scrollable area */}
-          <div className="pt-[76px] flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0">
             <div className="h-full px-3 pt-2 pb-2 space-y-0.5 bg-secondary">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -2145,7 +2145,8 @@ const Messages = () => {
 
            {/* iMessage Style Input */}
           <div 
-            className="sticky bottom-0 w-full px-2 py-1 bg-card border-t border-border/50 z-40 keyboard-input-container"
+             className="shrink-0 w-full px-2 py-1 bg-card border-t border-border/50 z-40 keyboard-input-container"
+             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             {/* Reply Preview */}
             {replyTo && (
