@@ -1,37 +1,72 @@
 
 
-## Accrocher le sous-filtre "Creees / Rejointes" sous le bouton "Seances"
+## Ajouter le Live Tracking pour les seances rejointes (participants)
 
 ### Objectif
 
-Le sous-filtre doit etre visuellement attache juste sous le bouton "Seances", avec une largeur totale egale a celle du bouton "Seances" (soit 50% de la barre). Il ne doit pas deborder sous "Itineraires".
+Permettre aux participants de seances rejointes (a venir) d'activer/desactiver le partage de leur position en temps reel. Leur position sera visible sur la page "Suivre les participants" (`/session-tracking/:id`). Un message de prevention s'affiche avant activation, et la permission de localisation native (Android/iOS) est demandee si necessaire.
 
-### Modification - `src/pages/MySessions.tsx`
+### Modifications
 
-Remplacer les deux blocs separes (segmented control principal + sous-filtre en dessous) par un seul conteneur `flex` horizontal :
+#### 1. Fichier `src/pages/MySessions.tsx` - Vue detail des seances rejointes
 
-```text
-|  px-4 container pleine largeur                          |
-|  [  col gauche (50%)       ]  [ col droite (50%)        ]
-|  [ Seances (bouton)        ]  [ Itineraires (bouton)    ]
-|  [ Creees | Rejointes      ]  [        vide             ]
-```
+**Nouveaux states :**
+- `liveTrackingEnabled: boolean` - indique si le participant partage sa position
+- `showTrackingWarning: boolean` - controle l'affichage du dialog de prevention
+- `trackingWatchId: string | null` - reference du watch GPS pour nettoyage
 
-**Structure technique :**
+**Nouvelle section UI dans la vue detail (apres la section ORGANISATEUR, avant INFORMATIONS) :**
+- Visible uniquement si `isViewingJoinedSession && isUpcoming`
+- Carte iOS-style avec icone MapPin et Switch pour activer/desactiver
+- Texte explicatif : "Partagez votre position en temps reel avec les autres participants"
+- Bouton "Voir sur la carte" qui navigue vers `/session-tracking/:id`
 
-- Le wrapper principal reste `px-4 pb-3`
-- A l'interieur, un `div flex` avec deux colonnes `w-1/2`
-- Colonne gauche :
-  - Bouton "Seances" en haut (arrondi en haut seulement si sous-filtre visible)
-  - Si `currentView === 'sessions'` : sous-filtre "Creees | Rejointes" colle en dessous, meme fond `bg-secondary`, arrondi en bas
-- Colonne droite :
-  - Bouton "Itineraires" (arrondi complet, meme hauteur que "Seances")
+**Nouveau AlertDialog de prevention :**
+- S'affiche quand l'utilisateur active le switch pour la premiere fois
+- Titre : "Partager votre position"
+- Message : "En activant cette fonctionnalite, votre position GPS sera partagee en temps reel avec l'organisateur et les autres participants de cette seance. Votre position ne sera plus partagee une fois la seance terminee ou si vous desactivez manuellement."
+- Boutons : "Annuler" / "Activer"
+- Sur "Activer" : demande la permission de localisation native via `Geolocation.requestPermissions()` (declenche le popup systeme Android/iOS), puis demarre le watch GPS
 
-Le sous-filtre utilise des boutons plus petits (`text-[11px]`, `py-1.5`) pour tenir dans la moitie de largeur.
+**Logique de tracking participant :**
+- `startParticipantTracking()` : 
+  - Appelle `Geolocation.requestPermissions()` (popup natif)
+  - Lance `Geolocation.watchPosition()` (natif) ou `setInterval` + `getCurrentPosition()` (web)
+  - Insere les points dans `live_tracking_points` toutes les 5 secondes
+  - Met a jour `liveTrackingEnabled = true`
+- `stopParticipantTracking()` :
+  - Arrete le watch/interval GPS
+  - Met a jour `liveTrackingEnabled = false`
+- Auto-stop : quand `scheduled_at` est depasse de plus de 3 heures, arret automatique
 
-### Fichier modifie
+**Nettoyage :** le watch GPS est nettoye au unmount du composant et quand on revient a la liste
 
-| Fichier | Zone modifiee |
-|---------|---------------|
-| `src/pages/MySessions.tsx` | Lignes ~720-772 : refonte du header segmented control |
+#### 2. Fichier `src/hooks/useLiveTracking.tsx` - Etendre aux participants
+
+Actuellement le hook ne permet le tracking que pour `isOrganizer`. Modification :
+- Supprimer le guard `if (!isOrganizer) return;` dans `startTracking`
+- Ajouter un parametre optionnel `isParticipant: boolean`
+- Pour les participants : ne pas modifier `sessions.live_tracking_active` (seul l'orga controle ce flag)
+- Le reste (watch GPS + insert dans `live_tracking_points`) fonctionne de la meme maniere
+
+Alternativement, la logique de tracking participant peut etre directement dans `MySessions.tsx` sans modifier le hook existant, pour eviter des regressions. C'est l'approche choisie.
+
+### Imports a ajouter dans MySessions.tsx
+
+- `MapPin` (deja importe)
+- `Switch` depuis `@/components/ui/switch`
+- `Geolocation` depuis `@capacitor/geolocation`
+- `Capacitor` depuis `@capacitor/core`
+
+### Resume
+
+| Element | Detail |
+|---------|--------|
+| States | `liveTrackingEnabled`, `showTrackingWarning`, `trackingWatchId` |
+| UI | Section "Position en direct" avec Switch + dialog prevention |
+| Permission | Popup natif Android/iOS via `Geolocation.requestPermissions()` |
+| GPS | `watchPosition` (natif) ou interval (web), insert `live_tracking_points` |
+| Auto-stop | 3h apres `scheduled_at` |
+| Desactivation | Switch OFF ou quitter la seance |
+| Fichier modifie | `src/pages/MySessions.tsx` uniquement |
 
