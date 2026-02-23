@@ -8,7 +8,7 @@ import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
 import { ParticipantValidationView } from '@/components/ParticipantValidationView';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2, UserCheck, Users } from 'lucide-react';
+import { ChevronLeft, Loader2, UserCheck, Users, MapPin } from 'lucide-react';
 
 interface Session {
   id: string;
@@ -253,7 +253,26 @@ export default function ConfirmPresence() {
           </div>
         ) : (
           // Validation view
-          <div>
+          <div className="space-y-4">
+            {/* Track participants button */}
+            <button
+              onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
+              className="w-full bg-card border border-border rounded-[10px] p-4 flex items-center gap-3 active:bg-secondary transition-colors"
+            >
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-[15px] font-medium text-foreground">
+                  {t('confirmPresence.trackParticipants') || 'Suivre les participants sur la carte'}
+                </p>
+                <p className="text-[12px] text-muted-foreground">
+                  {t('confirmPresence.trackParticipantsDescription') || 'Voir en temps réel où se trouvent les autres'}
+                </p>
+              </div>
+              <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+            </button>
+
             {userRole === 'creator' ? (
               <CreatorValidationView
                 session={selectedSession}
