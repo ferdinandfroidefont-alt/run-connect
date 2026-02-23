@@ -171,7 +171,7 @@ html, body {
 
   /* Strict Viewport Locking for iOS Stability */
   html, body {
-    background-color: #F5F5F5 !important;
+    background-color: #FFFFFF !important;
     height: 100%;
     width: 100%;
     overflow-x: hidden;

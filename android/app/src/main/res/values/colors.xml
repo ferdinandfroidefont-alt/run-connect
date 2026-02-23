@@ -12,5 +12,5 @@
     <color name="iosSystemGray">#F2F2F7</color>
     <!-- System Bars - CLAIR pour mode light -->
     <color name="systemBarBlack">#000000</color>
-    <color name="systemBarLight">#F5F5F5</color>
+    <color name="systemBarLight">#FFFFFF</color>
 </resources>

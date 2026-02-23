@@ -30,8 +30,8 @@ export const Layout = ({ children }: LayoutProps) => {
     document.documentElement.style.setProperty('--ios-top-color', topColor);
 
     // WKWebView native background - inline direct pour fiabilité native
-    document.documentElement.style.backgroundColor = '#F5F5F5';
-    document.body.style.backgroundColor = '#F5F5F5';
+    document.documentElement.style.backgroundColor = '#FFFFFF';
+    document.body.style.backgroundColor = '#FFFFFF';
 
     // Pas de cleanup : ces styles doivent rester permanents
     // pour éviter un flash blanc au retour de la caméra native
