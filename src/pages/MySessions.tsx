@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,6 +37,7 @@ interface UserSession {
   current_participants: number;
   created_at: string;
   image_url?: string;
+  organizer_id?: string;
 }
 
 interface Participant {
@@ -48,6 +49,13 @@ interface Participant {
     display_name: string;
     avatar_url: string | null;
   };
+}
+
+interface OrganizerProfile {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
 }
 
 interface UserRoute {
@@ -71,9 +79,12 @@ export default function MySessions() {
   const { openCreateRoute } = useAppContext();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
+  const [sessionSource, setSessionSource] = useState<'created' | 'joined'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
+  const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
   const [routes, setRoutes] = useState<UserRoute[]>([]);
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -83,10 +94,13 @@ export default function MySessions() {
   const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showRouteDeleteConfirm, setShowRouteDeleteConfirm] = useState(false);
   const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
   const SESSIONS_PER_PAGE = 3;
+
+  const isViewingJoinedSession = selectedSession && sessionSource === 'joined';
 
   const loadUserSessions = async () => {
     if (!user) return;
@@ -109,6 +123,67 @@ export default function MySessions() {
       toast({
         title: "Erreur",
         description: "Erreur lors du chargement de vos séances",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadJoinedSessions = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      // Get session IDs where user is a participant
+      const { data: participations, error: partError } = await supabase
+        .from('session_participants')
+        .select('session_id')
+        .eq('user_id', user.id);
+
+      if (partError) throw partError;
+      if (!participations || participations.length === 0) {
+        setJoinedSessions([]);
+        setLoading(false);
+        return;
+      }
+
+      const sessionIds = participations.map(p => p.session_id);
+
+      // Get sessions excluding ones created by the user
+      const { data: sessionsData, error: sessError } = await supabase
+        .from('sessions')
+        .select('*')
+        .in('id', sessionIds)
+        .neq('organizer_id', user.id)
+        .order('scheduled_at', { ascending: false });
+
+      if (sessError) throw sessError;
+
+      setJoinedSessions(sessionsData || []);
+
+      // Load organizer profiles
+      const organizerIds = [...new Set((sessionsData || []).map(s => s.organizer_id))];
+      if (organizerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', organizerIds);
+
+        const profilesMap = new Map<string, OrganizerProfile>();
+        (profiles || []).forEach(p => {
+          if (p.user_id) {
+            profilesMap.set(p.user_id, p as OrganizerProfile);
+          }
+        });
+        setOrganizerProfiles(profilesMap);
+      }
+    } catch (error) {
+      console.error('Error loading joined sessions:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des séances rejointes",
         variant: "destructive",
       });
     } finally {
@@ -162,6 +237,7 @@ export default function MySessions() {
     if (!user) return;
     
     loadUserSessions();
+    loadJoinedSessions();
     if (currentView === 'routes') {
       loadUserRoutes();
     }
@@ -180,6 +256,15 @@ export default function MySessions() {
         console.log('🆕 MySessions: Session change detected', payload.eventType);
         loadUserSessions();
       })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'session_participants',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('🆕 MySessions: Participation change detected', payload.eventType);
+        loadJoinedSessions();
+      })
       .subscribe((status) => {
         console.log('📡 MySessions: Subscription status:', status);
       });
@@ -196,6 +281,7 @@ export default function MySessions() {
       if (document.visibilityState === 'visible' && user) {
         console.log('👁️ MySessions: Page visible, reloading sessions');
         loadUserSessions();
+        loadJoinedSessions();
       }
     };
 
@@ -347,8 +433,39 @@ export default function MySessions() {
     }
   };
 
+  const handleLeaveSession = async () => {
+    if (!selectedSession || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', selectedSession.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setJoinedSessions(prev => prev.filter(s => s.id !== selectedSession.id));
+      toast({
+        title: "Succès",
+        description: "Vous avez quitté la séance",
+      });
+      setTimeout(() => setSelectedSession(null), 100);
+    } catch (error) {
+      console.error('Error leaving session:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la désinscription",
+        variant: "destructive",
+      });
+    } finally {
+      setShowLeaveConfirm(false);
+    }
+  };
+
   const now = new Date().toISOString();
-  const filteredSessions = sessions.filter(session => {
+  const activeSessions = sessionSource === 'created' ? sessions : joinedSessions;
+  const filteredSessions = activeSessions.filter(session => {
     if (filter === 'all') return true;
     if (filter === 'upcoming') return session.scheduled_at >= now;
     if (filter === 'completed') return session.scheduled_at < now;
@@ -358,6 +475,9 @@ export default function MySessions() {
   // Session detail view
   if (selectedSession) {
     const isUpcoming = new Date(selectedSession.scheduled_at) >= new Date();
+    const organizerProfile = isViewingJoinedSession && selectedSession.organizer_id 
+      ? organizerProfiles.get(selectedSession.organizer_id) 
+      : null;
     
     return (
       <>
@@ -374,26 +494,28 @@ export default function MySessions() {
                 <ArrowLeft className="h-5 w-5" />
                 Retour
               </Button>
-              <div className="flex items-center gap-2">
-                {isUpcoming && (
+              {!isViewingJoinedSession && (
+                <div className="flex items-center gap-2">
+                  {isUpcoming && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleEditClick}
+                      className="h-9 w-9"
+                    >
+                      <Edit className="h-5 w-5 text-primary" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handleEditClick}
+                    onClick={() => setShowDeleteConfirm(true)}
                     className="h-9 w-9"
                   >
-                    <Edit className="h-5 w-5 text-primary" />
+                    <Trash2 className="h-5 w-5 text-destructive" />
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="h-9 w-9"
-                >
-                  <Trash2 className="h-5 w-5 text-destructive" />
-                </Button>
-              </div>
+                </div>
+              )}
             </div>
             <div className="h-px bg-border" />
           </div>
@@ -406,9 +528,13 @@ export default function MySessions() {
                   <ActivityIcon activityType={selectedSession.activity_type} size="lg" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={isUpcoming ? "default" : "secondary"} className="text-xs">
-                        {isUpcoming ? "À venir" : "Terminée"}
-                      </Badge>
+                      {isViewingJoinedSession ? (
+                        <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
+                      ) : (
+                        <Badge variant={isUpcoming ? "default" : "secondary"} className="text-xs">
+                          {isUpcoming ? "À venir" : "Terminée"}
+                        </Badge>
+                      )}
                     </div>
                     <h1 className="text-[20px] font-semibold leading-tight">
                       {selectedSession.title}
@@ -420,6 +546,33 @@ export default function MySessions() {
                 </div>
               </div>
             </IOSListGroup>
+
+            {/* Organizer section for joined sessions */}
+            {isViewingJoinedSession && organizerProfile && (
+              <IOSListGroup header="ORGANISATEUR">
+                <div className="flex items-center gap-3 px-4 py-3 bg-card">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={organizerProfile.avatar_url || undefined} />
+                    <AvatarFallback className="text-sm font-semibold">
+                      {organizerProfile.username?.[0]?.toUpperCase() || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[17px] font-medium">{organizerProfile.display_name || organizerProfile.username}</p>
+                    <p className="text-[13px] text-muted-foreground">@{organizerProfile.username}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/messages?startConversation=${selectedSession.organizer_id}`)}
+                    className="gap-1.5"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Message
+                  </Button>
+                </div>
+              </IOSListGroup>
+            )}
 
             {/* Info Cards */}
             <IOSListGroup header="INFORMATIONS">
@@ -493,6 +646,20 @@ export default function MySessions() {
                 ))
               )}
             </IOSListGroup>
+
+            {/* Leave session button for joined sessions */}
+            {isViewingJoinedSession && (
+              <div className="px-0">
+                <Button
+                  variant="destructive"
+                  className="w-full rounded-[10px]"
+                  onClick={() => setShowLeaveConfirm(true)}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Quitter la séance
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -509,6 +676,33 @@ export default function MySessions() {
           userId={selectedUserId}
           onClose={closeProfilePreview}
         />
+
+        {/* Leave Session Confirmation Dialog */}
+        <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
+          <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+            <AlertDialogHeader className="p-6 pb-4">
+              <AlertDialogTitle className="text-center text-[17px] font-semibold">
+                Quitter la séance
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+                Êtes-vous sûr de vouloir quitter cette séance ?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="border-t border-border">
+              <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+                Annuler
+              </AlertDialogCancel>
+            </div>
+            <div className="border-t border-border">
+              <AlertDialogAction
+                onClick={handleLeaveSession}
+                className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+              >
+                Quitter
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </>
     );
   }
@@ -523,7 +717,7 @@ export default function MySessions() {
             <h1 className="text-[34px] font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           
-          {/* iOS Segmented Control */}
+          {/* iOS Segmented Control - Sessions/Itinéraires */}
           <div className="px-4 pb-3">
             <div className="flex bg-secondary rounded-[10px] p-1">
               <button
@@ -555,6 +749,32 @@ export default function MySessions() {
         <div className="py-4">
           {currentView === 'sessions' ? (
             <>
+              {/* Created/Joined segmented control */}
+              <div className="px-4 mb-3">
+                <div className="flex bg-card rounded-[10px] p-1">
+                  <button
+                    onClick={() => { setSessionSource('created'); setSessionPage(0); }}
+                    className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                      sessionSource === 'created'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Créées
+                  </button>
+                  <button
+                    onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
+                    className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                      sessionSource === 'joined'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Rejointes
+                  </button>
+                </div>
+              </div>
+
               {/* List/Calendar toggle */}
               <div className="flex px-4 mb-2">
                 <div className="flex bg-card rounded-lg p-0.5 shrink-0">
@@ -625,19 +845,23 @@ export default function MySessions() {
                   </div>
                   <div className="space-y-2 mb-8">
                     <h3 className="text-[20px] font-semibold text-foreground">
-                      Aucune séance
+                      {sessionSource === 'created' ? 'Aucune séance créée' : 'Aucune séance rejointe'}
                     </h3>
                     <p className="text-[15px] text-muted-foreground max-w-xs leading-relaxed">
-                      Créez votre première séance sportive et invitez vos amis à vous rejoindre.
+                      {sessionSource === 'created'
+                        ? 'Créez votre première séance sportive et invitez vos amis à vous rejoindre.'
+                        : 'Rejoignez des séances depuis la page d\'accueil pour les retrouver ici.'}
                     </p>
                   </div>
-                  <Button
-                    onClick={() => navigate('/')}
-                    className="w-full max-w-xs"
-                  >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Créer une séance
-                  </Button>
+                  {sessionSource === 'created' && (
+                    <Button
+                      onClick={() => navigate('/')}
+                      className="w-full max-w-xs"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      Créer une séance
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="divide-y divide-border">
@@ -655,6 +879,9 @@ export default function MySessions() {
                     .slice(sessionPage * SESSIONS_PER_PAGE, (sessionPage + 1) * SESSIONS_PER_PAGE)
                     .map((session) => {
                       const isUpcoming = session.scheduled_at >= now;
+                      const orgProfile = sessionSource === 'joined' && session.organizer_id
+                        ? organizerProfiles.get(session.organizer_id)
+                        : null;
                       return (
                         <div
                           key={session.id}
@@ -665,14 +892,32 @@ export default function MySessions() {
                             <ActivityIcon activityType={session.activity_type} size="lg" />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <Badge 
-                                  variant={isUpcoming ? "default" : "secondary"}
-                                  className="text-xs"
-                                >
-                                  {isUpcoming ? "À venir" : "Terminée"}
-                                </Badge>
+                                {sessionSource === 'joined' ? (
+                                  <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
+                                ) : (
+                                  <Badge 
+                                    variant={isUpcoming ? "default" : "secondary"}
+                                    className="text-xs"
+                                  >
+                                    {isUpcoming ? "À venir" : "Terminée"}
+                                  </Badge>
+                                )}
                               </div>
                               <h3 className="text-[17px] font-semibold truncate">{session.title}</h3>
+                              {/* Organizer info for joined sessions */}
+                              {orgProfile && (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <Avatar className="h-4 w-4">
+                                    <AvatarImage src={orgProfile.avatar_url || undefined} />
+                                    <AvatarFallback className="text-[8px]">
+                                      {orgProfile.username?.[0]?.toUpperCase() || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-[13px] text-muted-foreground truncate">
+                                    {orgProfile.display_name || orgProfile.username}
+                                  </span>
+                                </div>
+                              )}
                               <div className="flex items-center gap-4 mt-1 text-[13px] text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3.5 w-3.5" />
@@ -713,10 +958,12 @@ export default function MySessions() {
                 </div>
               )}
 
-              {/* Organizer Stats - en bas */}
-              <div className="mt-3 pb-8">
-                <div className="px-4"><OrganizerStatsCard /></div>
-              </div>
+              {/* Organizer Stats - only for created sessions */}
+              {sessionSource === 'created' && (
+                <div className="mt-3 pb-8">
+                  <div className="px-4"><OrganizerStatsCard /></div>
+                </div>
+              )}
             </>
           ) : (
             <>
