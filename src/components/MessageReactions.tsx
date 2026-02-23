@@ -21,6 +21,7 @@ interface MessageReactionsProps {
   }>;
   onReactionChange?: () => void;
   isOwnMessage?: boolean;
+  displayOnly?: boolean;
 }
 
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
@@ -30,6 +31,7 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
   reactions,
   onReactionChange,
   isOwnMessage = false,
+  displayOnly = false,
 }) => {
   const { user } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
@@ -88,6 +90,10 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
     setShowPicker(false);
   };
 
+  if (displayOnly && groupedReactions.length === 0) {
+    return null;
+  }
+
   return (
     <div className={cn("relative", isOwnMessage ? "text-right" : "text-left")}>
       {/* Displayed reactions */}
@@ -117,45 +123,49 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
           </motion.button>
         ))}
         
-        {/* Add reaction button */}
-        <button
-          onClick={() => setShowPicker(!showPicker)}
-          className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center transition-all",
-            "bg-secondary/50 border border-border hover:bg-secondary",
-            showPicker && "bg-primary/20 border-primary/30"
-          )}
-        >
-          <Plus className="w-3 h-3 text-muted-foreground" />
-        </button>
-      </div>
-
-      {/* Quick reaction picker */}
-      <AnimatePresence>
-        {showPicker && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+        {/* Add reaction button - hidden in displayOnly mode */}
+        {!displayOnly && (
+          <button
+            onClick={() => setShowPicker(!showPicker)}
             className={cn(
-              "absolute z-50 mt-1",
-              "bg-card rounded-full shadow-lg border border-border",
-              "flex items-center gap-1 p-1",
-              isOwnMessage ? "right-0 left-0 mx-auto w-fit" : "left-0 right-0 mx-auto w-fit"
+              "w-6 h-6 rounded-full flex items-center justify-center transition-all",
+              "bg-secondary/50 border border-border hover:bg-secondary",
+              showPicker && "bg-primary/20 border-primary/30"
             )}
           >
-            {QUICK_REACTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => handleReaction(emoji)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-lg"
-              >
-                {emoji}
-              </button>
-            ))}
-          </motion.div>
+            <Plus className="w-3 h-3 text-muted-foreground" />
+          </button>
         )}
-      </AnimatePresence>
+      </div>
+
+      {/* Quick reaction picker - hidden in displayOnly mode */}
+      {!displayOnly && (
+        <AnimatePresence>
+          {showPicker && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 10 }}
+              className={cn(
+                "absolute z-50 mt-1",
+                "bg-card rounded-full shadow-lg border border-border",
+                "flex items-center gap-1 p-1",
+                isOwnMessage ? "right-0 left-0 mx-auto w-fit" : "left-0 right-0 mx-auto w-fit"
+              )}
+            >
+              {QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleReaction(emoji)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-lg"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 };

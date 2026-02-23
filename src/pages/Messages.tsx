@@ -64,6 +64,7 @@ import { MessageReactions, useMessageReactionPicker } from "@/components/Message
 import { ReplyPreview, ReplyBubble } from "@/components/MessageReply";
 import { CreatePollDialog } from "@/components/CreatePollDialog";
 import { PollCard } from "@/components/PollCard";
+import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
 
 interface Profile {
   user_id: string;
@@ -176,6 +177,8 @@ const Messages = () => {
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Conversation settings states
   const [isMuted, setIsMuted] = useState(false);
@@ -1843,21 +1846,32 @@ const Messages = () => {
                           </div>
                         )}
                         
-                        <div className="relative group">
-                          {/* Delete button for own messages */}
-                          {isOwnMessage && !message.deleted_at && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute -top-1 -right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity bg-[#FF3B30] hover:bg-[#FF3B30]/90 text-white z-10 rounded-full"
-                               onClick={(e) => {
-                                e.stopPropagation();
-                                setMessageToDelete(message.id);
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
+                        <div 
+                          className="relative group"
+                          onTouchStart={() => {
+                            if (message.deleted_at) return;
+                            longPressTimerRef.current = setTimeout(() => {
+                              setLongPressMessage(message);
+                            }, 500);
+                          }}
+                          onTouchEnd={() => {
+                            if (longPressTimerRef.current) {
+                              clearTimeout(longPressTimerRef.current);
+                              longPressTimerRef.current = null;
+                            }
+                          }}
+                          onTouchMove={() => {
+                            if (longPressTimerRef.current) {
+                              clearTimeout(longPressTimerRef.current);
+                              longPressTimerRef.current = null;
+                            }
+                          }}
+                          onContextMenu={(e) => {
+                            if (message.deleted_at) return;
+                            e.preventDefault();
+                            setLongPressMessage(message);
+                          }}
+                        >
 
                           {/* Image - iMessage rounded style */}
                           {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
@@ -2017,32 +2031,15 @@ const Messages = () => {
                           )}
                         </div>
 
-                        {/* Reply + Reactions */}
+                        {/* Reactions display only */}
                         {!message.deleted_at && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setReplyTo({
-                                  id: message.id,
-                                  content: message.content || (message.file_url ? '📎 Pièce jointe' : ''),
-                                  senderName: message.sender.username || message.sender.display_name
-                                });
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-secondary transition-all"
-                              title="Répondre"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                                <polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-                              </svg>
-                            </button>
-                            <MessageReactions
-                              messageId={message.id}
-                              reactions={message.reactions || []}
-                              onReactionChange={() => loadMessages(selectedConversation!.id)}
-                              isOwnMessage={isOwnMessage}
-                            />
-                          </div>
+                          <MessageReactions
+                            messageId={message.id}
+                            reactions={message.reactions || []}
+                            onReactionChange={() => loadMessages(selectedConversation!.id)}
+                            isOwnMessage={isOwnMessage}
+                            displayOnly
+                          />
                         )}
 
                        </div>
@@ -2713,6 +2710,42 @@ const Messages = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Long press context menu */}
+      <MessageLongPressMenu
+        isOpen={!!longPressMessage}
+        onClose={() => setLongPressMessage(null)}
+        messageContent={longPressMessage?.content || ''}
+        isOwnMessage={longPressMessage?.sender_id === user?.id}
+        onReaction={async (emoji) => {
+          if (!longPressMessage || !user) return;
+          const existing = longPressMessage.reactions?.find(
+            (r) => r.emoji === emoji && r.user_id === user.id
+          );
+          if (existing) {
+            await supabase.from('message_reactions').delete().eq('id', existing.id);
+          } else {
+            await supabase.from('message_reactions').insert({
+              message_id: longPressMessage.id,
+              user_id: user.id,
+              emoji,
+            });
+          }
+          if (selectedConversation) loadMessages(selectedConversation.id);
+        }}
+        onReply={() => {
+          if (!longPressMessage) return;
+          setReplyTo({
+            id: longPressMessage.id,
+            content: longPressMessage.content || (longPressMessage.file_url ? '📎 Pièce jointe' : ''),
+            senderName: longPressMessage.sender.username || longPressMessage.sender.display_name
+          });
+        }}
+        onDelete={() => {
+          if (!longPressMessage) return;
+          setMessageToDelete(longPressMessage.id);
+        }}
+      />
     </>
   );
 };
