@@ -1,61 +1,58 @@
 
 
-## Diagnostic : cause racine trouvée
+## Diagnostic
 
-Le composant `Messages.tsx` a **3 blocs return distincts** :
+Le sondage est bien cree dans la table `polls` (confirme en BDD), mais **aucun message n'est insere** dans la table `messages`. Le probleme est double :
 
-1. **Ligne 1640** : `if (showNewConversation) return (...)` — vue nouvelle conversation
-2. **Ligne 1654** : `if (selectedConversation) return (...)` — vue conversation (lignes 1657–2389)
-3. **Ligne 2392** : `return (...)` — vue liste des conversations (lignes 2392–2809)
+1. **Pas d'`await`** : dans `CreatePollDialog`, `onPollCreated(pollId)` n'est pas `await`ed. Le dialog se ferme immediatement via `onOpenChange(false)`, ce qui peut causer des problemes de timing.
 
-Le bouton **Sondage** est dans le return n°2 (conversation sélectionnée, autour de la ligne 2230). Mais le **`CreatePollDialog`** est dans le return n°3 (liste des conversations, ligne 2778).
-
-Quand une conversation est ouverte, le composant fait un early return à la ligne 2389 et **n'atteint jamais** le `CreatePollDialog` à la ligne 2778. Le dialog n'est tout simplement jamais monté dans le DOM.
+2. **Erreur silencieuse** : dans le callback `onPollCreated`, le code fait `await supabase.from('messages').insert(...)` mais ne verifie pas le `{ error }` retourne. Supabase JS ne lance PAS d'exception en cas d'echec — il retourne `{ data, error }`. Le `try/catch` ne capture donc rien et l'erreur est completement ignoree.
 
 ## Solution
 
-**Déplacer le `CreatePollDialog`** du return n°3 vers le return n°2, juste avant la fermeture du fragment `<>...</>` à la ligne 2388.
+### Fichier 1 : `src/components/CreatePollDialog.tsx`
 
-### Changement concret
-
-**`src/pages/Messages.tsx`** :
-
-1. **Supprimer** le bloc `CreatePollDialog` des lignes 2778–2802 (dans le return de la liste)
-2. **Insérer** ce même bloc dans le return de la conversation sélectionnée, juste avant `</>`à la ligne 2388 (avant le `MessageLongPressMenu`)
-
-Le code à insérer (identique, juste déplacé) :
+**Ajouter `await`** avant `onPollCreated` pour que l'insertion du message se termine avant la fermeture du dialog :
 
 ```tsx
-{user && (
-  <CreatePollDialog
-    open={showCreatePoll}
-    onOpenChange={setShowCreatePoll}
-    conversationId={selectedConversation.id}
-    userId={user.id}
-    onPollCreated={async (pollId: string) => {
-      try {
-        await supabase.from('messages').insert({
-          conversation_id: selectedConversation.id,
-          sender_id: user.id,
-          content: pollId,
-          message_type: 'poll',
-        });
-        await supabase
-          .from('conversations')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', selectedConversation.id);
-        loadMessages(selectedConversation.id);
-      } catch (err) {
-        console.error('Error sending poll message:', err);
-      }
-    }}
-  />
-)}
+await onPollCreated((data as any).id);  // await ajouté
+onOpenChange(false);
 ```
 
-La condition `selectedConversation &&` n'est plus nécessaire car on est déjà dans le bloc `if (selectedConversation)`. On garde juste `user &&`.
+### Fichier 2 : `src/pages/Messages.tsx`
 
-### Pourquoi ça ne marchait pas
+**Verifier les erreurs Supabase** dans le callback `onPollCreated` et ajouter du logging :
 
-Aucune des solutions précédentes (setTimeout, modal, onSelect, div) ne pouvait fonctionner car le problème n'était pas lié au dropdown ou au timing — le `CreatePollDialog` n'était simplement **jamais rendu** quand une conversation était ouverte.
+```tsx
+onPollCreated={async (pollId: string) => {
+  try {
+    const { error: msgError } = await supabase.from('messages').insert({
+      conversation_id: selectedConversation.id,
+      sender_id: user.id,
+      content: pollId,
+      message_type: 'poll',
+    });
+
+    if (msgError) {
+      console.error('❌ Error inserting poll message:', msgError);
+      toast({ title: 'Erreur', description: 'Impossible d\'envoyer le sondage', variant: 'destructive' });
+      return;
+    }
+
+    await supabase
+      .from('conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', selectedConversation.id);
+
+    loadMessages(selectedConversation.id);
+  } catch (err) {
+    console.error('Error sending poll message:', err);
+  }
+}}
+```
+
+Cela permettra de :
+- Voir l'erreur exacte retournee par Supabase si l'insert echoue (probablement une erreur RLS)
+- Afficher un toast d'erreur a l'utilisateur
+- Garantir que le message est insere avant la fermeture du dialog
 
