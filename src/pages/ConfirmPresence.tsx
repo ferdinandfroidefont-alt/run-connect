@@ -30,7 +30,7 @@ export default function ConfirmPresence() {
   
   const [loading, setLoading] = useState(false);
 
-  const [roleChoice, setRoleChoice] = useState<'creator' | 'participant' | null>(null);
+  const [roleChoice, setRoleChoice] = useState<'creator' | 'participant' | 'tracking' | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<'creator' | 'participant' | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -67,9 +67,55 @@ export default function ConfirmPresence() {
     }
   };
 
-  const handleRoleChoice = (role: 'creator' | 'participant') => {
+  const handleRoleChoice = (role: 'creator' | 'participant' | 'tracking') => {
     setRoleChoice(role);
-    loadSessionsByRole(role);
+    if (role === 'tracking') {
+      loadAllUserSessions();
+    } else {
+      loadSessionsByRole(role);
+    }
+  };
+
+  const loadAllUserSessions = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      // Load sessions where user is organizer
+      const { data: createdSessions } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('organizer_id', user.id)
+        .gte('scheduled_at', twentyFourHoursAgo.toISOString());
+
+      // Load sessions where user is participant
+      const { data: participations } = await supabase
+        .from('session_participants')
+        .select('session_id')
+        .eq('user_id', user.id);
+
+      const participantSessionIds = participations?.map(p => p.session_id) || [];
+      let participantSessions: Session[] = [];
+      if (participantSessionIds.length > 0) {
+        const { data } = await supabase
+          .from('sessions')
+          .select('*')
+          .in('id', participantSessionIds)
+          .neq('organizer_id', user.id)
+          .gte('scheduled_at', twentyFourHoursAgo.toISOString());
+        participantSessions = (data || []) as Session[];
+      }
+
+      const allSessions = [...(createdSessions || []), ...participantSessions] as Session[];
+      allSessions.sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+      setSessions(allSessions);
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadSessionsByRole = async (role: 'creator' | 'participant') => {
@@ -123,6 +169,10 @@ export default function ConfirmPresence() {
   };
 
   const handleSessionSelect = (session: Session, role: 'creator' | 'participant') => {
+    if (roleChoice === 'tracking') {
+      navigate(`/session-tracking/${session.id}`);
+      return;
+    }
     setSelectedSession(session);
     setUserRole(role);
   };
@@ -206,6 +256,25 @@ export default function ConfirmPresence() {
                   </h2>
                   <p className="text-[13px] text-muted-foreground mt-0.5">
                     {t('confirmPresence.participantDescription')}
+                  </p>
+                </div>
+                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+              </button>
+
+              {/* Track Participants Card */}
+              <button
+                onClick={() => handleRoleChoice('tracking')}
+                className="w-full bg-card border border-primary/30 rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
+              >
+                <div className="h-14 w-14 rounded-[10px] bg-primary/10 flex items-center justify-center">
+                  <MapPin className="h-7 w-7 text-primary" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h2 className="text-[17px] font-semibold text-foreground">
+                    Suivre les participants
+                  </h2>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                    Voir en temps réel où se trouvent les autres sur la carte
                   </p>
                 </div>
                 <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
