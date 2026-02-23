@@ -264,7 +264,7 @@ export default function ConfirmPresence() {
               {/* Track Participants Card */}
               <button
                 onClick={() => handleRoleChoice('tracking')}
-                className="w-full bg-card border border-primary/30 rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
+                className="w-full bg-card border border-border rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
               >
                 <div className="h-14 w-14 rounded-[10px] bg-primary/10 flex items-center justify-center">
                   <MapPin className="h-7 w-7 text-primary" />
