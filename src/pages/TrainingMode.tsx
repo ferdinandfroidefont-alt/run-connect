@@ -33,6 +33,7 @@ export default function TrainingMode() {
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | google.maps.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [showOffRouteToast, setShowOffRouteToast] = useState(false);
   const offRouteToastTimer = useRef<NodeJS.Timeout | null>(null);
@@ -108,19 +109,45 @@ export default function TrainingMode() {
     initMap();
   }, [routeCoordinates, mapReady, apiKey]);
 
-  // Center map on initial position
+  // Helper to create or update the native-style Google blue dot
+  const updateBlueDot = useCallback((map: google.maps.Map, pos: { lat: number; lng: number }) => {
+    if (markerRef.current) {
+      if (markerRef.current instanceof google.maps.Marker) {
+        markerRef.current.setPosition(pos);
+      } else {
+        (markerRef.current as google.maps.marker.AdvancedMarkerElement).position = pos;
+      }
+      return;
+    }
+    try {
+      const dotEl = document.createElement('div');
+      dotEl.innerHTML = `
+        <div style="position:relative;width:22px;height:22px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;width:22px;height:22px;border-radius:50%;background:rgba(66,133,244,0.18);animation:gm-pulse 2s ease-out infinite;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#4285F4;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);position:relative;z-index:1;"></div>
+        </div>
+      `;
+      markerRef.current = new google.maps.marker.AdvancedMarkerElement({ map, position: pos, content: dotEl });
+    } catch {
+      markerRef.current = new google.maps.Marker({
+        map, position: pos,
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#4285F4', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2 },
+      });
+    }
+  }, []);
+
+  // Center map on initial position & show blue dot
   useEffect(() => {
     if (!mapReady || !googleMapRef.current) return;
 
+    const centerOn = (lat: number, lng: number) => {
+      const map = googleMapRef.current!;
+      updateBlueDot(map, { lat, lng });
+      map.panTo({ lat, lng });
+      map.setZoom(16);
+    };
+
     const getInitialPosition = async () => {
-      const map = googleMapRef.current;
-      if (!map) return;
-
-      const centerOn = (lat: number, lng: number) => {
-        map.panTo({ lat, lng });
-        map.setZoom(16);
-      };
-
       try {
         if (Capacitor.isNativePlatform()) {
           const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
@@ -128,7 +155,6 @@ export default function TrainingMode() {
           return;
         }
       } catch {}
-
       navigator.geolocation.getCurrentPosition(
         (pos) => centerOn(pos.coords.latitude, pos.coords.longitude),
         () => {},
@@ -137,13 +163,14 @@ export default function TrainingMode() {
     };
 
     getInitialPosition();
-  }, [mapReady]);
+  }, [mapReady, updateBlueDot]);
 
-  // Auto-recenter on user position updates
+  // Update blue dot position on GPS updates
   useEffect(() => {
     if (!googleMapRef.current || !userPosition || !mapReady) return;
+    updateBlueDot(googleMapRef.current, userPosition);
     googleMapRef.current.panTo(userPosition);
-  }, [userPosition, mapReady]);
+  }, [userPosition, mapReady, updateBlueDot]);
 
   // Off-route toast
   useEffect(() => {
@@ -233,6 +260,13 @@ export default function TrainingMode() {
 
   return (
     <div className="fixed inset-0 bg-background">
+      <style>{`
+        @keyframes gm-pulse {
+          0% { transform: scale(1); opacity: 0.5; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+      `}</style>
+
       {/* Map - isolated stacking context so Google Maps z-indexes stay below our UI */}
       <div className="absolute inset-0" style={{ zIndex: 0, isolation: 'isolate' }}>
         <div ref={mapRef} className="w-full h-full bg-secondary" />
