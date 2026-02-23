@@ -1,47 +1,53 @@
 
 
-## Diagnostic
+## Diagnostic approfondi
 
-Les logs confirment que `🗳️ Sondage clicked` est bien execute (2 fois meme). Le state `showCreatePoll` passe a `true` et le `CreatePollDialog` se monte. **Mais le dialog ne s'affiche pas visuellement.**
+Le probleme persiste malgre plusieurs tentatives. L'approche actuelle combine `modal={false}`, `e.preventDefault()`, et `setAttachMenuOpen(false)` - ces trois instructions entrent en conflit :
 
-**Cause racine** : le `<div>` qui a remplace le `DropdownMenuItem` ne ferme pas le dropdown. Contrairement a un `DropdownMenuItem`, un simple `<div>` ne declenche pas la fermeture automatique du `DropdownMenuContent`. Le dropdown reste ouvert par-dessus le dialog, le masquant completement.
+1. `e.preventDefault()` empeche Radix de fermer le menu par defaut
+2. `setAttachMenuOpen(false)` force la fermeture via le state
+3. `modal={false}` change le comportement du focus mais peut empecher le `DialogOverlay` de se superposer correctement
 
-## Solution
+Le `setTimeout` de 150ms ne suffit peut-etre pas pour que le DOM soit nettoye apres la fermeture du dropdown avec `modal={false}`.
+
+## Solution : approche simplifiee
 
 ### Fichier : `src/pages/Messages.tsx`
 
-1. **Controler l'ouverture du dropdown avec un state** : ajouter `const [attachMenuOpen, setAttachMenuOpen] = useState(false)` et passer `open={attachMenuOpen}` / `onOpenChange={setAttachMenuOpen}` au `<DropdownMenu>`.
+**Supprimer toute la complexite** et utiliser l'approche la plus directe possible :
 
-2. **Remettre un `DropdownMenuItem`** pour le sondage (supprimer le `<div>`) mais avec `onSelect` qui :
-   - Ferme le dropdown via `setAttachMenuOpen(false)`
-   - Ouvre le dialog avec un `setTimeout` de 150ms : `setTimeout(() => setShowCreatePoll(true), 150)`
+1. **Retirer `modal={false}`** du `DropdownMenu` - revenir au comportement modal par defaut de Radix
+2. **Retirer `open` et `onOpenChange`** du `DropdownMenu` - laisser Radix gerer son propre state
+3. **Supprimer le state `attachMenuOpen`** - il n'est plus necessaire
+4. **Sur le `DropdownMenuItem` "Sondage"** : utiliser un simple `onClick` avec un `setTimeout` de 300ms (plus long pour laisser le dropdown modal se fermer completement avec son animation)
 
-Cela garantit que le dropdown se ferme proprement avant que le dialog s'ouvre.
+```tsx
+<DropdownMenu>
+  ...
+  <DropdownMenuItem
+    onClick={() => {
+      setTimeout(() => setShowCreatePoll(true), 300);
+    }}
+    className="py-3"
+  >
+    <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
+    Sondage
+  </DropdownMenuItem>
+  ...
+</DropdownMenu>
+```
+
+Le `DropdownMenuItem` avec `onClick` fermera automatiquement le dropdown (comportement par defaut de Radix). Le `setTimeout` de 300ms garantit que le dialog ne s'ouvre qu'apres la fermeture complete du dropdown et de son overlay, evitant tout conflit de focus ou de z-index.
+
+5. **Ajouter `aria-describedby={undefined}`** au `DialogContent` dans `CreatePollDialog.tsx` pour eviter un warning Radix qui pourrait bloquer le rendu dans certains cas.
 
 ### Changements concrets
 
-**Ajout du state** (vers ligne 178) :
-```tsx
-const [attachMenuOpen, setAttachMenuOpen] = useState(false);
-```
+**`src/pages/Messages.tsx`** :
+- Ligne 179 : supprimer `const [attachMenuOpen, setAttachMenuOpen] = useState(false);`
+- Ligne 2188 : remplacer `<DropdownMenu open={attachMenuOpen} onOpenChange={setAttachMenuOpen} modal={false}>` par `<DropdownMenu>`
+- Lignes 2230-2240 : remplacer le `onSelect` par un `onClick` avec `setTimeout` de 300ms
 
-**Modification du DropdownMenu** (ligne 2187) :
-```tsx
-<DropdownMenu open={attachMenuOpen} onOpenChange={setAttachMenuOpen}>
-```
-
-**Remplacement du div par DropdownMenuItem** (lignes 2229-2239) :
-```tsx
-<DropdownMenuItem
-  onSelect={(e) => {
-    e.preventDefault();
-    setAttachMenuOpen(false);
-    setTimeout(() => setShowCreatePoll(true), 150);
-  }}
-  className="py-3"
->
-  <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
-  Sondage
-</DropdownMenuItem>
-```
+**`src/components/CreatePollDialog.tsx`** :
+- Ligne 96 : ajouter `aria-describedby={undefined}` au `DialogContent` pour eviter les warnings Radix sur le titre/description manquants
 
