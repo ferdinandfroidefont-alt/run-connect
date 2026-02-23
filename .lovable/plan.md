@@ -1,43 +1,36 @@
 
 
-## Aligner verticalement l'heure et l'appareil photo
+## Remplacer le `confirm()` natif par un AlertDialog pour la suppression de message
 
-### Modification unique - `src/pages/Messages.tsx`
+### Probleme
 
-Deplacer l'heure (actuellement dans la ligne du nom d'utilisateur, ligne ~2541-2555) vers une colonne droite partagee avec le bouton camera.
+Quand on supprime un message, le navigateur affiche un `confirm()` natif du browser (la boite de dialogue grise/moche qu'on voit sur la capture). Il faut le remplacer par un vrai composant AlertDialog de l'app.
 
-**Avant** : L'heure est dans le header row (a cote du nom), le camera est en dehors, plus bas.
+### Modification - `src/pages/Messages.tsx`
 
-**Apres** : L'heure et le camera sont dans un meme conteneur `flex flex-col items-center justify-center gap-1` place a droite de la conversation, les deux elements empiles verticalement et centres.
+#### 1. Importer AlertDialog
 
-### Detail technique
+Ajouter les imports depuis `@/components/ui/alert-dialog` :
+- `AlertDialog`, `AlertDialogAction`, `AlertDialogCancel`, `AlertDialogContent`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogHeader`, `AlertDialogTitle`
 
-1. Supprimer le `<span>` de l'heure de la ligne 2541-2555 (dans le header row du nom)
-2. Remplacer le bouton camera seul (lignes 2593-2604) par un conteneur vertical contenant l'heure AU-DESSUS du bouton camera :
+#### 2. Ajouter un state pour la confirmation
 
-```tsx
-{/* Colonne droite: heure + camera */}
-<div className="flex flex-col items-center justify-center gap-1 flex-shrink-0 ml-2">
-  <span className="text-[13px] text-muted-foreground">
-    {/* logique de date existante */}
-  </span>
-  {!isSelectionMode && (
-    <button
-      className="p-1 rounded-full active:bg-secondary transition-colors"
-      onClick={(e) => {
-        e.stopPropagation();
-        handleQuickCameraForConversation(conversation);
-      }}
-    >
-      <Camera className="h-5 w-5 text-muted-foreground" />
-    </button>
-  )}
-</div>
-```
+Ajouter un state `messageToDelete` (`string | null`) pour stocker l'ID du message a supprimer.
 
-Resultat visuel :
-```
-[ Avatar ]  [ Nom d'utilisateur        ]  [  14h  ]
-            [ Dernier message...       ]  [  cam   ]
-```
+#### 3. Remplacer le `confirm()` par le state
+
+Dans le bouton de suppression (ligne 1853), au lieu de `if (confirm(...)) { handleDeleteMessage(...) }`, simplement faire `setMessageToDelete(message.id)`.
+
+#### 4. Ajouter le composant AlertDialog dans le JSX
+
+Ajouter en bas du composant un `AlertDialog` qui :
+- S'ouvre quand `messageToDelete` n'est pas null
+- Titre : "Supprimer ce message ?"
+- Description : "Cette action est irreversible."
+- Bouton "Annuler" : remet `messageToDelete` a null
+- Bouton "Supprimer" (style rouge) : appelle `handleDeleteMessage(messageToDelete)` puis remet a null
+
+### Resultat
+
+Une boite de dialogue propre, style iOS/app, au lieu du popup natif du navigateur.
 
