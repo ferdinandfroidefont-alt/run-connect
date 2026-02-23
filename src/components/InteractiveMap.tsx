@@ -424,23 +424,26 @@ export const InteractiveMap = ({
         });
       }
 
-      // Get organizer profiles and routes for all sessions
-      const sessionsWithProfiles = [];
-      for (const session of visibleSessions) {
-        // Get organizer profile
-        const {
-          data: profile
-        } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('user_id', session.organizer_id).maybeSingle();
+      // Batch-load all organizer profiles and routes in parallel
+      const organizerIds = [...new Set(visibleSessions.map(s => s.organizer_id))];
+      const routeIds = [...new Set(visibleSessions.map(s => s.route_id).filter(Boolean))] as string[];
 
-        // Get route if session has one
-        let route = null;
-        if (session.route_id) {
-          const {
-            data: routeData
-          } = await supabase.from('routes').select('id, name, coordinates, total_distance, total_elevation_gain').eq('id', session.route_id).maybeSingle();
-          route = routeData;
-        }
-        sessionsWithProfiles.push({
+      const [profilesResult, routesResult] = await Promise.all([
+        organizerIds.length > 0
+          ? supabase.from('profiles').select('user_id, username, display_name, avatar_url').in('user_id', organizerIds)
+          : Promise.resolve({ data: [] }),
+        routeIds.length > 0
+          ? supabase.from('routes').select('id, name, coordinates, total_distance, total_elevation_gain').in('id', routeIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const profilesMap = new Map((profilesResult.data || []).map(p => [p.user_id, p]));
+      const routesMap = new Map((routesResult.data || []).map(r => [r.id, r]));
+
+      const sessionsWithProfiles = visibleSessions.map(session => {
+        const profile = profilesMap.get(session.organizer_id);
+        const route = session.route_id ? routesMap.get(session.route_id) || null : null;
+        return {
           ...session,
           profiles: profile || {
             username: 'Utilisateur',
@@ -448,8 +451,8 @@ export const InteractiveMap = ({
             avatar_url: null
           },
           routes: route
-        });
-      }
+        };
+      });
 
       // Log user's own sessions for visibility verification
       const userSessions = sessionsWithProfiles.filter(s => s.organizer_id === user?.id);
