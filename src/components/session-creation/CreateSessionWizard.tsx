@@ -418,7 +418,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
 
         {/* Step content */}
-        <div className="flex-1 overflow-hidden px-4 pb-4">
+        <div className="flex-1 overflow-hidden overflow-x-hidden px-4 pb-4">
           <AnimatePresence mode="wait">
             {renderStep()}
           </AnimatePresence>
