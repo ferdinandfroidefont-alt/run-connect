@@ -2226,13 +2226,17 @@ const Messages = () => {
                         <Smile className="h-4 w-4 mr-3 text-[#FF9500]" />
                         Emoji
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                          onClick={() => setShowCreatePoll(true)}
-                          className="py-3"
+                      <div 
+                          role="menuitem"
+                          onClick={() => {
+                            console.log('🗳️ Sondage clicked');
+                            setShowCreatePoll(true);
+                          }}
+                          className="relative flex cursor-default select-none items-center rounded-sm px-2 py-3 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
                         >
                           <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
                           Sondage
-                        </DropdownMenuItem>
+                        </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   
