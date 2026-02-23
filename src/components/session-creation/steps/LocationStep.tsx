@@ -196,24 +196,24 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-3 mb-10">
+      <div className="flex gap-2 mb-10 px-1">
         <Button
           variant="outline"
           onClick={handleMyLocation}
           disabled={isLocating}
-          className="flex-1 h-12"
+          className="flex-1 min-w-0 h-11 text-xs px-3"
         >
-          <Navigation className="w-4 h-4 mr-2" />
-          Ma position
+          <Navigation className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+          <span className="truncate">Ma position</span>
         </Button>
         <Button
           variant="outline"
           onClick={handleUseMapCenter}
           disabled={isLocating}
-          className="flex-1 h-12"
+          className="flex-1 min-w-0 h-11 text-xs px-3"
         >
-          <MapPin className="w-4 h-4 mr-2" />
-          Centre carte
+          <MapPin className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+          <span className="truncate">Centre carte</span>
         </Button>
       </div>
 
