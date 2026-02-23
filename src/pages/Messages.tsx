@@ -2227,7 +2227,9 @@ const Messages = () => {
                         Emoji
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                          onClick={() => setShowCreatePoll(true)}
+                          onSelect={() => {
+                            setTimeout(() => setShowCreatePoll(true), 100);
+                          }}
                           className="py-3"
                         >
                           <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
