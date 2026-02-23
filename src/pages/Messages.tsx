@@ -2184,7 +2184,7 @@ const Messages = () => {
               {!isRecording && (
                 <>
                   {/* Plus button - opens attachment options */}
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <button 
                          className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
@@ -2227,9 +2227,7 @@ const Messages = () => {
                         Emoji
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                          onSelect={() => {
-                            setTimeout(() => setShowCreatePoll(true), 100);
-                          }}
+                          onClick={() => setShowCreatePoll(true)}
                           className="py-3"
                         >
                           <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
