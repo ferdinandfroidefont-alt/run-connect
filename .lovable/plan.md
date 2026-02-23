@@ -1,38 +1,33 @@
 
-
-## Corriger les debordements horizontaux sur iPhone
+## Corriger le z-index du panneau de filtres sur la carte
 
 ### Le probleme
 
-Sur iPhone, certains elements debordent du cote droit de l'ecran dans deux endroits :
-
-1. **Parametres > Partager mon profil** : Le code parrainage, l'URL, le bouton "Copier le lien", et les boutons "Partager"/"Story" sont coupes a droite
-2. **Creer une seance > Etape Lieu** : Le bouton "Centre carte" est coupe a droite
+Sur iPhone, quand le panneau de filtres est ouvert, les boutons de la carte (itineraire, localisation, style de carte, etc.) sur le cote gauche apparaissent par-dessus le panneau de filtres. Le panneau devrait etre au-dessus de tous les boutons.
 
 ### Cause
 
-Les conteneurs internes des dialogs ne contraignent pas correctement la largeur de leurs enfants. Meme si le `DialogContent` a `overflow-hidden`, les sous-conteneurs (ScrollArea, zone de contenu des etapes) peuvent depasser la largeur disponible sur les petits ecrans iPhone.
+Dans `src/components/InteractiveMap.tsx` :
+- Le conteneur parent du panneau de filtres (ligne 1561) a `z-10`
+- Les boutons de controle de la carte (ligne 1569) ont aussi `z-10`
+- Meme si le composant `SessionFilters` a `z-50` en interne, son conteneur parent limite son empilement a `z-10`
 
-### Corrections
+### Correction
 
-#### 1. Fichier : `src/components/SettingsDialog.tsx`
+#### Fichier : `src/components/InteractiveMap.tsx`
 
-- Ajouter `overflow-x-hidden` sur le conteneur de la section "Partager mon profil" (ligne 475)
-- Contraindre la largeur du texte URL avec `max-w-full` et `overflow-hidden` pour eviter le debordement
-- S'assurer que les boutons d'action restent dans les limites avec `overflow-hidden` sur leur conteneur
+- Ligne 1561 : Changer le `z-10` du conteneur des filtres en `z-30` pour qu'il passe au-dessus des boutons de controle qui restent a `z-10`
 
-#### 2. Fichier : `src/components/session-creation/CreateSessionWizard.tsx`
+Changement :
+```
+// Avant
+<div className="absolute right-4 z-10 flex flex-col ..."
 
-- Ajouter `overflow-x-hidden` sur le conteneur de contenu des etapes (ligne 421) pour empecher le debordement horizontal
-
-#### 3. Fichier : `src/components/session-creation/steps/LocationStep.tsx`
-
-- Ajouter `overflow-hidden` sur le conteneur des boutons d'action (ligne 199) pour empecher le texte des boutons de depasser
-- Ajouter `truncate` sur le texte des boutons pour couper proprement le texte trop long
+// Apres
+<div className="absolute right-4 z-30 flex flex-col ..."
+```
 
 ### Resultat attendu
 
-- Tous les elements restent visibles et contenus dans la largeur de l'ecran iPhone
-- Les textes longs sont tronques proprement au lieu de depasser
-- Aucun changement visuel sur les ecrans plus grands
-
+- Le panneau de filtres ouvert couvre les boutons de la carte sur iPhone et Android
+- Les boutons restent visibles quand les filtres sont fermes (pas de conflit)
