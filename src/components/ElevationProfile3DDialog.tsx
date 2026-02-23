@@ -123,7 +123,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
             <ElevationProfile3D
               coordinates={coordinates}
               elevations={elevations}
-              autoPlay
+              autoPlay={false}
               elevationExaggeration={2}
               routeStats={computedStats}
               className="w-full h-full"

@@ -138,7 +138,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
             <ElevationProfile3D
               coordinates={coordinates!}
               elevations={elevations}
-              autoPlay
+              autoPlay={false}
               elevationExaggeration={2}
               routeStats={routeStats ? {
                 totalDistance: routeStats.totalDistance,
