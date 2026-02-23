@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 import { ScheduleCoachingDialog } from "./ScheduleCoachingDialog";
 import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
@@ -47,6 +48,9 @@ interface Participation {
   completed_at: string | null;
   scheduled_at: string | null;
   location_name: string | null;
+  suggested_date: string | null;
+  custom_pace: string | null;
+  custom_notes: string | null;
   profile?: {
     username: string;
     display_name: string;
@@ -61,6 +65,14 @@ interface CoachingSessionDetailProps {
   isCoach: boolean;
 }
 
+const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
+  sent: { label: "Envoyée", emoji: "📨", color: "secondary" },
+  confirmed: { label: "Inscrit", emoji: "📋", color: "secondary" },
+  scheduled: { label: "Programmée", emoji: "📍", color: "outline" },
+  completed: { label: "Effectuée", emoji: "✅", color: "default" },
+  missed: { label: "Non effectuée", emoji: "❌", color: "destructive" },
+};
+
 export const CoachingSessionDetail = ({
   isOpen,
   onClose,
@@ -69,6 +81,7 @@ export const CoachingSessionDetail = ({
 }: CoachingSessionDetailProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendPushNotification } = useSendNotification();
   const [participations, setParticipations] = useState<Participation[]>([]);
   const [loading, setLoading] = useState(false);
   const [myParticipation, setMyParticipation] = useState<Participation | null>(null);
@@ -121,7 +134,7 @@ export const CoachingSessionDetail = ({
   };
 
   const handleComplete = async () => {
-    if (!myParticipation) return;
+    if (!myParticipation || !session) return;
     try {
       const { error } = await supabase
         .from("coaching_participations")
@@ -132,6 +145,21 @@ export const CoachingSessionDetail = ({
         })
         .eq("id", myParticipation.id);
       if (error) throw error;
+
+      // Notify coach
+      const { data: athleteProfile } = await supabase
+        .from("profiles")
+        .select("display_name, username")
+        .eq("user_id", user?.id || "")
+        .single();
+      const athleteName = athleteProfile?.display_name || athleteProfile?.username || "Un athlète";
+      sendPushNotification(
+        session.coach_id,
+        `✅ ${athleteName} a terminé`,
+        session.title,
+        "coaching_completed"
+      );
+
       toast({ title: "Séance validée !" });
       loadParticipations();
     } catch (error: any) {
@@ -139,7 +167,7 @@ export const CoachingSessionDetail = ({
     }
   };
 
-  const handleSendFeedback = async (participationId: string) => {
+  const handleSendFeedback = async (participationId: string, athleteUserId: string) => {
     const feedback = feedbackMap[participationId];
     if (!feedback?.trim()) return;
     try {
@@ -148,6 +176,15 @@ export const CoachingSessionDetail = ({
         .update({ feedback: feedback.trim() })
         .eq("id", participationId);
       if (error) throw error;
+
+      // Notify athlete
+      sendPushNotification(
+        athleteUserId,
+        "💬 Nouveau feedback de votre coach",
+        session?.title || "",
+        "coaching_feedback"
+      );
+
       toast({ title: "Feedback envoyé !" });
       setFeedbackMap((prev) => ({ ...prev, [participationId]: "" }));
       loadParticipations();
@@ -159,7 +196,9 @@ export const CoachingSessionDetail = ({
   if (!session) return null;
 
   const completedCount = participations.filter((p) => p.status === "completed").length;
-  const scheduledCount = participations.filter((p) => p.scheduled_at).length;
+  const scheduledCount = participations.filter((p) => p.status === "scheduled").length;
+  const sentCount = participations.filter((p) => p.status === "sent" || p.status === "confirmed").length;
+  const missedCount = participations.filter((p) => p.status === "missed").length;
   const completionRate = participations.length > 0 ? Math.round((completedCount / participations.length) * 100) : 0;
 
   return (
@@ -201,16 +240,27 @@ export const CoachingSessionDetail = ({
             {/* Athlete actions */}
             {!isCoach && (
               <div className="space-y-3">
-                {!myParticipation ? (
-                  <Button onClick={() => setShowSchedule(true)} className="w-full">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Programmer ma séance
-                  </Button>
+                {!myParticipation || myParticipation.status === "sent" ? (
+                  <div className="space-y-2">
+                    {myParticipation?.suggested_date && (
+                      <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                        <p className="text-xs flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span className="font-medium">Le coach suggère :</span>
+                          {format(new Date(myParticipation.suggested_date), "EEE d MMM à HH:mm", { locale: fr })}
+                        </p>
+                      </div>
+                    )}
+                    <Button onClick={() => setShowSchedule(true)} className="w-full">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Programmer ma séance
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Badge variant={myParticipation.status === "completed" ? "default" : "secondary"}>
-                        {myParticipation.status === "completed" ? "✅ Fait" : myParticipation.scheduled_at ? "📍 Programmé" : "📋 Inscrit"}
+                        {STATUS_CONFIG[myParticipation.status]?.emoji} {STATUS_CONFIG[myParticipation.status]?.label}
                       </Badge>
                     </div>
 
@@ -227,14 +277,11 @@ export const CoachingSessionDetail = ({
                       </div>
                     )}
 
-                    {!myParticipation.scheduled_at && (
-                      <Button size="sm" variant="outline" onClick={() => setShowSchedule(true)}>
-                        <MapPin className="h-4 w-4 mr-1" />
-                        Choisir lieu & date
-                      </Button>
+                    {myParticipation.custom_pace && (
+                      <p className="text-xs text-muted-foreground">🏃 Mon allure : {myParticipation.custom_pace}</p>
                     )}
 
-                    {myParticipation.status !== "completed" && (
+                    {myParticipation.status === "scheduled" && (
                       <div className="space-y-2">
                         <Textarea
                           placeholder="Comment ça s'est passé ? (optionnel)"
@@ -268,10 +315,11 @@ export const CoachingSessionDetail = ({
                   <span className="text-muted-foreground">{completionRate}%</span>
                 </div>
                 <Progress value={completionRate} className="h-2" />
-                <div className="flex gap-3 text-xs text-muted-foreground">
-                  <span>✅ {completedCount} fait</span>
-                  <span>📍 {scheduledCount} programmé</span>
-                  <span>⏳ {participations.length - scheduledCount} en attente</span>
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span>📨 {sentCount} envoyée(s)</span>
+                  <span>📍 {scheduledCount} programmée(s)</span>
+                  <span>✅ {completedCount} fait(s)</span>
+                  {missedCount > 0 && <span>❌ {missedCount} manquée(s)</span>}
                 </div>
               </div>
             )}
@@ -286,64 +334,78 @@ export const CoachingSessionDetail = ({
                 <p className="text-sm text-muted-foreground">Aucun inscrit pour le moment</p>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {participations.map((p) => (
-                    <div key={p.id} className="flex items-start gap-3 p-2 rounded-lg bg-muted/30">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={p.profile?.avatar_url || ""} />
-                        <AvatarFallback>
-                          {(p.profile?.username || "?").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium truncate">
-                            {p.profile?.display_name || p.profile?.username}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {p.status === "completed" ? "✅" : p.scheduled_at ? "📍" : "⏳"}
-                          </Badge>
-                        </div>
-                        {p.scheduled_at && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {format(new Date(p.scheduled_at), "d MMM HH:mm", { locale: fr })}
-                            {p.location_name && ` • ${p.location_name}`}
-                          </p>
-                        )}
-                        {p.athlete_note && (
-                          <p className="text-xs text-muted-foreground mt-1">{p.athlete_note}</p>
-                        )}
-                        {p.feedback && (
-                          <div className="mt-1 p-1.5 rounded bg-primary/10 text-xs">
-                            <span className="font-medium text-primary">Coach: </span>
-                            {p.feedback}
+                  {participations.map((p) => {
+                    const statusConf = STATUS_CONFIG[p.status] || STATUS_CONFIG.sent;
+                    return (
+                      <div key={p.id} className="flex items-start gap-3 p-2 rounded-lg bg-muted/30">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={p.profile?.avatar_url || ""} />
+                          <AvatarFallback>
+                            {(p.profile?.username || "?").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">
+                              {p.profile?.display_name || p.profile?.username}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {statusConf.emoji}
+                            </Badge>
                           </div>
-                        )}
+                          {p.suggested_date && isCoach && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              💡 Suggéré : {format(new Date(p.suggested_date), "d MMM HH:mm", { locale: fr })}
+                            </p>
+                          )}
+                          {p.scheduled_at && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {format(new Date(p.scheduled_at), "d MMM HH:mm", { locale: fr })}
+                              {p.location_name && ` • ${p.location_name}`}
+                            </p>
+                          )}
+                          {p.custom_pace && (
+                            <p className="text-xs text-muted-foreground">🏃 {p.custom_pace}</p>
+                          )}
+                          {p.athlete_note && (
+                            <p className="text-xs text-muted-foreground mt-1">{p.athlete_note}</p>
+                          )}
+                          {p.custom_notes && (
+                            <p className="text-xs text-muted-foreground mt-1 italic">{p.custom_notes}</p>
+                          )}
+                          {p.feedback && (
+                            <div className="mt-1 p-1.5 rounded bg-primary/10 text-xs">
+                              <span className="font-medium text-primary">Coach: </span>
+                              {p.feedback}
+                            </div>
+                          )}
 
-                        {/* Coach feedback input */}
-                        {isCoach && !p.feedback && (
-                          <div className="flex gap-1 mt-2">
-                            <Textarea
-                              placeholder="Feedback..."
-                              value={feedbackMap[p.id] || ""}
-                              onChange={(e) =>
-                                setFeedbackMap((prev) => ({ ...prev, [p.id]: e.target.value }))
-                              }
-                              rows={1}
-                              className="text-xs min-h-[32px]"
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleSendFeedback(p.id)}
-                              disabled={!feedbackMap[p.id]?.trim()}
-                            >
-                              <Send className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
+                          {/* Coach feedback input */}
+                          {isCoach && !p.feedback && (
+                            <div className="flex gap-1 mt-2">
+                              <Textarea
+                                placeholder="Feedback..."
+                                value={feedbackMap[p.id] || ""}
+                                onChange={(e) =>
+                                  setFeedbackMap((prev) => ({ ...prev, [p.id]: e.target.value }))
+                                }
+                                rows={1}
+                                className="text-xs min-h-[32px]"
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleSendFeedback(p.id, p.user_id)}
+                                disabled={!feedbackMap[p.id]?.trim()}
+                              >
+                                <Send className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -360,6 +422,7 @@ export const CoachingSessionDetail = ({
         onClose={() => setShowSchedule(false)}
         session={session}
         onScheduled={loadParticipations}
+        suggestedDate={myParticipation?.suggested_date}
       />
     </>
   );

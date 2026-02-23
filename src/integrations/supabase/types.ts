@@ -183,6 +183,8 @@ export type Database = {
           coaching_session_id: string
           completed_at: string | null
           created_at: string
+          custom_notes: string | null
+          custom_pace: string | null
           feedback: string | null
           id: string
           location_lat: number | null
@@ -191,6 +193,7 @@ export type Database = {
           map_session_id: string | null
           scheduled_at: string | null
           status: string
+          suggested_date: string | null
           user_id: string
         }
         Insert: {
@@ -198,6 +201,8 @@ export type Database = {
           coaching_session_id: string
           completed_at?: string | null
           created_at?: string
+          custom_notes?: string | null
+          custom_pace?: string | null
           feedback?: string | null
           id?: string
           location_lat?: number | null
@@ -206,6 +211,7 @@ export type Database = {
           map_session_id?: string | null
           scheduled_at?: string | null
           status?: string
+          suggested_date?: string | null
           user_id: string
         }
         Update: {
@@ -213,6 +219,8 @@ export type Database = {
           coaching_session_id?: string
           completed_at?: string | null
           created_at?: string
+          custom_notes?: string | null
+          custom_pace?: string | null
           feedback?: string | null
           id?: string
           location_lat?: number | null
@@ -221,6 +229,7 @@ export type Database = {
           map_session_id?: string | null
           scheduled_at?: string | null
           status?: string
+          suggested_date?: string | null
           user_id?: string
         }
         Relationships: [
@@ -245,8 +254,10 @@ export type Database = {
           id: string
           pace_target: string | null
           scheduled_at: string
+          send_mode: string | null
           session_blocks: Json | null
           status: string
+          target_athletes: string[] | null
           title: string
         }
         Insert: {
@@ -260,8 +271,10 @@ export type Database = {
           id?: string
           pace_target?: string | null
           scheduled_at: string
+          send_mode?: string | null
           session_blocks?: Json | null
           status?: string
+          target_athletes?: string[] | null
           title: string
         }
         Update: {
@@ -275,8 +288,10 @@ export type Database = {
           id?: string
           pace_target?: string | null
           scheduled_at?: string
+          send_mode?: string | null
           session_blocks?: Json | null
           status?: string
+          target_athletes?: string[] | null
           title?: string
         }
         Relationships: [

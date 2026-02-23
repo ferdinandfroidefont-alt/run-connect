@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Check } from "lucide-react";
+import { useSendNotification } from "@/hooks/useSendNotification";
+import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
+import { MapPin, Calendar, Check, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface CoachingSessionInfo {
   id: string;
@@ -17,6 +22,7 @@ interface CoachingSessionInfo {
   pace_target: string | null;
   session_blocks?: any;
   club_id: string;
+  coach_id: string;
 }
 
 interface ScheduleCoachingDialogProps {
@@ -24,6 +30,7 @@ interface ScheduleCoachingDialogProps {
   onClose: () => void;
   session: CoachingSessionInfo | null;
   onScheduled: () => void;
+  suggestedDate?: string | null;
 }
 
 export const ScheduleCoachingDialog = ({
@@ -31,14 +38,28 @@ export const ScheduleCoachingDialog = ({
   onClose,
   session,
   onScheduled,
+  suggestedDate,
 }: ScheduleCoachingDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [locationName, setLocationName] = useState("");
   const [locationLat, setLocationLat] = useState("");
   const [locationLng, setLocationLng] = useState("");
+  const [customPace, setCustomPace] = useState("");
+  const [customNotes, setCustomNotes] = useState("");
+
+  // Pre-fill suggested date
+  useEffect(() => {
+    if (suggestedDate && isOpen) {
+      try {
+        const d = new Date(suggestedDate);
+        setScheduledAt(format(d, "yyyy-MM-dd'T'HH:mm"));
+      } catch {}
+    }
+  }, [suggestedDate, isOpen]);
 
   if (!session) return null;
 
@@ -50,7 +71,7 @@ export const ScheduleCoachingDialog = ({
       const lat = locationLat ? parseFloat(locationLat) : 48.8566;
       const lng = locationLng ? parseFloat(locationLng) : 2.3522;
 
-      // 1. Create a real session on the map
+      // Create a real session on the map
       const { data: mapSession, error: sessionError } = await supabase
         .from("sessions")
         .insert({
@@ -73,7 +94,7 @@ export const ScheduleCoachingDialog = ({
 
       if (sessionError) throw sessionError;
 
-      // 2. Create/update participation
+      // Create/update participation
       const { data: existingParticipation } = await supabase
         .from("coaching_participations")
         .select("id")
@@ -81,35 +102,52 @@ export const ScheduleCoachingDialog = ({
         .eq("user_id", user.id)
         .maybeSingle();
 
+      const participationData = {
+        scheduled_at: new Date(scheduledAt).toISOString(),
+        location_name: locationName.trim(),
+        location_lat: lat,
+        location_lng: lng,
+        map_session_id: mapSession.id,
+        status: "scheduled",
+        custom_pace: customPace.trim() || null,
+        custom_notes: customNotes.trim() || null,
+      };
+
       if (existingParticipation) {
         await supabase
           .from("coaching_participations")
-          .update({
-            scheduled_at: new Date(scheduledAt).toISOString(),
-            location_name: locationName.trim(),
-            location_lat: lat,
-            location_lng: lng,
-            map_session_id: mapSession.id,
-          })
+          .update(participationData)
           .eq("id", existingParticipation.id);
       } else {
         await supabase.from("coaching_participations").insert({
           coaching_session_id: session.id,
           user_id: user.id,
-          status: "confirmed",
-          scheduled_at: new Date(scheduledAt).toISOString(),
-          location_name: locationName.trim(),
-          location_lat: lat,
-          location_lng: lng,
-          map_session_id: mapSession.id,
+          ...participationData,
         });
       }
+
+      // Notify coach
+      const { data: athleteProfile } = await supabase
+        .from("profiles")
+        .select("display_name, username")
+        .eq("user_id", user.id)
+        .single();
+      const athleteName = athleteProfile?.display_name || athleteProfile?.username || "Un athlète";
+
+      sendPushNotification(
+        session.coach_id,
+        `📍 ${athleteName} a programmé sa séance`,
+        session.title,
+        "coaching_scheduled"
+      );
 
       toast({ title: "Séance programmée !", description: "Elle apparaît maintenant sur la carte" });
       setScheduledAt("");
       setLocationName("");
       setLocationLat("");
       setLocationLng("");
+      setCustomPace("");
+      setCustomNotes("");
       onScheduled();
       onClose();
     } catch (error: any) {
@@ -121,7 +159,7 @@ export const ScheduleCoachingDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
@@ -135,6 +173,24 @@ export const ScheduleCoachingDialog = ({
             <p className="text-xs text-muted-foreground mt-1">{session.description}</p>
           )}
         </div>
+
+        {/* Structured blocks (read-only) */}
+        {session.session_blocks && Array.isArray(session.session_blocks) && session.session_blocks.length > 0 && (
+          <div className="mb-2">
+            <CoachingBlocksPreview blocks={session.session_blocks} />
+            <p className="text-xs text-muted-foreground mt-1 italic">🔒 Structure définie par le coach</p>
+          </div>
+        )}
+
+        {suggestedDate && (
+          <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 mb-2">
+            <p className="text-xs flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span className="font-medium">Le coach suggère :</span>
+              {format(new Date(suggestedDate), "EEE d MMM à HH:mm", { locale: fr })}
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -182,6 +238,25 @@ export const ScheduleCoachingDialog = ({
                 onChange={(e) => setLocationLng(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Mon allure personnelle</Label>
+            <Input
+              placeholder="Ex: 5:30/km"
+              value={customPace}
+              onChange={(e) => setCustomPace(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Notes personnelles</Label>
+            <Textarea
+              placeholder="Objectifs, sensations attendues..."
+              value={customNotes}
+              onChange={(e) => setCustomNotes(e.target.value)}
+              rows={2}
+            />
           </div>
 
           <div className="flex gap-2 pt-2">
