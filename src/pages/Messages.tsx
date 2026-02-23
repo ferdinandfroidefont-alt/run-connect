@@ -176,6 +176,7 @@ const Messages = () => {
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2184,7 +2185,7 @@ const Messages = () => {
               {!isRecording && (
                 <>
                   {/* Plus button - opens attachment options */}
-                  <DropdownMenu modal={false}>
+                  <DropdownMenu open={attachMenuOpen} onOpenChange={setAttachMenuOpen} modal={false}>
                     <DropdownMenuTrigger asChild>
                       <button 
                          className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
@@ -2226,17 +2227,17 @@ const Messages = () => {
                         <Smile className="h-4 w-4 mr-3 text-[#FF9500]" />
                         Emoji
                       </DropdownMenuItem>
-                      <div 
-                          role="menuitem"
-                          onClick={() => {
-                            console.log('🗳️ Sondage clicked');
-                            setShowCreatePoll(true);
-                          }}
-                          className="relative flex cursor-default select-none items-center rounded-sm px-2 py-3 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
-                        >
-                          <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
-                          Sondage
-                        </div>
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setAttachMenuOpen(false);
+                          setTimeout(() => setShowCreatePoll(true), 150);
+                        }}
+                        className="py-3"
+                      >
+                        <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
+                        Sondage
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   
