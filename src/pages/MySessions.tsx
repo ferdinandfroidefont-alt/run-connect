@@ -718,7 +718,7 @@ export default function MySessions() {
           </div>
           
           {/* iOS Segmented Control - Sessions/Itinéraires */}
-          <div className="px-4 pb-3">
+          <div className="px-4 pb-2">
             <div className="flex bg-secondary rounded-[10px] p-1">
               <button
                 onClick={() => setCurrentView('sessions')}
@@ -742,6 +742,34 @@ export default function MySessions() {
               </button>
             </div>
           </div>
+
+          {/* Created/Joined sub-filter - attached below, same width */}
+          {currentView === 'sessions' && (
+            <div className="px-4 pb-3">
+              <div className="flex bg-secondary rounded-[10px] p-1">
+                <button
+                  onClick={() => { setSessionSource('created'); setSessionPage(0); }}
+                  className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                    sessionSource === 'created'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  Créées
+                </button>
+                <button
+                  onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
+                  className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                    sessionSource === 'joined'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  Rejointes
+                </button>
+              </div>
+            </div>
+          )}
           <div className="h-px bg-border" />
         </div>
 
@@ -749,32 +777,6 @@ export default function MySessions() {
         <div className="py-4">
           {currentView === 'sessions' ? (
             <>
-              {/* Created/Joined segmented control */}
-              <div className="px-4 mb-3">
-                <div className="flex bg-card rounded-[10px] p-1">
-                  <button
-                    onClick={() => { setSessionSource('created'); setSessionPage(0); }}
-                    className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
-                      sessionSource === 'created'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    Créées
-                  </button>
-                  <button
-                    onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
-                    className={`flex-1 py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
-                      sessionSource === 'joined'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    Rejointes
-                  </button>
-                </div>
-              </div>
-
               {/* List/Calendar toggle */}
               <div className="flex px-4 mb-2">
                 <div className="flex bg-card rounded-lg p-0.5 shrink-0">
