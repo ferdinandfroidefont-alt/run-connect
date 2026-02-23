@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   Settings, 
@@ -17,10 +18,13 @@ import {
   Trash2, 
   Search,
   AlertTriangle,
-  Copy
+  Copy,
+  GraduationCap
 } from "lucide-react";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { CoachingTab } from "./coaching/CoachingTab";
+import { CoachBadge } from "./coaching/CoachBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +45,7 @@ interface Profile {
 
 interface GroupMember extends Profile {
   is_admin: boolean;
+  is_coach: boolean;
   joined_at: string;
 }
 
@@ -99,7 +104,7 @@ export const ClubInfoDialog = ({
       
       const { data: memberIds, error: memberError } = await supabase
         .from('group_members')
-        .select('user_id, is_admin, joined_at')
+        .select('user_id, is_admin, is_coach, joined_at')
         .eq('conversation_id', conversationId);
 
       console.log('📊 Member IDs result:', { memberIds, memberError });
@@ -127,6 +132,7 @@ export const ClubInfoDialog = ({
           return {
             ...profile,
             is_admin: member.is_admin,
+            is_coach: member.is_coach || false,
             joined_at: member.joined_at
           } as GroupMember;
         }).filter(m => m.user_id);
@@ -158,6 +164,29 @@ export const ClubInfoDialog = ({
       setLoading(false);
     }
   };
+
+  // Toggle coach status
+  const toggleCoach = async (memberId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('group_members')
+        .update({ is_coach: !currentStatus })
+        .eq('conversation_id', conversationId)
+        .eq('user_id', memberId);
+      if (error) throw error;
+      toast({
+        title: !currentStatus ? "Coach promu !" : "Rôle coach retiré",
+      });
+      loadGroupMembers();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
+
+  // Check if current user is coach
+  const currentUserIsCoach = members.some(
+    (m) => m.user_id === user?.id && (m.is_coach || m.is_admin)
+  ) || createdBy === user?.id;
 
   const handleMemberClick = (member: GroupMember) => {
     navigateToProfile(member.user_id);
@@ -382,112 +411,131 @@ export const ClubInfoDialog = ({
               </div>
             )}
 
-            {/* Members List */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-sm">Membres du club</h4>
-                <div className="flex gap-2">
-                  {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowInviteDialog(true)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Inviter
-                    </Button>
-                  )}
-                  {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onEditGroup}
-                    >
-                      <Settings className="h-4 w-4 mr-1" />
-                      Gérer
-                    </Button>
-                  )}
-                </div>
-              </div>
+            {/* Tabs: Members & Coaching */}
+            <Tabs defaultValue="members" className="w-full">
+              <TabsList className="w-full">
+                <TabsTrigger value="members" className="flex-1 gap-1">
+                  <Users className="h-4 w-4" />
+                  Membres
+                </TabsTrigger>
+                <TabsTrigger value="coaching" className="flex-1 gap-1">
+                  <GraduationCap className="h-4 w-4" />
+                  Entraînements
+                </TabsTrigger>
+              </TabsList>
 
-              {loading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
-                      <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
-                      <div className="flex-1">
-                        <div className="h-4 bg-muted rounded animate-pulse mb-1" />
-                        <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {members.map((member) => (
-                    <div
-                      key={member.user_id}
-                      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                        member.user_id === user?.id 
-                          ? 'bg-muted/30' 
-                          : 'hover:bg-muted/50'
-                      }`}
-                    >
-                      <div className="relative">
-                        <Avatar 
-                          className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => navigateToProfile(member.user_id)}
-                        >
-                          <AvatarImage src={member.avatar_url || ""} />
-                          <AvatarFallback>
-                            {(member.username || member.display_name || "").charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {member.is_admin && (
-                          <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
-                            <Crown className="h-3 w-3 text-primary-foreground" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm truncate">
-                            {member.username || member.display_name}
-                            {member.user_id === user?.id && (
-                              <span className="text-muted-foreground"> (vous)</span>
-                            )}
-                          </p>
-                          {member.is_admin && (
-                            <Badge variant="secondary" className="text-xs px-1 py-0">
-                              Admin
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          @{member.username}
-                        </p>
-                      </div>
-
-                      {/* Remove member button for admins */}
-                      {isAdmin && member.user_id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setMemberToDelete(member);
-                            setShowDeleteDialog(true);
-                          }}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <UserMinus className="h-4 w-4" />
+              <TabsContent value="members" className="mt-3">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-sm">Membres du club</h4>
+                    <div className="flex gap-2">
+                      {isAdmin && (
+                        <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)}>
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Inviter
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button variant="outline" size="sm" onClick={onEditGroup}>
+                          <Settings className="h-4 w-4 mr-1" />
+                          Gérer
                         </Button>
                       )}
                     </div>
-                  ))}
+                  </div>
+
+                  {loading ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
+                          <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
+                          <div className="flex-1">
+                            <div className="h-4 bg-muted rounded animate-pulse mb-1" />
+                            <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {members.map((member) => (
+                        <div
+                          key={member.user_id}
+                          className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                            member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'
+                          }`}
+                        >
+                          <div className="relative">
+                            <Avatar
+                              className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => navigateToProfile(member.user_id)}
+                            >
+                              <AvatarImage src={member.avatar_url || ""} />
+                              <AvatarFallback>
+                                {(member.username || member.display_name || "").charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {member.is_admin && (
+                              <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
+                                <Crown className="h-3 w-3 text-primary-foreground" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-medium text-sm truncate">
+                                {member.username || member.display_name}
+                                {member.user_id === user?.id && (
+                                  <span className="text-muted-foreground"> (vous)</span>
+                                )}
+                              </p>
+                              {member.is_admin && (
+                                <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>
+                              )}
+                              {member.is_coach && <CoachBadge />}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">@{member.username}</p>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {/* Toggle coach button for admins */}
+                            {isAdmin && member.user_id !== user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleCoach(member.user_id, member.is_coach)}
+                                title={member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}
+                              >
+                                <GraduationCap className={`h-4 w-4 ${member.is_coach ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                              </Button>
+                            )}
+                            {/* Remove member button for admins */}
+                            {isAdmin && member.user_id !== user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setMemberToDelete(member);
+                                  setShowDeleteDialog(true);
+                                }}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </TabsContent>
+
+              <TabsContent value="coaching" className="mt-3">
+                <CoachingTab clubId={conversationId} isCoach={currentUserIsCoach} />
+              </TabsContent>
+            </Tabs>
 
             {/* Actions */}
             <div className="flex gap-2 pt-4">

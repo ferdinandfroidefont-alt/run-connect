@@ -177,6 +177,100 @@ export type Database = {
           },
         ]
       }
+      coaching_participations: {
+        Row: {
+          athlete_note: string | null
+          coaching_session_id: string
+          completed_at: string | null
+          created_at: string
+          feedback: string | null
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          athlete_note?: string | null
+          coaching_session_id: string
+          completed_at?: string | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          athlete_note?: string | null
+          coaching_session_id?: string
+          completed_at?: string | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_participations_coaching_session_id_fkey"
+            columns: ["coaching_session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_sessions: {
+        Row: {
+          activity_type: string
+          club_id: string
+          coach_id: string
+          created_at: string
+          description: string | null
+          distance_km: number | null
+          id: string
+          pace_target: string | null
+          scheduled_at: string
+          session_blocks: Json | null
+          status: string
+          title: string
+        }
+        Insert: {
+          activity_type?: string
+          club_id: string
+          coach_id: string
+          created_at?: string
+          description?: string | null
+          distance_km?: number | null
+          id?: string
+          pace_target?: string | null
+          scheduled_at: string
+          session_blocks?: Json | null
+          status?: string
+          title: string
+        }
+        Update: {
+          activity_type?: string
+          club_id?: string
+          coach_id?: string
+          created_at?: string
+          description?: string | null
+          distance_km?: number | null
+          id?: string
+          pace_target?: string | null
+          scheduled_at?: string
+          session_blocks?: Json | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_sessions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           club_code: string | null
@@ -278,6 +372,7 @@ export type Database = {
           conversation_id: string
           id: string
           is_admin: boolean | null
+          is_coach: boolean | null
           joined_at: string
           user_id: string
         }
@@ -285,6 +380,7 @@ export type Database = {
           conversation_id: string
           id?: string
           is_admin?: boolean | null
+          is_coach?: boolean | null
           joined_at?: string
           user_id: string
         }
@@ -292,6 +388,7 @@ export type Database = {
           conversation_id?: string
           id?: string
           is_admin?: boolean | null
+          is_coach?: boolean | null
           joined_at?: string
           user_id?: string
         }
@@ -1838,6 +1935,14 @@ export type Database = {
       initialize_user_challenges: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      is_club_coach: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_club_member: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
       }
       is_user_blocked: {
         Args: { blocked_user_id: string; blocker_user_id: string }
