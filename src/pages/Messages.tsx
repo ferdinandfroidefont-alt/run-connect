@@ -1866,6 +1866,24 @@ const Messages = () => {
                               longPressTimerRef.current = null;
                             }
                           }}
+                          onMouseDown={() => {
+                            if (message.deleted_at) return;
+                            longPressTimerRef.current = setTimeout(() => {
+                              setLongPressMessage(message);
+                            }, 500);
+                          }}
+                          onMouseUp={() => {
+                            if (longPressTimerRef.current) {
+                              clearTimeout(longPressTimerRef.current);
+                              longPressTimerRef.current = null;
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            if (longPressTimerRef.current) {
+                              clearTimeout(longPressTimerRef.current);
+                              longPressTimerRef.current = null;
+                            }
+                          }}
                           onContextMenu={(e) => {
                             if (message.deleted_at) return;
                             e.preventDefault();
