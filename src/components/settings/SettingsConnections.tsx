@@ -2,19 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Link2, Users, Share2, Palette, Gift, ChevronRight, ArrowLeft } from "lucide-react";
+import { Link2, Users, Share2, Gift, ChevronRight, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { StravaConnect } from "@/components/StravaConnect";
 import { InstagramConnect } from "@/components/InstagramConnect";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
-import { ConversationThemeSelector } from "@/components/ConversationThemeSelector";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { ReferralDialog } from "@/components/ReferralDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
-import { useConversationTheme } from "@/hooks/useConversationTheme";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 
 interface Profile {
@@ -36,10 +33,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
   const { user } = useAuth();
   const { toast } = useToast();
   const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
-  const { conversationTheme, setConversationTheme } = useConversationTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showConversationThemes, setShowConversationThemes] = useState(false);
   const [showReferralDialog, setShowReferralDialog] = useState(false);
 
   useEffect(() => {
@@ -186,23 +181,6 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
 
               <div className="h-px bg-border ml-[54px]" />
 
-              {/* Conversation Themes */}
-              <button 
-                onClick={() => setShowConversationThemes(true)}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
-              >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
-                  <Palette className="h-[18px] w-[18px] text-white" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Thèmes de conversation</p>
-                  <p className="text-[13px] text-muted-foreground">Personnaliser l'apparence</p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-              </button>
-
-              <div className="h-px bg-border ml-[54px]" />
-
               {/* Referral */}
               <button 
                 onClick={() => setShowReferralDialog(true)}
@@ -244,25 +222,6 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
         isOpen={showReferralDialog}
         onClose={() => setShowReferralDialog(false)}
       />
-
-      <Dialog open={showConversationThemes} onOpenChange={setShowConversationThemes}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0 flex flex-col">
-          <DialogHeader className="p-6 pb-0 shrink-0">
-            <DialogTitle className="text-center text-2xl font-bold">
-              Thèmes de conversation
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="flex-1 px-6 pb-6">
-            <ConversationThemeSelector 
-              currentTheme={conversationTheme}
-              onThemeSelect={(themeId) => {
-                setConversationTheme(themeId);
-                setShowConversationThemes(false);
-              }}
-            />
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
 
       {qrData && (
         <QRShareDialog
