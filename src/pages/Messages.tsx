@@ -68,6 +68,7 @@ import { PollCard } from "@/components/PollCard";
 import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
 import { CoachAccessDialog } from "@/components/coaching/CoachAccessDialog";
 import { CreateCoachingSessionDialog } from "@/components/coaching/CreateCoachingSessionDialog";
+import { CoachingMessageCard } from "@/components/coaching/CoachingMessageCard";
 
 interface Profile {
   user_id: string;
@@ -1915,7 +1916,7 @@ const Messages = () => {
                           )}
 
                           {/* iMessage bubble */}
-                          {(message.message_type === 'session' || 
+                          {(message.message_type === 'session' || message.message_type === 'coaching_session' || 
                             (message.file_url && !message.file_type?.startsWith('image/')) ||
                             (message.content && !message.content.match(/^(Image partagée)$/i) && !isOnlyEmojis(message.content)) ||
                             message.deleted_at ||
@@ -1944,6 +1945,16 @@ const Messages = () => {
                                   {message.message_type === 'poll' && message.content && (
                                     <div className="mb-2">
                                       <PollCard pollId={message.content} />
+                                    </div>
+                                  )}
+
+                                  {/* Coaching session card */}
+                                  {message.message_type === 'coaching_session' && message.content && (
+                                    <div className="mb-2">
+                                      <CoachingMessageCard
+                                        coachingSessionId={message.content}
+                                        currentUserId={user?.id || ""}
+                                      />
                                     </div>
                                   )}
 
@@ -2672,6 +2683,7 @@ const Messages = () => {
                                 {conversation.last_message.message_type === 'voice' && 'Message vocal'}
                                 {conversation.last_message.message_type === 'session' && 'Session partagée'}
                                 {conversation.last_message.message_type === 'poll' && '📊 Sondage'}
+                                {conversation.last_message.message_type === 'coaching_session' && '🎓 Séance coach'}
                                 {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
                                   (conversation.last_message.content?.length > 40 
                                     ? conversation.last_message.content.substring(0, 40) + '…' 
