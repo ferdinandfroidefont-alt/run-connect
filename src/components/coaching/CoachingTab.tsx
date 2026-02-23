@@ -6,9 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 import { CreateCoachingSessionDialog } from "./CreateCoachingSessionDialog";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
-import { GraduationCap, Plus, Calendar, Users, Clock } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { GraduationCap, Plus, Users } from "lucide-react";
 
 interface CoachingSession {
   id: string;
@@ -78,8 +76,8 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   }, [clubId]);
 
   const now = new Date();
-  const upcoming = sessions.filter((s) => new Date(s.scheduled_at) >= now && s.status === "planned");
-  const past = sessions.filter((s) => new Date(s.scheduled_at) < now || s.status !== "planned");
+  const upcoming = sessions.filter((s) => s.status === "planned");
+  const past = sessions.filter((s) => s.status !== "planned");
 
   return (
     <div className="space-y-4">
@@ -115,7 +113,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         <div className="space-y-3">
           {upcoming.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase">À venir</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Plans actifs</p>
               {upcoming.map((s) => (
                 <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} />
               ))}
@@ -123,7 +121,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           )}
           {past.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase">Passées</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Terminées</p>
               {past.map((s) => (
                 <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} isPast />
               ))}
@@ -169,8 +167,8 @@ const SessionCard = ({
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm truncate">{session.title}</p>
         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" />
-          {format(new Date(session.scheduled_at), "EEE d MMM, HH:mm", { locale: fr })}
+          <Users className="h-3 w-3" />
+          {session.participation_count || 0} inscrit(s)
         </div>
         <div className="flex items-center gap-3 mt-1">
           {session.distance_km && (
