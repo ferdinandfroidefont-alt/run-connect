@@ -51,7 +51,8 @@ import {
   Square,
   X,
   Smile,
-  BarChart3
+  BarChart3,
+  Camera
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -162,7 +163,7 @@ const Messages = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { isRecording, recordingDuration, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
-  const { selectFromGallery, loading: cameraLoading } = useCamera();
+  const { selectFromGallery, takePicture, loading: cameraLoading } = useCamera();
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const { activeMessageId: reactionPickerMessageId, togglePicker: toggleReactionPicker, closePicker: closeReactionPicker } = useMessageReactionPicker();
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; senderName: string } | null>(null);
@@ -934,7 +935,69 @@ const Messages = () => {
     }
   };
 
-  // Handle file selection
+  // Quick camera for conversation list (Instagram-style)
+  const handleQuickCameraForConversation = async (conversation: Conversation) => {
+    if (!user) return;
+    
+    try {
+      const photo = await takePicture();
+      if (!photo) return;
+
+      setLoading(true);
+      setUploadProgress('Compression...');
+
+      let fileToUpload = photo;
+      if (photo.size > 1024 * 1024) {
+        try {
+          fileToUpload = await compressImage(photo);
+        } catch { /* use original */ }
+      }
+
+      const fileExt = fileToUpload.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      setUploadProgress('Envoi...');
+      const { error: uploadError } = await supabase.storage
+        .from('message-files')
+        .upload(filePath, fileToUpload);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('message-files')
+        .getPublicUrl(filePath);
+
+      const { error } = await supabase
+        .from('messages')
+        .insert([{
+          conversation_id: conversation.id,
+          sender_id: user.id,
+          content: '📸 Photo',
+          file_url: publicUrl,
+          file_type: 'image/jpeg',
+          file_name: fileToUpload.name,
+          message_type: 'image'
+        }]);
+
+      if (error) throw error;
+
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversation.id);
+
+      loadConversations();
+      toast({ title: "📸", description: "Photo envoyée !" });
+    } catch (error: any) {
+      console.error('Quick camera error:', error);
+      toast({ title: "Erreur", description: "Impossible d'envoyer la photo", variant: "destructive" });
+    } finally {
+      setLoading(false);
+      setUploadProgress(null);
+    }
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -2526,6 +2589,19 @@ const Messages = () => {
                           )}
                         </div>
                       </div>
+                      
+                      {/* Quick camera button (Instagram-style) */}
+                      {!isSelectionMode && (
+                        <button
+                          className="p-2 rounded-full active:bg-secondary transition-colors flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickCameraForConversation(conversation);
+                          }}
+                        >
+                          <Camera className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                      )}
                       
                       {/* iOS-style inset separator */}
                       {index < filteredAndSortedConversations.length - 1 && (
