@@ -5,5 +5,5 @@
     <color name="white">#FFFFFF</color>
     <!-- System Bars -->
     <color name="systemBarBlack">#000000</color>
-    <color name="systemBarLight">#F5F5F5</color>
+    <color name="systemBarLight">#FFFFFF</color>
 </resources>

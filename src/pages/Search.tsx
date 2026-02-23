@@ -48,9 +48,9 @@ export default function Search() {
 
   // Couleurs iOS Status Bar + WKWebView background
   useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', '#F5F5F5');
-    document.documentElement.style.backgroundColor = '#F5F5F5';
-    document.body.style.backgroundColor = '#F5F5F5';
+    document.documentElement.style.setProperty('--ios-top-color', '#FFFFFF');
+    document.documentElement.style.backgroundColor = '#FFFFFF';
+    document.body.style.backgroundColor = '#FFFFFF';
     return () => {
       document.documentElement.style.removeProperty('--ios-top-color');
       document.documentElement.style.removeProperty('background-color');
