@@ -8,8 +8,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Switch } from '@/components/ui/switch';
+import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
@@ -100,7 +103,114 @@ export default function MySessions() {
   const [sessionPage, setSessionPage] = useState(0);
   const SESSIONS_PER_PAGE = 3;
 
+  // Live tracking participant states
+  const [liveTrackingEnabled, setLiveTrackingEnabled] = useState(false);
+  const [showTrackingWarning, setShowTrackingWarning] = useState(false);
+  const trackingWatchIdRef = useRef<string | null>(null);
+
   const isViewingJoinedSession = selectedSession && sessionSource === 'joined';
+
+  // Auto-stop tracking when session is 3h past scheduled_at
+  useEffect(() => {
+    if (!liveTrackingEnabled || !selectedSession) return;
+    const checkAutoStop = () => {
+      const scheduledTime = new Date(selectedSession.scheduled_at).getTime();
+      const threeHoursAfter = scheduledTime + 3 * 60 * 60 * 1000;
+      if (Date.now() > threeHoursAfter) {
+        stopParticipantTracking();
+      }
+    };
+    checkAutoStop();
+    const interval = setInterval(checkAutoStop, 30000);
+    return () => clearInterval(interval);
+  }, [liveTrackingEnabled, selectedSession]);
+
+  // Cleanup tracking on unmount or when going back to list
+  useEffect(() => {
+    return () => {
+      if (trackingWatchIdRef.current) {
+        if (Capacitor.isNativePlatform()) {
+          Geolocation.clearWatch({ id: trackingWatchIdRef.current });
+        } else {
+          clearInterval(Number(trackingWatchIdRef.current));
+        }
+        trackingWatchIdRef.current = null;
+      }
+    };
+  }, []);
+
+  const startParticipantTracking = useCallback(async () => {
+    if (!selectedSession || !user) return;
+    try {
+      // Request native permission (triggers Android/iOS popup)
+      await Geolocation.requestPermissions();
+
+      setLiveTrackingEnabled(true);
+
+      if (Capacitor.isNativePlatform()) {
+        const id = await Geolocation.watchPosition(
+          { enableHighAccuracy: true },
+          async (position) => {
+            if (!position) return;
+            await supabase.from('live_tracking_points').insert({
+              session_id: selectedSession.id,
+              user_id: user.id,
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+            });
+          }
+        );
+        trackingWatchIdRef.current = id;
+      } else {
+        const sendPosition = async () => {
+          try {
+            const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+            await supabase.from('live_tracking_points').insert({
+              session_id: selectedSession.id,
+              user_id: user.id,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+            });
+          } catch (err) {
+            console.error('GPS error:', err);
+          }
+        };
+        sendPosition();
+        const intervalId = setInterval(sendPosition, 5000);
+        trackingWatchIdRef.current = String(intervalId);
+      }
+    } catch (error) {
+      console.error('Failed to start participant tracking:', error);
+      setLiveTrackingEnabled(false);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accéder à votre position. Vérifiez les permissions de localisation.",
+        variant: "destructive",
+      });
+    }
+  }, [selectedSession, user]);
+
+  const stopParticipantTracking = useCallback(() => {
+    setLiveTrackingEnabled(false);
+    if (trackingWatchIdRef.current) {
+      if (Capacitor.isNativePlatform()) {
+        Geolocation.clearWatch({ id: trackingWatchIdRef.current });
+      } else {
+        clearInterval(Number(trackingWatchIdRef.current));
+      }
+      trackingWatchIdRef.current = null;
+    }
+  }, []);
+
+  const handleTrackingToggle = (checked: boolean) => {
+    if (checked) {
+      setShowTrackingWarning(true);
+    } else {
+      stopParticipantTracking();
+    }
+  };
 
   const loadUserSessions = async () => {
     if (!user) return;
@@ -488,7 +598,10 @@ export default function MySessions() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setSelectedSession(null)}
+                onClick={() => {
+                  stopParticipantTracking();
+                  setSelectedSession(null);
+                }}
                 className="gap-1 text-primary p-0 h-auto font-normal"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -569,6 +682,38 @@ export default function MySessions() {
                   >
                     <MessageCircle className="h-4 w-4" />
                     Message
+                  </Button>
+                </div>
+              </IOSListGroup>
+            )}
+
+            {/* Live Tracking section for joined upcoming sessions */}
+            {isViewingJoinedSession && new Date(selectedSession.scheduled_at) >= new Date() && (
+              <IOSListGroup header="POSITION EN DIRECT">
+                <div className="p-4 bg-card space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Navigation className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-medium">Partager ma position</p>
+                        <p className="text-[12px] text-muted-foreground">Visible par les autres participants</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={liveTrackingEnabled}
+                      onCheckedChange={handleTrackingToggle}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-[8px]"
+                    onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Voir sur la carte
                   </Button>
                 </div>
               </IOSListGroup>
@@ -699,6 +844,33 @@ export default function MySessions() {
                 className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
               >
                 Quitter
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Tracking Warning Dialog */}
+        <AlertDialog open={showTrackingWarning} onOpenChange={setShowTrackingWarning}>
+          <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
+            <AlertDialogHeader className="p-6 pb-4">
+              <AlertDialogTitle className="text-center text-[17px] font-semibold">
+                Partager votre position
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+                En activant cette fonctionnalité, votre position GPS sera partagée en temps réel avec l'organisateur et les autres participants de cette séance. Votre position ne sera plus partagée une fois la séance terminée ou si vous désactivez manuellement.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="border-t border-border">
+              <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+                Annuler
+              </AlertDialogCancel>
+            </div>
+            <div className="border-t border-border">
+              <AlertDialogAction
+                onClick={() => startParticipantTracking()}
+                className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-primary text-[17px] font-semibold"
+              >
+                Activer
               </AlertDialogAction>
             </div>
           </AlertDialogContent>
