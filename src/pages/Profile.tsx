@@ -778,9 +778,57 @@ const Profile = () => {
 
         {/* Classement, Badges & Activités - iOS Style Group */}
         {!isViewingOtherUser ? (
-          <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)} />
+          <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)}>
+            <div className="h-px bg-border ml-[54px]" />
+            <PersonalRecords records={{
+              running_records: profile?.running_records,
+              cycling_records: profile?.cycling_records,
+              swimming_records: profile?.swimming_records,
+              triathlon_records: profile?.triathlon_records,
+              walking_records: profile?.walking_records
+            }} />
+            <div className="h-px bg-border ml-[54px]" />
+            <div onClick={() => navigate('/my-sessions')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
+                <Route className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+            <div className="h-px bg-border ml-[54px]" />
+            <div onClick={() => navigate('/route-creation')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
+                <MapPin className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[17px] text-foreground">Créer un parcours</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+          </ProfileStatsGroup>
         ) : (
-          <ProfileStatsGroup userId={viewingUserId || ''} />
+          <ProfileStatsGroup userId={viewingUserId || ''}>
+            <div className="h-px bg-border ml-[54px]" />
+            <PersonalRecords records={{
+              running_records: profile?.running_records,
+              cycling_records: profile?.cycling_records,
+              swimming_records: profile?.swimming_records,
+              triathlon_records: profile?.triathlon_records,
+              walking_records: profile?.walking_records
+            }} />
+            <div className="h-px bg-border ml-[54px]" />
+            <div onClick={() => navigate(`/my-sessions?user=${viewingUserId}`)} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
+                <Route className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[17px] text-foreground">Voir ses séances et itinéraires</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+          </ProfileStatsGroup>
         )}
 
         {/* iOS List Groups */}
@@ -841,18 +889,6 @@ const Profile = () => {
           </div>}
 
 
-        {/* Records personnels - Other users */}
-        {isViewingOtherUser && profile && viewingUserId && (
-          <div className="bg-card rounded-[10px] overflow-hidden">
-            <PersonalRecords records={{
-              running_records: profile.running_records,
-              cycling_records: profile.cycling_records,
-              swimming_records: profile.swimming_records,
-              triathlon_records: profile.triathlon_records,
-              walking_records: profile.walking_records
-            }} />
-          </div>
-        )}
 
         {/* Common Clubs - Other Users */}
         {isViewingOtherUser && commonClubs.length > 0 && <div>
@@ -901,34 +937,6 @@ const Profile = () => {
         {/* Historique d'activité */}
         <ActivityTimeline userId={viewingUserId || user?.id || ''} />
 
-        {/* Routes Section - For all profiles */}
-        <div>
-          
-          <div className="bg-card rounded-[10px] overflow-hidden">
-            <div onClick={() => isViewingOtherUser ? navigate(`/my-sessions?user=${viewingUserId}`) : navigate('/my-sessions')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer relative">
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
-                <Route className="h-[18px] w-[18px] text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[17px] text-foreground">
-                  {isViewingOtherUser ? 'Voir ses séances et itinéraires' : 'Voir mes séances et itinéraires'}
-                </p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-            </div>
-            <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
-            
-            {!isViewingOtherUser && <div onClick={() => navigate('/route-creation')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
-                  <MapPin className="h-[18px] w-[18px] text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[17px] text-foreground">Créer un parcours</p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-              </div>}
-          </div>
-        </div>
         
         {/* Admin Premium Manager - Creator only */}
         {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
