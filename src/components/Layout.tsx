@@ -18,24 +18,10 @@ export const Layout = ({ children }: LayoutProps) => {
 
   // Couleurs dynamiques iOS Status Bar + Home Indicator selon la page
   useEffect(() => {
-    const path = location.pathname;
-    let topColor = 'hsl(var(--background))';
-
-    if (path === '/') {
-      topColor = 'hsl(var(--card))';
-    } else if (path === '/messages' || path.startsWith('/messages/')) {
-      topColor = 'hsl(var(--secondary))';
-    }
-
-    document.documentElement.style.setProperty('--ios-top-color', topColor);
-
-    // WKWebView native background - inline direct pour fiabilité native
+    document.documentElement.style.setProperty('--ios-top-color', '#FFFFFF');
     document.documentElement.style.backgroundColor = '#FFFFFF';
     document.body.style.backgroundColor = '#FFFFFF';
-
-    // Pas de cleanup : ces styles doivent rester permanents
-    // pour éviter un flash blanc au retour de la caméra native
-  }, [location.pathname]);
+  }, []);
   
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);
