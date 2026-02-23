@@ -58,7 +58,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageSectionHeader, shouldShowSectionHeader } from "../components/MessageTimestamp";
-import { useConversationTheme } from "@/hooks/useConversationTheme";
+
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { MessageReactions, useMessageReactionPicker } from "@/components/MessageReactions";
 import { ReplyPreview, ReplyBubble } from "@/components/MessageReply";
@@ -134,7 +134,7 @@ const Messages = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { getThemeClasses } = useConversationTheme();
+  
   const { setHideBottomNav } = useAppContext();
   const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -1791,7 +1791,7 @@ const Messages = () => {
 
           {/* Messages - iMessage style scrollable area */}
           <div className="pt-[76px] flex-1 overflow-y-auto min-h-0">
-            <div className={`h-full px-3 pt-2 pb-2 space-y-0.5 ${getThemeClasses().background}`}>
+            <div className="h-full px-3 pt-2 pb-2 space-y-0.5 bg-secondary">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1917,8 +1917,8 @@ const Messages = () => {
                             <div
                               className={`rounded-[18px] px-3 py-2 ${
                                 isOwnMessage
-                                  ? getThemeClasses().ownMessage
-                                  : getThemeClasses().otherMessage
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-[#E5E5EA] text-black dark:bg-[#38383A] dark:text-white'
                               }`}
                             >
                               {/* Reply context */}
