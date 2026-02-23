@@ -118,7 +118,7 @@ async function sendFCMNotification(
             icon: 'ic_notification',
             color: '#007AFF',
             sound: 'default',
-            channel_id: 'high_importance_channel'
+            channel_id: 'runconnect_channel'
           }
         },
         apns: {
@@ -319,7 +319,7 @@ serve(async (req) => {
     // 8. Send FCM
     try {
       const accessToken = await getFirebaseAccessToken(serviceAccount);
-      console.log('📤 [FCM] Sending | channel: high_importance_channel | title:', finalTitle);
+      console.log('📤 [FCM] Sending | channel: runconnect_channel | title:', finalTitle);
 
       const fcmResult = await sendFCMNotification(
         accessToken, serviceAccount.project_id, profile.push_token, finalTitle, finalBody, fcmData
