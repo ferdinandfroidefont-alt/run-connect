@@ -1,33 +1,34 @@
 
-## Corriger le z-index du panneau de filtres sur la carte
+
+## Harmoniser la couleur des barres iOS avec le blanc de l'app
 
 ### Le probleme
 
-Sur iPhone, quand le panneau de filtres est ouvert, les boutons de la carte (itineraire, localisation, style de carte, etc.) sur le cote gauche apparaissent par-dessus le panneau de filtres. Le panneau devrait etre au-dessus de tous les boutons.
+Sur iPhone, la barre de statut (en haut) et la zone du Home Indicator (en bas) ont une couleur gris clair `#F5F5F5`, alors que l'application utilise du blanc pur `#FFFFFF` pour les cards et le fond. Cela cree une difference de teinte visible entre les barres systeme et le contenu de l'app.
 
 ### Cause
 
-Dans `src/components/InteractiveMap.tsx` :
-- Le conteneur parent du panneau de filtres (ligne 1561) a `z-10`
-- Les boutons de controle de la carte (ligne 1569) ont aussi `z-10`
-- Meme si le composant `SessionFilters` a `z-50` en interne, son conteneur parent limite son empilement a `z-10`
+Plusieurs fichiers codent en dur la couleur `#F5F5F5` pour le fond du body/html et les barres systeme iOS, au lieu d'utiliser `#FFFFFF` qui correspond au blanc reel de l'app.
 
-### Correction
+### Corrections
 
-#### Fichier : `src/components/InteractiveMap.tsx`
+#### 1. `src/components/Layout.tsx`
+- Ligne 33-34 : Remplacer `#F5F5F5` par `#FFFFFF` pour le backgroundColor du body et html
 
-- Ligne 1561 : Changer le `z-10` du conteneur des filtres en `z-30` pour qu'il passe au-dessus des boutons de controle qui restent a `z-10`
+#### 2. `src/components/LoadingScreen.tsx`
+- Ligne 25-27 : Remplacer `#F5F5F5` par `#FFFFFF` pour `--ios-top-color` et les backgrounds
 
-Changement :
-```
-// Avant
-<div className="absolute right-4 z-10 flex flex-col ..."
+#### 3. `src/pages/Search.tsx`
+- Ligne 51-53 : Remplacer `#F5F5F5` par `#FFFFFF`
 
-// Apres
-<div className="absolute right-4 z-30 flex flex-col ..."
-```
+#### 4. `src/index.css`
+- Ligne ~162 : Remplacer `background-color: #F5F5F5 !important` du html/body par `#FFFFFF !important`
+
+#### 5. Fichiers Android (pour coherence)
+- `android/app/src/main/res/values/colors.xml` : Changer `systemBarLight` de `#F5F5F5` a `#FFFFFF`
+- `android-webview/app/src/main/res/values/colors.xml` : Idem
 
 ### Resultat attendu
 
-- Le panneau de filtres ouvert couvre les boutons de la carte sur iPhone et Android
-- Les boutons restent visibles quand les filtres sont fermes (pas de conflit)
+Les barres iOS en haut et en bas seront exactement du meme blanc que le contenu de l'app, sans difference de teinte visible.
+
