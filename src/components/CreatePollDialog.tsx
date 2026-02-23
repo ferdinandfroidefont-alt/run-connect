@@ -79,7 +79,7 @@ export const CreatePollDialog = ({
 
       if (error) throw error;
 
-      onPollCreated((data as any).id);
+      await onPollCreated((data as any).id);
       onOpenChange(false);
       setQuestion('');
       setOptions(['', '']);
