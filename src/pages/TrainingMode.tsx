@@ -33,7 +33,7 @@ export default function TrainingMode() {
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | google.maps.Marker | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [showOffRouteToast, setShowOffRouteToast] = useState(false);
   const offRouteToastTimer = useRef<NodeJS.Timeout | null>(null);
@@ -109,32 +109,55 @@ export default function TrainingMode() {
     initMap();
   }, [routeCoordinates, mapReady, apiKey]);
 
-  // Helper to create or update the native-style Google blue dot
+  // Create canvas-based blue dot icon (same as InteractiveMap)
+  const createBlueDotIcon = useCallback(() => {
+    const size = 60;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, 5, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.6)');
+    gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.3)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#3b82f6';
+    ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, 8, 0, 2 * Math.PI);
+    ctx.stroke();
+    return canvas.toDataURL('image/png');
+  }, []);
+
   const updateBlueDot = useCallback((map: google.maps.Map, pos: { lat: number; lng: number }) => {
     if (markerRef.current) {
-      if (markerRef.current instanceof google.maps.Marker) {
-        markerRef.current.setPosition(pos);
-      } else {
-        (markerRef.current as google.maps.marker.AdvancedMarkerElement).position = pos;
-      }
+      markerRef.current.setPosition(pos);
       return;
     }
-    try {
-      const dotEl = document.createElement('div');
-      dotEl.innerHTML = `
-        <div style="position:relative;width:22px;height:22px;display:flex;align-items:center;justify-content:center;">
-          <div style="position:absolute;width:22px;height:22px;border-radius:50%;background:rgba(66,133,244,0.18);animation:gm-pulse 2s ease-out infinite;"></div>
-          <div style="width:12px;height:12px;border-radius:50%;background:#4285F4;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);position:relative;z-index:1;"></div>
-        </div>
-      `;
-      markerRef.current = new google.maps.marker.AdvancedMarkerElement({ map, position: pos, content: dotEl });
-    } catch {
-      markerRef.current = new google.maps.Marker({
-        map, position: pos,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#4285F4', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2 },
-      });
-    }
-  }, []);
+    const iconUrl = createBlueDotIcon();
+    markerRef.current = new google.maps.Marker({
+      map,
+      position: pos,
+      icon: {
+        url: iconUrl,
+        scaledSize: new google.maps.Size(60, 60),
+        anchor: new google.maps.Point(30, 30),
+      },
+      zIndex: 1000,
+      title: 'Votre position',
+    });
+  }, [createBlueDotIcon]);
 
   // Center map on initial position & show blue dot
   useEffect(() => {
@@ -260,13 +283,6 @@ export default function TrainingMode() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      <style>{`
-        @keyframes gm-pulse {
-          0% { transform: scale(1); opacity: 0.5; }
-          100% { transform: scale(2.8); opacity: 0; }
-        }
-      `}</style>
-
       {/* Map - isolated stacking context so Google Maps z-indexes stay below our UI */}
       <div className="absolute inset-0" style={{ zIndex: 0, isolation: 'isolate' }}>
         <div ref={mapRef} className="w-full h-full bg-secondary" />
