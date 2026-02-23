@@ -193,7 +193,7 @@ export default function ConfirmPresence() {
     <div className="fixed inset-0 bg-secondary flex flex-col overflow-x-hidden">
       {/* iOS Header */}
       <div className="bg-card border-b border-border shrink-0">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="relative flex items-center justify-between px-4 py-3">
           <button
             onClick={handleBack}
             className="flex items-center gap-1 text-primary"
@@ -201,7 +201,7 @@ export default function ConfirmPresence() {
             <ChevronLeft className="h-5 w-5" />
             <span className="text-[17px]">Retour</span>
           </button>
-          <h1 className="text-[17px] font-semibold text-foreground">
+          <h1 className="text-[17px] font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
             {t('confirmPresence.title')}
           </h1>
           <div className="w-16" />
