@@ -2385,6 +2385,31 @@ const Messages = () => {
           setMessageToDelete(longPressMessage.id);
         }}
       />
+      {user && (
+        <CreatePollDialog
+          open={showCreatePoll}
+          onOpenChange={setShowCreatePoll}
+          conversationId={selectedConversation.id}
+          userId={user.id}
+          onPollCreated={async (pollId: string) => {
+            try {
+              await supabase.from('messages').insert({
+                conversation_id: selectedConversation.id,
+                sender_id: user.id,
+                content: pollId,
+                message_type: 'poll',
+              });
+              await supabase
+                .from('conversations')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('id', selectedConversation.id);
+              loadMessages(selectedConversation.id);
+            } catch (err) {
+              console.error('Error sending poll message:', err);
+            }
+          }}
+        />
+      )}
       </>
     );
   }
@@ -2775,31 +2800,6 @@ const Messages = () => {
           username={selectedAvatarData?.username || "Utilisateur"}
         />
 
-        {selectedConversation && user && (
-          <CreatePollDialog
-            open={showCreatePoll}
-            onOpenChange={setShowCreatePoll}
-            conversationId={selectedConversation.id}
-            userId={user.id}
-            onPollCreated={async (pollId: string) => {
-              try {
-                await supabase.from('messages').insert({
-                  conversation_id: selectedConversation.id,
-                  sender_id: user.id,
-                  content: pollId,
-                  message_type: 'poll',
-                });
-                await supabase
-                  .from('conversations')
-                  .update({ updated_at: new Date().toISOString() })
-                  .eq('id', selectedConversation.id);
-                loadMessages(selectedConversation.id);
-              } catch (err) {
-                console.error('Error sending poll message:', err);
-              }
-            }}
-          />
-        )}
       </div>
 
     </>
