@@ -1,57 +1,121 @@
 
 
-## Diagnostic
+# Système de Coaching dans les Clubs
 
-En regardant le screenshot, la zone de la status bar iOS (derrière "18:44") a une teinte légèrement grisée comparée au blanc pur de l'app en dessous. De même, la zone du Home Indicator en bas peut ne pas correspondre.
+## Concept
 
-**Causes identifiées :**
+Enrichir le système de clubs existant avec des fonctionnalités de coaching. Le créateur d'un club (ou un membre promu "coach") peut publier des **séances d'entraînement planifiées** visibles uniquement par les membres du club, suivre leur participation, et donner un **feedback** individuel. Tout utilisateur peut activer ce rôle.
 
-1. **`body::before` (status bar)** utilise `var(--ios-top-color, hsl(var(--background)))` — une résolution CSS variable indirecte qui peut ne pas donner exactement `#FFFFFF` sur tous les moteurs WebKit. De plus, `Layout.tsx` set `--ios-top-color` à `'hsl(var(--card))'` (une string CSS avec variable imbriquée) ce qui peut causer des problèmes de résolution.
+## Architecture
 
-2. **Pas de `body::after`** pour la zone du Home Indicator en bas — il n'y a aucun pseudo-élément couvrant `safe-area-inset-bottom`, donc la couleur native du WKWebView transparaît.
+### Nouvelles tables Supabase
 
-3. **`--background: 0 0% 100%`** dans le CSS est bien blanc, mais la résolution `hsl(var(--card))` dans un `setProperty` JavaScript peut être ambiguë.
+**1. `coaching_sessions`** — Séances planifiées par le coach dans un club
 
-## Solution
+| Colonne | Type | Description |
+|---|---|---|
+| id | uuid PK | |
+| club_id | uuid FK → conversations.id | Club concerné |
+| coach_id | uuid | Créateur de la séance |
+| title | text | Titre (ex: "Fractionné 10x400m") |
+| description | text | Consignes détaillées |
+| scheduled_at | timestamptz | Date/heure prévue |
+| activity_type | text | course, vélo, etc. |
+| distance_km | numeric | Distance prévue (optionnel) |
+| pace_target | text | Allure cible (optionnel) |
+| session_blocks | jsonb | Blocs structurés (réutilise le format existant) |
+| status | text | planned / completed / cancelled |
+| created_at | timestamptz | |
 
-### Fichier 1 : `src/index.css`
+**2. `coaching_participations`** — Participation + feedback
 
-**Forcer `#FFFFFF` en dur** sur le `body::before` (status bar) et **ajouter un `body::after`** pour le Home Indicator :
+| Colonne | Type | Description |
+|---|---|---|
+| id | uuid PK | |
+| coaching_session_id | uuid FK | |
+| user_id | uuid | Athlète |
+| status | text | confirmed / completed / absent |
+| feedback | text | Feedback du coach (nullable) |
+| athlete_note | text | Note de l'athlète (comment ça s'est passé) |
+| completed_at | timestamptz | |
+| created_at | timestamptz | |
 
-```css
-body::before {
-  background-color: #FFFFFF;  /* Hardcodé au lieu de var(--ios-top-color) */
-}
+**3. Modification de `group_members`** — Ajouter un rôle coach
 
-body::after {
-  content: '';
-  display: block;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-bottom, 0px);
-  background-color: #FFFFFF;
-  z-index: 9999;
-  pointer-events: none;
-}
+Ajouter une colonne `is_coach boolean DEFAULT false` à la table `group_members`.
+
+### RLS Policies
+
+- **coaching_sessions** : SELECT pour les membres du club ; INSERT/UPDATE/DELETE pour les coachs du club
+- **coaching_participations** : SELECT pour membres du club ; INSERT pour les membres (s'inscrire) ; UPDATE pour le coach (feedback) ou l'athlète (sa note)
+- **group_members.is_coach** : UPDATE uniquement par le créateur du club
+
+### Nouveaux composants
+
+**1. `CoachingTab.tsx`** — Onglet dans `ClubInfoDialog` ou vue dédiée dans la conversation de club
+
+- Liste des séances planifiées (prochaines en haut)
+- Bouton "Créer une séance" (visible uniquement pour les coachs)
+- Chaque séance : titre, date, activité, nombre d'inscrits
+- Clic → détail avec liste des inscrits et zone de feedback
+
+**2. `CreateCoachingSessionDialog.tsx`** — Dialog de création
+
+- Champs : titre, description, date/heure, type d'activité, distance, allure cible
+- Option blocs structurés (réutilise `SessionBlock` existant)
+- Bouton publier → insère dans `coaching_sessions` + envoie notification aux membres du club
+
+**3. `CoachingSessionDetail.tsx`** — Détail d'une séance coaching
+
+- Vue coach : liste des participants avec statut, zone de feedback individuel
+- Vue athlète : consignes, bouton "Je participe" / "Fait", zone pour écrire sa note
+- Historique des séances passées
+
+**4. `CoachBadge.tsx`** — Badge "Coach" affiché dans la liste des membres du club
+
+### Modifications existantes
+
+**`ClubInfoDialog.tsx`** :
+- Ajouter un onglet "Entraînements" entre les membres et les infos
+- Bouton pour promouvoir un membre en coach (admin seulement)
+
+**`Messages.tsx`** (vue conversation de club) :
+- Ajouter un bouton raccourci en haut ou dans le menu "..." pour accéder aux séances coaching du club
+
+**`BottomNavigation.tsx`** : Aucun changement (les séances coaching sont accessibles via le club)
+
+### Flux utilisateur
+
+```text
+Club existant
+  └─ Menu "..." ou onglet "Entraînements"
+       ├─ [Coach] → "Créer une séance"
+       │    └─ Formulaire → Publie → Notifie les membres
+       ├─ Liste des séances à venir
+       │    └─ Clic → Détail
+       │         ├─ [Athlète] "Je participe" / "Fait" + note
+       │         └─ [Coach] Feedback individuel par athlète
+       └─ Historique des séances passées
 ```
 
-### Fichier 2 : `src/components/Layout.tsx`
+### Notifications
 
-**Simplifier** : remplacer `hsl(var(--card))` par `#FFFFFF` directement dans le `setProperty`, et supprimer la logique conditionnelle inutile puisque toutes les pages utilisent du blanc :
+- Nouvelle séance coaching publiée → push aux membres du club
+- Feedback du coach → push à l'athlète concerné
+- Rappel avant séance (optionnel, via cron)
 
-```tsx
-document.documentElement.style.setProperty('--ios-top-color', '#FFFFFF');
-```
+### Étapes d'implémentation
 
-### Fichier 3 : `src/components/BottomNavigation.tsx`
+1. **Migration SQL** : créer `coaching_sessions`, `coaching_participations`, ajouter `is_coach` à `group_members`, RLS policies
+2. **Composants UI** : `CoachingTab`, `CreateCoachingSessionDialog`, `CoachingSessionDetail`, `CoachBadge`
+3. **Intégration** : modifier `ClubInfoDialog` pour l'onglet coaching, modifier la vue conversation club pour l'accès rapide
+4. **Notifications** : réutiliser `useSendNotification` pour notifier les membres
+5. **Traductions** : ajouter les clés FR/EN dans `translations.ts`
 
-**Ajouter `pb-[env(safe-area-inset-bottom)]`** sur la nav pour que le contenu ne soit pas caché par le pseudo-élément du Home Indicator (déjà géré par `ios-nav-padding` dans Layout, mais vérifier la cohérence).
+### Points techniques
 
-### Résumé
-
-- Status bar → `body::before` forcé en `#FFFFFF`
-- Home Indicator → nouveau `body::after` en `#FFFFFF`
-- Plus de résolution CSS variable imbriquée qui peut échouer sur WKWebView
+- Réutilise le format `session_blocks` (jsonb) déjà utilisé dans `sessions` pour les blocs structurés
+- Le rôle coach est par club (un utilisateur peut être coach dans un club et simple membre dans un autre)
+- Le créateur du club est automatiquement coach
+- Pas de nouvelle page : tout est intégré dans l'écosystème clubs existant
 
