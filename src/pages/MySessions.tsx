@@ -41,6 +41,7 @@ interface UserSession {
   created_at: string;
   image_url?: string;
   organizer_id?: string;
+  live_tracking_max_duration?: number;
 }
 
 interface Participant {
@@ -110,13 +111,14 @@ export default function MySessions() {
 
   const isViewingJoinedSession = selectedSession && sessionSource === 'joined';
 
-  // Auto-stop tracking when session is 3h past scheduled_at
+  // Auto-stop tracking based on live_tracking_max_duration
   useEffect(() => {
     if (!liveTrackingEnabled || !selectedSession) return;
     const checkAutoStop = () => {
       const scheduledTime = new Date(selectedSession.scheduled_at).getTime();
-      const threeHoursAfter = scheduledTime + 3 * 60 * 60 * 1000;
-      if (Date.now() > threeHoursAfter) {
+      const maxDuration = (selectedSession as any).live_tracking_max_duration || 120;
+      const autoStopTime = scheduledTime + maxDuration * 60 * 1000;
+      if (Date.now() > autoStopTime) {
         stopParticipantTracking();
       }
     };
@@ -144,6 +146,11 @@ export default function MySessions() {
     try {
       // Request native permission (triggers Android/iOS popup)
       await Geolocation.requestPermissions();
+
+      // If organizer (created session), activate live_tracking_active on the session for RLS
+      if (sessionSource === 'created') {
+        await supabase.from('sessions').update({ live_tracking_active: true, live_tracking_started_at: new Date().toISOString() }).eq('id', selectedSession.id);
+      }
 
       setLiveTrackingEnabled(true);
 
@@ -192,7 +199,7 @@ export default function MySessions() {
     }
   }, [selectedSession, user]);
 
-  const stopParticipantTracking = useCallback(() => {
+  const stopParticipantTracking = useCallback(async () => {
     setLiveTrackingEnabled(false);
     if (trackingWatchIdRef.current) {
       if (Capacitor.isNativePlatform()) {
@@ -202,7 +209,11 @@ export default function MySessions() {
       }
       trackingWatchIdRef.current = null;
     }
-  }, []);
+    // If organizer, deactivate live_tracking_active
+    if (sessionSource === 'created' && selectedSession) {
+      await supabase.from('sessions').update({ live_tracking_active: false }).eq('id', selectedSession.id);
+    }
+  }, [sessionSource, selectedSession]);
 
   const handleTrackingToggle = (checked: boolean) => {
     if (checked) {
@@ -687,8 +698,14 @@ export default function MySessions() {
               </IOSListGroup>
             )}
 
-            {/* Live Tracking section for joined upcoming sessions */}
-            {isViewingJoinedSession && new Date(selectedSession.scheduled_at) >= new Date() && (
+            {/* Live Tracking section for joined/created sessions (not yet ended) */}
+            {(() => {
+              const maxDur = (selectedSession as any).live_tracking_max_duration || 120;
+              const sessionEndTime = new Date(selectedSession.scheduled_at).getTime() + maxDur * 60 * 1000;
+              const isNotEnded = Date.now() < sessionEndTime;
+              const showTracking = (isViewingJoinedSession || sessionSource === 'created') && isNotEnded;
+              return showTracking;
+            })() && (
               <IOSListGroup header="POSITION EN DIRECT">
                 <div className="p-4 bg-card space-y-3">
                   <div className="flex items-center justify-between">
