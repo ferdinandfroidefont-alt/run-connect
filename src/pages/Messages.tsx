@@ -2327,6 +2327,63 @@ const Messages = () => {
           </div>
         </div>
       </div>
+      {/* Delete message confirmation dialog */}
+      <AlertDialog open={!!messageToDelete} onOpenChange={(open) => { if (!open) setMessageToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce message ?</AlertDialogTitle>
+            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMessageToDelete(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (messageToDelete) handleDeleteMessage(messageToDelete);
+                setMessageToDelete(null);
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Long press context menu */}
+      <MessageLongPressMenu
+        isOpen={!!longPressMessage}
+        onClose={() => setLongPressMessage(null)}
+        messageContent={longPressMessage?.content || ''}
+        isOwnMessage={longPressMessage?.sender_id === user?.id}
+        onReaction={async (emoji) => {
+          if (!longPressMessage || !user) return;
+          const existing = longPressMessage.reactions?.find(
+            (r) => r.emoji === emoji && r.user_id === user.id
+          );
+          if (existing) {
+            await supabase.from('message_reactions').delete().eq('id', existing.id);
+          } else {
+            await supabase.from('message_reactions').insert({
+              message_id: longPressMessage.id,
+              user_id: user.id,
+              emoji,
+            });
+          }
+          if (selectedConversation) loadMessages(selectedConversation.id);
+        }}
+        onReply={() => {
+          if (!longPressMessage) return;
+          setReplyTo({
+            id: longPressMessage.id,
+            content: longPressMessage.content || (longPressMessage.file_url ? '📎 Pièce jointe' : ''),
+            senderName: longPressMessage.sender.username || longPressMessage.sender.display_name
+          });
+        }}
+        onDelete={() => {
+          if (!longPressMessage) return;
+          setMessageToDelete(longPressMessage.id);
+        }}
+      />
       </>
     );
   }
@@ -2707,63 +2764,6 @@ const Messages = () => {
         />
       </div>
 
-      {/* Delete message confirmation dialog */}
-      <AlertDialog open={!!messageToDelete} onOpenChange={(open) => { if (!open) setMessageToDelete(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce message ?</AlertDialogTitle>
-            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setMessageToDelete(null)}>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (messageToDelete) handleDeleteMessage(messageToDelete);
-                setMessageToDelete(null);
-              }}
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Long press context menu */}
-      <MessageLongPressMenu
-        isOpen={!!longPressMessage}
-        onClose={() => setLongPressMessage(null)}
-        messageContent={longPressMessage?.content || ''}
-        isOwnMessage={longPressMessage?.sender_id === user?.id}
-        onReaction={async (emoji) => {
-          if (!longPressMessage || !user) return;
-          const existing = longPressMessage.reactions?.find(
-            (r) => r.emoji === emoji && r.user_id === user.id
-          );
-          if (existing) {
-            await supabase.from('message_reactions').delete().eq('id', existing.id);
-          } else {
-            await supabase.from('message_reactions').insert({
-              message_id: longPressMessage.id,
-              user_id: user.id,
-              emoji,
-            });
-          }
-          if (selectedConversation) loadMessages(selectedConversation.id);
-        }}
-        onReply={() => {
-          if (!longPressMessage) return;
-          setReplyTo({
-            id: longPressMessage.id,
-            content: longPressMessage.content || (longPressMessage.file_url ? '📎 Pièce jointe' : ''),
-            senderName: longPressMessage.sender.username || longPressMessage.sender.display_name
-          });
-        }}
-        onDelete={() => {
-          if (!longPressMessage) return;
-          setMessageToDelete(longPressMessage.id);
-        }}
-      />
     </>
   );
 };
