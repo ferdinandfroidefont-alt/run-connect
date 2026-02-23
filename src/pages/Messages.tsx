@@ -2576,7 +2576,7 @@ const Messages = () => {
                       </div>
                       
                       {/* Right column: time + camera */}
-                      <div className="flex flex-col items-center justify-center gap-1 flex-shrink-0 ml-2">
+                      <div className="flex items-center justify-center gap-2 flex-shrink-0 ml-2">
                         <span className="text-[13px] text-muted-foreground">
                           {(() => {
                             const date = new Date(conversation.last_message_date || conversation.updated_at);
