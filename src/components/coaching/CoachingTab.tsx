@@ -10,6 +10,7 @@ import { CalendarDays, BookOpen, BarChart3, Users, Clock, AlertTriangle, Layers 
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 import { WeeklyTrackingDialog } from "./WeeklyTrackingDialog";
 import { ClubGroupsManagerDialog } from "./ClubGroupsManagerDialog";
+import { AthleteWeeklyView } from "./AthleteWeeklyView";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -235,29 +236,13 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         </IOSListGroup>
       )}
 
-      {/* Empty state for athletes */}
-      {!isCoach && sessions.length === 0 && (
-        <IOSListGroup>
-          <div className="px-4 py-8 text-center">
-            <CalendarDays className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">Aucune séance cette semaine</p>
-          </div>
-        </IOSListGroup>
-      )}
-
-      {/* Athlete view: received sessions */}
-      {!isCoach && sessions.length > 0 && (
-        <IOSListGroup header="MES SÉANCES">
-          {sessions.map((s, i) => (
-            <IOSListItem
-              key={s.id}
-              title={s.title}
-              subtitle={`${format(new Date(s.scheduled_at), "EEE d MMM", { locale: fr })}${s.objective ? ` · ${s.objective}` : ""}`}
-              onClick={() => setSelectedSession(s)}
-              showSeparator={i < sessions.length - 1}
-            />
-          ))}
-        </IOSListGroup>
+      {/* Athlete weekly view */}
+      {!isCoach && (
+        <AthleteWeeklyView
+          clubId={clubId}
+          sessions={sessions}
+          onSessionClick={(s) => setSelectedSession(s)}
+        />
       )}
 
       {/* Dialogs */}
