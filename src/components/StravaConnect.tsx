@@ -149,7 +149,7 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
         {profile?.strava_connected ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
                 ✓ Connecté à Strava
               </Badge>
               {profile.strava_verified_at && (

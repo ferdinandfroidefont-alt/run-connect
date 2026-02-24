@@ -41,10 +41,10 @@ export const ReliabilityDetailsDialog = ({
 
         <div className="p-4 space-y-4">
           {/* Grande Card Centrée - Taux de fiabilité */}
-          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-[10px] p-6">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-[10px] p-6">
             <div className="flex flex-col items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="text-5xl font-bold text-foreground">
                 {reliabilityRate.toFixed(0)}%
@@ -68,19 +68,19 @@ export const ReliabilityDetailsDialog = ({
 
             {/* Séances venues */}
             <div className="bg-card border border-border rounded-[10px] p-4 flex flex-col items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               </div>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalSessionsCompleted}</p>
+              <p className="text-2xl font-bold text-emerald-600">{totalSessionsCompleted}</p>
               <p className="text-xs text-muted-foreground text-center">Venues</p>
             </div>
 
             {/* Séances pas venues */}
             <div className="bg-card border border-border rounded-[10px] p-4 flex flex-col items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
-                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                <XCircle className="h-4 w-4 text-red-600" />
               </div>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{sessionsNotAttended}</p>
+              <p className="text-2xl font-bold text-red-600">{sessionsNotAttended}</p>
               <p className="text-xs text-muted-foreground text-center">Pas venues</p>
             </div>
           </div>

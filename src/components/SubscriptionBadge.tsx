@@ -48,14 +48,14 @@ export const SubscriptionBadge = ({
           label: 'Expire bientôt',
           icon: Clock,
           variant: 'outline' as const,
-          className: 'border-orange-400 text-orange-600 bg-orange-50 dark:bg-orange-950/30',
+          className: 'border-orange-400 text-orange-600 bg-orange-50',
         };
       case 'past_due':
         return {
           label: 'Paiement en attente',
           icon: AlertTriangle,
           variant: 'outline' as const,
-          className: 'border-red-400 text-red-600 bg-red-50 dark:bg-red-950/30',
+          className: 'border-red-400 text-red-600 bg-red-50',
         };
       case 'expired':
         return {

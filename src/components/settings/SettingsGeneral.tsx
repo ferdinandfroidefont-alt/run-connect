@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Sun, Moon, Key, Settings, Loader2, ArrowLeft, ChevronRight, MapPin } from "lucide-react";
+import { Languages, Key, Settings, Loader2, ArrowLeft, ChevronRight, MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { languages, Language } from "@/lib/translations";
@@ -18,7 +17,6 @@ interface SettingsGeneralProps {
 
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
   const { language, setLanguage } = useLanguage();
   const { toast } = useToast();
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -110,25 +108,6 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                 </Select>
               </div>
 
-              <div className="h-px bg-border ml-[54px]" />
-
-              {/* Theme Toggle */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
-                  {theme === 'dark' ? (
-                    <Moon className="h-[18px] w-[18px] text-white" />
-                  ) : (
-                    <Sun className="h-[18px] w-[18px] text-white" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-[15px] font-medium">Mode {theme === 'dark' ? 'sombre' : 'clair'}</p>
-                </div>
-                <Switch
-                  checked={theme === 'dark'}
-                  onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                />
-              </div>
             </div>
           </div>
 

@@ -1925,7 +1925,7 @@ const Messages = () => {
                               className={`rounded-[18px] px-3 py-2 ${
                                 isOwnMessage
                                   ? 'bg-primary text-primary-foreground'
-                                  : 'bg-[#E5E5EA] text-black dark:bg-[#38383A] dark:text-white'
+                                  : 'bg-[#E5E5EA] text-black'
                               }`}
                             >
                               {/* Reply context */}

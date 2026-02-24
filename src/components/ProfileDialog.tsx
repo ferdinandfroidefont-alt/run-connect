@@ -448,13 +448,13 @@ export const ProfileDialog = ({
                     </div>
                   )}
                   {profile?.strava_connected && profile?.strava_verified_at && (
-                    <div className="flex items-center gap-1 bg-orange-500/12 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full">
+                    <div className="flex items-center gap-1 bg-orange-500/12 text-orange-600 px-2 py-0.5 rounded-full">
                       <Zap className="h-3 w-3" />
                       <span className="text-[11px] font-semibold">Strava</span>
                     </div>
                   )}
                   {profile?.instagram_connected && profile?.instagram_verified_at && (
-                    <div className="flex items-center gap-1 bg-pink-500/12 text-pink-600 dark:text-pink-400 px-2 py-0.5 rounded-full">
+                    <div className="flex items-center gap-1 bg-pink-500/12 text-pink-600 px-2 py-0.5 rounded-full">
                       <Instagram className="h-3 w-3" />
                     </div>
                   )}

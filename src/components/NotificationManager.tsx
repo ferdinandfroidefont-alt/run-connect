@@ -324,11 +324,11 @@ export const NotificationManager = () => {
       <CardContent className="space-y-4">
         {!permissionStatus.granted ? (
           <div className="space-y-2">
-            <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-2">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-900 font-medium mb-2">
                 📱 Demande automatique au démarrage
               </p>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
+              <p className="text-xs text-blue-700">
                 Les notifications vous sont demandées automatiquement au premier lancement de l'application. 
                 Si vous avez refusé, désinstallez et réinstallez l'app, ou activez manuellement les notifications dans les paramètres Android.
               </p>

@@ -147,14 +147,14 @@ export const AthleteOverrideEditor = ({
                 <span className="text-sm font-medium">{getMemberName(userId)}</span>
                 {pctLabel && (
                   <span className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full ${
-                    pctLabel.startsWith("+") ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    pctLabel.startsWith("+") ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
                   }`}>
                     {pctLabel}
                   </span>
                 )}
                 {repsDiff != null && repsDiff !== 0 && (
                   <span className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full ${
-                    repsDiff > 0 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                    repsDiff > 0 ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
                   }`}>
                     {repsDiff > 0 ? `+${repsDiff}` : repsDiff} reps
                   </span>

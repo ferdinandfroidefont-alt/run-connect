@@ -101,7 +101,7 @@ export const RouteDialog = ({
           </div>
 
           {showCreateSessionOption && (
-            <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <input
                 type="checkbox"
                 id="create-session"
@@ -109,7 +109,7 @@ export const RouteDialog = ({
                 onChange={(e) => setCreateSession(e.target.checked)}
                 className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               />
-              <Label htmlFor="create-session" className="text-sm text-blue-700 dark:text-blue-300">
+              <Label htmlFor="create-session" className="text-sm text-blue-700">
                 Créer une séance avec cet itinéraire
               </Label>
             </div>

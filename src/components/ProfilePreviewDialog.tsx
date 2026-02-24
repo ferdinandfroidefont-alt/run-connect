@@ -499,7 +499,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 {/* Status Badges */}
                 <div className="flex flex-wrap justify-center gap-1.5 mb-4">
                   {profile.is_admin ? (
-                    <span className="px-2 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 text-[11px] rounded-full font-medium">
+                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[11px] rounded-full font-medium">
                       Admin
                     </span>
                   ) : (
@@ -508,14 +508,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </span>
                   )}
                   {profile.is_premium && (
-                    <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 text-[11px] rounded-full font-medium">
+                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[11px] rounded-full font-medium">
                       Premium
                     </span>
                   )}
                   {profile.strava_connected && profile.strava_verified_at && (
                     <button
                       onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                      className="px-2 py-0.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] rounded-full font-medium"
+                      className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[11px] rounded-full font-medium"
                     >
                       Strava ✓
                     </button>
@@ -523,7 +523,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   {profile.instagram_connected && profile.instagram_verified_at && (
                     <button
                       onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                      className="px-2 py-0.5 bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 text-[11px] rounded-full font-medium"
+                      className="px-2 py-0.5 bg-pink-100 text-pink-600 text-[11px] rounded-full font-medium"
                     >
                       Instagram ✓
                     </button>
@@ -548,7 +548,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     onClick={() => setShowReliabilityDetails(true)}
                     className="text-center min-w-[60px] active:opacity-70 transition-opacity"
                   >
-                    <p className="text-[20px] font-bold text-emerald-600 dark:text-emerald-400">{Math.round(reliabilityRate)}%</p>
+                    <p className="text-[20px] font-bold text-emerald-600">{Math.round(reliabilityRate)}%</p>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Fiabilité</p>
                   </button>
                 </div>

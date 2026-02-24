@@ -36,13 +36,13 @@ const getToastStyles = (type: ToastType) => {
   
   switch (type) {
     case "success":
-      return `${baseStyles} bg-green-50/90 border-green-200 dark:bg-green-950/90 dark:border-green-800`;
+      return `${baseStyles} bg-green-50/90 border-green-200`;
     case "error":
-      return `${baseStyles} bg-red-50/90 border-red-200 dark:bg-red-950/90 dark:border-red-800`;
+      return `${baseStyles} bg-red-50/90 border-red-200`;
     case "warning":
-      return `${baseStyles} bg-yellow-50/90 border-yellow-200 dark:bg-yellow-950/90 dark:border-yellow-800`;
+      return `${baseStyles} bg-yellow-50/90 border-yellow-200`;
     case "info":
-      return `${baseStyles} bg-blue-50/90 border-blue-200 dark:bg-blue-950/90 dark:border-blue-800`;
+      return `${baseStyles} bg-blue-50/90 border-blue-200`;
     case "loading":
       return `${baseStyles} bg-background/90 border-border`;
     default:
@@ -62,11 +62,11 @@ export const enhancedToast = {
       <div className={getToastStyles("success")}>
         {getToastIcon("success")}
         <div className="flex-1">
-          <div className="font-semibold text-green-900 dark:text-green-100">
+          <div className="font-semibold text-green-900">
             {options.title}
           </div>
           {options.description && (
-            <div className="text-sm text-green-700 dark:text-green-300 mt-1">
+            <div className="text-sm text-green-700 mt-1">
               {options.description}
             </div>
           )}
@@ -77,7 +77,7 @@ export const enhancedToast = {
               options.action?.onClick();
               sonnerToast.dismiss(t);
             }}
-            className="text-sm font-medium text-green-700 hover:text-green-800 dark:text-green-300 dark:hover:text-green-200"
+            className="text-sm font-medium text-green-700 hover:text-green-800"
           >
             {options.action.label}
           </button>
@@ -91,11 +91,11 @@ export const enhancedToast = {
       <div className={getToastStyles("error")}>
         {getToastIcon("error")}
         <div className="flex-1">
-          <div className="font-semibold text-red-900 dark:text-red-100">
+          <div className="font-semibold text-red-900">
             {options.title}
           </div>
           {options.description && (
-            <div className="text-sm text-red-700 dark:text-red-300 mt-1">
+            <div className="text-sm text-red-700 mt-1">
               {options.description}
             </div>
           )}
@@ -106,7 +106,7 @@ export const enhancedToast = {
               options.action?.onClick();
               sonnerToast.dismiss(t);
             }}
-            className="text-sm font-medium text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
+            className="text-sm font-medium text-red-700 hover:text-red-800"
           >
             {options.action.label}
           </button>
@@ -126,11 +126,11 @@ export const enhancedToast = {
       <div className={getToastStyles("warning")}>
         {getToastIcon("warning")}
         <div className="flex-1">
-          <div className="font-semibold text-yellow-900 dark:text-yellow-100">
+          <div className="font-semibold text-yellow-900">
             {options.title}
           </div>
           {options.description && (
-            <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+            <div className="text-sm text-yellow-700 mt-1">
               {options.description}
             </div>
           )}
@@ -141,7 +141,7 @@ export const enhancedToast = {
               options.action?.onClick();
               sonnerToast.dismiss(t);
             }}
-            className="text-sm font-medium text-yellow-700 hover:text-yellow-800 dark:text-yellow-300 dark:hover:text-yellow-200"
+            className="text-sm font-medium text-yellow-700 hover:text-yellow-800"
           >
             {options.action.label}
           </button>
@@ -161,11 +161,11 @@ export const enhancedToast = {
       <div className={getToastStyles("info")}>
         {getToastIcon("info")}
         <div className="flex-1">
-          <div className="font-semibold text-blue-900 dark:text-blue-100">
+          <div className="font-semibold text-blue-900">
             {options.title}
           </div>
           {options.description && (
-            <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+            <div className="text-sm text-blue-700 mt-1">
               {options.description}
             </div>
           )}
@@ -176,7 +176,7 @@ export const enhancedToast = {
               options.action?.onClick();
               sonnerToast.dismiss(t);
             }}
-            className="text-sm font-medium text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+            className="text-sm font-medium text-blue-700 hover:text-blue-800"
           >
             {options.action.label}
           </button>

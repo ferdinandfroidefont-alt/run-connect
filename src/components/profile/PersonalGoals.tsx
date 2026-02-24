@@ -293,7 +293,7 @@ export const PersonalGoals = () => {
                     exit={{ opacity: 0, x: -100 }}
                     className="relative"
                   >
-                    <div className={`p-3 rounded-lg border ${isCompleted ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20' : 'border-border'}`}>
+                    <div className={`p-3 rounded-lg border ${isCompleted ? 'border-green-200 bg-green-50/50' : 'border-border'}`}>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{info.icon}</span>

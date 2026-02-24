@@ -128,7 +128,7 @@ export const ParticipantValidationView = ({ session, userId, onComplete }: Parti
       <div className="bg-card border border-border rounded-[10px] p-6 text-center space-y-4">
         {validated ? (
           <>
-            <div className="h-16 w-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+            <div className="h-16 w-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-emerald-600" />
             </div>
             <div>

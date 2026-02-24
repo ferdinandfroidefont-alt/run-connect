@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
-import { useTheme } from "@/contexts/ThemeContext";
+
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, Award } from "lucide-react";
@@ -87,10 +87,6 @@ const Profile = () => {
   } = useParams();
   const viewingUserId = urlUserId || searchParams.get('user'); // ID de l'utilisateur à voir via URL ou query param
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
-  const {
-    theme,
-    setTheme
-  } = useTheme();
   const {
     shareProfile
   } = useShareProfile();

@@ -71,7 +71,7 @@ export const EarnedBadgesSection = ({ userId, onBadgesClick }: EarnedBadgesSecti
                 {badges.slice(0, 4).map((b, i) => (
                   <div
                     key={b.id}
-                    className="h-6 w-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 border-2 border-card flex items-center justify-center text-sm"
+                    className="h-6 w-6 rounded-full bg-yellow-100 border-2 border-card flex items-center justify-center text-sm"
                     style={{ zIndex: 4 - i }}
                   >
                     {b.badge_icon || "🏅"}
