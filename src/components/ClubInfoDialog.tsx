@@ -366,62 +366,53 @@ export const ClubInfoDialog = ({
           <div className="flex-1 overflow-y-auto p-4">
 
           <div className="space-y-2">
-            {/* Group Header */}
-            
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            {/* Group Header — Enhanced */}
+            <div className="flex flex-col items-center text-center py-4">
+              <Avatar className="h-20 w-20 mb-3">
+                <AvatarImage src={groupAvatarUrl || ""} />
+                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                  {(groupName || "C").charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <h2 className="text-[20px] font-bold text-foreground">{groupName}</h2>
+              {groupDescription && (
+                <p className="text-[13px] text-muted-foreground mt-1 max-w-[260px]">{groupDescription}</p>
+              )}
+              {/* Mini stats row */}
+              <div className="flex gap-5 mt-4">
+                <div className="text-center">
+                  <span className="text-[17px] font-semibold text-foreground">{members.length}</span>
+                  <p className="text-[10px] text-muted-foreground">Membres</p>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div className="text-center">
+                  <span className="text-[17px] font-semibold text-foreground">
+                    {members.filter(m => m.is_coach).length}
+                  </span>
+                  <p className="text-[10px] text-muted-foreground">Coachs</p>
+                </div>
+              </div>
+            </div>
 
             {/* Club Code - only visible to creator */}
-            {createdBy === user?.id
+            {createdBy === user?.id && clubCode && (
+              <div className="bg-card rounded-[10px] p-3 flex items-center justify-between mb-2" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Code du club</p>
+                  <p className="text-[15px] font-mono font-semibold text-foreground">{clubCode}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(clubCode);
+                    toast({ title: "Code copié !" });
+                  }}
+                  className="text-primary active:opacity-70"
+                >
+                  <Copy className="h-5 w-5" />
+                </button>
+              </div>
+            )}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-              }
 
             {/* Tabs: Members, Coaching & Groups */}
             <Tabs defaultValue="coaching" className="w-full">

@@ -2,17 +2,17 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { ActivityIcon } from "@/lib/activityIcons";
+import { Card } from "@/components/ui/card";
 import { CreateCoachingSessionDialog } from "./CreateCoachingSessionDialog";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { CalendarDays, BookOpen, BarChart3, Users, Clock, AlertTriangle, Layers } from "lucide-react";
+import { CalendarDays, BookOpen, BarChart3, Users, Plus } from "lucide-react";
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 import { WeeklyTrackingDialog } from "./WeeklyTrackingDialog";
 import { ClubGroupsManagerDialog } from "./ClubGroupsManagerDialog";
 import { AthleteWeeklyView } from "./AthleteWeeklyView";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
-import { format, startOfWeek, endOfWeek, isSameDay } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface CoachingSession {
@@ -41,7 +41,22 @@ interface DashboardStats {
   pending: number;
   activeGroups: number;
   lateAthletes: number;
+  activeAthletes: number;
+  validationPct: number;
 }
+
+// Map activity type / objective to a dot color
+const getSessionDotColor = (s: CoachingSession): string => {
+  const obj = (s.objective || "").toLowerCase();
+  const title = (s.title || "").toLowerCase();
+  if (obj.includes("vma") || obj.includes("interval") || title.includes("vma") || title.includes("fractionné"))
+    return "bg-red-500";
+  if (obj.includes("récup") || obj.includes("recup") || title.includes("récup"))
+    return "bg-blue-500";
+  if (obj.includes("seuil") || title.includes("seuil"))
+    return "bg-orange-500";
+  return "bg-green-500"; // EF / default
+};
 
 export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const { user } = useAuth();
@@ -53,7 +68,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const [showWeeklyPlan, setShowWeeklyPlan] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
   const [showGroups, setShowGroups] = useState(false);
-  const [stats, setStats] = useState<DashboardStats>({ totalSessions: 0, pending: 0, activeGroups: 0, lateAthletes: 0 });
+  const [stats, setStats] = useState<DashboardStats>({
+    totalSessions: 0, pending: 0, activeGroups: 0, lateAthletes: 0,
+    activeAthletes: 0, validationPct: 0,
+  });
 
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -62,7 +80,6 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      // Sessions this week
       const { data: weekSessions } = await supabase
         .from("coaching_sessions")
         .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code")
@@ -73,24 +90,32 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
       const sessionList = (weekSessions || []) as CoachingSession[];
 
-      // Get participation counts + stats
       let pending = 0;
       let lateAthletes = 0;
+      let activeAthletes = 0;
+      let totalParticipations = 0;
+      let completedParticipations = 0;
 
       if (sessionList.length > 0) {
         const sessionIds = sessionList.map(s => s.id);
         const { data: participations } = await supabase
           .from("coaching_participations")
-          .select("coaching_session_id, status")
+          .select("coaching_session_id, status, user_id")
           .in("coaching_session_id", sessionIds);
 
         const countMap: Record<string, number> = {};
+        const athleteSet = new Set<string>();
+
         (participations || []).forEach(p => {
           countMap[p.coaching_session_id] = (countMap[p.coaching_session_id] || 0) + 1;
+          athleteSet.add(p.user_id);
+          totalParticipations++;
           if (p.status === "sent") pending++;
+          if (p.status === "completed") completedParticipations++;
         });
 
-        // Late = sent status on past sessions
+        activeAthletes = athleteSet.size;
+
         sessionList.forEach(s => {
           if (new Date(s.scheduled_at) < now) {
             const pastSent = (participations || []).filter(
@@ -103,17 +128,22 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         sessionList.forEach(s => { s.participation_count = countMap[s.id] || 0; });
       }
 
-      // Groups count
       const { count: groupCount } = await supabase
         .from("club_groups")
         .select("id", { count: "exact", head: true })
         .eq("club_id", clubId);
+
+      const validationPct = totalParticipations > 0
+        ? Math.round((completedParticipations / totalParticipations) * 100)
+        : 0;
 
       setStats({
         totalSessions: sessionList.length,
         pending,
         activeGroups: groupCount || 0,
         lateAthletes,
+        activeAthletes,
+        validationPct,
       });
 
       setSessions(sessionList);
@@ -126,7 +156,6 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
   useEffect(() => { loadDashboard(); }, [clubId]);
 
-  // Next upcoming sessions (future only, max 5)
   const upcomingSessions = useMemo(() =>
     sessions.filter(s => new Date(s.scheduled_at) >= now).slice(0, 5),
     [sessions]
@@ -142,6 +171,13 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     );
   }
 
+  const tools = [
+    { icon: Plus, label: "Nouvelle séance", color: "bg-primary", onClick: () => setShowCreate(true) },
+    { icon: CalendarDays, label: "Plan hebdo", color: "bg-blue-500", onClick: () => setShowWeeklyPlan(true) },
+    { icon: Users, label: "Groupes", color: "bg-orange-500", onClick: () => setShowGroups(true) },
+    { icon: BarChart3, label: "Suivi", color: "bg-green-500", onClick: () => setShowTracking(true) },
+  ];
+
   return (
     <div className="bg-secondary -mx-4 -mb-4 px-4 pt-2 pb-8 min-h-[400px]">
       {/* Week label */}
@@ -149,72 +185,82 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         Semaine du {weekLabel}
       </p>
 
-      {/* KPI Section */}
+      {/* === COACH VIEW === */}
       {isCoach && (
-        <IOSListGroup header="CETTE SEMAINE">
-          <IOSListItem
-            icon={CalendarDays}
-            iconBgColor="bg-blue-500"
-            title={`${stats.totalSessions} séance${stats.totalSessions > 1 ? "s" : ""} programmée${stats.totalSessions > 1 ? "s" : ""}`}
-            showChevron={false}
-            showSeparator
-          />
-          <IOSListItem
-            icon={Clock}
-            iconBgColor="bg-orange-500"
-            title={`${stats.pending} en attente`}
-            showChevron={false}
-            showSeparator
-          />
-          <IOSListItem
-            icon={Layers}
-            iconBgColor="bg-green-500"
-            title={`${stats.activeGroups} groupe${stats.activeGroups > 1 ? "s" : ""} actif${stats.activeGroups > 1 ? "s" : ""}`}
-            showChevron={false}
-            showSeparator
-          />
-          <IOSListItem
-            icon={AlertTriangle}
-            iconBgColor="bg-red-500"
-            title={`${stats.lateAthletes} athlète${stats.lateAthletes > 1 ? "s" : ""} en retard`}
-            showChevron={false}
-            showSeparator={false}
-          />
-        </IOSListGroup>
-      )}
+        <>
+          {/* Hero Card */}
+          <Card className="mb-5 overflow-hidden">
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5">
+              {/* Big number */}
+              <div className="text-center mb-3">
+                <span className="text-[42px] font-bold leading-none text-foreground">
+                  {stats.totalSessions}
+                </span>
+                <p className="text-[13px] text-muted-foreground mt-1">
+                  séance{stats.totalSessions > 1 ? "s" : ""} programmée{stats.totalSessions > 1 ? "s" : ""}
+                </p>
+              </div>
 
-      {/* Quick Tools */}
-      {isCoach && (
-        <IOSListGroup header="OUTILS">
-          <IOSListItem
-            icon={CalendarDays}
-            iconBgColor="bg-blue-500"
-            title="Créer plan semaine"
-            onClick={() => setShowWeeklyPlan(true)}
-            showSeparator
-          />
-          <IOSListItem
-            icon={BookOpen}
-            iconBgColor="bg-purple-500"
-            title="Modèles de séances"
-            onClick={() => setShowTemplates(true)}
-            showSeparator
-          />
-          <IOSListItem
-            icon={BarChart3}
-            iconBgColor="bg-green-500"
-            title="Suivi athlètes"
-            onClick={() => setShowTracking(true)}
-            showSeparator
-          />
-          <IOSListItem
-            icon={Users}
-            iconBgColor="bg-orange-500"
-            title="Gérer les groupes"
-            onClick={() => setShowGroups(true)}
-            showSeparator={false}
-          />
-        </IOSListGroup>
+              {/* Sub-stats row */}
+              <div className="flex justify-center gap-6 mb-4">
+                <div className="text-center">
+                  <span className="text-[20px] font-semibold text-foreground">{stats.activeAthletes}</span>
+                  <p className="text-[11px] text-muted-foreground">athlètes</p>
+                </div>
+                <div className="text-center">
+                  <span className="text-[20px] font-semibold text-foreground">{stats.validationPct}%</span>
+                  <p className="text-[11px] text-muted-foreground">validées</p>
+                </div>
+                <div className="text-center">
+                  <span className="text-[20px] font-semibold text-foreground">{stats.pending}</span>
+                  <p className="text-[11px] text-muted-foreground">en attente</p>
+                </div>
+              </div>
+
+              {/* Segmented progress bar */}
+              <div className="space-y-1.5">
+                <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-muted/50">
+                  <div className="bg-green-500 rounded-full transition-all" style={{ width: "60%" }} />
+                  <div className="bg-orange-500 rounded-full transition-all" style={{ width: "30%" }} />
+                  <div className="bg-blue-500 rounded-full transition-all" style={{ width: "10%" }} />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
+                  <span>🟢 Volume</span>
+                  <span>🟡 Intensité</span>
+                  <span>🔵 Récup</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Tools Grid 2x2 */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            {tools.map((tool) => (
+              <button
+                key={tool.label}
+                onClick={tool.onClick}
+                className="flex flex-col items-center justify-center gap-2 bg-card rounded-[12px] p-4 active:scale-[0.97] transition-transform"
+                style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.06)' }}
+              >
+                <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${tool.color}`}>
+                  <tool.icon className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-[13px] font-medium text-foreground">{tool.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Templates shortcut */}
+          <IOSListGroup>
+            <IOSListItem
+              icon={BookOpen}
+              iconBgColor="bg-purple-500"
+              title="Modèles de séances"
+              onClick={() => setShowTemplates(true)}
+              showSeparator={false}
+            />
+          </IOSListGroup>
+        </>
       )}
 
       {/* Upcoming Sessions */}
@@ -227,7 +273,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
               subtitle={`${format(new Date(s.scheduled_at), "EEE d MMM", { locale: fr })}${s.objective ? ` · ${s.objective}` : ""}`}
               value={`${s.participation_count || 0}`}
               rightElement={
-                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <div className={`h-2.5 w-2.5 rounded-full ${getSessionDotColor(s)}`} />
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
               }
               onClick={() => setSelectedSession(s)}
               showSeparator={i < upcomingSessions.length - 1}
