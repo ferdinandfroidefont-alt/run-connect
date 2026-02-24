@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { WeeklyPlanSessionEditor, type WeekSession } from "./WeeklyPlanSessionEditor";
+import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown } from "lucide-react";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { parseRCC, rccToSessionBlocks } from "@/lib/rccParser";
@@ -340,6 +342,13 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
   // ── Duplicate plan dropdown state ──
   const [showDupDropdown, setShowDupDropdown] = useState(false);
   const [showTemplateList, setShowTemplateList] = useState(false);
+  const [showAthleteOverrides, setShowAthleteOverrides] = useState(false);
+
+  // Get base values from the selected session for override defaults
+  const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find(b => b.type === "interval");
+  const globalBasePace = selectedSessionIntervalBlock?.pace;
+  const globalBaseReps = selectedSessionIntervalBlock?.repetitions;
+  const globalBaseRecovery = selectedSessionIntervalBlock?.recoveryDuration;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -562,6 +571,46 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
                   <X className="h-4 w-4" />
                 </Button>
               </div>
+            </IOSListGroup>
+          )}
+          {/* ── AJUSTEMENTS ATHLÈTES section ── */}
+          {selectedSession && selectedIndex !== null && sessions.length > 0 && (
+            <IOSListGroup header="AJUSTEMENTS PAR ATHLÈTE" className="mx-4">
+              <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
+                <CollapsibleTrigger asChild>
+                  <div className="px-4 py-3 bg-card flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-medium text-foreground">
+                          Personnaliser les allures
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">
+                          {Object.keys(selectedSession.athleteOverrides).length > 0
+                            ? `${Object.keys(selectedSession.athleteOverrides).length} athlète${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""} personnalisé${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""}`
+                            : `Ajuster séries/allure pour ${DAY_LABELS[selectedSession.dayIndex]} — ${selectedSession.objective || "séance"}`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showAthleteOverrides ? "rotate-180" : ""}`} />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-4 py-3 bg-card border-t border-border">
+                    <AthleteOverrideEditor
+                      members={getMembersForGroup(activeGroupId)}
+                      overrides={selectedSession.athleteOverrides}
+                      onChange={ov => updateSession(selectedIndex, { ...selectedSession, athleteOverrides: ov })}
+                      basePace={globalBasePace}
+                      baseReps={globalBaseReps}
+                      baseRecovery={globalBaseRecovery}
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </IOSListGroup>
           )}
         </div>
