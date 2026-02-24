@@ -23,6 +23,9 @@ interface CoachingSessionInfo {
   session_blocks?: any;
   club_id: string;
   coach_id: string;
+  default_location_name?: string | null;
+  default_location_lat?: number | null;
+  default_location_lng?: number | null;
 }
 
 interface ScheduleCoachingDialogProps {
@@ -51,15 +54,22 @@ export const ScheduleCoachingDialog = ({
   const [customPace, setCustomPace] = useState("");
   const [customNotes, setCustomNotes] = useState("");
 
-  // Pre-fill suggested date
+  // Pre-fill suggested date and default location
   useEffect(() => {
-    if (suggestedDate && isOpen) {
-      try {
-        const d = new Date(suggestedDate);
-        setScheduledAt(format(d, "yyyy-MM-dd'T'HH:mm"));
-      } catch {}
+    if (isOpen) {
+      if (suggestedDate) {
+        try {
+          const d = new Date(suggestedDate);
+          setScheduledAt(format(d, "yyyy-MM-dd'T'HH:mm"));
+        } catch {}
+      }
+      if (session?.default_location_name && !locationName) {
+        setLocationName(session.default_location_name);
+        if (session.default_location_lat) setLocationLat(String(session.default_location_lat));
+        if (session.default_location_lng) setLocationLng(String(session.default_location_lng));
+      }
     }
-  }, [suggestedDate, isOpen]);
+  }, [suggestedDate, isOpen, session]);
 
   if (!session) return null;
 

@@ -180,6 +180,7 @@ export type Database = {
       coaching_participations: {
         Row: {
           athlete_note: string | null
+          athlete_overrides: Json | null
           coaching_session_id: string
           completed_at: string | null
           created_at: string
@@ -198,6 +199,7 @@ export type Database = {
         }
         Insert: {
           athlete_note?: string | null
+          athlete_overrides?: Json | null
           coaching_session_id: string
           completed_at?: string | null
           created_at?: string
@@ -216,6 +218,7 @@ export type Database = {
         }
         Update: {
           athlete_note?: string | null
+          athlete_overrides?: Json | null
           coaching_session_id?: string
           completed_at?: string | null
           created_at?: string
@@ -249,10 +252,15 @@ export type Database = {
           coach_id: string
           coach_notes: string | null
           created_at: string
+          default_location_lat: number | null
+          default_location_lng: number | null
+          default_location_name: string | null
           description: string | null
           distance_km: number | null
           id: string
+          objective: string | null
           pace_target: string | null
+          rcc_code: string | null
           scheduled_at: string
           send_mode: string | null
           session_blocks: Json | null
@@ -266,10 +274,15 @@ export type Database = {
           coach_id: string
           coach_notes?: string | null
           created_at?: string
+          default_location_lat?: number | null
+          default_location_lng?: number | null
+          default_location_name?: string | null
           description?: string | null
           distance_km?: number | null
           id?: string
+          objective?: string | null
           pace_target?: string | null
+          rcc_code?: string | null
           scheduled_at: string
           send_mode?: string | null
           session_blocks?: Json | null
@@ -283,10 +296,15 @@ export type Database = {
           coach_id?: string
           coach_notes?: string | null
           created_at?: string
+          default_location_lat?: number | null
+          default_location_lng?: number | null
+          default_location_name?: string | null
           description?: string | null
           distance_km?: number | null
           id?: string
+          objective?: string | null
           pace_target?: string | null
+          rcc_code?: string | null
           scheduled_at?: string
           send_mode?: string | null
           session_blocks?: Json | null
@@ -303,6 +321,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      coaching_templates: {
+        Row: {
+          activity_type: string | null
+          coach_id: string
+          created_at: string | null
+          id: string
+          name: string
+          objective: string | null
+          rcc_code: string
+        }
+        Insert: {
+          activity_type?: string | null
+          coach_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+          objective?: string | null
+          rcc_code: string
+        }
+        Update: {
+          activity_type?: string | null
+          coach_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          objective?: string | null
+          rcc_code?: string
+        }
+        Relationships: []
       }
       conversations: {
         Row: {
