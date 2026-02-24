@@ -253,7 +253,7 @@ export const InviteMembersDialog = ({ open, onOpenChange, clubId, onMemberInvite
                     
                     <div className="shrink-0">
                       {isInvited ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
                           <UserCheck className="h-3 w-3 mr-1" />
                           Invité
                         </Badge>
