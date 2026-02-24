@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
-import { MapPin, Calendar, Check, Clock } from "lucide-react";
+import { MapPin, Calendar, Check, Clock, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -159,15 +159,19 @@ export const ScheduleCoachingDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent fullScreen hideCloseButton>
+        <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
           <DialogTitle className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
             <Calendar className="h-5 w-5" />
             Programmer ma séance
           </DialogTitle>
         </DialogHeader>
 
-        <div className="p-3 rounded-lg bg-muted/50 mb-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="p-3 rounded-lg bg-muted/50">
           <p className="font-medium text-sm">{session.title}</p>
           {session.description && (
             <p className="text-xs text-muted-foreground mt-1">{session.description}</p>
@@ -258,24 +262,25 @@ export const ScheduleCoachingDialog = ({
               rows={2}
             />
           </div>
+        </div>
+        </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Annuler
-            </Button>
-            <Button
-              onClick={handleSchedule}
-              disabled={loading || !scheduledAt || !locationName.trim()}
-              className="flex-1"
-            >
-              {loading ? "..." : (
-                <>
-                  <Check className="h-4 w-4 mr-1" />
-                  Programmer
-                </>
-              )}
-            </Button>
-          </div>
+        <div className="sticky bottom-0 bg-background border-t p-4 flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Annuler
+          </Button>
+          <Button
+            onClick={handleSchedule}
+            disabled={loading || !scheduledAt || !locationName.trim()}
+            className="flex-1"
+          >
+            {loading ? "..." : (
+              <>
+                <Check className="h-4 w-4 mr-1" />
+                Programmer
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
