@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { WeeklyPlanSessionEditor, type WeekSession } from "./WeeklyPlanSessionEditor";
 import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp } from "lucide-react";
+import { MesocycleView } from "./MesocycleView";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { parseRCC, rccToSessionBlocks, computeRCCSummary } from "@/lib/rccParser";
@@ -418,6 +419,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
   const [showDupDropdown, setShowDupDropdown] = useState(false);
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [showAthleteOverrides, setShowAthleteOverrides] = useState(false);
+  const [showMesocycle, setShowMesocycle] = useState(false);
 
   // Get base values from the selected session for override defaults
   const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find(b => b.type === "interval");
@@ -658,10 +660,25 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
                 title="Sauver comme semaine type"
                 onClick={() => setShowSaveTemplate(true)}
                 showChevron
-                showSeparator={false}
+                showSeparator
               />
             )}
+            <IOSListItem
+              icon={TrendingUp}
+              iconBgColor="bg-indigo-500"
+              title="Vue mesocycle (8 sem.)"
+              subtitle="Progression volume et intensité"
+              onClick={() => setShowMesocycle(!showMesocycle)}
+              showSeparator={false}
+            />
           </IOSListGroup>
+
+          {/* Mesocycle panel */}
+          {showMesocycle && (
+            <div className="mx-4 p-4 rounded-xl bg-card border border-border">
+              <MesocycleView clubId={clubId} currentWeek={currentWeek} />
+            </div>
+          )}
 
           {/* Save template input */}
           {showSaveTemplate && (
