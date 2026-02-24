@@ -1,105 +1,46 @@
 
 
-# Refonte Mode Coach — Dashboard + Pages Pro (iOS Settings Style)
+# Fix: "new row violates row-level security policy" pour `club_groups`
 
-## Vision
+## Diagnostic
 
-Transformer le `CoachingTab` actuel (un simple onglet dans ClubInfoDialog) en un vrai dashboard coach avec des pages dédiées, toutes en style iOS Settings (fond `bg-secondary`, `IOSListGroup`, barre retour).
+Le `conversationId` passé est `9bb873a7-4f0f-4dcb-8349-ba94780a196c` (club "Ferdi"). Le user `0f464761-...` est le `created_by` de cette conversation, mais n'a **aucune entrée dans `group_members`** pour ce club.
 
-## Architecture actuelle vs proposée
+La fonction `is_club_coach_or_creator` retourne `true` quand on la teste directement (car elle vérifie `conversations.created_by`). Cependant, le problème vient du `.select()` chaîné après l'INSERT dans le code.
 
-```text
-ACTUEL :
-ClubInfoDialog → Tabs → CoachingTab (tout mélangé dans 1 onglet)
-                          ├── calendrier semaine
-                          ├── sessions du jour
-                          ├── toutes les sessions
-                          └── boutons (Plan, Suivi, Modèles, Créer)
+Quand on fait `.insert({...}).select()`, Supabase exécute :
+1. INSERT → vérifié par la policy `WITH CHECK (is_club_coach_or_creator(...))` → OK
+2. SELECT sur la row insérée → vérifié par `USING (is_club_member(...))` → **ÉCHEC**
 
-PROPOSÉ :
-ClubInfoDialog → Tabs → CoachingTab = DASHBOARD COACH (cards KPIs + boutons rapides)
-                          ├── clic "Plan semaine" → WeeklyPlanDialog (déjà fait, iOS style)
-                          ├── clic "Modèles" → CoachingTemplatesDialog (existe)
-                          ├── clic "Suivi athlètes" → WeeklyTrackingView (à refaire en dialog iOS)
-                          └── clic "Gérer groupes" → ClubGroupsManager (à refaire en dialog iOS)
+La policy SELECT utilise `is_club_member` qui vérifie uniquement `group_members`, et le user n'y est pas. Donc l'INSERT réussit mais le SELECT retourne une erreur.
+
+## Deux corrections
+
+### 1. `ClubGroupsManager.tsx` — Retirer le `.select()` inutile
+
+Le `.select()` n'est pas nécessaire ici car on fait `loadData()` juste après. Le retirer évite le problème SELECT.
+
+### 2. RLS SELECT policy — Autoriser aussi le créateur du club
+
+C'est la vraie correction de fond. Le créateur du club devrait pouvoir voir les groupes même s'il n'est pas dans `group_members`. Modifier la policy SELECT de `club_groups` :
+
+```sql
+DROP POLICY "Club members can view groups" ON club_groups;
+CREATE POLICY "Club members can view groups" ON club_groups
+  FOR SELECT TO public
+  USING (is_club_member(auth.uid(), club_id) OR is_club_coach_or_creator(auth.uid(), club_id));
 ```
 
-## Changements fichier par fichier
+Cela couvre le cas où le créateur n'est pas dans `group_members`.
 
-### 1. `src/components/coaching/CoachingTab.tsx` — Refonte complète en Dashboard
+## Aussi: ajouter le créateur dans `group_members`
 
-Le CoachingTab actuel est un calendrier + liste de sessions. On le transforme en **dashboard** :
-
-**Section KPIs** (IOSListGroup, 4 items) :
-- Séances programmées (count des coaching_sessions de la semaine courante)
-- En attente (participations avec status "sent")
-- Groupes actifs (count de club_groups)
-- Athlètes en retard (participations "sent" dont la session est passée)
-
-**Section "Outils rapides"** (IOSListGroup) :
-- `IOSListItem` "Créer plan semaine" → ouvre WeeklyPlanDialog
-- `IOSListItem` "Modèles de séances" → ouvre CoachingTemplatesDialog
-- `IOSListItem` "Suivi athlètes" → ouvre WeeklyTrackingView (en dialog)
-- `IOSListItem` "Gérer les groupes" → ouvre ClubGroupsManager (en dialog)
-
-**Section "Cette semaine"** (IOSListGroup) :
-- Liste compacte des prochaines sessions (max 5)
-- Chaque item cliquable → CoachingSessionDetail
-
-Pour les **athlètes** (non-coach), on garde l'affichage actuel des séances reçues, mais en style iOS cards.
-
-### 2. `src/components/coaching/WeeklyTrackingView.tsx` — Wrapper en Dialog fullscreen iOS
-
-Actuellement c'est un composant inline (remplace le CoachingTab). On le wrappe dans un `Dialog fullScreen` avec la barre retour iOS standard, fond `bg-secondary`, et la table dans un `IOSListGroup`.
-
-### 3. `src/components/coaching/ClubGroupsManager.tsx` — Wrapper en Dialog fullscreen iOS
-
-Même principe : on crée un `ClubGroupsManagerDialog` qui wrappe le composant existant dans un dialog fullscreen iOS avec barre retour.
-
-### 4. `src/components/coaching/CoachingTemplatesDialog.tsx` — Ajout style iOS
-
-Déjà un dialog, mais il faut vérifier qu'il a bien le fond `bg-secondary` et les `IOSListGroup`. Mise à jour légère du style.
-
-## Design du Dashboard Coach
-
-```text
-┌──────────────────────────────────┐
-│  (intégré dans l'onglet          │
-│   Entraînements de ClubInfoDialog)│
-│                                   │
-│  CETTE SEMAINE                    │
-│  ┌────────────────────────────┐   │
-│  │ 📅 18 séances programmées  │   │
-│  │ ⏳ 6 en attente            │   │
-│  │ 👥 4 groupes actifs        │   │
-│  │ ⚠️ 2 athlètes en retard   │   │
-│  └────────────────────────────┘   │
-│                                   │
-│  OUTILS                           │
-│  ┌────────────────────────────┐   │
-│  │ 📋 Créer plan semaine    › │   │
-│  │ 📂 Modèles               › │   │
-│  │ 📊 Suivi athlètes        › │   │
-│  │ 👥 Gérer les groupes     › │   │
-│  └────────────────────────────┘   │
-│                                   │
-│  PROCHAINES SÉANCES               │
-│  ┌────────────────────────────┐   │
-│  │ Lun - Seuil (12 athlètes) │   │
-│  │ Mar - VMA (8 athlètes)    │   │
-│  │ Mer - EF (24 athlètes)    │   │
-│  └────────────────────────────┘   │
-└──────────────────────────────────┘
-```
+Le fait que le créateur du club ne soit pas dans `group_members` est un bug de données. On devrait aussi s'assurer que la création de club ajoute bien le créateur. Mais c'est un problème séparé — les deux corrections ci-dessus règlent le problème immédiat.
 
 ## Fichiers impactés
 
 | Fichier | Action |
 |---|---|
-| `src/components/coaching/CoachingTab.tsx` | Refonte : dashboard KPIs + outils rapides + sessions résumées |
-| `src/components/coaching/WeeklyTrackingView.tsx` | Wrapper Dialog fullscreen iOS + style IOSListGroup |
-| `src/components/coaching/ClubGroupsManager.tsx` | Créer un wrapper Dialog fullscreen iOS |
-| `src/components/coaching/CoachingTemplatesDialog.tsx` | Ajustement style (fond bg-secondary, IOSListGroup) |
-
-Aucune migration SQL. Aucun changement de logique métier. Uniquement du redesign et de la réorganisation UI.
+| `src/components/coaching/ClubGroupsManager.tsx` | Retirer `.select()` de l'insert |
+| Migration SQL | Modifier la policy SELECT de `club_groups` pour inclure `is_club_coach_or_creator` |
 
