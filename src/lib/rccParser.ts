@@ -151,6 +151,73 @@ export function parseRCC(code: string): RCCResult {
   return { blocks, errors };
 }
 
+// Compute summary stats from parsed blocks
+export interface RCCSummary {
+  totalDistanceKm: number;
+  totalDurationMin: number;
+  intensity: 'Facile' | 'Modérée' | 'Intense' | 'Très intense';
+}
+
+function paceToKmPerMin(pace: string): number {
+  // pace "5:15" means 5min15s per km → speed = 1/5.25 km/min
+  const [min, sec] = pace.split(':').map(Number);
+  const totalMin = min + (sec || 0) / 60;
+  return totalMin > 0 ? 1 / totalMin : 0;
+}
+
+export function computeRCCSummary(blocks: ParsedBlock[]): RCCSummary {
+  let totalDistanceKm = 0;
+  let totalDurationMin = 0;
+  let fastestPaceSec = Infinity;
+  let slowestPaceSec = 0;
+
+  for (const b of blocks) {
+    if (b.type === 'interval' && b.distance && b.repetitions) {
+      // Distance from intervals
+      const distKm = (b.distance * b.repetitions) / 1000;
+      totalDistanceKm += distKm;
+
+      // Duration: estimate from pace if available
+      if (b.pace) {
+        const paceSec = paceToSeconds(b.pace);
+        const timePerRepMin = (b.distance / 1000) * (paceSec / 60);
+        totalDurationMin += timePerRepMin * b.repetitions;
+        fastestPaceSec = Math.min(fastestPaceSec, paceSec);
+        slowestPaceSec = Math.max(slowestPaceSec, paceSec);
+      }
+
+      // Add recovery time
+      if (b.recoveryDuration) {
+        totalDurationMin += (b.recoveryDuration * (b.repetitions - 1)) / 60;
+      }
+    } else if (b.duration) {
+      totalDurationMin += b.duration;
+      if (b.pace) {
+        const speed = paceToKmPerMin(b.pace);
+        totalDistanceKm += speed * b.duration;
+        const paceSec = paceToSeconds(b.pace);
+        fastestPaceSec = Math.min(fastestPaceSec, paceSec);
+        slowestPaceSec = Math.max(slowestPaceSec, paceSec);
+      }
+    }
+  }
+
+  // Intensity based on fastest pace
+  let intensity: RCCSummary['intensity'] = 'Facile';
+  if (fastestPaceSec < Infinity) {
+    if (fastestPaceSec < 210) intensity = 'Très intense'; // < 3:30
+    else if (fastestPaceSec < 270) intensity = 'Intense'; // < 4:30
+    else if (fastestPaceSec < 330) intensity = 'Modérée'; // < 5:30
+    else intensity = 'Facile';
+  }
+
+  return {
+    totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
+    totalDurationMin: Math.round(totalDurationMin),
+    intensity,
+  };
+}
+
 // Convert ParsedBlock[] to the SessionBlock format used in the DB
 export function rccToSessionBlocks(blocks: ParsedBlock[]): any[] {
   return blocks.map(b => {

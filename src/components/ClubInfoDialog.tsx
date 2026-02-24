@@ -24,6 +24,7 @@ import {
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { CoachingTab } from "./coaching/CoachingTab";
+import { ClubGroupsManager } from "./coaching/ClubGroupsManager";
 import { CoachBadge } from "./coaching/CoachBadge";
 import {
   AlertDialog,
@@ -411,7 +412,7 @@ export const ClubInfoDialog = ({
               </div>
             )}
 
-            {/* Tabs: Members & Coaching */}
+            {/* Tabs: Members, Coaching & Groups */}
             <Tabs defaultValue="coaching" className="w-full">
               <TabsList className="w-full">
                 <TabsTrigger value="members" className="flex-1 gap-1">
@@ -422,6 +423,12 @@ export const ClubInfoDialog = ({
                   <GraduationCap className="h-4 w-4" />
                   Entraînements
                 </TabsTrigger>
+                {currentUserIsCoach && (
+                  <TabsTrigger value="groups" className="flex-1 gap-1">
+                    <Users className="h-4 w-4" />
+                    Groupes
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="members" className="mt-3">
@@ -499,7 +506,6 @@ export const ClubInfoDialog = ({
                           </div>
 
                           <div className="flex items-center gap-1">
-                            {/* Toggle coach button for admins */}
                             {isAdmin && member.user_id !== user?.id && (
                               <Button
                                 variant="ghost"
@@ -510,7 +516,6 @@ export const ClubInfoDialog = ({
                                 <GraduationCap className={`h-4 w-4 ${member.is_coach ? 'text-amber-500' : 'text-muted-foreground'}`} />
                               </Button>
                             )}
-                            {/* Remove member button for admins */}
                             {isAdmin && member.user_id !== user?.id && (
                               <Button
                                 variant="ghost"
@@ -535,6 +540,12 @@ export const ClubInfoDialog = ({
               <TabsContent value="coaching" className="mt-3">
                 <CoachingTab clubId={conversationId} isCoach={currentUserIsCoach} />
               </TabsContent>
+
+              {currentUserIsCoach && (
+                <TabsContent value="groups" className="mt-3">
+                  <ClubGroupsManager clubId={conversationId} />
+                </TabsContent>
+              )}
             </Tabs>
 
             {/* Actions */}

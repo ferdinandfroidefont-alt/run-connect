@@ -7,9 +7,10 @@ import { ActivityIcon } from "@/lib/activityIcons";
 import { CreateCoachingSessionDialog } from "./CreateCoachingSessionDialog";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { GraduationCap, Plus, Users, BookOpen, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { GraduationCap, Plus, Users, BookOpen, ChevronLeft, ChevronRight, CalendarDays, BarChart3 } from "lucide-react";
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, isToday } from "date-fns";
+import { WeeklyTrackingView } from "./WeeklyTrackingView";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, isToday, isPast } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface CoachingSession {
@@ -41,6 +42,8 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const [selectedSession, setSelectedSession] = useState<CoachingSession | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showWeeklyPlan, setShowWeeklyPlan] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
+  const [participationStats, setParticipationStats] = useState<Record<string, { completed: number; scheduled: number; sent: number }>>({});
 
   // Calendar state
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -65,14 +68,20 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         const sessionIds = data.map(s => s.id);
         const { data: counts } = await supabase
           .from("coaching_participations")
-          .select("coaching_session_id")
+          .select("coaching_session_id, status")
           .in("coaching_session_id", sessionIds);
 
         const countMap: Record<string, number> = {};
+        const statsMap: Record<string, { completed: number; scheduled: number; sent: number }> = {};
         counts?.forEach(c => {
           countMap[c.coaching_session_id] = (countMap[c.coaching_session_id] || 0) + 1;
+          if (!statsMap[c.coaching_session_id]) statsMap[c.coaching_session_id] = { completed: 0, scheduled: 0, sent: 0 };
+          if (c.status === "completed") statsMap[c.coaching_session_id].completed++;
+          else if (c.status === "scheduled") statsMap[c.coaching_session_id].scheduled++;
+          else statsMap[c.coaching_session_id].sent++;
         });
 
+        setParticipationStats(statsMap);
         setSessions(data.map(s => ({ ...s, participation_count: countMap[s.id] || 0 })) as CoachingSession[]);
       } else {
         setSessions([]);
@@ -106,6 +115,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     setShowCreate(true);
   };
 
+  if (showTracking && isCoach) {
+    return <WeeklyTrackingView clubId={clubId} onClose={() => setShowTracking(false)} />;
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -117,6 +130,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         <div className="flex gap-1.5">
           {isCoach && (
             <>
+              <Button size="sm" variant="outline" onClick={() => setShowTracking(true)} className="h-7 px-2">
+                <BarChart3 className="h-3.5 w-3.5 mr-1" />
+                Suivi
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setShowWeeklyPlan(true)} className="h-7 px-2">
                 <CalendarDays className="h-3.5 w-3.5 mr-1" />
                 Plan
@@ -201,7 +218,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
       ) : (
         <div className="space-y-2">
           {daySessions.map(s => (
-            <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} />
+            <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} stats={participationStats[s.id]} />
           ))}
         </div>
       )}
@@ -211,7 +228,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         <div className="space-y-2 pt-2 border-t">
           <p className="text-xs font-medium text-muted-foreground uppercase">Toutes les séances</p>
           {sessions.slice(0, 10).map(s => (
-            <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} showDate />
+            <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} showDate stats={participationStats[s.id]} />
           ))}
         </div>
       )}
@@ -254,10 +271,12 @@ const SessionCard = ({
   session,
   onClick,
   showDate,
+  stats,
 }: {
   session: any;
   onClick: () => void;
   showDate?: boolean;
+  stats?: { completed: number; scheduled: number; sent: number };
 }) => (
   <button
     onClick={onClick}
@@ -282,6 +301,16 @@ const SessionCard = ({
           </span>
           {session.distance_km && <span>{session.distance_km} km</span>}
         </div>
+        {stats && (stats.completed + stats.scheduled + stats.sent > 0) && (
+          <div className="flex items-center gap-2 mt-1 text-[10px]">
+            {stats.completed > 0 && <span>✅ {stats.completed}</span>}
+            {stats.scheduled > 0 && <span>🕒 {stats.scheduled}</span>}
+            {stats.sent > 0 && <span>❌ {stats.sent}</span>}
+            <span className="text-muted-foreground ml-auto">
+              {Math.round((stats.completed / (stats.completed + stats.scheduled + stats.sent)) * 100)}%
+            </span>
+          </div>
+        )}
       </div>
     </div>
   </button>

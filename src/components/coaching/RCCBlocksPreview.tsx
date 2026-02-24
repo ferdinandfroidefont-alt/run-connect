@@ -1,6 +1,8 @@
-import { Flame, Zap, Activity, Snowflake, RotateCcw } from "lucide-react";
+import { Flame, Zap, Activity, Snowflake, RotateCcw, Ruler, Clock, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ParsedBlock } from "@/lib/rccParser";
+import { computeRCCSummary } from "@/lib/rccParser";
+import { useMemo } from "react";
 
 const BLOCK_CONFIG: Record<string, { icon: React.ElementType; label: string; bg: string; text: string }> = {
   warmup: { icon: Flame, label: "Échauffement", bg: "bg-green-500/10", text: "text-green-600" },
@@ -10,11 +12,36 @@ const BLOCK_CONFIG: Record<string, { icon: React.ElementType; label: string; bg:
   recovery: { icon: RotateCcw, label: "Récupération", bg: "bg-gray-500/10", text: "text-gray-500" },
 };
 
+const INTENSITY_CONFIG: Record<string, { bg: string; text: string }> = {
+  'Facile': { bg: 'bg-green-500/10', text: 'text-green-600' },
+  'Modérée': { bg: 'bg-yellow-500/10', text: 'text-yellow-600' },
+  'Intense': { bg: 'bg-orange-500/10', text: 'text-orange-600' },
+  'Très intense': { bg: 'bg-red-500/10', text: 'text-red-600' },
+};
+
 export const RCCBlocksPreview = ({ blocks }: { blocks: ParsedBlock[] }) => {
+  const summary = useMemo(() => computeRCCSummary(blocks), [blocks]);
+
   if (!blocks || blocks.length === 0) return null;
 
   return (
     <div className="space-y-1.5">
+      {/* Volume summary bar */}
+      <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 text-xs font-medium">
+        <span className="flex items-center gap-1">
+          <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+          {summary.totalDistanceKm} km
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          {summary.totalDurationMin} min
+        </span>
+        <span className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded", INTENSITY_CONFIG[summary.intensity]?.bg, INTENSITY_CONFIG[summary.intensity]?.text)}>
+          <TrendingUp className="h-3.5 w-3.5" />
+          {summary.intensity}
+        </span>
+      </div>
+
       <p className="text-xs font-medium text-muted-foreground uppercase">Aperçu</p>
       {blocks.map((block, i) => {
         const config = BLOCK_CONFIG[block.type] || BLOCK_CONFIG.steady;
