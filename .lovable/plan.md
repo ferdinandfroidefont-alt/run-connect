@@ -1,92 +1,62 @@
 
 
-# Vue Suivi Hebdo Athlète — Cocher ses séances + Commentaires
+# Bouton d'accès à la vue Athlète en dehors du coaching club
 
-## Constat actuel
+## Constat
 
-Côté **athlète**, le `CoachingTab` affiche une simple liste de séances cliquables. Pour marquer une séance comme faite, l'athlète doit :
-1. Cliquer sur la séance → ouvrir `CoachingSessionDetail`
-2. Écrire un commentaire dans un textarea
-3. Cliquer "Marquer comme fait"
+Actuellement, l'`AthleteWeeklyView` n'est accessible que depuis l'onglet "Entraînements" du `ClubInfoDialog`. Un athlète doit :
+1. Aller dans Messages
+2. Ouvrir un club
+3. Cliquer sur l'onglet "Entraînements"
 
-C'est trop de clics. L'athlète devrait voir sa semaine d'un coup et cocher directement.
+C'est trop enfoui. Il faut un accès rapide depuis la page **Mes Séances** (`MySessions`).
 
-## Ce qu'on va construire
+## Solution
 
-Une **vue semaine athlète** intégrée directement dans le `CoachingTab` (quand `!isCoach`), avec :
+Ajouter un **bandeau "Mon plan coaching"** en haut de la page `MySessions.tsx` qui apparaît uniquement si l'athlète a des `coaching_participations` actives. Au clic, il ouvre un **dialog fullscreen** avec l'`AthleteWeeklyView`.
 
 ```text
-┌──────────────────────────────────┐
-│  MA SEMAINE                       │
-│  23 fév – 1 mars         3/5 ✅  │
+┌─────────────────────────────────┐
+│  MES SÉANCES                     │
 │                                   │
-│  ┌────────────────────────────┐   │
-│  │ ☑ Lun — Seuil 3x1000      │   │
-│  │   "Bonnes sensations"  ✏️  │   │
-│  ├────────────────────────────┤   │
-│  │ ☑ Mar — EF 45'             │   │
-│  │   Pas de commentaire   ✏️  │   │
-│  ├────────────────────────────┤   │
-│  │ ☐ Mer — VMA 10x200        │   │
-│  │   [Cocher + commenter]     │   │
-│  ├────────────────────────────┤   │
-│  │ ☐ Ven — Seuil long        │   │
-│  │   Pas encore fait          │   │
-│  ├────────────────────────────┤   │
-│  │ ☐ Sam — Sortie longue     │   │
-│  │   Pas encore fait          │   │
-│  └────────────────────────────┘   │
+│  ┌─────────────────────────────┐ │
+│  │ 🏋️ Mon plan coaching        │ │
+│  │ Club Ferdi · 2/5 cette sem. > │
+│  └─────────────────────────────┘ │
 │                                   │
-│  Progression : ████████░░░ 60%    │
-└──────────────────────────────────┘
+│  [Créées]  [Rejointes]            │
+│  ... liste séances normales ...   │
+└─────────────────────────────────┘
 ```
-
-Chaque séance :
-- **Checkbox** pour cocher "fait" directement (update `coaching_participations.status` → `completed`)
-- **Zone commentaire** inline (expand au clic sur ✏️) pour `athlete_note`
-- **Clic sur le titre** → ouvre `CoachingSessionDetail` pour voir les détails complets
-- **Barre de progression** en bas avec le % de complétion
-
-## Changements fichier par fichier
-
-### 1. `src/components/coaching/CoachingTab.tsx`
-
-Remplacer la section athlete (`!isCoach && sessions.length > 0`) par un nouveau composant `AthleteWeeklyView`.
-
-La section actuelle (lignes 248-261) qui affiche juste une liste `IOSListItem` sera remplacée par :
-```tsx
-<AthleteWeeklyView 
-  clubId={clubId} 
-  sessions={sessions} 
-  onSessionClick={(s) => setSelectedSession(s)} 
-/>
-```
-
-### 2. `src/components/coaching/AthleteWeeklyView.tsx` — Nouveau composant
-
-Composant qui :
-- Prend les sessions de la semaine + les participations de l'athlète courant
-- Affiche chaque séance comme un item iOS avec :
-  - Checkbox (Radix `Checkbox`) à gauche
-  - Titre + jour au centre
-  - Bouton ✏️ pour expand un `Textarea` de commentaire
-- Au clic checkbox → update `coaching_participations` (status → `completed`, `completed_at` → now)
-- Au clic ✏️ → toggle textarea inline, auto-save `athlete_note` au blur
-- Barre `Progress` en bas avec le taux de complétion
-- Notification push au coach quand l'athlète coche une séance
-
-Requêtes Supabase :
-- `coaching_participations` WHERE `user_id = auth.uid()` AND `coaching_session_id IN (sessionIds)` → SELECT
-- UPDATE `status`, `completed_at`, `athlete_note` → utilise la policy existante "Athletes can update their own participation"
-
-Pas de migration SQL nécessaire — toutes les colonnes existent déjà (`status`, `completed_at`, `athlete_note`).
 
 ## Fichiers impactés
 
-| Fichier | Action |
-|---|---|
-| `src/components/coaching/AthleteWeeklyView.tsx` | Créer — vue semaine athlète avec checkboxes et commentaires |
-| `src/components/coaching/CoachingTab.tsx` | Modifier — remplacer la liste simple par `AthleteWeeklyView` |
+### 1. `src/components/coaching/AthleteWeeklyDialog.tsx` — Nouveau
 
-Aucune migration SQL. Les policies RLS existantes couvrent déjà les updates athlète.
+Dialog fullscreen (style sheet/drawer) qui encapsule `AthleteWeeklyView` + `CoachingSessionDetail` pour la navigation interne. Props : `isOpen`, `onClose`, `clubId`, `clubName`.
+
+### 2. `src/pages/MySessions.tsx` — Modifier
+
+- Au montage, requête pour vérifier si l'athlète a des `coaching_participations` récentes. Si oui, récupérer le `club_id` et le nom du club.
+- Afficher un bandeau cliquable en haut (avant la liste des séances) qui ouvre `AthleteWeeklyDialog`.
+- Le bandeau affiche : nom du club + nombre de séances complétées cette semaine.
+- Si l'athlète est dans plusieurs clubs coaching, afficher un bandeau par club.
+
+### 3. Aucune migration SQL
+
+Les données existent déjà dans `coaching_participations` et `coaching_sessions`.
+
+## Détails techniques
+
+**Requête pour détecter les clubs coaching de l'athlète :**
+```sql
+SELECT DISTINCT cs.club_id, c.name
+FROM coaching_participations cp
+JOIN coaching_sessions cs ON cs.id = cp.coaching_session_id
+JOIN conversations c ON c.id = cs.club_id
+WHERE cp.user_id = auth.uid()
+  AND cs.scheduled_at >= now() - interval '30 days'
+```
+
+**Bandeau UI :** IOSListItem avec icône Dumbbell, titre du club, sous-titre "X/Y séances cette semaine", chevron droit. Style card iOS standard.
 
