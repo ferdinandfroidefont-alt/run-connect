@@ -560,7 +560,7 @@ export const ClubInfoDialog = ({
             </Tabs>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 pt-2">
               {isAdmin &&
                 <Button
                   variant="destructive"
