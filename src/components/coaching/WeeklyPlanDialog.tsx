@@ -18,6 +18,13 @@ interface ClubMember {
   display_name: string;
 }
 
+interface ClubGroup {
+  id: string;
+  name: string;
+  color: string;
+  memberIds: string[];
+}
+
 interface WeeklyPlanDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,6 +43,8 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   athleteOverrides: {},
 });
 
+type SendTarget = "club" | "selection" | string; // string = group ID
+
 export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlanDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -43,13 +52,17 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
   const [sessions, setSessions] = useState<WeekSession[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [members, setMembers] = useState<ClubMember[]>([]);
+  const [groups, setGroups] = useState<ClubGroup[]>([]);
   const [sending, setSending] = useState(false);
-  const [sendMode, setSendMode] = useState<"club" | "selection">("club");
+  const [sendTarget, setSendTarget] = useState<SendTarget>("club");
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
 
   useEffect(() => {
-    if (isOpen) loadMembers();
+    if (isOpen) {
+      loadMembers();
+      loadGroups();
+    }
   }, [isOpen, clubId]);
 
   const loadMembers = async () => {
@@ -70,6 +83,30 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
           .filter(p => p.user_id !== user?.id)
           .map(p => ({ user_id: p.user_id!, display_name: p.display_name || "Athlète" }))
       );
+    }
+  };
+
+  const loadGroups = async () => {
+    const { data: groupsData } = await supabase
+      .from("club_groups")
+      .select("id, name, color")
+      .eq("club_id", clubId);
+
+    if (groupsData && groupsData.length > 0) {
+      const { data: memberships } = await supabase
+        .from("club_group_members")
+        .select("group_id, user_id")
+        .in("group_id", groupsData.map(g => g.id));
+
+      const memberMap: Record<string, string[]> = {};
+      (memberships || []).forEach(m => {
+        if (!memberMap[m.group_id]) memberMap[m.group_id] = [];
+        memberMap[m.group_id].push(m.user_id);
+      });
+
+      setGroups(groupsData.map(g => ({ ...g, memberIds: memberMap[g.id] || [] })));
+    } else {
+      setGroups([]);
     }
   };
 
@@ -130,20 +167,28 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
             coach_notes: session.coachNotes || null,
             session_blocks: sessionBlocks.length > 0 ? sessionBlocks : null,
             default_location_name: session.locationName || null,
-            send_mode: sendMode,
-            target_athletes: sendMode === "selection"
+            send_mode: sendTarget === "club" ? "club" : sendTarget === "selection" ? "selection" : "group",
+            target_athletes: sendTarget === "selection"
               ? Object.keys(session.athleteOverrides)
               : [],
+            target_group_id: sendTarget !== "club" && sendTarget !== "selection" ? sendTarget : null,
           })
           .select("id")
           .single();
 
         if (error) throw error;
 
-        // Create participations for all targeted members
-        const targetMembers = sendMode === "selection"
-          ? members.filter(m => session.athleteOverrides[m.user_id])
-          : members;
+        // Resolve target members based on sendTarget
+        let targetMembers: ClubMember[];
+        if (sendTarget === "selection") {
+          targetMembers = members.filter(m => session.athleteOverrides[m.user_id]);
+        } else if (sendTarget === "club") {
+          targetMembers = members;
+        } else {
+          // Group
+          const group = groups.find(g => g.id === sendTarget);
+          targetMembers = group ? members.filter(m => group.memberIds.includes(m.user_id)) : members;
+        }
 
         if (created && targetMembers.length > 0) {
           const participations = targetMembers.map(m => ({
@@ -157,7 +202,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
         }
       }
 
-      toast({ title: "Plan envoyé !", description: `${sessions.length} séances → ${sendMode === "club" ? members.length : "sélection"} athlètes` });
+      const targetLabel = sendTarget === "club" ? `${members.length} athlètes` : sendTarget === "selection" ? "sélection" : groups.find(g => g.id === sendTarget)?.name || "groupe";
+      toast({ title: "Plan envoyé !", description: `${sessions.length} séances → ${targetLabel}` });
       setSessions([]);
       setSelectedIndex(null);
       onSent?.();
@@ -249,26 +295,42 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
 
         {/* Footer */}
         <div className="shrink-0 border-t p-4 space-y-3 bg-background">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
-              variant={sendMode === "club" ? "default" : "outline"}
+              variant={sendTarget === "club" ? "default" : "outline"}
               size="sm"
               className="text-xs h-7"
-              onClick={() => setSendMode("club")}
+              onClick={() => setSendTarget("club")}
             >
               Tout le club
             </Button>
+            {groups.map(g => (
+              <Button
+                key={g.id}
+                variant={sendTarget === g.id ? "default" : "outline"}
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setSendTarget(g.id)}
+              >
+                <div className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: g.color }} />
+                {g.name}
+              </Button>
+            ))}
             <Button
-              variant={sendMode === "selection" ? "default" : "outline"}
+              variant={sendTarget === "selection" ? "default" : "outline"}
               size="sm"
               className="text-xs h-7"
-              onClick={() => setSendMode("selection")}
+              onClick={() => setSendTarget("selection")}
             >
               Sélection
             </Button>
             {sessions.length > 0 && (
               <Badge variant="secondary" className="text-[10px] ml-auto">
-                {sessions.length} séance{sessions.length > 1 ? "s" : ""} → {sendMode === "club" ? members.length : "sélection"} athlètes
+                {sessions.length} séance{sessions.length > 1 ? "s" : ""} → {
+                  sendTarget === "club" ? members.length :
+                  sendTarget === "selection" ? "sélection" :
+                  `${groups.find(g => g.id === sendTarget)?.name} (${groups.find(g => g.id === sendTarget)?.memberIds.length || 0})`
+                } athlètes
               </Badge>
             )}
           </div>

@@ -139,6 +139,67 @@ export type Database = {
         }
         Relationships: []
       }
+      club_group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "club_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_groups: {
+        Row: {
+          club_id: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          club_id: string
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          club_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_groups_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_invitations: {
         Row: {
           club_id: string
@@ -266,6 +327,7 @@ export type Database = {
           session_blocks: Json | null
           status: string
           target_athletes: string[] | null
+          target_group_id: string | null
           title: string
         }
         Insert: {
@@ -288,6 +350,7 @@ export type Database = {
           session_blocks?: Json | null
           status?: string
           target_athletes?: string[] | null
+          target_group_id?: string | null
           title: string
         }
         Update: {
@@ -310,6 +373,7 @@ export type Database = {
           session_blocks?: Json | null
           status?: string
           target_athletes?: string[] | null
+          target_group_id?: string | null
           title?: string
         }
         Relationships: [
@@ -318,6 +382,13 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_sessions_target_group_id_fkey"
+            columns: ["target_group_id"]
+            isOneToOne: false
+            referencedRelation: "club_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -2028,6 +2099,10 @@ export type Database = {
         Returns: undefined
       }
       is_club_coach: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_club_coach_or_creator: {
         Args: { _club_id: string; _user_id: string }
         Returns: boolean
       }
