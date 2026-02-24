@@ -423,6 +423,30 @@ export type Database = {
         }
         Relationships: []
       }
+      coaching_week_templates: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          name: string
+          sessions: Json
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          name: string
+          sessions?: Json
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sessions?: Json
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           club_code: string | null
