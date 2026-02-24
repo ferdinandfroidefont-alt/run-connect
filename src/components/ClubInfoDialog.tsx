@@ -412,7 +412,7 @@ export const ClubInfoDialog = ({
             )}
 
             {/* Tabs: Members & Coaching */}
-            <Tabs defaultValue="members" className="w-full">
+            <Tabs defaultValue="coaching" className="w-full">
               <TabsList className="w-full">
                 <TabsTrigger value="members" className="flex-1 gap-1">
                   <Users className="h-4 w-4" />
