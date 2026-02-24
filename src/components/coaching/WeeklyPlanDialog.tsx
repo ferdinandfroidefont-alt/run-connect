@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { WeeklyPlanSessionEditor, type WeekSession } from "./WeeklyPlanSessionEditor";
-import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X } from "lucide-react";
+import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X } from "lucide-react";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { parseRCC, rccToSessionBlocks } from "@/lib/rccParser";
@@ -336,232 +337,248 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
 
   const activeGroupMemberCount = getMembersForGroup(activeGroupId).length;
 
+  // ── Duplicate plan dropdown state ──
+  const [showDupDropdown, setShowDupDropdown] = useState(false);
+  const [showTemplateList, setShowTemplateList] = useState(false);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton className="flex flex-col">
-        {/* Header */}
-        <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4 shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
+      <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
+        {/* ── iOS Navigation Bar ── */}
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="text-[15px]">Retour</span>
+          </button>
+          <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
             Plan de semaine
-          </DialogTitle>
+          </span>
+          <div className="min-w-[70px]" />
+        </div>
 
-          {/* ── GROUP SELECTOR (first!) ── */}
-          <div className="mt-2">
-            <Select value={activeGroupId} onValueChange={id => { setActiveGroupId(id); setSelectedIndex(null); }}>
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Choisir un groupe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="club">🏟️ Tout le club ({members.length})</SelectItem>
-                {groups.map(g => (
-                  <SelectItem key={g.id} value={g.id}>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
-                      {g.name} ({g.memberIds.length})
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto bg-secondary pb-4">
+          {/* ── GROUPE section ── */}
+          <IOSListGroup header="GROUPE" className="mt-4 mx-4">
+            <div className="px-4 py-3 bg-card">
+              <Select value={activeGroupId} onValueChange={id => { setActiveGroupId(id); setSelectedIndex(null); }}>
+                <SelectTrigger className="h-10 text-[15px] border-0 bg-transparent p-0 shadow-none">
+                  <SelectValue placeholder="Choisir un groupe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="club">🏟️ Tout le club ({members.length})</SelectItem>
+                  {groups.map(g => (
+                    <SelectItem key={g.id} value={g.id}>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
+                        {g.name} ({g.memberIds.length})
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </IOSListGroup>
 
-          {/* Week navigation + actions */}
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
+          {/* ── SEMAINE section ── */}
+          <IOSListGroup header="SEMAINE" className="mx-4">
+            <div className="px-4 py-3 bg-card flex items-center justify-between">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-xs font-medium">
+              <span className="text-[15px] font-medium text-foreground">
                 Sem. {format(weekStart, "d MMM yyyy", { locale: fr })}
               </span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-
-            <div className="flex items-center gap-1">
-              {/* Load template */}
-              {templates.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Charger semaine type">
-                      <FolderOpen className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    {templates.map(t => (
-                      <DropdownMenuItem key={t.id} className="flex justify-between">
-                        <span onClick={() => loadTemplate(t)} className="flex-1 cursor-pointer text-xs">
-                          {t.name} ({t.sessions.length}s)
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 ml-1 text-destructive"
-                          onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              {/* Duplicate plan to another group */}
-              {sessions.length > 0 && otherGroups.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Dupliquer vers un autre groupe">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <div className="px-2 py-1 text-[10px] text-muted-foreground font-medium">Dupliquer vers...</div>
-                    {otherGroups.map(g => (
-                      <DropdownMenuItem key={g.id} onClick={() => duplicatePlanToGroup(g.id)}>
-                        {g.id !== "club" && (
-                          <span className="w-2 h-2 rounded-full inline-block mr-1.5" style={{ backgroundColor: g.color }} />
-                        )}
-                        {g.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </div>
-        </DialogHeader>
-
-        {/* Groups with plans indicator */}
-        {groupsWithPlans.length > 1 && (
-          <div className="shrink-0 px-4 pt-2 flex items-center gap-1.5 flex-wrap">
-            {groupsWithPlans.map(id => {
-              const g = id === "club" ? null : groups.find(g => g.id === id);
-              const count = (groupPlans[id] || []).length;
-              const isActive = id === activeGroupId;
-              return (
-                <button
-                  key={id}
-                  onClick={() => { setActiveGroupId(id); setSelectedIndex(null); }}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-accent"
-                  }`}
-                >
-                  {g && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: g.color }} />}
-                  {g ? g.name : "Club"} ({count})
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Week grid */}
-        <div className="shrink-0 px-4 pt-3">
-          <div className="grid grid-cols-7 gap-1">
-            {DAY_LABELS.map((label, dayIndex) => {
-              const daySessions = sessionsByDay[dayIndex] || [];
-              return (
-                <div key={dayIndex} className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-medium text-muted-foreground uppercase">{label}</span>
-                  {daySessions.map(sIdx => (
+            {/* Group pills */}
+            {groupsWithPlans.length > 1 && (
+              <div className="px-4 pb-3 bg-card flex items-center gap-1.5 flex-wrap border-t border-border">
+                {groupsWithPlans.map(id => {
+                  const g = id === "club" ? null : groups.find(g => g.id === id);
+                  const count = (groupPlans[id] || []).length;
+                  const isActive = id === activeGroupId;
+                  return (
                     <button
-                      key={sIdx}
-                      onClick={() => setSelectedIndex(sIdx)}
-                      className={`w-full px-1 py-0.5 rounded text-[10px] font-medium truncate transition-colors ${
-                        selectedIndex === sIdx
+                      key={id}
+                      onClick={() => { setActiveGroupId(id); setSelectedIndex(null); }}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors mt-2 ${
+                        isActive
                           ? "bg-primary text-primary-foreground"
-                          : "bg-accent text-accent-foreground hover:bg-accent/80"
+                          : "bg-muted text-muted-foreground hover:bg-accent"
                       }`}
                     >
-                      {sessions[sIdx].objective || "—"}
+                      {g && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: g.color }} />}
+                      {g ? g.name : "Club"} ({count})
                     </button>
-                  ))}
-                  <button
-                    onClick={() => addSession(dayIndex)}
-                    className="w-full py-0.5 rounded border border-dashed text-[10px] text-muted-foreground hover:bg-muted transition-colors"
-                  >
-                    <Plus className="h-3 w-3 mx-auto" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </IOSListGroup>
 
-        {/* Editor */}
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {/* ── SÉANCES grid section ── */}
+          <IOSListGroup header="SÉANCES" className="mx-4">
+            <div className="px-3 py-3 bg-card">
+              <div className="grid grid-cols-7 gap-1">
+                {DAY_LABELS.map((label, dayIndex) => {
+                  const daySessions = sessionsByDay[dayIndex] || [];
+                  return (
+                    <div key={dayIndex} className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">{label}</span>
+                      {daySessions.map(sIdx => (
+                        <button
+                          key={sIdx}
+                          onClick={() => setSelectedIndex(sIdx)}
+                          className={`w-full px-1 py-0.5 rounded-md text-[10px] font-medium truncate transition-colors ${
+                            selectedIndex === sIdx
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-accent text-accent-foreground hover:bg-accent/80"
+                          }`}
+                        >
+                          {sessions[sIdx].objective || "—"}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => addSession(dayIndex)}
+                        className="w-full py-0.5 rounded-md border border-dashed border-border text-[10px] text-muted-foreground hover:bg-muted transition-colors"
+                      >
+                        <Plus className="h-3 w-3 mx-auto" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </IOSListGroup>
+
+          {/* ── Éditeur de séance ── */}
           {selectedSession && selectedIndex !== null ? (
-            <WeeklyPlanSessionEditor
-              session={selectedSession}
-              onChange={s => updateSession(selectedIndex, s)}
-              onDuplicate={targetDay => duplicateToDay(selectedIndex, targetDay)}
-              onDelete={() => deleteSession(selectedIndex)}
-              members={getMembersForGroup(activeGroupId)}
-            />
+            <IOSListGroup className="mx-4">
+              <WeeklyPlanSessionEditor
+                session={selectedSession}
+                onChange={s => updateSession(selectedIndex, s)}
+                onDuplicate={targetDay => duplicateToDay(selectedIndex, targetDay)}
+                onDelete={() => deleteSession(selectedIndex)}
+                members={getMembersForGroup(activeGroupId)}
+              />
+            </IOSListGroup>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-sm">Cliquez sur <strong>+</strong> pour ajouter une séance</p>
-              <p className="text-xs mt-1">ou sélectionnez une séance existante</p>
+            <div className="text-center py-8 text-muted-foreground mx-4">
+              <p className="text-[15px]">Cliquez sur <strong>+</strong> pour ajouter une séance</p>
+              <p className="text-[13px] mt-1">ou sélectionnez une séance existante</p>
             </div>
+          )}
+
+          {/* ── ACTIONS section ── */}
+          <IOSListGroup header="ACTIONS" className="mx-4">
+            {templates.length > 0 && (
+              <IOSListItem
+                icon={FolderOpen}
+                iconBgColor="bg-blue-500"
+                title="Charger semaine type"
+                subtitle={`${templates.length} template${templates.length > 1 ? "s" : ""} disponible${templates.length > 1 ? "s" : ""}`}
+                onClick={() => setShowTemplateList(!showTemplateList)}
+                showSeparator
+              />
+            )}
+            {showTemplateList && templates.map(t => (
+              <div key={t.id} className="flex items-center justify-between px-4 py-2.5 bg-card border-b border-border last:border-0">
+                <button
+                  onClick={() => { loadTemplate(t); setShowTemplateList(false); }}
+                  className="text-[15px] text-primary flex-1 text-left"
+                >
+                  {t.name} ({t.sessions.length}s)
+                </button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive"
+                  onClick={() => deleteTemplate(t.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+            {sessions.length > 0 && otherGroups.length > 0 && (
+              <>
+                <IOSListItem
+                  icon={Copy}
+                  iconBgColor="bg-green-500"
+                  title="Dupliquer vers un groupe"
+                  subtitle={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} à copier`}
+                  onClick={() => setShowDupDropdown(!showDupDropdown)}
+                  showSeparator
+                />
+                {showDupDropdown && otherGroups.map(g => (
+                  <div key={g.id} className="px-4 py-2.5 bg-card border-b border-border last:border-0">
+                    <button
+                      onClick={() => { duplicatePlanToGroup(g.id); setShowDupDropdown(false); }}
+                      className="text-[15px] text-primary flex items-center gap-2 w-full text-left"
+                    >
+                      {g.id !== "club" && (
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
+                      )}
+                      {g.name}
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+            {sessions.length > 0 && (
+              <IOSListItem
+                icon={Save}
+                iconBgColor="bg-orange-500"
+                title="Sauver comme semaine type"
+                onClick={() => setShowSaveTemplate(true)}
+                showChevron
+                showSeparator={false}
+              />
+            )}
+          </IOSListGroup>
+
+          {/* Save template input */}
+          {showSaveTemplate && (
+            <IOSListGroup className="mx-4">
+              <div className="px-4 py-3 bg-card flex items-center gap-2">
+                <Input
+                  value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                  placeholder="Nom de la semaine type..."
+                  className="h-9 text-[15px] flex-1"
+                  autoFocus
+                  onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
+                />
+                <Button size="sm" className="h-9 text-[13px]" onClick={saveAsTemplate} disabled={!templateName.trim()}>
+                  <Save className="h-3.5 w-3.5 mr-1" />
+                  Sauver
+                </Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowSaveTemplate(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </IOSListGroup>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 border-t p-4 space-y-3 bg-background">
-          {/* Save template */}
-          {sessions.length > 0 && (
-            <div className="flex items-center gap-2">
-              {showSaveTemplate ? (
-                <>
-                  <Input
-                    value={templateName}
-                    onChange={e => setTemplateName(e.target.value)}
-                    placeholder="Nom de la semaine type..."
-                    className="h-7 text-xs flex-1"
-                    autoFocus
-                    onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
-                  />
-                  <Button size="sm" className="h-7 text-xs" onClick={saveAsTemplate} disabled={!templateName.trim()}>
-                    <Save className="h-3 w-3 mr-1" />
-                    Sauver
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSaveTemplate(false)}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setShowSaveTemplate(true)}
-                >
-                  <Save className="h-3 w-3 mr-1" />
-                  Sauver comme semaine type
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Summary */}
+        {/* ── Fixed footer ── */}
+        <div className="shrink-0 border-t border-border p-4 space-y-3 bg-card">
           {totalSessionsCount > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="secondary" className="text-[11px]">
                 {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} → {groupsWithPlans.map(id =>
                   id === "club" ? `Club (${members.length})` : `${groups.find(g => g.id === id)?.name} (${groups.find(g => g.id === id)?.memberIds.length || 0})`
                 ).join(", ")}
               </Badge>
             </div>
           )}
-
           <Button
-            className="w-full"
+            className="w-full h-11 text-[17px]"
             onClick={handleSendPlan}
             disabled={totalSessionsCount === 0 || sending}
           >
