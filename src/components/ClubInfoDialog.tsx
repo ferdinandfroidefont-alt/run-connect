@@ -8,20 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Users, 
-  Settings, 
-  Crown, 
+import {
+  Users,
+  Settings,
+  Crown,
   Calendar,
   ArrowLeft,
-  UserPlus, 
-  UserMinus, 
-  Trash2, 
+  UserPlus,
+  UserMinus,
+  Trash2,
   Search,
   AlertTriangle,
   Copy,
-  GraduationCap
-} from "lucide-react";
+  GraduationCap } from
+"lucide-react";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { CoachingTab } from "./coaching/CoachingTab";
@@ -35,8 +35,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AlertDialogTitle } from
+"@/components/ui/alert-dialog";
 
 interface Profile {
   user_id: string;
@@ -64,11 +64,11 @@ interface ClubInfoDialogProps {
   onEditGroup: () => void;
 }
 
-export const ClubInfoDialog = ({ 
-  isOpen, 
-  onClose, 
-  conversationId, 
-  groupName, 
+export const ClubInfoDialog = ({
+  isOpen,
+  onClose,
+  conversationId,
+  groupName,
   groupDescription,
   groupAvatarUrl,
   isAdmin,
@@ -99,15 +99,15 @@ export const ClubInfoDialog = ({
   // Load group members
   const loadGroupMembers = async () => {
     if (!conversationId) return;
-    
+
     setLoading(true);
     try {
       console.log('🔍 Loading members for conversation:', conversationId);
-      
-      const { data: memberIds, error: memberError } = await supabase
-        .from('group_members')
-        .select('user_id, is_admin, is_coach, joined_at')
-        .eq('conversation_id', conversationId);
+
+      const { data: memberIds, error: memberError } = await supabase.
+      from('group_members').
+      select('user_id, is_admin, is_coach, joined_at').
+      eq('conversation_id', conversationId);
 
       console.log('📊 Member IDs result:', { memberIds, memberError });
 
@@ -117,10 +117,10 @@ export const ClubInfoDialog = ({
       }
 
       if (memberIds && memberIds.length > 0) {
-        const { data: memberProfiles, error: profileError } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url')
-          .in('user_id', memberIds.map(m => m.user_id));
+        const { data: memberProfiles, error: profileError } = await supabase.
+        from('profiles').
+        select('user_id, username, display_name, avatar_url').
+        in('user_id', memberIds.map((m) => m.user_id));
 
         console.log('👥 Member profiles result:', { memberProfiles, profileError });
 
@@ -129,15 +129,15 @@ export const ClubInfoDialog = ({
           throw profileError;
         }
 
-        const membersWithProfiles = memberIds.map(member => {
-          const profile = memberProfiles?.find(p => p.user_id === member.user_id);
+        const membersWithProfiles = memberIds.map((member) => {
+          const profile = memberProfiles?.find((p) => p.user_id === member.user_id);
           return {
             ...profile,
             is_admin: member.is_admin,
             is_coach: member.is_coach || false,
             joined_at: member.joined_at
           } as GroupMember;
-        }).filter(m => m.user_id);
+        }).filter((m) => m.user_id);
 
         // Sort members: admins first, then by display name
         membersWithProfiles.sort((a, b) => {
@@ -170,14 +170,14 @@ export const ClubInfoDialog = ({
   // Toggle coach status
   const toggleCoach = async (memberId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .update({ is_coach: !currentStatus })
-        .eq('conversation_id', conversationId)
-        .eq('user_id', memberId);
+      const { error } = await supabase.
+      from('group_members').
+      update({ is_coach: !currentStatus }).
+      eq('conversation_id', conversationId).
+      eq('user_id', memberId);
       if (error) throw error;
       toast({
-        title: !currentStatus ? "Coach promu !" : "Rôle coach retiré",
+        title: !currentStatus ? "Coach promu !" : "Rôle coach retiré"
       });
       loadGroupMembers();
     } catch (error: any) {
@@ -203,14 +203,14 @@ export const ClubInfoDialog = ({
 
     try {
       // Get current group members to exclude them
-      const memberIds = members.map(m => m.user_id);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url')
-        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-        .not('user_id', 'in', `(${memberIds.join(',')})`)
-        .limit(10);
+      const memberIds = members.map((m) => m.user_id);
+
+      const { data, error } = await supabase.
+      from('profiles').
+      select('user_id, username, display_name, avatar_url').
+      or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`).
+      not('user_id', 'in', `(${memberIds.join(',')})`).
+      limit(10);
 
       if (error) throw error;
       setSearchResults(data || []);
@@ -223,13 +223,13 @@ export const ClubInfoDialog = ({
   const inviteUser = async (userId: string) => {
     setInviteLoading(true);
     try {
-      const { error } = await supabase
-        .from('club_invitations')
-        .insert([{
-          club_id: conversationId,
-          inviter_id: user?.id,
-          invited_user_id: userId
-        }]);
+      const { error } = await supabase.
+      from('club_invitations').
+      insert([{
+        club_id: conversationId,
+        inviter_id: user?.id,
+        invited_user_id: userId
+      }]);
 
       if (error) throw error;
 
@@ -263,11 +263,11 @@ export const ClubInfoDialog = ({
   // Remove member from group
   const removeMember = async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('conversation_id', conversationId)
-        .eq('user_id', userId);
+      const { error } = await supabase.
+      from('group_members').
+      delete().
+      eq('conversation_id', conversationId).
+      eq('user_id', userId);
 
       if (error) throw error;
 
@@ -292,22 +292,22 @@ export const ClubInfoDialog = ({
   const deleteGroup = async () => {
     try {
       // Delete group members first
-      await supabase
-        .from('group_members')
-        .delete()
-        .eq('conversation_id', conversationId);
+      await supabase.
+      from('group_members').
+      delete().
+      eq('conversation_id', conversationId);
 
       // Delete messages
-      await supabase
-        .from('messages')
-        .delete()
-        .eq('conversation_id', conversationId);
+      await supabase.
+      from('messages').
+      delete().
+      eq('conversation_id', conversationId);
 
       // Delete conversation
-      const { error } = await supabase
-        .from('conversations')
-        .delete()
-        .eq('id', conversationId);
+      const { error } = await supabase.
+      from('conversations').
+      delete().
+      eq('id', conversationId);
 
       if (error) throw error;
 
@@ -352,8 +352,8 @@ export const ClubInfoDialog = ({
           <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
             <button
               onClick={onClose}
-              className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]"
-            >
+              className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]">
+
               <ArrowLeft className="h-5 w-5" />
               <span className="text-[15px]">Retour</span>
             </button>
@@ -367,28 +367,28 @@ export const ClubInfoDialog = ({
 
           <div className="space-y-4">
             {/* Group Header */}
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={groupAvatarUrl || ""} />
-                <AvatarFallback>
-                  <Users className="h-6 w-6" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <h3 className="font-semibold">{groupName}</h3>
-                {groupDescription && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {groupDescription}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {members.length} membre{members.length > 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             {/* Club Code - only visible to creator */}
-            {createdBy === user?.id && (
+            {createdBy === user?.id &&
               <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="flex items-center justify-between">
                   <div>
@@ -415,13 +415,13 @@ export const ClubInfoDialog = ({
                           variant: "destructive"
                         });
                       }
-                    }}
-                  >
+                    }}>
+
                     <span className="text-xs">Copier</span>
                   </Button>
                 </div>
               </div>
-            )}
+              }
 
             {/* Tabs: Members, Coaching & Groups */}
             <Tabs defaultValue="coaching" className="w-full">
@@ -434,12 +434,12 @@ export const ClubInfoDialog = ({
                   <GraduationCap className="h-4 w-4" />
                   Entraînements
                 </TabsTrigger>
-                {currentUserIsCoach && (
+                {currentUserIsCoach &&
                   <TabsTrigger value="groups" className="flex-1 gap-1">
                     <Users className="h-4 w-4" />
                     Groupes
                   </TabsTrigger>
-                )}
+                  }
               </TabsList>
 
               <TabsContent value="members" className="mt-3">
@@ -447,104 +447,104 @@ export const ClubInfoDialog = ({
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-medium text-sm">Membres du club</h4>
                     <div className="flex gap-2">
-                      {isAdmin && (
+                      {isAdmin &&
                         <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)}>
                           <UserPlus className="h-4 w-4 mr-1" />
                           Inviter
                         </Button>
-                      )}
-                      {isAdmin && (
+                        }
+                      {isAdmin &&
                         <Button variant="outline" size="sm" onClick={onEditGroup}>
                           <Settings className="h-4 w-4 mr-1" />
                           Gérer
                         </Button>
-                      )}
+                        }
                     </div>
                   </div>
 
-                  {loading ? (
+                  {loading ?
                     <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
+                      {[1, 2, 3].map((i) =>
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
                           <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
                           <div className="flex-1">
                             <div className="h-4 bg-muted rounded animate-pulse mb-1" />
                             <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
+                      )}
+                    </div> :
+
                     <div className="space-y-1 max-h-64 overflow-y-auto">
-                      {members.map((member) => (
-                        <div
-                          key={member.user_id}
-                          className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                            member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'
-                          }`}
-                        >
+                      {members.map((member) =>
+                      <div
+                        key={member.user_id}
+                        className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                        member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`
+                        }>
+
                           <div className="relative">
                             <Avatar
-                              className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => navigateToProfile(member.user_id)}
-                            >
+                            className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigateToProfile(member.user_id)}>
+
                               <AvatarImage src={member.avatar_url || ""} />
                               <AvatarFallback>
                                 {(member.username || member.display_name || "").charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            {member.is_admin && (
-                              <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
+                            {member.is_admin &&
+                          <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
                                 <Crown className="h-3 w-3 text-primary-foreground" />
                               </div>
-                            )}
+                          }
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="font-medium text-sm truncate">
                                 {member.username || member.display_name}
-                                {member.user_id === user?.id && (
-                                  <span className="text-muted-foreground"> (vous)</span>
-                                )}
+                                {member.user_id === user?.id &&
+                              <span className="text-muted-foreground"> (vous)</span>
+                              }
                               </p>
-                              {member.is_admin && (
-                                <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>
-                              )}
+                              {member.is_admin &&
+                            <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>
+                            }
                               {member.is_coach && <CoachBadge />}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">@{member.username}</p>
                           </div>
 
                           <div className="flex items-center gap-1">
-                            {isAdmin && member.user_id !== user?.id && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleCoach(member.user_id, member.is_coach)}
-                                title={member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}
-                              >
+                            {isAdmin && member.user_id !== user?.id &&
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleCoach(member.user_id, member.is_coach)}
+                            title={member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}>
+
                                 <GraduationCap className={`h-4 w-4 ${member.is_coach ? 'text-amber-500' : 'text-muted-foreground'}`} />
                               </Button>
-                            )}
-                            {isAdmin && member.user_id !== user?.id && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setMemberToDelete(member);
-                                  setShowDeleteDialog(true);
-                                }}
-                                className="text-destructive hover:text-destructive"
-                              >
+                          }
+                            {isAdmin && member.user_id !== user?.id &&
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setMemberToDelete(member);
+                              setShowDeleteDialog(true);
+                            }}
+                            className="text-destructive hover:text-destructive">
+
                                 <UserMinus className="h-4 w-4" />
                               </Button>
-                            )}
+                          }
                           </div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
+                    }
                 </div>
               </TabsContent>
 
@@ -552,30 +552,30 @@ export const ClubInfoDialog = ({
                 <CoachingTab clubId={conversationId} isCoach={currentUserIsCoach} />
               </TabsContent>
 
-              {currentUserIsCoach && (
+              {currentUserIsCoach &&
                 <TabsContent value="groups" className="mt-3">
                   <ClubGroupsManager clubId={conversationId} />
                 </TabsContent>
-              )}
+                }
             </Tabs>
 
             {/* Actions */}
             <div className="flex gap-2 pt-4">
-              {isAdmin && (
+              {isAdmin &&
                 <Button
                   variant="destructive"
                   onClick={() => setShowDeleteGroupDialog(true)}
-                  className="flex-1"
-                >
+                  className="flex-1">
+
                   <Trash2 className="h-4 w-4 mr-2" />
                   Supprimer le club
                 </Button>
-              )}
+                }
               <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex-1"
-              >
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1">
+
                 Fermer
               </Button>
             </div>
@@ -587,8 +587,8 @@ export const ClubInfoDialog = ({
       {/* Profile Preview Dialog */}
       <ProfilePreviewDialog
         userId={showProfilePreview ? selectedUserId : null}
-        onClose={closeProfilePreview}
-      />
+        onClose={closeProfilePreview} />
+
 
       {/* Invite Members Dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -607,17 +607,17 @@ export const ClubInfoDialog = ({
                 placeholder="Rechercher des utilisateurs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+                className="pl-9" />
+
             </div>
 
-            {searchResults.length > 0 && (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {searchResults.map((profile) => (
-                  <div
-                    key={profile.user_id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50"
-                  >
+            {searchResults.length > 0 &&
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+                {searchResults.map((profile) =>
+              <div
+                key={profile.user_id}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={profile.avatar_url || ""} />
                       <AvatarFallback>
@@ -633,17 +633,17 @@ export const ClubInfoDialog = ({
                       </p>
                     </div>
                     <Button
-                      size="sm"
-                      onClick={() => inviteUser(profile.user_id)}
-                      disabled={inviteLoading}
-                    >
+                  size="sm"
+                  onClick={() => inviteUser(profile.user_id)}
+                  disabled={inviteLoading}>
+
                       <UserPlus className="h-4 w-4 mr-1" />
                       Inviter
                     </Button>
                   </div>
-                ))}
+              )}
               </div>
-            )}
+            }
 
             <div className="flex gap-2 pt-4">
               <Button
@@ -653,8 +653,8 @@ export const ClubInfoDialog = ({
                   setSearchQuery("");
                   setSearchResults([]);
                 }}
-                className="flex-1"
-              >
+                className="flex-1">
+
                 Annuler
               </Button>
             </div>
@@ -679,8 +679,8 @@ export const ClubInfoDialog = ({
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => memberToDelete && removeMember(memberToDelete.user_id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+
               Retirer
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -704,13 +704,13 @@ export const ClubInfoDialog = ({
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteGroup}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+
               Supprimer définitivement
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
-  );
+    </>);
+
 };
