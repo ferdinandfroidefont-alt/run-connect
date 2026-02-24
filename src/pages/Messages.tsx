@@ -2826,21 +2826,19 @@ const Messages = () => {
         <CoachAccessDialog
           isOpen={showCoachAccess}
           onClose={() => setShowCoachAccess(false)}
-          onSelectClub={(clubId) => {
-            setCoachClubId(clubId);
-            setShowCoachCreate(true);
+          onSelectClub={async (clubId) => {
+            const { data: clubData } = await supabase
+              .from("conversations")
+              .select("*")
+              .eq("id", clubId)
+              .single();
+            if (clubData) {
+              setGroupInfoData(clubData);
+              setShowGroupInfo(true);
+            }
           }}
           onCreateClub={() => setShowCreateGroup(true)}
         />
-
-        {coachClubId && (
-          <CreateCoachingSessionDialog
-            isOpen={showCoachCreate}
-            onClose={() => { setShowCoachCreate(false); setCoachClubId(null); }}
-            clubId={coachClubId}
-            onCreated={() => {}}
-          />
-        )}
 
       </div>
 
