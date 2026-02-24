@@ -26,6 +26,9 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { OrganizerStatsCard } from '@/components/OrganizerStatsCard';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 import { StreakBadge } from '@/components/StreakBadge';
+import { Dumbbell } from 'lucide-react';
+import { AthleteWeeklyDialog } from '@/components/coaching/AthleteWeeklyDialog';
+import { startOfWeek, endOfWeek } from 'date-fns';
 
 interface UserSession {
   id: string;
@@ -103,6 +106,10 @@ export default function MySessions() {
   const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
   const SESSIONS_PER_PAGE = 3;
+
+  // Coaching clubs for athlete banner
+  const [coachingClubs, setCoachingClubs] = useState<{ clubId: string; clubName: string; completed: number; total: number }[]>([]);
+  const [openCoachingClubId, setOpenCoachingClubId] = useState<string | null>(null);
 
   // Live tracking participant states
   const [liveTrackingEnabled, setLiveTrackingEnabled] = useState(false);
@@ -352,6 +359,85 @@ export default function MySessions() {
       setCurrentView('routes');
     }
   }, [location.search]);
+
+  // Load coaching clubs for athlete banner
+  useEffect(() => {
+    if (!user) return;
+    const loadCoachingClubs = async () => {
+      try {
+        // Get distinct clubs where user has coaching participations in last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const { data: participations } = await supabase
+          .from("coaching_participations")
+          .select("coaching_session_id, status")
+          .eq("user_id", user.id);
+
+        if (!participations || participations.length === 0) {
+          setCoachingClubs([]);
+          return;
+        }
+
+        const sessionIds = participations.map(p => p.coaching_session_id);
+        const { data: sessions } = await supabase
+          .from("coaching_sessions")
+          .select("id, club_id, scheduled_at")
+          .in("id", sessionIds)
+          .gte("scheduled_at", thirtyDaysAgo.toISOString());
+
+        if (!sessions || sessions.length === 0) {
+          setCoachingClubs([]);
+          return;
+        }
+
+        // Group by club
+        const clubMap = new Map<string, { sessionIds: string[] }>();
+        sessions.forEach(s => {
+          if (!clubMap.has(s.club_id)) clubMap.set(s.club_id, { sessionIds: [] });
+          clubMap.get(s.club_id)!.sessionIds.push(s.id);
+        });
+
+        // Get club names
+        const clubIds = [...clubMap.keys()];
+        const { data: conversations } = await supabase
+          .from("conversations")
+          .select("id, group_name")
+          .in("id", clubIds);
+
+        // Get this week's stats
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+
+        const clubs = clubIds.map(clubId => {
+          const conv = conversations?.find(c => c.id === clubId);
+          const clubSessions = sessions.filter(s => s.club_id === clubId);
+          const thisWeekSessionIds = clubSessions
+            .filter(s => {
+              const d = new Date(s.scheduled_at);
+              return d >= weekStart && d <= weekEnd;
+            })
+            .map(s => s.id);
+
+          const completedThisWeek = participations.filter(
+            p => thisWeekSessionIds.includes(p.coaching_session_id) && p.status === "completed"
+          ).length;
+
+          return {
+            clubId,
+            clubName: conv?.group_name || "Club",
+            completed: completedThisWeek,
+            total: thisWeekSessionIds.length,
+          };
+        });
+
+        setCoachingClubs(clubs);
+      } catch (e) {
+        console.error("Error loading coaching clubs:", e);
+      }
+    };
+    loadCoachingClubs();
+  }, [user]);
 
   // Load sessions and subscribe to real-time updates
   useEffect(() => {
@@ -971,6 +1057,25 @@ export default function MySessions() {
           <div className="h-px bg-border" />
         </div>
 
+        {/* Coaching Banner */}
+        {coachingClubs.length > 0 && (
+          <div className="px-4 pt-4">
+            <IOSListGroup>
+              {coachingClubs.map((club) => (
+                <IOSListItem
+                  key={club.clubId}
+                  icon={Dumbbell}
+                  iconBgColor="bg-primary"
+                  title="Mon plan coaching"
+                  subtitle={`${club.clubName} · ${club.completed}/${club.total} cette semaine`}
+                  onClick={() => setOpenCoachingClubId(club.clubId)}
+                  showSeparator={false}
+                />
+              ))}
+            </IOSListGroup>
+          </div>
+        )}
+
         {/* Content */}
         <div className="py-4">
           {currentView === 'sessions' ? (
@@ -1271,6 +1376,16 @@ export default function MySessions() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Athlete Weekly Dialog */}
+      {openCoachingClubId && (
+        <AthleteWeeklyDialog
+          isOpen={!!openCoachingClubId}
+          onClose={() => setOpenCoachingClubId(null)}
+          clubId={openCoachingClubId}
+          clubName={coachingClubs.find(c => c.clubId === openCoachingClubId)?.clubName || "Club"}
+        />
+      )}
     </>
   );
 }
