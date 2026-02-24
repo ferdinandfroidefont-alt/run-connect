@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.save-push-token]
 verify_jwt = false
+
+[functions.coaching-reminder]
+verify_jwt = false
