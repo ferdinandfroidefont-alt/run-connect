@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { IOSListGroup } from "@/components/ui/ios-list-item";
-import { ChevronLeft, ChevronRight, Search, MessageSquare, Bell, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, MessageSquare, Bell, Loader2, AlertTriangle } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useSendNotification } from "@/hooks/useSendNotification";
@@ -20,6 +21,7 @@ interface SessionInfo {
   id: string;
   title: string;
   scheduled_at: string;
+  distance_km: number | null;
 }
 
 interface ParticipationInfo {
@@ -44,6 +46,8 @@ interface AthleteData {
   days: Record<string, DayData>;
   completedCount: number;
   totalCount: number;
+  lateCount: number;
+  weeklyVolumeKm: number;
 }
 
 export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps) => {
@@ -67,7 +71,7 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
     try {
       const { data: sessions } = await supabase
         .from("coaching_sessions")
-        .select("id, title, scheduled_at")
+        .select("id, title, scheduled_at, distance_km")
         .eq("club_id", clubId)
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString());
@@ -116,6 +120,8 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
             days: {},
             completedCount: 0,
             totalCount: 0,
+            lateCount: 0,
+            weeklyVolumeKm: 0,
           };
         }
 
@@ -130,7 +136,12 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
           sessionId: session.id,
         };
         athleteMap[p.user_id].totalCount++;
-        if (p.status === "completed") athleteMap[p.user_id].completedCount++;
+        athleteMap[p.user_id].weeklyVolumeKm += Number(session.distance_km) || 0;
+        if (p.status === "completed") {
+          athleteMap[p.user_id].completedCount++;
+        } else if (new Date(session.scheduled_at) < new Date()) {
+          athleteMap[p.user_id].lateCount++;
+        }
       });
 
       setAthletes(Object.values(athleteMap).sort((a, b) => b.completedCount - a.completedCount));
@@ -266,12 +277,19 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
                       <div className="flex items-center justify-between">
                         <p className="text-[15px] font-medium text-foreground truncate">{athlete.displayName}</p>
                         <div className="flex items-center gap-1.5">
+                          {/* Status badge */}
+                          <Badge
+                            variant={pct >= 80 ? "success" : pct >= 50 ? "warning" : "destructive"}
+                            className="text-[10px] px-1.5 py-0"
+                          >
+                            {pct >= 80 ? "OK" : pct >= 50 ? "Fatigue" : "Alerte"}
+                          </Badge>
                           {hasLate && (
                             <button
                               onClick={(e) => handleSendReminder(e, athlete)}
                               disabled={isSending}
                               className="p-1 rounded-md hover:bg-secondary transition-colors text-orange-500"
-                              title={`Relancer (${lateTitles.length} séance${lateTitles.length > 1 ? 's' : ''} en retard)`}
+                              title={`Relancer (${lateTitles.length} en retard)`}
                             >
                               {isSending ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -312,9 +330,21 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
                   </div>
                 </div>
 
-                {/* Expanded: session details + notes */}
+                {/* Expanded: volume + late + session details */}
                 {isExpanded && (
                   <div className="border-t border-border">
+                    {/* Volume & late summary */}
+                    <div className="px-4 py-2.5 bg-card flex items-center gap-4 text-[12px]">
+                      <span className="text-muted-foreground">
+                        📏 Volume : <strong className="text-foreground">{Math.round(athlete.weeklyVolumeKm * 10) / 10} km</strong>
+                      </span>
+                      {athlete.lateCount > 0 && (
+                        <span className="flex items-center gap-1 text-orange-500">
+                          <AlertTriangle className="h-3 w-3" />
+                          {athlete.lateCount} en retard
+                        </span>
+                      )}
+                    </div>
                     {weekDays.map((day, i) => {
                       const dayKey = format(day, "yyyy-MM-dd");
                       const dayData = athlete.days[dayKey];
