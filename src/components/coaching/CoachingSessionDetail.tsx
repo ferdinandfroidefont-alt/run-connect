@@ -20,6 +20,7 @@ import {
   MapPin,
   Send,
   Clock,
+  ChevronLeft,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -204,15 +205,18 @@ export const CoachingSessionDetail = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent fullScreen hideCloseButton>
+          <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
             <DialogTitle className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
               <GraduationCap className="h-5 w-5" />
-              {session.title}
+              <span className="truncate">{session.title}</span>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Session Info */}
             <div className="space-y-2 p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2 text-sm">
@@ -410,9 +414,6 @@ export const CoachingSessionDetail = ({
               )}
             </div>
 
-            <Button variant="outline" onClick={onClose} className="w-full">
-              Fermer
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

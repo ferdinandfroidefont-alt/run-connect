@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Plus, Users } from "lucide-react";
+import { GraduationCap, Plus, Users, ChevronLeft } from "lucide-react";
 
 interface CoachClub {
   conversation_id: string;
@@ -73,15 +73,18 @@ export const CoachAccessDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
+      <DialogContent fullScreen hideCloseButton>
+        <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
           <DialogTitle className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
             <GraduationCap className="h-5 w-5" />
             Mode Coach
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (

@@ -207,14 +207,18 @@ export const CreateCoachingSessionDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent fullScreen hideCloseButton>
+        <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
           <DialogTitle className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
             <GraduationCap className="h-5 w-5" />
             {step === 1 ? "Plan d'entraînement" : step === 2 ? "Destinataires" : "Résumé"}
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Step indicators */}
         <div className="flex gap-1">
           {[1, 2, 3].map((s) => (
@@ -453,6 +457,7 @@ export const CreateCoachingSessionDialog = ({
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
