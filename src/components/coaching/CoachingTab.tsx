@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { CreateCoachingSessionDialog } from "./CreateCoachingSessionDialog";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { GraduationCap, Plus, Users, BookOpen, ChevronLeft, ChevronRight, CalendarDays, BarChart3 } from "lucide-react";
+import { CalendarDays, BookOpen, BarChart3, Users, Clock, AlertTriangle, Layers } from "lucide-react";
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
-import { WeeklyTrackingView } from "./WeeklyTrackingView";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, isToday, isPast } from "date-fns";
+import { WeeklyTrackingDialog } from "./WeeklyTrackingDialog";
+import { ClubGroupsManagerDialog } from "./ClubGroupsManagerDialog";
+import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
+import { format, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface CoachingSession {
@@ -34,6 +35,13 @@ interface CoachingTabProps {
   isCoach: boolean;
 }
 
+interface DashboardStats {
+  totalSessions: number;
+  pending: number;
+  activeGroups: number;
+  lateAthletes: number;
+}
+
 export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<CoachingSession[]>([]);
@@ -43,202 +51,221 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showWeeklyPlan, setShowWeeklyPlan] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
-  const [participationStats, setParticipationStats] = useState<Record<string, { completed: number; scheduled: number; sent: number }>>({});
+  const [showGroups, setShowGroups] = useState(false);
+  const [stats, setStats] = useState<DashboardStats>({ totalSessions: 0, pending: 0, activeGroups: 0, lateAthletes: 0 });
 
-  // Calendar state
-  const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
-
-  const loadSessions = async () => {
+  const loadDashboard = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Sessions this week
+      const { data: weekSessions } = await supabase
         .from("coaching_sessions")
-        .select("*")
+        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code")
         .eq("club_id", clubId)
+        .gte("scheduled_at", weekStart.toISOString())
+        .lte("scheduled_at", weekEnd.toISOString())
         .order("scheduled_at", { ascending: true });
 
-      if (error) throw error;
+      const sessionList = (weekSessions || []) as CoachingSession[];
 
-      if (data && data.length > 0) {
-        const sessionIds = data.map(s => s.id);
-        const { data: counts } = await supabase
+      // Get participation counts + stats
+      let pending = 0;
+      let lateAthletes = 0;
+
+      if (sessionList.length > 0) {
+        const sessionIds = sessionList.map(s => s.id);
+        const { data: participations } = await supabase
           .from("coaching_participations")
           .select("coaching_session_id, status")
           .in("coaching_session_id", sessionIds);
 
         const countMap: Record<string, number> = {};
-        const statsMap: Record<string, { completed: number; scheduled: number; sent: number }> = {};
-        counts?.forEach(c => {
-          countMap[c.coaching_session_id] = (countMap[c.coaching_session_id] || 0) + 1;
-          if (!statsMap[c.coaching_session_id]) statsMap[c.coaching_session_id] = { completed: 0, scheduled: 0, sent: 0 };
-          if (c.status === "completed") statsMap[c.coaching_session_id].completed++;
-          else if (c.status === "scheduled") statsMap[c.coaching_session_id].scheduled++;
-          else statsMap[c.coaching_session_id].sent++;
+        (participations || []).forEach(p => {
+          countMap[p.coaching_session_id] = (countMap[p.coaching_session_id] || 0) + 1;
+          if (p.status === "sent") pending++;
         });
 
-        setParticipationStats(statsMap);
-        setSessions(data.map(s => ({ ...s, participation_count: countMap[s.id] || 0 })) as CoachingSession[]);
-      } else {
-        setSessions([]);
+        // Late = sent status on past sessions
+        sessionList.forEach(s => {
+          if (new Date(s.scheduled_at) < now) {
+            const pastSent = (participations || []).filter(
+              p => p.coaching_session_id === s.id && p.status === "sent"
+            ).length;
+            lateAthletes += pastSent;
+          }
+        });
+
+        sessionList.forEach(s => { s.participation_count = countMap[s.id] || 0; });
       }
-    } catch (error) {
-      console.error("Error loading coaching sessions:", error);
+
+      // Groups count
+      const { count: groupCount } = await supabase
+        .from("club_groups")
+        .select("id", { count: "exact", head: true })
+        .eq("club_id", clubId);
+
+      setStats({
+        totalSessions: sessionList.length,
+        pending,
+        activeGroups: groupCount || 0,
+        lateAthletes,
+      });
+
+      setSessions(sessionList);
+    } catch (e) {
+      console.error("Error loading dashboard:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadSessions();
-  }, [clubId]);
+  useEffect(() => { loadDashboard(); }, [clubId]);
 
-  // Sessions for the selected day
-  const daySessions = useMemo(() =>
-    sessions.filter(s => isSameDay(new Date(s.scheduled_at), selectedDate)),
-    [sessions, selectedDate]
+  // Next upcoming sessions (future only, max 5)
+  const upcomingSessions = useMemo(() =>
+    sessions.filter(s => new Date(s.scheduled_at) >= now).slice(0, 5),
+    [sessions]
   );
 
-  // Days with sessions (for dots on calendar)
-  const daysWithSessions = useMemo(() => {
-    const set = new Set<string>();
-    sessions.forEach(s => set.add(format(new Date(s.scheduled_at), "yyyy-MM-dd")));
-    return set;
-  }, [sessions]);
+  const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
 
-  const handleDayCreate = (date: Date) => {
-    setSelectedDate(date);
-    setShowCreate(true);
-  };
-
-  if (showTracking && isCoach) {
-    return <WeeklyTrackingView clubId={clubId} onClose={() => setShowTracking(false)} />;
+  if (loading) {
+    return (
+      <div className="bg-secondary min-h-[300px] p-4 space-y-4">
+        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-card rounded-[10px] animate-pulse" />)}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h4 className="font-medium text-sm flex items-center gap-2">
-          <GraduationCap className="h-4 w-4" />
-          Entraînements
-        </h4>
-        <div className="flex gap-1.5">
-          {isCoach && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setShowTracking(true)} className="h-7 px-2">
-                <BarChart3 className="h-3.5 w-3.5 mr-1" />
-                Suivi
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowWeeklyPlan(true)} className="h-7 px-2">
-                <CalendarDays className="h-3.5 w-3.5 mr-1" />
-                Plan
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowTemplates(true)} className="h-7 px-2">
-                <BookOpen className="h-3.5 w-3.5" />
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => { setSelectedDate(new Date()); setShowCreate(true); }} className="h-7 px-2">
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Créer
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="bg-secondary -mx-4 -mb-4 px-4 pt-2 pb-8 min-h-[400px]">
+      {/* Week label */}
+      <p className="text-[13px] text-muted-foreground text-center mb-4">
+        Semaine du {weekLabel}
+      </p>
 
-      {/* Week Calendar */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs font-medium capitalize">
-            {format(weekStart, "d MMM", { locale: fr })} — {format(weekEnd, "d MMM yyyy", { locale: fr })}
-          </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1">
-          {weekDays.map(day => {
-            const dayKey = format(day, "yyyy-MM-dd");
-            const isSelected = isSameDay(day, selectedDate);
-            const hasSession = daysWithSessions.has(dayKey);
-            const isCurrentDay = isToday(day);
-
-            return (
-              <button
-                key={dayKey}
-                onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center py-1.5 rounded-lg text-xs transition-colors relative ${
-                  isSelected ? "bg-primary text-primary-foreground" : isCurrentDay ? "bg-accent" : "hover:bg-muted"
-                }`}
-              >
-                <span className="text-[10px] uppercase">{format(day, "EEE", { locale: fr }).slice(0, 3)}</span>
-                <span className="font-medium">{format(day, "d")}</span>
-                {hasSession && (
-                  <div className={`w-1 h-1 rounded-full mt-0.5 ${isSelected ? "bg-primary-foreground" : "bg-primary"}`} />
-                )}
-                {isCoach && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDayCreate(day); }}
-                    className={`absolute -top-1 -right-0.5 w-3.5 h-3.5 rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity ${
-                      isSelected ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
-                    }`}
-                    style={{ opacity: undefined }}
-                  >
-                    +
-                  </button>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Day sessions */}
-      {loading ? (
-        <div className="space-y-2">
-          {[1, 2].map(i => <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />)}
-        </div>
-      ) : daySessions.length === 0 ? (
-        <div className="text-center py-4 text-muted-foreground">
-          <p className="text-xs">Aucune séance le {format(selectedDate, "d MMMM", { locale: fr })}</p>
-          {isCoach && (
-            <Button variant="link" size="sm" className="text-xs mt-1" onClick={() => handleDayCreate(selectedDate)}>
-              + Créer une séance
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {daySessions.map(s => (
-            <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} stats={participationStats[s.id]} />
-          ))}
-        </div>
+      {/* KPI Section */}
+      {isCoach && (
+        <IOSListGroup header="CETTE SEMAINE">
+          <IOSListItem
+            icon={CalendarDays}
+            iconBgColor="bg-blue-500"
+            title={`${stats.totalSessions} séance${stats.totalSessions > 1 ? "s" : ""} programmée${stats.totalSessions > 1 ? "s" : ""}`}
+            showChevron={false}
+            showSeparator
+          />
+          <IOSListItem
+            icon={Clock}
+            iconBgColor="bg-orange-500"
+            title={`${stats.pending} en attente`}
+            showChevron={false}
+            showSeparator
+          />
+          <IOSListItem
+            icon={Layers}
+            iconBgColor="bg-green-500"
+            title={`${stats.activeGroups} groupe${stats.activeGroups > 1 ? "s" : ""} actif${stats.activeGroups > 1 ? "s" : ""}`}
+            showChevron={false}
+            showSeparator
+          />
+          <IOSListItem
+            icon={AlertTriangle}
+            iconBgColor="bg-red-500"
+            title={`${stats.lateAthletes} athlète${stats.lateAthletes > 1 ? "s" : ""} en retard`}
+            showChevron={false}
+            showSeparator={false}
+          />
+        </IOSListGroup>
       )}
 
-      {/* All sessions (below calendar) */}
-      {!loading && sessions.length > 0 && (
-        <div className="space-y-2 pt-2 border-t">
-          <p className="text-xs font-medium text-muted-foreground uppercase">Toutes les séances</p>
-          {sessions.slice(0, 10).map(s => (
-            <SessionCard key={s.id} session={s} onClick={() => setSelectedSession(s)} showDate stats={participationStats[s.id]} />
-          ))}
-        </div>
+      {/* Quick Tools */}
+      {isCoach && (
+        <IOSListGroup header="OUTILS">
+          <IOSListItem
+            icon={CalendarDays}
+            iconBgColor="bg-blue-500"
+            title="Créer plan semaine"
+            onClick={() => setShowWeeklyPlan(true)}
+            showSeparator
+          />
+          <IOSListItem
+            icon={BookOpen}
+            iconBgColor="bg-purple-500"
+            title="Modèles de séances"
+            onClick={() => setShowTemplates(true)}
+            showSeparator
+          />
+          <IOSListItem
+            icon={BarChart3}
+            iconBgColor="bg-green-500"
+            title="Suivi athlètes"
+            onClick={() => setShowTracking(true)}
+            showSeparator
+          />
+          <IOSListItem
+            icon={Users}
+            iconBgColor="bg-orange-500"
+            title="Gérer les groupes"
+            onClick={() => setShowGroups(true)}
+            showSeparator={false}
+          />
+        </IOSListGroup>
       )}
 
+      {/* Upcoming Sessions */}
+      {upcomingSessions.length > 0 && (
+        <IOSListGroup header="PROCHAINES SÉANCES">
+          {upcomingSessions.map((s, i) => (
+            <IOSListItem
+              key={s.id}
+              title={s.title}
+              subtitle={`${format(new Date(s.scheduled_at), "EEE d MMM", { locale: fr })}${s.objective ? ` · ${s.objective}` : ""}`}
+              value={`${s.participation_count || 0}`}
+              rightElement={
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              }
+              onClick={() => setSelectedSession(s)}
+              showSeparator={i < upcomingSessions.length - 1}
+            />
+          ))}
+        </IOSListGroup>
+      )}
+
+      {/* Empty state for athletes */}
+      {!isCoach && sessions.length === 0 && (
+        <IOSListGroup>
+          <div className="px-4 py-8 text-center">
+            <CalendarDays className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">Aucune séance cette semaine</p>
+          </div>
+        </IOSListGroup>
+      )}
+
+      {/* Athlete view: received sessions */}
+      {!isCoach && sessions.length > 0 && (
+        <IOSListGroup header="MES SÉANCES">
+          {sessions.map((s, i) => (
+            <IOSListItem
+              key={s.id}
+              title={s.title}
+              subtitle={`${format(new Date(s.scheduled_at), "EEE d MMM", { locale: fr })}${s.objective ? ` · ${s.objective}` : ""}`}
+              onClick={() => setSelectedSession(s)}
+              showSeparator={i < sessions.length - 1}
+            />
+          ))}
+        </IOSListGroup>
+      )}
+
+      {/* Dialogs */}
       <CreateCoachingSessionDialog
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
         clubId={clubId}
-        onCreated={loadSessions}
-        preselectedDate={selectedDate}
+        onCreated={loadDashboard}
       />
 
       <CoachingSessionDetail
@@ -261,57 +288,20 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         isOpen={showWeeklyPlan}
         onClose={() => setShowWeeklyPlan(false)}
         clubId={clubId}
-        onSent={loadSessions}
+        onSent={loadDashboard}
+      />
+
+      <WeeklyTrackingDialog
+        isOpen={showTracking}
+        onClose={() => setShowTracking(false)}
+        clubId={clubId}
+      />
+
+      <ClubGroupsManagerDialog
+        isOpen={showGroups}
+        onClose={() => setShowGroups(false)}
+        clubId={clubId}
       />
     </div>
   );
 };
-
-const SessionCard = ({
-  session,
-  onClick,
-  showDate,
-  stats,
-}: {
-  session: any;
-  onClick: () => void;
-  showDate?: boolean;
-  stats?: { completed: number; scheduled: number; sent: number };
-}) => (
-  <button
-    onClick={onClick}
-    className="w-full text-left p-3 rounded-lg border transition-colors hover:bg-muted/50"
-  >
-    <div className="flex items-start gap-3">
-      <ActivityIcon activityType={session.activity_type} size="sm" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-sm truncate">{session.title}</p>
-          {session.objective && (
-            <Badge variant="outline" className="text-[10px] shrink-0">{session.objective}</Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-          {showDate && (
-            <span>{format(new Date(session.scheduled_at), "d MMM", { locale: fr })}</span>
-          )}
-          <span className="flex items-center gap-1">
-            <Users className="h-3 w-3" />
-            {session.participation_count || 0}
-          </span>
-          {session.distance_km && <span>{session.distance_km} km</span>}
-        </div>
-        {stats && (stats.completed + stats.scheduled + stats.sent > 0) && (
-          <div className="flex items-center gap-2 mt-1 text-[10px]">
-            {stats.completed > 0 && <span>✅ {stats.completed}</span>}
-            {stats.scheduled > 0 && <span>🕒 {stats.scheduled}</span>}
-            {stats.sent > 0 && <span>❌ {stats.sent}</span>}
-            <span className="text-muted-foreground ml-auto">
-              {Math.round((stats.completed / (stats.completed + stats.scheduled + stats.sent)) * 100)}%
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  </button>
-);

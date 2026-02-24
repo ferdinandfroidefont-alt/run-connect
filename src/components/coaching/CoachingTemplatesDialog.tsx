@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { parseRCC } from "@/lib/rccParser";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
-import { ChevronLeft, Trash2, BookOpen } from "lucide-react";
+import { ArrowLeft, Trash2, BookOpen } from "lucide-react";
 
 interface Template {
   id: string;
@@ -58,18 +58,20 @@ export const CoachingTemplatesDialog = ({ isOpen, onClose, onSelect }: CoachingT
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton>
-        <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
-          <DialogTitle className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <BookOpen className="h-5 w-5" />
-            Mes templates
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
+        {/* iOS header */}
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
+          <button onClick={onClose} className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]">
+            <ArrowLeft className="h-5 w-5" />
+            <span className="text-[15px]">Retour</span>
+          </button>
+          <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
+            Modèles de séances
+          </span>
+          <div className="min-w-[70px]" />
+        </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto bg-secondary p-4 space-y-3">
           <Input
             placeholder="Rechercher un template..."
             value={search}
