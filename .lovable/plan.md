@@ -1,66 +1,87 @@
 
 
-# Analyse honnete : est-ce que cette fonctionnalite coaching convaincrait un coach FFA ?
+# P1 : Relance push des retardataires + Feedback en lot
 
-## Ce qui est deja bien fait
+## 1. Bouton "Relancer" dans WeeklyTrackingView
 
-Le systeme a des bases solides qui correspondent au workflow FFA :
+### Probleme
+Le coach voit les athletes en retard (dots orange) mais ne peut rien faire depuis cette vue. Il doit aller dans chaque seance individuellement.
 
-1. **Code RCC (RunConnect Code)** — Un coach FFA ecrit ses seances en format abrege (`3x1000>3'00 r1'15>trot`). Le parseur gere les intervalles, echauffements, recup. Les quick chips (EF, CD, x400, x1000) accelerent la saisie. C'est un vrai gain de temps vs ecrire en texte libre.
+### Solution
+Ajouter un bouton "Relancer" (icone Bell) sur chaque ligne athlete qui a des seances non completees (status `sent` ou `scheduled`). Au clic, envoie une notification push avec le titre de la seance manquee.
 
-2. **Plan de semaine** — Le coach peut creer 7 jours de seances d'un coup, par groupe. La duplication de plan entre groupes (Sprint → Demi-fond) est un vrai use case FFA.
+**Fichier : `src/components/coaching/WeeklyTrackingView.tsx`**
 
-3. **Semaines type (templates)** — Le coach sauvegarde des plans types et les recharge. Utile car les cycles d'entrainement se repetent.
+- Importer `useSendNotification` et `Bell` de lucide
+- Pour chaque athlete, calculer `lateSessionTitles` (seances dont le `scheduled_at` est passe et status != `completed`)
+- Afficher un bouton Bell a cote du pourcentage si `lateSessionTitles.length > 0`
+- Au clic : `sendPushNotification(athlete.userId, "📋 Rappel coaching", "N'oublie pas : {titres}", "coaching_reminder")`
+- Ajouter un state `sendingReminder` pour feedback visuel (loading spinner pendant l'envoi)
+- Toast de confirmation apres envoi
 
-4. **Groupes de niveau** — Sprint, Demi-fond, Loisirs, etc. C'est exactement comme ca que fonctionnent les clubs FFA.
+### Donnees necessaires
+L'info est deja disponible dans `athlete.days` : on filtre les jours passes ou le status n'est pas `completed`. Il faut stocker `coaching_session_id` dans les `days` pour enrichir la notification (deja dans `sessionMap`).
 
-5. **Variantes athlete** — Ajuster l'allure/les reps par athlete depuis le meme plan. Un coach FFA a 15 athletes au meme entrainement avec des allures differentes — c'est un vrai probleme resolu.
+Modification mineure : ajouter `sessionId` dans le type `days` pour pouvoir referencer la seance.
 
-6. **Suivi hebdo** — Le coach voit par athlete : dots colores, % completion, commentaires. C'est la vue "presence" que les coachs FFA font sur papier.
+---
 
-## Ce qui manque ou freine l'adoption
+## 2. Feedback en lot dans CoachingSessionDetail
 
-### Problemes critiques
+### Probleme
+Le coach doit ecrire un feedback individuel pour chaque athlete (20 athletes = 20 champs textarea). Pas de message commun.
 
-1. **Pas de vue cycle / mesocycle** — Un coach FFA planifie sur 4-8 semaines (PPG, PPS, competition). Actuellement, tout est semaine par semaine. Il n'y a aucune vision de la periodisation. Le coach ne peut pas voir : "semaine 1 = volume, semaine 2 = intensite, semaine 3 = pic". C'est LE manque principal.
+### Solution
+Ajouter une section "Feedback global" au-dessus de la liste des participants, visible uniquement par le coach. Un seul textarea + bouton "Envoyer a tous". Le feedback est enregistre sur toutes les participations qui n'ont pas encore de feedback, et une notification push est envoyee a chaque athlete.
 
-2. **Pas de charge d'entrainement** — Le coach ne voit pas la charge totale de la semaine (km total, denivele, intensite globale). Un simple resume en haut du plan semaine suffirait : "42 km cette semaine · 3 seances qualite · Charge : Moderee".
+**Fichier : `src/components/coaching/CoachingSessionDetail.tsx`**
 
-3. **Pas de duplication semaine → semaine suivante** — Le coach fait souvent S1 → copier vers S2 avec ajustements. Actuellement il doit tout refaire ou utiliser un template, mais sans possibilite de decaler d'une semaine directement.
+- Ajouter un state `batchFeedback: string` et `sendingBatch: boolean`
+- Ajouter une section UI entre le taux de completion et la liste des participants :
+  - Textarea "Feedback pour tous les athletes..."
+  - Bouton "Envoyer a X athletes" (X = nombre sans feedback)
+- Fonction `handleBatchFeedback()` :
+  - Filtre les participations sans feedback existant
+  - Pour chaque : `supabase.from("coaching_participations").update({ feedback }).eq("id", p.id)`
+  - Pour chaque : `sendPushNotification(p.user_id, "Feedback de votre coach", session.title, "coaching_feedback")`
+  - Toast "Feedback envoye a X athletes"
+  - Refresh via `loadParticipations()`
 
-4. **Le suivi coach ne permet pas de relancer les retardataires** — Le coach voit "3 athletes en retard" dans les KPI, mais ne peut pas leur envoyer un rappel push en un clic depuis le tracking view.
+### Le coach garde la possibilite de feedback individuel
+Le feedback individuel reste en dessous de chaque participant. Le feedback en lot remplit le champ `feedback` uniquement pour ceux qui n'en ont pas encore.
 
-5. **Pas de feedback par lot** — Le coach a 20 athletes qui completent la meme seance. Il doit ouvrir chaque participation pour ecrire un feedback. Il faudrait un mode "feedback groupe" : ecrire un message commun + feedback individuel optionnel.
+---
 
-6. **ScheduleCoachingDialog demande lat/lng** — Un athlete ne connait pas la latitude et longitude de son stade. Il faut soit une recherche Google Maps, soit supprimer ces champs et utiliser uniquement le nom du lieu.
+## Fichiers impactes
 
-### Irritants UX
-
-7. **Pas de notification de rappel** — La veille de la seance, l'athlete ne recoit aucun rappel. Un cron qui envoie "Demain : VMA 10x200 a 18h30" serait tres utile.
-
-8. **Pas d'historique de performance** — Le coach ne peut pas voir l'evolution d'un athlete sur plusieurs semaines (est-ce qu'il complete plus ? ses commentaires sont-ils positifs ?).
-
-9. **Le RCC ne gere pas les cotes** — En trail, le coach ecrit "3x500m D+100m". Le parseur ne comprend pas le denivele.
-
-10. **Pas d'export/import** — Un coach FFA utilise souvent Excel ou un Google Sheet. Pouvoir importer un plan depuis un CSV ou exporter les resultats de suivi serait un gros plus.
-
-## Verdict
-
-**En l'etat, c'est un MVP fonctionnel mais pas encore un outil qui remplacerait le groupe WhatsApp + Excel d'un coach FFA.** Les bases sont la (RCC, groupes, templates, suivi), mais il manque la dimension "periodisation" et des raccourcis de productivite (feedback en lot, relance push, duplication semaine).
-
-## Recommandations par priorite
-
-| Priorite | Feature | Impact |
+| Fichier | Type | Changement |
 |---|---|---|
-| **P0** | Resume charge semaine (km total, nb qualite, intensite) | Le coach veut voir en 1 seconde si sa semaine est coherente |
-| **P0** | Dupliquer semaine precedente → semaine courante | Divise par 5 le temps de planification |
-| **P0** | Supprimer lat/lng du ScheduleCoachingDialog | Friction inutile pour l'athlete |
-| **P1** | Bouton "Relancer" sur les athletes en retard | Le coach perd du temps a ecrire des messages individuels |
-| **P1** | Feedback en lot apres une seance | 20 athletes = 20 clics actuellement |
-| **P2** | Vue mesocycle (4-8 semaines) | Planification long terme |
-| **P2** | Notification rappel J-1 (cron) | Augmente le taux de completion |
-| **P3** | Historique athlete (courbe de completion) | Vision evolution |
-| **P3** | Support denivele dans RCC | Trail coaches |
+| `src/components/coaching/WeeklyTrackingView.tsx` | Modifier | Bouton relance + envoi push |
+| `src/components/coaching/CoachingSessionDetail.tsx` | Modifier | Section feedback en lot |
 
-Je peux implementer n'importe lequel de ces points. Lequel veux-tu attaquer en premier ?
+## Aucune migration SQL
+
+Toutes les colonnes necessaires existent deja (`feedback` dans `coaching_participations`, push via edge function).
+
+## Details techniques
+
+**Relance push — logique de filtrage :**
+```typescript
+const lateSessionTitles = Object.entries(athlete.days)
+  .filter(([dayKey, d]) => {
+    const sessionDate = new Date(dayKey);
+    return sessionDate < new Date() && d.status !== "completed";
+  })
+  .map(([, d]) => d.sessionTitle);
+```
+
+**Feedback en lot — update batch :**
+```typescript
+const withoutFeedback = participations.filter(p => !p.feedback);
+await Promise.all(withoutFeedback.map(p =>
+  supabase.from("coaching_participations")
+    .update({ feedback: batchFeedback.trim() })
+    .eq("id", p.id)
+));
+```
 
