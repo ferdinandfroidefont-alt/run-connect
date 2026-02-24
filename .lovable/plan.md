@@ -1,46 +1,92 @@
 
 
-# Fix: "new row violates row-level security policy" pour `club_groups`
+# Vue Suivi Hebdo Athlète — Cocher ses séances + Commentaires
 
-## Diagnostic
+## Constat actuel
 
-Le `conversationId` passé est `9bb873a7-4f0f-4dcb-8349-ba94780a196c` (club "Ferdi"). Le user `0f464761-...` est le `created_by` de cette conversation, mais n'a **aucune entrée dans `group_members`** pour ce club.
+Côté **athlète**, le `CoachingTab` affiche une simple liste de séances cliquables. Pour marquer une séance comme faite, l'athlète doit :
+1. Cliquer sur la séance → ouvrir `CoachingSessionDetail`
+2. Écrire un commentaire dans un textarea
+3. Cliquer "Marquer comme fait"
 
-La fonction `is_club_coach_or_creator` retourne `true` quand on la teste directement (car elle vérifie `conversations.created_by`). Cependant, le problème vient du `.select()` chaîné après l'INSERT dans le code.
+C'est trop de clics. L'athlète devrait voir sa semaine d'un coup et cocher directement.
 
-Quand on fait `.insert({...}).select()`, Supabase exécute :
-1. INSERT → vérifié par la policy `WITH CHECK (is_club_coach_or_creator(...))` → OK
-2. SELECT sur la row insérée → vérifié par `USING (is_club_member(...))` → **ÉCHEC**
+## Ce qu'on va construire
 
-La policy SELECT utilise `is_club_member` qui vérifie uniquement `group_members`, et le user n'y est pas. Donc l'INSERT réussit mais le SELECT retourne une erreur.
+Une **vue semaine athlète** intégrée directement dans le `CoachingTab` (quand `!isCoach`), avec :
 
-## Deux corrections
-
-### 1. `ClubGroupsManager.tsx` — Retirer le `.select()` inutile
-
-Le `.select()` n'est pas nécessaire ici car on fait `loadData()` juste après. Le retirer évite le problème SELECT.
-
-### 2. RLS SELECT policy — Autoriser aussi le créateur du club
-
-C'est la vraie correction de fond. Le créateur du club devrait pouvoir voir les groupes même s'il n'est pas dans `group_members`. Modifier la policy SELECT de `club_groups` :
-
-```sql
-DROP POLICY "Club members can view groups" ON club_groups;
-CREATE POLICY "Club members can view groups" ON club_groups
-  FOR SELECT TO public
-  USING (is_club_member(auth.uid(), club_id) OR is_club_coach_or_creator(auth.uid(), club_id));
+```text
+┌──────────────────────────────────┐
+│  MA SEMAINE                       │
+│  23 fév – 1 mars         3/5 ✅  │
+│                                   │
+│  ┌────────────────────────────┐   │
+│  │ ☑ Lun — Seuil 3x1000      │   │
+│  │   "Bonnes sensations"  ✏️  │   │
+│  ├────────────────────────────┤   │
+│  │ ☑ Mar — EF 45'             │   │
+│  │   Pas de commentaire   ✏️  │   │
+│  ├────────────────────────────┤   │
+│  │ ☐ Mer — VMA 10x200        │   │
+│  │   [Cocher + commenter]     │   │
+│  ├────────────────────────────┤   │
+│  │ ☐ Ven — Seuil long        │   │
+│  │   Pas encore fait          │   │
+│  ├────────────────────────────┤   │
+│  │ ☐ Sam — Sortie longue     │   │
+│  │   Pas encore fait          │   │
+│  └────────────────────────────┘   │
+│                                   │
+│  Progression : ████████░░░ 60%    │
+└──────────────────────────────────┘
 ```
 
-Cela couvre le cas où le créateur n'est pas dans `group_members`.
+Chaque séance :
+- **Checkbox** pour cocher "fait" directement (update `coaching_participations.status` → `completed`)
+- **Zone commentaire** inline (expand au clic sur ✏️) pour `athlete_note`
+- **Clic sur le titre** → ouvre `CoachingSessionDetail` pour voir les détails complets
+- **Barre de progression** en bas avec le % de complétion
 
-## Aussi: ajouter le créateur dans `group_members`
+## Changements fichier par fichier
 
-Le fait que le créateur du club ne soit pas dans `group_members` est un bug de données. On devrait aussi s'assurer que la création de club ajoute bien le créateur. Mais c'est un problème séparé — les deux corrections ci-dessus règlent le problème immédiat.
+### 1. `src/components/coaching/CoachingTab.tsx`
+
+Remplacer la section athlete (`!isCoach && sessions.length > 0`) par un nouveau composant `AthleteWeeklyView`.
+
+La section actuelle (lignes 248-261) qui affiche juste une liste `IOSListItem` sera remplacée par :
+```tsx
+<AthleteWeeklyView 
+  clubId={clubId} 
+  sessions={sessions} 
+  onSessionClick={(s) => setSelectedSession(s)} 
+/>
+```
+
+### 2. `src/components/coaching/AthleteWeeklyView.tsx` — Nouveau composant
+
+Composant qui :
+- Prend les sessions de la semaine + les participations de l'athlète courant
+- Affiche chaque séance comme un item iOS avec :
+  - Checkbox (Radix `Checkbox`) à gauche
+  - Titre + jour au centre
+  - Bouton ✏️ pour expand un `Textarea` de commentaire
+- Au clic checkbox → update `coaching_participations` (status → `completed`, `completed_at` → now)
+- Au clic ✏️ → toggle textarea inline, auto-save `athlete_note` au blur
+- Barre `Progress` en bas avec le taux de complétion
+- Notification push au coach quand l'athlète coche une séance
+
+Requêtes Supabase :
+- `coaching_participations` WHERE `user_id = auth.uid()` AND `coaching_session_id IN (sessionIds)` → SELECT
+- UPDATE `status`, `completed_at`, `athlete_note` → utilise la policy existante "Athletes can update their own participation"
+
+Pas de migration SQL nécessaire — toutes les colonnes existent déjà (`status`, `completed_at`, `athlete_note`).
 
 ## Fichiers impactés
 
 | Fichier | Action |
 |---|---|
-| `src/components/coaching/ClubGroupsManager.tsx` | Retirer `.select()` de l'insert |
-| Migration SQL | Modifier la policy SELECT de `club_groups` pour inclure `is_club_coach_or_creator` |
+| `src/components/coaching/AthleteWeeklyView.tsx` | Créer — vue semaine athlète avec checkboxes et commentaires |
+| `src/components/coaching/CoachingTab.tsx` | Modifier — remplacer la liste simple par `AthleteWeeklyView` |
+
+Aucune migration SQL. Les policies RLS existantes couvrent déjà les updates athlète.
 
