@@ -95,11 +95,12 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
     const color = GROUP_COLORS[groups.length % GROUP_COLORS.length];
-    const { error } = await supabase.from("club_groups").insert({
+    console.log("🏗️ Creating group:", { clubId, name: newGroupName.trim(), color });
+    const { data, error } = await supabase.from("club_groups").insert({
       club_id: clubId,
       name: newGroupName.trim(),
       color,
-    });
+    }).select();
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
