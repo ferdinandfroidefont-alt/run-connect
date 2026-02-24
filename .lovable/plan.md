@@ -1,87 +1,87 @@
 
 
-# P1 : Relance push des retardataires + Feedback en lot
+# P2 : Vue mesocycle + Notification rappel J-1
 
-## 1. Bouton "Relancer" dans WeeklyTrackingView
+## Feature 1 : Vue mesocycle (4-8 semaines)
 
-### Probleme
-Le coach voit les athletes en retard (dots orange) mais ne peut rien faire depuis cette vue. Il doit aller dans chaque seance individuellement.
+Ajouter une vue "Mesocycle" accessible depuis le `WeeklyPlanDialog` qui affiche un graphique Recharts de la charge sur 4-8 semaines passees. Le coach voit en un coup d'oeil la progression volume/intensite.
 
-### Solution
-Ajouter un bouton "Relancer" (icone Bell) sur chaque ligne athlete qui a des seances non completees (status `sent` ou `scheduled`). Au clic, envoie une notification push avec le titre de la seance manquee.
+### Fichier impacte : `src/components/coaching/WeeklyPlanDialog.tsx`
 
-**Fichier : `src/components/coaching/WeeklyTrackingView.tsx`**
+- Ajouter un state `showMesocycle` (boolean)
+- Ajouter un bouton dans la section ACTIONS : "Vue mesocycle (8 sem.)" avec icone `BarChart3`
+- Au clic, affiche un panneau en dessous avec un `AreaChart` Recharts
 
-- Importer `useSendNotification` et `Bell` de lucide
-- Pour chaque athlete, calculer `lateSessionTitles` (seances dont le `scheduled_at` est passe et status != `completed`)
-- Afficher un bouton Bell a cote du pourcentage si `lateSessionTitles.length > 0`
-- Au clic : `sendPushNotification(athlete.userId, "📋 Rappel coaching", "N'oublie pas : {titres}", "coaching_reminder")`
-- Ajouter un state `sendingReminder` pour feedback visuel (loading spinner pendant l'envoi)
-- Toast de confirmation apres envoi
+### Nouveau composant : `src/components/coaching/MesocycleView.tsx`
 
-### Donnees necessaires
-L'info est deja disponible dans `athlete.days` : on filtre les jours passes ou le status n'est pas `completed`. Il faut stocker `coaching_session_id` dans les `days` pour enrichir la notification (deja dans `sessionMap`).
+- Props : `clubId: string`, `currentWeek: Date`
+- Au montage, requete Supabase : `coaching_sessions` des 8 dernieres semaines pour le club
+- Pour chaque semaine : parser les `rcc_code` avec `parseRCC` + `computeRCCSummary` pour calculer le km total et l'intensite
+- Afficher un `AreaChart` avec :
+  - Axe X : semaines (S-7 a S0)
+  - Axe Y : km total
+  - Coloration par intensite (vert = facile, orange = modere, rouge = intense)
+- Sous le graphique : tableau resume (km, nb seances, intensite par semaine)
 
-Modification mineure : ajouter `sessionId` dans le type `days` pour pouvoir referencer la seance.
+### Donnees :
+```sql
+SELECT id, rcc_code, scheduled_at 
+FROM coaching_sessions 
+WHERE club_id = ? AND scheduled_at >= (now - 8 weeks)
+```
+Pas de migration SQL necessaire — les donnees existent deja.
 
 ---
 
-## 2. Feedback en lot dans CoachingSessionDetail
+## Feature 2 : Notification rappel J-1
 
-### Probleme
-Le coach doit ecrire un feedback individuel pour chaque athlete (20 athletes = 20 champs textarea). Pas de message commun.
+Creer une edge function `coaching-reminder` appelee par un cron pg_cron chaque jour a 18h. Elle envoie un push aux athletes qui ont une `coaching_session` le lendemain.
 
-### Solution
-Ajouter une section "Feedback global" au-dessus de la liste des participants, visible uniquement par le coach. Un seul textarea + bouton "Envoyer a tous". Le feedback est enregistre sur toutes les participations qui n'ont pas encore de feedback, et une notification push est envoyee a chaque athlete.
+### Nouveau fichier : `supabase/functions/coaching-reminder/index.ts`
 
-**Fichier : `src/components/coaching/CoachingSessionDetail.tsx`**
+Logique :
+1. Calculer `tomorrow` = demain (UTC)
+2. Requeter `coaching_sessions` dont `scheduled_at` est dans la journee de demain
+3. Pour chaque session, requeter `coaching_participations` avec status `sent` ou `scheduled`
+4. Pour chaque participation, recuperer le `push_token` du profil
+5. Envoyer un FCM push via le meme pattern que `send-push-notification` (Firebase JWT + FCM v1 API)
+6. Body : "Demain : {titre_seance} a {heure}"
 
-- Ajouter un state `batchFeedback: string` et `sendingBatch: boolean`
-- Ajouter une section UI entre le taux de completion et la liste des participants :
-  - Textarea "Feedback pour tous les athletes..."
-  - Bouton "Envoyer a X athletes" (X = nombre sans feedback)
-- Fonction `handleBatchFeedback()` :
-  - Filtre les participations sans feedback existant
-  - Pour chaque : `supabase.from("coaching_participations").update({ feedback }).eq("id", p.id)`
-  - Pour chaque : `sendPushNotification(p.user_id, "Feedback de votre coach", session.title, "coaching_feedback")`
-  - Toast "Feedback envoye a X athletes"
-  - Refresh via `loadParticipations()`
+### Config : `supabase/config.toml`
+```toml
+[functions.coaching-reminder]
+verify_jwt = false
+```
 
-### Le coach garde la possibilite de feedback individuel
-Le feedback individuel reste en dessous de chaque participant. Le feedback en lot remplit le champ `feedback` uniquement pour ceux qui n'en ont pas encore.
+### Cron job (via SQL insert tool, pas migration) :
+```sql
+SELECT cron.schedule(
+  'coaching-reminder-daily',
+  '0 18 * * *',
+  $$
+  SELECT net.http_post(
+    url:='https://dbptgehpknjsoisirviz.supabase.co/functions/v1/coaching-reminder',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRicHRnZWhwa25qc29pc2lydml6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NjIxNDUsImV4cCI6MjA3MDIzODE0NX0.D1uw0ui_auBAi-dvodv6j2a9x3lvMnY69cDa9Wupjcs"}'::jsonb,
+    body:='{"time": "daily-18h"}'::jsonb
+  ) AS request_id;
+  $$
+);
+```
+
+### Secrets necessaires :
+L'edge function utilise `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, et `FIREBASE_SERVICE_ACCOUNT_JSON` — deja configures (utilises par `send-push-notification`).
 
 ---
 
-## Fichiers impactes
+## Resume des fichiers
 
-| Fichier | Type | Changement |
-|---|---|---|
-| `src/components/coaching/WeeklyTrackingView.tsx` | Modifier | Bouton relance + envoi push |
-| `src/components/coaching/CoachingSessionDetail.tsx` | Modifier | Section feedback en lot |
+| Fichier | Action |
+|---|---|
+| `src/components/coaching/MesocycleView.tsx` | Creer — graphique 8 semaines |
+| `src/components/coaching/WeeklyPlanDialog.tsx` | Modifier — bouton + intégration MesocycleView |
+| `supabase/functions/coaching-reminder/index.ts` | Creer — edge function rappel J-1 |
+| `supabase/config.toml` | Modifier — ajouter `[functions.coaching-reminder]` |
+| SQL (insert tool) | Cron pg_cron a 18h |
 
-## Aucune migration SQL
-
-Toutes les colonnes necessaires existent deja (`feedback` dans `coaching_participations`, push via edge function).
-
-## Details techniques
-
-**Relance push — logique de filtrage :**
-```typescript
-const lateSessionTitles = Object.entries(athlete.days)
-  .filter(([dayKey, d]) => {
-    const sessionDate = new Date(dayKey);
-    return sessionDate < new Date() && d.status !== "completed";
-  })
-  .map(([, d]) => d.sessionTitle);
-```
-
-**Feedback en lot — update batch :**
-```typescript
-const withoutFeedback = participations.filter(p => !p.feedback);
-await Promise.all(withoutFeedback.map(p =>
-  supabase.from("coaching_participations")
-    .update({ feedback: batchFeedback.trim() })
-    .eq("id", p.id)
-));
-```
+Aucune migration de schema. Pas de nouvelle table.
 
