@@ -1,111 +1,105 @@
 
 
-# Rendre le Plan Hebdo vraiment plus rapide que WhatsApp
+# Redesign WeeklyPlanDialog — Style iOS Settings (Inset Grouped)
 
-## Le vrai problème
+## Objectif
 
-Un coach FFA le dimanche soir : 4 groupes × 5 séances = 20 séances à créer. Avec le flow actuel, il doit cliquer "+" 20 fois, remplir chaque séance une par une, puis sélectionner le groupe en bas. C'est plus lent que copier-coller sur WhatsApp. Aucun coach ne se dira "ça me fait gagner du temps".
+Aligner le `WeeklyPlanDialog` sur le design iOS "Paramètres" utilisé dans `SettingsDialog` : fond gris (`bg-secondary`), barre retour iOS en haut (flèche + "Retour" à gauche, titre centré), sections en cartes blanches arrondies (`IOSListGroup`), typographies iOS (`text-[17px]`, `text-[13px]`).
 
-## Ce qui changerait tout : 3 fonctions clés
+## Changements dans `src/components/coaching/WeeklyPlanDialog.tsx`
 
-### 1. Groupe d'abord, pas à la fin
+### 1. Header → barre retour iOS standard
 
-Actuellement le groupe est choisi dans le footer au moment d'envoyer. Le coach devrait commencer par choisir son groupe, puis remplir la semaine pour ce groupe.
-
-**Flow proposé :**
+Remplacer le `DialogHeader` actuel par le même pattern que `SettingsDialog` :
 
 ```text
-┌─────────────────────────────────┐
-│ ← Plan de semaine               │
-│                                  │
-│ Groupe : [Demi-fond ▼]          │  ← PREMIER choix
-│ Sem. 24 fév 2026                │
-│                                  │
-│ Lun  Mar  Mer  Jeu  Ven  Sam   │
-│ VMA  —    Seuil —   EF   Sortie│
-│  +   +     +   +    +    +     │
-│                                  │
-│ [Éditeur de séance]             │
-│                                  │
-│ ┌──────────────────────────┐    │
-│ │ 📋 Dupliquer ce plan     │    │  ← LE game-changer
-│ │    vers un autre groupe  │    │
-│ └──────────────────────────┘    │
-│                                  │
-│ [Envoyer → Demi-fond (12)]     │
-└─────────────────────────────────┘
+┌─────────────────────────────────────┐
+│ ← Retour    Plan de semaine         │  bg-card, border-b
+└─────────────────────────────────────┘
 ```
 
-### 2. "Dupliquer le plan vers un autre groupe"
+- Bouton gauche : `ArrowLeft` + texte "Retour" en `text-primary`
+- Titre centré : `text-[17px] font-semibold`
+- Spacer droit pour centrage
 
-C'est LA fonction qui fait gagner du temps. Le coach crée le plan pour le groupe Demi-fond, puis clique "Dupliquer vers Sprint" — toutes les séances sont copiées, il n'a qu'à ajuster les allures. Au lieu de 20 séances from scratch, c'est 5 séances + 3 duplications rapides.
+### 2. Body → fond `bg-secondary` + sections `IOSListGroup`
 
-**Bouton dans le header, après avoir créé les séances :**
-- "Dupliquer vers..." → liste des autres groupes
-- Les séances sont copiées avec les mêmes objectifs/jours
-- Le coach ajuste juste les allures et les notes
+Le contenu scrollable passe en `bg-secondary` avec des sections groupées :
 
-### 3. Sauvegarder/charger une semaine type
+**Section "Groupe"** — `IOSListGroup` header="GROUPE"
+- Sélecteur de groupe dans une carte blanche arrondie
 
-Un coach fait souvent les mêmes structures de semaine (Lundi VMA, Mardi repos, Mercredi Seuil...). Pouvoir sauvegarder une "semaine type" et la recharger d'un clic.
+**Section "Semaine"** — `IOSListGroup` header="SEMAINE"
+- Navigation semaine (chevrons + date) dans une carte blanche
+- Sous la date, les pilules groupes actifs (si >1 groupe a des plans)
 
-**Bouton "Charger semaine type" dans le header :**
-- Liste des semaines types sauvegardées
-- Pré-remplit les 5-6 séances d'un coup
-- Le coach n'a plus qu'à ajuster les détails
+**Section "Séances"** — `IOSListGroup` header="SÉANCES"
+- La grille 7 jours dans une carte blanche arrondie
+- Les boutons "+" restent mais avec style iOS (fond blanc, coins arrondis)
 
-## Changements techniques
+**Section "Éditeur"** (quand une séance est sélectionnée)
+- `IOSListGroup` sans header, contenant le `WeeklyPlanSessionEditor`
 
-### Fichier : `src/components/coaching/WeeklyPlanDialog.tsx`
+**Section "Actions rapides"** — `IOSListGroup` header="ACTIONS"
+- `IOSListItem` "Charger semaine type" avec icône `FolderOpen`
+- `IOSListItem` "Dupliquer vers un groupe" avec icône `Copy`
+- `IOSListItem` "Sauver comme semaine type" avec icône `Save`
 
-1. **Déplacer le sélecteur de groupe du footer vers le header** — Le `sendTarget` (groupe/club) devient un `Select` affiché juste sous le titre, avant la grille de semaine
-2. **Ajouter un bouton "Dupliquer vers..."** — Quand `sessions.length > 0`, affiche un bouton qui propose les autres groupes. Clone toutes les sessions dans un nouveau "plan" interne et switch vers ce groupe
-3. **Ajouter le bouton "Charger semaine type"** — À côté du sélecteur de semaine
-4. **Ajouter "Sauver comme semaine type"** — Dans le footer, sauvegarde les sessions en cours dans une nouvelle table ou en localStorage
-5. **Permettre d'envoyer plusieurs groupes d'un coup** — Le state interne stocke les plans par groupe : `Record<groupId, WeekSession[]>`. Quand le coach switch de groupe, il retrouve les séances de ce groupe. Au moment d'envoyer, il envoie tous les groupes d'un coup
+### 3. Footer → bouton pleine largeur dans une section iOS
 
-### Structure de données interne (pas de nouvelle table SQL)
+Le bouton "Envoyer" reste en bas fixe mais dans un `IOSListGroup` :
+- Le badge résumé au-dessus
+- Bouton pleine largeur en dessous
 
-```typescript
-// Plans par groupe, stockés dans le state du dialog
-type GroupPlans = Record<string, WeekSession[]>; // groupId → sessions
+### 4. Supprimer les DropdownMenu
 
-// Le coach navigue entre groupes, chaque groupe a ses sessions
-const [groupPlans, setGroupPlans] = useState<GroupPlans>({});
-const [activeGroupId, setActiveGroupId] = useState<string>("club");
-```
+Les actions templates et duplication deviennent des `IOSListItem` dans la section "Actions" au lieu de dropdown menus cachés derrière des icônes. Plus visible, plus iOS.
 
-### Nouvelle table SQL : `coaching_week_templates`
-
-Pour les semaines types sauvegardées :
-
-```sql
-CREATE TABLE coaching_week_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  coach_id UUID NOT NULL,
-  name TEXT NOT NULL,
-  sessions JSONB NOT NULL DEFAULT '[]',
-  created_at TIMESTAMPTZ DEFAULT now()
-);
--- RLS: coach voit/crée/supprime les siens
-```
-
-### Fichier : `src/components/coaching/WeeklyPlanSessionEditor.tsx`
-
-Pas de changement majeur — il reste l'éditeur d'une séance individuelle.
-
-## Fichiers impactés
+## Fichier impacté
 
 | Fichier | Action |
 |---|---|
-| `src/components/coaching/WeeklyPlanDialog.tsx` | Refonte : groupe en haut, plans par groupe, dupliquer vers groupe, charger/sauver semaine type |
-| Migration SQL | Table `coaching_week_templates` |
+| `src/components/coaching/WeeklyPlanDialog.tsx` | Refonte complète du JSX de rendu (la logique métier ne change pas) |
 
-## Résultat pour le coach
+## Résultat visuel
 
-**Avant (flow actuel) :** 4 groupes × 5 séances = 20 créations manuelles = 30-40 min
+```text
+┌──────────────────────────────┐
+│ ← Retour    Plan de semaine  │  bg-card
+├──────────────────────────────┤
+│                              │  bg-secondary
+│  GROUPE                      │
+│  ┌──────────────────────┐    │
+│  │ 🏟️ Tout le club (24) ▼│    │  bg-card rounded
+│  └──────────────────────┘    │
+│                              │
+│  SEMAINE                     │
+│  ┌──────────────────────┐    │
+│  │ ‹  Sem. 24 fév 2026  › │    │  bg-card rounded
+│  │  [Club] [Sprint]       │    │  pilules groupes
+│  └──────────────────────┘    │
+│                              │
+│  SÉANCES                     │
+│  ┌──────────────────────┐    │
+│  │ Lun Mar Mer Jeu ...   │    │
+│  │ VMA  —  Seuil  —     │    │  bg-card rounded
+│  │  +   +    +    +      │    │
+│  └──────────────────────┘    │
+│                              │
+│  [Éditeur si sélection]      │
+│                              │
+│  ACTIONS                     │
+│  ┌──────────────────────┐    │
+│  │ 📂 Charger semaine   ›│    │
+│  │ 📋 Dupliquer vers... ›│    │  IOSListItem
+│  │ 💾 Sauver semaine    ›│    │
+│  └──────────────────────┘    │
+│                              │
+│  ┌──────────────────────┐    │
+│  │  Envoyer 5 séances    │    │  bouton primary
+│  └──────────────────────┘    │
+└──────────────────────────────┘
+```
 
-**Après :** 1 plan de 5 séances (5 min) + 3 duplications (1 min chacune) + ajustements rapides (2 min) = **~10 min pour 4 groupes**
-
-C'est ça qui fait dire au coach : "Ok, ça je l'utilise."
+Toute la logique (groupPlans, templates, duplication, envoi) reste identique. Seul le rendu JSX change.
 
