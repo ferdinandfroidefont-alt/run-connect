@@ -388,39 +388,39 @@ export const ClubInfoDialog = ({
 
 
             {/* Club Code - only visible to creator */}
-            {createdBy === user?.id &&
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-primary">Code du club (privé)</p>
-                    <p className="text-xs text-muted-foreground mb-2">Partagez ce code pour inviter des membres</p>
-                    <Badge variant="outline" className="font-mono">
-                      {clubCode}
-                    </Badge>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(clubCode);
-                        toast({
-                          title: "Code copié !",
-                          description: "Le code du club a été copié dans le presse-papiers"
-                        });
-                      } catch (error) {
-                        toast({
-                          title: "Erreur",
-                          description: "Impossible de copier le code",
-                          variant: "destructive"
-                        });
-                      }
-                    }}>
+            {createdBy === user?.id
 
-                    <span className="text-xs">Copier</span>
-                  </Button>
-                </div>
-              </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
               }
 
             {/* Tabs: Members, Coaching & Groups */}
