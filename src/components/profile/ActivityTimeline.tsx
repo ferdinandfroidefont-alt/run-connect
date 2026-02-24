@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Trophy, MapPin, UserPlus } from "lucide-react";
+import { Calendar, Users, Trophy, MapPin, UserPlus, ChevronUp, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -24,6 +24,7 @@ interface ActivityTimelineProps {
 export const ActivityTimeline = ({ userId }: ActivityTimelineProps) => {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     fetchActivity();
@@ -173,6 +174,10 @@ export const ActivityTimeline = ({ userId }: ActivityTimelineProps) => {
     );
   }
 
+  const ITEMS_PER_PAGE = 3;
+  const totalPages = Math.ceil(events.length / ITEMS_PER_PAGE);
+  const visibleEvents = events.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+
   return (
     <Card className="bg-card rounded-[10px] overflow-hidden">
       <CardContent className="p-4">
@@ -189,7 +194,7 @@ export const ActivityTimeline = ({ userId }: ActivityTimelineProps) => {
           <div className="absolute left-[15px] top-2 bottom-2 w-[2px] bg-border" />
 
           <div className="space-y-4">
-            {events.map((event, index) => {
+            {visibleEvents.map((event, index) => {
               const EventIcon = event.icon;
               return (
                 <motion.div
@@ -220,6 +225,29 @@ export const ActivityTimeline = ({ userId }: ActivityTimelineProps) => {
             })}
           </div>
         </div>
+
+        {/* Pagination arrows */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-border">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="p-1.5 rounded-md hover:bg-secondary transition-colors disabled:opacity-30"
+            >
+              <ChevronUp className="h-5 w-5 text-primary" />
+            </button>
+            <span className="text-[13px] text-muted-foreground">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              className="p-1.5 rounded-md hover:bg-secondary transition-colors disabled:opacity-30"
+            >
+              <ChevronDown className="h-5 w-5 text-primary" />
+            </button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
