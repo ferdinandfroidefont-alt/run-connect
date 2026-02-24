@@ -21,6 +21,7 @@ import {
   Send,
   Clock,
   ChevronLeft,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -89,6 +90,8 @@ export const CoachingSessionDetail = ({
   const [athleteNote, setAthleteNote] = useState("");
   const [feedbackMap, setFeedbackMap] = useState<Record<string, string>>({});
   const [showSchedule, setShowSchedule] = useState(false);
+  const [batchFeedback, setBatchFeedback] = useState("");
+  const [sendingBatch, setSendingBatch] = useState(false);
 
   useEffect(() => {
     if (isOpen && session) {
@@ -191,6 +194,40 @@ export const CoachingSessionDetail = ({
       loadParticipations();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const withoutFeedback = participations.filter(p => !p.feedback);
+
+  const handleBatchFeedback = async () => {
+    if (!batchFeedback.trim() || withoutFeedback.length === 0 || !session) return;
+    setSendingBatch(true);
+    try {
+      await Promise.all(
+        withoutFeedback.map(p =>
+          supabase
+            .from("coaching_participations")
+            .update({ feedback: batchFeedback.trim() })
+            .eq("id", p.id)
+        )
+      );
+      await Promise.all(
+        withoutFeedback.map(p =>
+          sendPushNotification(
+            p.user_id,
+            "💬 Feedback de votre coach",
+            session.title,
+            "coaching_feedback"
+          )
+        )
+      );
+      toast({ title: `Feedback envoyé à ${withoutFeedback.length} athlète(s)` });
+      setBatchFeedback("");
+      loadParticipations();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setSendingBatch(false);
     }
   };
 
@@ -325,6 +362,33 @@ export const CoachingSessionDetail = ({
                   <span>✅ {completedCount} fait(s)</span>
                   {missedCount > 0 && <span>❌ {missedCount} manquée(s)</span>}
                 </div>
+              </div>
+            )}
+
+            {/* Batch feedback */}
+            {isCoach && withoutFeedback.length > 0 && (
+              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+                <p className="text-sm font-medium">Feedback global</p>
+                <Textarea
+                  placeholder="Écrire un feedback pour tous les athlètes sans retour..."
+                  value={batchFeedback}
+                  onChange={(e) => setBatchFeedback(e.target.value)}
+                  rows={2}
+                  className="text-sm"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleBatchFeedback}
+                  disabled={!batchFeedback.trim() || sendingBatch}
+                  className="w-full"
+                >
+                  {sendingBatch ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Envoyer à {withoutFeedback.length} athlète{withoutFeedback.length > 1 ? 's' : ''}
+                </Button>
               </div>
             )}
 

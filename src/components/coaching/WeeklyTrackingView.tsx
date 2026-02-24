@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { IOSListGroup } from "@/components/ui/ios-list-item";
-import { ChevronLeft, ChevronRight, Search, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, MessageSquare, Bell, Loader2 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useSendNotification } from "@/hooks/useSendNotification";
+import { useToast } from "@/hooks/use-toast";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 
@@ -28,11 +30,18 @@ interface ParticipationInfo {
   completed_at: string | null;
 }
 
+interface DayData {
+  status: string;
+  note: string | null;
+  sessionTitle: string;
+  sessionId: string;
+}
+
 interface AthleteData {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
-  days: Record<string, { status: string; note: string | null; sessionTitle: string }>;
+  days: Record<string, DayData>;
   completedCount: number;
   totalCount: number;
 }
@@ -43,6 +52,9 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedAthlete, setExpandedAthlete] = useState<string | null>(null);
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const { sendPushNotification } = useSendNotification();
+  const { toast } = useToast();
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -92,7 +104,6 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
         profileMap[p.user_id!] = { name: p.display_name || "Athlète", avatar: p.avatar_url };
       });
 
-      // Build athlete data
       const athleteMap: Record<string, AthleteData> = {};
 
       (participations || []).forEach(p => {
@@ -116,6 +127,7 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
           status: p.status,
           note: p.athlete_note,
           sessionTitle: session.title,
+          sessionId: session.id,
         };
         athleteMap[p.user_id].totalCount++;
         if (p.status === "completed") athleteMap[p.user_id].completedCount++;
@@ -134,6 +146,38 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
     const q = search.toLowerCase();
     return athletes.filter(a => a.displayName.toLowerCase().includes(q));
   }, [athletes, search]);
+
+  const getLateSessionTitles = (athlete: AthleteData): string[] => {
+    const now = new Date();
+    return Object.entries(athlete.days)
+      .filter(([dayKey, d]) => {
+        const sessionDate = new Date(dayKey);
+        return sessionDate < now && d.status !== "completed";
+      })
+      .map(([, d]) => d.sessionTitle);
+  };
+
+  const handleSendReminder = async (e: React.MouseEvent, athlete: AthleteData) => {
+    e.stopPropagation();
+    const lateTitles = getLateSessionTitles(athlete);
+    if (lateTitles.length === 0) return;
+
+    setSendingReminder(athlete.userId);
+    try {
+      const body = `N'oublie pas : ${lateTitles.join(", ")}`;
+      await sendPushNotification(
+        athlete.userId,
+        "📋 Rappel coaching",
+        body,
+        "coaching_reminder"
+      );
+      toast({ title: "Rappel envoyé", description: `Notification envoyée à ${athlete.displayName}` });
+    } catch (err) {
+      toast({ title: "Erreur", description: "Impossible d'envoyer le rappel", variant: "destructive" });
+    } finally {
+      setSendingReminder(null);
+    }
+  };
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
 
@@ -195,6 +239,9 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
             const pct = athlete.totalCount > 0 ? Math.round((athlete.completedCount / athlete.totalCount) * 100) : 0;
             const isExpanded = expandedAthlete === athlete.userId;
             const hasNotes = Object.values(athlete.days).some(d => d.note);
+            const lateTitles = getLateSessionTitles(athlete);
+            const hasLate = lateTitles.length > 0;
+            const isSending = sendingReminder === athlete.userId;
 
             return (
               <IOSListGroup key={athlete.userId}>
@@ -219,6 +266,20 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
                       <div className="flex items-center justify-between">
                         <p className="text-[15px] font-medium text-foreground truncate">{athlete.displayName}</p>
                         <div className="flex items-center gap-1.5">
+                          {hasLate && (
+                            <button
+                              onClick={(e) => handleSendReminder(e, athlete)}
+                              disabled={isSending}
+                              className="p-1 rounded-md hover:bg-secondary transition-colors text-orange-500"
+                              title={`Relancer (${lateTitles.length} séance${lateTitles.length > 1 ? 's' : ''} en retard)`}
+                            >
+                              {isSending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Bell className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
                           {hasNotes && <MessageSquare className="h-3.5 w-3.5 text-primary" />}
                           <span className="text-[13px] font-semibold text-primary">{pct}%</span>
                         </div>
