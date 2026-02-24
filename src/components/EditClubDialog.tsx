@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Users, Search, Settings, Trash2, Copy, Camera, Upload } from "lucide-react";
+import { X, Plus, Users, Search, Settings, Trash2, Copy, Camera, Upload, ArrowLeft } from "lucide-react";
 import { ImageCropEditor } from "./ImageCropEditor";
 
 interface Profile {
@@ -351,15 +351,23 @@ export const EditClubDialog = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+        <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
+          {/* iOS Navigation Bar */}
+          <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="text-[15px]">Retour</span>
+            </button>
+            <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
               Modifier le club
-            </DialogTitle>
-          </DialogHeader>
+            </span>
+            <div className="min-w-[70px]" />
+          </div>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Club Avatar - only editable by creator */}
             {createdBy === user?.id && (
               <div>
