@@ -1,132 +1,111 @@
 
 
-# Plan : Mode Coach "Club FFA" — Groupes + Volume + Suivi
+# Rendre le Plan Hebdo vraiment plus rapide que WhatsApp
 
-## Constat
+## Le vrai problème
 
-Le système actuel est pensé "individu par individu". Un coach de club FFA gère **des groupes de niveau** (Sprint, Demi-fond, Loisirs, Minimes), pas 40 athlètes un par un. Il manque aussi le résumé volume/durée/charge sous le code RCC, et un suivi simple (fait/programmé/non fait).
+Un coach FFA le dimanche soir : 4 groupes × 5 séances = 20 séances à créer. Avec le flow actuel, il doit cliquer "+" 20 fois, remplir chaque séance une par une, puis sélectionner le groupe en bas. C'est plus lent que copier-coller sur WhatsApp. Aucun coach ne se dira "ça me fait gagner du temps".
 
-## Changements prévus
+## Ce qui changerait tout : 3 fonctions clés
 
-### 1. Résumé de volume instantané sous le RCC
+### 1. Groupe d'abord, pas à la fin
 
-**Fichier : `src/components/coaching/RCCBlocksPreview.tsx`**
+Actuellement le groupe est choisi dans le footer au moment d'envoyer. Le coach devrait commencer par choisir son groupe, puis remplir la semaine pour ce groupe.
 
-Ajouter en haut du preview une barre de résumé calculée à partir des blocs parsés :
+**Flow proposé :**
 
 ```text
-📏 5.8 km  ·  ⏱ 58 min  ·  🔥 Modérée
+┌─────────────────────────────────┐
+│ ← Plan de semaine               │
+│                                  │
+│ Groupe : [Demi-fond ▼]          │  ← PREMIER choix
+│ Sem. 24 fév 2026                │
+│                                  │
+│ Lun  Mar  Mer  Jeu  Ven  Sam   │
+│ VMA  —    Seuil —   EF   Sortie│
+│  +   +     +   +    +    +     │
+│                                  │
+│ [Éditeur de séance]             │
+│                                  │
+│ ┌──────────────────────────┐    │
+│ │ 📋 Dupliquer ce plan     │    │  ← LE game-changer
+│ │    vers un autre groupe  │    │
+│ └──────────────────────────┘    │
+│                                  │
+│ [Envoyer → Demi-fond (12)]     │
+└─────────────────────────────────┘
 ```
 
-Logique de calcul (nouvelle fonction `computeRCCSummary` dans `rccParser.ts`) :
-- **Volume total** : pour les blocs `interval` → `reps × distance` ; pour les blocs `steady/warmup/cooldown` → `durée × vitesse déduite de l'allure`
-- **Durée estimée** : somme des durées + (reps × temps par répétition) + récupérations
-- **Charge** : basée sur le ratio allure basse / allure haute (Facile / Modérée / Intense / Très intense)
+### 2. "Dupliquer le plan vers un autre groupe"
 
-**Fichier : `src/lib/rccParser.ts`** — ajout de `computeRCCSummary(blocks: ParsedBlock[]): { totalDistanceKm: number; totalDurationMin: number; intensity: string }`
+C'est LA fonction qui fait gagner du temps. Le coach crée le plan pour le groupe Demi-fond, puis clique "Dupliquer vers Sprint" — toutes les séances sont copiées, il n'a qu'à ajuster les allures. Au lieu de 20 séances from scratch, c'est 5 séances + 3 duplications rapides.
 
-### 2. Groupes de niveau dans le club
+**Bouton dans le header, après avoir créé les séances :**
+- "Dupliquer vers..." → liste des autres groupes
+- Les séances sont copiées avec les mêmes objectifs/jours
+- Le coach ajuste juste les allures et les notes
 
-**Migration SQL** : Nouvelle table `club_groups`
+### 3. Sauvegarder/charger une semaine type
+
+Un coach fait souvent les mêmes structures de semaine (Lundi VMA, Mardi repos, Mercredi Seuil...). Pouvoir sauvegarder une "semaine type" et la recharger d'un clic.
+
+**Bouton "Charger semaine type" dans le header :**
+- Liste des semaines types sauvegardées
+- Pré-remplit les 5-6 séances d'un coup
+- Le coach n'a plus qu'à ajuster les détails
+
+## Changements techniques
+
+### Fichier : `src/components/coaching/WeeklyPlanDialog.tsx`
+
+1. **Déplacer le sélecteur de groupe du footer vers le header** — Le `sendTarget` (groupe/club) devient un `Select` affiché juste sous le titre, avant la grille de semaine
+2. **Ajouter un bouton "Dupliquer vers..."** — Quand `sessions.length > 0`, affiche un bouton qui propose les autres groupes. Clone toutes les sessions dans un nouveau "plan" interne et switch vers ce groupe
+3. **Ajouter le bouton "Charger semaine type"** — À côté du sélecteur de semaine
+4. **Ajouter "Sauver comme semaine type"** — Dans le footer, sauvegarde les sessions en cours dans une nouvelle table ou en localStorage
+5. **Permettre d'envoyer plusieurs groupes d'un coup** — Le state interne stocke les plans par groupe : `Record<groupId, WeekSession[]>`. Quand le coach switch de groupe, il retrouve les séances de ce groupe. Au moment d'envoyer, il envoie tous les groupes d'un coup
+
+### Structure de données interne (pas de nouvelle table SQL)
+
+```typescript
+// Plans par groupe, stockés dans le state du dialog
+type GroupPlans = Record<string, WeekSession[]>; // groupId → sessions
+
+// Le coach navigue entre groupes, chaque groupe a ses sessions
+const [groupPlans, setGroupPlans] = useState<GroupPlans>({});
+const [activeGroupId, setActiveGroupId] = useState<string>("club");
+```
+
+### Nouvelle table SQL : `coaching_week_templates`
+
+Pour les semaines types sauvegardées :
 
 ```sql
-CREATE TABLE club_groups (
+CREATE TABLE coaching_week_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  club_id UUID NOT NULL,
+  coach_id UUID NOT NULL,
   name TEXT NOT NULL,
-  color TEXT DEFAULT '#3B82F6',
+  sessions JSONB NOT NULL DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
-CREATE TABLE club_group_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  group_id UUID NOT NULL REFERENCES club_groups(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(group_id, user_id)
-);
+-- RLS: coach voit/crée/supprime les siens
 ```
 
-RLS : les membres du club peuvent voir les groupes ; les coachs/créateurs peuvent créer/modifier/supprimer.
+### Fichier : `src/components/coaching/WeeklyPlanSessionEditor.tsx`
 
-### 3. Sélecteur de groupe dans le WeeklyPlanDialog
-
-**Fichier : `src/components/coaching/WeeklyPlanDialog.tsx`**
-
-Remplacer le toggle "Tout le club / Sélection" par un sélecteur de groupe :
-
-```text
-Destinataires : [Tout le club ▼] [Demi-fond ▼] [Sprint ▼] [Sélection manuelle]
-```
-
-- Quand un groupe est sélectionné, les membres de ce groupe deviennent les `targetMembers`
-- Le coach peut toujours basculer en sélection manuelle
-- Résumé : "4 séances → Groupe Demi-fond (12 athlètes)"
-
-### 4. Gestion des groupes dans ClubInfoDialog
-
-**Fichier : `src/components/ClubInfoDialog.tsx`**
-
-Ajouter un onglet "Groupes" (visible uniquement pour le coach/admin) dans le `Tabs` existant :
-- Liste des groupes avec couleur + nombre de membres
-- Bouton "+ Créer un groupe"
-- Drag & drop ou multi-select pour affecter des membres aux groupes
-- Un athlète peut être dans plusieurs groupes
-
-**Nouveau composant : `src/components/coaching/ClubGroupsManager.tsx`**
-- CRUD des groupes (nom, couleur)
-- Affectation des membres (checkbox list)
-
-### 5. Suivi simple dans le CoachingTab
-
-**Fichier : `src/components/coaching/CoachingTab.tsx`**
-
-Ajouter un indicateur de suivi par séance (sous chaque `SessionCard`) :
-
-```text
-✅ 8  🕒 3  ❌ 1  — 92% complétion
-```
-
-Les statuts viennent de `coaching_participations.status` :
-- `completed` → ✅
-- `scheduled` → 🕒
-- `sent` (pas d'action) → ❌ (après la date)
-
-Pas besoin de nouvel écran, juste un petit badge sous chaque session card.
-
-### 6. Suivi hebdo coach (vue synthétique)
-
-**Nouveau composant : `src/components/coaching/WeeklyTrackingView.tsx`**
-
-Accessible depuis un bouton "📊 Suivi" dans le header du CoachingTab. Affiche un tableau simple :
-
-```text
-           Lun   Mar   Mer   Jeu   Ven   Sam
-Paul       ✅    ✅    🕒    —     —     ✅    83%
-Marie      ✅    ✅    ✅    —     —     ✅    100%
-Lucas      ❌    🕒    —     —     —     —     17%
-```
-
-Requête : `coaching_sessions` de la semaine + `coaching_participations` avec statuts.
+Pas de changement majeur — il reste l'éditeur d'une séance individuelle.
 
 ## Fichiers impactés
 
 | Fichier | Action |
 |---|---|
-| `src/lib/rccParser.ts` | Ajout `computeRCCSummary()` |
-| `src/components/coaching/RCCBlocksPreview.tsx` | Ajout barre résumé volume/durée/charge |
-| `src/components/coaching/WeeklyPlanDialog.tsx` | Sélecteur de groupe au lieu de club/sélection |
-| `src/components/coaching/CoachingTab.tsx` | Badge suivi par séance + bouton Suivi |
-| `src/components/coaching/ClubGroupsManager.tsx` | **Nouveau** — CRUD groupes de niveau |
-| `src/components/coaching/WeeklyTrackingView.tsx` | **Nouveau** — tableau suivi hebdo |
-| `src/components/ClubInfoDialog.tsx` | Onglet "Groupes" pour coach/admin |
-| Migration SQL | Tables `club_groups` + `club_group_members` + RLS |
+| `src/components/coaching/WeeklyPlanDialog.tsx` | Refonte : groupe en haut, plans par groupe, dupliquer vers groupe, charger/sauver semaine type |
+| Migration SQL | Table `coaching_week_templates` |
 
-## Ordre d'implémentation
+## Résultat pour le coach
 
-1. Migration SQL (`club_groups` + `club_group_members`)
-2. `computeRCCSummary` dans `rccParser.ts` + barre résumé dans `RCCBlocksPreview`
-3. `ClubGroupsManager.tsx` + onglet dans `ClubInfoDialog`
-4. Sélecteur de groupe dans `WeeklyPlanDialog`
-5. Badges suivi dans `CoachingTab` + `WeeklyTrackingView`
+**Avant (flow actuel) :** 4 groupes × 5 séances = 20 créations manuelles = 30-40 min
+
+**Après :** 1 plan de 5 séances (5 min) + 3 duplications (1 min chacune) + ajustements rapides (2 min) = **~10 min pour 4 groupes**
+
+C'est ça qui fait dire au coach : "Ok, ça je l'utilise."
 
