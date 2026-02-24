@@ -1,5 +1,6 @@
 import { Flame, Zap, Activity, Snowflake, RotateCcw, Ruler, Clock, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import type { ParsedBlock } from "@/lib/rccParser";
 import { computeRCCSummary } from "@/lib/rccParser";
 import { useMemo } from "react";
@@ -22,10 +23,52 @@ const INTENSITY_CONFIG: Record<string, { bg: string; text: string }> = {
 export const RCCBlocksPreview = ({ blocks }: { blocks: ParsedBlock[] }) => {
   const summary = useMemo(() => computeRCCSummary(blocks), [blocks]);
 
+  // Auto-generated tags based on block types
+  const tags = useMemo(() => {
+    if (!blocks || blocks.length === 0) return [];
+    const result: { label: string; className: string }[] = [];
+    const types = new Set(blocks.map(b => b.type));
+
+    if (types.has("warmup") || types.has("steady")) {
+      result.push({ label: "EF", className: "bg-green-500/15 text-green-600 border-green-500/20" });
+    }
+    if (types.has("interval")) {
+      // Determine VMA vs Seuil from pace
+      const intervalBlock = blocks.find(b => b.type === "interval");
+      const pace = intervalBlock?.pace || "";
+      const paceMin = parseInt(pace.split("'")[0] || "0");
+      if (paceMin > 0 && paceMin <= 3) {
+        result.push({ label: "VMA", className: "bg-red-500/15 text-red-600 border-red-500/20" });
+      } else if (paceMin > 3 && paceMin <= 4) {
+        result.push({ label: "Seuil", className: "bg-orange-500/15 text-orange-600 border-orange-500/20" });
+      } else {
+        result.push({ label: "VMA", className: "bg-red-500/15 text-red-600 border-red-500/20" });
+      }
+    }
+    if (types.has("cooldown")) {
+      result.push({ label: "Récup", className: "bg-blue-500/15 text-blue-600 border-blue-500/20" });
+    }
+    return result;
+  }, [blocks]);
+
   if (!blocks || blocks.length === 0) return null;
 
   return (
     <div className="space-y-1.5">
+      {/* Auto tags */}
+      {tags.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap mb-1">
+          {tags.map(tag => (
+            <span
+              key={tag.label}
+              className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", tag.className)}
+            >
+              {tag.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Volume summary bar */}
       <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 text-xs font-medium">
         <span className="flex items-center gap-1">
