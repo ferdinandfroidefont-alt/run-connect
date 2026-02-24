@@ -7,7 +7,8 @@ import { ActivityIcon } from "@/lib/activityIcons";
 import { CreateCoachingSessionDialog } from "./CreateCoachingSessionDialog";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { GraduationCap, Plus, Users, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import { GraduationCap, Plus, Users, BookOpen, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -39,6 +40,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedSession, setSelectedSession] = useState<CoachingSession | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showWeeklyPlan, setShowWeeklyPlan] = useState(false);
 
   // Calendar state
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -115,6 +117,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         <div className="flex gap-1.5">
           {isCoach && (
             <>
+              <Button size="sm" variant="outline" onClick={() => setShowWeeklyPlan(true)} className="h-7 px-2">
+                <CalendarDays className="h-3.5 w-3.5 mr-1" />
+                Plan
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setShowTemplates(true)} className="h-7 px-2">
                 <BookOpen className="h-3.5 w-3.5" />
               </Button>
@@ -232,6 +238,13 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           setShowTemplates(false);
           setShowCreate(true);
         }}
+      />
+
+      <WeeklyPlanDialog
+        isOpen={showWeeklyPlan}
+        onClose={() => setShowWeeklyPlan(false)}
+        clubId={clubId}
+        onSent={loadSessions}
       />
     </div>
   );
