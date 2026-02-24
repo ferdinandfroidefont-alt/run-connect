@@ -254,7 +254,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
     let totalKm = 0;
     let totalDuration = 0;
     let qualitySessions = 0;
-    let fastestPace = Infinity;
 
     for (const s of sessions) {
       if (s.rccCode) {
@@ -274,6 +273,21 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
     else if (totalKm > 30) intensity = 'Modérée';
 
     return { totalKm: Math.round(totalKm * 10) / 10, totalDuration: Math.round(totalDuration), qualitySessions, intensity };
+  }, [sessions]);
+
+  // ── Daily charge for bar chart ──
+  const dailyCharge = useMemo(() => {
+    const charges = Array(7).fill(0);
+    for (const s of sessions) {
+      let charge = 1; // base charge per session
+      if (s.rccCode) {
+        const { blocks } = parseRCC(s.rccCode);
+        const summary = computeRCCSummary(blocks);
+        charge = summary.totalDistanceKm || 1;
+      }
+      charges[s.dayIndex] += charge;
+    }
+    return charges as number[];
   }, [sessions]);
 
   // ── Duplicate previous week ──
@@ -508,14 +522,14 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
             )}
           </IOSListGroup>
 
-          {/* ── CHARGE DE LA SEMAINE ── */}
+          {/* ── CHARGE DE LA SEMAINE with bar chart ── */}
           {weekLoadSummary && (
             <div className="mx-4 px-4 py-3 rounded-xl bg-card border border-border">
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-2 mb-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
                 <span className="text-[13px] font-semibold text-foreground">Charge de la semaine</span>
               </div>
-              <div className="flex items-center gap-3 text-[12px] text-muted-foreground flex-wrap">
+              <div className="flex items-center gap-3 text-[12px] text-muted-foreground flex-wrap mb-3">
                 <span className="font-medium text-foreground">{weekLoadSummary.totalKm} km</span>
                 <span>·</span>
                 <span>{sessions.length} séance{sessions.length > 1 ? "s" : ""}</span>
@@ -534,34 +548,79 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
                   {weekLoadSummary.intensity}
                 </Badge>
               </div>
+              {/* Mini bar chart */}
+              {(() => {
+                const maxCharge = Math.max(...dailyCharge, 1);
+                return (
+                  <div className="flex items-end gap-1.5 h-16">
+                    {DAY_LABELS.map((label, i) => {
+                      const val = dailyCharge[i];
+                      const pct = (val / maxCharge) * 100;
+                      const daySessions = (sessionsByDay[i] || []).map(idx => sessions[idx]);
+                      const hasIntense = daySessions.some(s => {
+                        const obj = (s.objective || s.activityType || "").toLowerCase();
+                        return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné");
+                      });
+                      const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                          <div className="w-full flex items-end justify-center" style={{ height: 48 }}>
+                            <div
+                              className={`w-full max-w-[20px] rounded-t-sm transition-all ${barColor}`}
+                              style={{ height: val > 0 ? `${Math.max(pct, 8)}%` : 4 }}
+                            />
+                          </div>
+                          <span className="text-[9px] text-muted-foreground">{label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
-          {/* ── SÉANCES grid section ── */}
+          {/* ── SÉANCES grid section — colored pills ── */}
           <IOSListGroup header="SÉANCES" className="mx-4">
             <div className="px-3 py-3 bg-card">
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1.5">
                 {DAY_LABELS.map((label, dayIndex) => {
                   const daySessions = sessionsByDay[dayIndex] || [];
                   return (
                     <div key={dayIndex} className="flex flex-col items-center gap-1">
                       <span className="text-[10px] font-medium text-muted-foreground uppercase">{label}</span>
-                      {daySessions.map(sIdx => (
-                        <button
-                          key={sIdx}
-                          onClick={() => setSelectedIndex(sIdx)}
-                          className={`w-full px-1 py-0.5 rounded-md text-[10px] font-medium truncate transition-colors ${
-                            selectedIndex === sIdx
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-accent text-accent-foreground hover:bg-accent/80"
-                          }`}
-                        >
-                          {sessions[sIdx].objective || "—"}
-                        </button>
-                      ))}
+                      {daySessions.map(sIdx => {
+                        const s = sessions[sIdx];
+                        const obj = (s.objective || s.activityType || "").toLowerCase();
+                        let pillColor = "bg-green-500"; // EF default
+                        let pillLabel = "EF";
+                        if (obj.includes("vma") || obj.includes("interval") || obj.includes("fractionné")) {
+                          pillColor = "bg-red-500"; pillLabel = "VMA";
+                        } else if (obj.includes("seuil")) {
+                          pillColor = "bg-orange-500"; pillLabel = "SEU";
+                        } else if (obj.includes("récup") || obj.includes("recup")) {
+                          pillColor = "bg-blue-500"; pillLabel = "REC";
+                        } else if (obj.includes("spé") || obj.includes("specifique")) {
+                          pillColor = "bg-purple-500"; pillLabel = "SPÉ";
+                        } else if (s.objective) {
+                          pillLabel = s.objective.slice(0, 3).toUpperCase();
+                        }
+                        const isSelected = selectedIndex === sIdx;
+                        return (
+                          <button
+                            key={sIdx}
+                            onClick={() => setSelectedIndex(sIdx)}
+                            className={`w-full py-1 rounded-lg text-[9px] font-bold text-white transition-all ${pillColor} ${
+                              isSelected ? "ring-2 ring-primary ring-offset-1 scale-105" : "opacity-85 hover:opacity-100"
+                            }`}
+                          >
+                            {pillLabel}
+                          </button>
+                        );
+                      })}
                       <button
                         onClick={() => addSession(dayIndex)}
-                        className="w-full py-0.5 rounded-md border border-dashed border-border text-[10px] text-muted-foreground hover:bg-muted transition-colors"
+                        className="w-full py-1 rounded-lg border border-dashed border-border text-[10px] text-muted-foreground hover:bg-muted transition-colors"
                       >
                         <Plus className="h-3 w-3 mx-auto" />
                       </button>
@@ -742,6 +801,19 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
               </Collapsible>
             </IOSListGroup>
           )}
+
+          {/* FAB - Add session for today */}
+          <button
+            onClick={() => {
+              const todayDow = new Date().getDay();
+              const dayIndex = todayDow === 0 ? 6 : todayDow - 1;
+              addSession(dayIndex);
+            }}
+            className="fixed bottom-24 right-6 z-20 h-14 w-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            style={{ boxShadow: '0 4px 14px hsl(var(--primary) / 0.4)' }}
+          >
+            <Plus className="h-6 w-6" />
+          </button>
         </div>
 
         {/* ── Fixed footer ── */}
