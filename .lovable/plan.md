@@ -1,105 +1,105 @@
 
 
-# Redesign WeeklyPlanDialog — Style iOS Settings (Inset Grouped)
+# Refonte Mode Coach — Dashboard + Pages Pro (iOS Settings Style)
 
-## Objectif
+## Vision
 
-Aligner le `WeeklyPlanDialog` sur le design iOS "Paramètres" utilisé dans `SettingsDialog` : fond gris (`bg-secondary`), barre retour iOS en haut (flèche + "Retour" à gauche, titre centré), sections en cartes blanches arrondies (`IOSListGroup`), typographies iOS (`text-[17px]`, `text-[13px]`).
+Transformer le `CoachingTab` actuel (un simple onglet dans ClubInfoDialog) en un vrai dashboard coach avec des pages dédiées, toutes en style iOS Settings (fond `bg-secondary`, `IOSListGroup`, barre retour).
 
-## Changements dans `src/components/coaching/WeeklyPlanDialog.tsx`
-
-### 1. Header → barre retour iOS standard
-
-Remplacer le `DialogHeader` actuel par le même pattern que `SettingsDialog` :
+## Architecture actuelle vs proposée
 
 ```text
-┌─────────────────────────────────────┐
-│ ← Retour    Plan de semaine         │  bg-card, border-b
-└─────────────────────────────────────┘
+ACTUEL :
+ClubInfoDialog → Tabs → CoachingTab (tout mélangé dans 1 onglet)
+                          ├── calendrier semaine
+                          ├── sessions du jour
+                          ├── toutes les sessions
+                          └── boutons (Plan, Suivi, Modèles, Créer)
+
+PROPOSÉ :
+ClubInfoDialog → Tabs → CoachingTab = DASHBOARD COACH (cards KPIs + boutons rapides)
+                          ├── clic "Plan semaine" → WeeklyPlanDialog (déjà fait, iOS style)
+                          ├── clic "Modèles" → CoachingTemplatesDialog (existe)
+                          ├── clic "Suivi athlètes" → WeeklyTrackingView (à refaire en dialog iOS)
+                          └── clic "Gérer groupes" → ClubGroupsManager (à refaire en dialog iOS)
 ```
 
-- Bouton gauche : `ArrowLeft` + texte "Retour" en `text-primary`
-- Titre centré : `text-[17px] font-semibold`
-- Spacer droit pour centrage
+## Changements fichier par fichier
 
-### 2. Body → fond `bg-secondary` + sections `IOSListGroup`
+### 1. `src/components/coaching/CoachingTab.tsx` — Refonte complète en Dashboard
 
-Le contenu scrollable passe en `bg-secondary` avec des sections groupées :
+Le CoachingTab actuel est un calendrier + liste de sessions. On le transforme en **dashboard** :
 
-**Section "Groupe"** — `IOSListGroup` header="GROUPE"
-- Sélecteur de groupe dans une carte blanche arrondie
+**Section KPIs** (IOSListGroup, 4 items) :
+- Séances programmées (count des coaching_sessions de la semaine courante)
+- En attente (participations avec status "sent")
+- Groupes actifs (count de club_groups)
+- Athlètes en retard (participations "sent" dont la session est passée)
 
-**Section "Semaine"** — `IOSListGroup` header="SEMAINE"
-- Navigation semaine (chevrons + date) dans une carte blanche
-- Sous la date, les pilules groupes actifs (si >1 groupe a des plans)
+**Section "Outils rapides"** (IOSListGroup) :
+- `IOSListItem` "Créer plan semaine" → ouvre WeeklyPlanDialog
+- `IOSListItem` "Modèles de séances" → ouvre CoachingTemplatesDialog
+- `IOSListItem` "Suivi athlètes" → ouvre WeeklyTrackingView (en dialog)
+- `IOSListItem` "Gérer les groupes" → ouvre ClubGroupsManager (en dialog)
 
-**Section "Séances"** — `IOSListGroup` header="SÉANCES"
-- La grille 7 jours dans une carte blanche arrondie
-- Les boutons "+" restent mais avec style iOS (fond blanc, coins arrondis)
+**Section "Cette semaine"** (IOSListGroup) :
+- Liste compacte des prochaines sessions (max 5)
+- Chaque item cliquable → CoachingSessionDetail
 
-**Section "Éditeur"** (quand une séance est sélectionnée)
-- `IOSListGroup` sans header, contenant le `WeeklyPlanSessionEditor`
+Pour les **athlètes** (non-coach), on garde l'affichage actuel des séances reçues, mais en style iOS cards.
 
-**Section "Actions rapides"** — `IOSListGroup` header="ACTIONS"
-- `IOSListItem` "Charger semaine type" avec icône `FolderOpen`
-- `IOSListItem` "Dupliquer vers un groupe" avec icône `Copy`
-- `IOSListItem` "Sauver comme semaine type" avec icône `Save`
+### 2. `src/components/coaching/WeeklyTrackingView.tsx` — Wrapper en Dialog fullscreen iOS
 
-### 3. Footer → bouton pleine largeur dans une section iOS
+Actuellement c'est un composant inline (remplace le CoachingTab). On le wrappe dans un `Dialog fullScreen` avec la barre retour iOS standard, fond `bg-secondary`, et la table dans un `IOSListGroup`.
 
-Le bouton "Envoyer" reste en bas fixe mais dans un `IOSListGroup` :
-- Le badge résumé au-dessus
-- Bouton pleine largeur en dessous
+### 3. `src/components/coaching/ClubGroupsManager.tsx` — Wrapper en Dialog fullscreen iOS
 
-### 4. Supprimer les DropdownMenu
+Même principe : on crée un `ClubGroupsManagerDialog` qui wrappe le composant existant dans un dialog fullscreen iOS avec barre retour.
 
-Les actions templates et duplication deviennent des `IOSListItem` dans la section "Actions" au lieu de dropdown menus cachés derrière des icônes. Plus visible, plus iOS.
+### 4. `src/components/coaching/CoachingTemplatesDialog.tsx` — Ajout style iOS
 
-## Fichier impacté
+Déjà un dialog, mais il faut vérifier qu'il a bien le fond `bg-secondary` et les `IOSListGroup`. Mise à jour légère du style.
+
+## Design du Dashboard Coach
+
+```text
+┌──────────────────────────────────┐
+│  (intégré dans l'onglet          │
+│   Entraînements de ClubInfoDialog)│
+│                                   │
+│  CETTE SEMAINE                    │
+│  ┌────────────────────────────┐   │
+│  │ 📅 18 séances programmées  │   │
+│  │ ⏳ 6 en attente            │   │
+│  │ 👥 4 groupes actifs        │   │
+│  │ ⚠️ 2 athlètes en retard   │   │
+│  └────────────────────────────┘   │
+│                                   │
+│  OUTILS                           │
+│  ┌────────────────────────────┐   │
+│  │ 📋 Créer plan semaine    › │   │
+│  │ 📂 Modèles               › │   │
+│  │ 📊 Suivi athlètes        › │   │
+│  │ 👥 Gérer les groupes     › │   │
+│  └────────────────────────────┘   │
+│                                   │
+│  PROCHAINES SÉANCES               │
+│  ┌────────────────────────────┐   │
+│  │ Lun - Seuil (12 athlètes) │   │
+│  │ Mar - VMA (8 athlètes)    │   │
+│  │ Mer - EF (24 athlètes)    │   │
+│  └────────────────────────────┘   │
+└──────────────────────────────────┘
+```
+
+## Fichiers impactés
 
 | Fichier | Action |
 |---|---|
-| `src/components/coaching/WeeklyPlanDialog.tsx` | Refonte complète du JSX de rendu (la logique métier ne change pas) |
+| `src/components/coaching/CoachingTab.tsx` | Refonte : dashboard KPIs + outils rapides + sessions résumées |
+| `src/components/coaching/WeeklyTrackingView.tsx` | Wrapper Dialog fullscreen iOS + style IOSListGroup |
+| `src/components/coaching/ClubGroupsManager.tsx` | Créer un wrapper Dialog fullscreen iOS |
+| `src/components/coaching/CoachingTemplatesDialog.tsx` | Ajustement style (fond bg-secondary, IOSListGroup) |
 
-## Résultat visuel
-
-```text
-┌──────────────────────────────┐
-│ ← Retour    Plan de semaine  │  bg-card
-├──────────────────────────────┤
-│                              │  bg-secondary
-│  GROUPE                      │
-│  ┌──────────────────────┐    │
-│  │ 🏟️ Tout le club (24) ▼│    │  bg-card rounded
-│  └──────────────────────┘    │
-│                              │
-│  SEMAINE                     │
-│  ┌──────────────────────┐    │
-│  │ ‹  Sem. 24 fév 2026  › │    │  bg-card rounded
-│  │  [Club] [Sprint]       │    │  pilules groupes
-│  └──────────────────────┘    │
-│                              │
-│  SÉANCES                     │
-│  ┌──────────────────────┐    │
-│  │ Lun Mar Mer Jeu ...   │    │
-│  │ VMA  —  Seuil  —     │    │  bg-card rounded
-│  │  +   +    +    +      │    │
-│  └──────────────────────┘    │
-│                              │
-│  [Éditeur si sélection]      │
-│                              │
-│  ACTIONS                     │
-│  ┌──────────────────────┐    │
-│  │ 📂 Charger semaine   ›│    │
-│  │ 📋 Dupliquer vers... ›│    │  IOSListItem
-│  │ 💾 Sauver semaine    ›│    │
-│  └──────────────────────┘    │
-│                              │
-│  ┌──────────────────────┐    │
-│  │  Envoyer 5 séances    │    │  bouton primary
-│  └──────────────────────┘    │
-└──────────────────────────────┘
-```
-
-Toute la logique (groupPlans, templates, duplication, envoi) reste identique. Seul le rendu JSX change.
+Aucune migration SQL. Aucun changement de logique métier. Uniquement du redesign et de la réorganisation UI.
 
