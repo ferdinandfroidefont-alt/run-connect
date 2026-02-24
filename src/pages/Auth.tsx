@@ -10,7 +10,8 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
-import { InAppBrowser } from '@capgo/inappbrowser';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import appIcon from '@/assets/app-icon.png';
@@ -234,14 +235,14 @@ const Auth = () => {
         }
       }
 
-      // 🍎 iOS: utiliser InAppBrowser pour rester dans l'app
+      // 🍎 iOS: utiliser @capacitor/browser (SFSafariViewController) + deep link
       if (isNativeIOS()) {
-        console.log('🍎 [GOOGLE AUTH] iOS detected, using InAppBrowser...');
+        console.log('🍎 [GOOGLE AUTH] iOS detected, using Browser.open (SFSafariViewController)...');
         try {
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: `${window.location.origin}/`,
+              redirectTo: 'app.runconnect://auth',
               skipBrowserRedirect: true,
               queryParams: { access_type: 'offline', prompt: 'consent' }
             }
@@ -251,32 +252,35 @@ const Auth = () => {
             throw oauthError || new Error('No OAuth URL returned');
           }
 
-          console.log('🍎 [GOOGLE AUTH] Opening InAppBrowser with URL:', oauthData.url);
+          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up deep link listener...');
 
-          // Écouter les changements d'URL pour détecter le callback
-          const urlListener = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
-            console.log('🍎 [GOOGLE AUTH] URL changed:', event.url);
-            
-            const url = event.url;
-            // Détecter le callback Supabase (contient access_token ou code dans le fragment/query)
-            if (url.includes('access_token=') || url.includes('code=') || url.includes('#access_token')) {
-              console.log('🍎 [GOOGLE AUTH] Callback detected, extracting tokens...');
-              
+          // Écouter le deep link de retour via @capacitor/app
+          const appUrlListener = await App.addListener('appUrlOpen', async ({ url }) => {
+            console.log('🍎 [GOOGLE AUTH] Deep link received:', url);
+
+            if (url.startsWith('app.runconnect://auth')) {
               try {
-                // Fermer le browser immédiatement
-                await InAppBrowser.close();
-                urlListener.remove();
+                // Fermer le navigateur système immédiatement
+                await Browser.close();
+                appUrlListener.remove();
 
-                // Extraire les paramètres du fragment (#) ou query (?)
-                const urlObj = new URL(url);
-                const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-                const queryParams = new URLSearchParams(urlObj.search);
+                // Extraire les tokens du fragment (#) ou query (?)
+                // Le format deep link: app.runconnect://auth#access_token=...&refresh_token=...
+                const hashIndex = url.indexOf('#');
+                const queryIndex = url.indexOf('?');
+                
+                let params = new URLSearchParams();
+                if (hashIndex !== -1) {
+                  params = new URLSearchParams(url.substring(hashIndex + 1));
+                } else if (queryIndex !== -1) {
+                  params = new URLSearchParams(url.substring(queryIndex + 1));
+                }
 
-                const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-                const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
 
                 if (accessToken && refreshToken) {
-                  console.log('🍎 [GOOGLE AUTH] Setting session with tokens...');
+                  console.log('🍎 [GOOGLE AUTH] Tokens found, setting session...');
                   const { error: sessionError } = await supabase.auth.setSession({
                     access_token: accessToken,
                     refresh_token: refreshToken
@@ -301,16 +305,18 @@ const Auth = () => {
                     }
                   }
                 } else {
-                  // Si on a un code PKCE, laisser Supabase le gérer via detectSessionInUrl
-                  console.log('🍎 [GOOGLE AUTH] No direct tokens, trying PKCE exchange...');
-                  // Naviguer vers l'URL de callback pour que Supabase échange le code
-                  window.location.href = url;
+                  console.warn('🍎 [GOOGLE AUTH] No tokens in deep link URL, check redirect config');
+                  toast({
+                    title: "Erreur Google Sign-In",
+                    description: "Tokens non reçus. Vérifiez la configuration.",
+                    variant: "destructive"
+                  });
                 }
-              } catch (callbackError) {
+              } catch (callbackError: any) {
                 console.error('🍎 [GOOGLE AUTH] Callback error:', callbackError);
                 toast({
                   title: "Erreur Google Sign-In",
-                  description: "Erreur lors de la récupération de la session",
+                  description: callbackError.message || "Erreur lors de la récupération de la session",
                   variant: "destructive"
                 });
               } finally {
@@ -319,21 +325,16 @@ const Auth = () => {
             }
           });
 
-          // Écouter la fermeture manuelle du browser
-          const closeListener = await InAppBrowser.addListener('closeEvent', () => {
-            console.log('🍎 [GOOGLE AUTH] InAppBrowser closed by user');
-            closeListener.remove();
-            urlListener.remove();
+          // Timeout: si pas de callback après 120s, nettoyer le listener
+          setTimeout(() => {
+            appUrlListener.remove();
             setIsLoading(false);
-          });
+          }, 120000);
 
-          // Ouvrir le navigateur intégré
-          await InAppBrowser.open({
-            url: oauthData.url,
-            isPresentAfterPageLoad: true,
-            preventDeeplink: false,
-          });
-          
+          // Ouvrir SFSafariViewController (approuvé par Google)
+          console.log('🍎 [GOOGLE AUTH] Opening SFSafariViewController...');
+          await Browser.open({ url: oauthData.url });
+
           return;
         } catch (iosError: any) {
           console.error('🍎 [GOOGLE AUTH] iOS error:', iosError);
