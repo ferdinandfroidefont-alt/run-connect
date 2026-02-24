@@ -11,10 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { WeeklyPlanSessionEditor, type WeekSession } from "./WeeklyPlanSessionEditor";
 import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History } from "lucide-react";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { parseRCC, rccToSessionBlocks } from "@/lib/rccParser";
+import { parseRCC, rccToSessionBlocks, computeRCCSummary } from "@/lib/rccParser";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -247,6 +247,81 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
     return Object.values(groupPlans).reduce((sum, s) => sum + s.length, 0);
   }, [groupPlans]);
 
+  // ── Weekly load summary ──
+  const weekLoadSummary = useMemo(() => {
+    if (sessions.length === 0) return null;
+    let totalKm = 0;
+    let totalDuration = 0;
+    let qualitySessions = 0;
+    let fastestPace = Infinity;
+
+    for (const s of sessions) {
+      if (s.rccCode) {
+        const { blocks } = parseRCC(s.rccCode);
+        const summary = computeRCCSummary(blocks);
+        totalKm += summary.totalDistanceKm;
+        totalDuration += summary.totalDurationMin;
+        if (summary.intensity === 'Intense' || summary.intensity === 'Très intense') {
+          qualitySessions++;
+        }
+      }
+    }
+
+    let intensity: string = 'Facile';
+    if (totalKm > 60) intensity = 'Très intense';
+    else if (totalKm > 45) intensity = 'Intense';
+    else if (totalKm > 30) intensity = 'Modérée';
+
+    return { totalKm: Math.round(totalKm * 10) / 10, totalDuration: Math.round(totalDuration), qualitySessions, intensity };
+  }, [sessions]);
+
+  // ── Duplicate previous week ──
+  const loadPreviousWeek = async () => {
+    if (!user) return;
+    const prevWeekStart = subWeeks(weekStart, 1);
+    const prevWeekEnd = addDays(prevWeekStart, 7);
+    
+    const targetGroupId = activeGroupId !== "club" ? activeGroupId : null;
+    
+    let query = supabase
+      .from("coaching_sessions")
+      .select("*")
+      .eq("club_id", clubId)
+      .eq("coach_id", user.id)
+      .gte("scheduled_at", prevWeekStart.toISOString())
+      .lt("scheduled_at", prevWeekEnd.toISOString());
+
+    if (targetGroupId) {
+      query = query.eq("target_group_id", targetGroupId);
+    }
+
+    const { data } = await query;
+    if (!data || data.length === 0) {
+      toast({ title: "Aucune séance", description: "Pas de séances trouvées la semaine précédente pour ce groupe", variant: "destructive" });
+      return;
+    }
+
+    const imported: WeekSession[] = data.map(cs => {
+      const scheduledDate = new Date(cs.scheduled_at);
+      const dayOfWeek = scheduledDate.getDay();
+      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to Mon=0
+      return {
+        dayIndex,
+        activityType: cs.activity_type || "running",
+        objective: cs.objective || cs.title || "",
+        rccCode: cs.rcc_code || "",
+        parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+        coachNotes: cs.coach_notes || "",
+        locationName: cs.default_location_name || "",
+        athleteOverrides: {},
+      };
+    });
+
+    setSessions(() => imported);
+    setSelectedIndex(null);
+    toast({ title: "Semaine précédente chargée", description: `${imported.length} séances importées` });
+  };
+
   const groupsWithPlans = useMemo(() => {
     return Object.entries(groupPlans)
       .filter(([, s]) => s.length > 0)
@@ -431,6 +506,35 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
             )}
           </IOSListGroup>
 
+          {/* ── CHARGE DE LA SEMAINE ── */}
+          {weekLoadSummary && (
+            <div className="mx-4 px-4 py-3 rounded-xl bg-card border border-border">
+              <div className="flex items-center gap-2 mb-1.5">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <span className="text-[13px] font-semibold text-foreground">Charge de la semaine</span>
+              </div>
+              <div className="flex items-center gap-3 text-[12px] text-muted-foreground flex-wrap">
+                <span className="font-medium text-foreground">{weekLoadSummary.totalKm} km</span>
+                <span>·</span>
+                <span>{sessions.length} séance{sessions.length > 1 ? "s" : ""}</span>
+                {weekLoadSummary.qualitySessions > 0 && (
+                  <>
+                    <span>·</span>
+                    <span>{weekLoadSummary.qualitySessions} qualité</span>
+                  </>
+                )}
+                <span>·</span>
+                <Badge variant={
+                  weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
+                  weekLoadSummary.intensity === 'Intense' ? 'default' :
+                  'secondary'
+                } className="text-[10px] px-1.5 py-0">
+                  {weekLoadSummary.intensity}
+                </Badge>
+              </div>
+            </div>
+          )}
+
           {/* ── SÉANCES grid section ── */}
           <IOSListGroup header="SÉANCES" className="mx-4">
             <div className="px-3 py-3 bg-card">
@@ -486,6 +590,14 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
 
           {/* ── ACTIONS section ── */}
           <IOSListGroup header="ACTIONS" className="mx-4">
+            <IOSListItem
+              icon={History}
+              iconBgColor="bg-amber-500"
+              title="Dupliquer semaine précédente"
+              subtitle="Charger les séances de S-1"
+              onClick={loadPreviousWeek}
+              showSeparator
+            />
             {templates.length > 0 && (
               <IOSListItem
                 icon={FolderOpen}

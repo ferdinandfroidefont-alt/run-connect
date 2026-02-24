@@ -231,28 +231,7 @@ export const ScheduleCoachingDialog = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Latitude</Label>
-              <Input
-                type="number"
-                step="0.0001"
-                placeholder="48.8566"
-                value={locationLat}
-                onChange={(e) => setLocationLat(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Longitude</Label>
-              <Input
-                type="number"
-                step="0.0001"
-                placeholder="2.3522"
-                value={locationLng}
-                onChange={(e) => setLocationLng(e.target.value)}
-              />
-            </div>
-          </div>
+          {/* Lat/Lng removed — location name is sufficient for athletes */}
 
           <div className="space-y-2">
             <Label>Mon allure personnelle</Label>
