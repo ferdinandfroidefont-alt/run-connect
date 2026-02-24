@@ -7,10 +7,11 @@ import { useToast } from './use-toast';
 import { useNavigate } from 'react-router-dom';
 import { isReallyNative } from '@/lib/nativeDetection';
 
-// Debug logger — silent in production
-const DEBUG = import.meta.env.DEV;
-const log = (...args: any[]) => { if (DEBUG) console.log(...args); };
-const logError = (...args: any[]) => console.error(...args);
+// Always log push-critical events (needed for iOS prod debugging via Safari/Xcode)
+const log = (...args: any[]) => console.log('[PUSH]', ...args);
+const logError = (...args: any[]) => console.error('[PUSH]', ...args);
+
+const SUPABASE_URL = 'https://dbptgehpknjsoisirviz.supabase.co';
 
 interface NotificationPermissionStatus {
   granted: boolean;
@@ -57,14 +58,48 @@ export const usePushNotifications = () => {
         setIsRegistered(p === 'granted');
       }
     } catch (e) {
-      logError('[PUSH] checkPermissionStatus error:', e);
+      logError('checkPermissionStatus error:', e);
     }
   }, [isNative]);
+
+  /** Detect platform — prioritize iOS detection */
+  const detectPlatform = useCallback((): string => {
+    const capPlatform = Capacitor.getPlatform();
+    // iOS first — no ambiguity
+    if (capPlatform === 'ios') return 'ios';
+    // Android detection
+    if (capPlatform === 'android') return 'android';
+    if ((window as any).AndroidBridge || (window as any).fcmToken) return 'android';
+    if (typeof (window as any).fcmTokenPlatform === 'string') return (window as any).fcmTokenPlatform;
+    return capPlatform;
+  }, []);
+
+  /** Save token via edge function (bypasses RLS) */
+  const saveTokenViaEdgeFunction = useCallback(async (pushToken: string, userId: string, platform: string): Promise<boolean> => {
+    try {
+      log('Saving token via edge function, platform:', platform);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/save-push-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, token: pushToken, platform })
+      });
+      if (response.ok) {
+        log('✅ Token saved via edge function');
+        return true;
+      }
+      const errBody = await response.text();
+      logError('Edge function save failed:', response.status, errBody);
+      return false;
+    } catch (e) {
+      logError('Edge function fetch error:', e);
+      return false;
+    }
+  }, []);
 
   /** Save token to DB — with retry if profile doesn't exist yet */
   const savePushToken = useCallback(async (pushToken: string): Promise<boolean> => {
     if (!user) {
-      log('[PUSH] No user, storing token in memory');
+      log('No user, storing token in memory');
       setToken(pushToken);
       return false;
     }
@@ -72,7 +107,7 @@ export const usePushNotifications = () => {
     // Verify Supabase session is ready
     const { data: sess } = await supabase.auth.getSession();
     if (!sess?.session?.user) {
-      log('[PUSH] Session not ready, deferring save');
+      log('Session not ready, deferring save');
       setToken(pushToken);
       return false;
     }
@@ -87,28 +122,22 @@ export const usePushNotifications = () => {
 
       // Profile doesn't exist yet — keep token in memory, signal retry needed
       if (!existing) {
-        log('[PUSH] Profile not found yet, keeping token in memory for retry');
+        log('Profile not found yet, keeping token in memory for retry');
         setToken(pushToken);
         return false;
       }
 
       if (existing.push_token === pushToken) {
-        log('[PUSH] Token already saved');
+        log('Token already saved');
         setToken(pushToken);
         setIsRegistered(true);
         return true;
       }
 
-      // Detect platform
-      let platform = Capacitor.getPlatform();
-      if (platform === 'web' && ((window as any).AndroidBridge || (window as any).fcmToken)) {
-        platform = 'android';
-      }
-      if (typeof (window as any).fcmTokenPlatform === 'string') {
-        platform = (window as any).fcmTokenPlatform;
-      }
+      const platform = detectPlatform();
+      log('Saving token via Supabase client, platform:', platform);
 
-      const { error, count } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({
           push_token: pushToken,
@@ -119,12 +148,20 @@ export const usePushNotifications = () => {
         .eq('user_id', user.id);
 
       if (error) {
-        logError('[PUSH] Save token error:', error.code, error.message);
+        logError('Save token error (client):', error.code, error.message);
+        // Fallback: try edge function
+        log('Trying edge function fallback...');
+        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, user.id, platform);
+        if (edgeSaved) {
+          setToken(pushToken);
+          setIsRegistered(true);
+          return true;
+        }
         setToken(pushToken);
         return false;
       }
 
-      log('[PUSH] Token saved successfully');
+      log('✅ Token saved successfully via client');
       setToken(pushToken);
       setIsRegistered(true);
 
@@ -134,11 +171,11 @@ export const usePushNotifications = () => {
       }
       return true;
     } catch (e) {
-      logError('[PUSH] Exception saving token:', e);
+      logError('Exception saving token:', e);
       setToken(pushToken);
       return false;
     }
-  }, [user]);
+  }, [user, detectPlatform, saveTokenViaEdgeFunction]);
 
   // ─── NOTIFICATION TAP ────────────────────────────────────
 
@@ -167,7 +204,7 @@ export const usePushNotifications = () => {
   const setupPushListeners = useCallback(async () => {
     if (!isNative || (window as any).__pushNotificationSystemInitialized) return;
 
-    log('[PUSH] Setting up listeners...');
+    log('Setting up listeners...');
 
     // Request token via AndroidBridge if available
     if ((window as any).AndroidBridge?.getFCMToken) {
@@ -176,21 +213,42 @@ export const usePushNotifications = () => {
 
     try {
       await PushNotifications.addListener('registration', async (t) => {
-        log('[PUSH] Registration token received');
+        log('📱 Registration token received, length:', t.value?.length);
         if (t.value) {
           setToken(t.value);
           setIsRegistered(true);
-          await savePushToken(t.value);
+          const saved = await savePushToken(t.value);
+
+          // Fallback: if save failed or token not in DB after 3s, use edge function
+          if (!saved && user) {
+            setTimeout(async () => {
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('push_token')
+                  .eq('user_id', user.id)
+                  .maybeSingle();
+
+                if (!profile?.push_token || profile.push_token !== t.value) {
+                  log('⚠️ Token not in DB after 3s, using edge function fallback');
+                  const platform = detectPlatform();
+                  await saveTokenViaEdgeFunction(t.value, user.id, platform);
+                }
+              } catch (e) {
+                logError('Fallback check error:', e);
+              }
+            }, 3000);
+          }
         }
       });
 
       await PushNotifications.addListener('registrationError', (error) => {
-        logError('[PUSH] Registration error:', error);
+        logError('❌ Registration error:', JSON.stringify(error));
         setIsRegistered(false);
       });
 
       await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        log('[PUSH] Notification received:', notification.title);
+        log('Notification received:', notification.title);
       });
 
       await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
@@ -198,11 +256,11 @@ export const usePushNotifications = () => {
       });
 
       (window as any).__pushNotificationSystemInitialized = true;
-      log('[PUSH] Listeners configured');
+      log('✅ Listeners configured');
     } catch (e) {
-      logError('[PUSH] Listener setup error:', e);
+      logError('Listener setup error:', e);
     }
-  }, [isNative, savePushToken, handleNotificationTap]);
+  }, [isNative, savePushToken, handleNotificationTap, user, detectPlatform, saveTokenViaEdgeFunction]);
 
   // ─── REQUEST PERMISSIONS ─────────────────────────────────
 
@@ -217,8 +275,10 @@ export const usePushNotifications = () => {
     // iOS
     if (platform === 'ios') {
       try {
+        log('🍎 Requesting iOS permissions...');
         const result = await PushNotifications.requestPermissions();
         const granted = result.receive === 'granted';
+        log('🍎 iOS permission result:', result.receive);
         if (granted) {
           await PushNotifications.register();
           setPermissionStatus({ granted: true, denied: false, prompt: false });
@@ -229,7 +289,7 @@ export const usePushNotifications = () => {
         }
         return granted;
       } catch (e) {
-        logError('[PUSH] iOS permission error:', e);
+        logError('iOS permission error:', e);
         return false;
       }
     }
@@ -254,7 +314,6 @@ export const usePushNotifications = () => {
     }
 
     try {
-      // 1. Check DB first
       console.log('[PUSH TEST] Fetching token for user:', user.id);
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -271,27 +330,16 @@ export const usePushNotifications = () => {
 
       let dbToken = profile?.push_token;
 
-      // 2. If no token in DB, try to recover from memory and save via edge function
+      // If no token in DB, try to recover from memory and save via edge function
       if (!dbToken || dbToken.length < 50) {
         const memoryToken = token || (window as any).fcmToken || (window as any).__fcmTokenBuffer;
         
         if (memoryToken && typeof memoryToken === 'string' && memoryToken.length > 50) {
           console.log('[PUSH TEST] Token found in memory, saving via edge function...');
-          try {
-            const response = await fetch(
-              `https://dbptgehpknjsoisirviz.supabase.co/functions/v1/save-push-token`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: user.id, token: memoryToken, platform: 'android' })
-              }
-            );
-            if (response.ok) {
-              console.log('[PUSH TEST] Token saved via edge function');
-              dbToken = memoryToken;
-            }
-          } catch (e) {
-            console.error('[PUSH TEST] Edge function save failed:', e);
+          const platform = detectPlatform();
+          const saved = await saveTokenViaEdgeFunction(memoryToken, user.id, platform);
+          if (saved) {
+            dbToken = memoryToken;
           }
         }
 
@@ -305,14 +353,12 @@ export const usePushNotifications = () => {
         }
       }
 
-      // 2. Vérifier la session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         toast({ title: "Session expirée", description: "Reconnectez-vous", variant: "destructive" });
         return;
       }
 
-      // 3. Appeler l'edge function
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: {
@@ -339,7 +385,7 @@ export const usePushNotifications = () => {
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message || "Une erreur est survenue", variant: "destructive" });
     }
-  }, [user, toast]);
+  }, [user, toast, token, detectPlatform, saveTokenViaEdgeFunction]);
 
   // ─── useEffect #1: INIT (once per user) ──────────────────
 
@@ -370,30 +416,51 @@ export const usePushNotifications = () => {
 
         try {
           const status = await PushNotifications.checkPermissions();
-          log('[PUSH] Permission status:', status.receive);
+          const platform = Capacitor.getPlatform();
+          log('Permission status:', status.receive, '| Platform:', platform);
           
           if (status.receive === 'granted') {
             const { data: profile } = await supabase.from('profiles').select('push_token').eq('user_id', user.id).single();
             if (profile?.push_token) {
-              log('[PUSH] Token already in DB, syncing');
+              log('Token already in DB, syncing');
               setToken(profile.push_token);
               setIsRegistered(true);
             } else {
-              log('[PUSH] No token in DB, calling register()...');
+              log('No token in DB, calling register()...');
               await PushNotifications.register();
-              log('[PUSH] register() called successfully');
+              log('register() called successfully');
+
+              // iOS retry: if no token received after 5s, retry register()
+              if (platform === 'ios') {
+                setTimeout(async () => {
+                  try {
+                    const { data: checkProfile } = await supabase
+                      .from('profiles')
+                      .select('push_token')
+                      .eq('user_id', user.id)
+                      .maybeSingle();
+
+                    if (!checkProfile?.push_token) {
+                      log('⚠️ iOS: No token after 5s, retrying register()...');
+                      await PushNotifications.register();
+                    }
+                  } catch (e) {
+                    logError('iOS retry error:', e);
+                  }
+                }, 5000);
+              }
             }
           } else if (status.receive === 'prompt' || status.receive === 'prompt-with-rationale') {
-            // iOS: request permissions then register
-            log('[PUSH] Requesting permissions on iOS...');
+            log('Requesting permissions...');
             const permResult = await PushNotifications.requestPermissions();
+            log('Permission result:', permResult.receive);
             if (permResult.receive === 'granted') {
-              log('[PUSH] iOS permissions granted, registering...');
+              log('Permissions granted, registering...');
               await PushNotifications.register();
             }
           }
         } catch (e) {
-          logError('[PUSH] Init error:', e);
+          logError('Init error:', e);
         }
       }
     };
@@ -405,13 +472,12 @@ export const usePushNotifications = () => {
 
   useEffect(() => {
     if (!user) return;
-    if (isRegistered) return; // Already saved, no need to retry
+    if (isRegistered) return;
 
     let attempts = 0;
-    const maxAttempts = 12; // 12 x 10s = 2 minutes
+    const maxAttempts = 12;
 
     const tryRecover = async () => {
-      // Check DB first
       try {
         const { data: profile } = await supabase
           .from('profiles')
@@ -420,27 +486,24 @@ export const usePushNotifications = () => {
           .maybeSingle();
 
         if (profile?.push_token) {
-          log('[PUSH] Token already in DB, syncing state');
+          log('Token already in DB, syncing state');
           setToken(profile.push_token);
           setIsRegistered(true);
           return true;
         }
       } catch {}
 
-      // Try saving from window.fcmToken or local state
       const pendingToken = token || (window as any).fcmToken || (window as any).__fcmTokenBuffer;
       if (pendingToken && typeof pendingToken === 'string' && pendingToken.length > 50) {
-        log('[PUSH] Retry saving token, attempt', attempts + 1);
+        log('Retry saving token, attempt', attempts + 1);
         const saved = await savePushToken(pendingToken);
         if (saved) return true;
       }
       return false;
     };
 
-    // Immediate attempt
     tryRecover();
 
-    // Then retry every 10s for up to 2 minutes
     const interval = setInterval(async () => {
       attempts++;
       if (attempts >= maxAttempts) {
@@ -462,9 +525,9 @@ export const usePushNotifications = () => {
       const t = customEvent.detail?.token;
 
       if (t && !(window as any).__fcmTokenReceived) {
-        log('[PUSH] fcmTokenReady received — forcing native mode');
+        log('fcmTokenReady received — forcing native mode');
         (window as any).__fcmTokenReceived = true;
-        setIsNative(true); // Receiving a token proves we're native
+        setIsNative(true);
         setToken(t);
         setIsRegistered(true);
         savePushToken(t);
@@ -475,10 +538,9 @@ export const usePushNotifications = () => {
     (window as any).__fcmListenerReady = true;
     document.dispatchEvent(new CustomEvent('ReactListenerReady'));
 
-    // Check if window.fcmToken or __fcmTokenBuffer was already injected before React mounted
     const existingToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
     if (existingToken && typeof existingToken === 'string' && existingToken.length > 50 && !(window as any).__fcmTokenReceived) {
-      log('[PUSH] window.fcmToken/buffer already present at mount, saving...');
+      log('window.fcmToken/buffer already present at mount, saving...');
       (window as any).__fcmTokenReceived = true;
       setIsNative(true);
       setToken(existingToken);
@@ -501,7 +563,7 @@ export const usePushNotifications = () => {
     import('@capacitor/app').then(({ App }) => {
       appStateListener = App.addListener('appStateChange', async ({ isActive }) => {
         if (!isActive) return;
-        log('[PUSH] App resumed, checking token...');
+        log('App resumed, checking token...');
 
         try {
           const status = await PushNotifications.checkPermissions();
@@ -520,7 +582,7 @@ export const usePushNotifications = () => {
             }
           }
         } catch (e) {
-          logError('[PUSH] Resume check error:', e);
+          logError('Resume check error:', e);
         }
       });
     }).catch((err) => {
@@ -532,7 +594,7 @@ export const usePushNotifications = () => {
     };
   }, [user, isNative]);
 
-  // ─── Native detection polling (first 5s) ─────────────────
+  // ─── Native detection polling (first 15s) ─────────────────
 
   useEffect(() => {
     const interval = setInterval(() => {
