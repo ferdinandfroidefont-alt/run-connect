@@ -242,6 +242,14 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
         throw new Error('Impossible d\'ajouter le créateur comme admin du club');
       }
 
+      // Insert system message: "a créé le club"
+      await supabase.from('messages').insert([{
+        conversation_id: conversation.id,
+        sender_id: user.id,
+        content: 'a créé le club',
+        message_type: 'system'
+      }]);
+
       // Add selected members
       if (selectedMembers.length > 0) {
         await supabase.from('group_members').insert(
@@ -251,6 +259,15 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
             is_admin: false
           }))
         );
+
+        // Insert system message: "a ajouté @user1, @user2"
+        const memberNames = selectedMembers.map(m => m.username || m.display_name).join(', ');
+        await supabase.from('messages').insert([{
+          conversation_id: conversation.id,
+          sender_id: user.id,
+          content: `a ajouté ${memberNames}`,
+          message_type: 'system'
+        }]);
       }
 
       onGroupCreated(conversation.id);

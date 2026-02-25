@@ -154,6 +154,17 @@ export const NotificationCenter = ({
       });
       if (error) throw error;
       if (data) {
+        // Insert system message: "a rejoint le club"
+        const clubId = notification.data?.club_id;
+        if (clubId) {
+          await supabase.from('messages').insert([{
+            conversation_id: clubId,
+            sender_id: user.id,
+            content: 'a rejoint le club',
+            message_type: 'system'
+          }]);
+        }
+
         toast({
           title: "Succès",
           description: "Vous avez rejoint le club !"
