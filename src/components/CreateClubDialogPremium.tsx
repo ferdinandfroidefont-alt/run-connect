@@ -229,12 +229,18 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
 
       if (convError) throw convError;
 
-      // Add creator as admin
-      await supabase.from('group_members').insert([{
+      // Add creator as admin - with verification and rollback
+      const { error: adminError } = await supabase.from('group_members').insert([{
         conversation_id: conversation.id,
         user_id: user.id,
         is_admin: true
       }]);
+
+      if (adminError) {
+        console.error('❌ Failed to add creator as admin, rolling back conversation:', adminError);
+        await supabase.from('conversations').delete().eq('id', conversation.id);
+        throw new Error('Impossible d\'ajouter le créateur comme admin du club');
+      }
 
       // Add selected members
       if (selectedMembers.length > 0) {
