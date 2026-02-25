@@ -170,12 +170,34 @@ export const WeeklyPlanSessionEditor = ({
             ))}
           </SelectContent>
         </Select>
-        <Input
-          value={session.objective}
-          onChange={e => update("objective", e.target.value)}
-          placeholder="Objectif (VMA, Seuil...)"
-          className="h-9 text-xs"
-        />
+        <div className="relative flex-1">
+          <Input
+            value={session.objective}
+            onChange={e => update("objective", e.target.value)}
+            placeholder="Objectif..."
+            className="h-9 text-xs pr-7"
+          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-muted-foreground hover:text-foreground">
+                <HelpCircle className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 text-xs space-y-1.5" side="top">
+              <p className="font-semibold text-sm mb-2">Types de séance</p>
+              {["Footing", "Footing Z2", "Footing Z3", "Seuil", "VMA", "VMA courte", "VMA longue", "Spé cross", "Spé piste", "Spé 10K", "Spé semi", "Spé marathon", "Côtes", "Fartlek", "PPG / Renfo", "Sortie longue", "Récupération"].map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  className="block w-full text-left px-2 py-1 rounded hover:bg-accent/50 transition-colors"
+                  onClick={() => { update("objective", t); }}
+                >
+                  {t}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       <div className="flex gap-1.5">
