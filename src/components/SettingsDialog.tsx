@@ -437,7 +437,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 overflow-x-hidden">
+              <ScrollArea className="flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
                 <div className="py-6 space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
                   {/* iOS grouped list style */}
                   <div className="bg-background overflow-hidden">
