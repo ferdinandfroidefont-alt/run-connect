@@ -238,6 +238,53 @@ export type Database = {
           },
         ]
       }
+      coaching_drafts: {
+        Row: {
+          club_id: string
+          coach_id: string
+          created_at: string
+          group_id: string
+          id: string
+          sent_at: string | null
+          sessions: Json
+          target_athletes: string[]
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          club_id: string
+          coach_id: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          sent_at?: string | null
+          sessions?: Json
+          target_athletes?: string[]
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          club_id?: string
+          coach_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          sent_at?: string | null
+          sessions?: Json
+          target_athletes?: string[]
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_drafts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaching_participations: {
         Row: {
           athlete_note: string | null
