@@ -1,117 +1,59 @@
 
 
-# Refonte du workflow Coach : Brouillons + Plan hebdo unifié
+## Plan: Créateur de club = Coach automatiquement
 
-## Résumé
+### Contexte actuel
+- A la creation d'un club, le createur est insere dans `group_members` avec `is_admin: true` mais `is_coach: false`
+- Le `CoachAccessDialog` fait un fallback sur `created_by` pour trouver les clubs du createur, mais c'est un contournement
+- Le `ClubInfoDialog` a une logique hybride: `is_coach || is_admin || createdBy === user?.id`
+- La fonction SQL `is_club_coach_or_creator` gere deja le cas au niveau RLS (verifie `created_by` OU `is_coach`)
 
-Remplacer le bouton "Nouvelle séance" par "Brouillons", supprimer la création de séance isolée, et transformer le Plan hebdo en outil principal avec : persistance des brouillons en base, barre de recherche d'athlètes, navigation par swipe entre semaines, et conservation des données après envoi.
+### Changements prevus
 
-## Analyse du code actuel
+**1. Lors de la creation du club, mettre `is_coach: true` en plus de `is_admin: true`**
 
-Le `CoachingTab` affiche 4 boutons : Nouvelle séance, Plan hebdo, Groupes, Suivi. Le `WeeklyPlanDialog` gère tout en mémoire (`groupPlans` state) — les données sont perdues à la fermeture. La création de séance individuelle (`CreateCoachingSessionDialog`) est un formulaire séparé.
+Fichiers concernes:
+- `src/components/CreateClubDialog.tsx` (ligne ~296): ajouter `is_coach: true` dans l'insert `group_members`
+- `src/components/CreateClubDialogPremium.tsx` (ligne ~236): idem
 
-## Architecture proposée
+**2. Simplifier `CoachAccessDialog.loadCoachClubs()`**
 
-### 1. Nouvelle table `coaching_drafts`
+- Supprimer le fallback `created_by` (lignes 70-78) car le createur aura desormais `is_coach: true` dans `group_members`
+- Garder uniquement la query `is_coach = true`
 
-```text
-coaching_drafts
-├── id          uuid PK
-├── coach_id    uuid NOT NULL
-├── club_id     uuid NOT NULL (ref conversations.id)
-├── week_start  date NOT NULL
-├── group_id    text DEFAULT 'club'
-├── sessions    jsonb DEFAULT '[]'
-├── target_athletes uuid[] DEFAULT '{}'
-├── updated_at  timestamptz DEFAULT now()
-├── created_at  timestamptz DEFAULT now()
-│
-└── UNIQUE(coach_id, club_id, week_start, group_id)
-```
+**3. Simplifier `ClubInfoDialog` la detection coach**
 
-RLS : coach_id = auth.uid() pour SELECT/INSERT/UPDATE/DELETE.
+- La logique `currentUserIsCoach` (ligne ~189) peut rester telle quelle car elle gere deja les cas anciens (`is_admin || createdBy`), ce qui assure la retro-compatibilite avec les clubs existants
 
-### 2. CoachingTab — Remplacer les boutons
+**4. (Optionnel) Mettre a jour les clubs existants**
 
-**Avant :**
-```text
-[+ Nouvelle séance] [Plan hebdo] [Groupes] [Suivi]
-```
+- Executer un UPDATE SQL pour mettre `is_coach = true` sur les `group_members` des createurs de clubs existants, afin d'aligner les donnees historiques
 
-**Après :**
-```text
-[📝 Brouillons]  [📅 Plan hebdo]  [👥 Groupes]  [📊 Suivi]
-```
-
-- "Brouillons" ouvre une liste des brouillons existants (groupés par semaine/groupe) avec preview (nb séances, dernière modif)
-- Cliquer un brouillon ouvre le `WeeklyPlanDialog` pré-rempli
-- Supprimer le `CreateCoachingSessionDialog` du CoachingTab (la création passe uniquement par le Plan hebdo)
-
-### 3. WeeklyPlanDialog — Modifications
-
-#### 3a. Barre de recherche d'athlètes (en haut)
-
-Ajouter un champ de recherche filtrable au-dessus de la grille de séances. Le coach tape un nom → filtre les membres du club → sélectionne ceux qu'il veut cibler pour cette semaine. Stocké dans `target_athletes` du brouillon.
+### Details techniques
 
 ```text
-┌──────────────────────────────────┐
-│ ← Retour    Plan de semaine     │
-│ ┌──────────────────────────────┐ │
-│ │ 🔍 Rechercher un athlète...  │ │
-│ │ [Chip: Maxime] [Chip: Julie] │ │
-│ └──────────────────────────────┘ │
-│                                  │
-│  SEMAINE  ◄ 2 Jun 2026 ►       │
-│  [Lun] [Mar] [Mer] ...         │
+CreateClubDialog / CreateClubDialogPremium
+  insert group_members:
+    AVANT:  { is_admin: true }
+    APRES:  { is_admin: true, is_coach: true }
+
+CoachAccessDialog.loadCoachClubs():
+  AVANT:  query is_coach=true, fallback created_by
+  APRES:  query is_coach=true uniquement
+
+SQL migration (donnees existantes):
+  UPDATE group_members gm
+  SET is_coach = true
+  FROM conversations c
+  WHERE gm.conversation_id = c.id
+    AND c.is_group = true
+    AND c.created_by = gm.user_id
+    AND gm.is_coach = false;
 ```
 
-#### 3b. Auto-save en brouillon
-
-- À chaque modification (ajout/suppression/édition de séance), debounce 2s → upsert dans `coaching_drafts`
-- Badge "Brouillon sauvegardé" discret en bas
-- Au chargement du dialog, si un brouillon existe pour cette semaine/groupe → charger automatiquement
-
-#### 3c. Conserver les données après envoi
-
-Après `handleSendPlan()`, ne pas vider `groupPlans`. Mettre à jour le brouillon avec un flag visuel "Envoyé ✓" mais garder les données pour modification rapide et renvoi.
-
-#### 3d. Swipe entre semaines
-
-Utiliser les gestes tactiles (touch start/end) sur le conteneur principal pour naviguer entre semaines, en plus des boutons chevron existants.
-
-### 4. Nouveau composant : DraftsList
-
-Liste des brouillons pour un club donné, affichée quand on clique sur "Brouillons" :
-
-```text
-┌─────────────────────────────────┐
-│ BROUILLONS                      │
-│                                 │
-│ 📝 Sem. 2 Jun · Club (3 séances)│
-│    Modifié il y a 2h            │
-│                                 │
-│ 📝 Sem. 9 Jun · Sprint (5 séances)│
-│    Modifié hier                 │
-│                                 │
-│ [+ Nouveau plan hebdo]          │
-└─────────────────────────────────┘
-```
-
-Cliquer ouvre le WeeklyPlanDialog avec la bonne semaine, le bon groupe, et les séances pré-remplies.
-
-## Fichiers modifiés
-
-| Fichier | Changement |
-|---------|-----------|
-| Migration SQL | Créer table `coaching_drafts` avec RLS |
-| `src/components/coaching/CoachingTab.tsx` | Remplacer "Nouvelle séance" par "Brouillons", supprimer `CreateCoachingSessionDialog` |
-| `src/components/coaching/WeeklyPlanDialog.tsx` | Ajouter barre de recherche athlètes, auto-save brouillon, chargement auto, conserver données après envoi, swipe semaines |
-| `src/components/coaching/CoachingDraftsList.tsx` | Nouveau composant — liste des brouillons |
-
-## Détails techniques
-
-- Auto-save : `useEffect` avec debounce 2s sur `groupPlans` → `supabase.from('coaching_drafts').upsert(...)` avec contrainte unique `(coach_id, club_id, week_start, group_id)`
-- Chargement : au mount du WeeklyPlanDialog, `SELECT * FROM coaching_drafts WHERE coach_id = ? AND club_id = ? AND week_start = ?` → hydrate `groupPlans`
-- Swipe : `onTouchStart`/`onTouchEnd` avec delta X > 50px → `setCurrentWeek(addWeeks/subWeeks)`
-- Recherche athlètes : filtre local sur `members[]` avec `display_name.toLowerCase().includes(query)`
+### Fichiers modifies
+1. `src/components/CreateClubDialog.tsx` - ajouter `is_coach: true`
+2. `src/components/CreateClubDialogPremium.tsx` - ajouter `is_coach: true`
+3. `src/components/coaching/CoachAccessDialog.tsx` - simplifier `loadCoachClubs`
+4. Migration SQL - aligner les donnees existantes
 
