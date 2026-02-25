@@ -397,7 +397,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[100%] max-w-[100vw] h-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
+      <DialogContent className="fixed inset-0 w-full max-w-full h-full max-h-full sm:relative sm:inset-auto sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
@@ -437,8 +437,8 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 </div>
               </div>
 
-              <ScrollArea className="flex-1">
-                <div className="py-6 space-y-6">
+              <ScrollArea className="flex-1 overflow-x-hidden">
+                <div className="py-6 space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
                   {/* iOS grouped list style */}
                   <div className="bg-background overflow-hidden">
                     {filteredCategories.map((category, index) => (
@@ -472,7 +472,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Profile Share Section */}
                   {profile && (
-                    <div className="bg-background overflow-hidden px-4 sm:px-6 py-4 space-y-4 max-w-full">
+                    <div className="bg-background overflow-hidden px-4 py-4 space-y-4 min-w-0 w-full max-w-full">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
@@ -539,7 +539,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                       </p>
                       
                       {/* Action buttons */}
-                      <div className="space-y-2 mx-2">
+                      <div className="space-y-2 mx-2 min-w-0">
                         <Button
                           variant="default"
                           size="default"
@@ -550,27 +550,27 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           Copier le lien
                         </Button>
                         
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 min-w-0">
                           <Button
-                            variant="outline"
-                            size="default"
-                            onClick={handleShare}
-                            className="w-full border-primary/30 hover:bg-primary/10 hover:border-primary/50"
-                          >
-                            <Share2 className="h-4 w-4 mr-2" />
-                            Partager
-                          </Button>
+                              variant="outline"
+                              size="default"
+                              onClick={handleShare}
+                              className="w-full min-w-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+                            >
+                              <Share2 className="h-4 w-4 mr-2 shrink-0" />
+                              <span className="truncate">Partager</span>
+                            </Button>
                           
-                          <Button
-                            variant="outline"
-                            size="default"
-                            onClick={generateInstagramStoryImage}
-                            disabled={!qrImageUrl}
-                            className="w-full border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
-                          >
-                            <Instagram className="h-4 w-4 mr-2 text-pink-500" />
-                            Story
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="default"
+                              onClick={generateInstagramStoryImage}
+                              disabled={!qrImageUrl}
+                              className="w-full min-w-0 border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
+                            >
+                              <Instagram className="h-4 w-4 mr-2 shrink-0 text-pink-500" />
+                              <span className="truncate">Story</span>
+                            </Button>
                         </div>
                       </div>
                     </div>
