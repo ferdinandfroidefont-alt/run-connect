@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -68,6 +69,7 @@ const normalizeSearchValue = (value: string) =>
     .trim();
 
 export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps) => {
+  const { user } = useAuth();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +88,46 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
   const loadTracking = async () => {
     setLoading(true);
     try {
+      // 1. Load ALL club members (exclude current coach)
+      const { data: clubMembers } = await supabase
+        .from("group_members")
+        .select("user_id")
+        .eq("conversation_id", clubId);
+
+      const allUserIds = (clubMembers || [])
+        .map(m => m.user_id)
+        .filter(id => id !== user?.id);
+
+      if (allUserIds.length === 0) {
+        setAthletes([]);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Load profiles for all members
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, username, avatar_url")
+        .in("user_id", allUserIds);
+
+      // 3. Initialize athleteMap with ALL members
+      const athleteMap: Record<string, AthleteData> = {};
+      (profiles || []).forEach(p => {
+        if (!p.user_id) return;
+        athleteMap[p.user_id] = {
+          userId: p.user_id,
+          displayName: p.display_name || "Athlète",
+          username: p.username || null,
+          avatarUrl: p.avatar_url || null,
+          days: {},
+          completedCount: 0,
+          totalCount: 0,
+          lateCount: 0,
+          weeklyVolumeKm: 0,
+        };
+      });
+
+      // 4. Load sessions for the week
       const { data: sessions } = await supabase
         .from("coaching_sessions")
         .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target")
@@ -93,84 +135,54 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString());
 
-      if (!sessions || sessions.length === 0) {
-        setAthletes([]);
-        setLoading(false);
-        return;
-      }
+      if (sessions && sessions.length > 0) {
+        const sessionIds = sessions.map(s => s.id);
+        const sessionMap: Record<string, SessionInfo> = {};
+        sessions.forEach(s => { sessionMap[s.id] = s; });
 
-      const sessionIds = sessions.map(s => s.id);
-      const sessionMap: Record<string, SessionInfo> = {};
-      sessions.forEach(s => { sessionMap[s.id] = s; });
+        // 5. Load participations and overlay on athleteMap
+        const { data: participations } = await supabase
+          .from("coaching_participations")
+          .select("coaching_session_id, user_id, status, athlete_note, completed_at")
+          .in("coaching_session_id", sessionIds);
 
-      const { data: participations } = await supabase
-        .from("coaching_participations")
-        .select("coaching_session_id, user_id, status, athlete_note, completed_at")
-        .in("coaching_session_id", sessionIds);
+        (participations || []).forEach(p => {
+          if (!athleteMap[p.user_id]) return; // skip coach or non-members
 
-      const userIds = [...new Set((participations || []).map(p => p.user_id))];
-      if (userIds.length === 0) {
-        setAthletes([]);
-        setLoading(false);
-        return;
-      }
+          const session = sessionMap[p.coaching_session_id];
+          if (!session) return;
 
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, username, avatar_url")
-        .in("user_id", userIds);
-
-      const profileMap: Record<string, { name: string; username: string | null; avatar: string | null }> = {};
-      (profiles || []).forEach(p => {
-        profileMap[p.user_id!] = { name: p.display_name || "Athlète", username: p.username || null, avatar: p.avatar_url };
-      });
-
-      const athleteMap: Record<string, AthleteData> = {};
-
-      (participations || []).forEach(p => {
-        if (!athleteMap[p.user_id]) {
-          const profile = profileMap[p.user_id];
-          athleteMap[p.user_id] = {
-            userId: p.user_id,
-            displayName: profile?.name || "Athlète",
-            username: profile?.username || null,
-            avatarUrl: profile?.avatar || null,
-            days: {},
-            completedCount: 0,
-            totalCount: 0,
-            lateCount: 0,
-            weeklyVolumeKm: 0,
+          const dayKey = format(new Date(session.scheduled_at), "yyyy-MM-dd");
+          athleteMap[p.user_id].days[dayKey] = {
+            status: p.status,
+            note: p.athlete_note,
+            sessionTitle: session.title,
+            sessionId: session.id,
+            session,
           };
-        }
+          athleteMap[p.user_id].totalCount++;
+          athleteMap[p.user_id].weeklyVolumeKm += Number(session.distance_km) || 0;
+          if (p.status === "completed") {
+            athleteMap[p.user_id].completedCount++;
+          } else if (new Date(session.scheduled_at) < new Date()) {
+            athleteMap[p.user_id].lateCount++;
+          }
+        });
+      }
 
-        const session = sessionMap[p.coaching_session_id];
-        if (!session) return;
-
-        const dayKey = format(new Date(session.scheduled_at), "yyyy-MM-dd");
-        athleteMap[p.user_id].days[dayKey] = {
-          status: p.status,
-          note: p.athlete_note,
-          sessionTitle: session.title,
-          sessionId: session.id,
-          session,
-        };
-        athleteMap[p.user_id].totalCount++;
-        athleteMap[p.user_id].weeklyVolumeKm += Number(session.distance_km) || 0;
-        if (p.status === "completed") {
-          athleteMap[p.user_id].completedCount++;
-        } else if (new Date(session.scheduled_at) < new Date()) {
-          athleteMap[p.user_id].lateCount++;
-        }
-      });
-
-      setAthletes(Object.values(athleteMap).sort((a, b) => b.completedCount - a.completedCount));
+      // Sort: athletes with sessions first (by completion), then without (alphabetically)
+      setAthletes(Object.values(athleteMap).sort((a, b) => {
+        if (a.totalCount > 0 && b.totalCount === 0) return -1;
+        if (a.totalCount === 0 && b.totalCount > 0) return 1;
+        if (a.totalCount > 0 && b.totalCount > 0) return b.completedCount - a.completedCount;
+        return a.displayName.localeCompare(b.displayName);
+      }));
     } catch (e) {
       console.error("Error loading tracking:", e);
     } finally {
       setLoading(false);
     }
   };
-
   const filtered = useMemo(() => {
     const q = normalizeSearchValue(search);
     if (!q) return athletes;
