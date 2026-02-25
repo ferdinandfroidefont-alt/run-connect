@@ -9,6 +9,8 @@ import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval }
 import { fr } from "date-fns/locale";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { useToast } from "@/hooks/use-toast";
+import { WeeklyBarChart } from "./WeeklyBarChart";
+import { WeeklyPlanCard } from "./WeeklyPlanCard";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 
@@ -22,6 +24,10 @@ interface SessionInfo {
   title: string;
   scheduled_at: string;
   distance_km: number | null;
+  rcc_code: string | null;
+  activity_type: string;
+  objective: string | null;
+  pace_target: string | null;
 }
 
 interface ParticipationInfo {
@@ -37,6 +43,7 @@ interface DayData {
   note: string | null;
   sessionTitle: string;
   sessionId: string;
+  session: SessionInfo;
 }
 
 interface AthleteData {
@@ -71,7 +78,7 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
     try {
       const { data: sessions } = await supabase
         .from("coaching_sessions")
-        .select("id, title, scheduled_at, distance_km")
+        .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target")
         .eq("club_id", clubId)
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString());
@@ -134,6 +141,7 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
           note: p.athlete_note,
           sessionTitle: session.title,
           sessionId: session.id,
+          session,
         };
         athleteMap[p.user_id].totalCount++;
         athleteMap[p.user_id].weeklyVolumeKm += Number(session.distance_km) || 0;
@@ -330,7 +338,7 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
                   </div>
                 </div>
 
-                {/* Expanded: volume + late + session details */}
+                {/* Expanded: bar chart + session cards */}
                 {isExpanded && (
                   <div className="border-t border-border">
                     {/* Volume & late summary */}
@@ -339,48 +347,39 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
                         📏 Volume : <strong className="text-foreground">{Math.round(athlete.weeklyVolumeKm * 10) / 10} km</strong>
                       </span>
                       {athlete.lateCount > 0 && (
-                        <span className="flex items-center gap-1 text-orange-500">
+                        <span className="flex items-center gap-1 text-destructive">
                           <AlertTriangle className="h-3 w-3" />
                           {athlete.lateCount} en retard
                         </span>
                       )}
                     </div>
-                    {weekDays.map((day, i) => {
-                      const dayKey = format(day, "yyyy-MM-dd");
-                      const dayData = athlete.days[dayKey];
-                      if (!dayData) return null;
 
-                      const isCompleted = dayData.status === "completed";
-                      const dayLabel = format(day, "EEE d", { locale: fr });
+                    {/* Bar chart */}
+                    <div className="px-4 py-2 bg-card">
+                      <WeeklyBarChart
+                        sessions={Object.values(athlete.days).map(d => d.session)}
+                        weekDays={weekDays}
+                      />
+                    </div>
 
-                      return (
-                        <div key={dayKey} className="px-4 py-2.5 bg-card relative">
-                          <div className="flex items-start gap-2">
-                            <span className="text-[14px]">{isCompleted ? "✅" : "⬜"}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[14px] text-foreground">
-                                <span className="text-muted-foreground">{dayLabel}</span>
-                                {" — "}
-                                <span className={isCompleted ? "text-foreground" : "text-muted-foreground"}>
-                                  {dayData.sessionTitle}
-                                </span>
-                              </p>
-                              {dayData.note && (
-                                <p className="text-[13px] text-muted-foreground italic mt-0.5">
-                                  💬 "{dayData.note}"
-                                </p>
-                              )}
-                              {!dayData.note && isCompleted && (
-                                <p className="text-[12px] text-muted-foreground/60 mt-0.5">
-                                  Pas de commentaire
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {i < 6 && <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />}
-                        </div>
-                      );
-                    })}
+                    {/* Session cards */}
+                    <div className="px-3 pb-3 space-y-2">
+                      {weekDays.map((day) => {
+                        const dayKey = format(day, "yyyy-MM-dd");
+                        const dayData = athlete.days[dayKey];
+                        if (!dayData) return null;
+
+                        return (
+                          <WeeklyPlanCard
+                            key={dayKey}
+                            session={dayData.session}
+                            isDone={dayData.status === "completed"}
+                            noteValue={dayData.note || undefined}
+                            showCheckbox={false}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </IOSListGroup>
