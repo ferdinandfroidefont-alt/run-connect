@@ -21,8 +21,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuTrigger } from
+"@/components/ui/dropdown-menu";
 
 const DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -63,7 +63,7 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   parsedBlocks: [],
   coachNotes: "",
   locationName: "",
-  athleteOverrides: {},
+  athleteOverrides: {}
 });
 
 export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId }: WeeklyPlanDialogProps) => {
@@ -90,9 +90,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const sessions = groupPlans[activeGroupId] || [];
 
   const setSessions = useCallback((updater: (prev: WeekSession[]) => WeekSession[]) => {
-    setGroupPlans(prev => ({
+    setGroupPlans((prev) => ({
       ...prev,
-      [activeGroupId]: updater(prev[activeGroupId] || []),
+      [activeGroupId]: updater(prev[activeGroupId] || [])
     }));
   }, [activeGroupId]);
 
@@ -127,22 +127,22 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const loadDraft = async () => {
     if (!user) return;
     const weekStartStr = format(weekStart, "yyyy-MM-dd");
-    const { data } = await supabase
-      .from("coaching_drafts" as any)
-      .select("*")
-      .eq("coach_id", user.id)
-      .eq("club_id", clubId)
-      .eq("week_start", weekStartStr)
-      .eq("group_id", activeGroupId)
-      .maybeSingle();
+    const { data } = await supabase.
+    from("coaching_drafts" as any).
+    select("*").
+    eq("coach_id", user.id).
+    eq("club_id", clubId).
+    eq("week_start", weekStartStr).
+    eq("group_id", activeGroupId).
+    maybeSingle();
     if (data) {
       const draft = data as any;
       const restored = (draft.sessions || []).map((s: any) => ({
         ...s,
         parsedBlocks: s.parsedBlocks || [],
-        athleteOverrides: s.athleteOverrides || {},
+        athleteOverrides: s.athleteOverrides || {}
       }));
-      setGroupPlans(prev => ({ ...prev, [activeGroupId]: restored }));
+      setGroupPlans((prev) => ({ ...prev, [activeGroupId]: restored }));
       setTargetAthletes(draft.target_athletes || []);
       setSentAt(draft.sent_at || null);
     } else {
@@ -154,13 +154,13 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const loadSentSessions = async () => {
     if (!user) return;
     const weekEndDate = addDays(weekStart, 7);
-    let query = supabase
-      .from("coaching_sessions")
-      .select("*")
-      .eq("club_id", clubId)
-      .eq("coach_id", user.id)
-      .gte("scheduled_at", weekStart.toISOString())
-      .lt("scheduled_at", weekEndDate.toISOString());
+    let query = supabase.
+    from("coaching_sessions").
+    select("*").
+    eq("club_id", clubId).
+    eq("coach_id", user.id).
+    gte("scheduled_at", weekStart.toISOString()).
+    lt("scheduled_at", weekEndDate.toISOString());
 
     if (activeGroupId !== "club") {
       query = query.eq("target_group_id", activeGroupId);
@@ -170,7 +170,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
     const { data: sentSessions } = await query;
     if (sentSessions && sentSessions.length > 0) {
-      const imported: WeekSession[] = sentSessions.map(cs => {
+      const imported: WeekSession[] = sentSessions.map((cs) => {
         const scheduledDate = new Date(cs.scheduled_at);
         const dayOfWeek = scheduledDate.getDay();
         const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -182,10 +182,10 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
           coachNotes: cs.coach_notes || "",
           locationName: cs.default_location_name || "",
-          athleteOverrides: {},
+          athleteOverrides: {}
         };
       });
-      setGroupPlans(prev => ({ ...prev, [activeGroupId]: imported }));
+      setGroupPlans((prev) => ({ ...prev, [activeGroupId]: imported }));
       setSentAt(sentSessions[0].created_at);
     } else {
       if (!groupPlans[activeGroupId] || groupPlans[activeGroupId].length === 0) {
@@ -206,46 +206,46 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       week_start: weekStartStr,
       group_id: activeGroupId,
       sessions: stripped,
-      target_athletes: targetAthletes,
+      target_athletes: targetAthletes
     } as any, { onConflict: "coach_id,club_id,week_start,group_id" } as any);
     setDraftSaveStatus("saved");
   };
 
   const loadMembers = async () => {
-    const { data } = await supabase
-      .from("group_members")
-      .select("user_id")
-      .eq("conversation_id", clubId);
+    const { data } = await supabase.
+    from("group_members").
+    select("user_id").
+    eq("conversation_id", clubId);
     if (data && data.length > 0) {
-      const userIds = data.map(d => d.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name")
-        .in("user_id", userIds);
+      const userIds = data.map((d) => d.user_id);
+      const { data: profiles } = await supabase.
+      from("profiles").
+      select("user_id, display_name").
+      in("user_id", userIds);
       setMembers(
-        (profiles || [])
-          .filter(p => p.user_id !== user?.id)
-          .map(p => ({ user_id: p.user_id!, display_name: p.display_name || "Athlète" }))
+        (profiles || []).
+        filter((p) => p.user_id !== user?.id).
+        map((p) => ({ user_id: p.user_id!, display_name: p.display_name || "Athlète" }))
       );
     }
   };
 
   const loadGroups = async () => {
-    const { data: groupsData } = await supabase
-      .from("club_groups")
-      .select("id, name, color")
-      .eq("club_id", clubId);
+    const { data: groupsData } = await supabase.
+    from("club_groups").
+    select("id, name, color").
+    eq("club_id", clubId);
     if (groupsData && groupsData.length > 0) {
-      const { data: memberships } = await supabase
-        .from("club_group_members")
-        .select("group_id, user_id")
-        .in("group_id", groupsData.map(g => g.id));
+      const { data: memberships } = await supabase.
+      from("club_group_members").
+      select("group_id, user_id").
+      in("group_id", groupsData.map((g) => g.id));
       const memberMap: Record<string, string[]> = {};
-      (memberships || []).forEach(m => {
+      (memberships || []).forEach((m) => {
         if (!memberMap[m.group_id]) memberMap[m.group_id] = [];
         memberMap[m.group_id].push(m.user_id);
       });
-      setGroups(groupsData.map(g => ({ ...g, memberIds: memberMap[g.id] || [] })));
+      setGroups(groupsData.map((g) => ({ ...g, memberIds: memberMap[g.id] || [] })));
     } else {
       setGroups([]);
     }
@@ -253,16 +253,16 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
   const loadTemplates = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("coaching_week_templates")
-      .select("id, name, sessions")
-      .eq("coach_id", user.id)
-      .order("created_at", { ascending: false });
+    const { data } = await supabase.
+    from("coaching_week_templates").
+    select("id, name, sessions").
+    eq("coach_id", user.id).
+    order("created_at", { ascending: false });
     if (data) {
-      setTemplates(data.map(t => ({
+      setTemplates(data.map((t) => ({
         id: t.id,
         name: t.name,
-        sessions: (t.sessions as any) || [],
+        sessions: t.sessions as any || []
       })));
     }
   };
@@ -278,23 +278,23 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
   const addSession = (dayIndex: number) => {
     const newSession = createEmptySession(dayIndex);
-    setSessions(prev => [...prev, newSession]);
+    setSessions((prev) => [...prev, newSession]);
     setSelectedIndex(sessions.length);
   };
 
   const updateSession = (index: number, updated: WeekSession) => {
-    setSessions(prev => prev.map((s, i) => (i === index ? updated : s)));
+    setSessions((prev) => prev.map((s, i) => i === index ? updated : s));
   };
 
   const deleteSession = (index: number) => {
-    setSessions(prev => prev.filter((_, i) => i !== index));
+    setSessions((prev) => prev.filter((_, i) => i !== index));
     setSelectedIndex(null);
   };
 
   const duplicateToDay = (sourceIndex: number, targetDay: number) => {
     const source = sessions[sourceIndex];
     const dup: WeekSession = { ...source, dayIndex: targetDay, athleteOverrides: { ...source.athleteOverrides } };
-    setSessions(prev => [...prev, dup]);
+    setSessions((prev) => [...prev, dup]);
     toast({ title: `Séance dupliquée vers ${DAY_LABELS[targetDay]}` });
   };
 
@@ -302,19 +302,19 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const duplicatePlanToGroup = (targetGroupId: string) => {
     const currentSessions = groupPlans[activeGroupId] || [];
     if (currentSessions.length === 0) return;
-    const cloned = currentSessions.map(s => ({
+    const cloned = currentSessions.map((s) => ({
       ...s,
-      athleteOverrides: {},
+      athleteOverrides: {}
     }));
-    setGroupPlans(prev => ({
+    setGroupPlans((prev) => ({
       ...prev,
-      [targetGroupId]: [...(prev[targetGroupId] || []), ...cloned],
+      [targetGroupId]: [...(prev[targetGroupId] || []), ...cloned]
     }));
     setActiveGroupId(targetGroupId);
     setSelectedIndex(null);
-    const targetName = targetGroupId === "club"
-      ? "Tout le club"
-      : groups.find(g => g.id === targetGroupId)?.name || "Groupe";
+    const targetName = targetGroupId === "club" ?
+    "Tout le club" :
+    groups.find((g) => g.id === targetGroupId)?.name || "Groupe";
     toast({ title: `Plan dupliqué vers ${targetName}`, description: `${cloned.length} séances copiées` });
   };
 
@@ -325,7 +325,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     const { error } = await supabase.from("coaching_week_templates").insert({
       coach_id: user.id,
       name: templateName.trim(),
-      sessions: stripped as any,
+      sessions: stripped as any
     });
     if (!error) {
       toast({ title: "Semaine type sauvegardée !" });
@@ -336,10 +336,10 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   };
 
   const loadTemplate = (template: WeekTemplate) => {
-    const restored: WeekSession[] = template.sessions.map(s => ({
+    const restored: WeekSession[] = template.sessions.map((s) => ({
       ...s,
       parsedBlocks: s.parsedBlocks || [],
-      athleteOverrides: s.athleteOverrides || {},
+      athleteOverrides: s.athleteOverrides || {}
     }));
     setSessions(() => restored);
     setSelectedIndex(null);
@@ -355,8 +355,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   // ── Resolve target members for a group ──
   const getMembersForGroup = (groupId: string): ClubMember[] => {
     if (groupId === "club") return members;
-    const group = groups.find(g => g.id === groupId);
-    return group ? members.filter(m => group.memberIds.includes(m.user_id)) : members;
+    const group = groups.find((g) => g.id === groupId);
+    return group ? members.filter((m) => group.memberIds.includes(m.user_id)) : members;
   };
 
   // ── Count total sessions across all groups ──
@@ -384,9 +384,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     }
 
     let intensity: string = 'Facile';
-    if (totalKm > 60) intensity = 'Très intense';
-    else if (totalKm > 45) intensity = 'Intense';
-    else if (totalKm > 30) intensity = 'Modérée';
+    if (totalKm > 60) intensity = 'Très intense';else
+    if (totalKm > 45) intensity = 'Intense';else
+    if (totalKm > 30) intensity = 'Modérée';
 
     return { totalKm: Math.round(totalKm * 10) / 10, totalDuration: Math.round(totalDuration), qualitySessions, intensity };
   }, [sessions]);
@@ -411,16 +411,16 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     if (!user) return;
     const prevWeekStart = subWeeks(weekStart, 1);
     const prevWeekEnd = addDays(prevWeekStart, 7);
-    
+
     const targetGroupId = activeGroupId !== "club" ? activeGroupId : null;
-    
-    let query = supabase
-      .from("coaching_sessions")
-      .select("*")
-      .eq("club_id", clubId)
-      .eq("coach_id", user.id)
-      .gte("scheduled_at", prevWeekStart.toISOString())
-      .lt("scheduled_at", prevWeekEnd.toISOString());
+
+    let query = supabase.
+    from("coaching_sessions").
+    select("*").
+    eq("club_id", clubId).
+    eq("coach_id", user.id).
+    gte("scheduled_at", prevWeekStart.toISOString()).
+    lt("scheduled_at", prevWeekEnd.toISOString());
 
     if (targetGroupId) {
       query = query.eq("target_group_id", targetGroupId);
@@ -432,7 +432,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       return;
     }
 
-    const imported: WeekSession[] = data.map(cs => {
+    const imported: WeekSession[] = data.map((cs) => {
       const scheduledDate = new Date(cs.scheduled_at);
       const dayOfWeek = scheduledDate.getDay();
       const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to Mon=0
@@ -444,7 +444,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
         coachNotes: cs.coach_notes || "",
         locationName: cs.default_location_name || "",
-        athleteOverrides: {},
+        athleteOverrides: {}
       };
     });
 
@@ -454,9 +454,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   };
 
   const groupsWithPlans = useMemo(() => {
-    return Object.entries(groupPlans)
-      .filter(([, s]) => s.length > 0)
-      .map(([id]) => id);
+    return Object.entries(groupPlans).
+    filter(([, s]) => s.length > 0).
+    map(([id]) => id);
   }, [groupPlans]);
 
   // ── Send all group plans ──
@@ -476,53 +476,47 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           const { blocks } = parseRCC(session.rccCode);
           const sessionBlocks = rccToSessionBlocks(blocks);
 
-          const { data: created, error } = await supabase
-            .from("coaching_sessions")
-            .insert({
-              club_id: clubId,
-              coach_id: user.id,
-              title: session.objective || `Séance ${DAY_LABELS[session.dayIndex]}`,
-              description: session.coachNotes || null,
-              activity_type: session.activityType,
-              scheduled_at: scheduledDate.toISOString(),
-              rcc_code: session.rccCode || null,
-              objective: session.objective || null,
-              coach_notes: session.coachNotes || null,
-              session_blocks: sessionBlocks.length > 0 ? sessionBlocks : null,
-              default_location_name: session.locationName || null,
-              send_mode: sendMode,
-              target_athletes: [],
-              target_group_id: targetGroupDbId,
-            })
-            .select("id")
-            .single();
+          const { data: created, error } = await supabase.
+          from("coaching_sessions").
+          insert({
+            club_id: clubId,
+            coach_id: user.id,
+            title: session.objective || `Séance ${DAY_LABELS[session.dayIndex]}`,
+            description: session.coachNotes || null,
+            activity_type: session.activityType,
+            scheduled_at: scheduledDate.toISOString(),
+            rcc_code: session.rccCode || null,
+            objective: session.objective || null,
+            coach_notes: session.coachNotes || null,
+            session_blocks: sessionBlocks.length > 0 ? sessionBlocks : null,
+            default_location_name: session.locationName || null,
+            send_mode: sendMode,
+            target_athletes: [],
+            target_group_id: targetGroupDbId
+          }).
+          select("id").
+          single();
 
           if (error) throw error;
 
           if (created && targetMembers.length > 0) {
-            const participations = targetMembers.map(m => ({
+            const participations = targetMembers.map((m) => ({
               coaching_session_id: created.id,
               user_id: m.user_id,
               status: "sent",
-              athlete_overrides: JSON.parse(JSON.stringify(session.athleteOverrides[m.user_id] || {})),
+              athlete_overrides: JSON.parse(JSON.stringify(session.athleteOverrides[m.user_id] || {}))
             }));
-            const { error: partError } = await supabase.from("coaching_participations").insert(participations);
-            if (partError) {
-              console.error("Error creating participations:", partError);
-              throw new Error(`Erreur lors de l'assignation aux athlètes: ${partError.message}`);
-            }
-          } else if (targetMembers.length === 0) {
-            console.warn("No target members found for group:", groupId);
+            await supabase.from("coaching_participations").insert(participations);
           }
         }
       }
 
       // Notify athletes in-app + push
-      const { data: coachProfile } = await supabase
-        .from("profiles")
-        .select("display_name, username")
-        .eq("user_id", user.id)
-        .single();
+      const { data: coachProfile } = await supabase.
+      from("profiles").
+      select("display_name, username").
+      eq("user_id", user.id).
+      single();
       const coachName = coachProfile?.display_name || coachProfile?.username || "Coach";
       const weekLabel = format(weekStart, "d MMM", { locale: fr });
 
@@ -538,19 +532,18 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             type: "coaching_plan",
             title: "📋 Nouveau plan d'entraînement",
             message: `${coachName} vous a envoyé un plan pour la semaine du ${weekLabel}`,
-            data: { club_id: clubId, week_start: format(weekStart, "yyyy-MM-dd") },
+            data: { club_id: clubId, week_start: format(weekStart, "yyyy-MM-dd") }
           });
           sendPushNotification(m.user_id, "📋 Nouveau plan", `Plan semaine du ${weekLabel}`, "coaching_plan");
         }
       }
 
-      const groupLabels = groupsWithPlans.map(id =>
-        id === "club" ? "Club" : groups.find(g => g.id === id)?.name || "Groupe"
+      const groupLabels = groupsWithPlans.map((id) =>
+      id === "club" ? "Club" : groups.find((g) => g.id === id)?.name || "Groupe"
       );
-      const weekEndLabel = format(addDays(weekStart, 6), "d MMM", { locale: fr });
       toast({
         title: "Plan envoyé ! 🚀",
-        description: `${totalSessionsCount} séances → ${groupLabels.join(", ")} (semaine du ${format(weekStart, "d MMM", { locale: fr })} au ${weekEndLabel})`,
+        description: `${totalSessionsCount} séances → ${groupLabels.join(", ")}`
       });
       // Keep data, mark as sent
       setSentAt(new Date().toISOString());
@@ -565,7 +558,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           group_id: groupId,
           sessions: stripped,
           target_athletes: targetAthletes,
-          sent_at: new Date().toISOString(),
+          sent_at: new Date().toISOString()
         } as any, { onConflict: "coach_id,club_id,week_start,group_id" } as any);
       }
       setSelectedIndex(null);
@@ -583,12 +576,12 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   // Groups available for duplication (excluding current)
   const otherGroups = useMemo(() => {
     const all = [{ id: "club", name: "Tout le club", color: "" }, ...groups];
-    return all.filter(g => g.id !== activeGroupId);
+    return all.filter((g) => g.id !== activeGroupId);
   }, [groups, activeGroupId]);
 
-  const activeGroupLabel = activeGroupId === "club"
-    ? "Tout le club"
-    : groups.find(g => g.id === activeGroupId)?.name || "Groupe";
+  const activeGroupLabel = activeGroupId === "club" ?
+  "Tout le club" :
+  groups.find((g) => g.id === activeGroupId)?.name || "Groupe";
 
   const activeGroupMemberCount = getMembersForGroup(activeGroupId).length;
 
@@ -599,7 +592,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const [showMesocycle, setShowMesocycle] = useState(false);
 
   // Get base values from the selected session for override defaults
-  const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find(b => b.type === "interval");
+  const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find((b) => b.type === "interval");
   const globalBasePace = selectedSessionIntervalBlock?.pace;
   const globalBaseReps = selectedSessionIntervalBlock?.repetitions;
   const globalBaseRecovery = selectedSessionIntervalBlock?.recoveryDuration;
@@ -611,8 +604,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
           <button
             onClick={onClose}
-            className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]"
-          >
+            className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]">
+
             <ArrowLeft className="h-5 w-5" />
             <span className="text-[15px]">Retour</span>
           </button>
@@ -624,220 +617,244 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
         {/* ── Scrollable body ── */}
         <div
-          className="flex-1 overflow-y-auto bg-secondary pb-32"
-          onTouchStart={e => setTouchStartX(e.touches[0].clientX)}
-          onTouchEnd={e => {
+          className="flex-1 overflow-y-auto bg-secondary pb-4"
+          onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+          onTouchEnd={(e) => {
             if (touchStartX === null) return;
             const dx = e.changedTouches[0].clientX - touchStartX;
             if (Math.abs(dx) > 60) {
-              if (dx > 0) setCurrentWeek(prev => subWeeks(prev, 1));
-              else setCurrentWeek(prev => addWeeks(prev, 1));
+              if (dx > 0) setCurrentWeek((prev) => subWeeks(prev, 1));else
+              setCurrentWeek((prev) => addWeeks(prev, 1));
             }
             setTouchStartX(null);
-          }}
-        >
-          {/* ── Week navigator — hero card ── */}
-          <div className="mx-4 mt-4 mb-3">
-            <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
-              {/* Week selector */}
-              <div className="flex items-center justify-between px-5 py-4">
-                <button
-                  onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-                  className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center active:bg-muted transition-colors"
-                >
-                  <ChevronLeft className="h-5 w-5 text-foreground" />
-                </button>
-                <div className="text-center">
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Semaine du</p>
-                  <p className="text-[20px] font-bold text-foreground mt-0.5">
-                    {format(weekStart, "d MMM", { locale: fr })} — {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-                  className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center active:bg-muted transition-colors"
-                >
-                  <ChevronRight className="h-5 w-5 text-foreground" />
-                </button>
-              </div>
+          }}>
 
-              {/* Group switcher pills */}
-              {groups.length > 0 && (
-                <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => { setActiveGroupId("club"); setSelectedIndex(null); }}
-                    className={`px-4 py-2 rounded-full text-[14px] font-semibold transition-all ${
-                      activeGroupId === "club"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    Club
-                    {(groupPlans["club"] || []).length > 0 && (
-                      <span className="ml-1.5 text-[12px] opacity-80">({(groupPlans["club"] || []).length})</span>
-                    )}
-                  </button>
-                  {groups.map(g => {
-                    const count = (groupPlans[g.id] || []).length;
-                    const isActive = g.id === activeGroupId;
-                    return (
-                      <button
-                        key={g.id}
-                        onClick={() => { setActiveGroupId(g.id); setSelectedIndex(null); }}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold transition-all ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "bg-secondary text-muted-foreground"
-                        }`}
-                      >
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: isActive ? 'white' : g.color }} />
-                        {g.name}
-                        {count > 0 && <span className="text-[12px] opacity-80">({count})</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Sent badge */}
-              {sentAt && (
-                <div className="mx-5 mb-4 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                  <span className="text-[14px] font-medium text-green-700 dark:text-green-400">
-                    ✓ Envoyé le {format(new Date(sentAt), "d MMM à HH:mm", { locale: fr })}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Search bar ── */}
-          <div className="mx-4 mb-3">
+          {/* ── ATHLETE / GROUP SEARCH ── */}
+          <div className="mx-4 mt-4 mb-2">
             <Input
               placeholder="🔍 Rechercher un athlète ou groupe..."
               value={athleteSearch}
-              onChange={e => setAthleteSearch(e.target.value)}
-              className="h-11 text-[16px] rounded-xl bg-card border-border"
-            />
+              onChange={(e) => setAthleteSearch(e.target.value)}
+              className="h-10 text-[15px]" />
+
 
             {/* Selected group chip */}
-            {activeGroupId !== "club" && (
-              <div className="flex flex-wrap gap-2 mt-2.5">
+            {activeGroupId !== "club" &&
+            <div className="flex flex-wrap gap-1.5 mt-2">
                 {(() => {
-                  const g = groups.find(g => g.id === activeGroupId);
-                  if (!g) return null;
-                  return (
-                    <button
-                      onClick={() => { setActiveGroupId("club"); setSelectedIndex(null); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-accent-foreground text-[13px] font-medium active:opacity-70"
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: g.color }} />
+                const g = groups.find((g) => g.id === activeGroupId);
+                if (!g) return null;
+                return (
+                  <button
+                    onClick={() => {setActiveGroupId("club");setSelectedIndex(null);}}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-accent-foreground text-[12px] font-medium">
+
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
                       {g.name}
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  );
-                })()}
+                      <X className="h-3 w-3" />
+                    </button>);
+
+              })()}
               </div>
-            )}
+            }
 
             {/* Selected athlete chips */}
-            {targetAthletes.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2.5">
-                {targetAthletes.map(id => {
-                  const m = members.find(m => m.user_id === id);
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setTargetAthletes(prev => prev.filter(a => a !== id))}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[13px] font-medium active:opacity-70"
-                    >
-                      {m?.display_name || "Athlète"}
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {targetAthletes.length > 0 &&
+            <div className="flex flex-wrap gap-1.5 mt-2">
+                {targetAthletes.map((id) => {
+                const m = members.find((m) => m.user_id === id);
+                return;
 
-            {/* Unified search results */}
-            {athleteSearch.trim().length > 0 && (
-              <div className="bg-card rounded-xl border border-border mt-2 max-h-48 overflow-y-auto" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                {groups
-                  .filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase()))
-                  .map(g => (
-                    <button
-                      key={`group-${g.id}`}
-                      onClick={() => {
-                        setActiveGroupId(g.id);
-                        setSelectedIndex(null);
-                        setAthleteSearch("");
-                      }}
-                      className="w-full text-left px-4 py-3 text-[15px] text-foreground active:bg-muted transition-colors border-b border-border last:border-0 flex items-center gap-2.5"
-                    >
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: g.color }} />
+
+
+
+
+
+
+
+
+              })}
+              </div>
+            }
+
+            {/* Unified search results: groups + athletes */}
+            {athleteSearch.trim().length > 0 &&
+            <div className="bg-card rounded-[10px] border border-border mt-1 max-h-40 overflow-y-auto">
+                {/* Group results */}
+                {groups.
+              filter((g) => g.name.toLowerCase().includes(athleteSearch.toLowerCase())).
+              map((g) =>
+              <button
+                key={`group-${g.id}`}
+                onClick={() => {
+                  setActiveGroupId(g.id);
+                  setSelectedIndex(null);
+                  setAthleteSearch("");
+                }}
+                className="w-full text-left px-3 py-2 text-[14px] text-foreground hover:bg-muted transition-colors border-b border-border last:border-0 flex items-center gap-2">
+
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: g.color }} />
                       <span className="font-medium">{g.name}</span>
-                      <span className="text-[13px] text-muted-foreground ml-auto">Groupe · {g.memberIds.length}</span>
+                      <span className="text-[12px] text-muted-foreground ml-auto">Groupe · {g.memberIds.length}</span>
                     </button>
-                  ))
-                }
-                {members
-                  .filter(m =>
-                    m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) &&
-                    !targetAthletes.includes(m.user_id)
-                  )
-                  .slice(0, 5)
-                  .map(m => (
-                    <button
-                      key={m.user_id}
-                      onClick={() => {
-                        setTargetAthletes(prev => [...prev, m.user_id]);
-                        setAthleteSearch("");
-                      }}
-                      className="w-full text-left px-4 py-3 text-[15px] text-foreground active:bg-muted transition-colors border-b border-border last:border-0"
-                    >
+              )
+              }
+                {/* Athlete results */}
+                {members.
+              filter((m) =>
+              m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) &&
+              !targetAthletes.includes(m.user_id)
+              ).
+              slice(0, 5).
+              map((m) =>
+              <button
+                key={m.user_id}
+                onClick={() => {
+                  setTargetAthletes((prev) => [...prev, m.user_id]);
+                  setAthleteSearch("");
+                }}
+                className="w-full text-left px-3 py-2 text-[14px] text-foreground hover:bg-muted transition-colors border-b border-border last:border-0">
+
                       {m.display_name}
                     </button>
-                  ))
-                }
-                {groups.filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase())).length === 0 &&
-                 members.filter(m => m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) && !targetAthletes.includes(m.user_id)).length === 0 && (
-                  <p className="px-4 py-3 text-[14px] text-muted-foreground">Aucun résultat</p>
-                )}
+              )
+              }
+                {groups.filter((g) => g.name.toLowerCase().includes(athleteSearch.toLowerCase())).length === 0 &&
+              members.filter((m) => m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) && !targetAthletes.includes(m.user_id)).length === 0 &&
+              <p className="px-3 py-2 text-[13px] text-muted-foreground">Aucun résultat</p>
+              }
               </div>
-            )}
+            }
           </div>
 
-          {/* ── CALENDAR GRID — big day columns ── */}
-          <div className="mx-4 mb-3">
-            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Calendrier</p>
-            <div className="bg-card rounded-2xl p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
-              <div className="grid grid-cols-7 gap-2">
+          {/* Sent badge */}
+          {sentAt &&
+          <div className="mx-4 mb-2 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full bg-green-100 dark:bg-green-900/30">
+              <span className="text-[12px] font-medium text-green-700 dark:text-green-400">
+                ✓ Envoyé le {format(new Date(sentAt), "d MMM à HH:mm", { locale: fr })}
+              </span>
+            </div>
+          }
+
+          {/* ── SEMAINE section ── */}
+          <IOSListGroup header="SEMAINE" className="mx-4">
+            <div className="px-4 py-3 bg-card flex items-center justify-between">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-[15px] font-medium text-foreground">
+                Sem. {format(weekStart, "d MMM yyyy", { locale: fr })}
+              </span>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            {/* Group pills */}
+            {groupsWithPlans.length > 1 &&
+            <div className="px-4 pb-3 bg-card flex items-center gap-1.5 flex-wrap border-t border-border">
+                {groupsWithPlans.map((id) => {
+                const g = id === "club" ? null : groups.find((g) => g.id === id);
+                const count = (groupPlans[id] || []).length;
+                const isActive = id === activeGroupId;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => {setActiveGroupId(id);setSelectedIndex(null);}}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors mt-2 ${
+                    isActive ?
+                    "bg-primary text-primary-foreground" :
+                    "bg-muted text-muted-foreground hover:bg-accent"}`
+                    }>
+
+                      {g && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: g.color }} />}
+                      {g ? g.name : "Club"} ({count})
+                    </button>);
+
+              })}
+              </div>
+            }
+          </IOSListGroup>
+
+          {/* ── CHARGE DE LA SEMAINE with bar chart ── */}
+          {weekLoadSummary &&
+          <div className="mx-4 px-4 py-3 rounded-xl bg-card border border-border">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <span className="text-[13px] font-semibold text-foreground">Charge de la semaine</span>
+              </div>
+              <div className="flex items-center gap-3 text-[12px] text-muted-foreground flex-wrap mb-3">
+                <span className="font-medium text-foreground">{weekLoadSummary.totalKm} km</span>
+                <span>·</span>
+                <span>{sessions.length} séance{sessions.length > 1 ? "s" : ""}</span>
+                {weekLoadSummary.qualitySessions > 0 &&
+              <>
+                    <span>·</span>
+                    <span>{weekLoadSummary.qualitySessions} qualité</span>
+                  </>
+              }
+                <span>·</span>
+                <Badge variant={
+              weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
+              weekLoadSummary.intensity === 'Intense' ? 'default' :
+              'secondary'
+              } className="text-[10px] px-1.5 py-0">
+                  {weekLoadSummary.intensity}
+                </Badge>
+              </div>
+              {/* Mini bar chart */}
+              {(() => {
+              const maxCharge = Math.max(...dailyCharge, 1);
+              return (
+                <div className="flex items-end gap-1.5 h-16">
+                    {DAY_LABELS.map((label, i) => {
+                    const val = dailyCharge[i];
+                    const pct = val / maxCharge * 100;
+                    const daySessions = (sessionsByDay[i] || []).map((idx) => sessions[idx]);
+                    const hasIntense = daySessions.some((s) => {
+                      const obj = (s.objective || s.activityType || "").toLowerCase();
+                      return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné");
+                    });
+                    const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                          <div className="w-full flex items-end justify-center" style={{ height: 48 }}>
+                            <div
+                            className={`w-full max-w-[20px] rounded-t-sm transition-all ${barColor}`}
+                            style={{ height: val > 0 ? `${Math.max(pct, 8)}%` : 4 }} />
+
+                          </div>
+                          <span className="text-[9px] text-muted-foreground">{label}</span>
+                        </div>);
+
+                  })}
+                  </div>);
+
+            })()}
+            </div>
+          }
+
+          {/* ── SÉANCES grid section — colored pills ── */}
+          <IOSListGroup header="SÉANCES" className="mx-4">
+            <div className="px-3 py-3 bg-card">
+              <div className="grid grid-cols-7 gap-1.5">
                 {DAY_LABELS.map((label, dayIndex) => {
                   const daySessions = sessionsByDay[dayIndex] || [];
-                  const dayDate = addDays(weekStart, dayIndex);
-                  const isToday = format(dayDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
                   return (
-                    <div key={dayIndex} className="flex flex-col items-center gap-1.5">
-                      <span className={`text-[11px] font-semibold uppercase ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                        {label}
-                      </span>
-                      <span className={`text-[13px] font-medium w-7 h-7 flex items-center justify-center rounded-full ${
-                        isToday ? "bg-primary text-primary-foreground" : "text-foreground"
-                      }`}>
-                        {format(dayDate, "d")}
-                      </span>
-                      {daySessions.map(sIdx => {
+                    <div key={dayIndex} className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">{label}</span>
+                      {daySessions.map((sIdx) => {
                         const s = sessions[sIdx];
                         const obj = (s.objective || s.activityType || "").toLowerCase();
-                        let pillColor = "bg-green-500";
+                        let pillColor = "bg-green-500"; // EF default
                         let pillLabel = "EF";
                         if (obj.includes("vma") || obj.includes("interval") || obj.includes("fractionné")) {
-                          pillColor = "bg-red-500"; pillLabel = "VMA";
+                          pillColor = "bg-red-500";pillLabel = "VMA";
                         } else if (obj.includes("seuil")) {
-                          pillColor = "bg-orange-500"; pillLabel = "SEU";
+                          pillColor = "bg-orange-500";pillLabel = "SEU";
                         } else if (obj.includes("récup") || obj.includes("recup")) {
-                          pillColor = "bg-blue-500"; pillLabel = "REC";
+                          pillColor = "bg-blue-500";pillLabel = "REC";
                         } else if (obj.includes("spé") || obj.includes("specifique")) {
-                          pillColor = "bg-purple-500"; pillLabel = "SPÉ";
+                          pillColor = "bg-purple-500";pillLabel = "SPÉ";
                         } else if (s.objective) {
                           pillLabel = s.objective.slice(0, 3).toUpperCase();
                         }
@@ -846,333 +863,243 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                           <button
                             key={sIdx}
                             onClick={() => setSelectedIndex(sIdx)}
-                            className={`w-full py-1.5 rounded-lg text-[10px] font-bold text-white transition-all ${pillColor} ${
-                              isSelected ? "ring-2 ring-primary ring-offset-2 scale-110" : "opacity-90 hover:opacity-100"
-                            }`}
-                          >
+                            className={`w-full py-1 rounded-lg text-[9px] font-bold text-white transition-all ${pillColor} ${
+                            isSelected ? "ring-2 ring-primary ring-offset-1 scale-105" : "opacity-85 hover:opacity-100"}`
+                            }>
+
                             {pillLabel}
-                          </button>
-                        );
+                          </button>);
+
                       })}
                       <button
                         onClick={() => addSession(dayIndex)}
-                        className="w-full py-1.5 rounded-lg border-2 border-dashed border-border text-muted-foreground hover:bg-muted active:bg-muted transition-colors flex items-center justify-center"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
+                        className="w-full py-1 rounded-lg border border-dashed border-border text-[10px] text-muted-foreground hover:bg-muted transition-colors">
+
+                        <Plus className="h-3 w-3 mx-auto" />
                       </button>
-                    </div>
-                  );
+                    </div>);
+
                 })}
               </div>
             </div>
-          </div>
-
-          {/* ── CHARGE DE LA SEMAINE ── */}
-          {weekLoadSummary && (
-            <div className="mx-4 mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Charge de la semaine</p>
-              <div className="bg-card rounded-2xl p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                {/* Stats row */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <BarChart3 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-[22px] font-bold text-foreground leading-none">{weekLoadSummary.totalKm} <span className="text-[14px] font-medium text-muted-foreground">km</span></p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-[14px]">
-                    <div className="text-center">
-                      <p className="text-[18px] font-bold text-foreground">{sessions.length}</p>
-                      <p className="text-[11px] text-muted-foreground">séances</p>
-                    </div>
-                    {weekLoadSummary.qualitySessions > 0 && (
-                      <div className="text-center">
-                        <p className="text-[18px] font-bold text-orange-500">{weekLoadSummary.qualitySessions}</p>
-                        <p className="text-[11px] text-muted-foreground">qualité</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Intensity badge */}
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge variant={
-                    weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
-                    weekLoadSummary.intensity === 'Intense' ? 'default' :
-                    'secondary'
-                  } className="text-[12px] px-3 py-1">
-                    {weekLoadSummary.intensity}
-                  </Badge>
-                </div>
-
-                {/* Bar chart */}
-                {(() => {
-                  const maxCharge = Math.max(...dailyCharge, 1);
-                  return (
-                    <div className="flex items-end gap-2 h-24">
-                      {DAY_LABELS.map((label, i) => {
-                        const val = dailyCharge[i];
-                        const pct = (val / maxCharge) * 100;
-                        const daySessions = (sessionsByDay[i] || []).map(idx => sessions[idx]);
-                        const hasIntense = daySessions.some(s => {
-                          const obj = (s.objective || s.activityType || "").toLowerCase();
-                          return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné");
-                        });
-                        const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
-                        return (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end justify-center" style={{ height: 72 }}>
-                              <div
-                                className={`w-full max-w-[24px] rounded-t-md transition-all ${barColor}`}
-                                style={{ height: val > 0 ? `${Math.max(pct, 10)}%` : 4 }}
-                              />
-                            </div>
-                            <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
+          </IOSListGroup>
 
           {/* ── Éditeur de séance ── */}
-          {selectedSession && selectedIndex !== null ? (
-            <div className="mx-4 mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Éditer la séance</p>
-              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <WeeklyPlanSessionEditor
-                  session={selectedSession}
-                  onChange={s => updateSession(selectedIndex, s)}
-                  onDuplicate={targetDay => duplicateToDay(selectedIndex, targetDay)}
-                  onDelete={() => deleteSession(selectedIndex)}
-                  members={getMembersForGroup(activeGroupId)}
-                />
-              </div>
+          {selectedSession && selectedIndex !== null ?
+          <IOSListGroup className="mx-4">
+              <WeeklyPlanSessionEditor
+              session={selectedSession}
+              onChange={(s) => updateSession(selectedIndex, s)}
+              onDuplicate={(targetDay) => duplicateToDay(selectedIndex, targetDay)}
+              onDelete={() => deleteSession(selectedIndex)}
+              members={getMembersForGroup(activeGroupId)} />
+
+            </IOSListGroup> :
+
+          <div className="text-center py-8 text-muted-foreground mx-4">
+              <p className="text-[15px]">Cliquez sur <strong>+</strong> pour ajouter une séance</p>
+              <p className="text-[13px] mt-1">ou sélectionnez une séance existante</p>
             </div>
-          ) : (
-            <div className="mx-4 mb-3 py-10 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <Plus className="h-7 w-7 text-primary" />
-              </div>
-              <p className="text-[17px] font-semibold text-foreground">Ajouter une séance</p>
-              <p className="text-[14px] text-muted-foreground mt-1">Appuyez sur <strong>+</strong> dans le calendrier<br />ou utilisez le bouton bleu</p>
-            </div>
-          )}
+          }
 
           {/* ── ACTIONS section ── */}
-          <div className="mx-4 mb-3">
-            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Outils</p>
-            <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
-              <IOSListItem
-                icon={History}
-                iconBgColor="bg-amber-500"
-                title="Dupliquer semaine précédente"
-                subtitle="Charger les séances de S-1"
-                onClick={loadPreviousWeek}
-                showSeparator
-              />
-              {templates.length > 0 && (
+          <IOSListGroup header="ACTIONS" className="mx-4">
+            <IOSListItem
+              icon={History}
+              iconBgColor="bg-amber-500"
+              title="Dupliquer semaine précédente"
+              subtitle="Charger les séances de S-1"
+              onClick={loadPreviousWeek}
+              showSeparator />
+
+            {templates.length > 0 &&
+            <IOSListItem
+              icon={FolderOpen}
+              iconBgColor="bg-blue-500"
+              title="Charger semaine type"
+              subtitle={`${templates.length} template${templates.length > 1 ? "s" : ""} disponible${templates.length > 1 ? "s" : ""}`}
+              onClick={() => setShowTemplateList(!showTemplateList)}
+              showSeparator />
+
+            }
+            {showTemplateList && templates.map((t) =>
+            <div key={t.id} className="flex items-center justify-between px-4 py-2.5 bg-card border-b border-border last:border-0">
+                <button
+                onClick={() => {loadTemplate(t);setShowTemplateList(false);}}
+                className="text-[15px] text-primary flex-1 text-left">
+
+                  {t.name} ({t.sessions.length}s)
+                </button>
+                <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive"
+                onClick={() => deleteTemplate(t.id)}>
+
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+            {sessions.length > 0 && otherGroups.length > 0 &&
+            <>
                 <IOSListItem
-                  icon={FolderOpen}
-                  iconBgColor="bg-blue-500"
-                  title="Charger semaine type"
-                  subtitle={`${templates.length} template${templates.length > 1 ? "s" : ""} disponible${templates.length > 1 ? "s" : ""}`}
-                  onClick={() => setShowTemplateList(!showTemplateList)}
-                  showSeparator
-                />
+                icon={Copy}
+                iconBgColor="bg-green-500"
+                title="Dupliquer vers un groupe"
+                subtitle={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} à copier`}
+                onClick={() => setShowDupDropdown(!showDupDropdown)}
+                showSeparator />
+
+                {showDupDropdown && otherGroups.map((g) =>
+              <div key={g.id} className="px-4 py-2.5 bg-card border-b border-border last:border-0">
+                    <button
+                  onClick={() => {duplicatePlanToGroup(g.id);setShowDupDropdown(false);}}
+                  className="text-[15px] text-primary flex items-center gap-2 w-full text-left">
+
+                      {g.id !== "club" &&
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
+                  }
+                      {g.name}
+                    </button>
+                  </div>
               )}
-              {showTemplateList && templates.map(t => (
-                <div key={t.id} className="flex items-center justify-between px-5 py-3 bg-card border-b border-border last:border-0">
-                  <button
-                    onClick={() => { loadTemplate(t); setShowTemplateList(false); }}
-                    className="text-[16px] text-primary flex-1 text-left font-medium"
-                  >
-                    {t.name} ({t.sessions.length}s)
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => deleteTemplate(t.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              {sessions.length > 0 && otherGroups.length > 0 && (
-                <>
-                  <IOSListItem
-                    icon={Copy}
-                    iconBgColor="bg-green-500"
-                    title="Dupliquer vers un groupe"
-                    subtitle={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} à copier`}
-                    onClick={() => setShowDupDropdown(!showDupDropdown)}
-                    showSeparator
-                  />
-                  {showDupDropdown && otherGroups.map(g => (
-                    <div key={g.id} className="px-5 py-3 bg-card border-b border-border last:border-0">
-                      <button
-                        onClick={() => { duplicatePlanToGroup(g.id); setShowDupDropdown(false); }}
-                        className="text-[16px] text-primary flex items-center gap-2.5 w-full text-left font-medium"
-                      >
-                        {g.id !== "club" && (
-                          <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: g.color }} />
-                        )}
-                        {g.name}
-                      </button>
-                    </div>
-                  ))}
-                </>
-              )}
-              {sessions.length > 0 && (
-                <IOSListItem
-                  icon={Save}
-                  iconBgColor="bg-orange-500"
-                  title="Sauver comme semaine type"
-                  onClick={() => setShowSaveTemplate(true)}
-                  showChevron
-                  showSeparator
-                />
-              )}
-              <IOSListItem
-                icon={TrendingUp}
-                iconBgColor="bg-indigo-500"
-                title="Vue mesocycle (8 sem.)"
-                subtitle="Progression volume et intensité"
-                onClick={() => setShowMesocycle(!showMesocycle)}
-                showSeparator={false}
-              />
-            </div>
-          </div>
+              </>
+            }
+            {sessions.length > 0 &&
+            <IOSListItem
+              icon={Save}
+              iconBgColor="bg-orange-500"
+              title="Sauver comme semaine type"
+              onClick={() => setShowSaveTemplate(true)}
+              showChevron
+              showSeparator />
+
+            }
+            <IOSListItem
+              icon={TrendingUp}
+              iconBgColor="bg-indigo-500"
+              title="Vue mesocycle (8 sem.)"
+              subtitle="Progression volume et intensité"
+              onClick={() => setShowMesocycle(!showMesocycle)}
+              showSeparator={false} />
+
+          </IOSListGroup>
 
           {/* Mesocycle panel */}
-          {showMesocycle && (
-            <div className="mx-4 mb-3">
-              <div className="bg-card rounded-2xl p-4 border border-border" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <MesocycleView clubId={clubId} currentWeek={currentWeek} />
-              </div>
+          {showMesocycle &&
+          <div className="mx-4 p-4 rounded-xl bg-card border border-border">
+              <MesocycleView clubId={clubId} currentWeek={currentWeek} />
             </div>
-          )}
+          }
 
           {/* Save template input */}
-          {showSaveTemplate && (
-            <div className="mx-4 mb-3">
-              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <div className="px-5 py-4 flex items-center gap-3">
-                  <Input
-                    value={templateName}
-                    onChange={e => setTemplateName(e.target.value)}
-                    placeholder="Nom de la semaine type..."
-                    className="h-11 text-[16px] flex-1 rounded-xl"
-                    autoFocus
-                    onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
-                  />
-                  <Button size="sm" className="h-11 px-4 text-[14px] rounded-xl" onClick={saveAsTemplate} disabled={!templateName.trim()}>
-                    <Save className="h-4 w-4 mr-1.5" />
-                    Sauver
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setShowSaveTemplate(false)}>
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {showSaveTemplate &&
+          <IOSListGroup className="mx-4">
+              <div className="px-4 py-3 bg-card flex items-center gap-2">
+                <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Nom de la semaine type..."
+                className="h-9 text-[15px] flex-1"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && saveAsTemplate()} />
 
+                <Button size="sm" className="h-9 text-[13px]" onClick={saveAsTemplate} disabled={!templateName.trim()}>
+                  <Save className="h-3.5 w-3.5 mr-1" />
+                  Sauver
+                </Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowSaveTemplate(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </IOSListGroup>
+          }
           {/* ── AJUSTEMENTS ATHLÈTES section ── */}
-          {selectedSession && selectedIndex !== null && sessions.length > 0 && (
-            <div className="mx-4 mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Personnalisation</p>
-              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
-                  <CollapsibleTrigger asChild>
-                    <div className="px-5 py-4 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-purple-500 flex items-center justify-center">
-                          <Users className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-[16px] font-semibold text-foreground">
-                            Personnaliser les allures
-                          </p>
-                          <p className="text-[13px] text-muted-foreground mt-0.5">
-                            {Object.keys(selectedSession.athleteOverrides).length > 0
-                              ? `${Object.keys(selectedSession.athleteOverrides).length} athlète${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""} personnalisé${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""}`
-                              : `${DAY_LABELS[selectedSession.dayIndex]} — ${selectedSession.objective || "séance"}`
-                            }
-                          </p>
-                        </div>
+          {selectedSession && selectedIndex !== null && sessions.length > 0 &&
+          <IOSListGroup header="AJUSTEMENTS PAR ATHLÈTE" className="mx-4">
+              <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
+                <CollapsibleTrigger asChild>
+                  <div className="px-4 py-3 bg-card flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-white" />
                       </div>
-                      <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showAthleteOverrides ? "rotate-180" : ""}`} />
+                      <div>
+                        <p className="text-[15px] font-medium text-foreground">
+                          Personnaliser les allures
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">
+                          {Object.keys(selectedSession.athleteOverrides).length > 0 ?
+                        `${Object.keys(selectedSession.athleteOverrides).length} athlète${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""} personnalisé${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""}` :
+                        `Ajuster séries/allure pour ${DAY_LABELS[selectedSession.dayIndex]} — ${selectedSession.objective || "séance"}`
+                        }
+                        </p>
+                      </div>
                     </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="px-5 py-4 border-t border-border">
-                      <AthleteOverrideEditor
-                        members={getMembersForGroup(activeGroupId)}
-                        overrides={selectedSession.athleteOverrides}
-                        onChange={ov => updateSession(selectedIndex, { ...selectedSession, athleteOverrides: ov })}
-                        basePace={globalBasePace}
-                        baseReps={globalBaseReps}
-                        baseRecovery={globalBaseRecovery}
-                      />
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            </div>
-          )}
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showAthleteOverrides ? "rotate-180" : ""}`} />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-4 py-3 bg-card border-t border-border">
+                    <AthleteOverrideEditor
+                    members={getMembersForGroup(activeGroupId)}
+                    overrides={selectedSession.athleteOverrides}
+                    onChange={(ov) => updateSession(selectedIndex, { ...selectedSession, athleteOverrides: ov })}
+                    basePace={globalBasePace}
+                    baseReps={globalBaseReps}
+                    baseRecovery={globalBaseRecovery} />
 
-          {/* FAB */}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </IOSListGroup>
+          }
+
+          {/* FAB - Add session for today */}
           <button
             onClick={() => {
               const todayDow = new Date().getDay();
               const dayIndex = todayDow === 0 ? 6 : todayDow - 1;
               addSession(dayIndex);
             }}
-            className="fixed bottom-28 right-6 z-20 h-14 w-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-            style={{ boxShadow: '0 6px 20px hsl(var(--primary) / 0.35)' }}
-          >
-            <Plus className="h-7 w-7" />
+            className="fixed bottom-24 right-6 z-20 h-14 w-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            style={{ boxShadow: '0 4px 14px hsl(var(--primary) / 0.4)' }}>
+
+            <Plus className="h-6 w-6" />
           </button>
         </div>
 
         {/* ── Fixed footer ── */}
-        <div className="shrink-0 border-t border-border px-5 py-4 space-y-3 bg-card">
+        <div className="shrink-0 border-t border-border p-4 space-y-3 bg-card">
           {/* Draft save status */}
-          {draftSaveStatus !== "idle" && (
-            <p className="text-[12px] text-muted-foreground text-center">
+          {draftSaveStatus !== "idle" &&
+          <p className="text-[11px] text-muted-foreground text-center">
               {draftSaveStatus === "saving" ? "Sauvegarde..." : "✓ Brouillon sauvegardé"}
             </p>
-          )}
-          {totalSessionsCount > 0 && (
-            <div className="flex items-center gap-2 flex-wrap justify-center">
-              <span className="text-[13px] text-muted-foreground">
-                {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} → {groupsWithPlans.map(id =>
-                  id === "club" ? `Club (${members.length})` : `${groups.find(g => g.id === id)?.name} (${groups.find(g => g.id === id)?.memberIds.length || 0})`
-                ).join(", ")}
-              </span>
+          }
+          {totalSessionsCount > 0 &&
+          <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary" className="text-[11px]">
+                {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} → {groupsWithPlans.map((id) =>
+              id === "club" ? `Club (${members.length})` : `${groups.find((g) => g.id === id)?.name} (${groups.find((g) => g.id === id)?.memberIds.length || 0})`
+              ).join(", ")}
+              </Badge>
             </div>
-          )}
+          }
           <Button
-            className="w-full h-12 text-[17px] font-semibold rounded-xl"
+            className="w-full h-11 text-[17px]"
             onClick={handleSendPlan}
-            disabled={totalSessionsCount === 0 || sending}
-          >
-            {sending ? (
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5 mr-2" />
-            )}
+            disabled={totalSessionsCount === 0 || sending}>
+
+            {sending ?
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> :
+
+            <Send className="h-4 w-4 mr-2" />
+            }
             {sentAt ? "Renvoyer" : "Envoyer"} {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
           </Button>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 };
