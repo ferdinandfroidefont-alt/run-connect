@@ -293,7 +293,19 @@ const Messages = () => {
               .eq('user_id', user.id)
               .single();
 
-            if (!membership) return null; // User is not a member
+            if (!membership) {
+              // Auto-repair: if user is the creator, insert them as admin
+              if (conv.created_by === user.id) {
+                console.log(`🔧 Auto-repair: inserting creator as admin for club ${conv.id}`);
+                await supabase.from('group_members').insert({
+                  conversation_id: conv.id,
+                  user_id: user.id,
+                  is_admin: true
+                });
+              } else {
+                return null; // User is not a member
+              }
+            }
 
             // Get club members profiles separately
             const { data: memberIds } = await supabase
