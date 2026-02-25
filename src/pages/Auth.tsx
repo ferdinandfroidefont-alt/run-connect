@@ -242,7 +242,7 @@ const Auth = () => {
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: 'app.runconnect://auth',
+              redirectTo: 'https://run-connect.lovable.app/auth/callback',
               skipBrowserRedirect: true,
               queryParams: { access_type: 'offline', prompt: 'consent' }
             }
@@ -265,7 +265,6 @@ const Auth = () => {
                 appUrlListener.remove();
 
                 // Extraire les tokens du fragment (#) ou query (?)
-                // Le format deep link: app.runconnect://auth#access_token=...&refresh_token=...
                 const hashIndex = url.indexOf('#');
                 const queryIndex = url.indexOf('?');
                 
@@ -278,37 +277,64 @@ const Auth = () => {
 
                 const accessToken = params.get('access_token');
                 const refreshToken = params.get('refresh_token');
+                const code = params.get('code');
+                const sessionOk = params.get('session');
 
                 if (accessToken && refreshToken) {
+                  // Implicit flow tokens
                   console.log('🍎 [GOOGLE AUTH] Tokens found, setting session...');
                   const { error: sessionError } = await supabase.auth.setSession({
                     access_token: accessToken,
                     refresh_token: refreshToken
                   });
-
                   if (sessionError) throw sessionError;
-
-                  // Vérifier le profil
-                  const { data: { user } } = await supabase.auth.getUser();
-                  if (user) {
-                    const { data: existingProfile } = await supabase
-                      .from('profiles')
-                      .select('id, username')
-                      .eq('user_id', user.id)
-                      .maybeSingle();
-
-                    if (!existingProfile) {
-                      setNewUserId(user.id);
-                      setShowProfileSetup(true);
-                    } else {
-                      navigate('/', { replace: true });
-                    }
+                } else if (code) {
+                  // PKCE flow - exchange code for session
+                  console.log('🍎 [GOOGLE AUTH] PKCE code found, exchanging...');
+                  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                  if (exchangeError) throw exchangeError;
+                } else if (sessionOk === 'ok') {
+                  // Returning from AuthCallback - session already established in SFSafariViewController
+                  console.log('🍎 [GOOGLE AUTH] Session already established via callback page');
+                  // Session was set in the SFSafariViewController context, 
+                  // but we need to refresh it in the WKWebView context
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) {
+                    console.log('🍎 [GOOGLE AUTH] No session in WKWebView, waiting...');
+                    // The session might take a moment to sync
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                   }
                 } else {
-                  console.warn('🍎 [GOOGLE AUTH] No tokens in deep link URL, check redirect config');
+                  console.warn('🍎 [GOOGLE AUTH] No tokens/code in deep link URL');
                   toast({
                     title: "Erreur Google Sign-In",
-                    description: "Tokens non reçus. Vérifiez la configuration.",
+                    description: "Authentification non reçue. Réessayez.",
+                    variant: "destructive"
+                  });
+                  setIsLoading(false);
+                  return;
+                }
+
+                // Vérifier le profil après authentification
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  const { data: existingProfile } = await supabase
+                    .from('profiles')
+                    .select('id, username')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                  if (!existingProfile) {
+                    setNewUserId(user.id);
+                    setShowProfileSetup(true);
+                  } else {
+                    navigate('/', { replace: true });
+                  }
+                } else {
+                  console.warn('🍎 [GOOGLE AUTH] No user after auth');
+                  toast({
+                    title: "Erreur",
+                    description: "Impossible de récupérer l'utilisateur.",
                     variant: "destructive"
                   });
                 }
