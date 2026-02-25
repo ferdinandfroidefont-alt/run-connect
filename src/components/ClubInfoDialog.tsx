@@ -367,36 +367,36 @@ export const ClubInfoDialog = ({
 
           <div className="space-y-2">
             {/* Group Header — Enhanced */}
-            <div className="flex flex-col items-center text-center py-4">
-              <Avatar className="h-20 w-20 mb-3">
-                <AvatarImage src={groupAvatarUrl || ""} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {(groupName || "C").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <h2 className="text-[20px] font-bold text-foreground">{groupName}</h2>
-              {groupDescription && (
-                <p className="text-[13px] text-muted-foreground mt-1 max-w-[260px]">{groupDescription}</p>
-              )}
-              {/* Mini stats row */}
-              <div className="flex gap-5 mt-4">
-                <div className="text-center">
-                  <span className="text-[17px] font-semibold text-foreground">{members.length}</span>
-                  <p className="text-[10px] text-muted-foreground">Membres</p>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <span className="text-[17px] font-semibold text-foreground">
-                    {members.filter(m => m.is_coach).length}
-                  </span>
-                  <p className="text-[10px] text-muted-foreground">Coachs</p>
-                </div>
-              </div>
-            </div>
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
             {/* Club Code - visible to all members */}
-            {clubCode && (
+            {clubCode &&
               <div className="bg-card rounded-[10px] p-3 flex items-center justify-between mb-2" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
                 <div>
                   <p className="text-[11px] text-muted-foreground">Code du club</p>
@@ -407,12 +407,12 @@ export const ClubInfoDialog = ({
                     navigator.clipboard.writeText(clubCode);
                     toast({ title: "Code copié !" });
                   }}
-                  className="text-primary active:opacity-70"
-                >
+                  className="text-primary active:opacity-70">
+
                   <Copy className="h-5 w-5" />
                 </button>
               </div>
-            )}
+              }
 
             {currentUserIsCoach ? (
               /* ===== COACH / ADMIN VIEW: Full tabs ===== */
@@ -438,13 +438,13 @@ export const ClubInfoDialog = ({
                       <h4 className="font-medium text-sm">Membres du club</h4>
                       <div className="flex gap-2">
                         {isAdmin &&
-                          <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)}>
+                        <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)}>
                             <UserPlus className="h-4 w-4 mr-1" />
                             Inviter
                           </Button>
                         }
                         {isAdmin &&
-                          <Button variant="outline" size="sm" onClick={onEditGroup}>
+                        <Button variant="outline" size="sm" onClick={onEditGroup}>
                             <Settings className="h-4 w-4 mr-1" />
                             Gérer
                           </Button>
@@ -453,45 +453,45 @@ export const ClubInfoDialog = ({
                     </div>
 
                     {loading ?
-                      <div className="space-y-2">
+                    <div className="space-y-2">
                         {[1, 2, 3].map((i) =>
-                          <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
                             <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
                             <div className="flex-1">
                               <div className="h-4 bg-muted rounded animate-pulse mb-1" />
                               <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
                             </div>
                           </div>
-                        )}
+                      )}
                       </div> :
-                      <div className="space-y-1 max-h-64 overflow-y-auto">
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
                         {members.map((member) =>
-                          <div
-                            key={member.user_id}
-                            className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                              member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`}>
+                      <div
+                        key={member.user_id}
+                        className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                        member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`}>
                             <div className="relative">
                               <Avatar
-                                className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => navigateToProfile(member.user_id)}>
+                            className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigateToProfile(member.user_id)}>
                                 <AvatarImage src={member.avatar_url || ""} />
                                 <AvatarFallback>
                                   {(member.username || member.display_name || "").charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               {member.is_admin &&
-                                <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
+                          <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
                                   <Crown className="h-3 w-3 text-primary-foreground" />
                                 </div>
-                              }
+                          }
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <p className="font-medium text-sm truncate">
                                   {member.username || member.display_name}
                                   {member.user_id === user?.id &&
-                                    <span className="text-muted-foreground"> (vous)</span>
-                                  }
+                              <span className="text-muted-foreground"> (vous)</span>
+                              }
                                 </p>
                                 {member.is_admin && <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>}
                                 {member.is_coach && <CoachBadge />}
@@ -500,21 +500,21 @@ export const ClubInfoDialog = ({
                             </div>
                             <div className="flex items-center gap-1">
                               {isAdmin && member.user_id !== user?.id &&
-                                <Button variant="ghost" size="sm" onClick={() => toggleCoach(member.user_id, member.is_coach)}
-                                  title={member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}>
+                          <Button variant="ghost" size="sm" onClick={() => toggleCoach(member.user_id, member.is_coach)}
+                          title={member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}>
                                   <GraduationCap className={`h-4 w-4 ${member.is_coach ? 'text-amber-500' : 'text-muted-foreground'}`} />
                                 </Button>
-                              }
+                          }
                               {isAdmin && member.user_id !== user?.id &&
-                                <Button variant="ghost" size="sm"
-                                  onClick={() => { setMemberToDelete(member); setShowDeleteDialog(true); }}
-                                  className="text-destructive hover:text-destructive">
+                          <Button variant="ghost" size="sm"
+                          onClick={() => {setMemberToDelete(member);setShowDeleteDialog(true);}}
+                          className="text-destructive hover:text-destructive">
                                   <UserMinus className="h-4 w-4" />
                                 </Button>
-                              }
+                          }
                             </div>
                           </div>
-                        )}
+                      )}
                       </div>
                     }
                   </div>
@@ -527,51 +527,51 @@ export const ClubInfoDialog = ({
                 <TabsContent value="groups" className="mt-3">
                   <ClubGroupsManager clubId={conversationId} />
                 </TabsContent>
-              </Tabs>
-            ) : (
+              </Tabs>) : (
+
               /* ===== MEMBER VIEW: Simple member list only ===== */
               <div>
                 <h4 className="font-medium text-sm mb-3">Membres du club</h4>
                 {loading ?
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     {[1, 2, 3].map((i) =>
-                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
+                  <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
                         <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
                         <div className="flex-1">
                           <div className="h-4 bg-muted rounded animate-pulse mb-1" />
                           <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
                         </div>
                       </div>
-                    )}
+                  )}
                   </div> :
-                  <div className="space-y-1 max-h-80 overflow-y-auto">
+                <div className="space-y-1 max-h-80 overflow-y-auto">
                     {members.map((member) =>
-                      <div
-                        key={member.user_id}
-                        className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                          member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`}>
+                  <div
+                    key={member.user_id}
+                    className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                    member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`}>
                         <div className="relative">
                           <Avatar
-                            className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => navigateToProfile(member.user_id)}>
+                        className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => navigateToProfile(member.user_id)}>
                             <AvatarImage src={member.avatar_url || ""} />
                             <AvatarFallback>
                               {(member.username || member.display_name || "").charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           {member.is_admin &&
-                            <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
+                      <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
                               <Crown className="h-3 w-3 text-primary-foreground" />
                             </div>
-                          }
+                      }
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="font-medium text-sm truncate">
                               {member.username || member.display_name}
                               {member.user_id === user?.id &&
-                                <span className="text-muted-foreground"> (vous)</span>
-                              }
+                          <span className="text-muted-foreground"> (vous)</span>
+                          }
                             </p>
                             {member.is_admin && <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>}
                             {member.is_coach && <CoachBadge />}
@@ -579,11 +579,11 @@ export const ClubInfoDialog = ({
                           <p className="text-xs text-muted-foreground truncate">@{member.username}</p>
                         </div>
                       </div>
-                    )}
+                  )}
                   </div>
                 }
-              </div>
-            )}
+              </div>)
+              }
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
@@ -595,11 +595,11 @@ export const ClubInfoDialog = ({
                   <Trash2 className="h-4 w-4 mr-2" />
                   Supprimer le club
                 </Button>
-              }
+                }
               <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex-1">
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1">
                 Fermer
               </Button>
             </div>
