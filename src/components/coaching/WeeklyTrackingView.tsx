@@ -83,6 +83,30 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+  // On first mount, find the latest week with coaching sessions
+  const [initialNavDone, setInitialNavDone] = useState(false);
+  useEffect(() => {
+    if (initialNavDone) return;
+    const findLatestWeek = async () => {
+      const { data: latestSession } = await supabase
+        .from("coaching_sessions")
+        .select("scheduled_at")
+        .eq("club_id", clubId)
+        .order("scheduled_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (latestSession) {
+        const latestDate = new Date(latestSession.scheduled_at);
+        const latestWeekStart = startOfWeek(latestDate, { weekStartsOn: 1 });
+        if (latestWeekStart.getTime() !== weekStart.getTime()) {
+          setCurrentWeek(latestDate);
+        }
+      }
+      setInitialNavDone(true);
+    };
+    findLatestWeek();
+  }, [clubId]);
+
   useEffect(() => { loadTracking(); }, [clubId, currentWeek]);
 
   const loadTracking = async () => {
