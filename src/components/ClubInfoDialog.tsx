@@ -76,13 +76,6 @@ export const ClubInfoDialog = ({
   createdBy,
   onEditGroup
 }: ClubInfoDialogProps) => {
-  console.log('🔍 GroupInfoDialog render - DEBUGGING:');
-  console.log('- isOpen:', isOpen);
-  console.log('- conversationId:', conversationId);
-  console.log('- groupName:', groupName);
-  console.log('- groupDescription:', groupDescription);
-  console.log('- groupAvatarUrl:', groupAvatarUrl);
-  console.log('- isAdmin:', isAdmin);
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
@@ -102,14 +95,14 @@ export const ClubInfoDialog = ({
 
     setLoading(true);
     try {
-      console.log('🔍 Loading members for conversation:', conversationId);
+      
 
       const { data: memberIds, error: memberError } = await supabase.
       from('group_members').
       select('user_id, is_admin, is_coach, joined_at').
       eq('conversation_id', conversationId);
 
-      console.log('📊 Member IDs result:', { memberIds, memberError });
+      
 
       if (memberError) {
         console.error('Error fetching member IDs:', memberError);
@@ -122,7 +115,7 @@ export const ClubInfoDialog = ({
         select('user_id, username, display_name, avatar_url').
         in('user_id', memberIds.map((m) => m.user_id));
 
-        console.log('👥 Member profiles result:', { memberProfiles, profileError });
+        
 
         if (profileError) {
           console.error('Error fetching member profiles:', profileError);
@@ -148,10 +141,10 @@ export const ClubInfoDialog = ({
           );
         });
 
-        console.log('✅ Final members with profiles:', membersWithProfiles);
+        
         setMembers(membersWithProfiles);
       } else {
-        console.log('⚠️ No members found for this club');
+        
         setMembers([]);
       }
     } catch (error) {
@@ -336,7 +329,7 @@ export const ClubInfoDialog = ({
     } else {
       setSearchResults([]);
     }
-  }, [searchQuery, members]);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (isOpen) {
