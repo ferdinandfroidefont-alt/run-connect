@@ -341,6 +341,11 @@ html, body {
     padding-bottom: 64px !important;
   }
 
+  /* iOS: descendre le titre pour aligner avec cloche/paramètres */
+  .ios-title-align {
+    margin-top: 0.75rem !important;
+  }
+
   /* iOS: remonter les boutons du header carte */
   .ios-map-header {
     align-items: flex-start !important;
@@ -425,6 +430,15 @@ html, body {
   50% {
     filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.9));
     transform: translate(-50%, -100%) scale(1.1);
+  }
+}
+
+/* Android: remonter les filtres pour aligner avec les boutons horaires */
+@supports not (-webkit-touch-callout: none) {
+  @media (max-width: 768px) {
+    .android-map-filters {
+      top: 7.5rem !important;
+    }
   }
 }
 
