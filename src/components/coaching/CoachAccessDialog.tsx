@@ -56,8 +56,8 @@ export const CoachAccessDialog = ({
         .eq("user_id", user.id)
         .eq("is_coach", true);
 
-      if (memberships && memberships.length > 0) {
-        const clubIds = memberships.map((m) => m.conversation_id);
+      const clubIds = (memberships || []).map((m) => m.conversation_id);
+      if (clubIds.length > 0) {
         const { data: convs } = await supabase
           .from("conversations")
           .select("id, group_name")
@@ -68,15 +68,7 @@ export const CoachAccessDialog = ({
           (convs || []).map((c) => ({ conversation_id: c.id, group_name: c.group_name }))
         );
       } else {
-        const { data: createdClubs } = await supabase
-          .from("conversations")
-          .select("id, group_name")
-          .eq("created_by", user.id)
-          .eq("is_group", true);
-
-        setClubs(
-          (createdClubs || []).map((c) => ({ conversation_id: c.id, group_name: c.group_name }))
-        );
+        setClubs([]);
       }
     } catch (error) {
       console.error("Error loading coach clubs:", error);
