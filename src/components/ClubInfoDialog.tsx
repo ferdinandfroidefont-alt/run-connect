@@ -363,7 +363,7 @@ export const ClubInfoDialog = ({
             <div className="min-w-[70px]" />
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
 
           <div className="space-y-2">
             {/* Group Header — Enhanced */}
@@ -418,16 +418,16 @@ export const ClubInfoDialog = ({
               /* ===== COACH / ADMIN VIEW: Full tabs ===== */
               <Tabs defaultValue="coaching" className="w-full">
                 <TabsList className="w-full">
-                  <TabsTrigger value="members" className="flex-1 gap-1">
-                    <Users className="h-4 w-4" />
+                  <TabsTrigger value="members" className="flex-1 gap-1 px-1.5 text-[12px]">
+                    <Users className="h-3.5 w-3.5" />
                     Membres
                   </TabsTrigger>
-                  <TabsTrigger value="coaching" className="flex-1 gap-1">
-                    <GraduationCap className="h-4 w-4" />
+                  <TabsTrigger value="coaching" className="flex-1 gap-1 px-1.5 text-[12px]">
+                    <GraduationCap className="h-3.5 w-3.5" />
                     Entraînements
                   </TabsTrigger>
-                  <TabsTrigger value="groups" className="flex-1 gap-1">
-                    <Users className="h-4 w-4" />
+                  <TabsTrigger value="groups" className="flex-1 gap-1 px-1.5 text-[12px]">
+                    <Users className="h-3.5 w-3.5" />
                     Groupes
                   </TabsTrigger>
                 </TabsList>
