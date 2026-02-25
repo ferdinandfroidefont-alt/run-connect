@@ -58,6 +58,15 @@ interface AthleteData {
   weeklyVolumeKm: number;
 }
 
+const normalizeSearchValue = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/^@/, "")
+    .trim();
+
 export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps) => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
@@ -163,12 +172,15 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
   };
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return athletes;
-    const q = search.toLowerCase();
-    return athletes.filter(a =>
-      a.displayName.toLowerCase().includes(q) ||
-      (a.username && a.username.toLowerCase().includes(q))
-    );
+    const q = normalizeSearchValue(search);
+    if (!q) return athletes;
+
+    return athletes.filter((athlete) => {
+      const displayName = normalizeSearchValue(athlete.displayName);
+      const username = normalizeSearchValue(athlete.username || "");
+      const searchable = `${displayName}${username}`;
+      return searchable.includes(q);
+    });
   }, [athletes, search]);
 
   const getLateSessionTitles = (athlete: AthleteData): string[] => {
