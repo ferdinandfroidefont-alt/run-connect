@@ -13,6 +13,7 @@ import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp } from "lucide-react";
 import { MesocycleView } from "./MesocycleView";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { parseRCC, rccToSessionBlocks, computeRCCSummary } from "@/lib/rccParser";
@@ -68,6 +69,7 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
 export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId }: WeeklyPlanDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendPushNotification } = useSendNotification();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [groupPlans, setGroupPlans] = useState<GroupPlans>({});
   const [activeGroupId, setActiveGroupId] = useState<string>("club");
@@ -465,6 +467,33 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             }));
             await supabase.from("coaching_participations").insert(participations);
           }
+        }
+      }
+
+      // Notify athletes in-app + push
+      const { data: coachProfile } = await supabase
+        .from("profiles")
+        .select("display_name, username")
+        .eq("user_id", user.id)
+        .single();
+      const coachName = coachProfile?.display_name || coachProfile?.username || "Coach";
+      const weekLabel = format(weekStart, "d MMM", { locale: fr });
+
+      const notifiedSet = new Set<string>();
+      for (const [groupId, groupSessions] of Object.entries(groupPlans)) {
+        if (groupSessions.length === 0) continue;
+        const targetMembers = getMembersForGroup(groupId);
+        for (const m of targetMembers) {
+          if (notifiedSet.has(m.user_id)) continue;
+          notifiedSet.add(m.user_id);
+          await supabase.from("notifications").insert({
+            user_id: m.user_id,
+            type: "coaching_plan",
+            title: "📋 Nouveau plan d'entraînement",
+            message: `${coachName} vous a envoyé un plan pour la semaine du ${weekLabel}`,
+            data: { club_id: clubId, week_start: format(weekStart, "yyyy-MM-dd") },
+          });
+          sendPushNotification(m.user_id, "📋 Nouveau plan", `Plan semaine du ${weekLabel}`, "coaching_plan");
         }
       }
 

@@ -172,7 +172,7 @@ export const CreateCoachingSessionDialog = ({
         );
       }
 
-      // Notify
+      // Notify in-app + push
       const { data: coachProfile } = await supabase
         .from("profiles")
         .select("display_name, username")
@@ -181,6 +181,13 @@ export const CreateCoachingSessionDialog = ({
       const coachName = coachProfile?.display_name || coachProfile?.username || "Coach";
 
       for (const athleteId of recipientIds) {
+        await supabase.from("notifications").insert({
+          user_id: athleteId,
+          type: "coaching_session",
+          title: `🎓 Nouvelle séance de ${coachName}`,
+          message: title,
+          data: { club_id: clubId, coaching_session_id: session.id },
+        });
         sendPushNotification(athleteId, `🎓 Nouvelle séance de ${coachName}`, title, "coaching_session");
       }
 
