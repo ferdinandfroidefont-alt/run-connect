@@ -1,84 +1,126 @@
 
 
-## Diagnostic
+## Audit complet du mode Coach - Problemes identifies
 
-Le probleme est dans le flux Google OAuth iOS. Voici ce qui se passe :
+Apres analyse detaillee de tous les composants coaching, voici les bugs et dysfonctionnements trouves :
 
-1. L'app appelle `supabase.auth.signInWithOAuth` avec `redirectTo: 'app.runconnect://auth'`
-2. Le client Supabase est configure en `flowType: 'pkce'` (ligne 26 de `client.ts`)
-3. Avec PKCE, apres l'auth Google, le serveur Supabase fait une redirection HTTP 302 vers `app.runconnect://auth?code=XXXX`
-4. Safari/SFSafariViewController ne peut pas "ouvrir" un custom scheme comme une page web → **"Safari ne peut pas ouvrir la page car l'adresse n'est pas valide"**
-5. Meme si le deep link arrive dans l'app, le code actuel (lignes 279-280) cherche `access_token` et `refresh_token` dans le fragment URL (`#`), mais avec PKCE il n'y a qu'un parametre `code` dans la query string (`?`) → les tokens ne sont jamais trouves
+---
 
-**Deux bugs combines :**
-- Le custom scheme comme redirect URL pose probleme avec PKCE sur iOS
-- Le handler ne gere pas l'echange de code PKCE
+### BUG 1 (CRITIQUE) : Requete avec `club_id` vide → erreur 400
 
-## Plan de correction
+**Fichier** : `src/components/coaching/CoachAccessDialog.tsx`
+**Probleme** : Quand l'utilisateur clique sur un club coach dans le `CoachAccessDialog`, `onSelectClub(club.conversation_id)` est appele, puis le dialog se ferme. Mais dans `Messages.tsx`, la valeur du `clubId` semble etre transmise au `CoachingTab` via `ClubInfoDialog`. Le network log montre une requete `club_id=eq.` (chaine vide) vers `coaching_sessions` qui retourne un 400 `"invalid input syntax for type uuid"`. Cela signifie que le `clubId` transmis au `CoachingTab` est parfois vide/undefined lors du second rendu. Le `ClubInfoDialog` est re-rendu en boucle toutes les secondes (visible dans les console logs : `GroupInfoDialog render - DEBUGGING` chaque seconde), ce qui cause aussi des requetes repetees inutiles.
 
-### Fichier : `src/pages/Auth.tsx`
+**Correction** :
+- Dans `CoachingTab`, ajouter un guard `if (!clubId) return null;` au debut du `loadDashboard`
+- Supprimer ou conditionner les console.log de debug du `ClubInfoDialog` qui polluent les logs et indiquent un re-render excessif
 
-**A. Changer la strategie de redirect pour iOS**
+---
 
-Remplacer `redirectTo: 'app.runconnect://auth'` par `redirectTo: 'https://run-connect.lovable.app/auth/callback'` (URL web).
+### BUG 2 (MODERE) : `AthleteWeeklyDialog` passe un tableau `sessions` vide
 
-Apres l'auth Google, Supabase redirige vers cette URL web. La page web dans SFSafariViewController va charger, et `detectSessionInUrl: true` du client Supabase va automatiquement echanger le code PKCE. Ensuite, on redirige vers le custom scheme pour revenir dans l'app.
+**Fichier** : `src/components/coaching/AthleteWeeklyDialog.tsx` (ligne 48-49)
+**Probleme** : Le composant passe toujours `sessions={[]}` a `AthleteWeeklyView`. Bien que `AthleteWeeklyView` charge ses propres sessions via Supabase, le prop `parentSessions` recu est inutile et ne sert qu'a la vue dans `CoachingTab`. Ce n'est pas un vrai bug car `AthleteWeeklyView` utilise son propre `loadWeek()`, mais c'est une confusion d'API.
 
-**B. Ajouter la gestion du code PKCE dans le deep link handler**
+**Impact** : Aucun impact fonctionnel direct - `AthleteWeeklyView.loadWeek()` charge correctement les sessions.
 
-Dans le listener `appUrlOpen`, en plus de chercher `access_token`/`refresh_token`, verifier la presence d'un parametre `code` et appeler `supabase.auth.exchangeCodeForSession(code)` pour etablir la session.
+---
 
-**C. Creer une route `/auth/callback` qui redirige vers l'app native**
+### BUG 3 (MODERE) : Re-render infini du `ClubInfoDialog`
 
-Ajouter un composant `AuthCallback` qui :
-1. Laisse Supabase echanger le code PKCE automatiquement (via `detectSessionInUrl`)
-2. Detecte que la session est etablie
-3. Redirige vers `app.runconnect://` pour que SFSafariViewController renvoie dans l'app
-4. Si on est deja dans l'app native (pas dans SFSafariViewController), navigate vers `/`
+**Console logs** : Le `GroupInfoDialog render - DEBUGGING` apparait toutes les secondes sans arret.
+**Probleme** : Il y a un effet secondaire dans `ClubInfoDialog` ou `Messages.tsx` qui cause un re-render continu du dialog quand il est ouvert. Cela surcharge les performances et multiplie les requetes Supabase inutiles.
 
-### Fichier : `src/App.tsx`
+**Correction** :
+- Identifier la source du re-render dans `ClubInfoDialog` (probablement un `useEffect` avec des dependances instables ou un state parent qui change frequemment)
+- Supprimer les `console.log` de debug
 
-**D. Ajouter la route `/auth/callback`**
+---
 
-Ajouter `<Route path="/auth/callback" element={<AuthCallback />} />` dans le router.
+### BUG 4 (MINEUR) : Barre de progression "segmented" du Hero Card est codee en dur
 
-### Fichier : `src/pages/AuthCallback.tsx` (nouveau)
+**Fichier** : `src/components/coaching/CoachingTab.tsx` (lignes ~186-194)
+**Probleme** : La barre de progression segmentee affiche toujours 60% / 30% / 10% de maniere statique au lieu de calculer les proportions reelles a partir des types de sessions. Cela donne une information trompeuse au coach.
 
-**E. Composant AuthCallback**
+**Correction** : Calculer les pourcentages reels a partir des sessions de la semaine, en categorisant par objectif (Volume/Intensite/Recup).
 
-```
-- Au mount, detecter si on a un `code` dans l'URL
-- Laisser Supabase echanger via detectSessionInUrl
-- Ecouter onAuthStateChange pour detecter la session
-- Si sur iOS natif en SFSafariViewController : rediriger vers app.runconnect://auth?session=ok
-- Sinon : navigate vers /
-```
+---
 
-### Resume des modifications
+### BUG 5 (MINEUR) : Badge "success"/"warning"/"destructive" non defini
+
+**Fichier** : `src/components/coaching/WeeklyTrackingView.tsx` (ligne 319)
+**Probleme** : Le composant `Badge` utilise les variants `"success"` et `"warning"` qui ne sont probablement pas definis dans le composant Badge de shadcn/ui. Cela peut causer un rendu incorrect des badges de statut des athletes.
+
+**Correction** : Verifier les variants disponibles dans `src/components/ui/badge.tsx` et ajouter `success` et `warning` si manquants.
+
+---
+
+### POINT FONCTIONNEL 6 : Envoi du plan hebdo - flux complet OK
+
+Le `WeeklyPlanDialog.handleSendPlan()` fonctionne correctement :
+- Cree les `coaching_sessions` pour chaque groupe
+- Cree les `coaching_participations` pour chaque membre
+- Envoie les notifications in-app et push
+- Sauvegarde le draft avec `sent_at`
+
+---
+
+### POINT FONCTIONNEL 7 : Groupes - flux OK
+
+Le `ClubGroupsManager` fonctionne correctement :
+- Creation/suppression de groupes
+- Ajout/suppression de membres dans les groupes
+- Chargement des donnees depuis Supabase
+
+---
+
+### POINT FONCTIONNEL 8 : Suivi athletes - flux OK (sauf bug 5)
+
+Le `WeeklyTrackingView` charge correctement tous les membres du club, leurs sessions et participations, avec les rappels push fonctionnels.
+
+---
+
+### POINT FONCTIONNEL 9 : Brouillons - flux OK
+
+Le `CoachingDraftsList` et le systeme de sauvegarde auto fonctionnent correctement avec la table `coaching_drafts`.
+
+---
+
+### POINT FONCTIONNEL 10 : Templates (modeles) - flux OK
+
+Les `CoachingTemplatesDialog` et `coaching_week_templates` fonctionnent correctement pour la sauvegarde et le chargement de semaines types.
+
+---
+
+## Plan de corrections
+
+### Fichier 1 : `src/components/coaching/CoachingTab.tsx`
+
+- Ajouter `if (!clubId) return;` au debut de `loadDashboard()`
+- Calculer les proportions reelles de la barre segmentee
+
+### Fichier 2 : `src/components/ClubInfoDialog.tsx`
+
+- Supprimer les `console.log` de debug (`🔍 GroupInfoDialog render - DEBUGGING`)
+- Investiguer et corriger la source du re-render continu
+
+### Fichier 3 : `src/components/ui/badge.tsx`
+
+- Verifier et ajouter les variants `success` et `warning` si necessaires
+
+### Resume
 
 ```text
-src/pages/Auth.tsx
-├── ~ ligne 245: redirectTo → 'https://run-connect.lovable.app/auth/callback'
-├── ~ lignes 268-280: ajouter gestion du param 'code' + exchangeCodeForSession
-└── ~ deep link handler: gerer aussi les URLs https://run-connect.lovable.app/auth/callback
+Bugs identifies : 5
+- 1 critique (club_id vide → 400)
+- 2 moderes (sessions vides dans AthleteWeeklyDialog, re-renders infinis)
+- 2 mineurs (barre segmentee statique, variants Badge)
 
-src/pages/AuthCallback.tsx (nouveau)
-├── Echange code PKCE via detectSessionInUrl
-├── Redirection vers custom scheme pour retour dans l'app
-└── Fallback navigate('/') si deja dans l'app
-
-src/App.tsx
-└── + Route /auth/callback → AuthCallback
+Fonctionnalites OK : 5
+- Envoi plan hebdo ✓
+- Groupes de niveau ✓
+- Suivi athletes ✓
+- Brouillons ✓
+- Templates ✓
 ```
-
-### Configuration Supabase requise
-
-Verifier que `https://run-connect.lovable.app/auth/callback` est dans les Redirect URLs autorisees dans Supabase Dashboard > Authentication > URL Configuration. C'est probablement deja couvert par `https://run-connect.lovable.app/*` mais a confirmer.
-
-### Pourquoi ca resout le probleme
-
-- Safari peut ouvrir une URL `https://` sans erreur
-- Le code PKCE est echange cote serveur/client correctement
-- Le retour dans l'app se fait via un lien `app.runconnect://` depuis la page callback
-- L'utilisateur arrive dans l'app connecte, pas sur le site web
 
