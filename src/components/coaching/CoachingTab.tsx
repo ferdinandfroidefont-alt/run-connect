@@ -80,6 +80,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
   const loadDashboard = async () => {
+    if (!clubId) return;
     setLoading(true);
     try {
       const { data: weekSessions } = await supabase
@@ -163,6 +164,29 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     [sessions]
   );
 
+  // Calculate real segment proportions from session objectives
+  const segmentProportions = useMemo(() => {
+    if (sessions.length === 0) return { volume: 34, intensity: 33, recovery: 33 };
+    let volume = 0, intensity = 0, recovery = 0;
+    sessions.forEach(s => {
+      const obj = (s.objective || "").toLowerCase();
+      const title = (s.title || "").toLowerCase();
+      if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) {
+        recovery++;
+      } else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) {
+        intensity++;
+      } else {
+        volume++;
+      }
+    });
+    const total = volume + intensity + recovery;
+    return {
+      volume: Math.round((volume / total) * 100),
+      intensity: Math.round((intensity / total) * 100),
+      recovery: Math.round((recovery / total) * 100),
+    };
+  }, [sessions]);
+
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
 
   if (loading) {
@@ -222,9 +246,9 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
               {/* Segmented progress bar */}
               <div className="space-y-1.5">
                 <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-muted/50">
-                  <div className="bg-green-500 rounded-full transition-all" style={{ width: "60%" }} />
-                  <div className="bg-orange-500 rounded-full transition-all" style={{ width: "30%" }} />
-                  <div className="bg-blue-500 rounded-full transition-all" style={{ width: "10%" }} />
+                  {segmentProportions.volume > 0 && <div className="bg-green-500 rounded-full transition-all" style={{ width: `${segmentProportions.volume}%` }} />}
+                  {segmentProportions.intensity > 0 && <div className="bg-orange-500 rounded-full transition-all" style={{ width: `${segmentProportions.intensity}%` }} />}
+                  {segmentProportions.recovery > 0 && <div className="bg-blue-500 rounded-full transition-all" style={{ width: `${segmentProportions.recovery}%` }} />}
                 </div>
                 <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
                   <span>🟢 Volume</span>
