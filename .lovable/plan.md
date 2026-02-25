@@ -2,28 +2,75 @@
 
 ## Problèmes identifiés
 
-### 1. Page instable — scroll horizontal parasite sur iOS
-Le composant `CoachingTab` (ligne 184) utilise `className="bg-secondary -mx-4 -mb-4 px-4 ..."` avec un **margin négatif `-mx-4`** qui fait déborder le contenu au-delà du viewport. Sur iOS, cela permet de "swiper" la page de gauche à droite, ce qui crée l'instabilité.
+### 1. RLS bloque l'insertion des participations (cause principale)
+La politique INSERT sur `coaching_participations` est :
+```sql
+auth.uid() = user_id AND EXISTS(... is_club_member ...)
+```
+Le coach insère des participations **pour d'autres utilisateurs** (`user_id = athleteId`), donc `auth.uid() = user_id` est **toujours faux** pour le coach. Résultat : les participations ne sont jamais créées → l'athlète ne voit rien.
 
-Ce `-mx-4` est utilisé pour que le fond gris `bg-secondary` s'étende bord à bord, mais il crée un overflow horizontal non contrôlé.
+Les logs DB confirment : `"new row violates row-level security policy for table coaching_participations"`.
 
-### 2. Boutons Membres / Entraînements / Groupes dépassent l'écran
-Les 3 `TabsTrigger` dans `ClubInfoDialog.tsx` (lignes 420-433) ont chacun une icône + du texte. La `TabsList` a `w-full` mais les triggers ont un `px-3` par défaut dans le composant `tabs.tsx`. Sur petit écran iPhone, les 3 onglets avec icônes + texte débordent.
+### 2. Pas de notification in-app pour l'athlète
+Quand un coach envoie un plan, seule une push notification est envoyée. Il n'y a pas d'insertion dans la table `notifications` pour que l'athlète voie un badge/indicateur sur le bouton Coach dans l'app.
 
 ## Solution
 
-### Fichier 1 : `src/components/coaching/CoachingTab.tsx`
-- **Ligne 184** : Remplacer `-mx-4` par un wrapper avec `overflow-x-hidden` pour empêcher le scroll horizontal tout en gardant le fond gris bord à bord
-- Changer `className="bg-secondary -mx-4 -mb-4 px-4 pt-2 pb-8 min-h-[400px]"` en `className="bg-secondary -mx-4 -mb-4 px-4 pt-2 pb-8 min-h-[400px] overflow-x-hidden"`
+### Fichier 1 : Migration SQL — Corriger la politique RLS
 
-### Fichier 2 : `src/components/ClubInfoDialog.tsx`
-- **Lignes 420-433** : Réduire la taille du texte et des icônes des onglets pour qu'ils tiennent sur un écran iPhone
-- Passer les icônes de `h-4 w-4` à `h-3.5 w-3.5`
-- Ajouter `text-[12px]` aux TabsTrigger pour un texte plus compact
-- Ajouter `px-1.5` pour réduire le padding horizontal
+Remplacer la politique INSERT existante par une qui autorise :
+- Un coach à insérer des participations pour les membres de son club
+- Un membre à s'inscrire lui-même
 
-### Fichier 3 : `src/components/ClubInfoDialog.tsx` — conteneur principal
-- **Ligne 366** : Ajouter `overflow-x-hidden` au conteneur scrollable `flex-1 overflow-y-auto p-4` pour empêcher tout débordement horizontal dans le contenu du dialog
+```sql
+DROP POLICY "Members can register for coaching sessions" ON coaching_participations;
 
-Ces corrections empêchent le swipe horizontal parasite sur iOS et font tenir les 3 onglets sans débordement sur petit écran.
+CREATE POLICY "Coaches or self can insert participations"
+ON coaching_participations FOR INSERT TO authenticated
+WITH CHECK (
+  -- Self-registration
+  (auth.uid() = user_id AND EXISTS (
+    SELECT 1 FROM coaching_sessions cs
+    WHERE cs.id = coaching_session_id AND is_club_member(auth.uid(), cs.club_id)
+  ))
+  OR
+  -- Coach inserting for athletes
+  EXISTS (
+    SELECT 1 FROM coaching_sessions cs
+    WHERE cs.id = coaching_session_id AND is_club_coach(auth.uid(), cs.club_id)
+  )
+);
+```
+
+### Fichier 2 : `src/components/coaching/WeeklyPlanDialog.tsx` — Ajouter notification in-app
+
+Après l'envoi des participations (ligne ~466), insérer une notification dans la table `notifications` pour chaque athlète concerné, avec `type: 'coaching_plan'`. Aussi envoyer la push notification existante.
+
+```typescript
+// After inserting participations, notify each athlete
+for (const member of targetMembers) {
+  await supabase.from("notifications").insert({
+    user_id: member.user_id,
+    type: "coaching_plan",
+    title: "📋 Nouveau plan d'entraînement",
+    message: `${coachName} vous a envoyé un plan pour la semaine du ${format(weekStart, "d MMM", { locale: fr })}`,
+    data: { club_id: clubId, club_name: clubName, week_start: format(weekStart, "yyyy-MM-dd") },
+  });
+  sendPushNotification(member.user_id, "📋 Nouveau plan", `Plan semaine du ${format(weekStart, "d MMM", { locale: fr })}`, "coaching_plan");
+}
+```
+
+Cela nécessite d'importer `useSendNotification` et de charger le `coachName` dans le dialog.
+
+### Fichier 3 : `src/components/coaching/CreateCoachingSessionDialog.tsx` — Même fix notification in-app
+
+Ajouter aussi une insertion `notifications` quand on envoie une séance individuelle (ligne ~183), pas seulement la push.
+
+## Résumé des changements
+
+| Fichier | Changement |
+|---------|-----------|
+| Migration SQL | Nouvelle politique RLS pour `coaching_participations` INSERT |
+| `WeeklyPlanDialog.tsx` | Notification in-app + push pour chaque athlète |
+| `CreateCoachingSessionDialog.tsx` | Notification in-app + push pour chaque athlète |
 
