@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RCCEditor } from "./RCCEditor";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { BookOpen, Copy, Trash2, MapPin, Loader2 } from "lucide-react";
+import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import type { RCCResult, ParsedBlock } from "@/lib/rccParser";
@@ -184,11 +185,34 @@ export const WeeklyPlanSessionEditor = ({
         </Button>
       </div>
 
-      <RCCEditor
-        value={session.rccCode}
-        onChange={v => update("rccCode", v)}
-        onParsedChange={handleParsedChange}
-      />
+      <div className="relative">
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-medium text-muted-foreground uppercase">Séance</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground">
+                <HelpCircle className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 text-xs space-y-2" side="top">
+              <p className="font-semibold text-sm">Formats RCC</p>
+              <div className="space-y-1.5">
+                <div><code className="font-mono bg-muted px-1 rounded">20'&gt;5'30</code> → 20 min à 5:30/km</div>
+                <div><code className="font-mono bg-muted px-1 rounded">10'</code> → 10 min (allure libre)</div>
+                <div><code className="font-mono bg-muted px-1 rounded">3x1000&gt;4'00</code> → 3×1000m à 4:00</div>
+                <div><code className="font-mono bg-muted px-1 rounded">6x3'&gt;3'30</code> → 6×3min à 3:30</div>
+                <div><code className="font-mono bg-muted px-1 rounded">r1'30&gt;trot</code> → Récup 1'30 trot</div>
+              </div>
+              <p className="text-muted-foreground pt-1">Séparez les blocs par des virgules.<br/>Ex: <code className="font-mono bg-muted px-1 rounded">20'&gt;5'30, 6x3'&gt;3'30 r1'30&gt;trot, 10'&gt;6'00</code></p>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <RCCEditor
+          value={session.rccCode}
+          onChange={v => update("rccCode", v)}
+          onParsedChange={handleParsedChange}
+        />
+      </div>
 
       {/* Location with autocomplete */}
       <div className="relative">
