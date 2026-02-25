@@ -559,15 +559,36 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             setTouchStartX(null);
           }}
         >
-          {/* ── ATHLETE SEARCH ── */}
+          {/* ── ATHLETE / GROUP SEARCH ── */}
           <div className="mx-4 mt-4 mb-2">
             <Input
-              placeholder="🔍 Rechercher un athlète..."
+              placeholder="🔍 Rechercher un athlète ou groupe..."
               value={athleteSearch}
               onChange={e => setAthleteSearch(e.target.value)}
               className="h-10 text-[15px]"
             />
-            {/* Selected chips */}
+
+            {/* Selected group chip */}
+            {activeGroupId !== "club" && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {(() => {
+                  const g = groups.find(g => g.id === activeGroupId);
+                  if (!g) return null;
+                  return (
+                    <button
+                      onClick={() => { setActiveGroupId("club"); setSelectedIndex(null); }}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-accent-foreground text-[12px] font-medium"
+                    >
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
+                      {g.name}
+                      <X className="h-3 w-3" />
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Selected athlete chips */}
             {targetAthletes.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {targetAthletes.map(id => {
@@ -585,9 +606,30 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                 })}
               </div>
             )}
-            {/* Search results dropdown */}
+
+            {/* Unified search results: groups + athletes */}
             {athleteSearch.trim().length > 0 && (
-              <div className="bg-card rounded-[10px] border border-border mt-1 max-h-32 overflow-y-auto">
+              <div className="bg-card rounded-[10px] border border-border mt-1 max-h-40 overflow-y-auto">
+                {/* Group results */}
+                {groups
+                  .filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase()))
+                  .map(g => (
+                    <button
+                      key={`group-${g.id}`}
+                      onClick={() => {
+                        setActiveGroupId(g.id);
+                        setSelectedIndex(null);
+                        setAthleteSearch("");
+                      }}
+                      className="w-full text-left px-3 py-2 text-[14px] text-foreground hover:bg-muted transition-colors border-b border-border last:border-0 flex items-center gap-2"
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: g.color }} />
+                      <span className="font-medium">{g.name}</span>
+                      <span className="text-[12px] text-muted-foreground ml-auto">Groupe · {g.memberIds.length}</span>
+                    </button>
+                  ))
+                }
+                {/* Athlete results */}
                 {members
                   .filter(m => 
                     m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) &&
@@ -607,7 +649,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                     </button>
                   ))
                 }
-                {members.filter(m => m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) && !targetAthletes.includes(m.user_id)).length === 0 && (
+                {groups.filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase())).length === 0 &&
+                 members.filter(m => m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) && !targetAthletes.includes(m.user_id)).length === 0 && (
                   <p className="px-3 py-2 text-[13px] text-muted-foreground">Aucun résultat</p>
                 )}
               </div>
@@ -622,28 +665,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               </span>
             </div>
           )}
-
-          {/* ── GROUPE section ── */}
-          <IOSListGroup header="GROUPE" className="mt-2 mx-4">
-            <div className="px-4 py-3 bg-card">
-              <Select value={activeGroupId} onValueChange={id => { setActiveGroupId(id); setSelectedIndex(null); }}>
-                <SelectTrigger className="h-10 text-[15px] border-0 bg-transparent p-0 shadow-none">
-                  <SelectValue placeholder="Choisir un groupe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="club">🏟️ Tout le club ({members.length})</SelectItem>
-                  {groups.map(g => (
-                    <SelectItem key={g.id} value={g.id}>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
-                        {g.name} ({g.memberIds.length})
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </IOSListGroup>
 
           {/* ── SEMAINE section ── */}
           <IOSListGroup header="SEMAINE" className="mx-4">
