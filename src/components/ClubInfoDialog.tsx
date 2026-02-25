@@ -394,8 +394,9 @@ export const ClubInfoDialog = ({
               </div>
             </div>
 
-            {/* Club Code - only visible to creator */}
-            {createdBy === user?.id && clubCode && (
+
+            {/* Club Code - visible to all members */}
+            {clubCode && (
               <div className="bg-card rounded-[10px] p-3 flex items-center justify-between mb-2" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
                 <div>
                   <p className="text-[11px] text-muted-foreground">Code du club</p>
@@ -413,142 +414,176 @@ export const ClubInfoDialog = ({
               </div>
             )}
 
-
-            {/* Tabs: Members, Coaching & Groups */}
-            <Tabs defaultValue="coaching" className="w-full">
-              <TabsList className="w-full">
-                <TabsTrigger value="members" className="flex-1 gap-1">
-                  <Users className="h-4 w-4" />
-                  Membres
-                </TabsTrigger>
-                <TabsTrigger value="coaching" className="flex-1 gap-1">
-                  <GraduationCap className="h-4 w-4" />
-                  Entraînements
-                </TabsTrigger>
-                {currentUserIsCoach &&
+            {currentUserIsCoach ? (
+              /* ===== COACH / ADMIN VIEW: Full tabs ===== */
+              <Tabs defaultValue="coaching" className="w-full">
+                <TabsList className="w-full">
+                  <TabsTrigger value="members" className="flex-1 gap-1">
+                    <Users className="h-4 w-4" />
+                    Membres
+                  </TabsTrigger>
+                  <TabsTrigger value="coaching" className="flex-1 gap-1">
+                    <GraduationCap className="h-4 w-4" />
+                    Entraînements
+                  </TabsTrigger>
                   <TabsTrigger value="groups" className="flex-1 gap-1">
                     <Users className="h-4 w-4" />
                     Groupes
                   </TabsTrigger>
-                  }
-              </TabsList>
+                </TabsList>
 
-              <TabsContent value="members" className="mt-3">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-sm">Membres du club</h4>
-                    <div className="flex gap-2">
-                      {isAdmin &&
-                        <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)}>
-                          <UserPlus className="h-4 w-4 mr-1" />
-                          Inviter
-                        </Button>
+                <TabsContent value="members" className="mt-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-sm">Membres du club</h4>
+                      <div className="flex gap-2">
+                        {isAdmin &&
+                          <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)}>
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            Inviter
+                          </Button>
                         }
-                      {isAdmin &&
-                        <Button variant="outline" size="sm" onClick={onEditGroup}>
-                          <Settings className="h-4 w-4 mr-1" />
-                          Gérer
-                        </Button>
+                        {isAdmin &&
+                          <Button variant="outline" size="sm" onClick={onEditGroup}>
+                            <Settings className="h-4 w-4 mr-1" />
+                            Gérer
+                          </Button>
                         }
+                      </div>
                     </div>
-                  </div>
 
-                  {loading ?
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) =>
-                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
-                          <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
-                          <div className="flex-1">
-                            <div className="h-4 bg-muted rounded animate-pulse mb-1" />
-                            <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
-                          </div>
-                        </div>
-                      )}
-                    </div> :
-
-                    <div className="space-y-1 max-h-64 overflow-y-auto">
-                      {members.map((member) =>
-                      <div
-                        key={member.user_id}
-                        className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                        member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`
-                        }>
-
-                          <div className="relative">
-                            <Avatar
-                            className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => navigateToProfile(member.user_id)}>
-
-                              <AvatarImage src={member.avatar_url || ""} />
-                              <AvatarFallback>
-                                {(member.username || member.display_name || "").charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            {member.is_admin &&
-                          <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
-                                <Crown className="h-3 w-3 text-primary-foreground" />
-                              </div>
-                          }
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <p className="font-medium text-sm truncate">
-                                {member.username || member.display_name}
-                                {member.user_id === user?.id &&
-                              <span className="text-muted-foreground"> (vous)</span>
-                              }
-                              </p>
-                              {member.is_admin &&
-                            <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>
-                            }
-                              {member.is_coach && <CoachBadge />}
+                    {loading ?
+                      <div className="space-y-2">
+                        {[1, 2, 3].map((i) =>
+                          <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
+                            <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
+                            <div className="flex-1">
+                              <div className="h-4 bg-muted rounded animate-pulse mb-1" />
+                              <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">@{member.username}</p>
                           </div>
-
-                          <div className="flex items-center gap-1">
-                            {isAdmin && member.user_id !== user?.id &&
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleCoach(member.user_id, member.is_coach)}
-                            title={member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}>
-
-                                <GraduationCap className={`h-4 w-4 ${member.is_coach ? 'text-amber-500' : 'text-muted-foreground'}`} />
-                              </Button>
-                          }
-                            {isAdmin && member.user_id !== user?.id &&
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setMemberToDelete(member);
-                              setShowDeleteDialog(true);
-                            }}
-                            className="text-destructive hover:text-destructive">
-
-                                <UserMinus className="h-4 w-4" />
-                              </Button>
-                          }
+                        )}
+                      </div> :
+                      <div className="space-y-1 max-h-64 overflow-y-auto">
+                        {members.map((member) =>
+                          <div
+                            key={member.user_id}
+                            className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                              member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`}>
+                            <div className="relative">
+                              <Avatar
+                                className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => navigateToProfile(member.user_id)}>
+                                <AvatarImage src={member.avatar_url || ""} />
+                                <AvatarFallback>
+                                  {(member.username || member.display_name || "").charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              {member.is_admin &&
+                                <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
+                                  <Crown className="h-3 w-3 text-primary-foreground" />
+                                </div>
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-medium text-sm truncate">
+                                  {member.username || member.display_name}
+                                  {member.user_id === user?.id &&
+                                    <span className="text-muted-foreground"> (vous)</span>
+                                  }
+                                </p>
+                                {member.is_admin && <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>}
+                                {member.is_coach && <CoachBadge />}
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">@{member.username}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {isAdmin && member.user_id !== user?.id &&
+                                <Button variant="ghost" size="sm" onClick={() => toggleCoach(member.user_id, member.is_coach)}
+                                  title={member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}>
+                                  <GraduationCap className={`h-4 w-4 ${member.is_coach ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                                </Button>
+                              }
+                              {isAdmin && member.user_id !== user?.id &&
+                                <Button variant="ghost" size="sm"
+                                  onClick={() => { setMemberToDelete(member); setShowDeleteDialog(true); }}
+                                  className="text-destructive hover:text-destructive">
+                                  <UserMinus className="h-4 w-4" />
+                                </Button>
+                              }
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
                     }
-                </div>
-              </TabsContent>
+                  </div>
+                </TabsContent>
 
-              <TabsContent value="coaching" className="mt-3">
-                <CoachingTab clubId={conversationId} isCoach={currentUserIsCoach} />
-              </TabsContent>
+                <TabsContent value="coaching" className="mt-3">
+                  <CoachingTab clubId={conversationId} isCoach={currentUserIsCoach} />
+                </TabsContent>
 
-              {currentUserIsCoach &&
                 <TabsContent value="groups" className="mt-3">
                   <ClubGroupsManager clubId={conversationId} />
                 </TabsContent>
+              </Tabs>
+            ) : (
+              /* ===== MEMBER VIEW: Simple member list only ===== */
+              <div>
+                <h4 className="font-medium text-sm mb-3">Membres du club</h4>
+                {loading ?
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) =>
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
+                        <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-muted rounded animate-pulse mb-1" />
+                          <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
+                        </div>
+                      </div>
+                    )}
+                  </div> :
+                  <div className="space-y-1 max-h-80 overflow-y-auto">
+                    {members.map((member) =>
+                      <div
+                        key={member.user_id}
+                        className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                          member.user_id === user?.id ? 'bg-muted/30' : 'hover:bg-muted/50'}`}>
+                        <div className="relative">
+                          <Avatar
+                            className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigateToProfile(member.user_id)}>
+                            <AvatarImage src={member.avatar_url || ""} />
+                            <AvatarFallback>
+                              {(member.username || member.display_name || "").charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {member.is_admin &&
+                            <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
+                              <Crown className="h-3 w-3 text-primary-foreground" />
+                            </div>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-medium text-sm truncate">
+                              {member.username || member.display_name}
+                              {member.user_id === user?.id &&
+                                <span className="text-muted-foreground"> (vous)</span>
+                              }
+                            </p>
+                            {member.is_admin && <Badge variant="secondary" className="text-xs px-1 py-0">Admin</Badge>}
+                            {member.is_coach && <CoachBadge />}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">@{member.username}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 }
-            </Tabs>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
@@ -557,16 +592,14 @@ export const ClubInfoDialog = ({
                   variant="destructive"
                   onClick={() => setShowDeleteGroupDialog(true)}
                   className="flex-1">
-
                   <Trash2 className="h-4 w-4 mr-2" />
                   Supprimer le club
                 </Button>
-                }
+              }
               <Button
-                  variant="outline"
-                  onClick={onClose}
-                  className="flex-1">
-
+                variant="outline"
+                onClick={onClose}
+                className="flex-1">
                 Fermer
               </Button>
             </div>
