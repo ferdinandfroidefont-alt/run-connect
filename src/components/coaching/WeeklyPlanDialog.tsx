@@ -506,7 +506,13 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               status: "sent",
               athlete_overrides: JSON.parse(JSON.stringify(session.athleteOverrides[m.user_id] || {})),
             }));
-            await supabase.from("coaching_participations").insert(participations);
+            const { error: partError } = await supabase.from("coaching_participations").insert(participations);
+            if (partError) {
+              console.error("Error creating participations:", partError);
+              throw new Error(`Erreur lors de l'assignation aux athlètes: ${partError.message}`);
+            }
+          } else if (targetMembers.length === 0) {
+            console.warn("No target members found for group:", groupId);
           }
         }
       }
@@ -541,9 +547,10 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       const groupLabels = groupsWithPlans.map(id =>
         id === "club" ? "Club" : groups.find(g => g.id === id)?.name || "Groupe"
       );
+      const weekEndLabel = format(addDays(weekStart, 6), "d MMM", { locale: fr });
       toast({
         title: "Plan envoyé ! 🚀",
-        description: `${totalSessionsCount} séances → ${groupLabels.join(", ")}`,
+        description: `${totalSessionsCount} séances → ${groupLabels.join(", ")} (semaine du ${format(weekStart, "d MMM", { locale: fr })} au ${weekEndLabel})`,
       });
       // Keep data, mark as sent
       setSentAt(new Date().toISOString());

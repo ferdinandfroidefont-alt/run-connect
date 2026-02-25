@@ -98,6 +98,38 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     }
   }, [user, clubId, weekStart.toISOString()]);
 
+  // On first mount, find the latest week with sessions if current week is empty
+  const [initialNavDone, setInitialNavDone] = useState(false);
+  useEffect(() => {
+    if (!user || initialNavDone) return;
+    const findLatestWeek = async () => {
+      const { data } = await supabase
+        .from("coaching_participations")
+        .select("coaching_session_id")
+        .eq("user_id", user.id)
+        .limit(1);
+      if (!data || data.length === 0) { setInitialNavDone(true); return; }
+
+      const { data: latestSession } = await supabase
+        .from("coaching_sessions")
+        .select("scheduled_at")
+        .eq("club_id", clubId)
+        .order("scheduled_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestSession) {
+        const latestDate = new Date(latestSession.scheduled_at);
+        const latestWeekStart = startOfWeek(latestDate, { weekStartsOn: 1 });
+        if (latestWeekStart.getTime() !== weekStart.getTime()) {
+          setCurrentWeek(latestDate);
+        }
+      }
+      setInitialNavDone(true);
+    };
+    findLatestWeek();
+  }, [user, clubId]);
+
   useEffect(() => { loadWeek(); }, [loadWeek]);
 
   const completedCount = Object.values(participations).filter(p => p.status === "completed").length;
