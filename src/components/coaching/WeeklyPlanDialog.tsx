@@ -624,7 +624,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
         {/* ── Scrollable body ── */}
         <div
-          className="flex-1 overflow-y-auto bg-secondary pb-4"
+          className="flex-1 overflow-y-auto bg-secondary pb-32"
           onTouchStart={e => setTouchStartX(e.touches[0].clientX)}
           onTouchEnd={e => {
             if (touchStartX === null) return;
@@ -636,29 +636,103 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             setTouchStartX(null);
           }}
         >
-          {/* ── ATHLETE / GROUP SEARCH ── */}
-          <div className="mx-4 mt-4 mb-2">
+          {/* ── Week navigator — hero card ── */}
+          <div className="mx-4 mt-4 mb-3">
+            <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+              {/* Week selector */}
+              <div className="flex items-center justify-between px-5 py-4">
+                <button
+                  onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+                  className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center active:bg-muted transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5 text-foreground" />
+                </button>
+                <div className="text-center">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Semaine du</p>
+                  <p className="text-[20px] font-bold text-foreground mt-0.5">
+                    {format(weekStart, "d MMM", { locale: fr })} — {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+                  className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center active:bg-muted transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5 text-foreground" />
+                </button>
+              </div>
+
+              {/* Group switcher pills */}
+              {groups.length > 0 && (
+                <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => { setActiveGroupId("club"); setSelectedIndex(null); }}
+                    className={`px-4 py-2 rounded-full text-[14px] font-semibold transition-all ${
+                      activeGroupId === "club"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    Club
+                    {(groupPlans["club"] || []).length > 0 && (
+                      <span className="ml-1.5 text-[12px] opacity-80">({(groupPlans["club"] || []).length})</span>
+                    )}
+                  </button>
+                  {groups.map(g => {
+                    const count = (groupPlans[g.id] || []).length;
+                    const isActive = g.id === activeGroupId;
+                    return (
+                      <button
+                        key={g.id}
+                        onClick={() => { setActiveGroupId(g.id); setSelectedIndex(null); }}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold transition-all ${
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-secondary text-muted-foreground"
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: isActive ? 'white' : g.color }} />
+                        {g.name}
+                        {count > 0 && <span className="text-[12px] opacity-80">({count})</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Sent badge */}
+              {sentAt && (
+                <div className="mx-5 mb-4 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                  <span className="text-[14px] font-medium text-green-700 dark:text-green-400">
+                    ✓ Envoyé le {format(new Date(sentAt), "d MMM à HH:mm", { locale: fr })}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Search bar ── */}
+          <div className="mx-4 mb-3">
             <Input
               placeholder="🔍 Rechercher un athlète ou groupe..."
               value={athleteSearch}
               onChange={e => setAthleteSearch(e.target.value)}
-              className="h-10 text-[15px]"
+              className="h-11 text-[16px] rounded-xl bg-card border-border"
             />
 
             {/* Selected group chip */}
             {activeGroupId !== "club" && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2.5">
                 {(() => {
                   const g = groups.find(g => g.id === activeGroupId);
                   if (!g) return null;
                   return (
                     <button
                       onClick={() => { setActiveGroupId("club"); setSelectedIndex(null); }}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-accent-foreground text-[12px] font-medium"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-accent-foreground text-[13px] font-medium active:opacity-70"
                     >
-                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
+                      <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: g.color }} />
                       {g.name}
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   );
                 })()}
@@ -667,27 +741,26 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
             {/* Selected athlete chips */}
             {targetAthletes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2.5">
                 {targetAthletes.map(id => {
                   const m = members.find(m => m.user_id === id);
                   return (
                     <button
                       key={id}
                       onClick={() => setTargetAthletes(prev => prev.filter(a => a !== id))}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[12px] font-medium"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[13px] font-medium active:opacity-70"
                     >
                       {m?.display_name || "Athlète"}
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   );
                 })}
               </div>
             )}
 
-            {/* Unified search results: groups + athletes */}
+            {/* Unified search results */}
             {athleteSearch.trim().length > 0 && (
-              <div className="bg-card rounded-[10px] border border-border mt-1 max-h-40 overflow-y-auto">
-                {/* Group results */}
+              <div className="bg-card rounded-xl border border-border mt-2 max-h-48 overflow-y-auto" style={{ boxShadow: 'var(--shadow-sm)' }}>
                 {groups
                   .filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase()))
                   .map(g => (
@@ -698,17 +771,16 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                         setSelectedIndex(null);
                         setAthleteSearch("");
                       }}
-                      className="w-full text-left px-3 py-2 text-[14px] text-foreground hover:bg-muted transition-colors border-b border-border last:border-0 flex items-center gap-2"
+                      className="w-full text-left px-4 py-3 text-[15px] text-foreground active:bg-muted transition-colors border-b border-border last:border-0 flex items-center gap-2.5"
                     >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: g.color }} />
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: g.color }} />
                       <span className="font-medium">{g.name}</span>
-                      <span className="text-[12px] text-muted-foreground ml-auto">Groupe · {g.memberIds.length}</span>
+                      <span className="text-[13px] text-muted-foreground ml-auto">Groupe · {g.memberIds.length}</span>
                     </button>
                   ))
                 }
-                {/* Athlete results */}
                 {members
-                  .filter(m => 
+                  .filter(m =>
                     m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) &&
                     !targetAthletes.includes(m.user_id)
                   )
@@ -720,7 +792,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                         setTargetAthletes(prev => [...prev, m.user_id]);
                         setAthleteSearch("");
                       }}
-                      className="w-full text-left px-3 py-2 text-[14px] text-foreground hover:bg-muted transition-colors border-b border-border last:border-0"
+                      className="w-full text-left px-4 py-3 text-[15px] text-foreground active:bg-muted transition-colors border-b border-border last:border-0"
                     >
                       {m.display_name}
                     </button>
@@ -728,131 +800,35 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                 }
                 {groups.filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase())).length === 0 &&
                  members.filter(m => m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) && !targetAthletes.includes(m.user_id)).length === 0 && (
-                  <p className="px-3 py-2 text-[13px] text-muted-foreground">Aucun résultat</p>
+                  <p className="px-4 py-3 text-[14px] text-muted-foreground">Aucun résultat</p>
                 )}
               </div>
             )}
           </div>
 
-          {/* Sent badge */}
-          {sentAt && (
-            <div className="mx-4 mb-2 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full bg-green-100 dark:bg-green-900/30">
-              <span className="text-[12px] font-medium text-green-700 dark:text-green-400">
-                ✓ Envoyé le {format(new Date(sentAt), "d MMM à HH:mm", { locale: fr })}
-              </span>
-            </div>
-          )}
-
-          {/* ── SEMAINE section ── */}
-          <IOSListGroup header="SEMAINE" className="mx-4">
-            <div className="px-4 py-3 bg-card flex items-center justify-between">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-[15px] font-medium text-foreground">
-                Sem. {format(weekStart, "d MMM yyyy", { locale: fr })}
-              </span>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            {/* Group pills */}
-            {groupsWithPlans.length > 1 && (
-              <div className="px-4 pb-3 bg-card flex items-center gap-1.5 flex-wrap border-t border-border">
-                {groupsWithPlans.map(id => {
-                  const g = id === "club" ? null : groups.find(g => g.id === id);
-                  const count = (groupPlans[id] || []).length;
-                  const isActive = id === activeGroupId;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => { setActiveGroupId(id); setSelectedIndex(null); }}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors mt-2 ${
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:bg-accent"
-                      }`}
-                    >
-                      {g && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: g.color }} />}
-                      {g ? g.name : "Club"} ({count})
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </IOSListGroup>
-
-          {/* ── CHARGE DE LA SEMAINE with bar chart ── */}
-          {weekLoadSummary && (
-            <div className="mx-4 px-4 py-3 rounded-xl bg-card border border-border">
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                <span className="text-[13px] font-semibold text-foreground">Charge de la semaine</span>
-              </div>
-              <div className="flex items-center gap-3 text-[12px] text-muted-foreground flex-wrap mb-3">
-                <span className="font-medium text-foreground">{weekLoadSummary.totalKm} km</span>
-                <span>·</span>
-                <span>{sessions.length} séance{sessions.length > 1 ? "s" : ""}</span>
-                {weekLoadSummary.qualitySessions > 0 && (
-                  <>
-                    <span>·</span>
-                    <span>{weekLoadSummary.qualitySessions} qualité</span>
-                  </>
-                )}
-                <span>·</span>
-                <Badge variant={
-                  weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
-                  weekLoadSummary.intensity === 'Intense' ? 'default' :
-                  'secondary'
-                } className="text-[10px] px-1.5 py-0">
-                  {weekLoadSummary.intensity}
-                </Badge>
-              </div>
-              {/* Mini bar chart */}
-              {(() => {
-                const maxCharge = Math.max(...dailyCharge, 1);
-                return (
-                  <div className="flex items-end gap-1.5 h-16">
-                    {DAY_LABELS.map((label, i) => {
-                      const val = dailyCharge[i];
-                      const pct = (val / maxCharge) * 100;
-                      const daySessions = (sessionsByDay[i] || []).map(idx => sessions[idx]);
-                      const hasIntense = daySessions.some(s => {
-                        const obj = (s.objective || s.activityType || "").toLowerCase();
-                        return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné");
-                      });
-                      const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                          <div className="w-full flex items-end justify-center" style={{ height: 48 }}>
-                            <div
-                              className={`w-full max-w-[20px] rounded-t-sm transition-all ${barColor}`}
-                              style={{ height: val > 0 ? `${Math.max(pct, 8)}%` : 4 }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-muted-foreground">{label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          {/* ── SÉANCES grid section — colored pills ── */}
-          <IOSListGroup header="SÉANCES" className="mx-4">
-            <div className="px-3 py-3 bg-card">
-              <div className="grid grid-cols-7 gap-1.5">
+          {/* ── CALENDAR GRID — big day columns ── */}
+          <div className="mx-4 mb-3">
+            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Calendrier</p>
+            <div className="bg-card rounded-2xl p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
+              <div className="grid grid-cols-7 gap-2">
                 {DAY_LABELS.map((label, dayIndex) => {
                   const daySessions = sessionsByDay[dayIndex] || [];
+                  const dayDate = addDays(weekStart, dayIndex);
+                  const isToday = format(dayDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
                   return (
-                    <div key={dayIndex} className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase">{label}</span>
+                    <div key={dayIndex} className="flex flex-col items-center gap-1.5">
+                      <span className={`text-[11px] font-semibold uppercase ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                        {label}
+                      </span>
+                      <span className={`text-[13px] font-medium w-7 h-7 flex items-center justify-center rounded-full ${
+                        isToday ? "bg-primary text-primary-foreground" : "text-foreground"
+                      }`}>
+                        {format(dayDate, "d")}
+                      </span>
                       {daySessions.map(sIdx => {
                         const s = sessions[sIdx];
                         const obj = (s.objective || s.activityType || "").toLowerCase();
-                        let pillColor = "bg-green-500"; // EF default
+                        let pillColor = "bg-green-500";
                         let pillLabel = "EF";
                         if (obj.includes("vma") || obj.includes("interval") || obj.includes("fractionné")) {
                           pillColor = "bg-red-500"; pillLabel = "VMA";
@@ -870,8 +846,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                           <button
                             key={sIdx}
                             onClick={() => setSelectedIndex(sIdx)}
-                            className={`w-full py-1 rounded-lg text-[9px] font-bold text-white transition-all ${pillColor} ${
-                              isSelected ? "ring-2 ring-primary ring-offset-1 scale-105" : "opacity-85 hover:opacity-100"
+                            className={`w-full py-1.5 rounded-lg text-[10px] font-bold text-white transition-all ${pillColor} ${
+                              isSelected ? "ring-2 ring-primary ring-offset-2 scale-110" : "opacity-90 hover:opacity-100"
                             }`}
                           >
                             {pillLabel}
@@ -880,228 +856,318 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                       })}
                       <button
                         onClick={() => addSession(dayIndex)}
-                        className="w-full py-1 rounded-lg border border-dashed border-border text-[10px] text-muted-foreground hover:bg-muted transition-colors"
+                        className="w-full py-1.5 rounded-lg border-2 border-dashed border-border text-muted-foreground hover:bg-muted active:bg-muted transition-colors flex items-center justify-center"
                       >
-                        <Plus className="h-3 w-3 mx-auto" />
+                        <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   );
                 })}
               </div>
             </div>
-          </IOSListGroup>
+          </div>
+
+          {/* ── CHARGE DE LA SEMAINE ── */}
+          {weekLoadSummary && (
+            <div className="mx-4 mb-3">
+              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Charge de la semaine</p>
+              <div className="bg-card rounded-2xl p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                {/* Stats row */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[22px] font-bold text-foreground leading-none">{weekLoadSummary.totalKm} <span className="text-[14px] font-medium text-muted-foreground">km</span></p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-[14px]">
+                    <div className="text-center">
+                      <p className="text-[18px] font-bold text-foreground">{sessions.length}</p>
+                      <p className="text-[11px] text-muted-foreground">séances</p>
+                    </div>
+                    {weekLoadSummary.qualitySessions > 0 && (
+                      <div className="text-center">
+                        <p className="text-[18px] font-bold text-orange-500">{weekLoadSummary.qualitySessions}</p>
+                        <p className="text-[11px] text-muted-foreground">qualité</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Intensity badge */}
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant={
+                    weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
+                    weekLoadSummary.intensity === 'Intense' ? 'default' :
+                    'secondary'
+                  } className="text-[12px] px-3 py-1">
+                    {weekLoadSummary.intensity}
+                  </Badge>
+                </div>
+
+                {/* Bar chart */}
+                {(() => {
+                  const maxCharge = Math.max(...dailyCharge, 1);
+                  return (
+                    <div className="flex items-end gap-2 h-24">
+                      {DAY_LABELS.map((label, i) => {
+                        const val = dailyCharge[i];
+                        const pct = (val / maxCharge) * 100;
+                        const daySessions = (sessionsByDay[i] || []).map(idx => sessions[idx]);
+                        const hasIntense = daySessions.some(s => {
+                          const obj = (s.objective || s.activityType || "").toLowerCase();
+                          return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné");
+                        });
+                        const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: 72 }}>
+                              <div
+                                className={`w-full max-w-[24px] rounded-t-md transition-all ${barColor}`}
+                                style={{ height: val > 0 ? `${Math.max(pct, 10)}%` : 4 }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* ── Éditeur de séance ── */}
           {selectedSession && selectedIndex !== null ? (
-            <IOSListGroup className="mx-4">
-              <WeeklyPlanSessionEditor
-                session={selectedSession}
-                onChange={s => updateSession(selectedIndex, s)}
-                onDuplicate={targetDay => duplicateToDay(selectedIndex, targetDay)}
-                onDelete={() => deleteSession(selectedIndex)}
-                members={getMembersForGroup(activeGroupId)}
-              />
-            </IOSListGroup>
+            <div className="mx-4 mb-3">
+              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Éditer la séance</p>
+              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                <WeeklyPlanSessionEditor
+                  session={selectedSession}
+                  onChange={s => updateSession(selectedIndex, s)}
+                  onDuplicate={targetDay => duplicateToDay(selectedIndex, targetDay)}
+                  onDelete={() => deleteSession(selectedIndex)}
+                  members={getMembersForGroup(activeGroupId)}
+                />
+              </div>
+            </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground mx-4">
-              <p className="text-[15px]">Cliquez sur <strong>+</strong> pour ajouter une séance</p>
-              <p className="text-[13px] mt-1">ou sélectionnez une séance existante</p>
+            <div className="mx-4 mb-3 py-10 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <Plus className="h-7 w-7 text-primary" />
+              </div>
+              <p className="text-[17px] font-semibold text-foreground">Ajouter une séance</p>
+              <p className="text-[14px] text-muted-foreground mt-1">Appuyez sur <strong>+</strong> dans le calendrier<br />ou utilisez le bouton bleu</p>
             </div>
           )}
 
           {/* ── ACTIONS section ── */}
-          <IOSListGroup header="ACTIONS" className="mx-4">
-            <IOSListItem
-              icon={History}
-              iconBgColor="bg-amber-500"
-              title="Dupliquer semaine précédente"
-              subtitle="Charger les séances de S-1"
-              onClick={loadPreviousWeek}
-              showSeparator
-            />
-            {templates.length > 0 && (
+          <div className="mx-4 mb-3">
+            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Outils</p>
+            <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
               <IOSListItem
-                icon={FolderOpen}
-                iconBgColor="bg-blue-500"
-                title="Charger semaine type"
-                subtitle={`${templates.length} template${templates.length > 1 ? "s" : ""} disponible${templates.length > 1 ? "s" : ""}`}
-                onClick={() => setShowTemplateList(!showTemplateList)}
+                icon={History}
+                iconBgColor="bg-amber-500"
+                title="Dupliquer semaine précédente"
+                subtitle="Charger les séances de S-1"
+                onClick={loadPreviousWeek}
                 showSeparator
               />
-            )}
-            {showTemplateList && templates.map(t => (
-              <div key={t.id} className="flex items-center justify-between px-4 py-2.5 bg-card border-b border-border last:border-0">
-                <button
-                  onClick={() => { loadTemplate(t); setShowTemplateList(false); }}
-                  className="text-[15px] text-primary flex-1 text-left"
-                >
-                  {t.name} ({t.sessions.length}s)
-                </button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive"
-                  onClick={() => deleteTemplate(t.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
-            {sessions.length > 0 && otherGroups.length > 0 && (
-              <>
+              {templates.length > 0 && (
                 <IOSListItem
-                  icon={Copy}
-                  iconBgColor="bg-green-500"
-                  title="Dupliquer vers un groupe"
-                  subtitle={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} à copier`}
-                  onClick={() => setShowDupDropdown(!showDupDropdown)}
+                  icon={FolderOpen}
+                  iconBgColor="bg-blue-500"
+                  title="Charger semaine type"
+                  subtitle={`${templates.length} template${templates.length > 1 ? "s" : ""} disponible${templates.length > 1 ? "s" : ""}`}
+                  onClick={() => setShowTemplateList(!showTemplateList)}
                   showSeparator
                 />
-                {showDupDropdown && otherGroups.map(g => (
-                  <div key={g.id} className="px-4 py-2.5 bg-card border-b border-border last:border-0">
-                    <button
-                      onClick={() => { duplicatePlanToGroup(g.id); setShowDupDropdown(false); }}
-                      className="text-[15px] text-primary flex items-center gap-2 w-full text-left"
-                    >
-                      {g.id !== "club" && (
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: g.color }} />
-                      )}
-                      {g.name}
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-            {sessions.length > 0 && (
+              )}
+              {showTemplateList && templates.map(t => (
+                <div key={t.id} className="flex items-center justify-between px-5 py-3 bg-card border-b border-border last:border-0">
+                  <button
+                    onClick={() => { loadTemplate(t); setShowTemplateList(false); }}
+                    className="text-[16px] text-primary flex-1 text-left font-medium"
+                  >
+                    {t.name} ({t.sessions.length}s)
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => deleteTemplate(t.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {sessions.length > 0 && otherGroups.length > 0 && (
+                <>
+                  <IOSListItem
+                    icon={Copy}
+                    iconBgColor="bg-green-500"
+                    title="Dupliquer vers un groupe"
+                    subtitle={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} à copier`}
+                    onClick={() => setShowDupDropdown(!showDupDropdown)}
+                    showSeparator
+                  />
+                  {showDupDropdown && otherGroups.map(g => (
+                    <div key={g.id} className="px-5 py-3 bg-card border-b border-border last:border-0">
+                      <button
+                        onClick={() => { duplicatePlanToGroup(g.id); setShowDupDropdown(false); }}
+                        className="text-[16px] text-primary flex items-center gap-2.5 w-full text-left font-medium"
+                      >
+                        {g.id !== "club" && (
+                          <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: g.color }} />
+                        )}
+                        {g.name}
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+              {sessions.length > 0 && (
+                <IOSListItem
+                  icon={Save}
+                  iconBgColor="bg-orange-500"
+                  title="Sauver comme semaine type"
+                  onClick={() => setShowSaveTemplate(true)}
+                  showChevron
+                  showSeparator
+                />
+              )}
               <IOSListItem
-                icon={Save}
-                iconBgColor="bg-orange-500"
-                title="Sauver comme semaine type"
-                onClick={() => setShowSaveTemplate(true)}
-                showChevron
-                showSeparator
+                icon={TrendingUp}
+                iconBgColor="bg-indigo-500"
+                title="Vue mesocycle (8 sem.)"
+                subtitle="Progression volume et intensité"
+                onClick={() => setShowMesocycle(!showMesocycle)}
+                showSeparator={false}
               />
-            )}
-            <IOSListItem
-              icon={TrendingUp}
-              iconBgColor="bg-indigo-500"
-              title="Vue mesocycle (8 sem.)"
-              subtitle="Progression volume et intensité"
-              onClick={() => setShowMesocycle(!showMesocycle)}
-              showSeparator={false}
-            />
-          </IOSListGroup>
+            </div>
+          </div>
 
           {/* Mesocycle panel */}
           {showMesocycle && (
-            <div className="mx-4 p-4 rounded-xl bg-card border border-border">
-              <MesocycleView clubId={clubId} currentWeek={currentWeek} />
+            <div className="mx-4 mb-3">
+              <div className="bg-card rounded-2xl p-4 border border-border" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                <MesocycleView clubId={clubId} currentWeek={currentWeek} />
+              </div>
             </div>
           )}
 
           {/* Save template input */}
           {showSaveTemplate && (
-            <IOSListGroup className="mx-4">
-              <div className="px-4 py-3 bg-card flex items-center gap-2">
-                <Input
-                  value={templateName}
-                  onChange={e => setTemplateName(e.target.value)}
-                  placeholder="Nom de la semaine type..."
-                  className="h-9 text-[15px] flex-1"
-                  autoFocus
-                  onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
-                />
-                <Button size="sm" className="h-9 text-[13px]" onClick={saveAsTemplate} disabled={!templateName.trim()}>
-                  <Save className="h-3.5 w-3.5 mr-1" />
-                  Sauver
-                </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowSaveTemplate(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
+            <div className="mx-4 mb-3">
+              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                <div className="px-5 py-4 flex items-center gap-3">
+                  <Input
+                    value={templateName}
+                    onChange={e => setTemplateName(e.target.value)}
+                    placeholder="Nom de la semaine type..."
+                    className="h-11 text-[16px] flex-1 rounded-xl"
+                    autoFocus
+                    onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
+                  />
+                  <Button size="sm" className="h-11 px-4 text-[14px] rounded-xl" onClick={saveAsTemplate} disabled={!templateName.trim()}>
+                    <Save className="h-4 w-4 mr-1.5" />
+                    Sauver
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setShowSaveTemplate(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
-            </IOSListGroup>
-          )}
-          {/* ── AJUSTEMENTS ATHLÈTES section ── */}
-          {selectedSession && selectedIndex !== null && sessions.length > 0 && (
-            <IOSListGroup header="AJUSTEMENTS PAR ATHLÈTE" className="mx-4">
-              <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
-                <CollapsibleTrigger asChild>
-                  <div className="px-4 py-3 bg-card flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-[15px] font-medium text-foreground">
-                          Personnaliser les allures
-                        </p>
-                        <p className="text-[12px] text-muted-foreground">
-                          {Object.keys(selectedSession.athleteOverrides).length > 0
-                            ? `${Object.keys(selectedSession.athleteOverrides).length} athlète${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""} personnalisé${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""}`
-                            : `Ajuster séries/allure pour ${DAY_LABELS[selectedSession.dayIndex]} — ${selectedSession.objective || "séance"}`
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showAthleteOverrides ? "rotate-180" : ""}`} />
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="px-4 py-3 bg-card border-t border-border">
-                    <AthleteOverrideEditor
-                      members={getMembersForGroup(activeGroupId)}
-                      overrides={selectedSession.athleteOverrides}
-                      onChange={ov => updateSession(selectedIndex, { ...selectedSession, athleteOverrides: ov })}
-                      basePace={globalBasePace}
-                      baseReps={globalBaseReps}
-                      baseRecovery={globalBaseRecovery}
-                    />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </IOSListGroup>
+            </div>
           )}
 
-          {/* FAB - Add session for today */}
+          {/* ── AJUSTEMENTS ATHLÈTES section ── */}
+          {selectedSession && selectedIndex !== null && sessions.length > 0 && (
+            <div className="mx-4 mb-3">
+              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Personnalisation</p>
+              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
+                  <CollapsibleTrigger asChild>
+                    <div className="px-5 py-4 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-purple-500 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[16px] font-semibold text-foreground">
+                            Personnaliser les allures
+                          </p>
+                          <p className="text-[13px] text-muted-foreground mt-0.5">
+                            {Object.keys(selectedSession.athleteOverrides).length > 0
+                              ? `${Object.keys(selectedSession.athleteOverrides).length} athlète${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""} personnalisé${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""}`
+                              : `${DAY_LABELS[selectedSession.dayIndex]} — ${selectedSession.objective || "séance"}`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showAthleteOverrides ? "rotate-180" : ""}`} />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-5 py-4 border-t border-border">
+                      <AthleteOverrideEditor
+                        members={getMembersForGroup(activeGroupId)}
+                        overrides={selectedSession.athleteOverrides}
+                        onChange={ov => updateSession(selectedIndex, { ...selectedSession, athleteOverrides: ov })}
+                        basePace={globalBasePace}
+                        baseReps={globalBaseReps}
+                        baseRecovery={globalBaseRecovery}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            </div>
+          )}
+
+          {/* FAB */}
           <button
             onClick={() => {
               const todayDow = new Date().getDay();
               const dayIndex = todayDow === 0 ? 6 : todayDow - 1;
               addSession(dayIndex);
             }}
-            className="fixed bottom-24 right-6 z-20 h-14 w-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-            style={{ boxShadow: '0 4px 14px hsl(var(--primary) / 0.4)' }}
+            className="fixed bottom-28 right-6 z-20 h-14 w-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            style={{ boxShadow: '0 6px 20px hsl(var(--primary) / 0.35)' }}
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-7 w-7" />
           </button>
         </div>
 
         {/* ── Fixed footer ── */}
-        <div className="shrink-0 border-t border-border p-4 space-y-3 bg-card">
+        <div className="shrink-0 border-t border-border px-5 py-4 space-y-3 bg-card">
           {/* Draft save status */}
           {draftSaveStatus !== "idle" && (
-            <p className="text-[11px] text-muted-foreground text-center">
+            <p className="text-[12px] text-muted-foreground text-center">
               {draftSaveStatus === "saving" ? "Sauvegarde..." : "✓ Brouillon sauvegardé"}
             </p>
           )}
           {totalSessionsCount > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary" className="text-[11px]">
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <span className="text-[13px] text-muted-foreground">
                 {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} → {groupsWithPlans.map(id =>
                   id === "club" ? `Club (${members.length})` : `${groups.find(g => g.id === id)?.name} (${groups.find(g => g.id === id)?.memberIds.length || 0})`
                 ).join(", ")}
-              </Badge>
+              </span>
             </div>
           )}
           <Button
-            className="w-full h-11 text-[17px]"
+            className="w-full h-12 text-[17px] font-semibold rounded-xl"
             onClick={handleSendPlan}
             disabled={totalSessionsCount === 0 || sending}
           >
             {sending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
             ) : (
-              <Send className="h-4 w-4 mr-2" />
+              <Send className="h-5 w-5 mr-2" />
             )}
             {sentAt ? "Renvoyer" : "Envoyer"} {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
           </Button>
