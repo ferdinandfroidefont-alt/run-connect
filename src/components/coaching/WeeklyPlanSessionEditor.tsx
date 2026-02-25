@@ -5,20 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RCCEditor } from "./RCCEditor";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle } from "lucide-react";
+import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import type { RCCResult, ParsedBlock } from "@/lib/rccParser";
 
-const DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+const DAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const ACTIVITY_TYPES = [
-  { value: "running", label: "Course" },
-  { value: "trail", label: "Trail" },
-  { value: "cycling", label: "Vélo" },
-  { value: "swimming", label: "Natation" },
-  { value: "walking", label: "Marche" },
+  { value: "running", label: "🏃 Course" },
+  { value: "trail", label: "⛰️ Trail" },
+  { value: "cycling", label: "🚴 Vélo" },
+  { value: "swimming", label: "🏊 Natation" },
+  { value: "walking", label: "🚶 Marche" },
+];
+
+const QUICK_OBJECTIVES = [
+  "Footing", "Footing Z2", "Footing Z3", "Seuil", "VMA", "VMA courte",
+  "VMA longue", "Spé cross", "Spé piste", "Spé 10K", "Spé semi",
+  "Spé marathon", "Côtes", "Fartlek", "PPG / Renfo", "Sortie longue", "Récupération"
 ];
 
 interface AthleteOverride {
@@ -67,16 +74,13 @@ export const WeeklyPlanSessionEditor = ({
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [showLocationResults, setShowLocationResults] = useState(false);
 
-  // Debounced location search
   useEffect(() => {
     if (!locationSearch.trim() || locationSearch === session.locationName) {
       setLocationResults([]);
       setShowLocationResults(false);
       return;
     }
-    const timer = setTimeout(() => {
-      searchLocation(locationSearch);
-    }, 500);
+    const timer = setTimeout(() => { searchLocation(locationSearch); }, 500);
     return () => clearTimeout(timer);
   }, [locationSearch]);
 
@@ -131,156 +135,199 @@ export const WeeklyPlanSessionEditor = ({
     update("parsedBlocks", result.blocks);
   };
 
-  const otherDays = DAY_LABELS.map((label, i) => ({ label, index: i }))
+  const otherDays = DAY_SHORT.map((label, i) => ({ label, index: i }))
     .filter(d => d.index !== session.dayIndex);
 
   return (
-    <div className="space-y-3 p-4 border rounded-xl bg-card">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">{DAY_LABELS[session.dayIndex]} — {session.objective || "Nouvelle séance"}</p>
-        <div className="flex gap-1">
+    <div className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border/50">
+      {/* Header with day + actions */}
+      <div className="bg-secondary/50 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+            <span className="text-[13px] font-bold text-primary">
+              {DAY_SHORT[session.dayIndex]}
+            </span>
+          </div>
+          <div>
+            <p className="text-[15px] font-semibold text-foreground leading-tight">
+              {session.objective || "Nouvelle séance"}
+            </p>
+            <p className="text-[12px] text-muted-foreground">{DAY_LABELS[session.dayIndex]}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Dupliquer vers...">
-                <Copy className="h-3.5 w-3.5" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" title="Dupliquer">
+                <Copy className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {otherDays.map(d => (
                 <DropdownMenuItem key={d.index} onClick={() => onDuplicate(d.index)}>
-                  {d.label}
+                  {DAY_LABELS[d.index]}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete}>
-            <Trash2 className="h-3.5 w-3.5" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-destructive" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Select value={session.activityType} onValueChange={v => update("activityType", v)}>
-          <SelectTrigger className="h-9 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ACTIVITY_TYPES.map(a => (
-              <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="relative flex-1">
-          <Input
-            value={session.objective}
-            onChange={e => update("objective", e.target.value)}
-            placeholder="Objectif..."
-            className="h-9 text-xs pr-7"
-          />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-muted-foreground hover:text-foreground">
-                <HelpCircle className="h-3.5 w-3.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 text-xs max-h-48 overflow-y-auto" side="top">
-              <p className="font-semibold text-sm mb-1.5">Types de séance</p>
-              <div className="grid grid-cols-2 gap-0.5">
-                {["Footing", "Footing Z2", "Footing Z3", "Seuil", "VMA", "VMA courte", "VMA longue", "Spé cross", "Spé piste", "Spé 10K", "Spé semi", "Spé marathon", "Côtes", "Fartlek", "PPG / Renfo", "Sortie longue", "Récupération"].map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    className="text-left px-1.5 py-1 rounded hover:bg-accent/50 transition-colors truncate"
-                    onClick={() => { update("objective", t); }}
-                  >
-                    {t}
-                  </button>
+      <div className="p-4 space-y-4">
+        {/* Activity type + Objective */}
+        <div className="space-y-3">
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+              Type d'activité
+            </label>
+            <Select value={session.activityType} onValueChange={v => update("activityType", v)}>
+              <SelectTrigger className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTIVITY_TYPES.map(a => (
+                  <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
                 ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="flex gap-1.5">
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowTemplates(true)}>
-          <BookOpen className="h-3.5 w-3.5 mr-1" />
-          Template
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+              Objectif de la séance
+            </label>
+            <div className="relative">
+              <Input
+                value={session.objective}
+                onChange={e => update("objective", e.target.value)}
+                placeholder="Ex: Footing, VMA, Seuil..."
+                className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px] pr-10"
+              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground">
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-2 max-h-56 overflow-y-auto" side="top">
+                  <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pb-2">
+                    Sélection rapide
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {QUICK_OBJECTIVES.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        className="text-left px-3 py-2 rounded-lg text-[14px] hover:bg-primary/10 active:bg-primary/20 transition-colors truncate"
+                        onClick={() => update("objective", t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </div>
+
+        {/* Template button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 rounded-xl text-[14px] w-full border-dashed border-border/80 hover:bg-primary/5"
+          onClick={() => setShowTemplates(true)}
+        >
+          <BookOpen className="h-4 w-4 mr-2 text-primary" />
+          Charger un template
         </Button>
-      </div>
 
-      <div className="relative">
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase">Séance</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground">
-                <HelpCircle className="h-3.5 w-3.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 text-xs space-y-2" side="top">
-              <p className="font-semibold text-sm">Formats RCC</p>
-              <div className="space-y-1.5">
-                <div><code className="font-mono bg-muted px-1 rounded">20'&gt;5'30</code> → 20 min à 5:30/km</div>
-                <div><code className="font-mono bg-muted px-1 rounded">10'</code> → 10 min (allure libre)</div>
-                <div><code className="font-mono bg-muted px-1 rounded">3x1000&gt;4'00</code> → 3×1000m à 4:00</div>
-                <div><code className="font-mono bg-muted px-1 rounded">6x3'&gt;3'30</code> → 6×3min à 3:30</div>
-                <div><code className="font-mono bg-muted px-1 rounded">r1'30&gt;trot</code> → Récup 1'30 trot</div>
-              </div>
-              <p className="text-muted-foreground pt-1">Séparez les blocs par des virgules.<br/>Ex: <code className="font-mono bg-muted px-1 rounded">20'&gt;5'30, 6x3'&gt;3'30 r1'30&gt;trot, 10'&gt;6'00</code></p>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <RCCEditor
-          value={session.rccCode}
-          onChange={v => update("rccCode", v)}
-          onParsedChange={handleParsedChange}
-        />
-      </div>
-
-      {/* Location with autocomplete */}
-      <div className="relative">
-        <div className="relative">
-          <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            value={locationSearch}
-            onChange={e => {
-              setLocationSearch(e.target.value);
-              if (!e.target.value.trim()) {
-                update("locationName", "");
-              }
-            }}
-            placeholder="Rechercher un lieu..."
-            className="h-9 text-xs pl-8 pr-8"
+        {/* RCC Editor */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Contenu de la séance
+            </label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-lg text-muted-foreground hover:text-foreground">
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 text-[13px] space-y-2 p-4" side="top">
+                <p className="font-semibold text-[15px]">Formats RCC</p>
+                <div className="space-y-2 text-muted-foreground">
+                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">20'&gt;5'30</code> → 20 min à 5:30/km</div>
+                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">10'</code> → 10 min (allure libre)</div>
+                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">3x1000&gt;4'00</code> → 3×1000m à 4:00</div>
+                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">6x3'&gt;3'30</code> → 6×3min à 3:30</div>
+                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">r1'30&gt;trot</code> → Récup 1'30 trot</div>
+                </div>
+                <p className="text-muted-foreground pt-1 text-[12px]">Séparez les blocs par des virgules.</p>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <RCCEditor
+            value={session.rccCode}
+            onChange={v => update("rccCode", v)}
+            onParsedChange={handleParsedChange}
           />
-          {isSearchingLocation && (
-            <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+        </div>
+
+        {/* Location */}
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            Lieu de rendez-vous
+          </label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={locationSearch}
+              onChange={e => {
+                setLocationSearch(e.target.value);
+                if (!e.target.value.trim()) update("locationName", "");
+              }}
+              placeholder="Rechercher un lieu..."
+              className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px] pl-10 pr-10"
+            />
+            {isSearchingLocation && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          {showLocationResults && locationResults.length > 0 && (
+            <div className="mt-1.5 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+              {locationResults.map((loc, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="w-full text-left px-4 py-3 text-[14px] hover:bg-secondary/50 active:bg-secondary transition-colors flex items-center gap-2.5 border-b border-border/50 last:border-0"
+                  onClick={() => selectLocation(loc)}
+                >
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="truncate">{loc.name}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
-        {showLocationResults && locationResults.length > 0 && (
-          <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-            {locationResults.map((loc, i) => (
-              <button
-                key={i}
-                type="button"
-                className="w-full text-left px-3 py-2 text-xs hover:bg-accent/50 transition-colors flex items-center gap-2"
-                onClick={() => selectLocation(loc)}
-              >
-                <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
-                <span className="truncate">{loc.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
-      <Textarea
-        value={session.coachNotes}
-        onChange={e => update("coachNotes", e.target.value)}
-        placeholder="📝 Notes coach (optionnel)"
-        className="text-xs min-h-[40px] resize-none"
-        rows={2}
-      />
+        {/* Coach notes */}
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            Notes coach (optionnel)
+          </label>
+          <Textarea
+            value={session.coachNotes}
+            onChange={e => update("coachNotes", e.target.value)}
+            placeholder="Consignes, rappels, motivation..."
+            className="rounded-xl bg-secondary/50 border-0 text-[14px] min-h-[60px] resize-none"
+            rows={2}
+          />
+        </div>
+      </div>
 
       <CoachingTemplatesDialog
         isOpen={showTemplates}
