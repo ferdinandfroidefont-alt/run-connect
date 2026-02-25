@@ -49,6 +49,7 @@ interface DayData {
 interface AthleteData {
   userId: string;
   displayName: string;
+  username: string | null;
   avatarUrl: string | null;
   days: Record<string, DayData>;
   completedCount: number;
@@ -107,12 +108,12 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
 
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, display_name, avatar_url")
+        .select("user_id, display_name, username, avatar_url")
         .in("user_id", userIds);
 
-      const profileMap: Record<string, { name: string; avatar: string | null }> = {};
+      const profileMap: Record<string, { name: string; username: string | null; avatar: string | null }> = {};
       (profiles || []).forEach(p => {
-        profileMap[p.user_id!] = { name: p.display_name || "Athlète", avatar: p.avatar_url };
+        profileMap[p.user_id!] = { name: p.display_name || "Athlète", username: p.username || null, avatar: p.avatar_url };
       });
 
       const athleteMap: Record<string, AthleteData> = {};
@@ -123,6 +124,7 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
           athleteMap[p.user_id] = {
             userId: p.user_id,
             displayName: profile?.name || "Athlète",
+            username: profile?.username || null,
             avatarUrl: profile?.avatar || null,
             days: {},
             completedCount: 0,
@@ -163,7 +165,10 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
   const filtered = useMemo(() => {
     if (!search.trim()) return athletes;
     const q = search.toLowerCase();
-    return athletes.filter(a => a.displayName.toLowerCase().includes(q));
+    return athletes.filter(a =>
+      a.displayName.toLowerCase().includes(q) ||
+      (a.username && a.username.toLowerCase().includes(q))
+    );
   }, [athletes, search]);
 
   const getLateSessionTitles = (athlete: AthleteData): string[] => {
