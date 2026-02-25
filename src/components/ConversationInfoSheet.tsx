@@ -85,16 +85,18 @@ export const ConversationInfoSheet: React.FC<ConversationInfoSheetProps> = ({
     }
   };
 
-  if (!conversation) return null;
+  const isDirectMessage = conversation ? !conversation.is_group : true;
+  const displayName = conversation
+    ? (isDirectMessage 
+      ? (conversation.other_participant?.username || conversation.other_participant?.display_name || 'Utilisateur')
+      : (conversation.group_name || 'Groupe'))
+    : '';
 
-  const isDirectMessage = !conversation.is_group;
-  const displayName = isDirectMessage 
-    ? (conversation.other_participant?.username || conversation.other_participant?.display_name || 'Utilisateur')
-    : (conversation.group_name || 'Groupe');
-
-  const avatarUrl = isDirectMessage
-    ? conversation.other_participant?.avatar_url
-    : conversation.group_avatar_url;
+  const avatarUrl = conversation
+    ? (isDirectMessage
+      ? conversation.other_participant?.avatar_url
+      : conversation.group_avatar_url)
+    : null;
 
   const handleNotifToggle = () => {
     if (!notificationsEnabled) {
