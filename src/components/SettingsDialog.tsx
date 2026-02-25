@@ -397,7 +397,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed inset-0 w-full max-w-full h-full max-h-full sm:relative sm:inset-auto sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
+      <DialogContent className="w-[100vw] max-w-[100vw] h-[100dvh] max-h-[100dvh] sm:w-auto sm:max-w-md sm:h-auto sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
