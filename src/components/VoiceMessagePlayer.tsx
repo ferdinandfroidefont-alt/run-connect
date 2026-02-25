@@ -7,7 +7,7 @@ interface VoiceMessagePlayerProps {
 }
 
 export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => {
-  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'error' | 'unsupported'>('idle');
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -34,16 +34,18 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
   const updateProgress = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    
+
     if (audio.duration && isFinite(audio.duration)) {
       setProgress(audio.currentTime / audio.duration);
       setDuration(audio.duration);
     }
-    
+
     if (!audio.paused && !audio.ended) {
       animRef.current = requestAnimationFrame(updateProgress);
     }
   }, []);
+
+  const isWebmFile = /\.webm(\?|$)/i.test(src);
 
   const handlePlay = useCallback(async () => {
     try {
@@ -61,18 +63,21 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
         return;
       }
 
-      // Create audio element within user gesture context
       setStatus('loading');
-      
+
       const audio = new Audio();
       audioRef.current = audio;
-      
-      // Try to unlock audio on iOS by calling play immediately
-      audio.play().catch(() => {});
-      audio.pause();
-      
       audio.preload = 'auto';
-      audio.crossOrigin = 'anonymous';
+
+      const canPlayWebm =
+        audio.canPlayType('audio/webm;codecs=opus') !== '' ||
+        audio.canPlayType('audio/webm') !== '';
+
+      if (isWebmFile && !canPlayWebm) {
+        console.warn('⚠️ Format webm non supporté sur cet appareil');
+        setStatus('unsupported');
+        return;
+      }
 
       audio.onloadedmetadata = () => {
         if (isFinite(audio.duration)) {
@@ -92,26 +97,18 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
         cleanup();
       };
 
-      // Fetch the audio as blob to avoid CORS/format issues
-      const response = await fetch(src);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      audio.src = blobUrl;
-      
+      // IMPORTANT: source + play directly in user gesture context (no pre-fetch)
+      audio.src = src;
       await audio.play();
+
       setStatus('playing');
       animRef.current = requestAnimationFrame(updateProgress);
-      
     } catch (error) {
       console.error('❌ Voice message play failed:', error);
       setStatus('error');
       cleanup();
     }
-  }, [status, src, cleanup, updateProgress]);
+  }, [status, src, isWebmFile, cleanup, updateProgress]);
 
   const formatTime = (seconds: number) => {
     if (!seconds || !isFinite(seconds)) return '0:00';
@@ -127,7 +124,12 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
       onClick={handlePlay}
       className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/30 backdrop-blur-sm border border-border/20 shadow-md min-w-[140px]"
     >
-      {status === 'error' ? (
+      {status === 'unsupported' ? (
+        <>
+          <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+          <span className="text-xs text-destructive">Format non supporté (.webm)</span>
+        </>
+      ) : status === 'error' ? (
         <>
           <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
           <span className="text-xs text-destructive">Erreur audio</span>
