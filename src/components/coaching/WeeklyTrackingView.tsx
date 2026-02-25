@@ -209,7 +209,7 @@ export const WeeklyTrackingView = ({ clubId, onClose }: WeeklyTrackingViewProps)
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher un athlète..."
-          className="pl-9 bg-secondary border-0 rounded-[10px] h-9 text-[15px]"
+          className="pl-9 bg-card border border-border rounded-[10px] h-9 text-[15px]"
         />
       </div>
 

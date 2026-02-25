@@ -146,7 +146,48 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       setTargetAthletes(draft.target_athletes || []);
       setSentAt(draft.sent_at || null);
     } else {
-      // Don't clear if switching groups - only clear if truly no draft
+      // No draft — try loading already-sent sessions from coaching_sessions
+      await loadSentSessions();
+    }
+  };
+
+  const loadSentSessions = async () => {
+    if (!user) return;
+    const weekEndDate = addDays(weekStart, 7);
+    let query = supabase
+      .from("coaching_sessions")
+      .select("*")
+      .eq("club_id", clubId)
+      .eq("coach_id", user.id)
+      .gte("scheduled_at", weekStart.toISOString())
+      .lt("scheduled_at", weekEndDate.toISOString());
+
+    if (activeGroupId !== "club") {
+      query = query.eq("target_group_id", activeGroupId);
+    } else {
+      query = query.is("target_group_id", null);
+    }
+
+    const { data: sentSessions } = await query;
+    if (sentSessions && sentSessions.length > 0) {
+      const imported: WeekSession[] = sentSessions.map(cs => {
+        const scheduledDate = new Date(cs.scheduled_at);
+        const dayOfWeek = scheduledDate.getDay();
+        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        return {
+          dayIndex,
+          activityType: cs.activity_type || "running",
+          objective: cs.objective || cs.title || "",
+          rccCode: cs.rcc_code || "",
+          parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+          coachNotes: cs.coach_notes || "",
+          locationName: cs.default_location_name || "",
+          athleteOverrides: {},
+        };
+      });
+      setGroupPlans(prev => ({ ...prev, [activeGroupId]: imported }));
+      setSentAt(sentSessions[0].created_at);
+    } else {
       if (!groupPlans[activeGroupId] || groupPlans[activeGroupId].length === 0) {
         setTargetAthletes([]);
         setSentAt(null);
