@@ -1836,6 +1836,22 @@ const Messages = () => {
                   });
                 };
                 
+                // System message rendering
+                if (message.message_type === 'system') {
+                  return (
+                    <div key={message.id}>
+                      {showHeader && (
+                        <MessageSectionHeader timestamp={message.created_at} />
+                      )}
+                      <div className="text-center py-2">
+                        <span className="text-xs text-muted-foreground italic">
+                          {message.sender?.username || message.sender?.display_name || ''} {message.content}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                
                 return (
                   <div key={message.id}>
                     {showHeader && (
@@ -2696,6 +2712,11 @@ const Messages = () => {
                                 {conversation.last_message.message_type === 'session' && 'Session partagée'}
                                 {conversation.last_message.message_type === 'poll' && '📊 Sondage'}
                                 {conversation.last_message.message_type === 'coaching_session' && '🎓 Séance coach'}
+                                {conversation.last_message.message_type === 'system' && (
+                                  <span className="italic text-muted-foreground">
+                                    {conversation.last_message.content}
+                                  </span>
+                                )}
                                 {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
                                   (conversation.last_message.content?.length > 40 
                                     ? conversation.last_message.content.substring(0, 40) + '…' 
