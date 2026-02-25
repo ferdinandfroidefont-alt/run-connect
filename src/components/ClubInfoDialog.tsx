@@ -395,24 +395,6 @@ export const ClubInfoDialog = ({
 
 
 
-            {/* Club Code - visible to all members */}
-            {clubCode &&
-              <div className="bg-card rounded-[10px] p-3 flex items-center justify-between mb-2" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
-                <div>
-                  <p className="text-[11px] text-muted-foreground">Code du club</p>
-                  <p className="text-[15px] font-mono font-semibold text-foreground">{clubCode}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(clubCode);
-                    toast({ title: "Code copié !" });
-                  }}
-                  className="text-primary active:opacity-70">
-
-                  <Copy className="h-5 w-5" />
-                </button>
-              </div>
-              }
 
             {currentUserIsCoach ? (
               /* ===== COACH / ADMIN VIEW: Full tabs ===== */
