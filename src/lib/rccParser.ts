@@ -67,7 +67,30 @@ function parseSingleBlock(raw: string, index: number, totalBlocks: number): { bl
     recovery = parseRecovery(recoveryPart);
   }
 
-  // Try interval format: "3x1000>3'00"
+  // Try interval by time: "6x3'>3'30" (6 reps of 3min at 3:30 pace)
+  const intervalTimeMatch = mainPart.match(/^(\d+)x(\d+)'>(.+)$/);
+  if (intervalTimeMatch) {
+    const repetitions = parseInt(intervalTimeMatch[1]);
+    const duration = parseInt(intervalTimeMatch[2]);
+    const pace = parsePace(intervalTimeMatch[3]);
+    if (!pace) {
+      return { block: null, error: { blockIndex: index, raw: trimmed, message: `Allure invalide: "${intervalTimeMatch[3]}"` } };
+    }
+    return {
+      block: {
+        type: 'interval',
+        raw: trimmed,
+        duration,
+        repetitions,
+        pace,
+        recoveryDuration: recovery?.duration,
+        recoveryType: recovery?.type,
+      },
+      error: null,
+    };
+  }
+
+  // Try interval by distance: "3x1000>3'00"
   const intervalMatch = mainPart.match(/^(\d+)x(\d+)>(.+)$/);
   if (intervalMatch) {
     const repetitions = parseInt(intervalMatch[1]);
