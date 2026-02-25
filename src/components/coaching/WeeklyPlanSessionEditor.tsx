@@ -183,18 +183,20 @@ export const WeeklyPlanSessionEditor = ({
                 <HelpCircle className="h-3.5 w-3.5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 text-xs space-y-1.5" side="top">
-              <p className="font-semibold text-sm mb-2">Types de séance</p>
-              {["Footing", "Footing Z2", "Footing Z3", "Seuil", "VMA", "VMA courte", "VMA longue", "Spé cross", "Spé piste", "Spé 10K", "Spé semi", "Spé marathon", "Côtes", "Fartlek", "PPG / Renfo", "Sortie longue", "Récupération"].map(t => (
-                <button
-                  key={t}
-                  type="button"
-                  className="block w-full text-left px-2 py-1 rounded hover:bg-accent/50 transition-colors"
-                  onClick={() => { update("objective", t); }}
-                >
-                  {t}
-                </button>
-              ))}
+            <PopoverContent className="w-64 text-xs max-h-48 overflow-y-auto" side="top">
+              <p className="font-semibold text-sm mb-1.5">Types de séance</p>
+              <div className="grid grid-cols-2 gap-0.5">
+                {["Footing", "Footing Z2", "Footing Z3", "Seuil", "VMA", "VMA courte", "VMA longue", "Spé cross", "Spé piste", "Spé 10K", "Spé semi", "Spé marathon", "Côtes", "Fartlek", "PPG / Renfo", "Sortie longue", "Récupération"].map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    className="text-left px-1.5 py-1 rounded hover:bg-accent/50 transition-colors truncate"
+                    onClick={() => { update("objective", t); }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </PopoverContent>
           </Popover>
         </div>
