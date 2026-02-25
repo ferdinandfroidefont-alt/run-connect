@@ -418,3 +418,9 @@ html, body {
 .pulse-marker-animation {
   animation: newSessionPulse 0.8s ease-in-out infinite;
 }
+
+/* Joyride tooltip: keep within viewport on mobile */
+.__floater {
+  max-width: calc(100vw - 16px) !important;
+  padding: 0 8px !important;
+}
