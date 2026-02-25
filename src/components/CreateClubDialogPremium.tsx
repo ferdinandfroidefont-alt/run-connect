@@ -233,7 +233,8 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
       const { error: adminError } = await supabase.from('group_members').insert([{
         conversation_id: conversation.id,
         user_id: user.id,
-        is_admin: true
+        is_admin: true,
+        is_coach: true
       }]);
 
       if (adminError) {

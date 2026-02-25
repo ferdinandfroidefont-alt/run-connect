@@ -294,7 +294,8 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
         .insert([{
           conversation_id: conversation.id,
           user_id: user.id,
-          is_admin: true
+          is_admin: true,
+          is_coach: true
         }]);
 
       if (adminError) {
