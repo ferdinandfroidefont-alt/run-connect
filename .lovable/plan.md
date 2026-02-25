@@ -1,59 +1,56 @@
 
 
-## Plan: Créateur de club = Coach automatiquement
+## Problem
 
-### Contexte actuel
-- A la creation d'un club, le createur est insere dans `group_members` avec `is_admin: true` mais `is_coach: false`
-- Le `CoachAccessDialog` fait un fallback sur `created_by` pour trouver les clubs du createur, mais c'est un contournement
-- Le `ClubInfoDialog` a une logique hybride: `is_coach || is_admin || createdBy === user?.id`
-- La fonction SQL `is_club_coach_or_creator` gere deja le cas au niveau RLS (verifie `created_by` OU `is_coach`)
+The `ConversationInfoSheet` component is placed in the **conversation list** branch of `Messages.tsx` (after line 2510), but it needs to be in the **active conversation** branch (lines 1700-2508). When a conversation is selected, the component hits an early `return` at line 2506, so the sheet at line 2946 is never in the DOM. Clicking the chevron sets `showConversationInfo = true` but there is no sheet to show.
 
-### Changements prevus
+## Solution
 
-**1. Lors de la creation du club, mettre `is_coach: true` en plus de `is_admin: true`**
+Move the `ConversationInfoSheet` render from the conversation list branch into the active conversation branch, just before the closing `</>` at line 2506.
 
-Fichiers concernes:
-- `src/components/CreateClubDialog.tsx` (ligne ~296): ajouter `is_coach: true` dans l'insert `group_members`
-- `src/components/CreateClubDialogPremium.tsx` (ligne ~236): idem
+## Implementation Steps
 
-**2. Simplifier `CoachAccessDialog.loadCoachClubs()`**
+1. **Remove** the `ConversationInfoSheet` block from lines 2946-2969 (conversation list branch)
+2. **Add** the same `ConversationInfoSheet` block inside the `selectedConversation` branch, right before the `</>` closing at line 2506
 
-- Supprimer le fallback `created_by` (lignes 70-78) car le createur aura desormais `is_coach: true` dans `group_members`
-- Garder uniquement la query `is_coach = true`
+This is the same architectural issue documented in the project memory: global dialogs must be explicitly rendered in the active conversation branch because the early return prevents reaching code in the list branch.
 
-**3. Simplifier `ClubInfoDialog` la detection coach**
-
-- La logique `currentUserIsCoach` (ligne ~189) peut rester telle quelle car elle gere deja les cas anciens (`is_admin || createdBy`), ce qui assure la retro-compatibilite avec les clubs existants
-
-**4. (Optionnel) Mettre a jour les clubs existants**
-
-- Executer un UPDATE SQL pour mettre `is_coach = true` sur les `group_members` des createurs de clubs existants, afin d'aligner les donnees historiques
-
-### Details techniques
+## Technical Details
 
 ```text
-CreateClubDialog / CreateClubDialogPremium
-  insert group_members:
-    AVANT:  { is_admin: true }
-    APRES:  { is_admin: true, is_coach: true }
+Current structure:
+  if (selectedConversation) {
+    return (
+      <>
+        ... conversation UI ...
+      </>              ← line 2506, early return
+    );
+  }
 
-CoachAccessDialog.loadCoachClubs():
-  AVANT:  query is_coach=true, fallback created_by
-  APRES:  query is_coach=true uniquement
+  return (
+    <>
+      ... conversation list ...
+      <ConversationInfoSheet ... />   ← line 2946, NEVER rendered when chat is open
+    </>
+  );
 
-SQL migration (donnees existantes):
-  UPDATE group_members gm
-  SET is_coach = true
-  FROM conversations c
-  WHERE gm.conversation_id = c.id
-    AND c.is_group = true
-    AND c.created_by = gm.user_id
-    AND gm.is_coach = false;
+Fixed structure:
+  if (selectedConversation) {
+    return (
+      <>
+        ... conversation UI ...
+        <ConversationInfoSheet ... />  ← moved here
+      </>
+    );
+  }
+
+  return (
+    <>
+      ... conversation list ...
+      // removed from here
+    </>
+  );
 ```
 
-### Fichiers modifies
-1. `src/components/CreateClubDialog.tsx` - ajouter `is_coach: true`
-2. `src/components/CreateClubDialogPremium.tsx` - ajouter `is_coach: true`
-3. `src/components/coaching/CoachAccessDialog.tsx` - simplifier `loadCoachClubs`
-4. Migration SQL - aligner les donnees existantes
+No new files or dependencies needed. Single file edit in `Messages.tsx`.
 
