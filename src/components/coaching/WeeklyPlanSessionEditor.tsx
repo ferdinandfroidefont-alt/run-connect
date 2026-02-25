@@ -1,14 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { RCCEditor } from "./RCCEditor";
-import { AthleteOverrideEditor, type AthleteOverride } from "./AthleteOverrideEditor";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { BookOpen, ChevronDown, Users, Copy, Trash2 } from "lucide-react";
+import { BookOpen, Copy, Trash2, MapPin, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
 import type { RCCResult, ParsedBlock } from "@/lib/rccParser";
 
 const DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -21,6 +20,13 @@ const ACTIVITY_TYPES = [
   { value: "walking", label: "Marche" },
 ];
 
+interface AthleteOverride {
+  pace?: string;
+  reps?: number;
+  recovery?: number;
+  notes?: string;
+}
+
 export interface WeekSession {
   dayIndex: number;
   activityType: string;
@@ -29,6 +35,8 @@ export interface WeekSession {
   parsedBlocks: ParsedBlock[];
   coachNotes: string;
   locationName: string;
+  locationLat?: number;
+  locationLng?: number;
   athleteOverrides: Record<string, AthleteOverride>;
 }
 
@@ -53,7 +61,66 @@ export const WeeklyPlanSessionEditor = ({
   members,
 }: WeeklyPlanSessionEditorProps) => {
   const [showTemplates, setShowTemplates] = useState(false);
-  const [variantsOpen, setVariantsOpen] = useState(false);
+  const [locationSearch, setLocationSearch] = useState(session.locationName || "");
+  const [locationResults, setLocationResults] = useState<any[]>([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [showLocationResults, setShowLocationResults] = useState(false);
+
+  // Debounced location search
+  useEffect(() => {
+    if (!locationSearch.trim() || locationSearch === session.locationName) {
+      setLocationResults([]);
+      setShowLocationResults(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      searchLocation(locationSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [locationSearch]);
+
+  const searchLocation = async (query: string) => {
+    if (!query.trim()) return;
+    setIsSearchingLocation(true);
+    try {
+      if (window.google?.maps?.places) {
+        const service = new google.maps.places.PlacesService(document.createElement('div'));
+        service.textSearch({ query }, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            setLocationResults(results.slice(0, 4).map(r => ({
+              name: r.formatted_address || r.name || "",
+              lat: r.geometry?.location?.lat() || 0,
+              lng: r.geometry?.location?.lng() || 0,
+            })));
+            setShowLocationResults(true);
+          }
+          setIsSearchingLocation(false);
+        });
+      } else {
+        const { data } = await supabase.functions.invoke('google-maps-proxy', {
+          body: { address: query, type: 'geocode' }
+        });
+        if (data?.results) {
+          setLocationResults(data.results.slice(0, 4).map((r: any) => ({
+            name: r.formatted_address,
+            lat: r.geometry.location.lat,
+            lng: r.geometry.location.lng,
+          })));
+          setShowLocationResults(true);
+        }
+        setIsSearchingLocation(false);
+      }
+    } catch {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  const selectLocation = (loc: { name: string; lat: number; lng: number }) => {
+    onChange({ ...session, locationName: loc.name, locationLat: loc.lat, locationLng: loc.lng });
+    setLocationSearch(loc.name);
+    setShowLocationResults(false);
+    setLocationResults([]);
+  };
 
   const update = <K extends keyof WeekSession>(key: K, value: WeekSession[K]) => {
     onChange({ ...session, [key]: value });
@@ -62,12 +129,6 @@ export const WeeklyPlanSessionEditor = ({
   const handleParsedChange = (result: RCCResult) => {
     update("parsedBlocks", result.blocks);
   };
-
-  // Extract base values from parsed blocks for override defaults
-  const intervalBlock = session.parsedBlocks.find(b => b.type === "interval");
-  const basePace = intervalBlock?.pace;
-  const baseReps = intervalBlock?.repetitions;
-  const baseRecovery = intervalBlock?.recoveryDuration;
 
   const otherDays = DAY_LABELS.map((label, i) => ({ label, index: i }))
     .filter(d => d.index !== session.dayIndex);
@@ -129,12 +190,41 @@ export const WeeklyPlanSessionEditor = ({
         onParsedChange={handleParsedChange}
       />
 
-      <Input
-        value={session.locationName}
-        onChange={e => update("locationName", e.target.value)}
-        placeholder="📍 Lieu (optionnel)"
-        className="h-9 text-xs"
-      />
+      {/* Location with autocomplete */}
+      <div className="relative">
+        <div className="relative">
+          <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={locationSearch}
+            onChange={e => {
+              setLocationSearch(e.target.value);
+              if (!e.target.value.trim()) {
+                update("locationName", "");
+              }
+            }}
+            placeholder="Rechercher un lieu..."
+            className="h-9 text-xs pl-8 pr-8"
+          />
+          {isSearchingLocation && (
+            <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        {showLocationResults && locationResults.length > 0 && (
+          <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+            {locationResults.map((loc, i) => (
+              <button
+                key={i}
+                type="button"
+                className="w-full text-left px-3 py-2 text-xs hover:bg-accent/50 transition-colors flex items-center gap-2"
+                onClick={() => selectLocation(loc)}
+              >
+                <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="truncate">{loc.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <Textarea
         value={session.coachNotes}
@@ -143,29 +233,6 @@ export const WeeklyPlanSessionEditor = ({
         className="text-xs min-h-[40px] resize-none"
         rows={2}
       />
-
-      {/* Athlete variants */}
-      <Collapsible open={variantsOpen} onOpenChange={setVariantsOpen}>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-7 text-xs w-full justify-between">
-            <span className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" />
-              Variantes ({Object.keys(session.athleteOverrides).length})
-            </span>
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${variantsOpen ? "rotate-180" : ""}`} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">
-          <AthleteOverrideEditor
-            members={members}
-            overrides={session.athleteOverrides}
-            onChange={ov => update("athleteOverrides", ov)}
-            basePace={basePace}
-            baseReps={baseReps}
-            baseRecovery={baseRecovery}
-          />
-        </CollapsibleContent>
-      </Collapsible>
 
       <CoachingTemplatesDialog
         isOpen={showTemplates}
