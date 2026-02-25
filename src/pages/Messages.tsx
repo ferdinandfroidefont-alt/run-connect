@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
+import { ClubProfileDialog } from "@/components/ClubProfileDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateClubDialogPremium } from "@/components/CreateClubDialogPremium";
 import { NewConversationView } from "@/components/NewConversationView";
@@ -154,6 +155,7 @@ const Messages = () => {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showClubProfile, setShowClubProfile] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [groupInfoData, setGroupInfoData] = useState<any>(null);
   const [showAvatarViewer, setShowAvatarViewer] = useState(false);
@@ -1703,7 +1705,7 @@ const Messages = () => {
                       setSelectedConversation(null);
                       setTimeout(() => {
                         setGroupInfoData(clubData);
-                        setShowGroupInfo(true);
+                        setShowClubProfile(true);
                       }, 100);
                     }}
                   >
@@ -2805,6 +2807,35 @@ const Messages = () => {
             setShowGroupInfo(false);
             setTimeout(() => {
               setShowEditGroup(true);
+            }, 100);
+          }}
+        />
+
+        {/* Club Profile Dialog - for all members */}
+        <ClubProfileDialog
+          isOpen={showClubProfile}
+          onClose={() => {
+            setShowClubProfile(false);
+            setGroupInfoData(null);
+          }}
+          conversationId={groupInfoData?.id || ''}
+          groupName={groupInfoData?.group_name || ""}
+          groupDescription={groupInfoData?.group_description || null}
+          groupAvatarUrl={groupInfoData?.group_avatar_url || null}
+          clubCode={groupInfoData?.club_code || ""}
+          createdBy={groupInfoData?.created_by || ""}
+          createdAt={groupInfoData?.created_at || ""}
+          isAdmin={groupInfoData?.created_by === user?.id}
+          onEditGroup={() => {
+            setShowClubProfile(false);
+            setTimeout(() => {
+              setShowEditGroup(true);
+            }, 100);
+          }}
+          onOpenCoachView={() => {
+            setShowClubProfile(false);
+            setTimeout(() => {
+              setShowGroupInfo(true);
             }, 100);
           }}
         />
