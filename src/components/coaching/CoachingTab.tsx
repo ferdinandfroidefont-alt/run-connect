@@ -3,13 +3,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { CreateCoachingSessionDialog } from "./CreateCoachingSessionDialog";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { CalendarDays, BookOpen, BarChart3, Users, Plus } from "lucide-react";
+import { CalendarDays, BookOpen, BarChart3, Users, FileText } from "lucide-react";
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 import { WeeklyTrackingDialog } from "./WeeklyTrackingDialog";
 import { ClubGroupsManagerDialog } from "./ClubGroupsManagerDialog";
+import { CoachingDraftsList } from "./CoachingDraftsList";
 import { AthleteWeeklyView } from "./AthleteWeeklyView";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek } from "date-fns";
@@ -62,12 +62,14 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<CoachingSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
   const [selectedSession, setSelectedSession] = useState<CoachingSession | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showWeeklyPlan, setShowWeeklyPlan] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
   const [showGroups, setShowGroups] = useState(false);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [draftInitialWeek, setDraftInitialWeek] = useState<Date | undefined>();
+  const [draftInitialGroup, setDraftInitialGroup] = useState<string | undefined>();
   const [stats, setStats] = useState<DashboardStats>({
     totalSessions: 0, pending: 0, activeGroups: 0, lateAthletes: 0,
     activeAthletes: 0, validationPct: 0,
@@ -172,8 +174,8 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   }
 
   const tools = [
-    { icon: Plus, label: "Nouvelle séance", color: "bg-primary", onClick: () => setShowCreate(true) },
-    { icon: CalendarDays, label: "Plan hebdo", color: "bg-blue-500", onClick: () => setShowWeeklyPlan(true) },
+    { icon: FileText, label: "Brouillons", color: "bg-primary", onClick: () => setShowDrafts(true) },
+    { icon: CalendarDays, label: "Plan hebdo", color: "bg-blue-500", onClick: () => { setDraftInitialWeek(undefined); setDraftInitialGroup(undefined); setShowWeeklyPlan(true); } },
     { icon: Users, label: "Groupes", color: "bg-orange-500", onClick: () => setShowGroups(true) },
     { icon: BarChart3, label: "Suivi", color: "bg-green-500", onClick: () => setShowTracking(true) },
   ];
@@ -295,11 +297,15 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
       )}
 
       {/* Dialogs */}
-      <CreateCoachingSessionDialog
-        isOpen={showCreate}
-        onClose={() => setShowCreate(false)}
+      <CoachingDraftsList
+        isOpen={showDrafts}
+        onClose={() => setShowDrafts(false)}
         clubId={clubId}
-        onCreated={loadDashboard}
+        onOpenDraft={(weekStart, groupId) => {
+          setDraftInitialWeek(weekStart);
+          setDraftInitialGroup(groupId);
+          setShowWeeklyPlan(true);
+        }}
       />
 
       <CoachingSessionDetail
@@ -314,15 +320,17 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         onClose={() => setShowTemplates(false)}
         onSelect={(code) => {
           setShowTemplates(false);
-          setShowCreate(true);
+          setShowWeeklyPlan(true);
         }}
       />
 
       <WeeklyPlanDialog
         isOpen={showWeeklyPlan}
-        onClose={() => setShowWeeklyPlan(false)}
+        onClose={() => { setShowWeeklyPlan(false); setDraftInitialWeek(undefined); setDraftInitialGroup(undefined); }}
         clubId={clubId}
         onSent={loadDashboard}
+        initialWeek={draftInitialWeek}
+        initialGroupId={draftInitialGroup}
       />
 
       <WeeklyTrackingDialog

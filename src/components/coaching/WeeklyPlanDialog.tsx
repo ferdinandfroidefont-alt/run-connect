@@ -48,6 +48,8 @@ interface WeeklyPlanDialogProps {
   onClose: () => void;
   clubId: string;
   onSent?: () => void;
+  initialWeek?: Date;
+  initialGroupId?: string;
 }
 
 type GroupPlans = Record<string, WeekSession[]>;
@@ -63,7 +65,7 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   athleteOverrides: {},
 });
 
-export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlanDialogProps) => {
+export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId }: WeeklyPlanDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -76,6 +78,11 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
   const [templates, setTemplates] = useState<WeekTemplate[]>([]);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  const [targetAthletes, setTargetAthletes] = useState<string[]>([]);
+  const [athleteSearch, setAthleteSearch] = useState("");
+  const [draftSaveStatus, setDraftSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [sentAt, setSentAt] = useState<string | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const sessions = groupPlans[activeGroupId] || [];
@@ -87,13 +94,79 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
     }));
   }, [activeGroupId]);
 
+  // Apply initial props
   useEffect(() => {
     if (isOpen) {
+      if (initialWeek) setCurrentWeek(initialWeek);
+      if (initialGroupId) setActiveGroupId(initialGroupId);
       loadMembers();
       loadGroups();
       loadTemplates();
     }
   }, [isOpen, clubId]);
+
+  // Load draft when week/group changes
+  useEffect(() => {
+    if (isOpen && user) {
+      loadDraft();
+    }
+  }, [isOpen, weekStart.toISOString(), activeGroupId, user]);
+
+  // Auto-save draft with debounce
+  useEffect(() => {
+    if (!isOpen || !user || sessions.length === 0) return;
+    setDraftSaveStatus("idle");
+    const timer = setTimeout(() => {
+      saveDraft();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [JSON.stringify(sessions), JSON.stringify(targetAthletes)]);
+
+  const loadDraft = async () => {
+    if (!user) return;
+    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+    const { data } = await supabase
+      .from("coaching_drafts" as any)
+      .select("*")
+      .eq("coach_id", user.id)
+      .eq("club_id", clubId)
+      .eq("week_start", weekStartStr)
+      .eq("group_id", activeGroupId)
+      .maybeSingle();
+    if (data) {
+      const draft = data as any;
+      const restored = (draft.sessions || []).map((s: any) => ({
+        ...s,
+        parsedBlocks: s.parsedBlocks || [],
+        athleteOverrides: s.athleteOverrides || {},
+      }));
+      setGroupPlans(prev => ({ ...prev, [activeGroupId]: restored }));
+      setTargetAthletes(draft.target_athletes || []);
+      setSentAt(draft.sent_at || null);
+    } else {
+      // Don't clear if switching groups - only clear if truly no draft
+      if (!groupPlans[activeGroupId] || groupPlans[activeGroupId].length === 0) {
+        setTargetAthletes([]);
+        setSentAt(null);
+      }
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!user || sessions.length === 0) return;
+    setDraftSaveStatus("saving");
+    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+    const stripped = sessions.map(({ parsedBlocks, ...rest }) => rest);
+    await supabase.from("coaching_drafts" as any).upsert({
+      coach_id: user.id,
+      club_id: clubId,
+      week_start: weekStartStr,
+      group_id: activeGroupId,
+      sessions: stripped,
+      target_athletes: targetAthletes,
+    } as any, { onConflict: "coach_id,club_id,week_start,group_id" } as any);
+    setDraftSaveStatus("saved");
+  };
 
   const loadMembers = async () => {
     const { data } = await supabase
@@ -402,11 +475,24 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
         title: "Plan envoyé ! 🚀",
         description: `${totalSessionsCount} séances → ${groupLabels.join(", ")}`,
       });
-      setGroupPlans({});
+      // Keep data, mark as sent
+      setSentAt(new Date().toISOString());
+      // Update draft with sent_at
+      const weekStartStr = format(weekStart, "yyyy-MM-dd");
+      for (const groupId of groupsWithPlans) {
+        const stripped = (groupPlans[groupId] || []).map(({ parsedBlocks, ...rest }) => rest);
+        await supabase.from("coaching_drafts" as any).upsert({
+          coach_id: user.id,
+          club_id: clubId,
+          week_start: weekStartStr,
+          group_id: groupId,
+          sessions: stripped,
+          target_athletes: targetAthletes,
+          sent_at: new Date().toISOString(),
+        } as any, { onConflict: "coach_id,club_id,week_start,group_id" } as any);
+      }
       setSelectedIndex(null);
-      setActiveGroupId("club");
       onSent?.();
-      onClose();
     } catch (error) {
       console.error("Error sending plan:", error);
       toast({ title: "Erreur", description: "Impossible d'envoyer le plan", variant: "destructive" });
@@ -460,9 +546,85 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto bg-secondary pb-4">
+        <div
+          className="flex-1 overflow-y-auto bg-secondary pb-4"
+          onTouchStart={e => setTouchStartX(e.touches[0].clientX)}
+          onTouchEnd={e => {
+            if (touchStartX === null) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(dx) > 60) {
+              if (dx > 0) setCurrentWeek(prev => subWeeks(prev, 1));
+              else setCurrentWeek(prev => addWeeks(prev, 1));
+            }
+            setTouchStartX(null);
+          }}
+        >
+          {/* ── ATHLETE SEARCH ── */}
+          <div className="mx-4 mt-4 mb-2">
+            <Input
+              placeholder="🔍 Rechercher un athlète..."
+              value={athleteSearch}
+              onChange={e => setAthleteSearch(e.target.value)}
+              className="h-10 text-[15px]"
+            />
+            {/* Selected chips */}
+            {targetAthletes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {targetAthletes.map(id => {
+                  const m = members.find(m => m.user_id === id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setTargetAthletes(prev => prev.filter(a => a !== id))}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[12px] font-medium"
+                    >
+                      {m?.display_name || "Athlète"}
+                      <X className="h-3 w-3" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {/* Search results dropdown */}
+            {athleteSearch.trim().length > 0 && (
+              <div className="bg-card rounded-[10px] border border-border mt-1 max-h-32 overflow-y-auto">
+                {members
+                  .filter(m => 
+                    m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) &&
+                    !targetAthletes.includes(m.user_id)
+                  )
+                  .slice(0, 5)
+                  .map(m => (
+                    <button
+                      key={m.user_id}
+                      onClick={() => {
+                        setTargetAthletes(prev => [...prev, m.user_id]);
+                        setAthleteSearch("");
+                      }}
+                      className="w-full text-left px-3 py-2 text-[14px] text-foreground hover:bg-muted transition-colors border-b border-border last:border-0"
+                    >
+                      {m.display_name}
+                    </button>
+                  ))
+                }
+                {members.filter(m => m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) && !targetAthletes.includes(m.user_id)).length === 0 && (
+                  <p className="px-3 py-2 text-[13px] text-muted-foreground">Aucun résultat</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Sent badge */}
+          {sentAt && (
+            <div className="mx-4 mb-2 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full bg-green-100 dark:bg-green-900/30">
+              <span className="text-[12px] font-medium text-green-700 dark:text-green-400">
+                ✓ Envoyé le {format(new Date(sentAt), "d MMM à HH:mm", { locale: fr })}
+              </span>
+            </div>
+          )}
+
           {/* ── GROUPE section ── */}
-          <IOSListGroup header="GROUPE" className="mt-4 mx-4">
+          <IOSListGroup header="GROUPE" className="mt-2 mx-4">
             <div className="px-4 py-3 bg-card">
               <Select value={activeGroupId} onValueChange={id => { setActiveGroupId(id); setSelectedIndex(null); }}>
                 <SelectTrigger className="h-10 text-[15px] border-0 bg-transparent p-0 shadow-none">
@@ -818,6 +980,12 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
 
         {/* ── Fixed footer ── */}
         <div className="shrink-0 border-t border-border p-4 space-y-3 bg-card">
+          {/* Draft save status */}
+          {draftSaveStatus !== "idle" && (
+            <p className="text-[11px] text-muted-foreground text-center">
+              {draftSaveStatus === "saving" ? "Sauvegarde..." : "✓ Brouillon sauvegardé"}
+            </p>
+          )}
           {totalSessionsCount > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary" className="text-[11px]">
@@ -837,7 +1005,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent }: WeeklyPlan
             ) : (
               <Send className="h-4 w-4 mr-2" />
             )}
-            Envoyer {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
+            {sentAt ? "Renvoyer" : "Envoyer"} {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
           </Button>
         </div>
       </DialogContent>
