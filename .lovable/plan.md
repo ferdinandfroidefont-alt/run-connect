@@ -1,56 +1,23 @@
 
 
-## Problem
+## Problèmes identifiés
 
-The `ConversationInfoSheet` component is placed in the **conversation list** branch of `Messages.tsx` (after line 2510), but it needs to be in the **active conversation** branch (lines 1700-2508). When a conversation is selected, the component hits an early `return` at line 2506, so the sheet at line 2946 is never in the DOM. Clicking the chevron sets `showConversationInfo = true` but there is no sheet to show.
+### 1. Double Home Indicator sur iOS
+Le `body::after` dans `index.css` (lignes 385-396) crée un overlay blanc fixe en bas avec `z-index: 9999` qui couvre la zone `safe-area-inset-bottom`. **En plus**, le `BottomNavigation` a déjà son propre `paddingBottom: env(safe-area-inset-bottom)` (ligne 70), et la barre d'input Messages aussi (ligne 2234). Résultat : on voit **deux barres blanches empilées** dans la zone du Home Indicator.
+
+### 2. Blanc différent entre WebView et app
+Le `body::before` et `body::after` utilisent `#FFFFFF`, mais le fond natif WKWebView peut avoir un rendu légèrement différent à cause du compositing. Ces pseudo-éléments avec `z-index: 9999` créent une couche supplémentaire visible.
 
 ## Solution
 
-Move the `ConversationInfoSheet` render from the conversation list branch into the active conversation branch, just before the closing `</>` at line 2506.
+**Supprimer `body::before` et `body::after`** dans le bloc `@supports (-webkit-touch-callout: none)` de `index.css`. Ces pseudo-éléments ne sont plus nécessaires car :
+- Le `BottomNavigation` gère déjà le `safe-area-inset-bottom` via son padding inline
+- Le `html, body` a déjà `background-color: #FFFFFF !important` (ligne 116)
+- Le Status Bar est géré par Capacitor StatusBar plugin dans `main.tsx`
 
-## Implementation Steps
+Les composants individuels (BottomNavigation, Messages input) gèrent correctement leurs propres safe areas — pas besoin d'une couche globale par-dessus.
 
-1. **Remove** the `ConversationInfoSheet` block from lines 2946-2969 (conversation list branch)
-2. **Add** the same `ConversationInfoSheet` block inside the `selectedConversation` branch, right before the `</>` closing at line 2506
+## Fichier modifié
 
-This is the same architectural issue documented in the project memory: global dialogs must be explicitly rendered in the active conversation branch because the early return prevents reaching code in the list branch.
-
-## Technical Details
-
-```text
-Current structure:
-  if (selectedConversation) {
-    return (
-      <>
-        ... conversation UI ...
-      </>              ← line 2506, early return
-    );
-  }
-
-  return (
-    <>
-      ... conversation list ...
-      <ConversationInfoSheet ... />   ← line 2946, NEVER rendered when chat is open
-    </>
-  );
-
-Fixed structure:
-  if (selectedConversation) {
-    return (
-      <>
-        ... conversation UI ...
-        <ConversationInfoSheet ... />  ← moved here
-      </>
-    );
-  }
-
-  return (
-    <>
-      ... conversation list ...
-      // removed from here
-    </>
-  );
-```
-
-No new files or dependencies needed. Single file edit in `Messages.tsx`.
+**`src/index.css`** — Supprimer les lignes 371-396 (le bloc `body::before` et `body::after` dans le `@supports (-webkit-touch-callout: none)`).
 
