@@ -32,6 +32,7 @@ import About from "./pages/About";
 import ConfirmPresence from "./pages/ConfirmPresence";
 import TrainingMode from "./pages/TrainingMode";
 import SessionTracking from "./pages/SessionTracking";
+import AuthCallback from "./pages/AuthCallback";
 import { SecurityDashboard } from "./components/SecurityDashboard";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => {
               <AnimatePresence mode="wait">
                 <Routes>
                   <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/" element={<Layout><PageTransition><Index /></PageTransition></Layout>} />
                   <Route path="/feed" element={<Layout><PageTransition><Feed /></PageTransition></Layout>} />
                   <Route path="/my-sessions" element={<Layout><PageTransition><MySessions /></PageTransition></Layout>} />
