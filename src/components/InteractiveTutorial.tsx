@@ -29,7 +29,8 @@ const CustomTooltip = ({
   return (
     <div
       {...tooltipProps}
-      className="bg-background rounded-2xl shadow-2xl border border-border/50 max-w-[320px] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      className="bg-background rounded-2xl shadow-2xl border border-border/50 max-w-[min(320px,calc(100vw-32px))] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border/30">
@@ -161,10 +162,11 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
       callback={handleJoyrideCallback}
       tooltipComponent={CustomTooltip}
       disableOverlayClose
-      disableScrolling={false}
+      disableScrolling
       spotlightPadding={8}
       floaterProps={{
         disableAnimation: false,
+        offset: 16,
       }}
       styles={{
         options: {
