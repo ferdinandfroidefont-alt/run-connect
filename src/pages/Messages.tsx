@@ -2705,7 +2705,7 @@ const Messages = () => {
                               </>
                             ) : (
                               conversation.is_group 
-                                ? `${conversation.group_members?.length || 0} membres`
+                                ? `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? 's' : ''}`
                                 : 'Aucun message'
                             )}
                           </p>
