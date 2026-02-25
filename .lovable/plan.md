@@ -1,66 +1,84 @@
 
 
-## Diagnostic du probleme
+## Diagnostic
 
-Le token push iOS est `null` car il y a deux problemes combines :
+Le probleme est dans le flux Google OAuth iOS. Voici ce qui se passe :
 
-### 1. Race condition dans `setupPushListeners` (bug code)
+1. L'app appelle `supabase.auth.signInWithOAuth` avec `redirectTo: 'app.runconnect://auth'`
+2. Le client Supabase est configure en `flowType: 'pkce'` (ligne 26 de `client.ts`)
+3. Avec PKCE, apres l'auth Google, le serveur Supabase fait une redirection HTTP 302 vers `app.runconnect://auth?code=XXXX`
+4. Safari/SFSafariViewController ne peut pas "ouvrir" un custom scheme comme une page web → **"Safari ne peut pas ouvrir la page car l'adresse n'est pas valide"**
+5. Meme si le deep link arrive dans l'app, le code actuel (lignes 279-280) cherche `access_token` et `refresh_token` dans le fragment URL (`#`), mais avec PKCE il n'y a qu'un parametre `code` dans la query string (`?`) → les tokens ne sont jamais trouves
 
-Le guard `__pushNotificationSystemInitialized` empeche la re-creation des listeners quand le `user` change. Si les listeners sont configures avant que `user` soit disponible, le `savePushToken` dans la closure capture un `user` null et echoue silencieusement (ligne 101: `if (!user) { setToken(...); return false; }`). Le token est perdu.
+**Deux bugs combines :**
+- Le custom scheme comme redirect URL pose probleme avec PKCE sur iOS
+- Le handler ne gere pas l'echange de code PKCE
 
-### 2. Le `registration` event peut ne jamais fire sur iOS
+## Plan de correction
 
-Sur iOS, `PushNotifications.register()` declenche l'enregistrement APNs. Si le Firebase iOS SDK n'est pas correctement integre (GoogleService-Info.plist absent, pods Firebase non installes), l'evenement `registration` ne fire jamais et aucun token n'est capture.
+### Fichier : `src/pages/Auth.tsx`
 
-## Plan de correction (code)
+**A. Changer la strategie de redirect pour iOS**
 
-### Fichier : `src/hooks/usePushNotifications.tsx`
+Remplacer `redirectTo: 'app.runconnect://auth'` par `redirectTo: 'https://run-connect.lovable.app/auth/callback'` (URL web).
 
-**A. Utiliser un `useRef` pour stocker le token en attente et le sauvegarder des que `user` est disponible**
+Apres l'auth Google, Supabase redirige vers cette URL web. La page web dans SFSafariViewController va charger, et `detectSessionInUrl: true` du client Supabase va automatiquement echanger le code PKCE. Ensuite, on redirige vers le custom scheme pour revenir dans l'app.
 
-- Ajouter `const pendingTokenRef = useRef<string | null>(null)` 
-- Dans le listener `registration`, stocker le token dans `pendingTokenRef.current` en plus de `setToken`
-- Ajouter un useEffect qui surveille `user` + `pendingTokenRef.current` : des que les deux sont presents, appeler `savePushToken`
+**B. Ajouter la gestion du code PKCE dans le deep link handler**
 
-**B. Supprimer le guard `__pushNotificationSystemInitialized` ou le rendre user-aware**
+Dans le listener `appUrlOpen`, en plus de chercher `access_token`/`refresh_token`, verifier la presence d'un parametre `code` et appeler `supabase.auth.exchangeCodeForSession(code)` pour etablir la session.
 
-- Remplacer `__pushNotificationSystemInitialized` par un tracking local (via `useRef<boolean>`) pour eviter les doublons dans le meme composant
-- Quand `user` change et qu'un token pending existe, le sauvegarder immediatement
+**C. Creer une route `/auth/callback` qui redirige vers l'app native**
 
-**C. Ajouter un timeout diagnostic pour iOS**
+Ajouter un composant `AuthCallback` qui :
+1. Laisse Supabase echanger le code PKCE automatiquement (via `detectSessionInUrl`)
+2. Detecte que la session est etablie
+3. Redirige vers `app.runconnect://` pour que SFSafariViewController renvoie dans l'app
+4. Si on est deja dans l'app native (pas dans SFSafariViewController), navigate vers `/`
 
-- Apres `PushNotifications.register()` sur iOS, si aucun `registration` event n'est recu sous 10s, logger un message d'erreur clair indiquant que le Firebase iOS SDK n'est probablement pas configure
-- Tenter un retry de `register()` une fois supplementaire
+### Fichier : `src/App.tsx`
 
-**D. Sauvegarder le token via edge function directement dans le listener `registration` (bypass RLS)**
+**D. Ajouter la route `/auth/callback`**
 
-- Dans le listener `registration`, si `user` est disponible et que `savePushToken` echoue, appeler immediatement `saveTokenViaEdgeFunction` comme fallback sans attendre 3s
-- Si `user` n'est pas disponible, stocker dans `pendingTokenRef` ET `window.__pendingPushToken` pour persistance cross-component
+Ajouter `<Route path="/auth/callback" element={<AuthCallback />} />` dans le router.
 
-**E. Ajouter un useEffect dedie pour iOS qui re-tente `register()` si pas de token apres 8s**
+### Fichier : `src/pages/AuthCallback.tsx` (nouveau)
 
-- Specifique a `platform === 'ios'`
-- Verifie `token === null` et `isNative`
-- Appelle `PushNotifications.register()` avec un log explicite
-- Maximum 3 tentatives espacees de 8s
+**E. Composant AuthCallback**
 
-### Resume des changements concrets
-
-```text
-usePushNotifications.tsx
-├── + useRef pendingTokenRef
-├── ~ setupPushListeners: supprimer guard global, utiliser ref local
-├── ~ registration listener: stocker dans ref + fallback edge function immediat
-├── + useEffect: user + pendingTokenRef → save
-├── + useEffect: iOS retry register() si token null apres 8s (max 3x)
-└── + logs diagnostiques iOS detailles
+```
+- Au mount, detecter si on a un `code` dans l'URL
+- Laisser Supabase echanger via detectSessionInUrl
+- Ecouter onAuthStateChange pour detecter la session
+- Si sur iOS natif en SFSafariViewController : rediriger vers app.runconnect://auth?session=ok
+- Sinon : navigate vers /
 ```
 
-### Note importante pour l'utilisateur
+### Resume des modifications
 
-Si apres ces corrections le token reste null sur iOS, il faudra verifier cote Xcode :
-- `GoogleService-Info.plist` present dans le target App
-- Pods Firebase installes (`pod install` dans `ios/App`)
-- Capability "Push Notifications" activee dans Signing & Capabilities
-- Cle APNs (.p8) uploadee dans Firebase Console
+```text
+src/pages/Auth.tsx
+├── ~ ligne 245: redirectTo → 'https://run-connect.lovable.app/auth/callback'
+├── ~ lignes 268-280: ajouter gestion du param 'code' + exchangeCodeForSession
+└── ~ deep link handler: gerer aussi les URLs https://run-connect.lovable.app/auth/callback
+
+src/pages/AuthCallback.tsx (nouveau)
+├── Echange code PKCE via detectSessionInUrl
+├── Redirection vers custom scheme pour retour dans l'app
+└── Fallback navigate('/') si deja dans l'app
+
+src/App.tsx
+└── + Route /auth/callback → AuthCallback
+```
+
+### Configuration Supabase requise
+
+Verifier que `https://run-connect.lovable.app/auth/callback` est dans les Redirect URLs autorisees dans Supabase Dashboard > Authentication > URL Configuration. C'est probablement deja couvert par `https://run-connect.lovable.app/*` mais a confirmer.
+
+### Pourquoi ca resout le probleme
+
+- Safari peut ouvrir une URL `https://` sans erreur
+- Le code PKCE est echange cote serveur/client correctement
+- Le retour dans l'app se fait via un lien `app.runconnect://` depuis la page callback
+- L'utilisateur arrive dans l'app connecte, pas sur le site web
 
