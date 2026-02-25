@@ -69,6 +69,7 @@ import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
 import { CoachAccessDialog } from "@/components/coaching/CoachAccessDialog";
 import { CreateCoachingSessionDialog } from "@/components/coaching/CreateCoachingSessionDialog";
 import { CoachingMessageCard } from "@/components/coaching/CoachingMessageCard";
+import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
 
 interface Profile {
   user_id: string;
@@ -2036,15 +2037,7 @@ const Messages = () => {
                                   {message.file_url && !message.file_type?.startsWith('image/') && (
                                     <div className="mb-2">
                                        {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
-                                         <div className="flex items-center gap-2 px-2 py-1.5 rounded-full bg-background/30 backdrop-blur-sm border border-border/20 shadow-md">
-                                           <Mic className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                                           <audio 
-                                             controls 
-                                             src={message.file_url}
-                                             className="max-w-full audio-player-glass"
-                                             style={{ height: '28px', width: '160px' }}
-                                           />
-                                         </div>
+                                         <VoiceMessagePlayer src={message.file_url!} isMine={message.sender_id === user?.id} />
                                       ) : (
                                         <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
                                           <Paperclip className="h-4 w-4" />
@@ -2055,7 +2048,7 @@ const Messages = () => {
                                   )}
                                   
                                   {/* Show text content only if it's not a media-only message and not emoji-only */}
-                                  {message.content && !message.content.match(/^(Image partagée|Message vocal)$/i) && !isOnlyEmojis(message.content) && (
+                                  {message.content && !message.content.match(/^(Image partagée|Message vocal.*)/i) && !isOnlyEmojis(message.content) && (
                                     <p className="text-sm">{message.content}</p>
                                   )}
                                 </>
