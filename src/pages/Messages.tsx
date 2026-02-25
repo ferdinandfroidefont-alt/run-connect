@@ -18,6 +18,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { ClubProfileDialog } from "@/components/ClubProfileDialog";
+import { ConversationInfoSheet } from "@/components/ConversationInfoSheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateClubDialogPremium } from "@/components/CreateClubDialogPremium";
 import { NewConversationView } from "@/components/NewConversationView";
@@ -55,7 +56,8 @@ import {
   Smile,
   BarChart3,
   Camera,
-  GraduationCap
+  GraduationCap,
+  ChevronRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -192,6 +194,8 @@ const Messages = () => {
   
   // Conversation settings states
   const [isMuted, setIsMuted] = useState(false);
+  const [showConversationInfo, setShowConversationInfo] = useState(false);
+  const [userNotifSettings, setUserNotifSettings] = useState<{ notifications_enabled: boolean; notif_message: boolean }>({ notifications_enabled: false, notif_message: true });
   const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('pinnedConversations');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -238,6 +242,27 @@ const Messages = () => {
       document.body.style.backgroundColor = defaultColor;
     };
   }, [selectedConversation, setHideBottomNav]);
+
+  // Fetch user notification settings
+  useEffect(() => {
+    if (!user) return;
+    const fetchNotifSettings = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('notifications_enabled, notif_message')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data) {
+        setUserNotifSettings({
+          notifications_enabled: data.notifications_enabled ?? false,
+          notif_message: data.notif_message ?? true,
+        });
+        // Sync mute state: muted if notif_message is explicitly false
+        setIsMuted(data.notif_message === false);
+      }
+    };
+    fetchNotifSettings();
+  }, [user]);
 
   // Avatar viewer
   const handleAvatarClick = (avatarUrl: string | null, username: string) => {
@@ -1715,14 +1740,17 @@ const Messages = () => {
                         <Users className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
-                    <p className="font-semibold text-[13px] text-foreground mt-0.5">{selectedConversation.group_name}</p>
+                    <div className="flex items-center gap-0.5 mt-0.5">
+                      <p className="font-semibold text-[13px] text-foreground">{selectedConversation.group_name}</p>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    </div>
                   </div>
                 ) : (
                   <div 
                     className="flex flex-col items-center cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`);
+                      setShowConversationInfo(true);
                     }}
                   >
                     <div className="relative">
@@ -1734,9 +1762,12 @@ const Messages = () => {
                       </Avatar>
                       <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} className="w-2 h-2" />
                     </div>
-                    <p className="font-semibold text-[13px] text-foreground mt-0.5">
-                      {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
-                    </p>
+                    <div className="flex items-center gap-0.5 mt-0.5">
+                      <p className="font-semibold text-[13px] text-foreground">
+                        {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
+                      </p>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -1771,15 +1802,30 @@ const Messages = () => {
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
-                    onClick={() => setIsMuted(!isMuted)}
+                    onClick={() => {
+                      if (!userNotifSettings.notifications_enabled) {
+                        navigate('/profile');
+                        setTimeout(() => {
+                          // The settings dialog will need to be opened on Profile page
+                          window.dispatchEvent(new CustomEvent('open-notification-settings'));
+                        }, 500);
+                        return;
+                      }
+                      const newMuted = !isMuted;
+                      setIsMuted(newMuted);
+                      // Persist to profile
+                      if (user) {
+                        supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
+                      }
+                    }}
                     className="py-3 justify-between"
                   >
                     <div className="flex items-center">
-                      <span className="mr-3 text-lg">{isMuted ? "🔔" : "🔕"}</span>
+                      <span className="mr-3 text-lg">{!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}</span>
                       <span>Notifications</span>
                     </div>
-                     <span className="text-xs text-muted-foreground">
-                      {isMuted ? "On" : "Off"}
+                    <span className="text-xs text-muted-foreground">
+                      {!userNotifSettings.notifications_enabled ? "Désactivées" : isMuted ? "Off" : "On"}
                     </span>
                   </DropdownMenuItem>
                   
@@ -2895,6 +2941,31 @@ const Messages = () => {
             }
           }}
           onCreateClub={() => setShowCreateGroup(true)}
+        />
+
+        {/* Conversation Info Sheet */}
+        <ConversationInfoSheet
+          isOpen={showConversationInfo}
+          onClose={() => setShowConversationInfo(false)}
+          conversation={selectedConversation}
+          isMuted={isMuted}
+          onToggleMute={() => {
+            const newMuted = !isMuted;
+            setIsMuted(newMuted);
+            if (user) {
+              supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
+            }
+          }}
+          isPinned={selectedConversation ? pinnedConversations.has(selectedConversation.id) : false}
+          onTogglePin={() => selectedConversation && togglePinConversation(selectedConversation.id)}
+          onDelete={() => confirmDeleteConversation()}
+          notificationsEnabled={userNotifSettings.notifications_enabled}
+          onGoToNotifSettings={() => {
+            navigate('/profile');
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('open-notification-settings'));
+            }, 500);
+          }}
         />
 
       </div>
