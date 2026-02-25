@@ -36,8 +36,11 @@ export const CoachAccessDialog = ({
   const { user } = useAuth();
   const [clubs, setClubs] = useState<CoachClub[]>([]);
   const [athleteClubs, setAthleteClubs] = useState<AthleteClub[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingCoach, setLoadingCoach] = useState(true);
+  const [loadingAthlete, setLoadingAthlete] = useState(true);
   const [openCoachingClubId, setOpenCoachingClubId] = useState<string | null>(null);
+
+  const loading = loadingCoach || loadingAthlete;
 
   useEffect(() => {
     if (isOpen && user) {
@@ -48,7 +51,7 @@ export const CoachAccessDialog = ({
 
   const loadCoachClubs = async () => {
     if (!user) return;
-    setLoading(true);
+    setLoadingCoach(true);
     try {
       const { data: memberships } = await supabase
         .from("group_members")
@@ -73,12 +76,13 @@ export const CoachAccessDialog = ({
     } catch (error) {
       console.error("Error loading coach clubs:", error);
     } finally {
-      setLoading(false);
+      setLoadingCoach(false);
     }
   };
 
   const loadAthleteClubs = async () => {
     if (!user) return;
+    setLoadingAthlete(true);
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -90,6 +94,7 @@ export const CoachAccessDialog = ({
 
       if (!participations || participations.length === 0) {
         setAthleteClubs([]);
+        setLoadingAthlete(false);
         return;
       }
 
@@ -102,6 +107,7 @@ export const CoachAccessDialog = ({
 
       if (!sessions || sessions.length === 0) {
         setAthleteClubs([]);
+        setLoadingAthlete(false);
         return;
       }
 
@@ -145,6 +151,8 @@ export const CoachAccessDialog = ({
       setAthleteClubs(result);
     } catch (e) {
       console.error("Error loading athlete clubs:", e);
+    } finally {
+      setLoadingAthlete(false);
     }
   };
 
@@ -217,7 +225,7 @@ export const CoachAccessDialog = ({
                   <div className="text-center py-8 px-4">
                     <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
                     <p className="text-sm text-muted-foreground mb-3">
-                      Vous n'êtes coach dans aucun club
+                      Aucun club ou programme d'entraînement
                     </p>
                     <Button
                       variant="outline"
