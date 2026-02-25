@@ -1,92 +1,117 @@
 
 
-# Messages systeme dans les clubs (style Instagram)
+# Refonte du workflow Coach : Brouillons + Plan hebdo unifié
 
-## Objectif
+## Résumé
 
-Ajouter des messages systeme automatiques dans les conversations de club, comme sur Instagram :
-- "**ferdinand-stat-triathlon** a cree le club"
-- "**ferdinand-stat-triathlon** a ajoute **griffonbleu.03**"
-- "**griffonbleu.03** a rejoint le club"
+Remplacer le bouton "Nouvelle séance" par "Brouillons", supprimer la création de séance isolée, et transformer le Plan hebdo en outil principal avec : persistance des brouillons en base, barre de recherche d'athlètes, navigation par swipe entre semaines, et conservation des données après envoi.
 
-## Analyse
+## Analyse du code actuel
 
-Le champ `message_type` existe deja dans la table `messages` (text, image, file, voice, session, poll, coaching_session). Il suffit d'ajouter un type `system` et d'inserer ces messages aux bons moments.
+Le `CoachingTab` affiche 4 boutons : Nouvelle séance, Plan hebdo, Groupes, Suivi. Le `WeeklyPlanDialog` gère tout en mémoire (`groupPlans` state) — les données sont perdues à la fermeture. La création de séance individuelle (`CreateCoachingSessionDialog`) est un formulaire séparé.
 
-## Plan
+## Architecture proposée
 
-### 1. Inserer un message systeme a la creation du club
+### 1. Nouvelle table `coaching_drafts`
 
-**Fichier** : `src/components/CreateClubDialogPremium.tsx` et `src/components/CreateClubDialog.tsx`
-
-Apres l'INSERT de la conversation et du createur dans `group_members`, inserer un message :
-```
-{ conversation_id, sender_id: user.id, content: "a créé le club", message_type: "system" }
-```
-
-Si des membres sont ajoutes a la creation, inserer aussi :
-```
-{ conversation_id, sender_id: user.id, content: "a ajouté @username1, @username2", message_type: "system" }
-```
-
-### 2. Inserer un message systeme quand un membre est invite/ajoute
-
-**Fichier** : `src/components/EditClubDialog.tsx` (handleAddMember)
-
-Apres l'envoi de l'invitation, pas de message (c'est une invitation, pas un ajout).
-
-**Fichier** : `src/components/NotificationCenter.tsx` (handleAcceptClubInvitation)
-
-Apres le `accept_club_invitation` RPC reussi, inserer :
-```
-{ conversation_id: club_id, sender_id: user.id, content: "a rejoint le club", message_type: "system" }
+```text
+coaching_drafts
+├── id          uuid PK
+├── coach_id    uuid NOT NULL
+├── club_id     uuid NOT NULL (ref conversations.id)
+├── week_start  date NOT NULL
+├── group_id    text DEFAULT 'club'
+├── sessions    jsonb DEFAULT '[]'
+├── target_athletes uuid[] DEFAULT '{}'
+├── updated_at  timestamptz DEFAULT now()
+├── created_at  timestamptz DEFAULT now()
+│
+└── UNIQUE(coach_id, club_id, week_start, group_id)
 ```
 
-### 3. Afficher les messages systeme dans le chat
+RLS : coach_id = auth.uid() pour SELECT/INSERT/UPDATE/DELETE.
 
-**Fichier** : `src/pages/Messages.tsx`
+### 2. CoachingTab — Remplacer les boutons
 
-Dans le rendu des messages (vers ligne 1839), ajouter une condition pour `message_type === 'system'` **avant** le rendu standard. Les messages systeme seront affiches :
-- Centres, sans bulle
-- Texte gris petit, style "username action"
-- Pas de reactions, pas de long-press, pas de reply
+**Avant :**
+```text
+[+ Nouvelle séance] [Plan hebdo] [Groupes] [Suivi]
+```
+
+**Après :**
+```text
+[📝 Brouillons]  [📅 Plan hebdo]  [👥 Groupes]  [📊 Suivi]
+```
+
+- "Brouillons" ouvre une liste des brouillons existants (groupés par semaine/groupe) avec preview (nb séances, dernière modif)
+- Cliquer un brouillon ouvre le `WeeklyPlanDialog` pré-rempli
+- Supprimer le `CreateCoachingSessionDialog` du CoachingTab (la création passe uniquement par le Plan hebdo)
+
+### 3. WeeklyPlanDialog — Modifications
+
+#### 3a. Barre de recherche d'athlètes (en haut)
+
+Ajouter un champ de recherche filtrable au-dessus de la grille de séances. Le coach tape un nom → filtre les membres du club → sélectionne ceux qu'il veut cibler pour cette semaine. Stocké dans `target_athletes` du brouillon.
+
+```text
+┌──────────────────────────────────┐
+│ ← Retour    Plan de semaine     │
+│ ┌──────────────────────────────┐ │
+│ │ 🔍 Rechercher un athlète...  │ │
+│ │ [Chip: Maxime] [Chip: Julie] │ │
+│ └──────────────────────────────┘ │
+│                                  │
+│  SEMAINE  ◄ 2 Jun 2026 ►       │
+│  [Lun] [Mar] [Mer] ...         │
+```
+
+#### 3b. Auto-save en brouillon
+
+- À chaque modification (ajout/suppression/édition de séance), debounce 2s → upsert dans `coaching_drafts`
+- Badge "Brouillon sauvegardé" discret en bas
+- Au chargement du dialog, si un brouillon existe pour cette semaine/groupe → charger automatiquement
+
+#### 3c. Conserver les données après envoi
+
+Après `handleSendPlan()`, ne pas vider `groupPlans`. Mettre à jour le brouillon avec un flag visuel "Envoyé ✓" mais garder les données pour modification rapide et renvoi.
+
+#### 3d. Swipe entre semaines
+
+Utiliser les gestes tactiles (touch start/end) sur le conteneur principal pour naviguer entre semaines, en plus des boutons chevron existants.
+
+### 4. Nouveau composant : DraftsList
+
+Liste des brouillons pour un club donné, affichée quand on clique sur "Brouillons" :
 
 ```text
 ┌─────────────────────────────────┐
+│ BROUILLONS                      │
 │                                 │
-│   ferdinand-stat a créé le club │
+│ 📝 Sem. 2 Jun · Club (3 séances)│
+│    Modifié il y a 2h            │
 │                                 │
-│  ferdinand-stat a ajouté        │
-│       griffonbleu.03            │
+│ 📝 Sem. 9 Jun · Sprint (5 séances)│
+│    Modifié hier                 │
 │                                 │
-│  griffonbleu.03 a rejoint       │
-│       le club                   │
-│                                 │
+│ [+ Nouveau plan hebdo]          │
 └─────────────────────────────────┘
 ```
 
-Style CSS : `text-center text-xs text-muted-foreground py-2 italic`
+Cliquer ouvre le WeeklyPlanDialog avec la bonne semaine, le bon groupe, et les séances pré-remplies.
 
-### 4. Gerer les messages systeme dans la liste des conversations
-
-**Fichier** : `src/pages/Messages.tsx` (affichage du dernier message)
-
-Ajouter une condition pour `message_type === 'system'` dans le preview du dernier message (ligne ~2698) :
-```
-{conversation.last_message.message_type === 'system' && `${senderName} ${content}`}
-```
-
-### 5. Inserer un message systeme retroactif pour le club Ferdi
-
-Migration SQL pour inserer un message "a cree le club" pour la conversation existante.
-
-## Fichiers modifies
+## Fichiers modifiés
 
 | Fichier | Changement |
 |---------|-----------|
-| `src/components/CreateClubDialogPremium.tsx` | INSERT message systeme apres creation |
-| `src/components/CreateClubDialog.tsx` | Idem |
-| `src/components/NotificationCenter.tsx` | INSERT message systeme quand invitation acceptee |
-| `src/pages/Messages.tsx` | Rendu centre des messages systeme + preview dans la liste |
-| Migration SQL | Message retroactif pour le club Ferdi |
+| Migration SQL | Créer table `coaching_drafts` avec RLS |
+| `src/components/coaching/CoachingTab.tsx` | Remplacer "Nouvelle séance" par "Brouillons", supprimer `CreateCoachingSessionDialog` |
+| `src/components/coaching/WeeklyPlanDialog.tsx` | Ajouter barre de recherche athlètes, auto-save brouillon, chargement auto, conserver données après envoi, swipe semaines |
+| `src/components/coaching/CoachingDraftsList.tsx` | Nouveau composant — liste des brouillons |
+
+## Détails techniques
+
+- Auto-save : `useEffect` avec debounce 2s sur `groupPlans` → `supabase.from('coaching_drafts').upsert(...)` avec contrainte unique `(coach_id, club_id, week_start, group_id)`
+- Chargement : au mount du WeeklyPlanDialog, `SELECT * FROM coaching_drafts WHERE coach_id = ? AND club_id = ? AND week_start = ?` → hydrate `groupPlans`
+- Swipe : `onTouchStart`/`onTouchEnd` avec delta X > 50px → `setCurrentWeek(addWeeks/subWeeks)`
+- Recherche athlètes : filtre local sur `members[]` avec `display_name.toLowerCase().includes(query)`
 
