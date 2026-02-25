@@ -1,49 +1,35 @@
 
 
-## Problem
+## Probleme
 
-`WeeklyTrackingView` builds its athlete list **only from `coaching_participations`** for the current week. If an athlete has no session assigned this week, they simply don't exist in the list — so the search bar can never find them, regardless of normalization logic.
-
-The user confirmed they want **all club members** visible, even those with 0 sessions.
+Le tooltip du tutoriel Joyride dépasse de l'écran sur iOS (visible sur la capture : le contenu est coupé en haut et déborde sur les côtés). Joyride positionne le tooltip librement et ne respecte pas les safe areas iOS ni les limites du viewport mobile.
 
 ## Solution
 
-Refactor `loadTracking()` in `WeeklyTrackingView.tsx` to:
+Modifier `InteractiveTutorial.tsx` pour :
 
-1. **First load all club members** from `group_members` + `profiles` (same pattern as `WeeklyPlanDialog.loadMembers`)
-2. **Then load sessions & participations** for the week as before
-3. **Merge**: every club member gets an `AthleteData` entry. Those with participations get their session data populated; those without show 0/0 (0%).
-4. Exclude the current coach (logged-in user) from the list.
+1. **Limiter la largeur** du tooltip : réduire `max-w-[320px]` à `max-w-[calc(100vw-32px)]` pour garantir 16px de marge de chaque côté
+2. **Ajouter des marges de sécurité** via `floaterProps.offset` pour éloigner le tooltip des bords
+3. **Forcer `disableScrolling: true`** pour éviter que Joyride ne scrolle la page et crée des décalages
+4. **Ajouter un style global** pour contraindre le floater Joyride dans le viewport avec `max-width` et `padding` sur le conteneur `.react-joyride__tooltip`
+5. **Ajouter `safe-area-inset-top`** comme padding sur le tooltip pour ne pas passer sous la barre de statut iOS
 
-### File: `src/components/coaching/WeeklyTrackingView.tsx`
+### Fichier : `src/components/InteractiveTutorial.tsx`
 
-**Changes:**
-- Import `useAuth` to get the current user (coach) and exclude them
-- In `loadTracking()`:
-  - Query `group_members` for the club → get all `user_id`s
-  - Query `profiles` for those user IDs → get `display_name`, `username`, `avatar_url`
-  - Build `athleteMap` from **all members** first (with empty days)
-  - Then overlay participation data on top (existing logic)
-  - Filter out the coach's own user ID
-- Sort: athletes with sessions first (by completion), then those without (alphabetically)
+- Tooltip div : `max-w-[320px]` → `max-w-[min(320px,calc(100vw-32px))]`
+- Ajouter du padding interne en tenant compte de la safe area : `style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}`
+- `floaterProps` : ajouter `offset: 16` pour créer une marge entre le spotlight et le tooltip
+- `disableScrolling: true` pour stabiliser sur mobile
 
-```typescript
-// Pseudocode for new loadTracking:
-const { data: clubMembers } = await supabase
-  .from("group_members")
-  .select("user_id")
-  .eq("conversation_id", clubId);
+### Fichier : `src/index.css`
 
-const allUserIds = clubMembers.map(m => m.user_id).filter(id => id !== user?.id);
-
-const { data: profiles } = await supabase
-  .from("profiles")
-  .select("user_id, display_name, username, avatar_url")
-  .in("user_id", allUserIds);
-
-// Initialize athleteMap with ALL members (0 sessions)
-// Then overlay participation data as before
+- Ajouter une règle globale pour contraindre le positionnement Joyride :
+```css
+.__floater {
+  max-width: calc(100vw - 16px) !important;
+  padding: 0 8px !important;
+}
 ```
 
-No database changes needed. No other files affected.
+Cela garantit que le tooltip reste toujours visible et ne dépasse jamais des bords de l'écran, y compris avec les safe areas iOS.
 
