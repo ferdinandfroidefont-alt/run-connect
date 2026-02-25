@@ -16,7 +16,7 @@ interface RCCEditorProps {
 const QUICK_CHIPS = [
   { label: "EF", insert: "20'>5'30", title: "Échauffement 20min" },
   { label: "CD", insert: "10'>6'00", title: "Retour au calme 10min" },
-  { label: "x400", insert: "6x400>3'30", title: "6×400m @ 3:30" },
+  { label: "x3'", insert: "6x3'>3'30", title: "6×3min @ 3:30" },
   { label: "x1000", insert: "3x1000>4'00", title: "3×1000m @ 4:00" },
   { label: "R=", insert: "r1'30>trot", title: "Récup 1'30 trot" },
   { label: "@", insert: ">", title: "Séparateur allure" },
