@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { WeeklyPlanSessionEditor, type WeekSession } from "./WeeklyPlanSessionEditor";
 import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp, FileText } from "lucide-react";
 import { MesocycleView } from "./MesocycleView";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
@@ -84,7 +84,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const [athleteSearch, setAthleteSearch] = useState("");
   const [draftSaveStatus, setDraftSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [sentAt, setSentAt] = useState<string | null>(null);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [hasDraft, setHasDraft] = useState(false);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const sessions = groupPlans[activeGroupId] || [];
@@ -107,10 +107,10 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     }
   }, [isOpen, clubId]);
 
-  // Load draft when week/group changes
+  // Load sent sessions when week/group changes (default = sent sessions, NOT drafts)
   useEffect(() => {
     if (isOpen && user) {
-      loadDraft();
+      loadSentSessionsDefault();
     }
   }, [isOpen, weekStart.toISOString(), activeGroupId, user]);
 
@@ -123,6 +123,24 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     }, 2000);
     return () => clearTimeout(timer);
   }, [JSON.stringify(sessions), JSON.stringify(targetAthletes)]);
+
+  // Default: load sent sessions + check if draft exists
+  const loadSentSessionsDefault = async () => {
+    if (!user) return;
+    await loadSentSessions();
+    // Check if a draft exists for this week/group
+    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+    const { data } = await supabase
+      .from("coaching_drafts" as any)
+      .select("id, sent_at")
+      .eq("coach_id", user.id)
+      .eq("club_id", clubId)
+      .eq("week_start", weekStartStr)
+      .eq("group_id", activeGroupId)
+      .is("sent_at", null)
+      .maybeSingle();
+    setHasDraft(!!data);
+  };
 
   const loadDraft = async () => {
     if (!user) return;
@@ -145,9 +163,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       setGroupPlans(prev => ({ ...prev, [activeGroupId]: restored }));
       setTargetAthletes(draft.target_athletes || []);
       setSentAt(draft.sent_at || null);
-    } else {
-      // No draft — try loading already-sent sessions from coaching_sessions
-      await loadSentSessions();
+      setHasDraft(false);
+      toast({ title: "Brouillon chargé", description: `${restored.length} séances restaurées` });
     }
   };
 
@@ -395,7 +412,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const dailyCharge = useMemo(() => {
     const charges = Array(7).fill(0);
     for (const s of sessions) {
-      let charge = 1; // base charge per session
+      let charge = 1;
       if (s.rccCode) {
         const { blocks } = parseRCC(s.rccCode);
         const summary = computeRCCSummary(blocks);
@@ -435,7 +452,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     const imported: WeekSession[] = data.map(cs => {
       const scheduledDate = new Date(cs.scheduled_at);
       const dayOfWeek = scheduledDate.getDay();
-      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to Mon=0
+      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       return {
         dayIndex,
         activityType: cs.activity_type || "running",
@@ -517,7 +534,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         }
       }
 
-      // Notify athletes in-app + push
       const { data: coachProfile } = await supabase
         .from("profiles")
         .select("display_name, username")
@@ -552,9 +568,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         title: "Plan envoyé ! 🚀",
         description: `${totalSessionsCount} séances → ${groupLabels.join(", ")} (semaine du ${format(weekStart, "d MMM", { locale: fr })} au ${weekEndLabel})`,
       });
-      // Keep data, mark as sent
       setSentAt(new Date().toISOString());
-      // Update draft with sent_at
       const weekStartStr = format(weekStart, "yyyy-MM-dd");
       for (const groupId of groupsWithPlans) {
         const stripped = (groupPlans[groupId] || []).map(({ parsedBlocks, ...rest }) => rest);
@@ -569,6 +583,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         } as any, { onConflict: "coach_id,club_id,week_start,group_id" } as any);
       }
       setSelectedIndex(null);
+      setHasDraft(false);
       onSent?.();
     } catch (error) {
       console.error("Error sending plan:", error);
@@ -622,20 +637,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           <div className="min-w-[70px]" />
         </div>
 
-        {/* ── Scrollable body ── */}
-        <div
-          className="flex-1 overflow-y-auto bg-secondary pb-32"
-          onTouchStart={e => setTouchStartX(e.touches[0].clientX)}
-          onTouchEnd={e => {
-            if (touchStartX === null) return;
-            const dx = e.changedTouches[0].clientX - touchStartX;
-            if (Math.abs(dx) > 60) {
-              if (dx > 0) setCurrentWeek(prev => subWeeks(prev, 1));
-              else setCurrentWeek(prev => addWeeks(prev, 1));
-            }
-            setTouchStartX(null);
-          }}
-        >
+        {/* ── Scrollable body — NO swipe handlers ── */}
+        <div className="flex-1 overflow-y-auto bg-secondary pb-32">
           {/* ── Week navigator — hero card ── */}
           <div className="mx-4 mt-4 mb-3">
             <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
@@ -660,44 +663,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                   <ChevronRight className="h-5 w-5 text-foreground" />
                 </button>
               </div>
-
-              {/* Group switcher pills */}
-              {groups.length > 0 && (
-                <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => { setActiveGroupId("club"); setSelectedIndex(null); }}
-                    className={`px-4 py-2 rounded-full text-[14px] font-semibold transition-all ${
-                      activeGroupId === "club"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    Club
-                    {(groupPlans["club"] || []).length > 0 && (
-                      <span className="ml-1.5 text-[12px] opacity-80">({(groupPlans["club"] || []).length})</span>
-                    )}
-                  </button>
-                  {groups.map(g => {
-                    const count = (groupPlans[g.id] || []).length;
-                    const isActive = g.id === activeGroupId;
-                    return (
-                      <button
-                        key={g.id}
-                        onClick={() => { setActiveGroupId(g.id); setSelectedIndex(null); }}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold transition-all ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "bg-secondary text-muted-foreground"
-                        }`}
-                      >
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: isActive ? 'white' : g.color }} />
-                        {g.name}
-                        {count > 0 && <span className="text-[12px] opacity-80">({count})</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
 
               {/* Sent badge */}
               {sentAt && (
@@ -806,7 +771,74 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             )}
           </div>
 
-          {/* ── CALENDAR GRID — big day columns ── */}
+          {/* ── CHARGE DE LA SEMAINE (moved BEFORE calendar) ── */}
+          {weekLoadSummary && (
+            <div className="mx-4 mb-3">
+              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Charge de la semaine</p>
+              <div className="bg-card rounded-2xl p-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                {/* Compact stats row */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <BarChart3 className="h-4 w-4 text-primary" />
+                    </div>
+                    <p className="text-[18px] font-bold text-foreground leading-none">{weekLoadSummary.totalKm} <span className="text-[13px] font-medium text-muted-foreground">km</span></p>
+                  </div>
+                  <div className="flex items-center gap-3 text-[13px]">
+                    <div className="text-center">
+                      <p className="text-[16px] font-bold text-foreground">{sessions.length}</p>
+                      <p className="text-[10px] text-muted-foreground">séances</p>
+                    </div>
+                    {weekLoadSummary.qualitySessions > 0 && (
+                      <div className="text-center">
+                        <p className="text-[16px] font-bold text-orange-500">{weekLoadSummary.qualitySessions}</p>
+                        <p className="text-[10px] text-muted-foreground">qualité</p>
+                      </div>
+                    )}
+                    <Badge variant={
+                      weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
+                      weekLoadSummary.intensity === 'Intense' ? 'default' :
+                      'secondary'
+                    } className="text-[11px] px-2 py-0.5">
+                      {weekLoadSummary.intensity}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Compact bar chart — height reduced to 48px */}
+                {(() => {
+                  const maxCharge = Math.max(...dailyCharge, 1);
+                  return (
+                    <div className="flex items-end gap-2" style={{ height: 48 }}>
+                      {DAY_LABELS.map((label, i) => {
+                        const val = dailyCharge[i];
+                        const pct = (val / maxCharge) * 100;
+                        const daySessions = (sessionsByDay[i] || []).map(idx => sessions[idx]);
+                        const hasIntense = daySessions.some(s => {
+                          const obj = (s.objective || s.activityType || "").toLowerCase();
+                          return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné") || obj.includes("pma");
+                        });
+                        const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                            <div className="w-full flex items-end justify-center" style={{ height: 36 }}>
+                              <div
+                                className={`w-full max-w-[20px] rounded-t-md transition-all ${barColor}`}
+                                style={{ height: val > 0 ? `${Math.max(pct, 12)}%` : 3 }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* ── CALENDAR GRID (moved AFTER charge) ── */}
           <div className="mx-4 mb-3">
             <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Calendrier</p>
             <div className="bg-card rounded-2xl p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
@@ -830,8 +862,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                         const obj = (s.objective || s.activityType || "").toLowerCase();
                         let pillColor = "bg-green-500";
                         let pillLabel = "EF";
-                        if (obj.includes("vma") || obj.includes("interval") || obj.includes("fractionné")) {
-                          pillColor = "bg-red-500"; pillLabel = "VMA";
+                        if (obj.includes("vma") || obj.includes("interval") || obj.includes("fractionné") || obj.includes("pma")) {
+                          pillColor = "bg-red-500"; pillLabel = obj.includes("pma") ? "PMA" : "VMA";
                         } else if (obj.includes("seuil")) {
                           pillColor = "bg-orange-500"; pillLabel = "SEU";
                         } else if (obj.includes("récup") || obj.includes("recup")) {
@@ -867,79 +899,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             </div>
           </div>
 
-          {/* ── CHARGE DE LA SEMAINE ── */}
-          {weekLoadSummary && (
-            <div className="mx-4 mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Charge de la semaine</p>
-              <div className="bg-card rounded-2xl p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                {/* Stats row */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <BarChart3 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-[22px] font-bold text-foreground leading-none">{weekLoadSummary.totalKm} <span className="text-[14px] font-medium text-muted-foreground">km</span></p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-[14px]">
-                    <div className="text-center">
-                      <p className="text-[18px] font-bold text-foreground">{sessions.length}</p>
-                      <p className="text-[11px] text-muted-foreground">séances</p>
-                    </div>
-                    {weekLoadSummary.qualitySessions > 0 && (
-                      <div className="text-center">
-                        <p className="text-[18px] font-bold text-orange-500">{weekLoadSummary.qualitySessions}</p>
-                        <p className="text-[11px] text-muted-foreground">qualité</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Intensity badge */}
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge variant={
-                    weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
-                    weekLoadSummary.intensity === 'Intense' ? 'default' :
-                    'secondary'
-                  } className="text-[12px] px-3 py-1">
-                    {weekLoadSummary.intensity}
-                  </Badge>
-                </div>
-
-                {/* Bar chart */}
-                {(() => {
-                  const maxCharge = Math.max(...dailyCharge, 1);
-                  return (
-                    <div className="flex items-end gap-2 h-24">
-                      {DAY_LABELS.map((label, i) => {
-                        const val = dailyCharge[i];
-                        const pct = (val / maxCharge) * 100;
-                        const daySessions = (sessionsByDay[i] || []).map(idx => sessions[idx]);
-                        const hasIntense = daySessions.some(s => {
-                          const obj = (s.objective || s.activityType || "").toLowerCase();
-                          return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné");
-                        });
-                        const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
-                        return (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end justify-center" style={{ height: 72 }}>
-                              <div
-                                className={`w-full max-w-[24px] rounded-t-md transition-all ${barColor}`}
-                                style={{ height: val > 0 ? `${Math.max(pct, 10)}%` : 4 }}
-                              />
-                            </div>
-                            <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-
           {/* ── Éditeur de séance ── */}
           {selectedSession && selectedIndex !== null ? (
             <div className="mx-4 mb-3">
@@ -968,6 +927,17 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           <div className="mx-4 mb-3">
             <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Outils</p>
             <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+              {/* Resume draft button */}
+              {hasDraft && (
+                <IOSListItem
+                  icon={FileText}
+                  iconBgColor="bg-purple-500"
+                  title="Reprendre le brouillon"
+                  subtitle="Un brouillon non envoyé existe"
+                  onClick={loadDraft}
+                  showSeparator
+                />
+              )}
               <IOSListItem
                 icon={History}
                 iconBgColor="bg-amber-500"
