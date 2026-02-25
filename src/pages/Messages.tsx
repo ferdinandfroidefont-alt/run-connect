@@ -2503,6 +2503,31 @@ const Messages = () => {
           }}
         />
       )}
+
+      {/* Conversation Info Sheet */}
+      <ConversationInfoSheet
+        isOpen={showConversationInfo}
+        onClose={() => setShowConversationInfo(false)}
+        conversation={selectedConversation}
+        isMuted={isMuted}
+        onToggleMute={() => {
+          const newMuted = !isMuted;
+          setIsMuted(newMuted);
+          if (user) {
+            supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
+          }
+        }}
+        isPinned={selectedConversation ? pinnedConversations.has(selectedConversation.id) : false}
+        onTogglePin={() => selectedConversation && togglePinConversation(selectedConversation.id)}
+        onDelete={() => confirmDeleteConversation()}
+        notificationsEnabled={userNotifSettings.notifications_enabled}
+        onGoToNotifSettings={() => {
+          navigate('/profile');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('open-notification-settings'));
+          }, 500);
+        }}
+      />
       </>
     );
   }
@@ -2943,30 +2968,6 @@ const Messages = () => {
           onCreateClub={() => setShowCreateGroup(true)}
         />
 
-        {/* Conversation Info Sheet */}
-        <ConversationInfoSheet
-          isOpen={showConversationInfo}
-          onClose={() => setShowConversationInfo(false)}
-          conversation={selectedConversation}
-          isMuted={isMuted}
-          onToggleMute={() => {
-            const newMuted = !isMuted;
-            setIsMuted(newMuted);
-            if (user) {
-              supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
-            }
-          }}
-          isPinned={selectedConversation ? pinnedConversations.has(selectedConversation.id) : false}
-          onTogglePin={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-          onDelete={() => confirmDeleteConversation()}
-          notificationsEnabled={userNotifSettings.notifications_enabled}
-          onGoToNotifSettings={() => {
-            navigate('/profile');
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('open-notification-settings'));
-            }, 500);
-          }}
-        />
 
       </div>
 
