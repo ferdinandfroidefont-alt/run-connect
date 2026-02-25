@@ -3,9 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { IOSListGroup } from "@/components/ui/ios-list-item";
-import { CheckCircle2, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
+import { CheckCircle2, CalendarDays, ChevronLeft, ChevronRight, Trophy, Flame } from "lucide-react";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { WeeklyBarChart } from "./WeeklyBarChart";
@@ -98,7 +97,6 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     }
   }, [user, clubId, weekStart.toISOString()]);
 
-  // On first mount, find the latest week with sessions if current week is empty
   const [initialNavDone, setInitialNavDone] = useState(false);
   useEffect(() => {
     if (!user || initialNavDone) return;
@@ -180,53 +178,113 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-card rounded-[10px] animate-pulse" />)}
+      <div className="space-y-3 p-4">
+        {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-2xl animate-pulse" />)}
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Week navigation */}
-      <div className="flex items-center justify-center gap-3 mb-4">
-        <button onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))} className="p-1.5 rounded-md hover:bg-card transition-colors">
-          <ChevronLeft className="h-5 w-5 text-primary" />
-        </button>
-        <span className="text-[15px] font-medium text-foreground min-w-[140px] text-center">{weekLabel}</span>
-        <button onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))} className="p-1.5 rounded-md hover:bg-card transition-colors">
-          <ChevronRight className="h-5 w-5 text-primary" />
-        </button>
-      </div>
+    <div className="space-y-4">
+      {/* Week navigation — hero style */}
+      <div className="bg-card rounded-2xl p-4 border border-border/30">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+          >
+            <ChevronLeft className="h-5 w-5 text-primary" />
+          </button>
+          <div className="text-center">
+            <p className="text-[17px] font-bold text-foreground">{weekLabel}</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">Mon plan de la semaine</p>
+          </div>
+          <button
+            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+          >
+            <ChevronRight className="h-5 w-5 text-primary" />
+          </button>
+        </div>
 
-      {/* Bar chart + progress */}
-      <IOSListGroup>
-        <div className="px-4 py-3">
-          <WeeklyBarChart sessions={sessions} weekDays={weekDays} />
+        {/* Mini calendar row */}
+        <div className="grid grid-cols-7 gap-1.5 mb-4">
+          {weekDays.map((day, i) => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            const hasSession = sessions.some(s => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
+            const participation = sessions.find(s => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
+            const isDone = participation ? participations[participation.id]?.status === "completed" : false;
+            const today = isToday(day);
 
-          <div className="flex items-center justify-between mb-1.5 mt-3">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <span className="text-[13px] text-foreground font-medium">
-                {completedCount}/{totalCount}
+            return (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <span className={`text-[11px] font-medium ${today ? "text-primary" : "text-muted-foreground"}`}>
+                  {format(day, "EEE", { locale: fr }).charAt(0).toUpperCase()}
+                </span>
+                <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-[14px] font-semibold transition-all ${
+                  today
+                    ? "bg-primary text-primary-foreground"
+                    : isDone
+                      ? "bg-green-500/15 text-green-600"
+                      : hasSession
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground/50"
+                }`}>
+                  {format(day, "d")}
+                </div>
+                {hasSession && (
+                  <div className={`h-1.5 w-1.5 rounded-full ${isDone ? "bg-green-500" : "bg-primary"}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Progress summary */}
+        <div className="bg-secondary/50 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {progressPercent >= 100 ? (
+                <Trophy className="h-5 w-5 text-yellow-500" />
+              ) : (
+                <Flame className="h-5 w-5 text-primary" />
+              )}
+              <span className="text-[15px] font-semibold text-foreground">
+                {completedCount}/{totalCount} séances
               </span>
             </div>
-            <span className="text-[13px] font-semibold text-primary">{progressPercent}%</span>
+            <span className={`text-[17px] font-bold ${
+              progressPercent >= 100 ? "text-green-500" : "text-primary"
+            }`}>
+              {progressPercent}%
+            </span>
           </div>
-          <Progress value={progressPercent} className="h-1.5" />
+          <Progress value={progressPercent} className="h-2 rounded-full" />
         </div>
-      </IOSListGroup>
+      </div>
 
-      {/* Session cards */}
+      {/* Bar chart */}
+      {sessions.length > 0 && (
+        <div className="bg-card rounded-2xl p-4 border border-border/30">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Charge de la semaine
+          </p>
+          <WeeklyBarChart sessions={sessions} weekDays={weekDays} />
+        </div>
+      )}
+
+      {/* Session list */}
       {sessions.length === 0 ? (
-        <IOSListGroup>
-          <div className="px-4 py-8 text-center">
-            <CalendarDays className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">Aucune séance cette semaine</p>
-          </div>
-        </IOSListGroup>
+        <div className="bg-card rounded-2xl p-8 text-center border border-border/30">
+          <CalendarDays className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+          <p className="text-[16px] font-semibold text-foreground mb-1">Pas de séance</p>
+          <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine</p>
+        </div>
       ) : (
-        <div className="space-y-2 mt-3">
+        <div className="space-y-3">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            Mes séances
+          </p>
           {sessions.map(session => {
             const participation = participations[session.id];
             const isDone = participation?.status === "completed";
@@ -247,13 +305,16 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
                 />
 
                 {isExpanded && (
-                  <div className="bg-card rounded-b-xl px-4 pb-3 -mt-1">
+                  <div className="bg-card rounded-b-2xl px-4 pb-4 -mt-2 pt-4 border border-t-0 border-border/30">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                      Mon ressenti / notes
+                    </label>
                     <Textarea
                       value={noteValue}
                       onChange={(e) => setNoteValues(prev => ({ ...prev, [session.id]: e.target.value }))}
                       onBlur={() => saveNote(session.id)}
-                      placeholder="Comment s'est passée la séance ?"
-                      className="min-h-[60px] text-[14px] bg-secondary border-0 resize-none"
+                      placeholder="Comment s'est passée la séance ? Sensations, fatigue, douleurs..."
+                      className="min-h-[70px] text-[14px] bg-secondary/50 border-0 rounded-xl resize-none"
                       autoFocus
                     />
                   </div>
