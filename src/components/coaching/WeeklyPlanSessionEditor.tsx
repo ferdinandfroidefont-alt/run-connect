@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { RCCEditor } from "./RCCEditor";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
 import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle, ChevronDown } from "lucide-react";
@@ -16,17 +17,49 @@ const DAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const ACTIVITY_TYPES = [
   { value: "running", label: "🏃 Course" },
-  { value: "trail", label: "⛰️ Trail" },
   { value: "cycling", label: "🚴 Vélo" },
   { value: "swimming", label: "🏊 Natation" },
-  { value: "walking", label: "🚶 Marche" },
 ];
 
-const QUICK_OBJECTIVES = [
-  "Footing", "Footing Z2", "Footing Z3", "Seuil", "VMA", "VMA courte",
-  "VMA longue", "Spé cross", "Spé piste", "Spé 10K", "Spé semi",
-  "Spé marathon", "Côtes", "Fartlek", "PPG / Renfo", "Sortie longue", "Récupération"
-];
+const QUICK_OBJECTIVES: Record<string, string[]> = {
+  running: [
+    "Footing", "Footing Z2", "Seuil", "VMA", "VMA courte",
+    "VMA longue", "Fartlek", "Côtes", "Sortie longue", "Récupération",
+    "PPG / Renfo", "Spé 10K", "Spé semi", "Spé marathon"
+  ],
+  cycling: [
+    "Endurance", "Récup", "Tempo", "Seuil", "PMA", "PMA courte",
+    "PMA longue", "Sprint", "Côtes", "Sortie longue", "Home trainer"
+  ],
+  swimming: [
+    "Échauffement", "Technique", "Endurance", "Seuil", "Vitesse",
+    "Interval", "Retour au calme", "Mixte", "Palmes", "Pull buoy"
+  ],
+};
+
+const PACE_UNITS: Record<string, string> = {
+  running: "min/km",
+  cycling: "watts (W)",
+  swimming: "min/100m",
+};
+
+const PACE_EXAMPLES: Record<string, { code: string; label: string }[]> = {
+  running: [
+    { code: "20'>5'30", label: "20 min à 5:30/km" },
+    { code: "3x1000>4'00", label: "3×1000m à 4:00/km" },
+    { code: "6x3'>3'30", label: "6×3min à 3:30/km" },
+  ],
+  cycling: [
+    { code: "20'>250W", label: "20 min à 250W" },
+    { code: "5x5'>300W", label: "5×5min à 300W" },
+    { code: "60'>180W", label: "60 min à 180W" },
+  ],
+  swimming: [
+    { code: "10x100>1'45", label: "10×100m à 1:45/100m" },
+    { code: "20'>2'00", label: "20 min à 2:00/100m" },
+    { code: "5x200>3'30", label: "5×200m à 3:30/200m" },
+  ],
+};
 
 interface AthleteOverride {
   pace?: string;
@@ -138,6 +171,10 @@ export const WeeklyPlanSessionEditor = ({
   const otherDays = DAY_SHORT.map((label, i) => ({ label, index: i }))
     .filter(d => d.index !== session.dayIndex);
 
+  const currentObjectives = QUICK_OBJECTIVES[session.activityType] || QUICK_OBJECTIVES.running;
+  const currentPaceUnit = PACE_UNITS[session.activityType] || PACE_UNITS.running;
+  const currentPaceExamples = PACE_EXAMPLES[session.activityType] || PACE_EXAMPLES.running;
+
   return (
     <div className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border/50">
       {/* Header with day + actions */}
@@ -212,22 +249,30 @@ export const WeeklyPlanSessionEditor = ({
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-72 p-2 max-h-56 overflow-y-auto" side="top">
+                <PopoverContent 
+                  className="w-72 p-2" 
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
+                  style={{ maxHeight: '280px' }}
+                >
                   <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pb-2">
                     Sélection rapide
                   </p>
-                  <div className="grid grid-cols-2 gap-1">
-                    {QUICK_OBJECTIVES.map(t => (
-                      <button
-                        key={t}
-                        type="button"
-                        className="text-left px-3 py-2 rounded-lg text-[14px] hover:bg-primary/10 active:bg-primary/20 transition-colors truncate"
-                        onClick={() => update("objective", t)}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
+                  <ScrollArea className="h-[220px]">
+                    <div className="grid grid-cols-2 gap-1 pr-2" style={{ touchAction: 'pan-y' }}>
+                      {currentObjectives.map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          className="text-left px-3 py-2.5 rounded-lg text-[14px] hover:bg-primary/10 active:bg-primary/20 transition-colors truncate"
+                          onClick={() => update("objective", t)}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </PopoverContent>
               </Popover>
             </div>
@@ -249,7 +294,7 @@ export const WeeklyPlanSessionEditor = ({
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Contenu de la séance
+              Contenu · Allure en {currentPaceUnit}
             </label>
             <Popover>
               <PopoverTrigger asChild>
@@ -258,12 +303,14 @@ export const WeeklyPlanSessionEditor = ({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80 text-[13px] space-y-2 p-4" side="top">
-                <p className="font-semibold text-[15px]">Formats RCC</p>
+                <p className="font-semibold text-[15px]">Formats RCC — {currentPaceUnit}</p>
                 <div className="space-y-2 text-muted-foreground">
-                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">20'&gt;5'30</code> → 20 min à 5:30/km</div>
+                  {currentPaceExamples.map(ex => (
+                    <div key={ex.code}>
+                      <code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">{ex.code}</code> → {ex.label}
+                    </div>
+                  ))}
                   <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">10'</code> → 10 min (allure libre)</div>
-                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">3x1000&gt;4'00</code> → 3×1000m à 4:00</div>
-                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">6x3'&gt;3'30</code> → 6×3min à 3:30</div>
                   <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">r1'30&gt;trot</code> → Récup 1'30 trot</div>
                 </div>
                 <p className="text-muted-foreground pt-1 text-[12px]">Séparez les blocs par des virgules.</p>
