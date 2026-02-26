@@ -21,11 +21,32 @@ const AuthCallback = () => {
 
     const handleCallback = async () => {
       try {
-        console.log("🔄 [AuthCallback] Page loaded, waiting for session exchange...");
+        console.log("🔄 [AuthCallback] Page loaded");
         console.log("🔄 [AuthCallback] URL:", window.location.href);
 
-        // detectSessionInUrl: true will auto-exchange the PKCE code
-        // We just need to wait for the session to be established
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+
+        // Detect native iOS (SFSafariViewController) — NOT a third-party browser, NOT Capacitor
+        const isIOSNative = /iPhone|iPad|iPod/.test(navigator.userAgent) &&
+          !(/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent)) &&
+          !(window as any).Capacitor;
+
+        // On native iOS, the PKCE code_verifier lives in the WKWebView's localStorage.
+        // SFSafariViewController cannot access it, so we must NOT attempt exchangeCodeForSession here.
+        // Instead, pass the code back to the app via deep link.
+        if (isIOSNative && code) {
+          console.log("🍎 [AuthCallback] iOS native detected — redirecting code to app via deep link");
+          setStatus("Retour à l'application...");
+          window.location.href = `app.runconnect://auth?code=${code}`;
+          setTimeout(() => {
+            setStatus("Ouvrez l'application Run Connect pour continuer.");
+          }, 3000);
+          return;
+        }
+
+        // --- Standard web flow below (desktop / mobile browsers) ---
+
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -38,7 +59,6 @@ const AuthCallback = () => {
           return;
         }
 
-        // If no session yet, listen for auth state change
         console.log("⏳ [AuthCallback] No session yet, listening for auth state change...");
         
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -50,9 +70,6 @@ const AuthCallback = () => {
           }
         });
 
-        // Also try exchanging code manually if present
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
         if (code) {
           console.log("🔄 [AuthCallback] Found code param, exchanging...");
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -66,7 +83,6 @@ const AuthCallback = () => {
           }
         }
 
-        // Timeout after 15 seconds
         timeout = setTimeout(() => {
           console.warn("⚠️ [AuthCallback] Timeout waiting for session");
           setStatus("Délai dépassé. Retour à la connexion...");
