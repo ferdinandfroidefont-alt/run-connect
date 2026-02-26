@@ -176,7 +176,7 @@ export const WeeklyPlanSessionEditor = ({
   const currentPaceExamples = PACE_EXAMPLES[session.activityType] || PACE_EXAMPLES.running;
 
   return (
-    <div className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border/50">
+    <div className="bg-card rounded-none overflow-hidden">
       {/* Header with day + actions */}
       <div className="bg-secondary/50 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">

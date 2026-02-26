@@ -254,9 +254,9 @@ export const CoachingSessionDetail = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
+          <div className="flex-1 overflow-y-auto py-4 px-0 space-y-4">
             {/* Session Info */}
-            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+            <div className="space-y-2 p-3 rounded-none bg-card">
               <div className="flex items-center gap-2 text-sm">
                 <ActivityIcon activityType={session.activity_type} size="sm" />
                 <span>{getActivityLabel(session.activity_type)}</span>
@@ -368,7 +368,7 @@ export const CoachingSessionDetail = ({
 
             {/* Batch feedback */}
             {isCoach && withoutFeedback.length > 0 && (
-              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="space-y-2 p-3 rounded-none bg-card">
                 <p className="text-sm font-medium">Feedback global</p>
                 <Textarea
                   placeholder="Écrire un feedback pour tous les athlètes sans retour..."

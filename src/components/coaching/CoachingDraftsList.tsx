@@ -85,10 +85,10 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
           <div className="min-w-[70px]" />
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-secondary py-4 space-y-2">
+        <div className="flex-1 overflow-y-auto bg-secondary py-4 px-0 space-y-0">
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="h-16 bg-card rounded-[10px] animate-pulse" />)}
+              {[1, 2, 3].map(i => <div key={i} className="h-16 bg-card rounded-none animate-pulse" />)}
             </div>
           ) : drafts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -106,8 +106,7 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
               return (
                 <div
                   key={draft.id}
-                  className="bg-card rounded-[12px] px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform"
-                  style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.06)' }}
+                  className="bg-card rounded-none px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform border-b border-border/30"
                 >
                   <button
                     onClick={() => handleOpenDraft(draft)}
@@ -146,7 +145,7 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
               onOpenDraft(new Date(), "club");
               onClose();
             }}
-            className="w-full bg-card rounded-[12px] px-4 py-3 flex items-center justify-center gap-2 text-primary text-[15px] font-medium active:scale-[0.98] transition-transform border border-dashed border-border"
+            className="w-full bg-card rounded-none px-4 py-3 flex items-center justify-center gap-2 text-primary text-[15px] font-medium active:scale-[0.98] transition-transform border-b border-border/30"
           >
             <Plus className="h-4 w-4" />
             Nouveau plan hebdo
