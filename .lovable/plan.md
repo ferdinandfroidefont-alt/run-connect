@@ -2,26 +2,27 @@
 
 ## Diagnostic
 
-D'après les screenshots iOS :
-
-1. **ConsentDialog** : Le `DialogContent` utilise `max-w-2xl max-h-[90vh]` — sur iPhone, il ne prend pas le plein écran, le texte est tronqué horizontalement (titre "Consentement obligato..." coupé), et le contenu déborde. La `ScrollArea` a une hauteur fixe `h-[500px]` qui ne s'adapte pas.
-
-2. **SettingsDialog — section partage de profil** : Le contenu (QR code, code parrainage, URL, boutons) déborde horizontalement sur petit écran. Le screenshot montre que les boutons et le code parrainage sont rognés à droite.
+Le composant `AthleteWeeklyView.tsx` a son **JSX vidé** : les lignes 195-269 (navigation semaine + calendrier hero) et 271-278 (bar chart) sont vides. Le composant ne rend que le message "Pas de séance" et rien d'autre — d'où la page blanche.
 
 ## Plan
 
-### 1. ConsentDialog — Plein écran mobile
+### 1. Reconstruire le JSX manquant dans `AthleteWeeklyView.tsx`
 
-- Changer `DialogContent` : ajouter les classes mobile full-screen identiques au SettingsDialog (`w-[100vw] max-w-[100vw] h-[100dvh] max-h-[100dvh] sm:w-auto sm:max-w-2xl sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg`)
-- Changer `ScrollArea` de `h-[500px]` à `flex-1` pour occuper l'espace disponible dynamiquement
-- Ajouter `overflow-hidden` sur le container principal
+Restaurer les deux sections supprimées :
 
-### 2. SettingsDialog — Contraindre la section partage
+**Section hero navigation (lignes 195-269)** — Conformément au memory `ui/coaching/weekly-plan-visuals` :
+- Card de navigation semaine avec chevrons gauche/droite et label semaine
+- Calendrier interactif inline (7 jours, points de couleur : bleu = aujourd'hui, vert = séance complétée, gris = séance non faite)
+- Anneau de progression SVG avec compteur `completedCount/totalCount`
+- Icone flamme/trophy si 100% complété
 
-- Ajouter `overflow-x-hidden` sur le container de la section profil
-- S'assurer que tous les éléments enfants respectent `max-w-full` et `min-w-0`
+**Section bar chart (lignes 271-278)** :
+- Rendu conditionnel de `<WeeklyBarChart>` quand `sessions.length > 0`, avec mapping des sessions vers le format attendu
 
-### Fichiers modifiés
-- `src/components/ConsentDialog.tsx` — Layout plein écran mobile + ScrollArea flexible
-- `src/components/SettingsDialog.tsx` — Contraintes overflow sur la section partage
+**Section session list** :
+- Boucle sur `sessions` avec `<WeeklyPlanCard>` pour chaque séance, avec checkbox completion, note, et click handler
+- Zone note expandable avec `<Textarea>` et sauvegarde onBlur
+
+### Fichier modifié
+- `src/components/coaching/AthleteWeeklyView.tsx` — Reconstruire le JSX complet
 
