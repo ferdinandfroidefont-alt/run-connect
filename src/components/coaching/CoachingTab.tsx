@@ -29,6 +29,7 @@ interface CoachingSession {
   participation_count?: number;
   objective?: string | null;
   rcc_code?: string | null;
+  rpe?: number | null;
 }
 
 interface CoachingTabProps {
@@ -85,7 +86,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     try {
       const { data: weekSessions } = await supabase
         .from("coaching_sessions")
-        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code")
+        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe")
         .eq("club_id", clubId)
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString())
@@ -169,14 +170,22 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     if (sessions.length === 0) return { volume: 34, intensity: 33, recovery: 33 };
     let volume = 0, intensity = 0, recovery = 0;
     sessions.forEach(s => {
-      const obj = (s.objective || "").toLowerCase();
-      const title = (s.title || "").toLowerCase();
-      if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) {
-        recovery++;
-      } else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) {
-        intensity++;
+      if (s.rpe) {
+        // RPE-based categorization
+        if (s.rpe <= 3) recovery++;
+        else if (s.rpe <= 6) volume++;
+        else intensity++;
       } else {
-        volume++;
+        // Fallback: keyword-based
+        const obj = (s.objective || "").toLowerCase();
+        const title = (s.title || "").toLowerCase();
+        if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) {
+          recovery++;
+        } else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) {
+          intensity++;
+        } else {
+          volume++;
+        }
       }
     });
     const total = volume + intensity + recovery;

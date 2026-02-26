@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -53,7 +54,7 @@ export const CreateCoachingSessionDialog = ({
   const [parsedResult, setParsedResult] = useState<RCCResult>({ blocks: [], errors: [] });
   const [coachNotes, setCoachNotes] = useState("");
   const [locationName, setLocationName] = useState("");
-
+  const [rpe, setRpe] = useState<number | undefined>(undefined);
   // Recipients
   const [sendMode, setSendMode] = useState<"club" | "individual">("club");
   const [members, setMembers] = useState<ClubMember[]>([]);
@@ -151,6 +152,7 @@ export const CreateCoachingSessionDialog = ({
           rcc_code: rccCode.trim(),
           objective: objective.trim(),
           default_location_name: locationName.trim() || null,
+          rpe: rpe || null,
         } as any)
         .select("id")
         .single();
@@ -208,6 +210,7 @@ export const CreateCoachingSessionDialog = ({
     setParsedResult({ blocks: [], errors: [] });
     setCoachNotes("");
     setLocationName("");
+    setRpe(undefined);
     setSendMode("club");
     setSelectedAthletes(new Set());
     setSearchQuery("");
@@ -305,6 +308,42 @@ export const CreateCoachingSessionDialog = ({
                 onChange={e => setCoachNotes(e.target.value)}
                 rows={2}
               />
+            </div>
+
+            {/* RPE */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">RPE – Effort perçu (optionnel)</Label>
+              <div className="flex items-center gap-3">
+                <Slider
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={[rpe || 5]}
+                  onValueChange={([v]) => setRpe(v)}
+                  className="flex-1"
+                />
+                <span
+                  className="inline-flex items-center justify-center h-7 w-9 rounded-md text-[13px] font-bold text-white"
+                  style={{
+                    backgroundColor: !rpe ? 'hsl(var(--muted-foreground))' :
+                      rpe <= 3 ? 'hsl(142, 71%, 45%)' :
+                      rpe <= 6 ? 'hsl(45, 93%, 47%)' :
+                      rpe <= 8 ? 'hsl(25, 95%, 53%)' :
+                      'hsl(0, 84%, 60%)'
+                  }}
+                >
+                  {rpe || "–"}
+                </span>
+              </div>
+              {rpe && (
+                <button
+                  type="button"
+                  className="text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={() => setRpe(undefined)}
+                >
+                  Retirer le RPE
+                </button>
+              )}
             </div>
 
             {/* Recipients */}

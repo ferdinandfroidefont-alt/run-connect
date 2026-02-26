@@ -1,0 +1,1 @@
+ALTER TABLE public.coaching_sessions ADD COLUMN rpe smallint CHECK (rpe >= 1 AND rpe <= 10);

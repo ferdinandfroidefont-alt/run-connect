@@ -49,19 +49,19 @@ export const MesocycleView = ({ clubId, currentWeek }: MesocycleViewProps) => {
 
     const { data } = await supabase
       .from("coaching_sessions")
-      .select("id, rcc_code, scheduled_at")
+      .select("id, rcc_code, scheduled_at, rpe")
       .eq("club_id", clubId)
       .gte("scheduled_at", eightWeeksAgo.toISOString())
       .lte("scheduled_at", new Date(weekStart.getTime() + 7 * 86400000).toISOString());
 
     // Group by week
-    const weekMap = new Map<string, { km: number; sessions: number; fastestPace: number }>();
+    const weekMap = new Map<string, { km: number; sessions: number; rpeSum: number; rpeCount: number }>();
 
     // Init 8 weeks
     for (let i = 7; i >= 0; i--) {
       const ws = subWeeks(weekStart, i);
       const key = format(ws, "yyyy-MM-dd");
-      weekMap.set(key, { km: 0, sessions: 0, fastestPace: Infinity });
+      weekMap.set(key, { km: 0, sessions: 0, rpeSum: 0, rpeCount: 0 });
     }
 
     (data || []).forEach(session => {
@@ -71,6 +71,10 @@ export const MesocycleView = ({ clubId, currentWeek }: MesocycleViewProps) => {
       if (!entry) return;
 
       entry.sessions++;
+      if ((session as any).rpe) {
+        entry.rpeSum += (session as any).rpe;
+        entry.rpeCount++;
+      }
       if (session.rcc_code) {
         const { blocks } = parseRCC(session.rcc_code);
         const summary = computeRCCSummary(blocks);
@@ -82,10 +86,18 @@ export const MesocycleView = ({ clubId, currentWeek }: MesocycleViewProps) => {
     let idx = 0;
     for (const [key, val] of weekMap.entries()) {
       const weekLabel = `S${idx - 7}`;
+      // Use RPE average if available, otherwise fallback to km-based
       let intensity = "Facile";
-      if (val.km > 60) intensity = "Très intense";
-      else if (val.km > 45) intensity = "Intense";
-      else if (val.km > 30) intensity = "Modérée";
+      if (val.rpeCount > 0) {
+        const avgRpe = val.rpeSum / val.rpeCount;
+        if (avgRpe >= 8) intensity = "Très intense";
+        else if (avgRpe >= 6) intensity = "Intense";
+        else if (avgRpe >= 4) intensity = "Modérée";
+      } else {
+        if (val.km > 60) intensity = "Très intense";
+        else if (val.km > 45) intensity = "Intense";
+        else if (val.km > 30) intensity = "Modérée";
+      }
 
       const intensityScore = intensity === "Très intense" ? 4 : intensity === "Intense" ? 3 : intensity === "Modérée" ? 2 : 1;
 

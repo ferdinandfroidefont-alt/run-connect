@@ -614,7 +614,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               send_mode: sendMode,
               target_athletes: Object.keys(session.athleteOverrides || {}).length > 0 ? Object.keys(session.athleteOverrides) : [],
               target_group_id: targetGroupDbId,
-            })
+              rpe: session.rpe || null,
+            } as any)
             .select("id")
             .single();
 
