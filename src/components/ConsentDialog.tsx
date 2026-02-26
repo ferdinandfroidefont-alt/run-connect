@@ -71,15 +71,15 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
 
   return (
     <Dialog open={true} modal>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 [&>button]:hidden">
-        <DialogHeader className="p-6 pb-4 border-b">
+      <DialogContent className="w-[100vw] max-w-[100vw] h-[100dvh] max-h-[100dvh] sm:w-auto sm:max-w-2xl sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 [&>button]:hidden flex flex-col overflow-hidden">
+        <DialogHeader className="p-6 pb-4 border-b shrink-0">
           <DialogTitle className="text-2xl">Consentement obligatoire</DialogTitle>
           <DialogDescription>
             Avant d'utiliser RunConnect, vous devez accepter les conditions suivantes
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[500px] px-6">
+        <ScrollArea className="flex-1 min-h-0 px-6">
           <div className="space-y-8 py-4">
             {/* RGPD Section */}
             <div className="space-y-4">
@@ -169,7 +169,7 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
           </div>
         </ScrollArea>
 
-        <div className="p-6 pt-4 border-t bg-muted/30">
+        <div className="p-6 pt-4 border-t bg-muted/30 shrink-0">
           <div className="flex justify-center w-full">
             <Button 
               onClick={handleAccept}

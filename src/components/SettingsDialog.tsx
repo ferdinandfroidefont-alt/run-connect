@@ -472,7 +472,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Profile Share Section */}
                   {profile && (
-                    <div className="bg-background overflow-hidden px-4 py-4 space-y-4 min-w-0 w-full max-w-full">
+                    <div className="bg-background overflow-hidden overflow-x-hidden px-4 py-4 space-y-4 min-w-0 w-full max-w-full box-border">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
@@ -525,10 +525,10 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                       {/* Referral code */}
                       {profile.referral_code && (
-                        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-cyan-400/10 p-3 rounded-xl border border-primary/20 mx-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Code parrainage</span>
-                            <span className="font-mono font-bold text-primary text-sm tracking-wider">{profile.referral_code}</span>
+                        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-cyan-400/10 p-3 rounded-xl border border-primary/20 mx-2 min-w-0 overflow-hidden">
+                          <div className="flex items-center justify-between min-w-0 gap-2">
+                            <span className="text-xs text-muted-foreground shrink-0">Code parrainage</span>
+                            <span className="font-mono font-bold text-primary text-sm tracking-wider truncate min-w-0">{profile.referral_code}</span>
                           </div>
                         </div>
                       )}
