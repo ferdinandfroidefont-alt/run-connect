@@ -215,7 +215,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
       {isCoach && (
         <>
           {/* Hero Card */}
-          <Card className="mb-5 overflow-hidden">
+          <Card className="mb-5 overflow-hidden rounded-none border-x-0">
             <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5">
               {/* Big number */}
               <div className="text-center mb-3">
