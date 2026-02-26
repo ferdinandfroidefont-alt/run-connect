@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ActivityIcon } from "@/lib/activityIcons";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
@@ -16,6 +18,7 @@ interface WeeklyTrackingViewProps {
   onClose: () => void;
   selectedAthleteId: string | null;
   onSelectAthlete: (id: string | null) => void;
+  onOpenPlanForAthlete?: (athleteName: string) => void;
 }
 
 interface SessionInfo {
@@ -85,7 +88,7 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
   );
 };
 
-export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelectAthlete }: WeeklyTrackingViewProps) => {
+export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
@@ -459,33 +462,41 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                 return (
                   <div key={dayKey}>
                     {idx > 0 && <div className="h-px bg-border/30 ml-4" />}
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      {/* Day badge */}
-                      <Badge className={`text-[10px] px-1.5 py-0.5 rounded-md border-0 min-w-[32px] justify-center ${getObjectiveColor(dayData.session.objective)}`}>
-                        {DAY_FULL[eachDayOfInterval({ start: weekStart, end: day }).length - 1]}
-                      </Badge>
+                    <div className="flex items-start gap-3 px-4 py-3">
+                      {/* Activity icon */}
+                      <ActivityIcon activityType={dayData.session.activity_type} size="sm" className="mt-0.5" />
 
                       {/* Session info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-semibold text-foreground truncate">{dayData.sessionTitle}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {dayData.session.objective && (
-                            <span className="text-[12px] text-muted-foreground truncate">{dayData.session.objective}</span>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[15px] font-semibold text-foreground truncate">{dayData.sessionTitle}</p>
+                          {isDone ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border-2 border-border/50 flex-shrink-0" />
                           )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <Badge className={`text-[10px] px-1.5 py-0 rounded-md border-0 ${getObjectiveColor(dayData.session.objective)}`}>
+                            {DAY_FULL[eachDayOfInterval({ start: weekStart, end: day }).length - 1]}
+                          </Badge>
+                          {dayData.session.objective && (
+                            <span className="text-[12px] text-muted-foreground">{dayData.session.objective}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
                           {dayData.session.distance_km && (
                             <span className="text-[12px] font-medium text-primary">
-                              {Math.round(Number(dayData.session.distance_km) * 10) / 10} km
+                              📏 {Math.round(Number(dayData.session.distance_km) * 10) / 10} km
+                            </span>
+                          )}
+                          {dayData.session.pace_target && (
+                            <span className="text-[12px] text-muted-foreground">
+                              ⏱ {dayData.session.pace_target}
                             </span>
                           )}
                         </div>
                       </div>
-
-                      {/* Status: validated or not */}
-                      {isDone ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      ) : (
-                        <div className="h-5 w-5 rounded-full border-2 border-border/50 flex-shrink-0" />
-                      )}
                     </div>
                   </div>
                 );
@@ -530,6 +541,17 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           })()}
         </TabsContent>
       </Tabs>
+
+      {/* Continuer le plan button */}
+      {onOpenPlanForAthlete && (
+        <Button
+          onClick={() => onOpenPlanForAthlete(selectedAthlete.displayName)}
+          className="w-full rounded-2xl h-12 text-[15px] font-semibold gap-2"
+        >
+          <ClipboardList className="h-4.5 w-4.5" />
+          Continuer le plan pour {selectedAthlete.displayName.split(" ")[0]}
+        </Button>
+      )}
     </div>
   );
 };
