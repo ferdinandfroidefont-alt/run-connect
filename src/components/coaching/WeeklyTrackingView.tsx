@@ -42,6 +42,7 @@ interface AthleteData {
   displayName: string;
   username: string | null;
   avatarUrl: string | null;
+  age: number | null;
   groupName: string | null;
   groupColor: string | null;
   days: Record<string, DayData>;
@@ -135,7 +136,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
       // Load profiles, groups, and sessions in parallel
       const [profilesRes, groupsRes, groupMembersRes, sessionsRes] = await Promise.all([
-        supabase.from("profiles").select("user_id, display_name, username, avatar_url").in("user_id", allUserIds),
+        supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
         supabase.from("club_groups").select("id, name, color").eq("club_id", clubId),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
         supabase.from("coaching_sessions")
@@ -160,6 +161,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         athleteMap[p.user_id] = {
           userId: p.user_id, displayName: p.display_name || "Athlète",
           username: p.username || null, avatarUrl: p.avatar_url || null,
+          age: p.age || null,
           groupName: grp?.name || null, groupColor: grp?.color || null,
           days: {}, completedCount: 0, totalCount: 0, weeklyVolumeKm: 0,
         };
@@ -349,10 +351,9 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
               {selectedAthlete.groupName}
             </Badge>
           )}
-          {selectedAthlete.totalCount > 0 && (
-            <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded-lg gap-1">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-              Actif
+          {selectedAthlete.age && (
+            <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded-lg">
+              {selectedAthlete.age} ans
             </Badge>
           )}
         </div>
