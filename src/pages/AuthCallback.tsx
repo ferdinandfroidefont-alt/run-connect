@@ -2,45 +2,55 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-/**
- * AuthCallback - Handles the PKCE OAuth callback for iOS native apps.
- * 
- * Flow:
- * 1. Supabase redirects here after Google OAuth with ?code=XXXX
- * 2. detectSessionInUrl: true in the Supabase client auto-exchanges the code
- * 3. Once session is established, redirect back to the native app via custom scheme
- * 4. If not in a native context, navigate to /
- */
+// 🔥 CRITICAL: Capture the code IMMEDIATELY at module level
+// BEFORE Supabase's detectSessionInUrl can consume it
+const INITIAL_URL_PARAMS = new URLSearchParams(window.location.search);
+const INITIAL_CODE = INITIAL_URL_PARAMS.get('code');
+const INITIAL_FULL_URL = window.location.href;
+
+console.log("🔑 [AuthCallback] Module-level capture:", {
+  INITIAL_CODE: INITIAL_CODE ? `${INITIAL_CODE.substring(0, 10)}...` : null,
+  INITIAL_FULL_URL,
+});
+
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState("Connexion en cours...");
+  const [showFallbackButton, setShowFallbackButton] = useState(false);
+  const [deepLinkUrl, setDeepLinkUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
 
     const handleCallback = async () => {
       try {
-        console.log("🔄 [AuthCallback] Page loaded");
-        console.log("🔄 [AuthCallback] URL:", window.location.href);
+        console.log("🔄 [AuthCallback] useEffect fired");
+        console.log("🔄 [AuthCallback] INITIAL_CODE:", INITIAL_CODE ? "present" : "null");
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-
-        // Detect native iOS (SFSafariViewController) — NOT a third-party browser, NOT Capacitor
+        // Detect native iOS (SFSafariViewController)
         const isIOSNative = /iPhone|iPad|iPod/.test(navigator.userAgent) &&
           !(/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent)) &&
           !(window as any).Capacitor;
 
-        // On native iOS, the PKCE code_verifier lives in the WKWebView's localStorage.
-        // SFSafariViewController cannot access it, so we must NOT attempt exchangeCodeForSession here.
-        // Instead, pass the code back to the app via deep link.
-        if (isIOSNative && code) {
+        console.log("🔄 [AuthCallback] isIOSNative:", isIOSNative);
+        console.log("🔄 [AuthCallback] userAgent:", navigator.userAgent);
+
+        // 🍎 iOS NATIVE: Redirect code via deep link IMMEDIATELY, BEFORE any exchange
+        if (isIOSNative && INITIAL_CODE) {
           console.log("🍎 [AuthCallback] iOS native detected — redirecting code to app via deep link");
           setStatus("Retour à l'application...");
-          window.location.href = `app.runconnect://auth?code=${code}`;
+          
+          const link = `app.runconnect://auth?code=${INITIAL_CODE}`;
+          setDeepLinkUrl(link);
+          window.location.href = link;
+          
+          // Fallback: if deep link doesn't work after 3s, show button
           setTimeout(() => {
-            setStatus("Ouvrez l'application Run Connect pour continuer.");
+            console.log("⚠️ [AuthCallback] Deep link may have failed, showing fallback button");
+            setStatus("Si l'application ne s'ouvre pas automatiquement :");
+            setShowFallbackButton(true);
           }, 3000);
           return;
         }
@@ -70,9 +80,10 @@ const AuthCallback = () => {
           }
         });
 
-        if (code) {
-          console.log("🔄 [AuthCallback] Found code param, exchanging...");
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        // Use INITIAL_CODE (module-level) instead of re-reading URL
+        if (INITIAL_CODE) {
+          console.log("🔄 [AuthCallback] Found INITIAL_CODE, exchanging...");
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(INITIAL_CODE);
           if (exchangeError) {
             console.error("❌ [AuthCallback] Code exchange error:", exchangeError);
             setStatus("Erreur d'authentification. Réessayez.");
@@ -98,29 +109,23 @@ const AuthCallback = () => {
     };
 
     const redirectToApp = () => {
-      // Check if we're in a native iOS context (loaded in SFSafariViewController)
       const isNativeContext = /iPhone|iPad|iPod/.test(navigator.userAgent) && 
         !(/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent));
-      
-      // Also check if Capacitor is available (means we're in the app webview already)
       const isCapacitor = !!(window as any).Capacitor;
 
       if (isCapacitor) {
-        // We're inside the app's WKWebView - just navigate
         console.log("📱 [AuthCallback] Inside Capacitor WebView, navigating to /");
         navigate('/', { replace: true });
       } else if (isNativeContext) {
-        // We're in SFSafariViewController - redirect to custom scheme to return to app
         console.log("🍎 [AuthCallback] In SFSafariViewController, redirecting to custom scheme...");
         setStatus("Retour à l'application...");
         window.location.href = 'app.runconnect://auth?session=ok';
-        
-        // Fallback: if custom scheme doesn't work after 3s, show message
         setTimeout(() => {
-          setStatus("Ouvrez l'application Run Connect pour continuer.");
+          setStatus("Si l'application ne s'ouvre pas automatiquement :");
+          setShowFallbackButton(true);
+          setDeepLinkUrl('app.runconnect://auth?session=ok');
         }, 3000);
       } else {
-        // Web browser - just navigate
         console.log("🌐 [AuthCallback] Web browser, navigating to /");
         navigate('/', { replace: true });
       }
@@ -134,9 +139,20 @@ const AuthCallback = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
       <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground">{status}</p>
+      <p className="text-muted-foreground text-center mb-4">{status}</p>
+      {showFallbackButton && deepLinkUrl && (
+        <Button
+          onClick={() => {
+            window.location.href = deepLinkUrl;
+          }}
+          className="mt-2"
+          size="lg"
+        >
+          Ouvrir Run Connect
+        </Button>
+      )}
     </div>
   );
 };
