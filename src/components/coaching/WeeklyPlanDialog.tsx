@@ -205,10 +205,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       setGroupPlans(prev => ({ ...prev, [activeGroupId]: imported }));
       setSentAt(sentSessions[0].created_at);
     } else {
-      if (!groupPlans[activeGroupId] || groupPlans[activeGroupId].length === 0) {
-        setTargetAthletes([]);
-        setSentAt(null);
-      }
+      setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
+      setTargetAthletes([]);
+      setSentAt(null);
     }
   };
 
