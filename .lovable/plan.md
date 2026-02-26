@@ -1,25 +1,45 @@
 
 
-## Supprimer les marges horizontales sur toutes les pages coaching
+## Probleme identifie
 
-Actuellement, plusieurs pages coaching ont un padding `p-4` sur le conteneur scrollable, ce qui cree un espace entre le contenu et les bords. Il faut passer en `px-4` gere au niveau des enfants (ou retirer le px du parent) pour que les listes et boutons soient bord a bord, comme la page Parametres.
+Quand le dialog s'ouvre, deux effets se declenchent simultanement :
 
-### Fichiers a modifier
+1. **Effet ligne 100** : remet tout a zero (groupPlans, sentAt, etc.)
+2. **Effet ligne 119** : `loadSentSessionsDefault()` se declenche aussi car il depend de `isOpen` — il recharge les seances deja envoyees et remet `sentAt` avec la date d'envoi precedente
 
-| Fichier | Changement |
-|---|---|
-| `WeeklyTrackingDialog.tsx` (l.43) | `p-4` → `py-4` pour retirer le padding horizontal |
-| `CoachingDraftsList.tsx` (l.87) | `p-4 space-y-2` → `py-4 space-y-2` |
-| `ClubGroupsManagerDialog.tsx` (l.27) | `p-4` → `py-4` |
-| `CoachingTemplatesDialog.tsx` (l.74) | `p-4 space-y-3` → `py-4 px-4 space-y-3` — garder le px ici car le contenu (input + cards) a besoin de marge, mais ajouter `flush` aux groupes si applicable |
-| `CoachingSessionDetail.tsx` (l.256) | `p-4 space-y-4` → `py-4 space-y-4`, ajouter `px-4` sur les enfants qui en ont besoin |
-| `AthleteWeeklyDialog.tsx` (l.46) | `p-4 bg-secondary` → `py-4 bg-secondary` |
-| `CreateCoachingSessionDialog.tsx` (l.243) | `p-4 space-y-4` → `py-4 px-4 space-y-4` — celui-ci est un formulaire, il peut garder le px |
-| `ScheduleCoachingDialog.tsx` | Verifier et ajuster de la meme facon |
+Le reset est donc immediatement ecrase par le chargement automatique des seances envoyees.
 
-### Approche
+## Solution
 
-Pour les pages de type **liste** (Tracking, Drafts, Groupes, Templates, SessionDetail), le conteneur parent perd son `px-4` et chaque section interne gere son propre padding horizontal via `px-4` sur les elements non-liste, tandis que les `IOSListGroup` avec `flush` occupent toute la largeur.
+### 1. Ne plus charger automatiquement les seances envoyees a l'ouverture
 
-Pour les pages de type **formulaire** (CreateSession, Schedule), le `px-4` reste car tout le contenu a besoin de marges.
+**Fichier : `src/components/coaching/WeeklyPlanDialog.tsx`**
+
+- **Ligne 119-123** : Supprimer ou conditionner l'effet `loadSentSessionsDefault` pour qu'il ne se declenche PAS a l'ouverture initiale, uniquement quand on change de semaine ou de groupe apres l'ouverture.
+- Ajouter un flag `hasInitialized` (ref) qui passe a `true` apres le premier render avec `isOpen=true`, et ne charger les seances envoyees que sur les changements suivants (semaine/groupe).
+
+### 2. Supprimer le badge "Envoye a telle heure" du hero card
+
+- **Lignes 674-681** : Supprimer le bloc `sentAt &&` qui affiche le badge vert "Envoye le X a HH:mm". L'utilisateur ne souhaite pas voir cette information quand il revient faire un nouveau programme.
+
+### 3. Garder le chargement sur changement de semaine/groupe
+
+- Quand l'utilisateur change de semaine (chevrons) ou de groupe (barre de recherche), `loadSentSessionsDefault` continue de fonctionner normalement pour afficher les seances existantes de cette semaine/groupe.
+
+### Detail technique
+
+```text
+Flux actuel :
+  isOpen=true → reset() + loadSentSessions() → reset ecrase
+
+Flux corrige :
+  isOpen=true → reset() seulement (page vide)
+  changement semaine/groupe → loadSentSessions() (charge les donnees)
+```
+
+Modification concrete :
+- Ajouter `const isInitialOpen = useRef(true)` 
+- Dans l'effet ligne 119 : skip si `isInitialOpen.current` est true, puis le mettre a false
+- Dans l'effet ligne 100 : remettre `isInitialOpen.current = true` quand `!isOpen`
+- Supprimer les lignes 674-681 (badge "Envoye le...")
 
