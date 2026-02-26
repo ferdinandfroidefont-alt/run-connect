@@ -523,7 +523,7 @@ export const ClubProfileDialog = ({
 
               {/* 5️⃣ Supprimer le club - discret en bas */}
               {isAdmin && (
-                <div className="mx-4 pt-4">
+                <div className="mx-4 pt-2 pb-6">
                   <button
                     onClick={() => setShowDeleteGroupDialog(true)}
                     className="w-full text-center text-[13px] text-destructive active:opacity-70"
