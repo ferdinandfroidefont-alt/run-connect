@@ -1,29 +1,43 @@
 
+Objectif: corriger définitivement “Continuer le plan” pour charger le vrai programme de l’athlète (bonne semaine) + garantir l’affichage RCC.
 
-## Plan : 2 corrections coaching
+1) Synchroniser la semaine du suivi vers le planificateur
+- `WeeklyTrackingView.tsx`  
+  - Étendre `onOpenPlanForAthlete` → `(athleteId, athleteName, groupId?, weekDate?)`.
+  - Au clic sur “Continuer le plan”, passer `currentWeek`.
+- `WeeklyTrackingDialog.tsx`  
+  - Ajouter état `planWeekDate`.
+  - Stocker `weekDate` dans `handleOpenPlanForAthlete`.
+  - Passer `initialWeek={planWeekDate}` à `WeeklyPlanDialog`.
 
-### 1. "Continuer le plan" pré-sélectionne l'athlète
+2) Forcer le reset de contexte à chaque ouverture du plan
+- `WeeklyPlanDialog.tsx` (effet d’ouverture)
+  - Réinitialiser explicitement:
+    - `setCurrentWeek(initialWeek ?? new Date())`
+    - `setActiveGroupId(initialGroupId ?? "club")`
+    - `setTargetAthletes([])` puis préselection athlète.
+  - Éviter toute conservation de semaine/groupe d’une ouverture précédente.
 
-**Problème** : Le bouton ouvre `WeeklyPlanDialog` vide sans contexte athlete.
+3) Fiabiliser le chargement des séances athlète (sans rater de séance)
+- `WeeklyPlanDialog.tsx` (`loadSentSessions`)
+  - Remplacer la logique “participations d’abord” par:
+    1. Charger les `coaching_sessions` de la semaine + club (`weekStart..weekEnd`).
+    2. Charger `coaching_participations` filtrées par `focusedAthleteId` + `in(sessionIdsSemaine)`.
+    3. Garder uniquement les sessions de la semaine liées à ces participations.
+  - Puis mapper vers `WeekSession[]` (inclure `rcc_code`) et injecter dans `groupPlans[activeGroupId]`.
+  - Conserver `setTargetAthletes([focusedAthleteId])`.
 
-**Fix** :
-- **`WeeklyPlanDialog.tsx`** : Ajouter prop `initialAthleteName?: string`. Dans le `useEffect` d'ouverture, si `initialAthleteName` est fourni, chercher le membre correspondant dans `members` après chargement, et l'ajouter automatiquement à `targetAthletes`. Aussi pré-remplir le groupe de l'athlète dans `activeGroupId`.
-- **`WeeklyTrackingDialog.tsx`** : Stocker le `selectedAthleteId` quand on clique "Continuer le plan", et passer le `selectedAthlete.displayName` + le `groupId` de l'athlète au `WeeklyPlanDialog` via les nouvelles props.
-- **`WeeklyTrackingView.tsx`** : Modifier `onOpenPlanForAthlete` pour passer `(athleteId: string, athleteName: string, groupId?: string)` au lieu de juste le nom.
+4) Vérifier l’affichage RCC en suivi athlète
+- `WeeklyTrackingView.tsx`
+  - Garder l’affichage existant de `dayData.session.rcc_code` sous distance/allure.
+  - Ajouter fallback visuel léger si besoin (`trim()` avant rendu) pour éviter un cas de chaîne vide.
 
-Ainsi à l'ouverture, le plan charge les séances existantes de la semaine pour le groupe de l'athlète, et l'athlète est déjà sélectionné comme cible.
-
-### 2. Afficher le détail RCC dans les séances du suivi athlète
-
-**Problème** : Les cartes de séance dans l'onglet "Séances" du suivi athlète n'affichent pas le code RCC (ex: `4x1000>3'15`).
-
-**Fix dans `WeeklyTrackingView.tsx`** (section MODE DETAIL, lignes ~462-501) :
-- Sous la ligne distance/pace, ajouter l'affichage de `dayData.session.rcc_code` quand il existe :
-  ```
-  {dayData.session.rcc_code && (
-    <p className="text-[12px] font-mono text-muted-foreground mt-1">
-      {dayData.session.rcc_code}
-    </p>
-  )}
-  ```
-
+5) Validation manuelle ciblée
+- Cas test: Athlète “Ferdinand”.
+- Ouvrir Suivi athlète sur la semaine contenant jeudi.
+- Vérifier que la carte séance affiche bien le RCC (ex: `4x1000 > 3'15`).
+- Cliquer “Continuer le plan”.
+- Vérifier dans `WeeklyPlanDialog`:
+  - athlète déjà sélectionné,
+  - même semaine que le suivi,
+  - séance du jeudi visible dans le calendrier.
