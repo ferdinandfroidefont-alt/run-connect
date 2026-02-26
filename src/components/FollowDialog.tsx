@@ -559,7 +559,7 @@ export const FollowDialog = ({
           </div>
 
           <TabsContent value="followers" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
-            <div className="absolute inset-0 overflow-y-auto px-4 pb-24">
+            <div className="absolute inset-0 overflow-y-auto px-0 pb-24">
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -571,7 +571,7 @@ export const FollowDialog = ({
           </TabsContent>
 
           <TabsContent value="following" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
-            <div className="absolute inset-0 overflow-y-auto px-4 pb-24">
+            <div className="absolute inset-0 overflow-y-auto px-0 pb-24">
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -583,7 +583,7 @@ export const FollowDialog = ({
           </TabsContent>
 
           <TabsContent value="requests" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
-            <div className="absolute inset-0 overflow-y-auto px-4 pb-24">
+            <div className="absolute inset-0 overflow-y-auto px-0 pb-24">
               {/* Sub-tabs for Received / Sent */}
               <div className="flex gap-2 mb-4">
                 <Button
