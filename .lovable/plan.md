@@ -1,43 +1,61 @@
 
-Objectif: corriger définitivement “Continuer le plan” pour charger le vrai programme de l’athlète (bonne semaine) + garantir l’affichage RCC.
+Objectif immédiat: supprimer définitivement le “calendrier vide” quand on clique “Continuer le plan” depuis le suivi athlète.
 
-1) Synchroniser la semaine du suivi vers le planificateur
-- `WeeklyTrackingView.tsx`  
-  - Étendre `onOpenPlanForAthlete` → `(athleteId, athleteName, groupId?, weekDate?)`.
-  - Au clic sur “Continuer le plan”, passer `currentWeek`.
-- `WeeklyTrackingDialog.tsx`  
-  - Ajouter état `planWeekDate`.
-  - Stocker `weekDate` dans `handleOpenPlanForAthlete`.
-  - Passer `initialWeek={planWeekDate}` à `WeeklyPlanDialog`.
+1) Corriger le bootstrap d’ouverture dans `WeeklyPlanDialog.tsx`
+- Remplacer l’enchaînement actuel (`isInitialOpen` + effets séparés) par un seul flow d’ouverture déterministe.
+- À chaque `isOpen=true`, forcer:
+  - `setCurrentWeek(initialWeek ?? new Date())`
+  - `setActiveGroupId(initialGroupId ?? "club")`
+  - `setTargetAthletes([])`
+  - `setGroupPlans({})`
+- Ensuite, charger membres/groupes/templates, puis résoudre l’athlète cible (priorité `initialAthleteId`, fallback nom), puis appliquer `setTargetAthletes([resolvedId])`.
 
-2) Forcer le reset de contexte à chaque ouverture du plan
-- `WeeklyPlanDialog.tsx` (effet d’ouverture)
-  - Réinitialiser explicitement:
-    - `setCurrentWeek(initialWeek ?? new Date())`
-    - `setActiveGroupId(initialGroupId ?? "club")`
-    - `setTargetAthletes([])` puis préselection athlète.
-  - Éviter toute conservation de semaine/groupe d’une ouverture précédente.
+2) Supprimer les races de chargement (cause principale du vide)
+- Refactorer `loadSentSessions` pour prendre des paramètres explicites:
+  - `weekStartParam`
+  - `groupIdParam`
+  - `focusedAthleteIdParam`
+- Ne plus dépendre des states potentiellement obsolètes capturés dans les closures d’effets.
+- Ajouter un garde anti-réponse obsolète (`requestIdRef` / `loadVersionRef`) pour ignorer les retours d’anciennes requêtes.
 
-3) Fiabiliser le chargement des séances athlète (sans rater de séance)
-- `WeeklyPlanDialog.tsx` (`loadSentSessions`)
-  - Remplacer la logique “participations d’abord” par:
-    1. Charger les `coaching_sessions` de la semaine + club (`weekStart..weekEnd`).
-    2. Charger `coaching_participations` filtrées par `focusedAthleteId` + `in(sessionIdsSemaine)`.
-    3. Garder uniquement les sessions de la semaine liées à ces participations.
-  - Puis mapper vers `WeekSession[]` (inclure `rcc_code`) et injecter dans `groupPlans[activeGroupId]`.
-  - Conserver `setTargetAthletes([focusedAthleteId])`.
+3) Fiabiliser la requête “athlète focus”
+- Dans `loadSentSessions` (mode athlète):
+  - Étape A: charger les sessions de la semaine du club (`coaching_sessions`).
+  - Étape B: charger les participations de l’athlète sur ces IDs.
+  - Étape C: filtrer les sessions par participations.
+- Injecter les résultats dans la bonne clé de plan: `groupPlans[groupIdParam]` (pas `activeGroupId` implicite).
+- Conserver `rccCode` et mapping `dayIndex`.
+- Ne jamais écraser avec une réponse vide provenant d’un ancien contexte.
 
-4) Vérifier l’affichage RCC en suivi athlète
-- `WeeklyTrackingView.tsx`
-  - Garder l’affichage existant de `dayData.session.rcc_code` sous distance/allure.
-  - Ajouter fallback visuel léger si besoin (`trim()` avant rendu) pour éviter un cas de chaîne vide.
+4) Rebrancher l’effet de chargement hebdo
+- Remplacer l’effet actuel “skip first open” par:
+  - un appel unique de bootstrap sur ouverture,
+  - puis un effet simple pour changement semaine/groupe si dialog déjà initialisé.
+- En mode athlète pré-ciblé, garder le focus athlète au changement de semaine (ne pas perdre `targetAthletes`).
 
-5) Validation manuelle ciblée
-- Cas test: Athlète “Ferdinand”.
-- Ouvrir Suivi athlète sur la semaine contenant jeudi.
-- Vérifier que la carte séance affiche bien le RCC (ex: `4x1000 > 3'15`).
+5) Garder et durcir la synchro depuis le suivi
+- `WeeklyTrackingView.tsx`: conserver l’appel `onOpenPlanForAthlete(..., currentWeek)`.
+- `WeeklyTrackingDialog.tsx`: conserver `planWeekDate` -> `initialWeek`.
+- Ajouter un fallback de sécurité: si `weekDate` absent, passer `new Date(currentWeek)` pour éviter `undefined`.
+
+6) Validation manuelle ciblée (Ferdinand)
+- Ouvrir Suivi athlète sur la semaine avec jeudi.
+- Vérifier carte suivi: séance + RCC visible.
 - Cliquer “Continuer le plan”.
-- Vérifier dans `WeeklyPlanDialog`:
-  - athlète déjà sélectionné,
-  - même semaine que le suivi,
-  - séance du jeudi visible dans le calendrier.
+- Vérifier dans le planificateur:
+  - athlète pré-sélectionné,
+  - semaine identique au suivi,
+  - séance du jeudi visible (plus de calendrier vide).
+- Refaire le test en changeant de semaine puis retour pour confirmer qu’aucune réponse stale ne vide le calendrier.
+
+Section technique (détails à implémenter)
+- Fichier principal: `src/components/coaching/WeeklyPlanDialog.tsx`
+  - Introduire `const loadVersionRef = useRef(0);`
+  - `const loadSentSessions = async (params) => { const version = ++loadVersionRef.current; ... if (version !== loadVersionRef.current) return; setGroupPlans(...); }`
+  - `setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }))`
+  - Éviter `initialAthleteId` lu implicitement au milieu du flux; le résoudre une fois au bootstrap.
+- Fichiers de synchro:
+  - `src/components/coaching/WeeklyTrackingView.tsx`
+  - `src/components/coaching/WeeklyTrackingDialog.tsx`
+  - garder la signature `(athleteId, athleteName, groupId?, weekDate?)` et transmission `initialWeek`.
+
