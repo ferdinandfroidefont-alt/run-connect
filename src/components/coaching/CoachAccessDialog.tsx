@@ -170,11 +170,11 @@ export const CoachAccessDialog = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto bg-secondary px-4">
+          <div className="flex-1 overflow-y-auto bg-secondary px-0">
             {loading ? (
               <div className="p-4 space-y-2">
                 {[1, 2].map((i) => (
-                  <div key={i} className="h-12 bg-card rounded-[10px] animate-pulse" />
+                  <div key={i} className="h-12 bg-card rounded-none animate-pulse" />
                 ))}
               </div>
             ) : (
