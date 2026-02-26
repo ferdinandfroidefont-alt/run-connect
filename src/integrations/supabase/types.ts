@@ -497,6 +497,7 @@ export type Database = {
       conversations: {
         Row: {
           club_code: string | null
+          coaching_mode: string
           created_at: string
           created_by: string | null
           group_avatar_url: string | null
@@ -512,6 +513,7 @@ export type Database = {
         }
         Insert: {
           club_code?: string | null
+          coaching_mode?: string
           created_at?: string
           created_by?: string | null
           group_avatar_url?: string | null
@@ -527,6 +529,7 @@ export type Database = {
         }
         Update: {
           club_code?: string | null
+          coaching_mode?: string
           created_at?: string
           created_by?: string | null
           group_avatar_url?: string | null
@@ -1978,6 +1981,7 @@ export type Database = {
       generate_club_code: { Args: never; Returns: string }
       generate_referral_code: { Args: never; Returns: string }
       generate_security_report: { Args: never; Returns: Json }
+      get_club_coaching_mode: { Args: { _club_id: string }; Returns: string }
       get_common_clubs: {
         Args: { user_1_id: string; user_2_id: string }
         Returns: {

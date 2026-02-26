@@ -130,7 +130,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         .select("user_id")
         .eq("conversation_id", clubId);
 
-      const allUserIds = (clubMembers || []).map(m => m.user_id).filter(id => id !== user?.id);
+      const allUserIds = (clubMembers || []).map(m => m.user_id);
       if (allUserIds.length === 0) { setAthletes([]); setLoading(false); return; }
 
       // Load profiles, groups, and sessions in parallel
