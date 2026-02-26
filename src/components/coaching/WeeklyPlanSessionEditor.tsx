@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,6 +80,7 @@ export interface WeekSession {
   locationLat?: number;
   locationLng?: number;
   athleteOverrides: Record<string, AthleteOverride>;
+  rpe?: number;
 }
 
 interface ClubMember {
@@ -373,6 +375,44 @@ export const WeeklyPlanSessionEditor = ({
             className="rounded-xl bg-secondary/50 border-0 text-[14px] min-h-[60px] resize-none"
             rows={2}
           />
+        </div>
+
+        {/* RPE Slider */}
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            RPE – Effort perçu (optionnel)
+          </label>
+          <div className="flex items-center gap-3">
+            <Slider
+              min={1}
+              max={10}
+              step={1}
+              value={[session.rpe || 5]}
+              onValueChange={([v]) => update("rpe", v)}
+              className="flex-1"
+            />
+            <span
+              className="inline-flex items-center justify-center h-8 w-10 rounded-lg text-[14px] font-bold text-white"
+              style={{
+                backgroundColor: !session.rpe ? 'hsl(var(--muted-foreground))' :
+                  session.rpe <= 3 ? 'hsl(142, 71%, 45%)' :
+                  session.rpe <= 6 ? 'hsl(45, 93%, 47%)' :
+                  session.rpe <= 8 ? 'hsl(25, 95%, 53%)' :
+                  'hsl(0, 84%, 60%)'
+              }}
+            >
+              {session.rpe || "–"}
+            </span>
+          </div>
+          {session.rpe && (
+            <button
+              type="button"
+              className="text-[11px] text-muted-foreground mt-1 hover:text-foreground"
+              onClick={() => update("rpe", undefined as any)}
+            >
+              Retirer le RPE
+            </button>
+          )}
         </div>
       </div>
 

@@ -369,6 +369,7 @@ export type Database = {
           objective: string | null
           pace_target: string | null
           rcc_code: string | null
+          rpe: number | null
           scheduled_at: string
           send_mode: string | null
           session_blocks: Json | null
@@ -392,6 +393,7 @@ export type Database = {
           objective?: string | null
           pace_target?: string | null
           rcc_code?: string | null
+          rpe?: number | null
           scheduled_at: string
           send_mode?: string | null
           session_blocks?: Json | null
@@ -415,6 +417,7 @@ export type Database = {
           objective?: string | null
           pace_target?: string | null
           rcc_code?: string | null
+          rpe?: number | null
           scheduled_at?: string
           send_mode?: string | null
           session_blocks?: Json | null
