@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useSendNotification } from "@/hooks/useSendNotification";
-import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
-import { MapPin, Calendar, Check, Clock, ChevronLeft } from "lucide-react";
+import { RCCEditor } from "./RCCEditor";
+import { RCCBlocksPreview } from "./RCCBlocksPreview";
+import { rccToSessionBlocks, type RCCResult } from "@/lib/rccParser";
+import { ACTIVITY_TYPES } from "@/components/session-creation/types";
+import { MapPin, Calendar, Check, Clock, ChevronLeft, Send } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -23,6 +27,9 @@ interface CoachingSessionInfo {
   session_blocks?: any;
   club_id: string;
   coach_id: string;
+  objective?: string | null;
+  rcc_code?: string | null;
+  coach_notes?: string | null;
   default_location_name?: string | null;
   default_location_lat?: number | null;
   default_location_lng?: number | null;
@@ -47,29 +54,37 @@ export const ScheduleCoachingDialog = ({
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
+
+  // Form state — mirrors CreateCoachingSessionDialog
+  const [activityType, setActivityType] = useState("course");
+  const [objective, setObjective] = useState("");
+  const [rccCode, setRccCode] = useState("");
+  const [parsedResult, setParsedResult] = useState<RCCResult>({ blocks: [], errors: [] });
   const [scheduledAt, setScheduledAt] = useState("");
   const [locationName, setLocationName] = useState("");
-  const [locationLat, setLocationLat] = useState("");
-  const [locationLng, setLocationLng] = useState("");
   const [customPace, setCustomPace] = useState("");
   const [customNotes, setCustomNotes] = useState("");
 
-  // Pre-fill suggested date and default location
+  // Pre-fill from coaching session
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && session) {
+      setActivityType(session.activity_type || "course");
+      setObjective(session.objective || session.title || "");
+      setRccCode(session.rcc_code || "");
+      setLocationName(session.default_location_name || "");
+      setCustomPace(session.pace_target || "");
+      setCustomNotes("");
+
       if (suggestedDate) {
         try {
           const d = new Date(suggestedDate);
           setScheduledAt(format(d, "yyyy-MM-dd'T'HH:mm"));
         } catch {}
-      }
-      if (session?.default_location_name && !locationName) {
-        setLocationName(session.default_location_name);
-        if (session.default_location_lat) setLocationLat(String(session.default_location_lat));
-        if (session.default_location_lng) setLocationLng(String(session.default_location_lng));
+      } else {
+        setScheduledAt("");
       }
     }
-  }, [suggestedDate, isOpen, session]);
+  }, [isOpen, session, suggestedDate]);
 
   if (!session) return null;
 
@@ -78,24 +93,23 @@ export const ScheduleCoachingDialog = ({
 
     setLoading(true);
     try {
-      const lat = locationLat ? parseFloat(locationLat) : 48.8566;
-      const lng = locationLng ? parseFloat(locationLng) : 2.3522;
+      const sessionBlocks = parsedResult.blocks.length > 0 ? rccToSessionBlocks(parsedResult.blocks) : session.session_blocks;
 
       // Create a real session on the map
       const { data: mapSession, error: sessionError } = await supabase
         .from("sessions")
         .insert({
           organizer_id: user.id,
-          title: `📋 ${session.title}`,
+          title: `📋 ${objective.trim() || session.title}`,
           description: session.description,
-          activity_type: session.activity_type,
+          activity_type: activityType,
           session_type: "footing",
           scheduled_at: new Date(scheduledAt).toISOString(),
           location_name: locationName.trim(),
-          location_lat: lat,
-          location_lng: lng,
+          location_lat: 48.8566,
+          location_lng: 2.3522,
           distance_km: session.distance_km,
-          session_blocks: session.session_blocks,
+          session_blocks: sessionBlocks,
           coaching_session_id: session.id,
           club_id: session.club_id,
         })
@@ -115,8 +129,6 @@ export const ScheduleCoachingDialog = ({
       const participationData = {
         scheduled_at: new Date(scheduledAt).toISOString(),
         location_name: locationName.trim(),
-        location_lat: lat,
-        location_lng: lng,
         map_session_id: mapSession.id,
         status: "scheduled",
         custom_pace: customPace.trim() || null,
@@ -152,12 +164,6 @@ export const ScheduleCoachingDialog = ({
       );
 
       toast({ title: "Séance programmée !", description: "Elle apparaît maintenant sur la carte" });
-      setScheduledAt("");
-      setLocationName("");
-      setLocationLat("");
-      setLocationLng("");
-      setCustomPace("");
-      setCustomNotes("");
       onScheduled();
       onClose();
     } catch (error: any) {
@@ -176,74 +182,101 @@ export const ScheduleCoachingDialog = ({
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <Calendar className="h-5 w-5" />
-            Programmer ma séance
+            <span className="flex-1">Programmer ma séance</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
-        <div className="p-3 rounded-lg bg-muted/50">
-          <p className="font-medium text-sm">{session.title}</p>
-          {session.description && (
-            <p className="text-xs text-muted-foreground mt-1">{session.description}</p>
+          {/* Coach notes */}
+          {session.coach_notes && (
+            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+              <p className="text-xs font-medium text-primary mb-1">📝 Consignes du coach</p>
+              <p className="text-sm">{session.coach_notes}</p>
+            </div>
           )}
-        </div>
 
-        {/* Structured blocks (read-only) */}
-        {session.session_blocks && Array.isArray(session.session_blocks) && session.session_blocks.length > 0 && (
-          <div className="mb-2">
-            <CoachingBlocksPreview blocks={session.session_blocks} />
-            <p className="text-xs text-muted-foreground mt-1 italic">🔒 Structure définie par le coach</p>
+          {suggestedDate && (
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+              <p className="text-xs flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span className="font-medium">Le coach suggère :</span>
+                {format(new Date(suggestedDate), "EEE d MMM à HH:mm", { locale: fr })}
+              </p>
+            </div>
+          )}
+
+          {/* Sport + Objective */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Sport</Label>
+              <Select value={activityType} onValueChange={setActivityType}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACTIVITY_TYPES.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Objectif</Label>
+              <Input
+                value={objective}
+                onChange={e => setObjective(e.target.value)}
+                className="h-9"
+              />
+            </div>
           </div>
-        )}
 
-        {suggestedDate && (
-          <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 mb-2">
-            <p className="text-xs flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span className="font-medium">Le coach suggère :</span>
-              {format(new Date(suggestedDate), "EEE d MMM à HH:mm", { locale: fr })}
-            </p>
-          </div>
-        )}
+          {/* RCC Editor */}
+          <RCCEditor
+            value={rccCode}
+            onChange={setRccCode}
+            onParsedChange={setParsedResult}
+          />
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
+          {/* Date + Location */}
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
               Date et heure *
             </Label>
             <Input
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
+              className="h-9"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5" />
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
               Lieu *
             </Label>
             <Input
-              placeholder="Ex: Parc des Buttes-Chaumont"
+              placeholder="Parc, stade, forêt..."
               value={locationName}
               onChange={(e) => setLocationName(e.target.value)}
+              className="h-9"
             />
           </div>
 
-          {/* Lat/Lng removed — location name is sufficient for athletes */}
-
-          <div className="space-y-2">
-            <Label>Mon allure personnelle</Label>
+          {/* Personal adjustments */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Mon allure personnelle</Label>
             <Input
               placeholder="Ex: 5:30/km"
               value={customPace}
               onChange={(e) => setCustomPace(e.target.value)}
+              className="h-9"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Notes personnelles</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Notes personnelles</Label>
             <Textarea
               placeholder="Objectifs, sensations attendues..."
               value={customNotes}
@@ -252,21 +285,18 @@ export const ScheduleCoachingDialog = ({
             />
           </div>
         </div>
-        </div>
 
-        <div className="sticky bottom-0 bg-background border-t p-4 flex gap-2">
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            Annuler
-          </Button>
+        {/* Sticky footer */}
+        <div className="sticky bottom-0 bg-background border-t p-4">
           <Button
             onClick={handleSchedule}
             disabled={loading || !scheduledAt || !locationName.trim()}
-            className="flex-1"
+            className="w-full"
           >
-            {loading ? "..." : (
+            {loading ? "Publication..." : (
               <>
-                <Check className="h-4 w-4 mr-1" />
-                Programmer
+                <Send className="h-4 w-4 mr-2" />
+                Publier ma séance
               </>
             )}
           </Button>
