@@ -191,81 +191,81 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   return (
     <div className="space-y-4">
       {/* Week navigation — hero style */}
-      <div className="bg-card rounded-none p-4">
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
+      
 
-            <ChevronLeft className="h-5 w-5 text-primary" />
-          </button>
-          <div className="text-center">
-            <p className="text-[17px] font-bold text-foreground">{weekLabel}</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">Mon plan de la semaine</p>
-          </div>
-          <button
-            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
 
-            <ChevronRight className="h-5 w-5 text-primary" />
-          </button>
-        </div>
 
-        {/* Mini calendar row */}
-        <div className="grid grid-cols-7 gap-1.5 mb-4">
-          {weekDays.map((day, i) => {
-            const dayKey = format(day, "yyyy-MM-dd");
-            const hasSession = sessions.some((s) => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
-            const participation = sessions.find((s) => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
-            const isDone = participation ? participations[participation.id]?.status === "completed" : false;
-            const today = isToday(day);
 
-            return (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <span className={`text-[11px] font-medium ${today ? "text-primary" : "text-muted-foreground"}`}>
-                  {format(day, "EEE", { locale: fr }).charAt(0).toUpperCase()}
-                </span>
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-[14px] font-semibold transition-all ${
-                today ?
-                "bg-primary text-primary-foreground" :
-                isDone ?
-                "bg-green-500/15 text-green-600" :
-                hasSession ?
-                "bg-secondary text-foreground" :
-                "text-muted-foreground/50"}`
-                }>
-                  {format(day, "d")}
-                </div>
-                {hasSession &&
-                <div className={`h-1.5 w-1.5 rounded-full ${isDone ? "bg-green-500" : "bg-primary"}`} />
-                }
-              </div>);
 
-          })}
-        </div>
 
-        {/* Progress summary */}
-        <div className="bg-secondary/50 rounded-xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              {progressPercent >= 100 ?
-              <Trophy className="h-5 w-5 text-yellow-500" /> :
 
-              <Flame className="h-5 w-5 text-primary" />
-              }
-              <span className="text-[15px] font-semibold text-foreground">
-                {completedCount}/{totalCount} séances
-              </span>
-            </div>
-            <span className={`text-[17px] font-bold ${
-            progressPercent >= 100 ? "text-green-500" : "text-primary"}`
-            }>
-              {progressPercent}%
-            </span>
-          </div>
-          <Progress value={progressPercent} className="h-2 rounded-full" />
-        </div>
-      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
       {/* Bar chart */}
       {sessions.length > 0
