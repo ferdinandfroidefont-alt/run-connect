@@ -913,7 +913,7 @@ export default function MySessions() {
             <div className="flex gap-1">
               {/* Left column: Séances + sub-filter */}
               <div className="w-1/2">
-                <div className={`bg-secondary ${currentView === 'sessions' ? 'rounded-t-[10px]' : 'rounded-[10px]'} p-1 pb-0`}>
+                <div className={`bg-secondary ${currentView === 'sessions' ? 'rounded-t-[10px]' : 'rounded-[10px]'} p-1 pb-0.5`}>
                   <button
                     onClick={() => setCurrentView('sessions')}
                     className={`w-full py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
