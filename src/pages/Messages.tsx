@@ -2231,7 +2231,6 @@ const Messages = () => {
            {/* iMessage Style Input */}
           <div 
              className="shrink-0 w-full px-2 py-1 bg-card border-t border-border/50 z-40 keyboard-input-container"
-             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             {/* Reply Preview */}
             {replyTo && (
