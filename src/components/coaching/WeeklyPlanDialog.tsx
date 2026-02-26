@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -88,6 +88,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const sessions = groupPlans[activeGroupId] || [];
+  const isInitialOpen = useRef(true);
 
   const setSessions = useCallback((updater: (prev: WeekSession[]) => WeekSession[]) => {
     setGroupPlans(prev => ({
@@ -107,6 +108,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       setSelectedIndex(null);
       setAthleteSearch("");
       setDraftSaveStatus("idle");
+      isInitialOpen.current = true;
       if (initialWeek) setCurrentWeek(initialWeek);
       if (initialGroupId) setActiveGroupId(initialGroupId);
       loadMembers();
@@ -115,9 +117,13 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     }
   }, [isOpen, clubId]);
 
-  // Load sent sessions when week/group changes (default = sent sessions, NOT drafts)
+  // Load sent sessions when week/group changes — skip on initial open
   useEffect(() => {
     if (isOpen && user) {
+      if (isInitialOpen.current) {
+        isInitialOpen.current = false;
+        return;
+      }
       loadSentSessionsDefault();
     }
   }, [isOpen, weekStart.toISOString(), activeGroupId, user]);
@@ -671,14 +677,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                 </button>
               </div>
 
-              {/* Sent badge */}
-              {sentAt && (
-                <div className="mx-5 mb-4 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                  <span className="text-[14px] font-medium text-green-700 dark:text-green-400">
-                    ✓ Envoyé le {format(new Date(sentAt), "d MMM à HH:mm", { locale: fr })}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
