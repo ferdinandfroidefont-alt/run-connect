@@ -278,54 +278,11 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       }
 
       {/* Session list */}
-      {sessions.length === 0 ?
+      {sessions.length === 0 &&
       <div className="bg-card rounded-none p-8 text-center">
           <CalendarDays className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-[16px] font-semibold text-foreground mb-1">Pas de séance</p>
           <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine</p>
-        </div> :
-
-      <div className="space-y-3">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-            Mes séances
-          </p>
-          {sessions.map((session) => {
-          const participation = participations[session.id];
-          const isDone = participation?.status === "completed";
-          const isExpanded = expandedNote === session.id;
-          const noteValue = noteValues[session.id] || "";
-
-          return (
-            <div key={session.id}>
-                <WeeklyPlanCard
-                session={session}
-                isDone={isDone}
-                onCheck={() => toggleCompletion(session)}
-                onNoteClick={() => setExpandedNote(isExpanded ? null : session.id)}
-                noteValue={noteValue}
-                onClick={() => onSessionClick(session)}
-                showCheckbox={!!participation}
-                disabled={!participation} />
-
-
-                {isExpanded &&
-              <div className="bg-card rounded-none px-4 pb-4 -mt-2 pt-4">
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                      Mon ressenti / notes
-                    </label>
-                    <Textarea
-                  value={noteValue}
-                  onChange={(e) => setNoteValues((prev) => ({ ...prev, [session.id]: e.target.value }))}
-                  onBlur={() => saveNote(session.id)}
-                  placeholder="Comment s'est passée la séance ? Sensations, fatigue, douleurs..."
-                  className="min-h-[70px] text-[14px] bg-secondary/50 border-0 rounded-xl resize-none"
-                  autoFocus />
-
-                  </div>
-              }
-              </div>);
-
-        })}
         </div>
       }
     </div>);
