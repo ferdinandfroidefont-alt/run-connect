@@ -759,8 +759,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         {/* ── Scrollable body — NO swipe handlers ── */}
         <div className="flex-1 overflow-y-auto bg-secondary pb-32">
           {/* ── Week navigator — hero card ── */}
-          <div className="mx-4 mt-4 mb-3">
-            <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+          <div className="mt-4 mb-3">
+            <div className="bg-card rounded-none overflow-hidden">
               {/* Week selector */}
               <div className="flex items-center justify-between px-5 py-4">
                 <button
@@ -787,7 +787,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           </div>
 
           {/* ── Search bar ── */}
-          <div className="mx-4 mb-3">
+          <div className="px-4 mb-3">
             <Input
               placeholder="🔍 Rechercher un athlète ou groupe..."
               value={athleteSearch}
@@ -884,9 +884,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* ── CHARGE DE LA SEMAINE (moved BEFORE calendar) ── */}
           {weekLoadSummary && (
-            <div className="mx-4 mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Charge de la semaine</p>
-              <div className="bg-card rounded-2xl p-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <div className="mb-3">
+              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Charge de la semaine</p>
+              <div className="bg-card rounded-none p-3">
                 {/* Compact stats row */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -950,9 +950,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           )}
 
           {/* ── CALENDAR GRID (moved AFTER charge) ── */}
-          <div className="mx-4 mb-3">
-            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Calendrier</p>
-            <div className="bg-card rounded-2xl p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
+          <div className="mb-3">
+            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Calendrier</p>
+            <div className="bg-card rounded-none p-4">
               <div className="grid grid-cols-7 gap-2">
                 {DAY_LABELS.map((label, dayIndex) => {
                   const daySessions = sessionsByDay[dayIndex] || [];
@@ -1012,9 +1012,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* ── Éditeur de séance ── */}
           {selectedSession && selectedIndex !== null ? (
-            <div className="mx-4 mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Éditer la séance</p>
-              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <div className="mb-3">
+              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Éditer la séance</p>
+              <div className="bg-card rounded-none overflow-hidden">
                 <WeeklyPlanSessionEditor
                   session={selectedSession}
                   onChange={s => updateSession(selectedIndex, s)}
@@ -1025,7 +1025,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               </div>
             </div>
           ) : (
-            <div className="mx-4 mb-3 py-10 text-center">
+            <div className="px-4 mb-3 py-10 text-center">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <Plus className="h-7 w-7 text-primary" />
               </div>
@@ -1035,9 +1035,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           )}
 
           {/* ── ACTIONS section ── */}
-          <div className="mx-4 mb-3">
-            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Outils</p>
-            <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+          <div className="mb-3">
+            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Outils</p>
+            <div className="bg-card rounded-none overflow-hidden">
               {/* Resume draft button */}
               {hasDraft && (
                 <IOSListItem
@@ -1133,8 +1133,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* Mesocycle panel */}
           {showMesocycle && (
-            <div className="mx-4 mb-3">
-              <div className="bg-card rounded-2xl p-4 border border-border" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <div className="mb-3">
+              <div className="bg-card rounded-none p-4">
                 <MesocycleView clubId={clubId} currentWeek={currentWeek} />
               </div>
             </div>
@@ -1142,8 +1142,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* Save template input */}
           {showSaveTemplate && (
-            <div className="mx-4 mb-3">
-              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <div className="mb-3">
+              <div className="bg-card rounded-none overflow-hidden">
                 <div className="px-5 py-4 flex items-center gap-3">
                   <Input
                     value={templateName}
@@ -1167,9 +1167,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* ── AJUSTEMENTS ATHLÈTES section ── */}
           {selectedSession && selectedIndex !== null && sessions.length > 0 && (
-            <div className="mx-4 mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-1 mb-2">Personnalisation</p>
-              <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <div className="mb-3">
+              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Personnalisation</p>
+              <div className="bg-card rounded-none overflow-hidden">
                 <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
                   <CollapsibleTrigger asChild>
                     <div className="px-5 py-4 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
