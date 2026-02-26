@@ -71,7 +71,7 @@ export const CoachingTemplatesDialog = ({ isOpen, onClose, onSelect }: CoachingT
           <div className="min-w-[70px]" />
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-secondary p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto bg-secondary py-4 px-4 space-y-3">
           <Input
             placeholder="Rechercher un template..."
             value={search}

@@ -240,7 +240,7 @@ export const CreateCoachingSessionDialog = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
             {/* Sport + Objective */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

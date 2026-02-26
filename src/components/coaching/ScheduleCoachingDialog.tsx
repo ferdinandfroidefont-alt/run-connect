@@ -180,7 +180,7 @@ export const ScheduleCoachingDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
         <div className="p-3 rounded-lg bg-muted/50">
           <p className="font-medium text-sm">{session.title}</p>
           {session.description && (

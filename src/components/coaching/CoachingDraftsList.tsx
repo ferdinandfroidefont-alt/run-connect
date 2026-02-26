@@ -84,7 +84,7 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
           <div className="min-w-[70px]" />
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-secondary p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto bg-secondary py-4 space-y-2">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => <div key={i} className="h-16 bg-card rounded-[10px] animate-pulse" />)}

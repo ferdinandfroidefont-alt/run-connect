@@ -24,7 +24,7 @@ export const ClubGroupsManagerDialog = ({ isOpen, onClose, clubId }: ClubGroupsM
           <div className="min-w-[70px]" />
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-secondary p-4">
+        <div className="flex-1 overflow-y-auto bg-secondary py-4">
           <ClubGroupsManager clubId={clubId} />
         </div>
       </DialogContent>
