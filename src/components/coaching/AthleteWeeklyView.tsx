@@ -58,13 +58,13 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     setLoading(true);
     try {
       // First fetch participations for this user in this club's sessions for the week
-      const { data: allClubSessions } = await supabase
-        .from("coaching_sessions")
-        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code")
-        .eq("club_id", clubId)
-        .gte("scheduled_at", weekStart.toISOString())
-        .lte("scheduled_at", weekEnd.toISOString())
-        .order("scheduled_at", { ascending: true });
+      const { data: allClubSessions } = await supabase.
+      from("coaching_sessions").
+      select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code").
+      eq("club_id", clubId).
+      gte("scheduled_at", weekStart.toISOString()).
+      lte("scheduled_at", weekEnd.toISOString()).
+      order("scheduled_at", { ascending: true });
 
       if (!allClubSessions || allClubSessions.length === 0) {
         setSessions([]);
@@ -74,21 +74,21 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
         return;
       }
 
-      const allSessionIds = allClubSessions.map(s => s.id);
-      const { data } = await supabase
-        .from("coaching_participations")
-        .select("id, coaching_session_id, status, athlete_note, completed_at")
-        .eq("user_id", user.id)
-        .in("coaching_session_id", allSessionIds);
+      const allSessionIds = allClubSessions.map((s) => s.id);
+      const { data } = await supabase.
+      from("coaching_participations").
+      select("id, coaching_session_id, status, athlete_note, completed_at").
+      eq("user_id", user.id).
+      in("coaching_session_id", allSessionIds);
 
       // Only show sessions where the user has a participation record
-      const mySessionIds = new Set((data || []).map(p => p.coaching_session_id));
-      const sessionList = (allClubSessions.filter(s => mySessionIds.has(s.id))) as CoachingSession[];
+      const mySessionIds = new Set((data || []).map((p) => p.coaching_session_id));
+      const sessionList = allClubSessions.filter((s) => mySessionIds.has(s.id)) as CoachingSession[];
       setSessions(sessionList);
 
       const map: Record<string, Participation> = {};
       const notes: Record<string, string> = {};
-      (data || []).forEach(p => {
+      (data || []).forEach((p) => {
         map[p.coaching_session_id] = p;
         notes[p.coaching_session_id] = p.athlete_note || "";
       });
@@ -105,20 +105,20 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   useEffect(() => {
     if (!user || initialNavDone) return;
     const findLatestWeek = async () => {
-      const { data } = await supabase
-        .from("coaching_participations")
-        .select("coaching_session_id")
-        .eq("user_id", user.id)
-        .limit(1);
-      if (!data || data.length === 0) { setInitialNavDone(true); return; }
+      const { data } = await supabase.
+      from("coaching_participations").
+      select("coaching_session_id").
+      eq("user_id", user.id).
+      limit(1);
+      if (!data || data.length === 0) {setInitialNavDone(true);return;}
 
-      const { data: latestSession } = await supabase
-        .from("coaching_sessions")
-        .select("scheduled_at")
-        .eq("club_id", clubId)
-        .order("scheduled_at", { ascending: false })
-        .limit(1)
-        .single();
+      const { data: latestSession } = await supabase.
+      from("coaching_sessions").
+      select("scheduled_at").
+      eq("club_id", clubId).
+      order("scheduled_at", { ascending: false }).
+      limit(1).
+      single();
 
       if (latestSession) {
         const latestDate = new Date(latestSession.scheduled_at);
@@ -132,11 +132,11 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     findLatestWeek();
   }, [user, clubId]);
 
-  useEffect(() => { loadWeek(); }, [loadWeek]);
+  useEffect(() => {loadWeek();}, [loadWeek]);
 
-  const completedCount = Object.values(participations).filter(p => p.status === "completed").length;
+  const completedCount = Object.values(participations).filter((p) => p.status === "completed").length;
   const totalCount = sessions.length;
-  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const progressPercent = totalCount > 0 ? Math.round(completedCount / totalCount * 100) : 0;
 
   const toggleCompletion = async (session: CoachingSession) => {
     if (!user) return;
@@ -146,14 +146,14 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     const isCompleting = participation.status !== "completed";
     const newStatus = isCompleting ? "completed" : "sent";
 
-    const { error } = await supabase
-      .from("coaching_participations")
-      .update({ status: newStatus, completed_at: isCompleting ? new Date().toISOString() : null })
-      .eq("id", participation.id);
+    const { error } = await supabase.
+    from("coaching_participations").
+    update({ status: newStatus, completed_at: isCompleting ? new Date().toISOString() : null }).
+    eq("id", participation.id);
 
-    if (error) { toast.error("Erreur lors de la mise à jour"); return; }
+    if (error) {toast.error("Erreur lors de la mise à jour");return;}
 
-    setParticipations(prev => ({
+    setParticipations((prev) => ({
       ...prev,
       [session.id]: { ...prev[session.id], status: newStatus, completed_at: isCompleting ? new Date().toISOString() : null }
     }));
@@ -167,14 +167,14 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     const note = noteValues[sessionId] || "";
     if (note === (participation.athlete_note || "")) return;
 
-    const { error } = await supabase
-      .from("coaching_participations")
-      .update({ athlete_note: note || null })
-      .eq("id", participation.id);
+    const { error } = await supabase.
+    from("coaching_participations").
+    update({ athlete_note: note || null }).
+    eq("id", participation.id);
 
-    if (error) { toast.error("Erreur lors de la sauvegarde"); return; }
+    if (error) {toast.error("Erreur lors de la sauvegarde");return;}
 
-    setParticipations(prev => ({
+    setParticipations((prev) => ({
       ...prev,
       [sessionId]: { ...prev[sessionId], athlete_note: note || null }
     }));
@@ -183,9 +183,9 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   if (loading) {
     return (
       <div className="space-y-3 p-4">
-        {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-none animate-pulse" />)}
-      </div>
-    );
+        {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-card rounded-none animate-pulse" />)}
+      </div>);
+
   }
 
   return (
@@ -195,8 +195,8 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
-          >
+            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
+
             <ChevronLeft className="h-5 w-5 text-primary" />
           </button>
           <div className="text-center">
@@ -205,8 +205,8 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
           </div>
           <button
             onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
-          >
+            className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
+
             <ChevronRight className="h-5 w-5 text-primary" />
           </button>
         </div>
@@ -215,8 +215,8 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
         <div className="grid grid-cols-7 gap-1.5 mb-4">
           {weekDays.map((day, i) => {
             const dayKey = format(day, "yyyy-MM-dd");
-            const hasSession = sessions.some(s => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
-            const participation = sessions.find(s => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
+            const hasSession = sessions.some((s) => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
+            const participation = sessions.find((s) => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
             const isDone = participation ? participations[participation.id]?.status === "completed" : false;
             const today = isToday(day);
 
@@ -226,21 +226,21 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
                   {format(day, "EEE", { locale: fr }).charAt(0).toUpperCase()}
                 </span>
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-[14px] font-semibold transition-all ${
-                  today
-                    ? "bg-primary text-primary-foreground"
-                    : isDone
-                      ? "bg-green-500/15 text-green-600"
-                      : hasSession
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground/50"
-                }`}>
+                today ?
+                "bg-primary text-primary-foreground" :
+                isDone ?
+                "bg-green-500/15 text-green-600" :
+                hasSession ?
+                "bg-secondary text-foreground" :
+                "text-muted-foreground/50"}`
+                }>
                   {format(day, "d")}
                 </div>
-                {hasSession && (
-                  <div className={`h-1.5 w-1.5 rounded-full ${isDone ? "bg-green-500" : "bg-primary"}`} />
-                )}
-              </div>
-            );
+                {hasSession &&
+                <div className={`h-1.5 w-1.5 rounded-full ${isDone ? "bg-green-500" : "bg-primary"}`} />
+                }
+              </div>);
+
           })}
         </div>
 
@@ -248,18 +248,18 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
         <div className="bg-secondary/50 rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              {progressPercent >= 100 ? (
-                <Trophy className="h-5 w-5 text-yellow-500" />
-              ) : (
-                <Flame className="h-5 w-5 text-primary" />
-              )}
+              {progressPercent >= 100 ?
+              <Trophy className="h-5 w-5 text-yellow-500" /> :
+
+              <Flame className="h-5 w-5 text-primary" />
+              }
               <span className="text-[15px] font-semibold text-foreground">
                 {completedCount}/{totalCount} séances
               </span>
             </div>
             <span className={`text-[17px] font-bold ${
-              progressPercent >= 100 ? "text-green-500" : "text-primary"
-            }`}>
+            progressPercent >= 100 ? "text-green-500" : "text-primary"}`
+            }>
               {progressPercent}%
             </span>
           </div>
@@ -268,66 +268,66 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       </div>
 
       {/* Bar chart */}
-      {sessions.length > 0 && (
-        <div className="bg-card rounded-none p-4">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Charge de la semaine
-          </p>
-          <WeeklyBarChart sessions={sessions} weekDays={weekDays} />
-        </div>
-      )}
+      {sessions.length > 0
+
+
+
+
+
+
+      }
 
       {/* Session list */}
-      {sessions.length === 0 ? (
-        <div className="bg-card rounded-none p-8 text-center">
+      {sessions.length === 0 ?
+      <div className="bg-card rounded-none p-8 text-center">
           <CalendarDays className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-[16px] font-semibold text-foreground mb-1">Pas de séance</p>
           <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
+        </div> :
+
+      <div className="space-y-3">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
             Mes séances
           </p>
-          {sessions.map(session => {
-            const participation = participations[session.id];
-            const isDone = participation?.status === "completed";
-            const isExpanded = expandedNote === session.id;
-            const noteValue = noteValues[session.id] || "";
+          {sessions.map((session) => {
+          const participation = participations[session.id];
+          const isDone = participation?.status === "completed";
+          const isExpanded = expandedNote === session.id;
+          const noteValue = noteValues[session.id] || "";
 
-            return (
-              <div key={session.id}>
+          return (
+            <div key={session.id}>
                 <WeeklyPlanCard
-                  session={session}
-                  isDone={isDone}
-                  onCheck={() => toggleCompletion(session)}
-                  onNoteClick={() => setExpandedNote(isExpanded ? null : session.id)}
-                  noteValue={noteValue}
-                  onClick={() => onSessionClick(session)}
-                  showCheckbox={!!participation}
-                  disabled={!participation}
-                />
+                session={session}
+                isDone={isDone}
+                onCheck={() => toggleCompletion(session)}
+                onNoteClick={() => setExpandedNote(isExpanded ? null : session.id)}
+                noteValue={noteValue}
+                onClick={() => onSessionClick(session)}
+                showCheckbox={!!participation}
+                disabled={!participation} />
 
-                {isExpanded && (
-                  <div className="bg-card rounded-none px-4 pb-4 -mt-2 pt-4">
+
+                {isExpanded &&
+              <div className="bg-card rounded-none px-4 pb-4 -mt-2 pt-4">
                     <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                       Mon ressenti / notes
                     </label>
                     <Textarea
-                      value={noteValue}
-                      onChange={(e) => setNoteValues(prev => ({ ...prev, [session.id]: e.target.value }))}
-                      onBlur={() => saveNote(session.id)}
-                      placeholder="Comment s'est passée la séance ? Sensations, fatigue, douleurs..."
-                      className="min-h-[70px] text-[14px] bg-secondary/50 border-0 rounded-xl resize-none"
-                      autoFocus
-                    />
+                  value={noteValue}
+                  onChange={(e) => setNoteValues((prev) => ({ ...prev, [session.id]: e.target.value }))}
+                  onBlur={() => saveNote(session.id)}
+                  placeholder="Comment s'est passée la séance ? Sensations, fatigue, douleurs..."
+                  className="min-h-[70px] text-[14px] bg-secondary/50 border-0 rounded-xl resize-none"
+                  autoFocus />
+
                   </div>
-                )}
-              </div>
-            );
-          })}
+              }
+              </div>);
+
+        })}
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
