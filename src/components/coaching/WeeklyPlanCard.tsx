@@ -104,7 +104,7 @@ export const WeeklyPlanCard = ({
 
   return (
     <div
-      className={`bg-card rounded-2xl overflow-hidden transition-all border border-border/30 ${
+      className={`bg-card rounded-none overflow-hidden transition-all ${
         onClick ? "cursor-pointer active:scale-[0.98]" : ""
       } ${isDone ? "opacity-80" : ""}`}
       onClick={onClick}

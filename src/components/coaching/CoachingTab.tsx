@@ -205,7 +205,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   ];
 
   return (
-    <div className="bg-secondary -mx-4 -mb-4 px-4 pt-2 pb-8 min-h-[400px] overflow-x-hidden">
+    <div className="bg-secondary -mx-4 -mb-4 pt-2 pb-8 min-h-[400px] overflow-x-hidden">
       {/* Week label */}
       <p className="text-[13px] text-muted-foreground text-center mb-4">
         Semaine du {weekLabel}
@@ -260,7 +260,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           </Card>
 
           {/* Tools Grid 2x2 */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="grid grid-cols-2 gap-3 mb-5 px-4">
             {tools.map((tool) => (
               <button
                 key={tool.label}

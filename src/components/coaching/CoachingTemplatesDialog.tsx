@@ -71,12 +71,14 @@ export const CoachingTemplatesDialog = ({ isOpen, onClose, onSelect }: CoachingT
           <div className="min-w-[70px]" />
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-secondary py-4 px-4 space-y-3">
-          <Input
-            placeholder="Rechercher un template..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+        <div className="flex-1 overflow-y-auto bg-secondary py-4 px-0 space-y-0">
+          <div className="px-4 mb-3">
+            <Input
+              placeholder="Rechercher un template..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
 
           {loading ? (
             <div className="space-y-2">
@@ -94,7 +96,7 @@ export const CoachingTemplatesDialog = ({ isOpen, onClose, onSelect }: CoachingT
               return (
                 <button
                   key={t.id}
-                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-2"
+                  className="w-full text-left p-3 rounded-none border-b border-border/30 bg-card transition-colors space-y-2"
                   onClick={() => { onSelect(t.rcc_code, t.objective || undefined); onClose(); }}
                 >
                   <div className="flex items-center justify-between">

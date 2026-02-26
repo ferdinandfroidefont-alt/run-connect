@@ -183,7 +183,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   if (loading) {
     return (
       <div className="space-y-3 p-4">
-        {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-2xl animate-pulse" />)}
+        {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-none animate-pulse" />)}
       </div>
     );
   }
@@ -191,7 +191,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   return (
     <div className="space-y-4">
       {/* Week navigation — hero style */}
-      <div className="bg-card rounded-2xl p-4 border border-border/30">
+      <div className="bg-card rounded-none p-4">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
@@ -269,7 +269,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Bar chart */}
       {sessions.length > 0 && (
-        <div className="bg-card rounded-2xl p-4 border border-border/30">
+        <div className="bg-card rounded-none p-4">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Charge de la semaine
           </p>
@@ -279,7 +279,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Session list */}
       {sessions.length === 0 ? (
-        <div className="bg-card rounded-2xl p-8 text-center border border-border/30">
+        <div className="bg-card rounded-none p-8 text-center">
           <CalendarDays className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-[16px] font-semibold text-foreground mb-1">Pas de séance</p>
           <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine</p>
@@ -309,7 +309,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
                 />
 
                 {isExpanded && (
-                  <div className="bg-card rounded-b-2xl px-4 pb-4 -mt-2 pt-4 border border-t-0 border-border/30">
+                  <div className="bg-card rounded-none px-4 pb-4 -mt-2 pt-4">
                     <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                       Mon ressenti / notes
                     </label>
