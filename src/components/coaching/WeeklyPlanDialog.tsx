@@ -207,29 +207,36 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     const focusedAthleteId = initialAthleteId || (targetAthletes.length === 1 ? targetAthletes[0] : null);
 
     if (focusedAthleteId) {
-      const { data: participations } = await supabase
-        .from("coaching_participations")
-        .select("coaching_session_id, athlete_overrides")
-        .eq("user_id", focusedAthleteId);
+      // Step 1: Load all coaching_sessions for this week + club
+      const { data: weekSessions } = await supabase
+        .from("coaching_sessions")
+        .select("*")
+        .eq("club_id", clubId)
+        .gte("scheduled_at", weekStart.toISOString())
+        .lt("scheduled_at", weekEndDate.toISOString());
 
-      const sessionIds = (participations || []).map(p => p.coaching_session_id);
-      if (sessionIds.length === 0) {
+      if (!weekSessions || weekSessions.length === 0) {
         setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
         setSentAt(null);
         return;
       }
 
-      const { data: sentSessions } = await supabase
-        .from("coaching_sessions")
-        .select("*")
-        .in("id", sessionIds)
-        .eq("club_id", clubId)
-        .gte("scheduled_at", weekStart.toISOString())
-        .lt("scheduled_at", weekEndDate.toISOString())
-        .order("scheduled_at", { ascending: true });
+      const sessionIds = weekSessions.map(s => s.id);
 
-      if (sentSessions && sentSessions.length > 0) {
-        const imported: WeekSession[] = sentSessions.map(cs => {
+      // Step 2: Load participations for this athlete filtered by those session IDs
+      const { data: participations } = await supabase
+        .from("coaching_participations")
+        .select("coaching_session_id, athlete_overrides")
+        .eq("user_id", focusedAthleteId)
+        .in("coaching_session_id", sessionIds);
+
+      const participationSessionIds = new Set((participations || []).map(p => p.coaching_session_id));
+      
+      // Step 3: Keep only sessions this athlete participates in
+      const athleteSessions = weekSessions.filter(s => participationSessionIds.has(s.id));
+
+      if (athleteSessions.length > 0) {
+        const imported: WeekSession[] = athleteSessions.map(cs => {
           const scheduledDate = new Date(cs.scheduled_at);
           const dayOfWeek = scheduledDate.getDay();
           const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -246,7 +253,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         });
         setGroupPlans(prev => ({ ...prev, [activeGroupId]: imported }));
         setTargetAthletes([focusedAthleteId]);
-        setSentAt(sentSessions[0].created_at);
+        setSentAt(athleteSessions[0].created_at);
       } else {
         setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
         setSentAt(null);

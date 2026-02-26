@@ -18,7 +18,7 @@ interface WeeklyTrackingViewProps {
   onClose: () => void;
   selectedAthleteId: string | null;
   onSelectAthlete: (id: string | null) => void;
-  onOpenPlanForAthlete?: (athleteId: string, athleteName: string, groupId?: string) => void;
+  onOpenPlanForAthlete?: (athleteId: string, athleteName: string, groupId?: string, weekDate?: Date) => void;
 }
 
 interface SessionInfo {
@@ -552,7 +552,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
       {onOpenPlanForAthlete && (
         <Button
           onClick={() => {
-            onOpenPlanForAthlete(selectedAthlete.userId, selectedAthlete.displayName, selectedAthlete.groupId || undefined);
+            onOpenPlanForAthlete(selectedAthlete.userId, selectedAthlete.displayName, selectedAthlete.groupId || undefined, currentWeek);
           }}
           className="w-full rounded-2xl h-12 text-[15px] font-semibold gap-2"
         >
