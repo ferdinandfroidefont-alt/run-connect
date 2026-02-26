@@ -96,9 +96,17 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     }));
   }, [activeGroupId]);
 
-  // Apply initial props
+  // Apply initial props & reset state on open
   useEffect(() => {
     if (isOpen) {
+      // Reset all plan state when dialog opens
+      setGroupPlans({});
+      setTargetAthletes([]);
+      setSentAt(null);
+      setHasDraft(false);
+      setSelectedIndex(null);
+      setAthleteSearch("");
+      setDraftSaveStatus("idle");
       if (initialWeek) setCurrentWeek(initialWeek);
       if (initialGroupId) setActiveGroupId(initialGroupId);
       loadMembers();
