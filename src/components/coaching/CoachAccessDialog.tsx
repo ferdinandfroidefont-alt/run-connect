@@ -170,7 +170,7 @@ export const CoachAccessDialog = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto bg-secondary">
+          <div className="flex-1 overflow-y-auto bg-secondary px-4">
             {loading ? (
               <div className="p-4 space-y-2">
                 {[1, 2].map((i) => (
@@ -181,8 +181,8 @@ export const CoachAccessDialog = ({
               <>
                 {/* Coach clubs */}
                 {clubs.length > 0 && (
-                  <div className="pt-4 px-4">
-                    <IOSListGroup header="MES CLUBS (COACH)">
+                  <div className="pt-4">
+                    <IOSListGroup header="MES CLUBS (COACH)" flush>
                       {clubs.map((club, i) => (
                         <IOSListItem
                           key={club.conversation_id}
@@ -203,8 +203,8 @@ export const CoachAccessDialog = ({
 
                 {/* Athlete coaching plans */}
                 {athleteClubs.length > 0 && (
-                  <div className="px-4">
-                    <IOSListGroup header="MON PLAN COACHING">
+                  <div>
+                    <IOSListGroup header="MON PLAN COACHING" flush>
                       {athleteClubs.map((club, i) => (
                         <IOSListItem
                           key={club.clubId}
@@ -242,8 +242,8 @@ export const CoachAccessDialog = ({
 
                 {/* Create club button for coaches */}
                 {clubs.length > 0 && (
-                  <div className="px-4 pb-4">
-                    <IOSListGroup>
+                  <div className="pb-4">
+                    <IOSListGroup flush>
                       <IOSListItem
                         icon={Plus}
                         iconBgColor="bg-green-500"
