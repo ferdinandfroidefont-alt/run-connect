@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
-import { ScheduleCoachingDialog } from "./ScheduleCoachingDialog";
+import { CreateSessionWizard } from "@/components/session-creation/CreateSessionWizard";
+import type { CoachingSessionPrefill } from "@/components/session-creation/useSessionWizard";
 import { GraduationCap, Calendar } from "lucide-react";
 
 interface CoachingMessageCardProps {
@@ -83,12 +84,26 @@ export const CoachingMessageCard = ({ coachingSessionId, currentUserId }: Coachi
         )}
       </div>
 
-      <ScheduleCoachingDialog
+      <CreateSessionWizard
         isOpen={showSchedule}
         onClose={() => setShowSchedule(false)}
-        session={session}
-        onScheduled={loadData}
-        suggestedDate={participation?.suggested_date}
+        onSessionCreated={() => {}}
+        map={null}
+        coachingSession={session ? {
+          id: session.id,
+          title: session.title,
+          activity_type: session.activity_type,
+          description: session.description,
+          distance_km: session.distance_km,
+          pace_target: session.pace_target,
+          session_blocks: session.session_blocks,
+          club_id: session.club_id,
+          coach_id: session.coach_id,
+          coach_notes: session.coach_notes,
+          scheduled_at: session.scheduled_at,
+          suggestedDate: participation?.suggested_date,
+        } as CoachingSessionPrefill : null}
+        onCoachingScheduled={loadData}
       />
     </>
   );

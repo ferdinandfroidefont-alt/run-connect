@@ -17,6 +17,7 @@ interface ConfirmStepProps {
   onFormDataChange: (updates: Partial<SessionFormData>) => void;
   onSubmit: () => void;
   onBack: () => void;
+  isCoachingMode?: boolean;
 }
 
 const getVisibilityLabel = (type: VisibilityType, hiddenCount: number) => {
@@ -54,6 +55,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   onFormDataChange,
   onSubmit,
   onBack,
+  isCoachingMode = false,
 }) => {
   const navigate = useNavigate();
   const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
@@ -98,8 +100,10 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         >
           <span className="text-3xl">{activity?.icon || '🏃'}</span>
         </motion.div>
-        <h2 className="text-xl font-bold text-foreground">Prêt à créer ?</h2>
-        <p className="text-sm text-muted-foreground mt-1">Vérifiez les détails et la visibilité</p>
+        <h2 className="text-xl font-bold text-foreground">{isCoachingMode ? 'Programmer ma séance' : 'Prêt à créer ?'}</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isCoachingMode ? 'Vérifiez les détails pré-remplis par le coach' : 'Vérifiez les détails et la visibilité'}
+        </p>
       </div>
 
       {/* Content */}
@@ -239,9 +243,11 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
           ) : (
             <>
               <Check className="w-5 h-5 mr-2" />
-              {formData.recurrence_type === 'weekly' 
-                ? `Créer ${formData.recurrence_count} séances`
-                : 'Créer la séance'
+              {isCoachingMode 
+                ? 'Programmer ma séance'
+                : formData.recurrence_type === 'weekly' 
+                  ? `Créer ${formData.recurrence_count} séances`
+                  : 'Créer la séance'
               }
             </>
           )}

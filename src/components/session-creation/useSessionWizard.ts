@@ -1,14 +1,35 @@
 import { useState, useCallback, useEffect } from 'react';
 import { SessionFormData, SelectedLocation, WizardStep, WIZARD_STEPS, DEFAULT_FORM_DATA, SessionBlock, SessionMode } from './types';
 
+export interface CoachingSessionPrefill {
+  id: string;
+  title: string;
+  activity_type: string;
+  description: string | null;
+  distance_km: number | null;
+  pace_target: string | null;
+  session_blocks?: any;
+  club_id: string;
+  coach_id: string;
+  objective?: string | null;
+  rcc_code?: string | null;
+  coach_notes?: string | null;
+  default_location_name?: string | null;
+  default_location_lat?: number | null;
+  default_location_lng?: number | null;
+  scheduled_at?: string;
+  suggestedDate?: string | null;
+}
+
 interface UseSessionWizardProps {
   presetLocation?: { lat: number; lng: number } | null;
   initialSession?: any; // Session data for edit mode
   isEditMode?: boolean;
+  coachingSession?: CoachingSessionPrefill | null;
 }
 
-export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = false }: UseSessionWizardProps = {}) => {
-  // In edit mode, start at activity step (skip location since it's already set)
+export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = false, coachingSession }: UseSessionWizardProps = {}) => {
+  // In edit mode, start at activity step; coaching mode starts at location
   const [currentStep, setCurrentStep] = useState<WizardStep>(isEditMode ? 'activity' : 'location');
   const [formData, setFormData] = useState<SessionFormData>(DEFAULT_FORM_DATA);
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
@@ -17,16 +38,62 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
   const [selectedRoute, setSelectedRoute] = useState<string>('');
   const [routeMode, setRouteMode] = useState<'new' | 'existing'>('new');
 
+  // Initialize with coaching session data (pre-fill everything except location)
+  useEffect(() => {
+    if (coachingSession) {
+      const blocks = coachingSession.session_blocks && Array.isArray(coachingSession.session_blocks) 
+        ? coachingSession.session_blocks : [];
+      
+      let scheduledAt = '';
+      if (coachingSession.suggestedDate) {
+        try {
+          const d = new Date(coachingSession.suggestedDate);
+          scheduledAt = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        } catch {}
+      } else if (coachingSession.scheduled_at) {
+        try {
+          const d = new Date(coachingSession.scheduled_at);
+          scheduledAt = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        } catch {}
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        title: `📋 ${coachingSession.objective || coachingSession.title}`,
+        description: coachingSession.description || '',
+        activity_type: coachingSession.activity_type || 'course',
+        session_type: 'footing',
+        scheduled_at: scheduledAt,
+        distance_km: coachingSession.distance_km?.toString() || '',
+        pace_general: coachingSession.pace_target || '',
+        club_id: coachingSession.club_id,
+        session_mode: blocks.length > 0 ? 'structured' : 'simple',
+        blocks: blocks,
+        location_name: coachingSession.default_location_name || '',
+        visibility_type: 'club',
+      }));
+
+      // Pre-fill location if coach provided one
+      if (coachingSession.default_location_lat && coachingSession.default_location_lng && coachingSession.default_location_name) {
+        setSelectedLocation({
+          lat: coachingSession.default_location_lat,
+          lng: coachingSession.default_location_lng,
+          name: coachingSession.default_location_name,
+        });
+      }
+    }
+  }, [coachingSession]);
+
   // Initialize with session data in edit mode
   useEffect(() => {
     if (isEditMode && initialSession) {
-      // Convert scheduled_at to datetime-local format
       const scheduledDate = new Date(initialSession.scheduled_at);
       const localDateTime = new Date(scheduledDate.getTime() - scheduledDate.getTimezoneOffset() * 60000)
         .toISOString()
         .slice(0, 16);
 
       setFormData({
+        ...DEFAULT_FORM_DATA,
         title: initialSession.title || '',
         description: initialSession.description || '',
         activity_type: initialSession.activity_type || '',
@@ -36,7 +103,6 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
         distance_km: initialSession.distance_km?.toString() || '',
         pace_general: initialSession.pace_general || '',
         pace_unit: initialSession.pace_unit || 'speed',
-        interval_unit: 'distance',
         interval_distance: initialSession.interval_distance?.toString() || '',
         interval_pace: initialSession.interval_pace || '',
         interval_count: initialSession.interval_count?.toString() || '',
@@ -44,15 +110,7 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
         friends_only: initialSession.friends_only ?? true,
         image_url: initialSession.image_url || '',
         club_id: initialSession.club_id || null,
-        warmup_duration: '',
-        warmup_pace: '',
-        cooldown_duration: '',
-        cooldown_pace: '',
-        recovery_duration: '',
-        recovery_type: 'trot',
         intensity: initialSession.intensity || '',
-        terrain_type: '',
-        elevation_gain: '',
         session_mode: initialSession.session_mode || 'simple',
         blocks: initialSession.session_blocks || [],
         route_id: initialSession.route_id || null,
