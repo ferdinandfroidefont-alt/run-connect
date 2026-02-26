@@ -90,7 +90,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const sessions = groupPlans[activeGroupId] || [];
-  const isInitialOpen = useRef(true);
+  const loadVersionRef = useRef(0);
+  const isBootstrappedRef = useRef(false);
 
   const setSessions = useCallback((updater: (prev: WeekSession[]) => WeekSession[]) => {
     setGroupPlans(prev => ({
@@ -99,52 +100,63 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     }));
   }, [activeGroupId]);
 
-  // Apply initial props & reset state on open
+  // ── Deterministic bootstrap on open ──
   useEffect(() => {
-    if (isOpen) {
-      // Reset all plan state when dialog opens
-      setGroupPlans({});
-      setTargetAthletes([]);
-      setSentAt(null);
-      setHasDraft(false);
-      setSelectedIndex(null);
-      setAthleteSearch("");
-      setDraftSaveStatus("idle");
-      isInitialOpen.current = true;
-      if (initialWeek) setCurrentWeek(initialWeek);
-      if (initialGroupId) setActiveGroupId(initialGroupId);
-      loadMembers();
-      loadGroups();
-      loadTemplates();
+    if (!isOpen || !user) {
+      isBootstrappedRef.current = false;
+      return;
     }
+
+    // Force reset all state
+    const resolvedWeek = initialWeek ?? new Date();
+    const resolvedGroupId = initialGroupId ?? "club";
+    setCurrentWeek(resolvedWeek);
+    setActiveGroupId(resolvedGroupId);
+    setGroupPlans({});
+    setTargetAthletes([]);
+    setSentAt(null);
+    setHasDraft(false);
+    setSelectedIndex(null);
+    setAthleteSearch("");
+    setDraftSaveStatus("idle");
+
+    // Load base data, then resolve athlete & load sessions
+    const bootstrap = async () => {
+      await Promise.all([loadMembers(), loadGroups(), loadTemplates()]);
+      isBootstrappedRef.current = true;
+    };
+    bootstrap();
   }, [isOpen, clubId]);
 
-  // Pre-select athlete from tracking view
+  // ── Once members loaded + bootstrapped, resolve athlete & load sessions ──
   useEffect(() => {
-    if (isOpen && members.length > 0) {
-      const preferredAthleteId = initialAthleteId || members.find(m => 
-        initialAthleteName && m.display_name.toLowerCase() === initialAthleteName.toLowerCase()
-      )?.user_id;
+    if (!isOpen || !isBootstrappedRef.current || members.length === 0) return;
 
-      if (preferredAthleteId && !targetAthletes.includes(preferredAthleteId)) {
-        setTargetAthletes(prev => [...prev, preferredAthleteId]);
-      }
+    const resolvedWeek = initialWeek ?? new Date();
+    const resolvedGroupId = initialGroupId ?? "club";
+    const resolvedWeekStart = startOfWeek(resolvedWeek, { weekStartsOn: 1 });
+
+    // Resolve athlete
+    const resolvedAthleteId = initialAthleteId || members.find(m =>
+      initialAthleteName && m.display_name.toLowerCase() === initialAthleteName.toLowerCase()
+    )?.user_id || null;
+
+    if (resolvedAthleteId) {
+      setTargetAthletes([resolvedAthleteId]);
     }
-  }, [isOpen, initialAthleteId, initialAthleteName, members]);
 
-  // Load sent sessions when week/group changes — skip on initial open
+    // Load sessions with explicit params
+    loadSentSessionsWithParams(resolvedWeekStart, resolvedGroupId, resolvedAthleteId);
+  }, [isOpen, members, initialAthleteId, initialAthleteName]);
+
+  // ── Reload on week/group change AFTER bootstrap ──
   useEffect(() => {
-    if (isOpen && user) {
-      if (isInitialOpen.current) {
-        isInitialOpen.current = false;
-        if (initialAthleteId) {
-          loadSentSessionsDefault();
-        }
-        return;
-      }
-      loadSentSessionsDefault();
-    }
-  }, [isOpen, weekStart.toISOString(), activeGroupId, user, initialAthleteId]);
+    if (!isOpen || !user || !isBootstrappedRef.current || members.length === 0) return;
+
+    // Skip the initial bootstrap load (handled above)
+    const focusedAthleteId = initialAthleteId || (targetAthletes.length === 1 ? targetAthletes[0] : null);
+    loadSentSessionsWithParams(weekStart, activeGroupId, focusedAthleteId);
+  }, [weekStart.toISOString(), activeGroupId]);
 
   // Auto-save draft with debounce
   useEffect(() => {
@@ -156,22 +168,126 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     return () => clearTimeout(timer);
   }, [JSON.stringify(sessions), JSON.stringify(targetAthletes)]);
 
-  // Default: load sent sessions + check if draft exists
-  const loadSentSessionsDefault = async () => {
+  // ── Load sent sessions with explicit params (no stale closures) ──
+  const loadSentSessionsWithParams = async (
+    weekStartParam: Date,
+    groupIdParam: string,
+    focusedAthleteIdParam: string | null
+  ) => {
     if (!user) return;
-    await loadSentSessions();
-    // Check if a draft exists for this week/group
-    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+    const version = ++loadVersionRef.current;
+    const weekEndDate = addDays(weekStartParam, 7);
+
+    if (focusedAthleteIdParam) {
+      const { data: weekSessions } = await supabase
+        .from("coaching_sessions")
+        .select("*")
+        .eq("club_id", clubId)
+        .gte("scheduled_at", weekStartParam.toISOString())
+        .lt("scheduled_at", weekEndDate.toISOString());
+
+      if (version !== loadVersionRef.current) return;
+
+      if (!weekSessions || weekSessions.length === 0) {
+        setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
+        setSentAt(null);
+        return;
+      }
+
+      const sessionIds = weekSessions.map(s => s.id);
+
+      const { data: participations } = await supabase
+        .from("coaching_participations")
+        .select("coaching_session_id, athlete_overrides")
+        .eq("user_id", focusedAthleteIdParam)
+        .in("coaching_session_id", sessionIds);
+
+      if (version !== loadVersionRef.current) return;
+
+      const participationSessionIds = new Set((participations || []).map(p => p.coaching_session_id));
+      const athleteSessions = weekSessions.filter(s => participationSessionIds.has(s.id));
+
+      if (athleteSessions.length > 0) {
+        const imported: WeekSession[] = athleteSessions.map(cs => {
+          const scheduledDate = new Date(cs.scheduled_at);
+          const dayOfWeek = scheduledDate.getDay();
+          const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          return {
+            dayIndex,
+            activityType: cs.activity_type || "running",
+            objective: cs.objective || cs.title || "",
+            rccCode: cs.rcc_code || "",
+            parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+            coachNotes: cs.coach_notes || "",
+            locationName: cs.default_location_name || "",
+            athleteOverrides: {},
+          };
+        });
+        setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
+        setTargetAthletes([focusedAthleteIdParam]);
+        setSentAt(athleteSessions[0].created_at);
+      } else {
+        setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
+        setSentAt(null);
+      }
+      return;
+    }
+
+    let query = supabase
+      .from("coaching_sessions")
+      .select("*")
+      .eq("club_id", clubId)
+      .gte("scheduled_at", weekStartParam.toISOString())
+      .lt("scheduled_at", weekEndDate.toISOString());
+
+    if (groupIdParam !== "club") {
+      query = query.eq("target_group_id", groupIdParam);
+    } else {
+      query = query.is("target_group_id", null);
+    }
+
+    const { data: sentSessions } = await query.order("scheduled_at", { ascending: true });
+
+    if (version !== loadVersionRef.current) return;
+
+    if (sentSessions && sentSessions.length > 0) {
+      const imported: WeekSession[] = sentSessions.map(cs => {
+        const scheduledDate = new Date(cs.scheduled_at);
+        const dayOfWeek = scheduledDate.getDay();
+        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        return {
+          dayIndex,
+          activityType: cs.activity_type || "running",
+          objective: cs.objective || cs.title || "",
+          rccCode: cs.rcc_code || "",
+          parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+          coachNotes: cs.coach_notes || "",
+          locationName: cs.default_location_name || "",
+          athleteOverrides: {},
+        };
+      });
+      setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
+      setSentAt(sentSessions[0].created_at);
+    } else {
+      setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
+      setTargetAthletes([]);
+      setSentAt(null);
+    }
+
+    // Check if a draft exists
+    const weekStartStr = format(weekStartParam, "yyyy-MM-dd");
     const { data } = await supabase
       .from("coaching_drafts" as any)
       .select("id, sent_at")
       .eq("coach_id", user.id)
       .eq("club_id", clubId)
       .eq("week_start", weekStartStr)
-      .eq("group_id", activeGroupId)
+      .eq("group_id", groupIdParam)
       .is("sent_at", null)
       .maybeSingle();
-    setHasDraft(!!data);
+    if (version === loadVersionRef.current) {
+      setHasDraft(!!data);
+    }
   };
 
   const loadDraft = async () => {
@@ -198,105 +314,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       setSentAt(draft.sent_at || null);
       setHasDraft(false);
       toast({ title: "Brouillon chargé", description: `${restored.length} séances restaurées` });
-    }
-  };
-
-  const loadSentSessions = async () => {
-    if (!user) return;
-    const weekEndDate = addDays(weekStart, 7);
-    const focusedAthleteId = initialAthleteId || (targetAthletes.length === 1 ? targetAthletes[0] : null);
-
-    if (focusedAthleteId) {
-      // Step 1: Load all coaching_sessions for this week + club
-      const { data: weekSessions } = await supabase
-        .from("coaching_sessions")
-        .select("*")
-        .eq("club_id", clubId)
-        .gte("scheduled_at", weekStart.toISOString())
-        .lt("scheduled_at", weekEndDate.toISOString());
-
-      if (!weekSessions || weekSessions.length === 0) {
-        setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
-        setSentAt(null);
-        return;
-      }
-
-      const sessionIds = weekSessions.map(s => s.id);
-
-      // Step 2: Load participations for this athlete filtered by those session IDs
-      const { data: participations } = await supabase
-        .from("coaching_participations")
-        .select("coaching_session_id, athlete_overrides")
-        .eq("user_id", focusedAthleteId)
-        .in("coaching_session_id", sessionIds);
-
-      const participationSessionIds = new Set((participations || []).map(p => p.coaching_session_id));
-      
-      // Step 3: Keep only sessions this athlete participates in
-      const athleteSessions = weekSessions.filter(s => participationSessionIds.has(s.id));
-
-      if (athleteSessions.length > 0) {
-        const imported: WeekSession[] = athleteSessions.map(cs => {
-          const scheduledDate = new Date(cs.scheduled_at);
-          const dayOfWeek = scheduledDate.getDay();
-          const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-          return {
-            dayIndex,
-            activityType: cs.activity_type || "running",
-            objective: cs.objective || cs.title || "",
-            rccCode: cs.rcc_code || "",
-            parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
-            coachNotes: cs.coach_notes || "",
-            locationName: cs.default_location_name || "",
-            athleteOverrides: {},
-          };
-        });
-        setGroupPlans(prev => ({ ...prev, [activeGroupId]: imported }));
-        setTargetAthletes([focusedAthleteId]);
-        setSentAt(athleteSessions[0].created_at);
-      } else {
-        setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
-        setSentAt(null);
-      }
-      return;
-    }
-
-    let query = supabase
-      .from("coaching_sessions")
-      .select("*")
-      .eq("club_id", clubId)
-      .gte("scheduled_at", weekStart.toISOString())
-      .lt("scheduled_at", weekEndDate.toISOString());
-
-    if (activeGroupId !== "club") {
-      query = query.eq("target_group_id", activeGroupId);
-    } else {
-      query = query.is("target_group_id", null);
-    }
-
-    const { data: sentSessions } = await query.order("scheduled_at", { ascending: true });
-    if (sentSessions && sentSessions.length > 0) {
-      const imported: WeekSession[] = sentSessions.map(cs => {
-        const scheduledDate = new Date(cs.scheduled_at);
-        const dayOfWeek = scheduledDate.getDay();
-        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        return {
-          dayIndex,
-          activityType: cs.activity_type || "running",
-          objective: cs.objective || cs.title || "",
-          rccCode: cs.rcc_code || "",
-          parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
-          coachNotes: cs.coach_notes || "",
-          locationName: cs.default_location_name || "",
-          athleteOverrides: {},
-        };
-      });
-      setGroupPlans(prev => ({ ...prev, [activeGroupId]: imported }));
-      setSentAt(sentSessions[0].created_at);
-    } else {
-      setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
-      setTargetAthletes([]);
-      setSentAt(null);
     }
   };
 
