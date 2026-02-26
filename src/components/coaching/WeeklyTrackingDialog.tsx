@@ -14,6 +14,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [showPlan, setShowPlan] = useState(false);
   const [planAthleteName, setPlanAthleteName] = useState<string | undefined>();
+  const [planAthleteId, setPlanAthleteId] = useState<string | undefined>();
   const [planGroupId, setPlanGroupId] = useState<string | undefined>();
 
   const handleBack = () => {
@@ -29,7 +30,8 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
     onClose();
   };
 
-  const handleOpenPlanForAthlete = (_athleteId: string, athleteName: string, groupId?: string) => {
+  const handleOpenPlanForAthlete = (athleteId: string, athleteName: string, groupId?: string) => {
+    setPlanAthleteId(athleteId);
     setPlanAthleteName(athleteName);
     setPlanGroupId(groupId);
     setShowPlan(true);
@@ -69,6 +71,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
         clubId={clubId}
         initialGroupId={planGroupId}
         initialAthleteName={planAthleteName}
+        initialAthleteId={planAthleteId}
       />
     </>
   );
