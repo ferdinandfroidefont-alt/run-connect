@@ -18,7 +18,7 @@ interface WeeklyTrackingViewProps {
   onClose: () => void;
   selectedAthleteId: string | null;
   onSelectAthlete: (id: string | null) => void;
-  onOpenPlanForAthlete?: (athleteName: string) => void;
+  onOpenPlanForAthlete?: (athleteId: string, athleteName: string, groupId?: string) => void;
 }
 
 interface SessionInfo {
@@ -46,6 +46,7 @@ interface AthleteData {
   username: string | null;
   avatarUrl: string | null;
   age: number | null;
+  groupId: string | null;
   groupName: string | null;
   groupColor: string | null;
   days: Record<string, DayData>;
@@ -152,9 +153,9 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
       // Build group lookup: userId -> { name, color }
       const groupMap: Record<string, { name: string; color: string }> = {};
       (groupsRes.data || []).forEach(g => { groupMap[g.id] = { name: g.name, color: g.color }; });
-      const userGroupMap: Record<string, { name: string; color: string }> = {};
+      const userGroupMap: Record<string, { id: string; name: string; color: string }> = {};
       (groupMembersRes.data || []).forEach(gm => {
-        if (groupMap[gm.group_id]) userGroupMap[gm.user_id] = groupMap[gm.group_id];
+        if (groupMap[gm.group_id]) userGroupMap[gm.user_id] = { id: gm.group_id, ...groupMap[gm.group_id] };
       });
 
       const athleteMap: Record<string, AthleteData> = {};
@@ -165,7 +166,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           userId: p.user_id, displayName: p.display_name || "Athlète",
           username: p.username || null, avatarUrl: p.avatar_url || null,
           age: p.age || null,
-          groupName: grp?.name || null, groupColor: grp?.color || null,
+          groupId: grp?.id || null, groupName: grp?.name || null, groupColor: grp?.color || null,
           days: {}, completedCount: 0, totalCount: 0, weeklyVolumeKm: 0,
         };
       });
@@ -496,6 +497,11 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                             </span>
                           )}
                         </div>
+                        {dayData.session.rcc_code && (
+                          <p className="text-[12px] font-mono text-muted-foreground mt-1">
+                            {dayData.session.rcc_code}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -545,7 +551,9 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
       {/* Continuer le plan button */}
       {onOpenPlanForAthlete && (
         <Button
-          onClick={() => onOpenPlanForAthlete(selectedAthlete.displayName)}
+          onClick={() => {
+            onOpenPlanForAthlete(selectedAthlete.userId, selectedAthlete.displayName, selectedAthlete.groupId || undefined);
+          }}
           className="w-full rounded-2xl h-12 text-[15px] font-semibold gap-2"
         >
           <ClipboardList className="h-4.5 w-4.5" />

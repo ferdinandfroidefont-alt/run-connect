@@ -51,6 +51,7 @@ interface WeeklyPlanDialogProps {
   onSent?: () => void;
   initialWeek?: Date;
   initialGroupId?: string;
+  initialAthleteName?: string;
 }
 
 type GroupPlans = Record<string, WeekSession[]>;
@@ -66,7 +67,7 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   athleteOverrides: {},
 });
 
-export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId }: WeeklyPlanDialogProps) => {
+export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId, initialAthleteName }: WeeklyPlanDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
@@ -116,6 +117,18 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       loadTemplates();
     }
   }, [isOpen, clubId]);
+
+  // Pre-select athlete from tracking view
+  useEffect(() => {
+    if (isOpen && initialAthleteName && members.length > 0) {
+      const match = members.find(m => 
+        m.display_name.toLowerCase() === initialAthleteName.toLowerCase()
+      );
+      if (match && !targetAthletes.includes(match.user_id)) {
+        setTargetAthletes(prev => [...prev, match.user_id]);
+      }
+    }
+  }, [isOpen, initialAthleteName, members]);
 
   // Load sent sessions when week/group changes — skip on initial open
   useEffect(() => {
