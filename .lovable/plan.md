@@ -2,36 +2,26 @@
 
 ## Diagnostic
 
-J'ai identifie **2 problemes critiques** :
+D'après les screenshots iOS :
 
-### Probleme 1 : Le 302 redirect ne fonctionne PAS avec SFSafariViewController
+1. **ConsentDialog** : Le `DialogContent` utilise `max-w-2xl max-h-[90vh]` — sur iPhone, il ne prend pas le plein écran, le texte est tronqué horizontalement (titre "Consentement obligato..." coupé), et le contenu déborde. La `ScrollArea` a une hauteur fixe `h-[500px]` qui ne s'adapte pas.
 
-`SFSafariViewController` sur iOS **ne suit PAS les redirections HTTP 302 vers des custom URL schemes** (`app.runconnect://`). Il ne supporte que les Universal Links (HTTPS). L'Edge Function `ios-auth-callback` fait un `302 → app.runconnect://auth?code=XXX`, et Safari l'ignore silencieusement.
+2. **SettingsDialog — section partage de profil** : Le contenu (QR code, code parrainage, URL, boutons) déborde horizontalement sur petit écran. Le screenshot montre que les boutons et le code parrainage sont rognés à droite.
 
-**Solution** : L'Edge Function doit retourner une **page HTML avec un redirect JavaScript** au lieu d'un 302 HTTP. Le JavaScript `window.location.href = 'app.runconnect://...'` fonctionne dans SFSafariViewController.
+## Plan
 
-### Probleme 2 : Pas de git pull = pas de deep link handler natif
+### 1. ConsentDialog — Plein écran mobile
 
-Meme avec le fix ci-dessus, le deep link `app.runconnect://auth?code=XXX` doit etre capture par l'app iOS native. Sans git pull + rebuild Xcode, le listener `App.addListener('appUrlOpen')` et la configuration native ne sont pas a jour.
+- Changer `DialogContent` : ajouter les classes mobile full-screen identiques au SettingsDialog (`w-[100vw] max-w-[100vw] h-[100dvh] max-h-[100dvh] sm:w-auto sm:max-w-2xl sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg`)
+- Changer `ScrollArea` de `h-[500px]` à `flex-1` pour occuper l'espace disponible dynamiquement
+- Ajouter `overflow-hidden` sur le container principal
 
----
+### 2. SettingsDialog — Contraindre la section partage
 
-## Plan de correction
+- Ajouter `overflow-x-hidden` sur le container de la section profil
+- S'assurer que tous les éléments enfants respectent `max-w-full` et `min-w-0`
 
-### 1. Modifier l'Edge Function `ios-auth-callback` - Remplacer le 302 par une page HTML
-
-Au lieu de `return new Response(null, { status: 302, headers: { Location: deepLink } })`, retourner une page HTML qui :
-- Affiche "Redirection vers RunConnect..." 
-- Execute `window.location.href = 'app.runconnect://auth?code=XXX'` en JavaScript
-- Affiche un bouton fallback "Ouvrir RunConnect" si le redirect auto ne marche pas apres 2s
-
-### 2. Action manuelle requise : git pull + rebuild
-
-Tu dois faire `git pull` puis rebuilder l'app iOS dans Xcode pour que :
-- Le code Auth.tsx mis a jour soit charge
-- Le deep link handler natif Capacitor soit actif
-- Le scheme `app.runconnect` soit enregistre dans Info.plist
-
-### Fichiers modifies
-- `supabase/functions/ios-auth-callback/index.ts` - HTML + JS redirect au lieu de 302
+### Fichiers modifiés
+- `src/components/ConsentDialog.tsx` — Layout plein écran mobile + ScrollArea flexible
+- `src/components/SettingsDialog.tsx` — Contraintes overflow sur la section partage
 
