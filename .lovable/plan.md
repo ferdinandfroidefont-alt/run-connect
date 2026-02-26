@@ -2,40 +2,58 @@
 
 ## Diagnostic
 
-Le problème est dans le flux iOS PKCE Google Sign-In :
+Le probleme fondamental : le flux PKCE est **incompatible** avec SFSafariViewController.
 
-1. L'app ouvre SFSafariViewController → Google OAuth → redirige vers `https://run-connect.lovable.app/auth/callback?code=XXX`
-2. La page AuthCallback se charge dans SFSafariViewController
-3. **Bug** : Le client Supabase a `detectSessionInUrl: true` et `flowType: 'pkce'`. À l'initialisation globale du client, il détecte le `?code=` dans l'URL et tente d'échanger le code automatiquement. Mais le `code_verifier` PKCE est stocké dans le localStorage du WKWebView de l'app, pas dans SFSafariViewController → **l'échange échoue silencieusement** et le code est consommé/supprimé de l'URL
-4. Quand le `useEffect` du composant AuthCallback s'exécute, `urlParams.get('code')` retourne `null` (code déjà consommé), ou l'échange échoue → "Erreur d'authentification. Réessayez."
+1. `signInWithOAuth` est appelé dans le WKWebView → le `code_verifier` est stocké dans le localStorage du WKWebView
+2. Google redirige vers `https://run-connect.lovable.app/auth/callback?code=XXX`
+3. Cette page charge **toute l'app React**, y compris le client Supabase avec `detectSessionInUrl: true`
+4. Le client Supabase dans SFSafariViewController détecte le `?code=` et tente automatiquement `exchangeCodeForSession` → **ECHOUE** car pas de `code_verifier` dans ce contexte
+5. Le code est **invalide coté serveur** (usage unique) → le deep link arrive trop tard, le code est mort
 
-Le deep link `app.runconnect://auth?code=${code}` ne se déclenche jamais car le `code` a été consommé avant que la détection iOS ne puisse agir.
+**C'est pour ça que le fix précédent ne marche pas** : même en capturant le code au niveau module, le client Supabase (initialisé globalement dans `client.ts`) le consomme avant que le composant React ne monte.
 
-## Plan de correction
+## Solution : Edge Function de redirection serveur (approche Instagram/Strava/Nike)
 
-### 1. Capturer le code IMMÉDIATEMENT au niveau module (AuthCallback.tsx)
+Au lieu de charger une page web qui initialise le client Supabase, on redirige le callback vers une **Edge Function** qui fait un simple 302 redirect vers le deep link. Aucun JavaScript client n'est exécuté, le code n'est jamais consommé.
 
-Extraire le `code` de l'URL **avant** toute initialisation React/Supabase, en déclarant une constante au niveau du module :
-
-```typescript
-// Capture AVANT que Supabase detectSessionInUrl ne consomme le code
-const INITIAL_URL_PARAMS = new URLSearchParams(window.location.search);
-const INITIAL_CODE = INITIAL_URL_PARAMS.get('code');
-const INITIAL_FULL_URL = window.location.href;
+```text
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────────────┐     ┌──────────┐
+│  WKWebView│────►│  Google  │────►│ Supabase │────►│ Edge Function    │────►│  WKWebView│
+│ (app)     │     │  OAuth   │     │ Auth     │     │ ios-auth-callback│     │  (app)    │
+│           │     │          │     │ /callback│     │ 302 → deep link  │     │ exchange  │
+└──────────┘     └──────────┘     └──────────┘     └──────────────────┘     └──────────┘
+                                                    PAS de JS client !       code_verifier
+                                                    PAS de Supabase init     ✅ disponible
 ```
 
-### 2. Prioriser la détection iOS et le deep link AVANT l'échange
+## Plan d'implementation
 
-Dans le `useEffect`, utiliser `INITIAL_CODE` au lieu de `urlParams.get('code')`. S'assurer que la redirection deep link iOS se fait en premier, AVANT tout appel à `exchangeCodeForSession`.
+### 1. Créer l'Edge Function `ios-auth-callback`
 
-### 3. Ajouter un fallback : si le deep link échoue, afficher un bouton "Ouvrir l'app"
+Fonction minimale : reçoit `?code=XXX` → redirige 302 vers `app.runconnect://auth?code=XXX`. Aucune logique, aucun SDK, juste un redirect HTTP. Gère aussi le cas d'erreur (pas de code → redirige vers l'app avec `?error=...`).
 
-Au lieu de rester bloqué sur "Erreur d'authentification", ajouter un bouton explicite pour retenter le deep link, avec le code passé en paramètre.
+### 2. Modifier `Auth.tsx` — flux iOS
 
-### 4. Ajouter des logs pour chaque étape
+Pour iOS uniquement, changer le `redirectTo` de :
+- `https://run-connect.lovable.app/auth/callback`
+vers :
+- `https://dbptgehpknjsoisirviz.supabase.co/functions/v1/ios-auth-callback`
 
-Logs détaillés pour `INITIAL_CODE`, `isIOSNative`, et le résultat de chaque étape, afin de diagnostiquer si le problème persiste.
+Le code arrivera directement dans l'app via deep link, et le `exchangeCodeForSession` fonctionnera car le `code_verifier` est dans le localStorage du WKWebView.
+
+### 3. Ajouter l'URL de l'Edge Function aux Redirect URLs autorisées dans Supabase
+
+L'URL `https://dbptgehpknjsoisirviz.supabase.co/functions/v1/ios-auth-callback` doit être ajoutée dans **Supabase Dashboard → Authentication → URL Configuration → Redirect URLs**.
+
+### 4. Nettoyer `AuthCallback.tsx`
+
+Simplifier la page AuthCallback pour ne garder que le flux web standard (desktop/navigateur mobile). Supprimer la logique iOS devenue inutile (le flux iOS ne passera plus par cette page).
 
 ### Fichiers modifiés
-- `src/pages/AuthCallback.tsx` — Capture du code au niveau module, priorisation du deep link iOS, fallback UX
+- `supabase/functions/ios-auth-callback/index.ts` — **nouveau** : Edge Function de redirection
+- `src/pages/Auth.tsx` — Modifier le `redirectTo` pour iOS
+- `src/pages/AuthCallback.tsx` — Simplifier (supprimer logique iOS)
+
+### Action manuelle requise
+- Ajouter `https://dbptgehpknjsoisirviz.supabase.co/functions/v1/ios-auth-callback` dans Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
 
