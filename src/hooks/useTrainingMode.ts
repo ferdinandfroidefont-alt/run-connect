@@ -8,6 +8,12 @@ interface Coord {
   lng: number;
 }
 
+export interface TurnInstruction {
+  direction: 'left' | 'right' | 'slight-left' | 'slight-right' | 'straight' | 'u-turn';
+  distanceMeters: number;
+  segmentIndex: number;
+}
+
 interface TrainingState {
   routeCoordinates: Coord[];
   userPosition: Coord | null;
@@ -15,11 +21,13 @@ interface TrainingState {
   remainingDistance: number;
   isOffRoute: boolean;
   isActive: boolean;
+  isPaused: boolean;
   elapsedTime: number;
   loading: boolean;
   error: string | null;
   sessionTitle: string;
   routeName: string;
+  nextTurn: TurnInstruction | null;
 }
 
 // Haversine distance in meters
@@ -33,7 +41,6 @@ function haversine(a: Coord, b: Coord): number {
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-// Project point onto nearest segment, return { index, distance, projected }
 function projectOnRoute(point: Coord, route: Coord[]): { segmentIndex: number; minDist: number; projected: Coord } {
   let minDist = Infinity;
   let bestIndex = 0;
@@ -42,23 +49,15 @@ function projectOnRoute(point: Coord, route: Coord[]): { segmentIndex: number; m
   for (let i = 0; i < route.length - 1; i++) {
     const a = route[i];
     const b = route[i + 1];
-    
-    // Simple projection on segment
     const dx = b.lng - a.lng;
     const dy = b.lat - a.lat;
     const lenSq = dx * dx + dy * dy;
-    
     let t = 0;
     if (lenSq > 0) {
       t = ((point.lng - a.lng) * dx + (point.lat - a.lat) * dy) / lenSq;
       t = Math.max(0, Math.min(1, t));
     }
-    
-    const projected: Coord = {
-      lat: a.lat + t * dy,
-      lng: a.lng + t * dx,
-    };
-    
+    const projected: Coord = { lat: a.lat + t * dy, lng: a.lng + t * dx };
     const dist = haversine(point, projected);
     if (dist < minDist) {
       minDist = dist;
@@ -72,16 +71,57 @@ function projectOnRoute(point: Coord, route: Coord[]): { segmentIndex: number; m
 
 function calculateRemainingDistance(segmentIndex: number, projected: Coord, route: Coord[]): number {
   if (route.length < 2) return 0;
-  
-  // Distance from projected point to end of current segment
   let remaining = haversine(projected, route[segmentIndex + 1]);
-  
-  // Sum remaining segments
   for (let i = segmentIndex + 1; i < route.length - 1; i++) {
     remaining += haversine(route[i], route[i + 1]);
   }
-  
   return remaining;
+}
+
+// Detect turns from route coordinates
+function detectTurns(route: Coord[]): TurnInstruction[] {
+  const turns: TurnInstruction[] = [];
+  if (route.length < 3) return turns;
+
+  for (let i = 1; i < route.length - 1; i++) {
+    const a = route[i - 1];
+    const b = route[i];
+    const c = route[i + 1];
+
+    const angle1 = Math.atan2(b.lng - a.lng, b.lat - a.lat);
+    const angle2 = Math.atan2(c.lng - b.lng, c.lat - b.lat);
+    let diff = (angle2 - angle1) * 180 / Math.PI;
+
+    // Normalize to -180..180
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+
+    const absDiff = Math.abs(diff);
+    if (absDiff < 25) continue; // straight, skip
+
+    let direction: TurnInstruction['direction'];
+    if (absDiff > 150) {
+      direction = 'u-turn';
+    } else if (absDiff > 60) {
+      direction = diff > 0 ? 'right' : 'left';
+    } else {
+      direction = diff > 0 ? 'slight-right' : 'slight-left';
+    }
+
+    turns.push({ direction, distanceMeters: 0, segmentIndex: i });
+  }
+
+  return turns;
+}
+
+// Calculate distance along route from segmentIndex to a target point index
+function distanceAlongRoute(fromSegIdx: number, fromProjected: Coord, toPointIdx: number, route: Coord[]): number {
+  if (toPointIdx <= fromSegIdx) return 0;
+  let dist = haversine(fromProjected, route[fromSegIdx + 1]);
+  for (let i = fromSegIdx + 1; i < toPointIdx; i++) {
+    dist += haversine(route[i], route[i + 1]);
+  }
+  return dist;
 }
 
 export function useTrainingMode(sessionId: string | undefined, routeId?: string | undefined) {
@@ -92,26 +132,31 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
     remainingDistance: 0,
     isOffRoute: false,
     isActive: false,
+    isPaused: false,
     elapsedTime: 0,
     loading: true,
     error: null,
     sessionTitle: '',
     routeName: '',
+    nextTurn: null,
   });
 
   const watchIdRef = useRef<string | number | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
+  const pausedElapsedRef = useRef<number>(0);
   const prevPositionRef = useRef<Coord | null>(null);
   const offRouteTimerRef = useRef<number>(0);
   const lastOffRouteAlertRef = useRef<number>(0);
+  const turnsRef = useRef<TurnInstruction[]>([]);
+  const vibratedTurnIdxRef = useRef<number>(-1);
+  const orientationHandlerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
 
   // Load session & route data
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Mode 1: Load from route directly
         if (routeId) {
           const { data: route, error: routeError } = await supabase
             .from('routes')
@@ -134,6 +179,8 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
             totalDist += haversine(coords[i], coords[i + 1]);
           }
 
+          turnsRef.current = detectTurns(coords);
+
           setState(s => ({
             ...s,
             routeCoordinates: coords,
@@ -145,7 +192,6 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
           return;
         }
 
-        // Mode 2: Load from session
         if (!sessionId) {
           setState(s => ({ ...s, loading: false, error: 'Aucun itinéraire spécifié' }));
           return;
@@ -183,6 +229,8 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
           totalDist += haversine(coords[i], coords[i + 1]);
         }
 
+        turnsRef.current = detectTurns(coords);
+
         setState(s => ({
           ...s,
           routeCoordinates: coords,
@@ -200,12 +248,10 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
   }, [sessionId, routeId]);
 
   const handlePosition = useCallback((lat: number, lng: number, accuracy: number, gpsHeading?: number | null) => {
-    // Filter bad GPS
     if (accuracy > 50) return;
 
     let newPos: Coord = { lat, lng };
 
-    // Smooth jumps > 20m
     if (prevPositionRef.current) {
       const jump = haversine(prevPositionRef.current, newPos);
       if (jump > 20) {
@@ -223,16 +269,14 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
       const { segmentIndex, minDist, projected } = projectOnRoute(newPos, prev.routeCoordinates);
       const remaining = calculateRemainingDistance(segmentIndex, projected, prev.routeCoordinates);
 
-      // Off-route detection
+      // Off-route detection (20m threshold)
       const now = Date.now();
       let isOffRoute = prev.isOffRoute;
-      
-      if (minDist > 30) {
+      if (minDist > 20) {
         if (offRouteTimerRef.current === 0) {
           offRouteTimerRef.current = now;
         } else if (now - offRouteTimerRef.current > 5000) {
           isOffRoute = true;
-          // Vibrate with cooldown
           if (now - lastOffRouteAlertRef.current > 30000) {
             lastOffRouteAlertRef.current = now;
             try { navigator.vibrate?.(200); } catch {}
@@ -243,69 +287,47 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
         isOffRoute = false;
       }
 
+      // Find next turn ahead of current position
+      let nextTurn: TurnInstruction | null = null;
+      const turns = turnsRef.current;
+      for (const turn of turns) {
+        if (turn.segmentIndex > segmentIndex) {
+          const dist = distanceAlongRoute(segmentIndex, projected, turn.segmentIndex, prev.routeCoordinates);
+          nextTurn = { ...turn, distanceMeters: Math.round(dist) };
+
+          // Vibrate at 50m before turn
+          if (dist < 50 && vibratedTurnIdxRef.current !== turn.segmentIndex) {
+            vibratedTurnIdxRef.current = turn.segmentIndex;
+            try { navigator.vibrate?.(100); } catch {}
+          }
+          break;
+        }
+      }
+
       return {
         ...prev,
         userPosition: newPos,
         remainingDistance: remaining,
         isOffRoute,
         heading: gpsHeading ?? prev.heading,
+        nextTurn,
       };
     });
   }, []);
 
-  const startTracking = useCallback(async () => {
-    setState(s => ({ ...s, isActive: true }));
-    startTimeRef.current = Date.now();
-
-    // Elapsed time timer
-    timerRef.current = setInterval(() => {
-      setState(s => ({ ...s, elapsedTime: Math.floor((Date.now() - startTimeRef.current) / 1000) }));
-    }, 1000);
-
-    // Wake lock
-    try {
-      if ('wakeLock' in navigator) {
-        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-      }
-    } catch {}
-
-    // Compass via DeviceOrientation
-    const handleOrientation = (e: DeviceOrientationEvent) => {
-      const heading = (e as any).webkitCompassHeading ?? (e.alpha != null ? 360 - e.alpha : 0);
-      setState(s => ({ ...s, heading }));
-    };
-
-    // Request iOS permission
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      try {
-        const perm = await (DeviceOrientationEvent as any).requestPermission();
-        if (perm === 'granted') {
-          window.addEventListener('deviceorientation', handleOrientation, true);
-        }
-      } catch {}
-    } else {
-      window.addEventListener('deviceorientation', handleOrientation, true);
-    }
-
-    // GPS tracking
+  const startGPSWatch = useCallback(async () => {
     if (Capacitor.isNativePlatform()) {
       try {
         const id = await Geolocation.watchPosition(
           { enableHighAccuracy: true, timeout: 10000, minimumUpdateInterval: 3000 },
           (pos) => {
             if (pos) {
-              handlePosition(
-                pos.coords.latitude,
-                pos.coords.longitude,
-                pos.coords.accuracy,
-                pos.coords.heading
-              );
+              handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading);
             }
           }
         );
         watchIdRef.current = id;
-      } catch (err) {
-        // Fallback web
+      } catch {
         watchIdRef.current = navigator.geolocation.watchPosition(
           (pos) => handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading),
           () => {},
@@ -321,11 +343,7 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
     }
   }, [handlePosition]);
 
-  const stopTracking = useCallback(async () => {
-    setState(s => ({ ...s, isActive: false }));
-
-    if (timerRef.current) clearInterval(timerRef.current);
-
+  const stopGPSWatch = useCallback(async () => {
     if (watchIdRef.current !== null) {
       if (Capacitor.isNativePlatform() && typeof watchIdRef.current === 'string') {
         await Geolocation.clearWatch({ id: watchIdRef.current });
@@ -334,25 +352,84 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
       }
       watchIdRef.current = null;
     }
+  }, []);
+
+  const startTracking = useCallback(async () => {
+    setState(s => ({ ...s, isActive: true, isPaused: false }));
+    startTimeRef.current = Date.now();
+    pausedElapsedRef.current = 0;
+
+    timerRef.current = setInterval(() => {
+      setState(s => {
+        if (s.isPaused) return s;
+        return { ...s, elapsedTime: Math.floor((Date.now() - startTimeRef.current) / 1000) - pausedElapsedRef.current };
+      });
+    }, 1000);
+
+    // Wake lock
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+      }
+    } catch {}
+
+    // Compass
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      const h = (e as any).webkitCompassHeading ?? (e.alpha != null ? 360 - e.alpha : 0);
+      setState(s => ({ ...s, heading: h }));
+    };
+    orientationHandlerRef.current = handleOrientation;
+
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      try {
+        const perm = await (DeviceOrientationEvent as any).requestPermission();
+        if (perm === 'granted') {
+          window.addEventListener('deviceorientation', handleOrientation, true);
+        }
+      } catch {}
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+
+    await startGPSWatch();
+  }, [startGPSWatch]);
+
+  const pauseTracking = useCallback(async () => {
+    setState(s => ({ ...s, isPaused: true }));
+    await stopGPSWatch();
+  }, [stopGPSWatch]);
+
+  const resumeTracking = useCallback(async () => {
+    setState(s => ({ ...s, isPaused: false }));
+    await startGPSWatch();
+  }, [startGPSWatch]);
+
+  const stopTracking = useCallback(async () => {
+    setState(s => ({ ...s, isActive: false, isPaused: false }));
+
+    if (timerRef.current) clearInterval(timerRef.current);
+    await stopGPSWatch();
 
     if (wakeLockRef.current) {
       try { await wakeLockRef.current.release(); } catch {}
       wakeLockRef.current = null;
     }
 
-    window.removeEventListener('deviceorientation', () => {}, true);
-  }, []);
+    if (orientationHandlerRef.current) {
+      window.removeEventListener('deviceorientation', orientationHandlerRef.current, true);
+      orientationHandlerRef.current = null;
+    }
+  }, [stopGPSWatch]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      stopTracking();
-    };
+    return () => { stopTracking(); };
   }, [stopTracking]);
 
   return {
     ...state,
     startTracking,
     stopTracking,
+    pauseTracking,
+    resumeTracking,
   };
 }
