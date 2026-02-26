@@ -88,30 +88,6 @@ export const ClubInfoDialog = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<GroupMember | null>(null);
   const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
-  const [coachingMode, setCoachingMode] = useState<string>("shared");
-
-  // Load coaching mode
-  useEffect(() => {
-    if (isOpen && conversationId) {
-      supabase
-        .from("conversations")
-        .select("coaching_mode")
-        .eq("id", conversationId)
-        .single()
-        .then(({ data }) => {
-          setCoachingMode((data as any)?.coaching_mode || "shared");
-        });
-    }
-  }, [isOpen, conversationId]);
-
-  const updateCoachingMode = async (mode: string) => {
-    setCoachingMode(mode);
-    await supabase
-      .from("conversations")
-      .update({ coaching_mode: mode } as any)
-      .eq("id", conversationId);
-    toast({ title: mode === "shared" ? "Mode partagé activé" : "Mode indépendant activé" });
-  };
 
   // Load group members
   const loadGroupMembers = async () => {
@@ -521,39 +497,7 @@ export const ClubInfoDialog = ({
 
                 <TabsContent value="coaching" className="mt-3">
                   {/* Coaching mode selector (admin only) */}
-                  {isAdmin && (
-                    <div className="mb-4 bg-card rounded-[12px] p-4 space-y-3" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.06)' }}>
-                      <p className="text-[13px] font-semibold text-foreground">Mode coaching</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => updateCoachingMode("shared")}
-                          className={`rounded-[10px] p-3 text-left border transition-all ${
-                            coachingMode === "shared"
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
-                          }`}
-                        >
-                          <p className="text-[13px] font-medium text-foreground">Partagé</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Les coachs partagent programmes et suivi
-                          </p>
-                        </button>
-                        <button
-                          onClick={() => updateCoachingMode("independent")}
-                          className={`rounded-[10px] p-3 text-left border transition-all ${
-                            coachingMode === "independent"
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
-                          }`}
-                        >
-                          <p className="text-[13px] font-medium text-foreground">Indépendant</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Chaque coach gère ses athlètes
-                          </p>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                {/* Coaching mode removed - coaches are always independent */}
                   <CoachingTab clubId={conversationId} isCoach={currentUserIsCoach} />
                 </TabsContent>
 
