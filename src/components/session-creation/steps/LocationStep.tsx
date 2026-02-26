@@ -115,14 +115,18 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   };
 
   const handleMyLocation = () => {
-    if (!navigator.geolocation || !map) return;
+    if (!navigator.geolocation) return;
     
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        map.setCenter({ lat: latitude, lng: longitude });
-        map.setZoom(15);
+        
+        // Center map if available
+        if (map) {
+          map.setCenter({ lat: latitude, lng: longitude });
+          map.setZoom(15);
+        }
         
         try {
           const { data } = await supabase.functions.invoke('google-maps-proxy', {
@@ -136,9 +140,22 @@ export const LocationStep: React.FC<LocationStepProps> = ({
               name: data.results[0].formatted_address
             });
             setLocationSearch(data.results[0].formatted_address);
+          } else {
+            // Fallback: use coordinates directly
+            onLocationSelect({
+              lat: latitude,
+              lng: longitude,
+              name: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+            });
           }
         } catch (error) {
           console.error('Error:', error);
+          // Fallback: use coordinates directly
+          onLocationSelect({
+            lat: latitude,
+            lng: longitude,
+            name: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+          });
         } finally {
           setIsLocating(false);
         }
@@ -201,20 +218,22 @@ export const LocationStep: React.FC<LocationStepProps> = ({
           variant="outline"
           onClick={handleMyLocation}
           disabled={isLocating}
-          className="flex-1 h-12 min-w-0"
+          className={map ? "flex-1 h-12 min-w-0" : "w-full h-12"}
         >
           <Navigation className="w-4 h-4 mr-2 flex-shrink-0" />
           <span className="truncate">Ma position</span>
         </Button>
-        <Button
-          variant="outline"
-          onClick={handleUseMapCenter}
-          disabled={isLocating}
-          className="flex-1 h-12 min-w-0"
-        >
-          <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-          <span className="truncate">Centre carte</span>
-        </Button>
+        {map && (
+          <Button
+            variant="outline"
+            onClick={handleUseMapCenter}
+            disabled={isLocating}
+            className="flex-1 h-12 min-w-0"
+          >
+            <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span className="truncate">Centre carte</span>
+          </Button>
+        )}
       </div>
 
       {/* Selected location preview */}

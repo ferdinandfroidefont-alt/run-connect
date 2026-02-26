@@ -2185,6 +2185,10 @@ export type Database = {
         Args: { _club_id: string; _user_id: string }
         Returns: boolean
       }
+      is_group_creator: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_user_blocked: {
         Args: { blocked_user_id: string; blocker_user_id: string }
         Returns: boolean

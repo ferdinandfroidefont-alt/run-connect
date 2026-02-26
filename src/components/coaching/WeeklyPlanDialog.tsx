@@ -160,26 +160,14 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     if (!user) return;
     const weekStartStr = format(weekStart, "yyyy-MM-dd");
 
-    // In shared mode, load any coach's draft; in independent, only own
-    const { data: clubData } = await supabase
-      .from("conversations")
-      .select("coaching_mode")
-      .eq("id", clubId)
-      .single();
-    const coachingMode = (clubData as any)?.coaching_mode || "shared";
-
-    let draftQuery = supabase
+    const { data } = await supabase
       .from("coaching_drafts" as any)
       .select("*")
       .eq("club_id", clubId)
+      .eq("coach_id", user.id)
       .eq("week_start", weekStartStr)
-      .eq("group_id", activeGroupId);
-
-    if (coachingMode === "independent") {
-      draftQuery = draftQuery.eq("coach_id", user.id);
-    }
-
-    const { data } = await draftQuery.maybeSingle();
+      .eq("group_id", activeGroupId)
+      .maybeSingle();
     if (data) {
       const draft = data as any;
       const restored = (draft.sessions || []).map((s: any) => ({
@@ -199,25 +187,13 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     if (!user) return;
     const weekEndDate = addDays(weekStart, 7);
 
-    // Check coaching mode
-    const { data: clubData } = await supabase
-      .from("conversations")
-      .select("coaching_mode")
-      .eq("id", clubId)
-      .single();
-    const coachingMode = (clubData as any)?.coaching_mode || "shared";
-
     let query = supabase
       .from("coaching_sessions")
       .select("*")
       .eq("club_id", clubId)
+      .eq("coach_id", user.id)
       .gte("scheduled_at", weekStart.toISOString())
       .lt("scheduled_at", weekEndDate.toISOString());
-
-    // In independent mode, only show own sessions
-    if (coachingMode === "independent") {
-      query = query.eq("coach_id", user.id);
-    }
 
     if (activeGroupId !== "club") {
       query = query.eq("target_group_id", activeGroupId);
