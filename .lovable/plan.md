@@ -1,67 +1,84 @@
 
 
-## Plan de modifications du Plan de Semaine Coach
+## Refonte complete de la page Suivi d'athlete
 
-### Changements demandes
-
-1. **Supprimer les pills de groupes** (lignes 664-700) sous le selecteur de semaine. Garder uniquement la barre de recherche unifiee qui permet deja de filtrer par groupe ou athlete.
-
-2. **Inverser calendrier et charge** : mettre "Charge de la semaine" AVANT le "Calendrier" dans l'ordre d'affichage.
-
-3. **Reduire la taille de la charge** : rendre la section charge plus compacte (meme hauteur que le calendrier ~), reduire la hauteur des barres de 72px a ~48px.
-
-4. **Bloquer le swipe pour changer de semaine** : supprimer les handlers `onTouchStart`/`onTouchEnd` (lignes 628-637) qui permettent de changer de semaine en swipant. Le changement de semaine ne doit se faire QUE via les boutons chevron du hero card.
-
-5. **Types d'activite** : reduire a 3 (Course, Velo, Natation). Supprimer Trail et Marche.
-
-6. **Adapter l'unite d'allure par activite** :
-   - Course : allure en min/km (actuel)
-   - Velo : allure en watts (W)
-   - Natation : allure en min/100m
-
-7. **Adapter les objectifs rapides par activite** :
-   - Course : Footing, Footing Z2, Seuil, VMA, VMA courte, VMA longue, Fartlek, Cotes, Sortie longue, Recuperation, PPG/Renfo, Spe 10K, Spe semi, Spe marathon
-   - Velo : Endurance, Recup, Tempo, Seuil, PMA, PMA courte, PMA longue, Sprint, Cotes, Sortie longue, Home trainer
-   - Natation : Echauffement, Technique, Endurance, Seuil, Vitesse, Interval, Retour au calme, Mixte, Palmes, Pull buoy
-
-8. **Corriger le scroll du popover objectifs** : ajouter `position: 'popper'` et `sideOffset`, utiliser un `ScrollArea` ou un max-h plus grand avec `overflow-y-auto` et `touch-action: pan-y` pour que le scroll fonctionne sur mobile.
-
-9. **Brouillons vs donnees envoyees** : quand on quitte et revient, n'afficher QUE les sessions deja envoyees (`loadSentSessions`) et NON le brouillon en cours. Le brouillon est un etat transitoire de travail, pas la vue par defaut. Modifier `loadDraft` pour prioriser les sessions envoyees et ne charger le brouillon que si l'utilisateur le demande explicitement (via un bouton "Reprendre le brouillon").
+La maquette montre un flow en 2 niveaux :
+1. **Liste des athletes** (page d'accueil) : barre de recherche + liste iOS inset grouped
+2. **Fiche athlete** (page detail au clic) : profil, semaine, stats, seances, onglets
 
 ---
 
-### Fichiers modifies
-
-**`src/components/coaching/WeeklyPlanDialog.tsx`**
-- Supprimer le bloc group pills (lignes 664-700)
-- Supprimer les handlers onTouchStart/onTouchEnd (lignes 628-637)
-- Inverser l'ordre : charge AVANT calendrier
-- Reduire hauteur barres du graphique (72 → 48px)
-- Modifier `loadDraft` : charger par defaut les sessions envoyees, ajouter un bouton "Reprendre brouillon" dans la section Outils
-
-**`src/components/coaching/WeeklyPlanSessionEditor.tsx`**
-- Reduire ACTIVITY_TYPES a 3 : running, cycling, swimming
-- Rendre QUICK_OBJECTIVES dynamique selon l'activite selectionnee
-- Ajouter une indication d'unite d'allure dans le label RCC selon l'activite (ex: "Allure en watts" pour velo)
-- Fixer le scroll du popover objectifs sur mobile : ajouter `touch-action: pan-y` et augmenter `max-h`
-
-### Detail technique
+### Architecture
 
 ```text
-Ordre actuel :           Nouvel ordre :
-┌─ Semaine nav ──┐       ┌─ Semaine nav ──┐
-│ Group pills    │       │ (supprime)     │
-├─ Recherche ────┤       ├─ Recherche ────┤
-├─ Calendrier ───┤       ├─ Charge sem. ──┤  (compact)
-├─ Charge sem. ──┤       ├─ Calendrier ───┤
-├─ Editeur ──────┤       ├─ Editeur ──────┤
-├─ Outils ───────┤       ├─ Outils ───────┤
-└─ Footer ───────┘       │ + "Reprendre   │
-                         │   brouillon"   │
-                         └─ Footer ───────┘
+WeeklyTrackingDialog (fullscreen)
+  └─ WeeklyTrackingView
+       ├─ MODE LISTE (selectedAthlete = null)
+       │   ├─ Barre de recherche
+       │   └─ Liste athletes (inset grouped)
+       │        └─ Chaque ligne : avatar + nom + groupe + badge % + chevron
+       │
+       └─ MODE DETAIL (selectedAthlete = athlete)
+            ├─ Header iOS "< Retour | Suivi de l'athlete"
+            ├─ Profil hero (photo + nom + username + groupe + badge activite)
+            ├─ Semaine nav (chevrons + dates)
+            ├─ Mini calendrier (LUN-DIM) avec dots couleur
+            ├─ Card stats (ring % + X seances faites + volume par type)
+            ├─ Onglets : Seances | Commentaires
+            │   ├─ Tab Seances : liste inset grouped des seances
+            │   │    └─ Chaque ligne : badge jour + titre + objectif + distance + check vert si fait
+            │   └─ Tab Commentaires : notes de l'athlete sur ses seances
+            └─ Bouton rappel (Bell) si seances en retard
 ```
 
-Objectifs par activite :
-- `getQuickObjectives(activityType)` → retourne le tableau adapte
-- Label d'allure dynamique dans l'aide RCC : "min/km" | "watts" | "min/100m"
+---
+
+### Fichier 1 : `src/components/coaching/WeeklyTrackingView.tsx` — Reecriture complete
+
+**Changements majeurs :**
+
+- Ajouter un state `selectedAthlete: AthleteData | null` (null = mode liste, set = mode detail)
+- **Mode Liste** :
+  - Barre de recherche en haut
+  - Liste style inset grouped (bg-card rounded-xl) avec chaque athlete en ligne
+  - Chaque ligne : avatar (rond 44px), nom bold, @username en gris, badge groupe (depuis `club_groups` + `club_group_members`), mini indicateur % a droite, chevron >
+  - Au clic → `setSelectedAthlete(athlete)`
+  
+- **Mode Detail** (quand selectedAthlete est set) :
+  - **En-tete profil** : grande photo (72px rond), nom (18px bold), @username, badge groupe colore, badge "Actif" avec point vert
+  - **Navigation semaine** : card avec chevrons < > et dates "23 fevr. — 1 mars"
+  - **Mini calendrier** : 7 colonnes LUN-DIM avec labels courts, sous chaque label un dot/barre de couleur (vert=fait, bleu=programme, vide=rien), aujourd'hui en bleu inverse
+  - **Card stats circulaire** : un cercle de progression (SVG ring) avec le % au centre, a cote "X seances faites", en dessous des badges par type (endurance X km, seuil X km, VMA X km) avec emoji
+  - **Onglets** (Seances | Commentaires) :
+    - Tab Seances : liste inset grouped, chaque seance = ligne avec badge jour colore (LUN/MAR/MER en rounded), icone activite, titre bold + objectif, distance a droite, check vert si completed, si en retard badge rouge "En retard"
+    - Tab Commentaires : liste des notes laissees par l'athlete sur ses seances, avec avatar + texte + date
+  - **Bouton rappel** : si seances en retard, bouton Bell en haut a droite du header
+
+- Charger les groupes de l'athlete depuis `club_groups` + `club_group_members` pour afficher le badge groupe
+
+### Fichier 2 : `src/components/coaching/WeeklyTrackingDialog.tsx` — Adapter le header
+
+- Le header change dynamiquement :
+  - Mode liste : "Suivi athletes" (titre centre)
+  - Mode detail : bouton "< Retour" qui revient a la liste (setSelectedAthlete(null)), titre "Suivi de l'athlete"
+
+### Details techniques
+
+**Cercle de progression SVG** : un simple `<svg>` avec deux `<circle>` (fond gris + arc colore), le % au centre en texte.
+
+**Onglets** : utiliser le composant `Tabs` de shadcn deja disponible dans le projet.
+
+**Badge jour colore** : 
+- Course = vert, VMA = rouge, Seuil = orange, Recup = emeraude (meme logique que WeeklyPlanCard `getActivityColor`)
+
+**Donnees groupe** : charger `club_groups` et `club_group_members` dans `loadTracking()` pour enrichir chaque athlete avec son groupe (nom + couleur).
+
+**Volume par type** : calculer en iterant sur les sessions de l'athlete, grouper par objectif/titre pour afficher "endurance X km, seuil X km, VMA X km" comme sur la maquette.
+
+### Resume des fichiers modifies
+
+| Fichier | Action |
+|---|---|
+| `src/components/coaching/WeeklyTrackingView.tsx` | Reecriture complete : mode liste + mode detail athlete |
+| `src/components/coaching/WeeklyTrackingDialog.tsx` | Header dynamique selon le mode (liste vs detail) |
 
