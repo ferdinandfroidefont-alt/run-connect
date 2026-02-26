@@ -13,6 +13,8 @@ interface WeeklyTrackingDialogProps {
 export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTrackingDialogProps) => {
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [showPlan, setShowPlan] = useState(false);
+  const [planAthleteName, setPlanAthleteName] = useState<string | undefined>();
+  const [planGroupId, setPlanGroupId] = useState<string | undefined>();
 
   const handleBack = () => {
     if (selectedAthleteId) {
@@ -27,7 +29,9 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
     onClose();
   };
 
-  const handleOpenPlanForAthlete = (_athleteName: string) => {
+  const handleOpenPlanForAthlete = (_athleteId: string, athleteName: string, groupId?: string) => {
+    setPlanAthleteName(athleteName);
+    setPlanGroupId(groupId);
     setShowPlan(true);
   };
 
@@ -63,6 +67,8 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
         isOpen={showPlan}
         onClose={() => setShowPlan(false)}
         clubId={clubId}
+        initialGroupId={planGroupId}
+        initialAthleteName={planAthleteName}
       />
     </>
   );
