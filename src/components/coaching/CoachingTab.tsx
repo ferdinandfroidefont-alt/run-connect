@@ -277,7 +277,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           </div>
 
           {/* Templates shortcut */}
-          <IOSListGroup>
+          <IOSListGroup flush>
             <IOSListItem
               icon={BookOpen}
               iconBgColor="bg-purple-500"
@@ -291,7 +291,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
       {/* Upcoming Sessions */}
       {upcomingSessions.length > 0 && (
-        <IOSListGroup header="PROCHAINES SÉANCES">
+        <IOSListGroup header="PROCHAINES SÉANCES" flush>
           {upcomingSessions.map((s, i) => (
             <IOSListItem
               key={s.id}
