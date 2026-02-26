@@ -311,14 +311,12 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         </IOSListGroup>
       )}
 
-      {/* Athlete weekly view */}
-      {!isCoach && (
-        <AthleteWeeklyView
-          clubId={clubId}
-          sessions={sessions}
-          onSessionClick={(s) => setSelectedSession(s)}
-        />
-      )}
+      {/* Athlete weekly view — always shown (self-coaching support) */}
+      <AthleteWeeklyView
+        clubId={clubId}
+        sessions={sessions}
+        onSessionClick={(s) => setSelectedSession(s)}
+      />
 
       {/* Dialogs */}
       <CoachingDraftsList

@@ -41,12 +41,26 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
   const loadDrafts = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
+
+    // Check coaching mode — in shared mode, show all drafts
+    const { data: clubData } = await supabase
+      .from("conversations")
+      .select("coaching_mode")
+      .eq("id", clubId)
+      .single();
+    const coachingMode = (clubData as any)?.coaching_mode || "shared";
+
+    let query = supabase
       .from("coaching_drafts" as any)
       .select("*")
-      .eq("coach_id", user.id)
       .eq("club_id", clubId)
       .order("week_start", { ascending: false });
+
+    if (coachingMode === "independent") {
+      query = query.eq("coach_id", user.id);
+    }
+
+    const { data } = await query;
     setDrafts((data as any) || []);
     setLoading(false);
   };
