@@ -356,7 +356,7 @@ export const ClubInfoDialog = ({
             <div className="min-w-[70px]" />
           </div>
 
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary py-4">
 
           <div className="space-y-2">
             {/* Group Header — Enhanced */}
@@ -392,7 +392,7 @@ export const ClubInfoDialog = ({
             {currentUserIsCoach ? (
               /* ===== COACH / ADMIN VIEW: Full tabs ===== */
               <Tabs defaultValue="coaching" className="w-full">
-                <TabsList className="w-full">
+                <TabsList className="w-full mx-4" style={{ maxWidth: 'calc(100% - 2rem)' }}>
                   <TabsTrigger value="members" className="flex-1 gap-1 px-1.5 text-[12px]">
                     <Users className="h-3.5 w-3.5" />
                     Membres
@@ -409,7 +409,7 @@ export const ClubInfoDialog = ({
 
                 <TabsContent value="members" className="mt-3">
                   <div>
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-3 px-4">
                       <h4 className="font-medium text-sm">Membres du club</h4>
                       <div className="flex gap-2">
                         {isAdmin &&
@@ -563,7 +563,7 @@ export const ClubInfoDialog = ({
               }
 
             {/* Actions */}
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-2 px-4">
               {isAdmin &&
                 <Button
                   variant="destructive"

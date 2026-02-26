@@ -55,7 +55,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
             <div className="min-w-[70px]" />
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-secondary py-4">
+          <div className="flex-1 overflow-y-auto bg-secondary py-4 px-0">
             <WeeklyTrackingView
               clubId={clubId}
               onClose={onClose}

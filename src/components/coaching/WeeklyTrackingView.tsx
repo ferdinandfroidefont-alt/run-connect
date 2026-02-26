@@ -240,8 +240,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
     return (
       <div className="space-y-4">
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative px-4">
+          <Search className="absolute left-7.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -252,10 +252,10 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
         {loading ? (
           <div className="space-y-1">
-            {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-card rounded-xl animate-pulse" />)}
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-card animate-pulse" />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-card rounded-2xl p-8 text-center border border-border/30">
+          <div className="bg-card p-8 text-center">
             <p className="text-[16px] font-semibold text-foreground mb-1">
               {search ? "Aucun athlète trouvé" : "Aucun athlète"}
             </p>
@@ -264,7 +264,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
             </p>
           </div>
         ) : (
-          <div className="bg-card rounded-xl overflow-hidden border border-border/30">
+          <div className="bg-card overflow-hidden">
             {filtered.map((athlete, idx) => {
               const pct = athlete.totalCount > 0 ? Math.round((athlete.completedCount / athlete.totalCount) * 100) : -1;
               return (
@@ -332,7 +332,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
   return (
     <div className="space-y-4">
       {/* Profile hero */}
-      <div className="bg-card rounded-2xl p-4 border border-border/30 flex flex-col items-center text-center">
+      <div className="bg-card p-4 flex flex-col items-center text-center">
         <div className="h-[72px] w-[72px] rounded-full bg-secondary flex items-center justify-center overflow-hidden mb-3">
           {selectedAthlete.avatarUrl ? (
             <img src={selectedAthlete.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -364,7 +364,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
       </div>
 
       {/* Week navigation */}
-      <div className="bg-card rounded-2xl p-3 border border-border/30">
+      <div className="bg-card p-3">
         <div className="flex items-center justify-between">
           <button onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))} className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
             <ChevronLeft className="h-4 w-4 text-primary" />
@@ -406,7 +406,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
       </div>
 
       {/* Stats card */}
-      <div className="bg-card rounded-2xl p-4 border border-border/30">
+      <div className="bg-card p-4">
         <div className="flex items-center gap-4">
           <ProgressRing percent={pct} />
           <div className="flex-1">
@@ -435,7 +435,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
       {/* Tabs: Séances | Commentaires */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full bg-secondary/50 rounded-xl p-1">
+        <TabsList className="w-full bg-secondary/50 rounded-xl p-1 mx-4 max-w-[calc(100%-2rem)]">
           <TabsTrigger value="sessions" className="flex-1 rounded-lg text-[14px] gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm">
             <Calendar className="h-3.5 w-3.5" />
             Séances
@@ -448,11 +448,11 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
         <TabsContent value="sessions" className="mt-3">
           {selectedAthlete.totalCount === 0 ? (
-            <div className="bg-card rounded-2xl p-6 text-center border border-border/30">
+            <div className="bg-card p-6 text-center">
               <p className="text-[14px] text-muted-foreground">Aucune séance cette semaine</p>
             </div>
           ) : (
-            <div className="bg-card rounded-xl overflow-hidden border border-border/30">
+            <div className="bg-card overflow-hidden">
               {weekDays.map((day, idx) => {
                 const dayKey = format(day, "yyyy-MM-dd");
                 const dayData = selectedAthlete.days[dayKey];
@@ -519,7 +519,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
             if (notes.length === 0) {
               return (
-                <div className="bg-card rounded-2xl p-6 text-center border border-border/30">
+                <div className="bg-card p-6 text-center">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
                   <p className="text-[14px] text-muted-foreground">Aucun commentaire cette semaine</p>
                 </div>
@@ -527,7 +527,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
             }
 
             return (
-              <div className="bg-card rounded-xl overflow-hidden border border-border/30">
+              <div className="bg-card overflow-hidden">
                 {notes.map(([dayKey, dayData], idx) => (
                   <div key={dayKey}>
                     {idx > 0 && <div className="h-px bg-border/30 ml-4" />}
@@ -550,6 +550,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
       {/* Continuer le plan button */}
       {onOpenPlanForAthlete && (
+        <div className="px-4">
         <Button
           onClick={() => {
             onOpenPlanForAthlete(selectedAthlete.userId, selectedAthlete.displayName, selectedAthlete.groupId || undefined, currentWeek);
@@ -559,6 +560,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           <ClipboardList className="h-4.5 w-4.5" />
           Continuer le plan pour {selectedAthlete.displayName.split(" ")[0]}
         </Button>
+        </div>
       )}
     </div>
   );
