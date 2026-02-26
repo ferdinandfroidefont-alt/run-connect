@@ -11,7 +11,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 
-import { useSessionWizard } from './useSessionWizard';
+import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
 import { ProgressIndicator } from './ProgressIndicator';
 import { LocationStep } from './steps/LocationStep';
 import { ActivityStep } from './steps/ActivityStep';
@@ -35,6 +35,9 @@ interface CreateSessionWizardProps {
   // Edit mode props
   editSession?: any;
   isEditMode?: boolean;
+  // Coaching mode — pre-fill from coaching session
+  coachingSession?: CoachingSessionPrefill | null;
+  onCoachingScheduled?: () => void;
 }
 
 export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
@@ -46,6 +49,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   onCreateRoute,
   editSession,
   isEditMode = false,
+  coachingSession,
+  onCoachingScheduled,
 }) => {
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
@@ -55,7 +60,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const wizard = useSessionWizard({ presetLocation, initialSession: editSession, isEditMode });
+  const wizard = useSessionWizard({ presetLocation, initialSession: editSession, isEditMode, coachingSession });
 
   // Handle preset location
   useEffect(() => {
@@ -194,6 +199,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         visibility_type: formData.visibility_type || 'friends',
         hidden_from_users: formData.hidden_from_users || [],
         intensity: formData.intensity || null,
+        coaching_session_id: coachingSession?.id || null,
       };
 
       let sessionData;
@@ -263,8 +269,60 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
       if (!sessionData) throw new Error("Session data not returned");
 
-      // Send notifications to friends (only for new sessions)
-      if (!isEditMode && formData.friends_only && sessionData) {
+      // If this is a coaching session, create/update coaching_participation
+      if (coachingSession && !isEditMode) {
+        try {
+          const { data: existingParticipation } = await supabase
+            .from("coaching_participations")
+            .select("id")
+            .eq("coaching_session_id", coachingSession.id)
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          const participationData = {
+            scheduled_at: new Date(formData.scheduled_at).toISOString(),
+            location_name: formData.location_name,
+            map_session_id: sessionData.id,
+            status: "scheduled",
+          };
+
+          if (existingParticipation) {
+            await supabase
+              .from("coaching_participations")
+              .update(participationData)
+              .eq("id", existingParticipation.id);
+          } else {
+            await supabase.from("coaching_participations").insert({
+              coaching_session_id: coachingSession.id,
+              user_id: user.id,
+              ...participationData,
+            });
+          }
+
+          // Notify coach
+          const { data: athleteProfile } = await supabase
+            .from("profiles")
+            .select("display_name, username")
+            .eq("user_id", user.id)
+            .single();
+          const athleteName = athleteProfile?.display_name || athleteProfile?.username || "Un athlète";
+
+          sendPushNotification(
+            coachingSession.coach_id,
+            `📍 ${athleteName} a programmé sa séance`,
+            coachingSession.title,
+            "coaching_scheduled"
+          );
+
+          onCoachingScheduled?.();
+          toast({ title: "Séance programmée ! 📋", description: "Elle apparaît maintenant sur la carte" });
+        } catch (coachErr) {
+          console.error('Coaching participation error:', coachErr);
+        }
+      }
+
+      // Send notifications to friends (only for new non-coaching sessions)
+      if (!isEditMode && !coachingSession && formData.friends_only && sessionData) {
         try {
           const { data: followers } = await supabase
             .from('user_follows')
@@ -387,6 +445,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             onFormDataChange={wizard.updateFormData}
             onSubmit={handleSubmit}
             onBack={wizard.goToPreviousStep}
+            isCoachingMode={!!coachingSession}
           />
         );
       default:
@@ -408,7 +467,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
               <span className="text-[17px]">Fermer</span>
             </button>
             <h1 className="text-[17px] font-semibold text-foreground">
-              {isEditMode ? 'Modifier la séance' : 'Créer une séance'}
+              {isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'}
             </h1>
             <div className="w-16" />
           </div>
