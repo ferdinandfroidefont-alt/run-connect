@@ -1,41 +1,41 @@
 
 
-# Boutons/cartes flush bord-à-bord (style Paramètres iOS)
+## Diagnostic
 
-Aligner les listes et cartes de ClubInfoDialog, WeeklyTrackingView et CoachingTab pour qu'elles touchent les bords gauche et droit, comme dans les pages Paramètres.
+Le problème est dans le flux iOS PKCE Google Sign-In :
 
-## Changements
+1. L'app ouvre SFSafariViewController → Google OAuth → redirige vers `https://run-connect.lovable.app/auth/callback?code=XXX`
+2. La page AuthCallback se charge dans SFSafariViewController
+3. **Bug** : Le client Supabase a `detectSessionInUrl: true` et `flowType: 'pkce'`. À l'initialisation globale du client, il détecte le `?code=` dans l'URL et tente d'échanger le code automatiquement. Mais le `code_verifier` PKCE est stocké dans le localStorage du WKWebView de l'app, pas dans SFSafariViewController → **l'échange échoue silencieusement** et le code est consommé/supprimé de l'URL
+4. Quand le `useEffect` du composant AuthCallback s'exécute, `urlParams.get('code')` retourne `null` (code déjà consommé), ou l'échange échoue → "Erreur d'authentification. Réessayez."
 
-### 1. `src/components/ClubInfoDialog.tsx`
-- Changer le wrapper de contenu de `p-4` à `py-4 px-0` (ou `bg-secondary py-4`)
-- Les `TabsList` et boutons d'action gardent un `px-4` interne
-- Les listes de membres : retirer `rounded-lg`, utiliser `bg-card overflow-hidden rounded-none`
+Le deep link `app.runconnect://auth?code=${code}` ne se déclenche jamais car le `code` a été consommé avant que la détection iOS ne puisse agir.
 
-### 2. `src/components/coaching/WeeklyTrackingView.tsx`
-**Mode liste :**
-- Barre de recherche : garder `px-4` pour le padding
-- Liste athlètes : `rounded-xl border` → `rounded-none` sans border (flush)
-- Empty state : `rounded-2xl` → `rounded-none`
+## Plan de correction
 
-**Mode détail :**
-- Carte profil hero : `rounded-2xl border` → `rounded-none` sans border
-- Week navigation : `rounded-2xl border` → `rounded-none` sans border
-- Stats card : `rounded-2xl border` → `rounded-none` sans border
-- Liste séances : `rounded-xl border` → `rounded-none` sans border
-- Commentaires : `rounded-xl border` / `rounded-2xl border` → `rounded-none` sans border
-- Bouton "Continuer le plan" : `rounded-2xl` → garder padding via `px-4` wrapper
-- `TabsList` : garder arrondi interne
+### 1. Capturer le code IMMÉDIATEMENT au niveau module (AuthCallback.tsx)
 
-### 3. `src/components/coaching/CoachingTab.tsx`
-- Le wrapper utilise déjà `-mx-4` mais applique `px-4` partout
-- Hero Card : retirer arrondi, flush
-- Tools grid : garder avec `px-4` (ce sont des boutons carrés, pas des listes)
-- `IOSListGroup` : déjà `flush` ✓
-- `IOSListGroup` "Prochaines séances" : déjà `flush` ✓
+Extraire le `code` de l'URL **avant** toute initialisation React/Supabase, en déclarant une constante au niveau du module :
 
-### 4. `src/components/coaching/WeeklyTrackingDialog.tsx`
-- Le conteneur enfant a `py-4` → ajouter `px-0` pour que WeeklyTrackingView soit flush
-- Ajouter `px-4` seulement sur la barre de recherche dans WeeklyTrackingView
+```typescript
+// Capture AVANT que Supabase detectSessionInUrl ne consomme le code
+const INITIAL_URL_PARAMS = new URLSearchParams(window.location.search);
+const INITIAL_CODE = INITIAL_URL_PARAMS.get('code');
+const INITIAL_FULL_URL = window.location.href;
+```
 
-Principe appliqué partout : les `bg-card` touchent les bords, les inputs/boutons isolés gardent un `px-4`.
+### 2. Prioriser la détection iOS et le deep link AVANT l'échange
+
+Dans le `useEffect`, utiliser `INITIAL_CODE` au lieu de `urlParams.get('code')`. S'assurer que la redirection deep link iOS se fait en premier, AVANT tout appel à `exchangeCodeForSession`.
+
+### 3. Ajouter un fallback : si le deep link échoue, afficher un bouton "Ouvrir l'app"
+
+Au lieu de rester bloqué sur "Erreur d'authentification", ajouter un bouton explicite pour retenter le deep link, avec le code passé en paramètre.
+
+### 4. Ajouter des logs pour chaque étape
+
+Logs détaillés pour `INITIAL_CODE`, `isIOSNative`, et le résultat de chaque étape, afin de diagnostiquer si le problème persiste.
+
+### Fichiers modifiés
+- `src/pages/AuthCallback.tsx` — Capture du code au niveau module, priorisation du deep link iOS, fallback UX
 
