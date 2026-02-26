@@ -239,10 +239,13 @@ const Auth = () => {
       if (isNativeIOS()) {
         console.log('🍎 [GOOGLE AUTH] iOS detected, using Browser.open (SFSafariViewController)...');
         try {
+          // 🍎 Redirect to Edge Function instead of /auth/callback
+          // The Edge Function does a pure 302 redirect to deep link — no JS client, no Supabase init
+          // This preserves the PKCE code for exchange in the WKWebView
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: 'https://run-connect.lovable.app/auth/callback',
+              redirectTo: 'https://dbptgehpknjsoisirviz.supabase.co/functions/v1/ios-auth-callback',
               skipBrowserRedirect: true,
               queryParams: { access_type: 'offline', prompt: 'consent' }
             }
