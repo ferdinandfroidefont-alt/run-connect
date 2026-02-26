@@ -4,11 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Search, Bell, Loader2, AlertTriangle, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useSendNotification } from "@/hooks/useSendNotification";
-import { useToast } from "@/hooks/use-toast";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
@@ -49,7 +47,6 @@ interface AthleteData {
   days: Record<string, DayData>;
   completedCount: number;
   totalCount: number;
-  lateCount: number;
   weeklyVolumeKm: number;
 }
 
@@ -93,10 +90,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  
   const [activeTab, setActiveTab] = useState("sessions");
-  const { sendPushNotification } = useSendNotification();
-  const { toast } = useToast();
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -166,7 +161,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           userId: p.user_id, displayName: p.display_name || "Athlète",
           username: p.username || null, avatarUrl: p.avatar_url || null,
           groupName: grp?.name || null, groupColor: grp?.color || null,
-          days: {}, completedCount: 0, totalCount: 0, lateCount: 0, weeklyVolumeKm: 0,
+          days: {}, completedCount: 0, totalCount: 0, weeklyVolumeKm: 0,
         };
       });
 
@@ -190,7 +185,6 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           athleteMap[p.user_id].totalCount++;
           athleteMap[p.user_id].weeklyVolumeKm += Number(session.distance_km) || 0;
           if (p.status === "completed") athleteMap[p.user_id].completedCount++;
-          else if (new Date(session.scheduled_at) < new Date()) athleteMap[p.user_id].lateCount++;
         });
       }
 
@@ -220,26 +214,6 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
     return athletes.find(a => a.userId === selectedAthleteId) || null;
   }, [athletes, selectedAthleteId]);
 
-  const getLateSessionTitles = (athlete: AthleteData): string[] => {
-    const now = new Date();
-    return Object.entries(athlete.days)
-      .filter(([dayKey, d]) => new Date(dayKey) < now && d.status !== "completed")
-      .map(([, d]) => d.sessionTitle);
-  };
-
-  const handleSendReminder = async (athlete: AthleteData) => {
-    const lateTitles = getLateSessionTitles(athlete);
-    if (lateTitles.length === 0) return;
-    setSendingReminder(athlete.userId);
-    try {
-      await sendPushNotification(athlete.userId, "📋 Rappel coaching", `N'oublie pas : ${lateTitles.join(", ")}`, "coaching_reminder");
-      toast({ title: "Rappel envoyé", description: `Notification envoyée à ${athlete.displayName}` });
-    } catch {
-      toast({ title: "Erreur", description: "Impossible d'envoyer le rappel", variant: "destructive" });
-    } finally {
-      setSendingReminder(null);
-    }
-  };
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
 
@@ -333,9 +307,6 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                           {pct}%
                         </Badge>
                       )}
-                      {athlete.lateCount > 0 && (
-                        <div className="h-2 w-2 rounded-full bg-orange-500" />
-                      )}
                       <ChevronRightIcon className="h-4 w-4 text-muted-foreground/40" />
                     </div>
                   </button>
@@ -350,9 +321,6 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
   // ==================== MODE DETAIL ====================
   const pct = selectedAthlete.totalCount > 0 ? Math.round((selectedAthlete.completedCount / selectedAthlete.totalCount) * 100) : 0;
-  const lateTitles = getLateSessionTitles(selectedAthlete);
-  const hasLate = lateTitles.length > 0;
-  const isSending = sendingReminder === selectedAthlete.userId;
   const volumeByType = getVolumeByType(selectedAthlete);
 
   return (
@@ -445,22 +413,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                 📏 {Math.round(selectedAthlete.weeklyVolumeKm * 10) / 10} km cette semaine
               </p>
             )}
-            {hasLate && (
-              <p className="text-[12px] text-destructive font-medium mt-1 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                {selectedAthlete.lateCount} en retard
-              </p>
-            )}
           </div>
-          {hasLate && (
-            <button
-              onClick={() => handleSendReminder(selectedAthlete)}
-              disabled={isSending}
-              className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 active:scale-95 transition-transform"
-            >
-              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-            </button>
-          )}
         </div>
 
         {/* Volume by type */}
@@ -501,7 +454,6 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                 if (!dayData) return null;
 
                 const isDone = dayData.status === "completed";
-                const isLate = !isDone && new Date(dayData.session.scheduled_at) < new Date();
 
                 return (
                   <div key={dayKey}>
@@ -527,13 +479,9 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                         </div>
                       </div>
 
-                      {/* Status */}
+                      {/* Status: validated or not */}
                       {isDone ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      ) : isLate ? (
-                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 rounded-md">
-                          En retard
-                        </Badge>
                       ) : (
                         <div className="h-5 w-5 rounded-full border-2 border-border/50 flex-shrink-0" />
                       )}
