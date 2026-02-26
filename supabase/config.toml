@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.coaching-reminder]
 verify_jwt = false
+
+[functions.ios-auth-callback]
+verify_jwt = false
