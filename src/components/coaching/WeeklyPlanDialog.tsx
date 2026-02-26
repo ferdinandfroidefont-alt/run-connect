@@ -546,7 +546,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               session_blocks: sessionBlocks.length > 0 ? sessionBlocks : null,
               default_location_name: session.locationName || null,
               send_mode: sendMode,
-              target_athletes: [],
+              target_athletes: Object.keys(session.athleteOverrides || {}).length > 0 ? Object.keys(session.athleteOverrides) : [],
               target_group_id: targetGroupDbId,
             })
             .select("id")
@@ -555,7 +555,12 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           if (error) throw error;
 
           if (created && targetMembers.length > 0) {
-            const participations = targetMembers.map(m => ({
+            // If specific athletes were selected via overrides, only send to them
+            const overrideKeys = Object.keys(session.athleteOverrides || {});
+            const effectiveMembers = overrideKeys.length > 0
+              ? targetMembers.filter(m => overrideKeys.includes(m.user_id))
+              : targetMembers;
+            const participations = effectiveMembers.map(m => ({
               coaching_session_id: created.id,
               user_id: m.user_id,
               status: "sent",
@@ -583,18 +588,28 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       const notifiedSet = new Set<string>();
       for (const [groupId, groupSessions] of Object.entries(groupPlans)) {
         if (groupSessions.length === 0) continue;
-        const targetMembers = getMembersForGroup(groupId);
-        for (const m of targetMembers) {
-          if (notifiedSet.has(m.user_id)) continue;
-          notifiedSet.add(m.user_id);
+        const allGroupMembers = getMembersForGroup(groupId);
+        // Collect all athletes that actually received sessions in this group
+        const athletesInGroup = new Set<string>();
+        for (const s of groupSessions) {
+          const overrideKeys = Object.keys(s.athleteOverrides || {});
+          if (overrideKeys.length > 0) {
+            overrideKeys.forEach(id => athletesInGroup.add(id));
+          } else {
+            allGroupMembers.forEach(m => athletesInGroup.add(m.user_id));
+          }
+        }
+        for (const memberId of athletesInGroup) {
+          if (notifiedSet.has(memberId)) continue;
+          notifiedSet.add(memberId);
           await supabase.from("notifications").insert({
-            user_id: m.user_id,
+            user_id: memberId,
             type: "coaching_plan",
             title: "📋 Nouveau plan d'entraînement",
             message: `${coachName} vous a envoyé un plan pour la semaine du ${weekLabel}`,
             data: { club_id: clubId, week_start: format(weekStart, "yyyy-MM-dd") },
           });
-          sendPushNotification(m.user_id, "📋 Nouveau plan", `Plan semaine du ${weekLabel}`, "coaching_plan");
+          sendPushNotification(memberId, "📋 Nouveau plan", `Plan semaine du ${weekLabel}`, "coaching_plan");
         }
       }
 
