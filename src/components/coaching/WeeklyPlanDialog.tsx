@@ -52,6 +52,7 @@ interface WeeklyPlanDialogProps {
   initialWeek?: Date;
   initialGroupId?: string;
   initialAthleteName?: string;
+  initialAthleteId?: string;
 }
 
 type GroupPlans = Record<string, WeekSession[]>;
@@ -67,7 +68,7 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   athleteOverrides: {},
 });
 
-export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId, initialAthleteName }: WeeklyPlanDialogProps) => {
+export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId, initialAthleteName, initialAthleteId }: WeeklyPlanDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
@@ -120,26 +121,30 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
   // Pre-select athlete from tracking view
   useEffect(() => {
-    if (isOpen && initialAthleteName && members.length > 0) {
-      const match = members.find(m => 
-        m.display_name.toLowerCase() === initialAthleteName.toLowerCase()
-      );
-      if (match && !targetAthletes.includes(match.user_id)) {
-        setTargetAthletes(prev => [...prev, match.user_id]);
+    if (isOpen && members.length > 0) {
+      const preferredAthleteId = initialAthleteId || members.find(m => 
+        initialAthleteName && m.display_name.toLowerCase() === initialAthleteName.toLowerCase()
+      )?.user_id;
+
+      if (preferredAthleteId && !targetAthletes.includes(preferredAthleteId)) {
+        setTargetAthletes(prev => [...prev, preferredAthleteId]);
       }
     }
-  }, [isOpen, initialAthleteName, members]);
+  }, [isOpen, initialAthleteId, initialAthleteName, members]);
 
   // Load sent sessions when week/group changes — skip on initial open
   useEffect(() => {
     if (isOpen && user) {
       if (isInitialOpen.current) {
         isInitialOpen.current = false;
+        if (initialAthleteId) {
+          loadSentSessionsDefault();
+        }
         return;
       }
       loadSentSessionsDefault();
     }
-  }, [isOpen, weekStart.toISOString(), activeGroupId, user]);
+  }, [isOpen, weekStart.toISOString(), activeGroupId, user, initialAthleteId]);
 
   // Auto-save draft with debounce
   useEffect(() => {
@@ -199,12 +204,60 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const loadSentSessions = async () => {
     if (!user) return;
     const weekEndDate = addDays(weekStart, 7);
+    const focusedAthleteId = initialAthleteId || (targetAthletes.length === 1 ? targetAthletes[0] : null);
+
+    if (focusedAthleteId) {
+      const { data: participations } = await supabase
+        .from("coaching_participations")
+        .select("coaching_session_id, athlete_overrides")
+        .eq("user_id", focusedAthleteId);
+
+      const sessionIds = (participations || []).map(p => p.coaching_session_id);
+      if (sessionIds.length === 0) {
+        setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
+        setSentAt(null);
+        return;
+      }
+
+      const { data: sentSessions } = await supabase
+        .from("coaching_sessions")
+        .select("*")
+        .in("id", sessionIds)
+        .eq("club_id", clubId)
+        .gte("scheduled_at", weekStart.toISOString())
+        .lt("scheduled_at", weekEndDate.toISOString())
+        .order("scheduled_at", { ascending: true });
+
+      if (sentSessions && sentSessions.length > 0) {
+        const imported: WeekSession[] = sentSessions.map(cs => {
+          const scheduledDate = new Date(cs.scheduled_at);
+          const dayOfWeek = scheduledDate.getDay();
+          const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          return {
+            dayIndex,
+            activityType: cs.activity_type || "running",
+            objective: cs.objective || cs.title || "",
+            rccCode: cs.rcc_code || "",
+            parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+            coachNotes: cs.coach_notes || "",
+            locationName: cs.default_location_name || "",
+            athleteOverrides: {},
+          };
+        });
+        setGroupPlans(prev => ({ ...prev, [activeGroupId]: imported }));
+        setTargetAthletes([focusedAthleteId]);
+        setSentAt(sentSessions[0].created_at);
+      } else {
+        setGroupPlans(prev => ({ ...prev, [activeGroupId]: [] }));
+        setSentAt(null);
+      }
+      return;
+    }
 
     let query = supabase
       .from("coaching_sessions")
       .select("*")
       .eq("club_id", clubId)
-      .eq("coach_id", user.id)
       .gte("scheduled_at", weekStart.toISOString())
       .lt("scheduled_at", weekEndDate.toISOString());
 
@@ -214,7 +267,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       query = query.is("target_group_id", null);
     }
 
-    const { data: sentSessions } = await query;
+    const { data: sentSessions } = await query.order("scheduled_at", { ascending: true });
     if (sentSessions && sentSessions.length > 0) {
       const imported: WeekSession[] = sentSessions.map(cs => {
         const scheduledDate = new Date(cs.scheduled_at);
