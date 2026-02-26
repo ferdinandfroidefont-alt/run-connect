@@ -1,51 +1,29 @@
 
 
-## Plan : 3 corrections
+## Plan : 2 corrections coaching
 
-### 1. Infinite recursion RLS sur `group_members`
+### 1. "Continuer le plan" pré-sélectionne l'athlète
 
-**Cause** : La politique UPDATE `"Group creators can update member roles"` sur `group_members` fait un sous-query vers `conversations` qui elle-meme a un SELECT policy qui query `group_members` → boucle infinie.
+**Problème** : Le bouton ouvre `WeeklyPlanDialog` vide sans contexte athlete.
 
-**Fix** : Remplacer cette policy par une version utilisant une fonction `SECURITY DEFINER` qui bypass RLS.
+**Fix** :
+- **`WeeklyPlanDialog.tsx`** : Ajouter prop `initialAthleteName?: string`. Dans le `useEffect` d'ouverture, si `initialAthleteName` est fourni, chercher le membre correspondant dans `members` après chargement, et l'ajouter automatiquement à `targetAthletes`. Aussi pré-remplir le groupe de l'athlète dans `activeGroupId`.
+- **`WeeklyTrackingDialog.tsx`** : Stocker le `selectedAthleteId` quand on clique "Continuer le plan", et passer le `selectedAthlete.displayName` + le `groupId` de l'athlète au `WeeklyPlanDialog` via les nouvelles props.
+- **`WeeklyTrackingView.tsx`** : Modifier `onOpenPlanForAthlete` pour passer `(athleteId: string, athleteName: string, groupId?: string)` au lieu de juste le nom.
 
-```sql
--- Créer une fonction SECURITY DEFINER
-CREATE OR REPLACE FUNCTION public.is_group_creator(_user_id uuid, _conversation_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM conversations
-    WHERE id = _conversation_id AND created_by = _user_id AND is_group = true
-  );
-$$;
+Ainsi à l'ouverture, le plan charge les séances existantes de la semaine pour le groupe de l'athlète, et l'athlète est déjà sélectionné comme cible.
 
--- Remplacer la policy
-DROP POLICY "Group creators can update member roles" ON group_members;
-CREATE POLICY "Group creators can update member roles" ON group_members
-  FOR UPDATE TO authenticated
-  USING (is_group_creator(auth.uid(), conversation_id));
-```
+### 2. Afficher le détail RCC dans les séances du suivi athlète
 
-Faire pareil pour les policies INSERT et DELETE de `group_members` qui utilisent le meme sous-query vers `conversations`.
+**Problème** : Les cartes de séance dans l'onglet "Séances" du suivi athlète n'affichent pas le code RCC (ex: `4x1000>3'15`).
 
-### 2. Supprimer le mode partagé
-
-Les coachs sont toujours indépendants. Supprimer :
-
-- **`ClubInfoDialog.tsx`** : Retirer le state `coachingMode`, l'effet de chargement, la fonction `updateCoachingMode`, et le bloc UI du sélecteur "Mode coaching" (lignes 91-114, 524-556)
-- **`WeeklyPlanDialog.tsx`** : Retirer les queries de `coaching_mode`, toujours filtrer par `coach_id = user.id`
-- **`CoachingDraftsList.tsx`** : Idem, toujours filtrer par `coach_id = user.id`
-- **`CoachingTab.tsx`** : Retirer toute logique de `coaching_mode` si présente
-
-La colonne DB et les RLS policies restent (pas de breaking change), mais le frontend ne l'utilise plus.
-
-### 3. LocationStep sans carte — "Ma position" et "Centre carte"
-
-**Problème** : `CoachingSessionDetail` ouvre `CreateSessionWizard` avec `map={null}`. Les boutons "Ma position" et "Centre carte" dans `LocationStep` sont conditionnés à `map` existant (disabled quand `!map`, et actions qui font `map.setCenter()`).
-
-**Fix dans `LocationStep.tsx`** :
-- **"Ma position"** : Ne plus dépendre de `map`. Utiliser directement `navigator.geolocation.getCurrentPosition()`, faire un reverse geocode, et appeler `onLocationSelect()` sans centrer la carte.
-- **"Centre carte"** : Masquer ce bouton quand `map` est null (il n'a pas de sens sans carte).
-- S'assurer que les boutons sont toujours visibles quand `map` est null en enlevant le `disabled={!map}` implicite.
+**Fix dans `WeeklyTrackingView.tsx`** (section MODE DETAIL, lignes ~462-501) :
+- Sous la ligne distance/pace, ajouter l'affichage de `dayData.session.rcc_code` quand il existe :
+  ```
+  {dayData.session.rcc_code && (
+    <p className="text-[12px] font-mono text-muted-foreground mt-1">
+      {dayData.session.rcc_code}
+    </p>
+  )}
+  ```
 
