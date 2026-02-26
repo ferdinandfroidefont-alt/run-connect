@@ -57,7 +57,8 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     if (!user) return;
     setLoading(true);
     try {
-      const { data: weekSessions } = await supabase
+      // First fetch participations for this user in this club's sessions for the week
+      const { data: allClubSessions } = await supabase
         .from("coaching_sessions")
         .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code")
         .eq("club_id", clubId)
@@ -65,22 +66,25 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
         .lte("scheduled_at", weekEnd.toISOString())
         .order("scheduled_at", { ascending: true });
 
-      const sessionList = (weekSessions || []) as CoachingSession[];
-      setSessions(sessionList);
-
-      if (sessionList.length === 0) {
+      if (!allClubSessions || allClubSessions.length === 0) {
+        setSessions([]);
         setParticipations({});
         setNoteValues({});
         setLoading(false);
         return;
       }
 
-      const sessionIds = sessionList.map(s => s.id);
+      const allSessionIds = allClubSessions.map(s => s.id);
       const { data } = await supabase
         .from("coaching_participations")
         .select("id, coaching_session_id, status, athlete_note, completed_at")
         .eq("user_id", user.id)
-        .in("coaching_session_id", sessionIds);
+        .in("coaching_session_id", allSessionIds);
+
+      // Only show sessions where the user has a participation record
+      const mySessionIds = new Set((data || []).map(p => p.coaching_session_id));
+      const sessionList = (allClubSessions.filter(s => mySessionIds.has(s.id))) as CoachingSession[];
+      setSessions(sessionList);
 
       const map: Record<string, Participation> = {};
       const notes: Record<string, string> = {};
