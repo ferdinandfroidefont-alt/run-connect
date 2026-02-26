@@ -191,100 +191,150 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   return (
     <div className="space-y-4">
       {/* Week navigation — hero style */}
-      
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      <div className="bg-card rounded-none px-4 py-5">
+        {/* Week switcher */}
+        <div className="flex items-center justify-between mb-5">
+          <button
+            onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+            className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+          >
+            <ChevronLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <div className="text-center">
+            <p className="text-[15px] font-semibold text-foreground capitalize">{weekLabel}</p>
+          </div>
+          <button
+            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+            className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+          >
+            <ChevronRight className="h-5 w-5 text-foreground" />
+          </button>
+        </div>
+
+        {/* Inline 7-day calendar */}
+        <div className="flex items-center justify-between mb-5">
+          {weekDays.map((day, i) => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            const hasSession = sessions.some(s => format(new Date(s.scheduled_at), "yyyy-MM-dd") === dayKey);
+            const isDayCompleted = sessions.some(s => {
+              if (format(new Date(s.scheduled_at), "yyyy-MM-dd") !== dayKey) return false;
+              const p = participations[s.id];
+              return p?.status === "completed";
+            });
+            const today = isToday(day);
+
+            return (
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                <span className={`text-[11px] font-semibold ${today ? "text-primary" : "text-muted-foreground"}`}>
+                  {format(day, "EEE", { locale: fr }).charAt(0).toUpperCase()}
+                </span>
+                <div className={`h-9 w-9 rounded-full flex items-center justify-center text-[14px] font-semibold transition-all ${
+                  today
+                    ? "bg-primary text-primary-foreground"
+                    : isDayCompleted
+                      ? "bg-green-500/15 text-green-600"
+                      : hasSession
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground/50"
+                }`}>
+                  {format(day, "d")}
+                </div>
+                {hasSession && (
+                  <div className={`h-1.5 w-1.5 rounded-full ${
+                    isDayCompleted ? "bg-green-500" : "bg-muted-foreground/30"
+                  }`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Progress ring */}
+        <div className="flex items-center justify-center gap-4">
+          <div className="relative h-16 w-16">
+            <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--secondary))" strokeWidth="5" />
+              <circle
+                cx="32" cy="32" r="28" fill="none"
+                stroke={progressPercent === 100 ? "hsl(var(--chart-2))" : "hsl(var(--primary))"}
+                strokeWidth="5"
+                strokeDasharray={`${2 * Math.PI * 28}`}
+                strokeDashoffset={`${2 * Math.PI * 28 * (1 - progressPercent / 100)}`}
+                strokeLinecap="round"
+                className="transition-all duration-500"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              {progressPercent === 100 ? (
+                <Trophy className="h-5 w-5 text-green-500" />
+              ) : (
+                <span className="text-[13px] font-bold text-foreground">{completedCount}/{totalCount}</span>
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="text-[14px] font-semibold text-foreground">
+              {progressPercent === 100 ? "Semaine complète ! 🎉" : `${progressPercent}% réalisé`}
+            </p>
+            <p className="text-[12px] text-muted-foreground">
+              {completedCount} séance{completedCount > 1 ? "s" : ""} sur {totalCount}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Bar chart */}
-      {sessions.length > 0
-
-
-
-
-
-
-      }
+      {sessions.length > 0 && (
+        <div className="bg-card rounded-none px-4 py-4">
+          <WeeklyBarChart
+            sessions={sessions.map(s => ({ scheduled_at: s.scheduled_at, rcc_code: s.rcc_code, distance_km: s.distance_km }))}
+            weekDays={weekDays}
+          />
+        </div>
+      )}
 
       {/* Session list */}
-      {sessions.length === 0 &&
-      <div className="bg-card rounded-none p-8 text-center">
+      {sessions.length === 0 ? (
+        <div className="bg-card rounded-none p-8 text-center">
           <CalendarDays className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-[16px] font-semibold text-foreground mb-1">Pas de séance</p>
           <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine</p>
         </div>
-      }
+      ) : (
+        <div className="space-y-0">
+          {sessions.map((session) => {
+            const participation = participations[session.id];
+            const isDone = participation?.status === "completed";
+            const isExpanded = expandedNote === session.id;
+
+            return (
+              <div key={session.id}>
+                <WeeklyPlanCard
+                  session={session}
+                  isDone={isDone}
+                  onCheck={() => toggleCompletion(session)}
+                  onClick={() => onSessionClick(session)}
+                  onNoteClick={() => setExpandedNote(isExpanded ? null : session.id)}
+                  noteValue={participation?.athlete_note || ""}
+                  showCheckbox={true}
+                />
+                {isExpanded && (
+                  <div className="bg-card px-6 pb-4">
+                    <Textarea
+                      value={noteValues[session.id] || ""}
+                      onChange={(e) => setNoteValues(prev => ({ ...prev, [session.id]: e.target.value }))}
+                      onBlur={() => saveNote(session.id)}
+                      placeholder="Comment s'est passée la séance ?"
+                      className="text-[13px] min-h-[60px] bg-secondary/50 border-0 rounded-xl"
+                      autoFocus
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>);
 
 };
