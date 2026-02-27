@@ -258,7 +258,7 @@ const Auth = () => {
           const urlListener = await InAppBrowser.addListener('urlChangeEvent', async (event: { url: string }) => {
             console.log('🍎 [GOOGLE AUTH] URL changed:', event.url);
 
-            if (event.url.includes('/auth/callback')) {
+            if (event.url.includes('/ios-complete')) {
               try {
                 const callbackUrl = new URL(event.url);
                 const code = callbackUrl.searchParams.get('code');
