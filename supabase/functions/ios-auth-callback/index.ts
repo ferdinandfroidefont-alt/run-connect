@@ -1,5 +1,5 @@
 // iOS Auth Callback — Redirect from Supabase Auth after Google OAuth
-// Uses HTTP 302 redirect to custom scheme deep link
+// Redirects to HTTPS URL (not custom scheme) so InAppBrowser can intercept it
 
 Deno.serve((req: Request) => {
   const url = new URL(req.url);
@@ -9,39 +9,37 @@ Deno.serve((req: Request) => {
 
   // Handle errors
   if (error) {
-    const deepLink = `app.runconnect://auth?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "")}`;
-    console.log(`[ios-auth-callback] Error: ${error}, redirecting to app`);
+    const redirectUrl = `https://run-connect.lovable.app/auth/callback?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "")}`;
+    console.log(`[ios-auth-callback] Error: ${error}, redirecting to HTTPS callback`);
     return new Response(null, {
       status: 302,
       headers: { 
-        "Location": deepLink,
+        "Location": redirectUrl,
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });
   }
 
   if (!code) {
-    const deepLink = `app.runconnect://auth?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`;
+    const redirectUrl = `https://run-connect.lovable.app/auth/callback?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`;
     console.log(`[ios-auth-callback] No code received`);
     return new Response(null, {
       status: 302,
       headers: { 
-        "Location": deepLink,
+        "Location": redirectUrl,
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });
   }
 
-  // Build deep link with all query params forwarded
-  const deepLink = `app.runconnect://auth?code=${encodeURIComponent(code)}`;
-  console.log(`[ios-auth-callback] Redirecting with code (length: ${code.length})`);
+  // Redirect to HTTPS URL that InAppBrowser can intercept via urlChangeEvent
+  const redirectUrl = `https://run-connect.lovable.app/auth/callback?code=${encodeURIComponent(code)}`;
+  console.log(`[ios-auth-callback] Redirecting to HTTPS callback with code (length: ${code.length})`);
 
-  // Force direct redirect for all clients (Safari/WebView included)
-  // to avoid raw HTML being displayed instead of executed.
   return new Response(null, {
     status: 302,
     headers: {
-      "Location": deepLink,
+      "Location": redirectUrl,
       "Cache-Control": "no-cache, no-store, must-revalidate",
       "Pragma": "no-cache",
       "Expires": "0",
