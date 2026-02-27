@@ -1,51 +1,45 @@
 
-Do I know what the issue is? Oui: le flux iOS reste dans le WebView car la redirection HTTPS `/ios-complete` charge la web app (NotFound/auth) au lieu de renvoyer de façon fiable vers le contexte natif. Le callback doit revenir via deep link natif puis être traité par `App.addListener('appUrlOpen')`.
 
-### Plan d’implémentation (court)
+## Probleme identifie
 
-1. **Basculer le callback iOS vers deep link natif**
-   - Fichier: `supabase/functions/ios-auth-callback/index.ts`
-   - Remplacer les redirections `https://run-connect.lovable.app/ios-complete?...` par `app.runconnect://ios-complete?...` (succès + erreurs).
+Le flux actuel est casse a cause d'une incompatibilite fondamentale :
 
-2. **Gérer explicitement le retour deep link dans Auth iOS**
-   - Fichier: `src/pages/Auth.tsx`
-   - Ajouter un listener temporaire `App.addListener('appUrlOpen', ...)` au lancement du flow Google iOS.
-   - Si URL contient `app.runconnect://ios-complete`, parser `code`/`error`, fermer `InAppBrowser`, faire `supabase.auth.exchangeCodeForSession(code)`, puis navigation/profile setup.
-   - Nettoyer systématiquement listener + timeout (succès, erreur, annulation).
+1. L'edge function `ios-auth-callback` redirige vers `app.runconnect://ios-complete?code=...` (schema custom)
+2. Mais cette redirection se fait **depuis un WebView** (`openWebView`)
+3. **Un WebView ne peut pas naviguer vers un schema custom via 302** — il ne sait pas quoi faire avec `app.runconnect://`
+4. `appUrlOpen` ne se declenche pas non plus car le schema custom est tente **depuis l'interieur de l'app**, pas depuis un navigateur externe
+5. Resultat : rien ne se passe, ou erreur, l'utilisateur reste bloque
 
-3. **Garder un fallback robuste**
-   - Conserver `urlChangeEvent` pour intercepter aussi `/ios-complete` si jamais un flux HTTPS est encore reçu.
-   - Unifier le traitement callback dans une seule fonction interne (`handleOAuthCallbackUrl(url)`), appelée par `appUrlOpen` + `urlChangeEvent`.
+La combinaison correcte qui n'a jamais ete testee : **redirect HTTPS + `openWebView()` + `urlChangeEvent`**. Quand on avait `openWebView`, on avait aussi le custom scheme. Quand on avait HTTPS, on avait `open()` (pas `openWebView`).
 
-4. **Durcir la stabilité du flow**
-   - Ajouter garde anti double-traitement (flag `callbackHandledRef`) pour éviter double exchange.
-   - Ajouter logs ciblés pour distinguer clairement:
-     - callback reçu via deep link natif
-     - callback reçu via webview URL change
-     - aucun callback (timeout).
+## Solution
 
-### Détails techniques (section dédiée)
+Revenir a une redirection HTTPS dans l'edge function. Le `urlChangeEvent` (qui fonctionne avec `openWebView`) interceptera l'URL **avant** que le SPA ne charge et consomme le code.
 
-- **Fichiers touchés**
-  - `supabase/functions/ios-auth-callback/index.ts`
-  - `src/pages/Auth.tsx`
-- **Événements utilisés**
-  - `App.addListener('appUrlOpen', ...)` (principal iOS natif)
-  - `InAppBrowser.addListener('urlChangeEvent', ...)` (fallback)
-- **Flux final visé**
+### Modifications
+
+**1. `supabase/functions/ios-auth-callback/index.ts`**
+- Remplacer toutes les redirections `app.runconnect://ios-complete?...` par `https://run-connect.lovable.app/ios-complete?...`
+- Le WebView peut naviguer vers HTTPS, `urlChangeEvent` se declenchera
+
+**2. `src/pages/Auth.tsx`**
+- Supprimer le listener `appUrlOpen` (inutile avec HTTPS redirect dans un WebView)
+- Garder uniquement `urlChangeEvent` comme mecanisme principal
+- Simplifier le cleanup (plus besoin d'importer `App`)
+
+### Flux final
+
 ```text
-Google OAuth -> edge function ios-auth-callback -> app.runconnect://ios-complete?code=...
--> appUrlOpen (dans l’app native) -> close webview -> exchangeCodeForSession -> navigation app
+Google OAuth → Supabase → Edge function ios-auth-callback
+→ 302 vers https://run-connect.lovable.app/ios-complete?code=XXX
+→ urlChangeEvent se declenche dans le WebView
+→ handleOAuthCallbackUrl intercepte, extrait le code
+→ InAppBrowser.close()
+→ exchangeCodeForSession(code) dans le contexte natif
+→ navigation vers / ou ProfileSetup
 ```
 
-### Vérification après implémentation
+### Fichiers modifies
+- `supabase/functions/ios-auth-callback/index.ts`
+- `src/pages/Auth.tsx`
 
-1. Tester Google login sur iPhone réel:
-   - ouverture Google
-   - retour automatique dans l’app native (pas de page web run-connect)
-   - session active dans l’app
-   - redirection vers `/` ou setup profil.
-2. Tester chemin erreur OAuth (`error`, `error_description`).
-3. Confirmer absence de boucle/NotFound web.
-4. Après pull des changements natifs: `git pull` puis `npx cap sync` avant rebuild iOS.
-5. Relire aussi le billet Capacitor recommandé pour les flows OAuth natifs avant release.
