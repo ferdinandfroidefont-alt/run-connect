@@ -9,7 +9,7 @@ Deno.serve((req: Request) => {
 
   // Handle errors
   if (error) {
-    const redirectUrl = `https://run-connect.lovable.app/auth/callback?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "")}`;
+    const redirectUrl = `https://run-connect.lovable.app/ios-complete?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "")}`;
     console.log(`[ios-auth-callback] Error: ${error}, redirecting to HTTPS callback`);
     return new Response(null, {
       status: 302,
@@ -21,7 +21,7 @@ Deno.serve((req: Request) => {
   }
 
   if (!code) {
-    const redirectUrl = `https://run-connect.lovable.app/auth/callback?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`;
+    const redirectUrl = `https://run-connect.lovable.app/ios-complete?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`;
     console.log(`[ios-auth-callback] No code received`);
     return new Response(null, {
       status: 302,
@@ -32,8 +32,8 @@ Deno.serve((req: Request) => {
     });
   }
 
-  // Redirect to HTTPS URL that InAppBrowser can intercept via urlChangeEvent
-  const redirectUrl = `https://run-connect.lovable.app/auth/callback?code=${encodeURIComponent(code)}`;
+  // Redirect to inert URL (no React route) so InAppBrowser intercepts before Supabase client consumes code
+  const redirectUrl = `https://run-connect.lovable.app/ios-complete?code=${encodeURIComponent(code)}`;
   console.log(`[ios-auth-callback] Redirecting to HTTPS callback with code (length: ${code.length})`);
 
   return new Response(null, {
