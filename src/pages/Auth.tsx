@@ -319,7 +319,12 @@ const Auth = () => {
 
           // Ouvrir le navigateur in-app
           console.log('🍎 [GOOGLE AUTH] Opening InAppBrowser...');
-          await InAppBrowser.open({ url: oauthData.url });
+          await InAppBrowser.openWebView({ 
+            url: oauthData.url,
+            title: 'Connexion Google',
+            toolbarType: 'navigation' as any,
+            showArrow: true
+          });
 
           return;
         } catch (iosError: any) {
