@@ -1,76 +1,27 @@
 
 
-## Problème
+## Probleme
 
-SFSafariViewController (utilisé par `@capacitor/browser`) **ne supporte pas les redirections 302 vers des custom URL schemes** (`app.runconnect://`). C'est une limitation connue d'iOS — d'où l'erreur "Safari ne peut pas ouvrir la page car l'adresse n'est pas valide".
-
-Peu importe qu'on utilise du HTML, du JavaScript ou un 302 direct : SFSafariViewController bloquera toujours `app.runconnect://`.
+Apres Google OAuth, l'edge function redirige vers `https://run-connect.lovable.app/auth/callback?code=XXX`. L'InAppBrowser **charge cette URL comme une vraie page web**, ce qui :
+1. Affiche la page de connexion (le composant AuthCallback)
+2. Le client Supabase de la page web **consomme le code PKCE** avant que `urlChangeEvent` ne puisse l'intercepter
+3. Resultat : la session est creee dans l'InAppBrowser (pas dans l'app native), et l'utilisateur voit la page d'auth web
 
 ## Solution
 
-Remplacer `@capacitor/browser` par `@capgo/inappbrowser` (déjà installé) pour le flux OAuth iOS. Ce plugin expose un événement `urlChangeEvent` qui permet de détecter quand le navigateur navigue vers notre URL de callback, d'extraire le code PKCE, et de fermer le navigateur — **sans jamais utiliser de custom URL scheme**.
-
-### Flux corrigé
-
-```text
-Auth.tsx                InAppBrowser            Google OAuth          Edge Function
-   |                        |                       |                      |
-   |-- open(oauthUrl) ----->|                       |                      |
-   |                        |--- Google login ------>|                      |
-   |                        |                       |--- redirect -------->|
-   |                        |<---- 302 to HTTPS callback (with code) ------|
-   |<-- urlChangeEvent -----|                       |                      |
-   |   (detect callback URL)|                       |                      |
-   |-- extract code ------->|                       |                      |
-   |-- close() ------------>|                       |                      |
-   |-- exchangeCodeForSession()                     |                      |
-```
+Rediriger vers une URL "inerte" qui n'existe pas comme route React, pour que `urlChangeEvent` puisse intercepter le code **avant** qu'il soit consomme par le client web Supabase.
 
 ### Modifications
 
 **1. `supabase/functions/ios-auth-callback/index.ts`**
-- Rediriger vers `https://run-connect.lovable.app/auth/callback?code=XXX` au lieu de `app.runconnect://auth?code=XXX`
-- C'est une URL HTTPS standard que SFSafariViewController peut ouvrir sans problème
+- Changer la redirection de `/auth/callback?code=` vers `/ios-complete?code=`
+- Cette route n'existe pas dans l'app React → la page ne chargera pas de Supabase client → le code PKCE reste intact
 
 **2. `src/pages/Auth.tsx`**
-- Remplacer `Browser.open()` par `InAppBrowser.open()` de `@capgo/inappbrowser` pour le flux iOS
-- Ajouter un listener `urlChangeEvent` qui surveille les changements d'URL
-- Quand l'URL contient `/auth/callback?code=`, extraire le code, fermer le navigateur, appeler `exchangeCodeForSession(code)`
-- Supprimer le listener `appUrlOpen` (plus nécessaire avec cette approche)
+- Mettre a jour le listener `urlChangeEvent` pour detecter `/ios-complete` au lieu de `/auth/callback`
+- Le reste du flux (extract code → close browser → exchangeCodeForSession) reste identique
 
-### Détails techniques
-
-```typescript
-// Auth.tsx - iOS flow
-import { InAppBrowser } from '@capgo/inappbrowser';
-
-// Listener URL changes instead of deep links
-const urlListener = await InAppBrowser.addListener('urlChangeEvent', async (event) => {
-  if (event.url.includes('/auth/callback')) {
-    const url = new URL(event.url);
-    const code = url.searchParams.get('code');
-    if (code) {
-      await InAppBrowser.close();
-      urlListener.remove();
-      await supabase.auth.exchangeCodeForSession(code);
-      // ... check profile, navigate
-    }
-  }
-});
-
-await InAppBrowser.open({ url: oauthData.url });
-```
-
-```typescript
-// ios-auth-callback edge function
-const redirectUrl = `https://run-connect.lovable.app/auth/callback?code=${encodeURIComponent(code)}`;
-return new Response(null, {
-  status: 302,
-  headers: { "Location": redirectUrl }
-});
-```
-
-### Fichiers modifiés
+### Fichiers modifies
 - `supabase/functions/ios-auth-callback/index.ts`
 - `src/pages/Auth.tsx`
 
