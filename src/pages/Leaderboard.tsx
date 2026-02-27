@@ -19,6 +19,8 @@ import { WeeklyChallengesCard } from "@/components/leaderboard/WeeklyChallengesC
 import { BadgesToUnlockCard } from "@/components/leaderboard/BadgesToUnlockCard";
 import { ProgressionChart } from "@/components/leaderboard/ProgressionChart";
 import { StreakBadge } from "@/components/StreakBadge";
+import { CollapsibleSection } from "@/components/leaderboard/CollapsibleSection";
+import { Trophy as TrophyIcon, Flame, TrendingUp, Calendar, Target, Award } from "lucide-react";
 
 
 interface LeaderboardUser {
@@ -558,31 +560,41 @@ const Leaderboard = () => {
 
         {/* Mon rang actuel */}
         {userRank && (
-          <MyRankCard
-            currentRank={userRank}
-            totalUsers={totalUsers}
-            currentPoints={userPoints}
-            nextRankName={nextRank.name}
-            nextRankPoints={nextRank.points}
-            userRank={getUserRank(userPoints)}
-          />
+          <CollapsibleSection title="Mon Classement" icon={<TrophyIcon className="h-[18px] w-[18px] text-white" />} iconBg="bg-yellow-500">
+            <MyRankCard
+              currentRank={userRank}
+              totalUsers={totalUsers}
+              currentPoints={userPoints}
+              nextRankName={nextRank.name}
+              nextRankPoints={nextRank.points}
+              userRank={getUserRank(userPoints)}
+            />
+          </CollapsibleSection>
         )}
 
         {/* Streak */}
-        {user && <StreakBadge userId={user.id} variant="full" />}
+        {user && (
+          <CollapsibleSection title="Série" icon={<Flame className="h-[18px] w-[18px] text-white" />} iconBg="bg-orange-500">
+            <StreakBadge userId={user.id} variant="full" />
+          </CollapsibleSection>
+        )}
 
         {/* Progression Chart */}
-        <ProgressionChart />
+        <CollapsibleSection title="Ma Progression" icon={<TrendingUp className="h-[18px] w-[18px] text-white" />} iconBg="bg-blue-500">
+          <ProgressionChart />
+        </CollapsibleSection>
 
         {/* Statistiques de la saison */}
         {seasonStats && (
-          <SeasonStatsCard
-            sessionsJoined={seasonStats.sessionsJoined}
-            sessionsCreated={seasonStats.sessionsCreated}
-            totalPoints={seasonStats.totalPoints}
-            badgesWon={seasonStats.badgesWon}
-            friendsReferred={seasonStats.friendsReferred}
-          />
+          <CollapsibleSection title="Ma Saison" icon={<Calendar className="h-[18px] w-[18px] text-white" />} iconBg="bg-green-500">
+            <SeasonStatsCard
+              sessionsJoined={seasonStats.sessionsJoined}
+              sessionsCreated={seasonStats.sessionsCreated}
+              totalPoints={seasonStats.totalPoints}
+              badgesWon={seasonStats.badgesWon}
+              friendsReferred={seasonStats.friendsReferred}
+            />
+          </CollapsibleSection>
         )}
 
         {/* Top 3 Podium */}
@@ -703,10 +715,14 @@ const Leaderboard = () => {
         )}
 
         {/* Défis de la semaine */}
-        <WeeklyChallengesCard />
+        <CollapsibleSection title="Défis de la semaine" icon={<Target className="h-[18px] w-[18px] text-white" />} iconBg="bg-purple-500">
+          <WeeklyChallengesCard />
+        </CollapsibleSection>
 
         {/* Badges à débloquer */}
-        <BadgesToUnlockCard />
+        <CollapsibleSection title="Badges à débloquer" icon={<Award className="h-[18px] w-[18px] text-white" />} iconBg="bg-amber-500">
+          <BadgesToUnlockCard />
+        </CollapsibleSection>
       </div>
 
       {/* Dialog de prévisualisation */}
