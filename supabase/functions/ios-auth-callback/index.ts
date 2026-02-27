@@ -1,5 +1,5 @@
 // iOS Auth Callback — Redirect from Supabase Auth after Google OAuth
-// Redirects to custom scheme deep link so native app intercepts it
+// Redirects to HTTPS URL so openWebView's urlChangeEvent can intercept it
 
 Deno.serve((req: Request) => {
   const url = new URL(req.url);
@@ -9,8 +9,8 @@ Deno.serve((req: Request) => {
 
   // Handle errors
   if (error) {
-    const redirectUrl = `app.runconnect://ios-complete?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "")}`;
-    console.log(`[ios-auth-callback] Error: ${error}, redirecting to deep link`);
+    const redirectUrl = `https://run-connect.lovable.app/ios-complete?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "")}`;
+    console.log(`[ios-auth-callback] Error: ${error}, redirecting to HTTPS`);
     return new Response(null, {
       status: 302,
       headers: { 
@@ -21,7 +21,7 @@ Deno.serve((req: Request) => {
   }
 
   if (!code) {
-    const redirectUrl = `app.runconnect://ios-complete?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`;
+    const redirectUrl = `https://run-connect.lovable.app/ios-complete?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`;
     console.log(`[ios-auth-callback] No code received`);
     return new Response(null, {
       status: 302,
@@ -32,9 +32,9 @@ Deno.serve((req: Request) => {
     });
   }
 
-  // Redirect to native deep link so iOS app intercepts via appUrlOpen
-  const redirectUrl = `app.runconnect://ios-complete?code=${encodeURIComponent(code)}`;
-  console.log(`[ios-auth-callback] Redirecting to deep link with code (length: ${code.length})`);
+  // Redirect to HTTPS so openWebView's urlChangeEvent fires before SPA loads
+  const redirectUrl = `https://run-connect.lovable.app/ios-complete?code=${encodeURIComponent(code)}`;
+  console.log(`[ios-auth-callback] Redirecting to HTTPS with code (length: ${code.length})`);
 
   return new Response(null, {
     status: 302,

@@ -11,7 +11,7 @@ import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { InAppBrowser } from '@capgo/inappbrowser';
-import { App } from '@capacitor/app';
+// App import removed - not needed for HTTPS redirect flow
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import appIcon from '@/assets/app-icon.png';
@@ -235,9 +235,9 @@ const Auth = () => {
         }
       }
 
-      // 🍎 iOS: utiliser deep link natif (app.runconnect://) + fallback urlChangeEvent
+      // 🍎 iOS: utiliser HTTPS redirect + urlChangeEvent dans openWebView
       if (isNativeIOS()) {
-        console.log('🍎 [GOOGLE AUTH] iOS detected, using InAppBrowser + deep link...');
+        console.log('🍎 [GOOGLE AUTH] iOS detected, using InAppBrowser + urlChangeEvent...');
         try {
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -252,7 +252,7 @@ const Auth = () => {
             throw oauthError || new Error('No OAuth URL returned');
           }
 
-          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up listeners...');
+          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up urlChangeEvent listener...');
 
           // Guard against double-processing
           let callbackHandled = false;
@@ -263,33 +263,20 @@ const Auth = () => {
               return;
             }
 
-            if (!urlStr.includes('ios-complete')) return;
+            if (!urlStr.includes('/ios-complete')) return;
 
             callbackHandled = true;
-            console.log('🍎 [GOOGLE AUTH] ios-complete detected in URL:', urlStr);
+            console.log('🍎 [GOOGLE AUTH] /ios-complete detected in URL:', urlStr);
 
             try {
-              // Parse code/error - handle both custom scheme and HTTPS URLs
-              let code: string | null = null;
-              let callbackError: string | null = null;
-              let errorDesc: string | null = null;
+              const callbackUrl = new URL(urlStr);
+              const code = callbackUrl.searchParams.get('code');
+              const callbackError = callbackUrl.searchParams.get('error');
+              const errorDesc = callbackUrl.searchParams.get('error_description');
 
-              try {
-                const callbackUrl = new URL(urlStr);
-                code = callbackUrl.searchParams.get('code');
-                callbackError = callbackUrl.searchParams.get('error');
-                errorDesc = callbackUrl.searchParams.get('error_description');
-              } catch {
-                // Custom scheme URLs may not parse with new URL(), extract manually
-                const queryStr = urlStr.split('?')[1] || '';
-                const params = new URLSearchParams(queryStr);
-                code = params.get('code');
-                callbackError = params.get('error');
-                errorDesc = params.get('error_description');
-              }
-
-              // Close browser and clean up listeners
+              // Close browser IMMEDIATELY before SPA can load and consume the code
               try { await InAppBrowser.close(); } catch {}
+              urlListener.remove();
 
               if (callbackError) {
                 throw new Error(errorDesc || 'Erreur inconnue');
@@ -299,7 +286,7 @@ const Auth = () => {
                 throw new Error('Aucun code d\'autorisation reçu');
               }
 
-              console.log('🍎 [GOOGLE AUTH] PKCE code intercepted, exchanging...');
+              console.log('🍎 [GOOGLE AUTH] PKCE code intercepted via urlChangeEvent, exchanging...');
               const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
               if (exchangeError) throw exchangeError;
 
@@ -331,15 +318,8 @@ const Auth = () => {
             }
           };
 
-          // 🔑 PRIMARY: Listen for deep link via App plugin (app.runconnect://ios-complete?code=...)
-          const { App } = await import('@capacitor/app');
-          const appUrlListener = await App.addListener('appUrlOpen', (event: { url: string }) => {
-            console.log('🍎 [GOOGLE AUTH] appUrlOpen received:', event.url);
-            handleOAuthCallbackUrl(event.url);
-          });
-
-          // 🔄 FALLBACK: Listen for URL changes in WebView (in case HTTPS redirect still happens)
-          const urlListener = await InAppBrowser.addListener('urlChangeEvent', async (event: { url: string }) => {
+          // 🔑 UNIQUE LISTENER: urlChangeEvent dans le WebView intégré
+          const urlListener = await InAppBrowser.addListener('urlChangeEvent', (event: { url: string }) => {
             console.log('🍎 [GOOGLE AUTH] urlChangeEvent:', event.url);
             handleOAuthCallbackUrl(event.url);
           });
@@ -348,7 +328,6 @@ const Auth = () => {
           setTimeout(async () => {
             if (!callbackHandled) {
               console.log('🍎 [GOOGLE AUTH] Timeout 120s, cleaning up');
-              appUrlListener.remove();
               urlListener.remove();
               try { await InAppBrowser.close(); } catch {}
               setIsLoading(false);
