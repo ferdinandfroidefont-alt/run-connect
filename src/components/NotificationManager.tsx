@@ -372,7 +372,7 @@ export const NotificationManager = () => {
             {permissionStatus.granted && (
               <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Canal Android actif : high_importance_channel
+                Canal Android actif : runconnect_channel
               </div>
             )}
             <div className="flex gap-2 flex-wrap">
