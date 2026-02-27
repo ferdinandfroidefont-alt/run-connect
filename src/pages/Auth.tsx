@@ -235,9 +235,9 @@ const Auth = () => {
         }
       }
 
-      // 🍎 iOS: utiliser @capgo/inappbrowser + urlChangeEvent (pas de custom scheme)
+      // 🍎 iOS: utiliser deep link natif (app.runconnect://) + fallback urlChangeEvent
       if (isNativeIOS()) {
-        console.log('🍎 [GOOGLE AUTH] iOS detected, using InAppBrowser...');
+        console.log('🍎 [GOOGLE AUTH] iOS detected, using InAppBrowser + deep link...');
         try {
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -252,73 +252,111 @@ const Auth = () => {
             throw oauthError || new Error('No OAuth URL returned');
           }
 
-          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up urlChangeEvent listener...');
+          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up listeners...');
 
-          // Listen for URL changes in InAppBrowser to intercept the HTTPS callback
-          const urlListener = await InAppBrowser.addListener('urlChangeEvent', async (event: { url: string }) => {
-            console.log('🍎 [GOOGLE AUTH] URL changed:', event.url);
+          // Guard against double-processing
+          let callbackHandled = false;
 
-            if (event.url.includes('/ios-complete')) {
-              try {
-                const callbackUrl = new URL(event.url);
-                const code = callbackUrl.searchParams.get('code');
-                const callbackError = callbackUrl.searchParams.get('error');
-
-                // Close browser and remove listener immediately
-                await InAppBrowser.close();
-                urlListener.remove();
-
-                if (callbackError) {
-                  const errorDesc = callbackUrl.searchParams.get('error_description') || 'Erreur inconnue';
-                  throw new Error(errorDesc);
-                }
-
-                if (!code) {
-                  throw new Error('Aucun code d\'autorisation reçu');
-                }
-
-                console.log('🍎 [GOOGLE AUTH] PKCE code intercepted, exchanging...');
-                const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-                if (exchangeError) throw exchangeError;
-
-                // Vérifier le profil après authentification
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                  const { data: existingProfile } = await supabase
-                    .from('profiles')
-                    .select('id, username')
-                    .eq('user_id', user.id)
-                    .maybeSingle();
-
-                  if (!existingProfile) {
-                    setNewUserId(user.id);
-                    setShowProfileSetup(true);
-                  } else {
-                    navigate('/', { replace: true });
-                  }
-                }
-              } catch (callbackError: any) {
-                console.error('🍎 [GOOGLE AUTH] Callback error:', callbackError);
-                toast({
-                  title: "Erreur Google Sign-In",
-                  description: callbackError.message || "Erreur lors de la récupération de la session",
-                  variant: "destructive"
-                });
-              } finally {
-                setIsLoading(false);
-              }
+          const handleOAuthCallbackUrl = async (urlStr: string) => {
+            if (callbackHandled) {
+              console.log('🍎 [GOOGLE AUTH] Callback already handled, skipping');
+              return;
             }
+
+            if (!urlStr.includes('ios-complete')) return;
+
+            callbackHandled = true;
+            console.log('🍎 [GOOGLE AUTH] ios-complete detected in URL:', urlStr);
+
+            try {
+              // Parse code/error - handle both custom scheme and HTTPS URLs
+              let code: string | null = null;
+              let callbackError: string | null = null;
+              let errorDesc: string | null = null;
+
+              try {
+                const callbackUrl = new URL(urlStr);
+                code = callbackUrl.searchParams.get('code');
+                callbackError = callbackUrl.searchParams.get('error');
+                errorDesc = callbackUrl.searchParams.get('error_description');
+              } catch {
+                // Custom scheme URLs may not parse with new URL(), extract manually
+                const queryStr = urlStr.split('?')[1] || '';
+                const params = new URLSearchParams(queryStr);
+                code = params.get('code');
+                callbackError = params.get('error');
+                errorDesc = params.get('error_description');
+              }
+
+              // Close browser and clean up listeners
+              try { await InAppBrowser.close(); } catch {}
+
+              if (callbackError) {
+                throw new Error(errorDesc || 'Erreur inconnue');
+              }
+
+              if (!code) {
+                throw new Error('Aucun code d\'autorisation reçu');
+              }
+
+              console.log('🍎 [GOOGLE AUTH] PKCE code intercepted, exchanging...');
+              const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+              if (exchangeError) throw exchangeError;
+
+              // Vérifier le profil après authentification
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                const { data: existingProfile } = await supabase
+                  .from('profiles')
+                  .select('id, username')
+                  .eq('user_id', user.id)
+                  .maybeSingle();
+
+                if (!existingProfile) {
+                  setNewUserId(user.id);
+                  setShowProfileSetup(true);
+                } else {
+                  navigate('/', { replace: true });
+                }
+              }
+            } catch (cbError: any) {
+              console.error('🍎 [GOOGLE AUTH] Callback error:', cbError);
+              toast({
+                title: "Erreur Google Sign-In",
+                description: cbError.message || "Erreur lors de la récupération de la session",
+                variant: "destructive"
+              });
+            } finally {
+              setIsLoading(false);
+            }
+          };
+
+          // 🔑 PRIMARY: Listen for deep link via App plugin (app.runconnect://ios-complete?code=...)
+          const { App } = await import('@capacitor/app');
+          const appUrlListener = await App.addListener('appUrlOpen', (event: { url: string }) => {
+            console.log('🍎 [GOOGLE AUTH] appUrlOpen received:', event.url);
+            handleOAuthCallbackUrl(event.url);
+          });
+
+          // 🔄 FALLBACK: Listen for URL changes in WebView (in case HTTPS redirect still happens)
+          const urlListener = await InAppBrowser.addListener('urlChangeEvent', async (event: { url: string }) => {
+            console.log('🍎 [GOOGLE AUTH] urlChangeEvent:', event.url);
+            handleOAuthCallbackUrl(event.url);
           });
 
           // Timeout: si pas de callback après 120s, nettoyer
           setTimeout(async () => {
-            urlListener.remove();
-            try { await InAppBrowser.close(); } catch {}
-            setIsLoading(false);
+            if (!callbackHandled) {
+              console.log('🍎 [GOOGLE AUTH] Timeout 120s, cleaning up');
+              appUrlListener.remove();
+              urlListener.remove();
+              try { await InAppBrowser.close(); } catch {}
+              setIsLoading(false);
+            }
           }, 120000);
 
           // Ouvrir le navigateur in-app
-          console.log('🍎 [GOOGLE AUTH] Opening InAppBrowser...');
+          console.log('🍎 [GOOGLE AUTH] Opening InAppBrowser WebView...');
           await InAppBrowser.openWebView({ 
             url: oauthData.url,
             title: 'Connexion Google',
