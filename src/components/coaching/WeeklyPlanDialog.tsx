@@ -758,7 +758,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         </div>
 
         {/* ── Scrollable body — NO swipe handlers ── */}
-        <div className="flex-1 overflow-y-auto bg-secondary pb-32">
+        <div className="flex-1 overflow-y-auto bg-secondary pb-20">
           {/* ── Week navigator — hero card ── */}
           <div className="mt-4 mb-3">
             <div className="bg-card rounded-none overflow-hidden">
