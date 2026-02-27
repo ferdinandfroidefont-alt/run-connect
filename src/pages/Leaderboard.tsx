@@ -597,18 +597,27 @@ const Leaderboard = () => {
           </CollapsibleSection>
         )}
 
+        {/* Top 3 Podium */}
+        <div className="bg-card overflow-hidden">
+          <PodiumDisplay top3={top3} />
+        </div>
+
         {/* Liste du classement */}
         <div className="bg-card overflow-hidden">
           {(() => {
             const userInTop10 = userRank !== null && userRank <= 10;
             
             if (currentPage === 1 && !userInTop10 && userRank !== null) {
+              // User PAS dans TOP 10: afficher TOP 10 + séparateur + contexte user
               const top10Users = restOfLeaderboard.filter(u => u.rank <= 10);
               const userContextUsers = restOfLeaderboard.filter(u => u.rank > 10);
+              
+              // Éviter les séparateurs si user est #11 ou #12
               const needTopSeparator = userRank > 12;
               
               return (
                 <>
+                  {/* TOP 10 */}
                   {top10Users.map((userItem) => {
                     const isCurrentUser = userItem.user_id === user?.id;
                     return (
@@ -629,6 +638,7 @@ const Leaderboard = () => {
                     );
                   })}
                   
+                  {/* Séparateur si user pas #11 ou #12 */}
                   {needTopSeparator && (
                     <div className="flex items-center justify-center py-1">
                       <div className="w-full h-px bg-border opacity-30"></div>
@@ -637,6 +647,7 @@ const Leaderboard = () => {
                     </div>
                   )}
                   
+                  {/* Contexte user (rank-1, rank, rank+1) */}
                   {userContextUsers.map((userItem) => {
                     const isCurrentUser = userItem.user_id === user?.id;
                     return (
@@ -657,6 +668,7 @@ const Leaderboard = () => {
                     );
                   })}
                   
+                  {/* Séparateur final */}
                   <div className="flex items-center justify-center py-1">
                     <div className="w-full h-px bg-border opacity-30"></div>
                     <span className="px-3 text-muted-foreground text-xs opacity-30">...</span>
@@ -665,6 +677,7 @@ const Leaderboard = () => {
                 </>
               );
             } else {
+              // User dans TOP 10 OU pagination normale
               return restOfLeaderboard.map((userItem) => {
                 const isCurrentUser = userItem.user_id === user?.id;
                 return (
@@ -686,11 +699,6 @@ const Leaderboard = () => {
               });
             }
           })()}
-        </div>
-
-        {/* Top 3 Podium */}
-        <div className="bg-card overflow-hidden">
-          <PodiumDisplay top3={top3} />
         </div>
 
         {/* Bouton Charger plus */}
