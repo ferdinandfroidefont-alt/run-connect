@@ -558,45 +558,6 @@ const Leaderboard = () => {
           userClubs={userClubs}
         />
 
-        {/* Mon rang actuel */}
-        {userRank && (
-          <CollapsibleSection title="Mon Classement" icon={<TrophyIcon className="h-[18px] w-[18px] text-white" />} iconBg="bg-yellow-500">
-            <MyRankCard
-              currentRank={userRank}
-              totalUsers={totalUsers}
-              currentPoints={userPoints}
-              nextRankName={nextRank.name}
-              nextRankPoints={nextRank.points}
-              userRank={getUserRank(userPoints)}
-            />
-          </CollapsibleSection>
-        )}
-
-        {/* Streak */}
-        {user && (
-          <CollapsibleSection title="Série" icon={<Flame className="h-[18px] w-[18px] text-white" />} iconBg="bg-orange-500">
-            <StreakBadge userId={user.id} variant="full" />
-          </CollapsibleSection>
-        )}
-
-        {/* Progression Chart */}
-        <CollapsibleSection title="Ma Progression" icon={<TrendingUp className="h-[18px] w-[18px] text-white" />} iconBg="bg-blue-500">
-          <ProgressionChart />
-        </CollapsibleSection>
-
-        {/* Statistiques de la saison */}
-        {seasonStats && (
-          <CollapsibleSection title="Ma Saison" icon={<Calendar className="h-[18px] w-[18px] text-white" />} iconBg="bg-green-500">
-            <SeasonStatsCard
-              sessionsJoined={seasonStats.sessionsJoined}
-              sessionsCreated={seasonStats.sessionsCreated}
-              totalPoints={seasonStats.totalPoints}
-              badgesWon={seasonStats.badgesWon}
-              friendsReferred={seasonStats.friendsReferred}
-            />
-          </CollapsibleSection>
-        )}
-
         {/* Top 3 Podium */}
         <div className="bg-card overflow-hidden">
           <PodiumDisplay top3={top3} />
@@ -608,16 +569,12 @@ const Leaderboard = () => {
             const userInTop10 = userRank !== null && userRank <= 10;
             
             if (currentPage === 1 && !userInTop10 && userRank !== null) {
-              // User PAS dans TOP 10: afficher TOP 10 + séparateur + contexte user
               const top10Users = restOfLeaderboard.filter(u => u.rank <= 10);
               const userContextUsers = restOfLeaderboard.filter(u => u.rank > 10);
-              
-              // Éviter les séparateurs si user est #11 ou #12
               const needTopSeparator = userRank > 12;
               
               return (
                 <>
-                  {/* TOP 10 */}
                   {top10Users.map((userItem) => {
                     const isCurrentUser = userItem.user_id === user?.id;
                     return (
@@ -638,7 +595,6 @@ const Leaderboard = () => {
                     );
                   })}
                   
-                  {/* Séparateur si user pas #11 ou #12 */}
                   {needTopSeparator && (
                     <div className="flex items-center justify-center py-1">
                       <div className="w-full h-px bg-border opacity-30"></div>
@@ -647,7 +603,6 @@ const Leaderboard = () => {
                     </div>
                   )}
                   
-                  {/* Contexte user (rank-1, rank, rank+1) */}
                   {userContextUsers.map((userItem) => {
                     const isCurrentUser = userItem.user_id === user?.id;
                     return (
@@ -668,7 +623,6 @@ const Leaderboard = () => {
                     );
                   })}
                   
-                  {/* Séparateur final */}
                   <div className="flex items-center justify-center py-1">
                     <div className="w-full h-px bg-border opacity-30"></div>
                     <span className="px-3 text-muted-foreground text-xs opacity-30">...</span>
@@ -677,7 +631,6 @@ const Leaderboard = () => {
                 </>
               );
             } else {
-              // User dans TOP 10 OU pagination normale
               return restOfLeaderboard.map((userItem) => {
                 const isCurrentUser = userItem.user_id === user?.id;
                 return (
@@ -723,6 +676,45 @@ const Leaderboard = () => {
         <CollapsibleSection title="Badges à débloquer" icon={<Award className="h-[18px] w-[18px] text-white" />} iconBg="bg-amber-500">
           <BadgesToUnlockCard />
         </CollapsibleSection>
+
+        {/* Mon rang actuel */}
+        {userRank && (
+          <CollapsibleSection title="Mon Classement" icon={<TrophyIcon className="h-[18px] w-[18px] text-white" />} iconBg="bg-yellow-500">
+            <MyRankCard
+              currentRank={userRank}
+              totalUsers={totalUsers}
+              currentPoints={userPoints}
+              nextRankName={nextRank.name}
+              nextRankPoints={nextRank.points}
+              userRank={getUserRank(userPoints)}
+            />
+          </CollapsibleSection>
+        )}
+
+        {/* Streak */}
+        {user && (
+          <CollapsibleSection title="Série" icon={<Flame className="h-[18px] w-[18px] text-white" />} iconBg="bg-orange-500">
+            <StreakBadge userId={user.id} variant="full" />
+          </CollapsibleSection>
+        )}
+
+        {/* Progression Chart */}
+        <CollapsibleSection title="Ma Progression" icon={<TrendingUp className="h-[18px] w-[18px] text-white" />} iconBg="bg-blue-500">
+          <ProgressionChart />
+        </CollapsibleSection>
+
+        {/* Statistiques de la saison */}
+        {seasonStats && (
+          <CollapsibleSection title="Ma Saison" icon={<Calendar className="h-[18px] w-[18px] text-white" />} iconBg="bg-green-500">
+            <SeasonStatsCard
+              sessionsJoined={seasonStats.sessionsJoined}
+              sessionsCreated={seasonStats.sessionsCreated}
+              totalPoints={seasonStats.totalPoints}
+              badgesWon={seasonStats.badgesWon}
+              friendsReferred={seasonStats.friendsReferred}
+            />
+          </CollapsibleSection>
+        )}
       </div>
 
       {/* Dialog de prévisualisation */}
