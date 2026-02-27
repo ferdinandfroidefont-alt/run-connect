@@ -183,6 +183,26 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // ─── Optional JWT validation (allows unauthenticated internal calls) ───
+    const authHeader = req.headers.get('Authorization');
+    let callerUserId: string | null = null;
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
+        if (authUser && !authError) {
+          callerUserId = authUser.id;
+          console.log('🔐 [AUTH] Authenticated caller:', callerUserId.substring(0, 8) + '...');
+        } else {
+          console.warn('⚠️ [AUTH] Invalid token provided, proceeding without auth');
+        }
+      } catch (authErr) {
+        console.warn('⚠️ [AUTH] Token validation error:', authErr);
+      }
+    } else {
+      console.log('ℹ️ [AUTH] No Authorization header — internal/cron call');
+    }
+
     const { user_id, title, body, data, type }: NotificationPayload = await req.json();
 
     if (!user_id || !title || !body) {

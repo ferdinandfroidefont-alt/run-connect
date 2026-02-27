@@ -46,7 +46,17 @@ export const useSendNotification = () => {
         console.log('✅ [PUSH] Session rafraîchie avec succès');
       }
       
+      // Get session for Authorization header
+      const { data: sessionData2 } = await supabase.auth.getSession();
+      const accessToken = sessionData2?.session?.access_token;
+
+      const invokeHeaders: Record<string, string> = {};
+      if (accessToken) {
+        invokeHeaders['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
+        headers: invokeHeaders,
         body: {
           user_id: userId,
           title,
@@ -69,7 +79,14 @@ export const useSendNotification = () => {
             console.log('✅ [PUSH] Session rafraîchie, nouvelle tentative...');
             
             // Retry the call
+            const retryHeaders: Record<string, string> = {};
+            const retrySession = await supabase.auth.getSession();
+            if (retrySession.data?.session?.access_token) {
+              retryHeaders['Authorization'] = `Bearer ${retrySession.data.session.access_token}`;
+            }
+
             const { data: retryResult, error: retryError } = await supabase.functions.invoke('send-push-notification', {
+              headers: retryHeaders,
               body: {
                 user_id: userId,
                 title,
