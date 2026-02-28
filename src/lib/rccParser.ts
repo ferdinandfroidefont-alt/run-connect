@@ -157,11 +157,19 @@ function parseSingleBlock(raw: string, index: number, totalBlocks: number): { bl
   return { block: null, error: { blockIndex: index, raw: trimmed, message: `Format non reconnu: "${trimmed}"` } };
 }
 
+// Normalize all unicode apostrophe variants to standard ASCII apostrophe
+function normalizeApostrophes(text: string): string {
+  return text.replace(/[\u2018\u2019\u2032\u0027\u02B9\u02BC\u02BB\u02BD\u02BE\u055A\u07F4\u07F5\uFF07\u0060\u00B4\u2018\u2019\u201A\u201B\u2035\u2039\u203A]/g, "'");
+}
+
 export function parseRCC(code: string): RCCResult {
   if (!code.trim()) return { blocks: [], errors: [] };
 
+  // Normalize apostrophes for mobile/PC compatibility
+  const normalizedCode = normalizeApostrophes(code);
+
   // Split by comma or plus
-  const rawBlocks = code.split(/[,+]/).map(s => s.trim()).filter(Boolean);
+  const rawBlocks = normalizedCode.split(/[,+]/).map(s => s.trim()).filter(Boolean);
   const blocks: ParsedBlock[] = [];
   const errors: RCCError[] = [];
 

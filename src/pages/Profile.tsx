@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -597,6 +598,18 @@ const Profile = () => {
       });
     }
   };
+  // When viewing another user's profile, show ProfilePreviewDialog instead of full profile
+  if (isViewingOtherUser && viewingUserId) {
+    return (
+      <div className="h-full bg-secondary">
+        <ProfilePreviewDialog
+          userId={viewingUserId}
+          onClose={() => navigate(-1)}
+        />
+      </div>
+    );
+  }
+
   if (loading) {
     return <div className="h-full bg-secondary flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
