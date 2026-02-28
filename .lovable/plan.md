@@ -1,45 +1,68 @@
 
 
-## Probleme identifie
+## Problème
 
-Le flux actuel est casse a cause d'une incompatibilite fondamentale :
+Google bloque les WebViews (WKWebView/InAppBrowser) pour OAuth sur iOS. Il exige `ASWebAuthenticationSession` ou `SFSafariViewController`. Le plugin `@capacitor/browser` utilise exactement `SFSafariViewController` sur iOS — c'est la solution conforme.
 
-1. L'edge function `ios-auth-callback` redirige vers `app.runconnect://ios-complete?code=...` (schema custom)
-2. Mais cette redirection se fait **depuis un WebView** (`openWebView`)
-3. **Un WebView ne peut pas naviguer vers un schema custom via 302** — il ne sait pas quoi faire avec `app.runconnect://`
-4. `appUrlOpen` ne se declenche pas non plus car le schema custom est tente **depuis l'interieur de l'app**, pas depuis un navigateur externe
-5. Resultat : rien ne se passe, ou erreur, l'utilisateur reste bloque
+## Plan
 
-La combinaison correcte qui n'a jamais ete testee : **redirect HTTPS + `openWebView()` + `urlChangeEvent`**. Quand on avait `openWebView`, on avait aussi le custom scheme. Quand on avait HTTPS, on avait `open()` (pas `openWebView`).
+### 1. Edge function `ios-auth-callback` — Redirect vers deep link
 
-## Solution
+Remplacer toutes les redirections HTTPS par le scheme `runconnect://` :
 
-Revenir a une redirection HTTPS dans l'edge function. Le `urlChangeEvent` (qui fonctionne avec `openWebView`) interceptera l'URL **avant** que le SPA ne charge et consomme le code.
+- Succès : `runconnect://auth/callback?code=XXX`
+- Erreur : `runconnect://auth/callback?error=XXX&error_description=XXX`
+- No code : `runconnect://auth/callback?error=no_code&error_description=...`
 
-### Modifications
+**Fichier** : `supabase/functions/ios-auth-callback/index.ts`
 
-**1. `supabase/functions/ios-auth-callback/index.ts`**
-- Remplacer toutes les redirections `app.runconnect://ios-complete?...` par `https://run-connect.lovable.app/ios-complete?...`
-- Le WebView peut naviguer vers HTTPS, `urlChangeEvent` se declenchera
+### 2. Auth.tsx — Remplacer InAppBrowser par Browser + App listener
 
-**2. `src/pages/Auth.tsx`**
-- Supprimer le listener `appUrlOpen` (inutile avec HTTPS redirect dans un WebView)
-- Garder uniquement `urlChangeEvent` comme mecanisme principal
-- Simplifier le cleanup (plus besoin d'importer `App`)
+Dans le bloc iOS (`isNativeIOS()`), remplacer tout le code InAppBrowser par :
 
-### Flux final
+- Import `Browser` from `@capacitor/browser`
+- Import `App` from `@capacitor/app`
+- `App.addListener('appUrlOpen', ...)` pour intercepter `runconnect://auth/callback`
+- `Browser.open({ url: oauthData.url })` (ouvre SFSafariViewController, conforme Google)
+- Dans le listener : extraire `code`, `Browser.close()`, `exchangeCodeForSession(code)`, navigation
+- Supprimer import `InAppBrowser` de `@capgo/inappbrowser`
+- Supprimer `urlChangeEvent`, `openWebView`, `InAppBrowser.close()`
 
-```text
-Google OAuth → Supabase → Edge function ios-auth-callback
-→ 302 vers https://run-connect.lovable.app/ios-complete?code=XXX
-→ urlChangeEvent se declenche dans le WebView
-→ handleOAuthCallbackUrl intercepte, extrait le code
-→ InAppBrowser.close()
-→ exchangeCodeForSession(code) dans le contexte natif
-→ navigation vers / ou ProfileSetup
+**Fichier** : `src/pages/Auth.tsx`
+
+### 3. Capacitor config — Ajouter scheme `runconnect`
+
+Modifier `capacitor.config.ts` pour ajouter/mettre à jour le scheme iOS :
+
+```typescript
+ios: {
+  scheme: 'runconnect',  // au lieu de 'app.runconnect'
+  // ... reste inchangé
+}
 ```
 
-### Fichiers modifies
+**Fichier** : `capacitor.config.ts`
+
+### 4. Instructions post-deploy pour l'utilisateur
+
+Après implémentation :
+- `git pull` + `npx cap sync`
+- Vérifier dans Xcode : **Info** → **URL Types** → scheme `runconnect` présent
+- Si absent, l'ajouter manuellement : Identifier = `runconnect`, URL Schemes = `runconnect`
+- Rebuild iOS
+- Ajouter `runconnect://auth/callback` dans Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
+
+### Fichiers modifiés
 - `supabase/functions/ios-auth-callback/index.ts`
 - `src/pages/Auth.tsx`
+- `capacitor.config.ts`
+
+### Flux final
+```text
+Clic Google → Browser.open(oauthUrl) → SFSafariViewController (conforme Google)
+→ Google login → Supabase → Edge function ios-auth-callback
+→ 302 vers runconnect://auth/callback?code=XXX
+→ iOS ouvre l'app via deep link → appUrlOpen listener
+→ Browser.close() → exchangeCodeForSession(code) → navigation Home
+```
 
