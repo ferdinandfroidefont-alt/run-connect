@@ -10,8 +10,8 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
-import { InAppBrowser } from '@capgo/inappbrowser';
-// App import removed - not needed for HTTPS redirect flow
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import appIcon from '@/assets/app-icon.png';
@@ -235,9 +235,9 @@ const Auth = () => {
         }
       }
 
-      // 🍎 iOS: utiliser HTTPS redirect + urlChangeEvent dans openWebView
+      // 🍎 iOS: utiliser @capacitor/browser (SFSafariViewController) + deep link
       if (isNativeIOS()) {
-        console.log('🍎 [GOOGLE AUTH] iOS detected, using InAppBrowser + urlChangeEvent...');
+        console.log('🍎 [GOOGLE AUTH] iOS detected, using Browser + appUrlOpen deep link...');
         try {
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -252,31 +252,29 @@ const Auth = () => {
             throw oauthError || new Error('No OAuth URL returned');
           }
 
-          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up urlChangeEvent listener...');
+          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up appUrlOpen listener...');
 
           // Guard against double-processing
           let callbackHandled = false;
 
-          const handleOAuthCallbackUrl = async (urlStr: string) => {
-            if (callbackHandled) {
-              console.log('🍎 [GOOGLE AUTH] Callback already handled, skipping');
-              return;
-            }
-
-            if (!urlStr.includes('/ios-complete')) return;
+          // Listen for deep link return: runconnect://auth/callback?code=XXX
+          const appUrlListener = await App.addListener('appUrlOpen', async ({ url: urlStr }) => {
+            if (callbackHandled) return;
+            if (!urlStr.startsWith('runconnect://auth/callback')) return;
 
             callbackHandled = true;
-            console.log('🍎 [GOOGLE AUTH] /ios-complete detected in URL:', urlStr);
+            console.log('🍎 [GOOGLE AUTH] Deep link received:', urlStr);
 
             try {
-              const callbackUrl = new URL(urlStr);
-              const code = callbackUrl.searchParams.get('code');
-              const callbackError = callbackUrl.searchParams.get('error');
-              const errorDesc = callbackUrl.searchParams.get('error_description');
+              // Parse the deep link URL
+              const params = new URLSearchParams(urlStr.split('?')[1] || '');
+              const code = params.get('code');
+              const callbackError = params.get('error');
+              const errorDesc = params.get('error_description');
 
-              // Close browser IMMEDIATELY before SPA can load and consume the code
-              try { await InAppBrowser.close(); } catch {}
-              urlListener.remove();
+              // Close Safari immediately
+              try { await Browser.close(); } catch {}
+              appUrlListener.remove();
 
               if (callbackError) {
                 throw new Error(errorDesc || 'Erreur inconnue');
@@ -286,7 +284,7 @@ const Auth = () => {
                 throw new Error('Aucun code d\'autorisation reçu');
               }
 
-              console.log('🍎 [GOOGLE AUTH] PKCE code intercepted via urlChangeEvent, exchanging...');
+              console.log('🍎 [GOOGLE AUTH] PKCE code received via deep link, exchanging...');
               const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
               if (exchangeError) throw exchangeError;
 
@@ -316,32 +314,21 @@ const Auth = () => {
             } finally {
               setIsLoading(false);
             }
-          };
-
-          // 🔑 UNIQUE LISTENER: urlChangeEvent dans le WebView intégré
-          const urlListener = await InAppBrowser.addListener('urlChangeEvent', (event: { url: string }) => {
-            console.log('🍎 [GOOGLE AUTH] urlChangeEvent:', event.url);
-            handleOAuthCallbackUrl(event.url);
           });
 
           // Timeout: si pas de callback après 120s, nettoyer
           setTimeout(async () => {
             if (!callbackHandled) {
               console.log('🍎 [GOOGLE AUTH] Timeout 120s, cleaning up');
-              urlListener.remove();
-              try { await InAppBrowser.close(); } catch {}
+              appUrlListener.remove();
+              try { await Browser.close(); } catch {}
               setIsLoading(false);
             }
           }, 120000);
 
-          // Ouvrir le navigateur in-app
-          console.log('🍎 [GOOGLE AUTH] Opening InAppBrowser WebView...');
-          await InAppBrowser.openWebView({ 
-            url: oauthData.url,
-            title: 'Connexion Google',
-            toolbarType: 'navigation' as any,
-            showArrow: true
-          });
+          // Ouvrir Safari via @capacitor/browser (SFSafariViewController, conforme Google)
+          console.log('🍎 [GOOGLE AUTH] Opening Browser (SFSafariViewController)...');
+          await Browser.open({ url: oauthData.url });
 
           return;
         } catch (iosError: any) {
