@@ -818,6 +818,14 @@ const Auth = () => {
                           required
                         />
                       </div>
+                      {!captchaToken && (
+                        <CaptchaWidget
+                          ref={captchaRef}
+                          onVerify={(token) => setCaptchaToken(token)}
+                          onExpire={() => setCaptchaToken(null)}
+                          onError={() => setCaptchaToken(null)}
+                        />
+                      )}
                       {captchaToken && (
                         <div className="text-center text-[13px] text-green-600">✅ Vérification réussie</div>
                       )}

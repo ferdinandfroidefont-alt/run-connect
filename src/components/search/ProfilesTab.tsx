@@ -10,6 +10,8 @@ import { OnlineStatus } from '@/components/OnlineStatus';
 import { useNavigate } from 'react-router-dom';
 import { User, UserPlus, UserCheck, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useProfileNavigation } from '@/hooks/useProfileNavigation';
+import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 
 interface Profile {
   user_id: string;
@@ -26,6 +28,7 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -95,7 +98,7 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
   };
 
   const handleProfileClick = (userId: string) => {
-    navigate(`/profile/${userId}`);
+    navigateToProfile(userId);
   };
 
   const handleStartConversation = async (profile: Profile) => {
@@ -199,6 +202,7 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
   }
 
   return (
+    <>
     <div className="p-4 space-y-3">
       {profiles.map((profile) => (
         <Card key={profile.user_id} className="glass-card cursor-pointer hover:bg-card/50 transition-colors">
@@ -245,5 +249,12 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
         </Card>
       ))}
     </div>
+
+    {/* Profile Preview Dialog */}
+    <ProfilePreviewDialog
+      userId={showProfilePreview ? selectedUserId : null}
+      onClose={closeProfilePreview}
+    />
+    </>
   );
 };
