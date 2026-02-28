@@ -34,7 +34,7 @@ const config: CapacitorConfig = {
     scrollEnabled: true,
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: false,
-    scheme: 'app.runconnect',
+    scheme: 'runconnect',
     backgroundColor: '#FFFFFF'
   }
 };
