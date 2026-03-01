@@ -910,6 +910,7 @@ export type Database = {
           avatar_model_id: string | null
           avatar_url: string | null
           bio: string | null
+          cover_image_url: string | null
           created_at: string
           cycling_records: Json | null
           display_name: string | null
@@ -965,6 +966,7 @@ export type Database = {
           avatar_model_id?: string | null
           avatar_url?: string | null
           bio?: string | null
+          cover_image_url?: string | null
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
@@ -1020,6 +1022,7 @@ export type Database = {
           avatar_model_id?: string | null
           avatar_url?: string | null
           bio?: string | null
+          cover_image_url?: string | null
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null

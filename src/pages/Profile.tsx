@@ -40,6 +40,7 @@ interface Profile {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  cover_image_url?: string | null;
   age: number | null;
   bio: string | null;
   phone: string | null;
@@ -115,6 +116,9 @@ const Profile = () => {
   const [showAdminPremium, setShowAdminPremium] = useState(false);
   const [reliabilityRate, setReliabilityRate] = useState(0);
   const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string>("");
+  const [coverUploading, setCoverUploading] = useState(false);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
@@ -449,6 +453,36 @@ const Profile = () => {
     setAvatarPreview(previewUrl);
     setShowCropEditor(false);
   };
+  const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Erreur", description: "L'image ne doit pas dépasser 10MB.", variant: "destructive" });
+      return;
+    }
+    setCoverUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `cover-${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const coverUrl = data.publicUrl;
+      const { error: updateError } = await supabase.from('profiles').update({ cover_image_url: coverUrl } as any).eq('user_id', user.id);
+      if (updateError) throw updateError;
+      setProfile(prev => prev ? { ...prev, cover_image_url: coverUrl } : null);
+      setCoverPreview(coverUrl);
+      await refreshGlobalProfile();
+      toast({ title: "Photo de couverture mise à jour !" });
+    } catch (error: any) {
+      console.error('Error uploading cover:', error);
+      toast({ title: "Erreur", description: "Impossible de mettre à jour la couverture", variant: "destructive" });
+    } finally {
+      setCoverUploading(false);
+    }
+  };
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
@@ -616,34 +650,66 @@ const Profile = () => {
       </div>;
   }
   return <div className="h-full bg-secondary overflow-y-auto">
-      {/* Status bar area removed for cleaner iOS look */}
-      {/* iOS Header */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          {isViewingOtherUser ? <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-primary">
-              <ChevronLeft className="h-5 w-5" />
-              <span className="text-[17px]">Retour</span>
-            </button> : <div className="w-16" />}
-          <h1 className="text-[17px] font-semibold text-foreground">
-            {isViewingOtherUser ? 'Profil' : 'Mon Profil'}
-          </h1>
-          {!isViewingOtherUser ? <button onClick={() => setShowSettingsDialog(true)} className="w-16 flex justify-end">
-              <Settings className="h-5 w-5 text-primary" />
-            </button> : <div className="w-16" />}
+      {/* Cover Image - Facebook Style */}
+      <div className="relative">
+        {/* Cover Photo */}
+        <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
+          {(coverPreview || profile?.cover_image_url) ? (
+            <img 
+              src={coverPreview || profile?.cover_image_url || ''} 
+              alt="Couverture" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
+          )}
+          {/* Overlay gradient for readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+          
+          {/* Top bar buttons */}
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3 z-10">
+            {isViewingOtherUser ? (
+              <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-white drop-shadow-lg">
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
+              </button>
+            ) : <div className="w-16" />}
+            <div className="flex items-center gap-2">
+              {!isViewingOtherUser && (
+                <>
+                  <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
+                    <Camera className="h-4 w-4 text-white" />
+                    <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+                  </label>
+                  <button onClick={() => setShowSettingsDialog(true)} className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <Settings className="h-4 w-4 text-white" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {coverUploading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+          )}
         </div>
-      </div>
 
-      <div className="max-w-md mx-auto py-4 space-y-4">
-        {/* Profile Header - iOS Style Premium */}
-        <div className="flex flex-col items-center pt-4 pb-2">
-          {/* Avatar with subtle shadow */}
-          <div className="relative mb-3">
-            <Avatar className="h-20 w-20 ring-[3px] ring-white shadow-lg">
+        {/* Avatar overlapping cover */}
+        <div className="relative flex justify-center" style={{ marginTop: '-50px' }}>
+          <div className="relative">
+            <Avatar className="h-24 w-24 ring-4 ring-card shadow-xl">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
-                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+              <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/20 to-primary/40">
+                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
+            {profile?.is_premium && (
+              <div className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-green-500 border-3 border-card flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+            )}
             {isEditing && !isViewingOtherUser && (
               <button 
                 type="button" 
@@ -655,78 +721,50 @@ const Profile = () => {
                     }
                   } catch (error) {
                     console.error('❌ Erreur sélection galerie:', error);
-                    toast({
-                      title: "Erreur",
-                      description: "Impossible d'accéder à la galerie",
-                      variant: "destructive"
-                    });
+                    toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
                   }
                 }} 
                 disabled={cameraLoading} 
-                className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
+                className="absolute bottom-0 left-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
               >
                 <Camera className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-          
-          {isEditing && !isViewingOtherUser && (
-            <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
-          )}
-          
-          {/* Display Name - Primary */}
+        </div>
+      </div>
+
+      {isEditing && !isViewingOtherUser && (
+        <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
+      )}
+
+      <div className="max-w-md mx-auto pb-4 space-y-4">
+        {/* Name, username, bio */}
+        <div className="flex flex-col items-center pt-3 pb-2 px-4">
           <div className="flex items-center gap-1.5 mb-0.5">
             <h2 className="text-[22px] font-bold text-foreground">
               {profile?.display_name || profile?.username}
             </h2>
-            {/* Couronne uniquement si le profil visualisé est premium */}
             {profile?.is_premium && (
               <Crown className="h-4 w-4 text-yellow-500" />
             )}
           </div>
           
-          {/* Username - Secondary */}
           <p className="text-[14px] text-muted-foreground mb-2">
             @{profile?.username}
           </p>
+
+          {/* Bio */}
+          {profile?.bio && (
+            <p className="text-[14px] text-muted-foreground text-center max-w-[300px] mb-3 leading-relaxed">
+              {profile.bio}
+            </p>
+          )}
           
-          {/* Status Badges - Compact Inline */}
-          <div className="flex flex-wrap justify-center gap-1.5 mb-4">
-            {/* Badge Admin uniquement si le profil visualisé est admin, sinon Membre */}
-            {isAdmin ? (
-              <Badge className="bg-red-100 text-red-700 border-0 text-[11px] px-2 py-0.5 font-medium">
-                Admin
-              </Badge>
-            ) : (
-              <Badge className="bg-muted text-muted-foreground border-0 text-[11px] px-2 py-0.5 font-medium">
-                Membre
-              </Badge>
-            )}
-            {/* Badge Premium uniquement basé sur le profil, pas sur subscriptionInfo de l'utilisateur connecté */}
-            {profile?.is_premium && (
-              <Badge className="bg-orange-100 text-orange-700 border-0 text-[11px] px-2 py-0.5 font-medium">
-                Premium
-              </Badge>
-            )}
-            {profile?.strava_connected && profile?.strava_verified_at && (
-              <Badge className="bg-orange-100 text-orange-600 border-0 text-[11px] px-2 py-0.5 font-medium">
-                Strava ✓
-              </Badge>
-            )}
-            {profile?.instagram_connected && profile?.instagram_verified_at && (
-              <Badge className="bg-pink-100 text-pink-600 border-0 text-[11px] px-2 py-0.5 font-medium">
-                Instagram ✓
-              </Badge>
-            )}
-          </div>
-          
-          {/* Stats Row - Instagram/Strava Style */}
-          <div className="flex items-center justify-center gap-8 py-3 w-full">
+          {/* Stats Row */}
+          <div className="flex items-center justify-center gap-6 py-3 w-full">
             <button 
-              onClick={() => {
-                setFollowDialogType('followers');
-                setShowFollowDialog(true);
-              }} 
+              onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }} 
               className="text-center min-w-[60px] active:opacity-70 transition-opacity"
             >
               <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
@@ -734,10 +772,7 @@ const Profile = () => {
             </button>
             <div className="w-px h-8 bg-border/60" />
             <button 
-              onClick={() => {
-                setFollowDialogType('following');
-                setShowFollowDialog(true);
-              }} 
+              onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }} 
               className="text-center min-w-[60px] active:opacity-70 transition-opacity"
             >
               <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
@@ -745,33 +780,21 @@ const Profile = () => {
             </button>
             <div className="w-px h-8 bg-border/60" />
             <div className="text-center min-w-[60px]">
-              <p className="text-[20px] font-bold text-foreground">{totalSessionsCreated}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Séances</p>
+              <div className="text-[20px] font-bold text-foreground">{reliabilityRate}%</div>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Réputé</p>
             </div>
           </div>
-          
-          {/* Bio - Juste sous les stats */}
-          {profile?.bio && (
-            <p className="text-[14px] text-muted-foreground text-center max-w-[280px] mt-3 leading-relaxed">
-              {profile.bio}
-            </p>
-          )}
-          
-          {/* Reliability Badge - Compact */}
-          <div className="w-full max-w-[160px] mt-3">
-            <ReliabilityBadge rate={reliabilityRate} onClick={() => setShowReliabilityDetails(true)} />
-          </div>
-          
+
           {/* Action Buttons */}
           {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-3 gap-1.5 h-8 text-[13px]">
+            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-2 gap-1.5 h-8 text-[13px]">
               <Crown className="h-3.5 w-3.5" />
               Devenir Premium
             </Button>
           )}
           
           {isViewingOtherUser && (
-            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 text-[13px]">
+            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 text-[13px]">
               <Flag className="h-3.5 w-3.5" />
               Signaler
             </Button>
