@@ -252,83 +252,17 @@ const Auth = () => {
             throw oauthError || new Error('No OAuth URL returned');
           }
 
-          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, setting up appUrlOpen listener...');
-
-          // Guard against double-processing
-          let callbackHandled = false;
-
-          // Listen for deep link return: runconnect://auth/callback?code=XXX
-          const appUrlListener = await App.addListener('appUrlOpen', async ({ url: urlStr }) => {
-            if (callbackHandled) return;
-            if (!urlStr.startsWith('runconnect://auth/callback')) return;
-
-            callbackHandled = true;
-            console.log('🍎 [GOOGLE AUTH] Deep link received:', urlStr);
-
-            try {
-              // Parse the deep link URL
-              const params = new URLSearchParams(urlStr.split('?')[1] || '');
-              const code = params.get('code');
-              const callbackError = params.get('error');
-              const errorDesc = params.get('error_description');
-
-              // Close Safari immediately
-              try { await Browser.close(); } catch {}
-              appUrlListener.remove();
-
-              if (callbackError) {
-                throw new Error(errorDesc || 'Erreur inconnue');
-              }
-
-              if (!code) {
-                throw new Error('Aucun code d\'autorisation reçu');
-              }
-
-              console.log('🍎 [GOOGLE AUTH] PKCE code received via deep link, exchanging...');
-              const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-              if (exchangeError) throw exchangeError;
-
-              // Vérifier le profil après authentification
-              const { data: { user } } = await supabase.auth.getUser();
-              if (user) {
-                const { data: existingProfile } = await supabase
-                  .from('profiles')
-                  .select('id, username')
-                  .eq('user_id', user.id)
-                  .maybeSingle();
-
-                if (!existingProfile) {
-                  setNewUserId(user.id);
-                  setShowProfileSetup(true);
-                } else {
-                  navigate('/', { replace: true });
-                }
-              }
-            } catch (cbError: any) {
-              console.error('🍎 [GOOGLE AUTH] Callback error:', cbError);
-              toast({
-                title: "Erreur Google Sign-In",
-                description: cbError.message || "Erreur lors de la récupération de la session",
-                variant: "destructive"
-              });
-            } finally {
-              setIsLoading(false);
-            }
-          });
-
-          // Timeout: si pas de callback après 120s, nettoyer
-          setTimeout(async () => {
-            if (!callbackHandled) {
-              console.log('🍎 [GOOGLE AUTH] Timeout 120s, cleaning up');
-              appUrlListener.remove();
-              try { await Browser.close(); } catch {}
-              setIsLoading(false);
-            }
-          }, 120000);
+          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, opening Browser...');
+          console.log('🍎 [GOOGLE AUTH] Deep link callback will be handled by global listener in App.tsx');
 
           // Ouvrir Safari via @capacitor/browser (SFSafariViewController, conforme Google)
-          console.log('🍎 [GOOGLE AUTH] Opening Browser (SFSafariViewController)...');
           await Browser.open({ url: oauthData.url });
+
+          // Le retour deep link sera géré par le listener global dans App.tsx
+          // Timeout de sécurité pour remettre isLoading à false
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 120000);
 
           return;
         } catch (iosError: any) {
@@ -962,6 +896,24 @@ const Auth = () => {
               >
                 Problème de connexion ? Nettoyer la session
               </button>
+
+              {/* iOS Debug: Test deep link scheme */}
+              {(window as any).detectedPlatform === 'ios' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const { Browser } = await import('@capacitor/browser');
+                      await Browser.open({ url: 'runconnect://test' });
+                    } catch (e) {
+                      console.error('Debug scheme test failed:', e);
+                    }
+                  }}
+                  className="w-full text-center text-[11px] text-muted-foreground/50 py-1"
+                >
+                  🔧 Debug: Tester scheme iOS
+                </button>
+              )}
             </div>
           )}
         </div>
