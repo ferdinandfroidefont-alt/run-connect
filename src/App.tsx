@@ -11,6 +11,7 @@ import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { PageTransition } from "@/components/PageTransition";
+import { supabase } from "@/integrations/supabase/client";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -40,6 +41,74 @@ const queryClient = new QueryClient();
 const App = () => {
   // Show loading screen on all platforms
   const [isAppLoaded, setIsAppLoaded] = useState(false);
+
+  // 🍎 Global deep link listener for iOS OAuth callback
+  useEffect(() => {
+    const isNative = !!(window as any).CapacitorForceNative || !!(window as any).Capacitor;
+    if (!isNative) return;
+
+    let removed = false;
+
+    const setupListener = async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        const { Browser } = await import('@capacitor/browser');
+
+        const listener = await CapApp.addListener('appUrlOpen', async ({ url }) => {
+          console.log('🍎 [GLOBAL] appUrlOpen:', url);
+
+          if (!url.startsWith('runconnect://auth/callback')) return;
+
+          try {
+            const params = new URLSearchParams(url.split('?')[1] || '');
+            const code = params.get('code');
+            const error = params.get('error');
+            const errorDesc = params.get('error_description');
+
+            // Close Safari immediately
+            try { await Browser.close(); } catch {}
+
+            if (error) {
+              console.error('🍎 [GLOBAL] OAuth error:', error, errorDesc);
+              return;
+            }
+
+            if (!code) {
+              console.error('🍎 [GLOBAL] No authorization code received');
+              return;
+            }
+
+            console.log('🍎 [GLOBAL] Exchanging PKCE code for session...');
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) {
+              console.error('🍎 [GLOBAL] Exchange error:', exchangeError);
+              return;
+            }
+
+            console.log('🍎 [GLOBAL] Session established, navigating to /');
+            window.location.href = '/';
+          } catch (err) {
+            console.error('🍎 [GLOBAL] Deep link handling error:', err);
+          }
+        });
+
+        // Cleanup on unmount
+        return () => {
+          if (!removed) {
+            removed = true;
+            listener.remove();
+          }
+        };
+      } catch (e) {
+        console.warn('🍎 [GLOBAL] Could not set up appUrlOpen listener:', e);
+      }
+    };
+
+    const cleanupPromise = setupListener();
+    return () => {
+      cleanupPromise.then(cleanup => cleanup?.());
+    };
+  }, []);
 
   if (!isAppLoaded) {
     return (
