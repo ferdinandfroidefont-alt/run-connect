@@ -28,6 +28,7 @@ interface Profile {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  cover_image_url?: string | null;
   age: number | null;
   bio: string | null;
   is_premium: boolean;
@@ -413,10 +414,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[85vh] sm:rounded-lg sm:border flex flex-col">
         {/* iOS Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-background border-b border-border flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-full hover:bg-secondary transition-colors flex items-center justify-center"
-          >
+          <button onClick={onClose} className="h-8 w-8 rounded-full hover:bg-secondary transition-colors flex items-center justify-center">
             <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
           <h2 className="text-lg font-semibold text-foreground">Profil</h2>
@@ -429,26 +427,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background border-border shadow-lg z-50">
                 {isBlocked ? (
-                  <DropdownMenuItem 
-                    onClick={handleUnblockUser}
-                    className="text-emerald-600 hover:bg-emerald-50 cursor-pointer"
-                  >
+                  <DropdownMenuItem onClick={handleUnblockUser} className="text-emerald-600 hover:bg-emerald-50 cursor-pointer">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Débloquer cet utilisateur
                   </DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem 
-                    onClick={handleBlockUser}
-                    className="text-destructive hover:bg-destructive/10 cursor-pointer"
-                  >
+                  <DropdownMenuItem onClick={handleBlockUser} className="text-destructive hover:bg-destructive/10 cursor-pointer">
                     <UserMinus className="h-4 w-4 mr-2" />
                     Bloquer cet utilisateur
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem 
-                  onClick={() => setShowReportDialog(true)}
-                  className="text-destructive hover:bg-destructive/10 cursor-pointer"
-                >
+                <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-destructive hover:bg-destructive/10 cursor-pointer">
                   <Flag className="h-4 w-4 mr-2" />
                   Signaler cet utilisateur
                 </DropdownMenuItem>
@@ -465,23 +454,39 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </div>
         ) : profile ? (
           <ScrollArea className="flex-1">
-            <div className="py-4 space-y-4">
-              {/* Profile Header - Mirrors Profile.tsx */}
-              <div className="flex flex-col items-center pt-4 pb-2">
-                {/* Avatar */}
-                <div className="relative mb-3">
-                  <Avatar className="h-20 w-20 ring-[3px] ring-white shadow-lg">
-                    <AvatarImage src={profile.avatar_url || ""} />
-                    <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
-                      {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!isOwnProfile && areFriends && (
-                    <OnlineStatus userId={profile.user_id} />
+            <div className="space-y-4">
+              {/* Cover Image + Avatar */}
+              <div className="relative">
+                <div className="h-36 w-full overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20">
+                  {profile.cover_image_url ? (
+                    <img src={profile.cover_image_url} alt="Couverture" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
                   )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 </div>
+                <div className="relative flex justify-center" style={{ marginTop: '-40px' }}>
+                  <div className="relative">
+                    <Avatar className="h-20 w-20 ring-4 ring-card shadow-xl">
+                      <AvatarImage src={profile.avatar_url || ""} />
+                      <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
+                        {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    {profile.is_premium && (
+                      <div className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-green-500 border-2 border-card flex items-center justify-center">
+                        <span className="text-white text-[10px]">✓</span>
+                      </div>
+                    )}
+                    {!isOwnProfile && areFriends && (
+                      <OnlineStatus userId={profile.user_id} />
+                    )}
+                  </div>
+                </div>
+              </div>
 
-                {/* Display Name */}
+              {/* Name, username, bio */}
+              <div className="flex flex-col items-center pb-2 px-4">
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <h2 className="text-[22px] font-bold text-foreground">
                     {profile.display_name || profile.username}
@@ -490,50 +495,16 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     <Crown className="h-4 w-4 text-yellow-500" />
                   )}
                 </div>
+                <p className="text-[14px] text-muted-foreground mb-2">@{profile.username}</p>
 
-                {/* Username */}
-                <p className="text-[14px] text-muted-foreground mb-2">
-                  @{profile.username}
-                </p>
+                {profile.bio && (
+                  <p className="text-[14px] text-muted-foreground text-center max-w-[280px] mb-3 leading-relaxed">
+                    {profile.bio}
+                  </p>
+                )}
 
-                {/* Status Badges */}
-                <div className="flex flex-wrap justify-center gap-1.5 mb-4">
-                  {profile.is_admin ? (
-                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[11px] rounded-full font-medium">
-                      Admin
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 bg-muted text-muted-foreground text-[11px] rounded-full font-medium">
-                      Membre
-                    </span>
-                  )}
-                  {profile.is_premium && (
-                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[11px] rounded-full font-medium">
-                      Premium
-                    </span>
-                  )}
-                  {profile.strava_connected && profile.strava_verified_at && (
-                    <button
-                      onClick={() => window.open(`https://www.strava.com/athletes/${profile.strava_user_id}`, '_blank')}
-                      className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[11px] rounded-full font-medium"
-                    >
-                      Strava ✓
-                    </button>
-                  )}
-                  {profile.instagram_connected && profile.instagram_verified_at && (
-                    <button
-                      onClick={() => window.open(`https://www.instagram.com/${profile.instagram_username}`, '_blank')}
-                      className="px-2 py-0.5 bg-pink-100 text-pink-600 text-[11px] rounded-full font-medium"
-                    >
-                      Instagram ✓
-                    </button>
-                  )}
-                  <OrganizerRatingBadge userId={profile.user_id} />
-                  <StreakBadge userId={profile.user_id} variant="compact" />
-                </div>
-
-                {/* Stats Row - Always visible */}
-                <div className="flex items-center justify-center gap-8 py-3 w-full">
+                {/* Stats Row */}
+                <div className="flex items-center justify-center gap-6 py-3 w-full">
                   <div className="text-center min-w-[60px]">
                     <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnés</p>
@@ -544,21 +515,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnements</p>
                   </div>
                   <div className="w-px h-8 bg-border/60" />
-                  <button
-                    onClick={() => setShowReliabilityDetails(true)}
-                    className="text-center min-w-[60px] active:opacity-70 transition-opacity"
-                  >
-                    <p className="text-[20px] font-bold text-emerald-600">{Math.round(reliabilityRate)}%</p>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Fiabilité</p>
+                  <button onClick={() => setShowReliabilityDetails(true)} className="text-center min-w-[60px] active:opacity-70 transition-opacity">
+                    <p className="text-[20px] font-bold text-foreground">{Math.round(reliabilityRate)}%</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Réputé</p>
                   </button>
                 </div>
 
-                {/* Bio */}
-                {profile.bio && (
-                  <p className="text-[14px] text-muted-foreground text-center max-w-[280px] mt-3 leading-relaxed">
-                    {profile.bio}
-                  </p>
-                )}
+                {/* Badges inline */}
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  <OrganizerRatingBadge userId={profile.user_id} />
+                  <StreakBadge userId={profile.user_id} variant="compact" />
+                </div>
               </div>
 
               {/* === NOT FOLLOWING: Show follow CTA === */}
