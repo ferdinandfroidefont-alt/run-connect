@@ -901,13 +901,18 @@ const Auth = () => {
               {(window as any).detectedPlatform === 'ios' && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    try {
-                      const { Browser } = await import('@capacitor/browser');
-                      await Browser.open({ url: 'runconnect://test' });
-                    } catch (e) {
-                      console.error('Debug scheme test failed:', e);
-                    }
+                  onClick={() => {
+                    const testUrl = 'runconnect://test';
+                    console.log('🔧 [DEBUG] Testing deep link scheme:', testUrl);
+                    toast({
+                      title: "🔧 Test Deep Link",
+                      description: `Ouverture de ${testUrl}...`,
+                    });
+                    // On iOS, window.location.href is the correct way to trigger a custom scheme
+                    // Browser.open() is for HTTP URLs only
+                    setTimeout(() => {
+                      window.location.href = testUrl;
+                    }, 500);
                   }}
                   className="w-full text-center text-[11px] text-muted-foreground/50 py-1"
                 >

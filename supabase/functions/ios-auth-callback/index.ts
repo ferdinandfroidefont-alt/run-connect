@@ -35,6 +35,7 @@ Deno.serve((req: Request) => {
   // Redirect to deep link so iOS intercepts via appUrlOpen
   const redirectUrl = `runconnect://auth/callback?code=${encodeURIComponent(code)}`;
   console.log(`[ios-auth-callback] Redirecting to deep link with code (length: ${code.length})`);
+  console.log(`[ios-auth-callback] Final redirect URL: ${redirectUrl}`);
 
   return new Response(null, {
     status: 302,
