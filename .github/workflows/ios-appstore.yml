@@ -163,6 +163,23 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :NSPhotoLibraryUsageDescription" "$INFO_PLIST"
           /usr/libexec/PlistBuddy -c "Print :NSLocationWhenInUseUsageDescription" "$INFO_PLIST"
 
+      - name: 🔗 Configure Deep Link URL Type (runconnect://)
+        run: |
+          INFO_PLIST="ios/App/App/Info.plist"
+          
+          # Add CFBundleURLTypes for deep linking (runconnect://)
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST" 2>/dev/null || true
+          
+          echo "✅ Deep link URL Type configured (runconnect://)"
+          
+          # Verify
+          echo "📋 CFBundleURLTypes:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" || echo "⚠️ Could not print CFBundleURLTypes"
+
       - name: 🔧 Update Bundle Identifier
         run: |
           sed -i '' 's/app.lovable.[^"]*\|io\.ionic\.starter/com.ferdi.runconnect/g' \
