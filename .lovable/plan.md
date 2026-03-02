@@ -2,66 +2,70 @@
 
 ## Diagnostic
 
-L'erreur "Safari ne peut pas ouvrir la page car l'adresse n'est pas valide" confirme que iOS ne reconnait pas le scheme `runconnect://`. Deux causes possibles :
+Le code cote web/edge est correct. Le probleme est exclusivement cote **build iOS natif** : le workflow GitHub Actions (`ios-appstore.yml`) ne declare jamais `CFBundleURLTypes` dans `Info.plist`. Donc iOS ne sait pas que `runconnect://` est un scheme valide → Safari affiche "adresse invalide".
 
-1. **Le dossier `ios/` n'existe pas dans le repo** (confirmé : `ios/` est vide). Donc `Info.plist` n'est pas versionné ici. Le scheme doit etre configuré manuellement dans Xcode apres `npx cap add ios`.
-2. **Le redirect `302` vers `runconnect://...` est fait depuis SFSafariViewController** (navigateur externe), ce qui est correct. Le probleme est uniquement que le scheme n'est pas declaré dans `Info.plist` cote Xcode.
+**Preuve** : le fichier `ios-appstore.yml` configure permissions, Firebase, signing, mais **aucune ligne ne touche `CFBundleURLTypes`**. Le `capacitor.config.ts` a `ios.scheme = 'runconnect'` mais `npx cap sync` genere uniquement le scheme pour le WKWebView interne, **pas** un URL Type pour les deep links externes.
 
-## Etat actuel du code
+## Cause racine
 
-- **Edge function** : redirige vers `runconnect://auth/callback?code=...` -- OK, format correct (`scheme://host/path?query`).
-- **capacitor.config.ts** : `ios.scheme = 'runconnect'` -- OK, Capacitor devrait generer le URL Type dans Info.plist lors de `npx cap sync`.
-- **Auth.tsx** : ecoute `App.addListener('appUrlOpen', ...)` pour `runconnect://auth/callback` -- OK.
-- **App.tsx** : pas de listener global `appUrlOpen` -- le listener est local dans Auth.tsx ce qui est un probleme si l'utilisateur n'est pas sur la page Auth quand le deep link arrive.
+Capacitor `ios.scheme` configure le scheme du **serveur web interne** (pour charger les assets), pas un `CFBundleURLTypes` pour les deep links. Il faut **explicitement** ajouter le URL Type dans `Info.plist`.
 
-## Plan d'implementation
+## Plan
 
-### 1. Deplacer le listener `appUrlOpen` au niveau global (App.tsx)
+### 1. Ajouter CFBundleURLTypes dans le workflow GitHub Actions
 
-Le listener doit etre monte au demarrage de l'app, pas uniquement quand on est sur la page Auth. Si iOS rouvre l'app via deep link, le composant Auth pourrait ne pas etre monte.
+**Fichier** : `.github/workflows/ios-appstore.yml`
 
-- **Fichier** : `src/App.tsx`
-- Ajouter un `useEffect` global qui ecoute `App.addListener('appUrlOpen', ...)` 
-- Si URL commence par `runconnect://auth/callback`, extraire le `code`, appeler `supabase.auth.exchangeCodeForSession(code)`, fermer le browser, naviguer vers `/`
-- Nettoyer le listener au unmount
+Apres l'etape "Configure Info.plist permissions" (ligne ~157), ajouter une nouvelle etape qui utilise PlistBuddy pour creer le `CFBundleURLTypes` :
 
-### 2. Simplifier Auth.tsx
+```bash
+INFO_PLIST="ios/App/App/Info.plist"
+# Add URL Types for deep linking (runconnect://)
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$INFO_PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$INFO_PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST" 2>/dev/null || true
+```
 
-- **Fichier** : `src/pages/Auth.tsx`
-- Supprimer le listener `appUrlOpen` local (lignes 261-317) et le timeout associe
-- Garder uniquement `Browser.open({ url: oauthData.url })` pour lancer le flux
-- Le retour deep link sera gere globalement par App.tsx
+### 2. Ameliorer le logging de l'edge function
 
-### 3. Edge function -- deja correct
+**Fichier** : `supabase/functions/ios-auth-callback/index.ts`
 
-- `supabase/functions/ios-auth-callback/index.ts` redirige vers `runconnect://auth/callback?code=...` -- aucun changement necessaire.
+Logger l'URL exacte du redirect 302 pour faciliter le debug futur :
 
-### 4. Instructions post-deploy pour l'utilisateur
+```typescript
+console.log(`[ios-auth-callback] Final redirect URL: ${redirectUrl}`);
+```
 
-Apres `git pull` + `npx cap sync ios` :
-- Ouvrir Xcode, aller dans **Runner > Info > URL Types**
-- Verifier qu'un URL Type avec scheme `runconnect` existe
-- Si absent : ajouter manuellement (Identifier: `runconnect`, URL Schemes: `runconnect`)
-- Ajouter `runconnect://auth/callback` dans Supabase Dashboard > Authentication > URL Configuration > Redirect URLs
-- Rebuild et tester
+### 3. Ameliorer le bouton debug iOS dans Auth.tsx
 
-### 5. Bouton debug (bonus)
+**Fichier** : `src/pages/Auth.tsx`
 
-- **Fichier** : `src/pages/Auth.tsx`
-- Ajouter un bouton visible uniquement sur iOS natif qui fait `Browser.open({ url: 'runconnect://test' })`
-- Si iOS ne reconnait pas le scheme, c'est que Info.plist n'est pas bon
+Le bouton debug actuel utilise `Browser.open({ url: 'runconnect://test' })` — mais `Browser.open` est prevu pour les URLs HTTP. Sur iOS, pour tester un custom scheme, il faut utiliser `window.location.href` ou un lien `<a>`. Modifier le bouton pour utiliser `window.open('runconnect://test', '_self')` et afficher un toast avec le resultat.
+
+### 4. Rien a changer dans App.tsx ni capacitor.config.ts
+
+Le listener global `appUrlOpen` et la config sont deja corrects.
 
 ### Fichiers modifies
-- `src/App.tsx` (ajout listener global appUrlOpen)
-- `src/pages/Auth.tsx` (suppression listener local, ajout bouton debug)
+- `.github/workflows/ios-appstore.yml` (ajout CFBundleURLTypes pour deep link `runconnect://`)
+- `supabase/functions/ios-auth-callback/index.ts` (logging ameliore)
+- `src/pages/Auth.tsx` (bouton debug ameliore)
 
-### Flux final
+### Flux apres correctif
 ```text
-Clic Google -> Browser.open(oauthUrl) -> SFSafariViewController
--> Google login -> Supabase -> Edge function ios-auth-callback
--> 302 vers runconnect://auth/callback?code=XXX
--> iOS reconnait le scheme -> rouvre l'app
--> appUrlOpen listener (global dans App.tsx)
--> Browser.close() -> exchangeCodeForSession(code) -> navigation /
+GitHub Actions build:
+  npx cap sync ios → genere ios/
+  PlistBuddy ajoute CFBundleURLTypes[runconnect] dans Info.plist
+  xcodebuild archive → IPA contient le URL Type
+
+Runtime:
+  Clic Google → Browser.open(oauthUrl) → SFSafariViewController
+  → Google login → Supabase → Edge function ios-auth-callback
+  → 302 vers runconnect://auth/callback?code=XXX
+  → iOS reconnait le scheme (present dans Info.plist) → rouvre l'app
+  → appUrlOpen listener (global dans App.tsx)
+  → Browser.close() → exchangeCodeForSession(code) → navigation /
 ```
 
