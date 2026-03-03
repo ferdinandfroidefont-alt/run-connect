@@ -1,68 +1,72 @@
 
 
-## Diagnostic : J'ai trouvé la vraie cause
+## Diagnostic complet — Vérification 100%
 
-Le correctif precedent (PlistBuddy) **echoue silencieusement** a cause de `|| true`.
+### Ce qui fonctionne ✅
+1. **Edge function `ios-auth-callback`** : déployée et fonctionnelle — retourne un `302 Location: runconnect://auth/callback?code=...`
+2. **Listener `appUrlOpen` dans App.tsx** : correctement configuré pour intercepter `runconnect://auth/callback`
+3. **Auth.tsx** : ouvre correctement SFSafariViewController via `@capacitor/browser` avec `redirectTo` vers l'edge function
+4. **Workflow GitHub Actions** : ajoute dynamiquement le scheme `runconnect` dans Info.plist
+5. **`capacitor.config.ts`** : `ios.scheme = 'runconnect'` — Capacitor ajoute AUSSI ce scheme dans `CFBundleURLTypes` lors de `cap sync`
 
-### Pourquoi ca ne marche pas
+### Le vrai problème 🔴
 
-Quand `npx cap sync ios` s'execute dans le workflow, Capacitor genere **deja** un `CFBundleURLTypes` dans `Info.plist` avec son propre scheme interne a l'index 0. Ensuite, les commandes PlistBuddy :
+**SFSafariViewController ne gère PAS les redirections 302 vers des custom URL schemes de la même façon que Safari classique.**
 
-```bash
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" ... 2>/dev/null || true   # ECHOUE: array existe deja
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" ... 2>/dev/null || true   # ECHOUE: index 0 existe deja
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName ..." || true     # ECHOUE: dict existe deja
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes ..." || true  # ECHOUE
+Quand l'edge function retourne `302 Location: runconnect://auth/callback?code=...`, SFSafariViewController essaie de **naviguer** vers cette URL au lieu de la **passer au système**. Résultat : Safari affiche "adresse invalide" car il ne sait pas charger un protocole `runconnect://`.
+
+### Solution : remplacer le 302 par une page HTML intermédiaire
+
+Au lieu d'un redirect HTTP 302, l'edge function doit retourner une **page HTML (200 OK)** qui utilise JavaScript pour déclencher le deep link. SFSafariViewController charge la page normalement, puis le `window.location.href` déclenche le scheme handler d'iOS.
+
+```text
+Flux actuel (cassé) :
+  Edge function → 302 runconnect://... → SFSafariViewController dit "adresse invalide"
+
+Flux corrigé :
+  Edge function → 200 HTML page → JS: window.location.href = 'runconnect://...' → iOS intercepte → appUrlOpen
 ```
 
-**Toutes les commandes echouent silencieusement**. Le scheme `runconnect` n'est jamais ajoute. L'IPA ne contient pas le URL Type → Safari dit "adresse invalide".
+### Fichier modifié
 
-### Correction
+**`supabase/functions/ios-auth-callback/index.ts`** :
 
-Remplacer l'etape dans `.github/workflows/ios-appstore.yml` par un script qui :
-1. Compte combien d'entrees existent deja dans `CFBundleURLTypes`
-2. Ajoute le scheme `runconnect` au **prochain index disponible**
-3. Verifie en lisant le plist apres
+Remplacer les `return new Response(null, { status: 302, headers: { Location: ... } })` par :
 
-```bash
-INFO_PLIST="ios/App/App/Info.plist"
+```typescript
+const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body>
+<p>Redirection vers RunConnect...</p>
+<script>
+  window.location.href = '${redirectUrl}';
+  // Fallback si le scheme ne fonctionne pas après 2s
+  setTimeout(function() {
+    document.body.innerHTML = '<p>Si l\\'application ne s\\'ouvre pas, <a href="${redirectUrl}">appuyez ici</a>.</p>';
+  }, 2000);
+</script>
+</body></html>`;
 
-# Count existing URL types
-COUNT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null | grep -c "Dict" || echo "0")
-
-# If no CFBundleURLTypes array exists, create it
-if [ "$COUNT" = "0" ]; then
-  /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST" 2>/dev/null || true
-  COUNT=0
-fi
-
-# Check if runconnect scheme already exists
-EXISTING=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null | grep "runconnect" || true)
-if [ -n "$EXISTING" ]; then
-  echo "✅ runconnect scheme already present"
-  exit 0
-fi
-
-# Add at next available index
-IDX=$COUNT
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX dict" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes array" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST"
+return new Response(html, {
+  status: 200,
+  headers: {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+  },
+});
 ```
 
-### Fichiers modifies
-- `.github/workflows/ios-appstore.yml` : remplacement de l'etape "Configure Deep Link URL Type" par le script corrige qui gere l'index dynamiquement
+Cela s'applique aux 3 cas (error, no code, success).
 
-### Aucun autre fichier a modifier
-- Edge function : deja correct
-- App.tsx listener : deja correct
-- Auth.tsx : deja correct
+### Aucun autre fichier à modifier
 
-### Apres le deploy
-1. Lancer un nouveau run GitHub Actions
-2. Verifier dans les logs que le script affiche `runconnect` dans le print final
-3. Installer la nouvelle build TestFlight
-4. Tester le bouton "Debug: Tester scheme iOS" → ne doit plus afficher "adresse invalide"
-5. Tester le flux Google OAuth complet
+- Workflow iOS : déjà correct
+- App.tsx listener : déjà correct
+- Auth.tsx : déjà correct
+- capacitor.config.ts : déjà correct
+
+### Après le deploy
+1. L'edge function sera re-déployée automatiquement
+2. **Pas besoin de rebuild iOS** — le correctif est côté serveur
+3. Tester directement avec la build TestFlight actuelle
 
