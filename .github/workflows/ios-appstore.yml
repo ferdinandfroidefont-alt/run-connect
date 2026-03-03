@@ -167,18 +167,30 @@ jobs:
         run: |
           INFO_PLIST="ios/App/App/Info.plist"
           
-          # Add CFBundleURLTypes for deep linking (runconnect://)
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$INFO_PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$INFO_PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST" 2>/dev/null || true
+          # Check if runconnect scheme already exists
+          EXISTING=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null | grep "runconnect" || true)
+          if [ -n "$EXISTING" ]; then
+            echo "✅ runconnect scheme already present"
+          else
+            # Count existing URL type entries (Capacitor may have added one at index 0)
+            IDX=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null | grep -c "Dict" || echo "0")
+            
+            # If no CFBundleURLTypes array exists at all, create it
+            if [ "$IDX" = "0" ]; then
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST" 2>/dev/null || true
+            fi
+            
+            echo "📋 Adding runconnect scheme at index $IDX"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX dict" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes array" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST"
+            echo "✅ Deep link URL Type configured (runconnect://)"
+          fi
           
-          echo "✅ Deep link URL Type configured (runconnect://)"
-          
-          # Verify
-          echo "📋 CFBundleURLTypes:"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" || echo "⚠️ Could not print CFBundleURLTypes"
+          # Verify final state
+          echo "📋 Final CFBundleURLTypes:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST"
 
       - name: 🔧 Update Bundle Identifier
         run: |
