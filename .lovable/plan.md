@@ -1,72 +1,45 @@
 
 
-## Diagnostic complet — Vérification 100%
+## Diagnostic
 
-### Ce qui fonctionne ✅
-1. **Edge function `ios-auth-callback`** : déployée et fonctionnelle — retourne un `302 Location: runconnect://auth/callback?code=...`
-2. **Listener `appUrlOpen` dans App.tsx** : correctement configuré pour intercepter `runconnect://auth/callback`
-3. **Auth.tsx** : ouvre correctement SFSafariViewController via `@capacitor/browser` avec `redirectTo` vers l'edge function
-4. **Workflow GitHub Actions** : ajoute dynamiquement le scheme `runconnect` dans Info.plist
-5. **`capacitor.config.ts`** : `ios.scheme = 'runconnect'` — Capacitor ajoute AUSSI ce scheme dans `CFBundleURLTypes` lors de `cap sync`
+Le screenshot montre clairement que **SFSafariViewController affiche le HTML comme du texte brut** au lieu de le rendre. Le `Content-Type: text/html` que nous definissons dans l'edge function est **ecrase par le proxy/gateway de Supabase Edge Functions** en `text/plain`. Le JavaScript `window.location.href = 'runconnect://...'` n'est donc jamais execute.
 
-### Le vrai problème 🔴
+## Solution
 
-**SFSafariViewController ne gère PAS les redirections 302 vers des custom URL schemes de la même façon que Safari classique.**
-
-Quand l'edge function retourne `302 Location: runconnect://auth/callback?code=...`, SFSafariViewController essaie de **naviguer** vers cette URL au lieu de la **passer au système**. Résultat : Safari affiche "adresse invalide" car il ne sait pas charger un protocole `runconnect://`.
-
-### Solution : remplacer le 302 par une page HTML intermédiaire
-
-Au lieu d'un redirect HTTP 302, l'edge function doit retourner une **page HTML (200 OK)** qui utilise JavaScript pour déclencher le deep link. SFSafariViewController charge la page normalement, puis le `window.location.href` déclenche le scheme handler d'iOS.
+Contourner le probleme en hebergeant une **page HTML statique** sur le domaine de l'app (ou le Content-Type est garanti correct par le serveur web), et faire en sorte que l'edge function redirige vers cette page.
 
 ```text
-Flux actuel (cassé) :
-  Edge function → 302 runconnect://... → SFSafariViewController dit "adresse invalide"
-
-Flux corrigé :
-  Edge function → 200 HTML page → JS: window.location.href = 'runconnect://...' → iOS intercepte → appUrlOpen
+Flux corrige :
+  Edge function → 302 vers https://run-connect.lovable.app/ios-callback.html?code=XXX
+  → SFSafariViewController charge la page statique (Content-Type correct)
+  → JS: window.location.href = 'runconnect://auth/callback?code=XXX'
+  → iOS intercepte le scheme → appUrlOpen → echange PKCE → session
 ```
 
-### Fichier modifié
+## Fichiers modifies
 
-**`supabase/functions/ios-auth-callback/index.ts`** :
+### 1. Creer `public/ios-callback.html`
 
-Remplacer les `return new Response(null, { status: 302, headers: { Location: ... } })` par :
+Page HTML statique qui :
+- Lit les parametres `code`, `error`, `error_description` de l'URL
+- Construit le deep link `runconnect://auth/callback?...`
+- Execute `window.location.href` pour declencher le scheme
+- Affiche un lien fallback apres 2 secondes
 
-```typescript
-const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body>
-<p>Redirection vers RunConnect...</p>
-<script>
-  window.location.href = '${redirectUrl}';
-  // Fallback si le scheme ne fonctionne pas après 2s
-  setTimeout(function() {
-    document.body.innerHTML = '<p>Si l\\'application ne s\\'ouvre pas, <a href="${redirectUrl}">appuyez ici</a>.</p>';
-  }, 2000);
-</script>
-</body></html>`;
+### 2. Modifier `supabase/functions/ios-auth-callback/index.ts`
 
-return new Response(html, {
-  status: 200,
-  headers: {
-    "Content-Type": "text/html; charset=utf-8",
-    "Cache-Control": "no-cache, no-store, must-revalidate",
-  },
-});
-```
+Remplacer la generation HTML par un simple **302 redirect** vers `https://run-connect.lovable.app/ios-callback.html?code=XXX` (ou `?error=...`). Le serveur web de l'app servira la page avec le bon Content-Type.
 
-Cela s'applique aux 3 cas (error, no code, success).
+### 3. Aucun autre fichier a modifier
 
-### Aucun autre fichier à modifier
+- App.tsx : deja correct (listener `appUrlOpen`)
+- Auth.tsx : deja correct (`redirectTo` vers l'edge function)
+- Workflow iOS : deja correct
 
-- Workflow iOS : déjà correct
-- App.tsx listener : déjà correct
-- Auth.tsx : déjà correct
-- capacitor.config.ts : déjà correct
+## Apres le deploy
 
-### Après le deploy
-1. L'edge function sera re-déployée automatiquement
-2. **Pas besoin de rebuild iOS** — le correctif est côté serveur
-3. Tester directement avec la build TestFlight actuelle
+- L'edge function sera re-deployee automatiquement
+- La page statique sera deployee avec le prochain build web
+- **Pas besoin de rebuild iOS** — seul le contenu serveur change
+- Tester directement avec la build TestFlight actuelle
 
