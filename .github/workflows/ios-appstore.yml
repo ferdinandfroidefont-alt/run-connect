@@ -168,29 +168,24 @@ jobs:
           INFO_PLIST="ios/App/App/Info.plist"
           
           # Check if runconnect scheme already exists
-          EXISTING=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null | grep "runconnect" || true)
-          if [ -n "$EXISTING" ]; then
+          if plutil -p "$INFO_PLIST" | grep -q '"runconnect"'; then
             echo "✅ runconnect scheme already present"
           else
-            # Count existing URL type entries (Capacitor may have added one at index 0)
-            IDX=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null | grep -c "Dict" || echo "0")
+            # Ensure CFBundleURLTypes array exists
+            plutil -type CFBundleURLTypes "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleURLTypes -json '[]' "$INFO_PLIST"
             
-            # If no CFBundleURLTypes array exists at all, create it
-            if [ "$IDX" = "0" ]; then
-              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST" 2>/dev/null || true
-            fi
+            # Append runconnect scheme entry at end of array (-1 = append)
+            plutil -insert CFBundleURLTypes.-1 \
+              -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+              "$INFO_PLIST"
             
-            echo "📋 Adding runconnect scheme at index $IDX"
-            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX dict" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes array" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST"
             echo "✅ Deep link URL Type configured (runconnect://)"
           fi
           
           # Verify final state
           echo "📋 Final CFBundleURLTypes:"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST"
+          plutil -p "$INFO_PLIST" | grep -A5 -i "urlschemes\|runconnect\|CFBundleURL"
 
       - name: 🔧 Update Bundle Identifier
         run: |
