@@ -23,8 +23,16 @@
         deepLink = 'runconnect://auth/callback?error=no_code&error_description=' + encodeURIComponent('No authorization code received');
       }
 
-      window.location.href = deepLink;
+      // Method 1: iframe (works better in SFSafariViewController on some iOS versions)
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = deepLink;
+      document.body.appendChild(iframe);
 
+      // Method 2: location.href fallback after short delay
+      setTimeout(function() { window.location.href = deepLink; }, 100);
+
+      // Method 3: manual link after 2s
       setTimeout(function() {
         document.getElementById('status').innerHTML = 'Si l\'application ne s\'ouvre pas automatiquement, <a href="' + deepLink + '" style="color:#007AFF;">appuyez ici</a>.';
       }, 2000);
