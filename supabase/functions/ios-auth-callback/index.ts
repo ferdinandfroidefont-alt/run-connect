@@ -1,6 +1,6 @@
-// iOS Auth Callback — Redirect from Supabase Auth after Google OAuth
-// Returns an HTML page that triggers the deep link via JavaScript
-// SFSafariViewController doesn't handle 302 to custom schemes properly
+// iOS Auth Callback — Redirect to static HTML bridge page
+// Supabase Edge Functions override Content-Type, so we use a 302 redirect
+// to a static page hosted on the app domain where text/html is guaranteed
 
 Deno.serve((req: Request) => {
   const url = new URL(req.url);
@@ -8,35 +8,28 @@ Deno.serve((req: Request) => {
   const error = url.searchParams.get("error");
   const errorDescription = url.searchParams.get("error_description");
 
-  let redirectUrl: string;
+  const bridgeBase = "https://run-connect.lovable.app/ios-callback.html";
+  const params = new URLSearchParams();
 
   if (error) {
-    redirectUrl = `runconnect://auth/callback?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "")}`;
-    console.log(`[ios-auth-callback] Error: ${error}, redirecting via HTML`);
+    params.set("error", error);
+    if (errorDescription) params.set("error_description", errorDescription);
+    console.log(`[ios-auth-callback] Error: ${error}, redirecting to bridge page`);
   } else if (!code) {
-    redirectUrl = `runconnect://auth/callback?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`;
+    params.set("error", "no_code");
+    params.set("error_description", "No authorization code received");
     console.log(`[ios-auth-callback] No code received`);
   } else {
-    redirectUrl = `runconnect://auth/callback?code=${encodeURIComponent(code)}`;
+    params.set("code", code);
     console.log(`[ios-auth-callback] Redirecting with code (length: ${code.length})`);
   }
 
-  const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:-apple-system,sans-serif;text-align:center;padding:60px 20px;">
-<p>Redirection vers RunConnect...</p>
-<script>
-  window.location.href = '${redirectUrl}';
-  setTimeout(function() {
-    document.body.innerHTML = '<p style="font-family:-apple-system,sans-serif;text-align:center;padding:60px 20px;">Si l\\'application ne s\\'ouvre pas, <a href="${redirectUrl}">appuyez ici</a>.</p>';
-  }, 2000);
-</script>
-</body></html>`;
+  const redirectUrl = `${bridgeBase}?${params.toString()}`;
 
-  return new Response(html, {
-    status: 200,
+  return new Response(null, {
+    status: 302,
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Location": redirectUrl,
       "Cache-Control": "no-cache, no-store, must-revalidate",
     },
   });
