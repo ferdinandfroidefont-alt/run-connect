@@ -2,44 +2,52 @@
 
 ## Diagnostic
 
-Le screenshot montre clairement que **SFSafariViewController affiche le HTML comme du texte brut** au lieu de le rendre. Le `Content-Type: text/html` que nous definissons dans l'edge function est **ecrase par le proxy/gateway de Supabase Edge Functions** en `text/plain`. Le JavaScript `window.location.href = 'runconnect://...'` n'est donc jamais execute.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-## Solution
+Deux problemes distincts :
 
-Contourner le probleme en hebergeant une **page HTML statique** sur le domaine de l'app (ou le Content-Type est garanti correct par le serveur web), et faire en sorte que l'edge function redirige vers cette page.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-```text
-Flux corrige :
-  Edge function → 302 vers https://run-connect.lovable.app/ios-callback.html?code=XXX
-  → SFSafariViewController charge la page statique (Content-Type correct)
-  → JS: window.location.href = 'runconnect://auth/callback?code=XXX'
-  → iOS intercepte le scheme → appUrlOpen → echange PKCE → session
+## Solution en 2 parties
+
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
+
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-## Fichiers modifies
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-### 1. Creer `public/ios-callback.html`
+### Partie 2 : Securiser la page bridge
 
-Page HTML statique qui :
-- Lit les parametres `code`, `error`, `error_description` de l'URL
-- Construit le deep link `runconnect://auth/callback?...`
-- Execute `window.location.href` pour declencher le scheme
-- Affiche un lien fallback apres 2 secondes
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
 
-### 2. Modifier `supabase/functions/ios-auth-callback/index.ts`
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
 
-Remplacer la generation HTML par un simple **302 redirect** vers `https://run-connect.lovable.app/ios-callback.html?code=XXX` (ou `?error=...`). Le serveur web de l'app servira la page avec le bon Content-Type.
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
 
-### 3. Aucun autre fichier a modifier
+### Fichiers modifies
 
-- App.tsx : deja correct (listener `appUrlOpen`)
-- Auth.tsx : deja correct (`redirectTo` vers l'edge function)
-- Workflow iOS : deja correct
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
 
-## Apres le deploy
+### Apres le deploy
 
-- L'edge function sera re-deployee automatiquement
-- La page statique sera deployee avec le prochain build web
-- **Pas besoin de rebuild iOS** — seul le contenu serveur change
-- Tester directement avec la build TestFlight actuelle
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
