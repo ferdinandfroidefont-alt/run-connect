@@ -10,13 +10,11 @@ import { SettingsDialog } from "./SettingsDialog";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus, UserMinus, Crown, Calendar, Loader2, Flag, MoreVertical, ArrowLeft, ChevronRight, Users } from "lucide-react";
-import { ProfileRankCard } from "@/components/profile/ProfileRankCard";
-import { EarnedBadgesSection } from "@/components/profile/EarnedBadgesSection";
 import { OrganizerRatingBadge } from "@/components/OrganizerRatingBadge";
 import { StreakBadge } from "@/components/StreakBadge";
-import { UserActivityChart } from "@/components/UserActivityChart";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { ActivityTimeline } from "@/components/profile/ActivityTimeline";
+import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -457,7 +455,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             <div className="space-y-4">
               {/* Cover Image + Avatar */}
               <div className="relative">
-                <div className="h-36 w-full overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20">
+                <div className="h-48 w-full overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20">
                   {profile.cover_image_url ? (
                     <img src={profile.cover_image_url} alt="Couverture" className="w-full h-full object-cover" />
                   ) : (
@@ -465,9 +463,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 </div>
-                <div className="relative flex justify-center" style={{ marginTop: '-40px' }}>
+               <div className="relative flex justify-center" style={{ marginTop: '-50px' }}>
                   <div className="relative">
-                    <Avatar className="h-20 w-20 ring-4 ring-card shadow-xl">
+                    <Avatar className="h-24 w-24 ring-4 ring-card shadow-xl">
                       <AvatarImage src={profile.avatar_url || ""} />
                       <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
                         {(profile.username || profile.display_name)?.charAt(0)?.toUpperCase() || "U"}
@@ -563,18 +561,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   {/* Streak Badge */}
                   <StreakBadge userId={profile.user_id} variant="full" />
 
-                  {/* Classement & Badges */}
-                  <ProfileRankCard userId={userId} />
-                  <EarnedBadgesSection userId={userId} />
-
-                  {/* Records personnels */}
-                  <PersonalRecords records={{
-                    running_records: profile.running_records,
-                    cycling_records: profile.cycling_records,
-                    swimming_records: profile.swimming_records,
-                    triathlon_records: profile.triathlon_records,
-                    walking_records: profile.walking_records,
-                  }} />
+                  {/* Unified ProfileStatsGroup — same as Profile.tsx */}
+                  <ProfileStatsGroup userId={profile.user_id}>
+                    <div className="h-px bg-border ml-[54px]" />
+                    <PersonalRecords records={{
+                      running_records: profile.running_records,
+                      cycling_records: profile.cycling_records,
+                      swimming_records: profile.swimming_records,
+                      triathlon_records: profile.triathlon_records,
+                      walking_records: profile.walking_records,
+                    }} />
+                  </ProfileStatsGroup>
 
                   {/* Clubs en commun */}
                   {!isOwnProfile && commonClubs.length > 0 && (
@@ -597,10 +594,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   )}
 
                   {/* Activité récente */}
-                  <ActivityTimeline userId={userId!} />
-
-                  {/* Statistiques d'activité */}
-                  <UserActivityChart userId={userId} username={profile.username} />
+                  <ActivityTimeline userId={profile.user_id} />
 
                   {/* Member since */}
                   <div className="bg-card overflow-hidden">
