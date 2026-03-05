@@ -20,11 +20,11 @@ export const StreakBadge = ({ userId, variant = 'compact', className }: StreakBa
 
   const fetchStreak = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select('streak_weeks')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const { data, error } = await supabase.
+      from('user_stats').
+      select('streak_weeks').
+      eq('user_id', userId).
+      maybeSingle();
 
       if (!error && data) {
         setStreakWeeks(data.streak_weeks || 0);
@@ -59,54 +59,54 @@ export const StreakBadge = ({ userId, variant = 'compact', className }: StreakBa
           "inline-flex items-center gap-1 px-2 py-1 rounded-full",
           isActive ? "bg-red-500/10" : "bg-muted",
           className
-        )}
-      >
+        )}>
+        
         <Flame className={cn("h-4 w-4", isActive ? "text-red-500" : "text-muted-foreground")} />
         <span className={cn("text-[13px] font-semibold", isActive ? "text-red-500" : "text-muted-foreground")}>
           {streakWeeks}
         </span>
-      </motion.div>
-    );
+      </motion.div>);
+
   }
 
   return (
     <div className={cn("bg-card rounded-[10px] overflow-hidden", className)}>
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-        <motion.div
-          className={cn("h-[30px] w-[30px] rounded-[7px] flex items-center justify-center", config.color)}
-          animate={config.glow ? { scale: [1, 1.1, 1] } : {}}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          <Flame className={cn("h-[18px] w-[18px]", config.iconColor)} />
-        </motion.div>
-        <div className="flex-1 flex items-center justify-between">
-          <span className="text-[17px] font-semibold text-foreground">{isActive ? 'Série en cours' : 'Aucune série'}</span>
-          <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary", config.textColor)}>
-            <Flame className={cn("h-3.5 w-3.5", isActive ? "text-red-500" : "text-muted-foreground")} />
-            <span className="text-[13px] font-bold">{streakWeeks} sem.</span>
-          </div>
-        </div>
-      </div>
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
       <div className="px-4 py-3">
         <p className="text-[15px] text-muted-foreground">{config.label}</p>
         <div className="flex gap-1 mt-2">
-          {Array.from({ length: Math.min(streakWeeks, 12) }).map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className={cn(
-                "h-2 flex-1 rounded-full",
-                i < streakWeeks ? config.color : "bg-secondary"
-              )}
-            />
-          ))}
+          {Array.from({ length: Math.min(streakWeeks, 12) }).map((_, i) =>
+          <motion.div
+            key={i}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: i * 0.05 }}
+            className={cn(
+              "h-2 flex-1 rounded-full",
+              i < streakWeeks ? config.color : "bg-secondary"
+            )} />
+
+          )}
         </div>
         <p className="text-[13px] text-muted-foreground mt-1.5">
           {streakWeeks} semaine{streakWeeks > 1 ? 's' : ''} consécutive{streakWeeks > 1 ? 's' : ''} avec activité
         </p>
       </div>
-    </div>
-  );
+    </div>);
+
 };
