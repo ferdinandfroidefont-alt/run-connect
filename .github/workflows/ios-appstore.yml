@@ -92,68 +92,57 @@ jobs:
               
               # Add APNs delegate methods before the last closing brace of the class
               # Find the last } and insert the methods before it
-              python3 << 'PYTHON_SCRIPT'
+              python3 -c "
           import re
-
-          with open("ios/App/App/AppDelegate.swift", "r") as f:
+          with open('ios/App/App/AppDelegate.swift', 'r') as f:
               content = f.read()
-
-          apns_methods = "\n".join([
-              "    // MARK: - APNs Token Registration (required for Capacitor Push Notifications on iOS)",
-              "    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {",
-              "        Messaging.messaging().apnsToken = deviceToken",
-              "        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)",
-              "    }",
-              "",
-              "    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {",
-              "        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)",
-              "    }",
+          apns_methods = '\n'.join([
+              '    // MARK: - APNs Token Registration (required for Capacitor Push Notifications on iOS)',
+              '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
+              '        Messaging.messaging().apnsToken = deviceToken',
+              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)',
+              '    }',
+              '',
+              '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
+              '        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)',
+              '    }',
           ])
-
-          # Insert before the last closing brace
-          last_brace = content.rfind("}")
+          last_brace = content.rfind('}')
           if last_brace != -1:
-              content = content[:last_brace] + apns_methods + "\n" + content[last_brace:]
-
-          with open("ios/App/App/AppDelegate.swift", "w") as f:
+              content = content[:last_brace] + apns_methods + '\n' + content[last_brace:]
+          with open('ios/App/App/AppDelegate.swift', 'w') as f:
               f.write(content)
-
-          print("✅ APNs delegate methods injected")
-          PYTHON_SCRIPT
+          print('APNs delegate methods injected')
+          "
               
               echo "✅ Firebase + APNs delegates configured in AppDelegate"
             else
               echo "ℹ️ Firebase already configured in AppDelegate"
               # Still check if APNs methods are missing
               if ! grep -q "didRegisterForRemoteNotificationsWithDeviceToken" "$DELEGATE"; then
-                python3 << 'PYTHON_SCRIPT'
-          with open("ios/App/App/AppDelegate.swift", "r") as f:
+                python3 -c "
+          with open('ios/App/App/AppDelegate.swift', 'r') as f:
               content = f.read()
-
-          if "import FirebaseMessaging" not in content:
-              content = content.replace("import FirebaseCore", "import FirebaseCore\nimport FirebaseMessaging")
-
-          apns_methods = "\n".join([
-              "    // MARK: - APNs Token Registration (required for Capacitor Push Notifications on iOS)",
-              "    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {",
-              "        Messaging.messaging().apnsToken = deviceToken",
-              "        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)",
-              "    }",
-              "",
-              "    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {",
-              "        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)",
-              "    }",
+          if 'import FirebaseMessaging' not in content:
+              content = content.replace('import FirebaseCore', 'import FirebaseCore\nimport FirebaseMessaging')
+          apns_methods = '\n'.join([
+              '    // MARK: - APNs Token Registration (required for Capacitor Push Notifications on iOS)',
+              '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
+              '        Messaging.messaging().apnsToken = deviceToken',
+              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)',
+              '    }',
+              '',
+              '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
+              '        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)',
+              '    }',
           ])
-
-          last_brace = content.rfind("}")
+          last_brace = content.rfind('}')
           if last_brace != -1:
-              content = content[:last_brace] + apns_methods + "\n" + content[last_brace:]
-
-          with open("ios/App/App/AppDelegate.swift", "w") as f:
+              content = content[:last_brace] + apns_methods + '\n' + content[last_brace:]
+          with open('ios/App/App/AppDelegate.swift', 'w') as f:
               f.write(content)
-
-          print("✅ APNs delegate methods added to existing Firebase config")
-          PYTHON_SCRIPT
+          print('APNs delegate methods added to existing Firebase config')
+          "
               fi
             fi
           else
